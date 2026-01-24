@@ -1,0 +1,159 @@
+import { EntityType } from '../types/schema';
+
+export const ENTITY_TYPES: EntityType[] = [
+    {
+        id: "chest",
+        category: "object",
+        displayName: "Chest",
+        description: "Interactable storage container",
+        placeholderColor: "#8B4513",
+        defaultSize: [1, 1],
+        properties: [
+            {
+                key: "locked",
+                label: "Locked",
+                type: "boolean",
+                defaultValue: false,
+                required: true,
+                description: "Whether the chest is locked"
+            },
+            {
+                key: "lootTable",
+                label: "Loot Table",
+                type: "string",
+                defaultValue: "common_chest",
+                required: true,
+                description: "ID of the loot table to use"
+            },
+            {
+                key: "respawns",
+                label: "Respawns",
+                type: "boolean",
+                defaultValue: false,
+                required: false
+            }
+        ]
+    },
+    {
+        id: "door",
+        category: "transition",
+        displayName: "Door",
+        placeholderColor: "#654321",
+        defaultSize: [1, 2],
+        properties: [
+            {
+                key: "targetMap",
+                label: "Target Map",
+                type: "string",
+                defaultValue: "",
+                required: true
+            },
+            {
+                key: "targetX",
+                label: "Target X",
+                type: "number",
+                defaultValue: 0,
+                required: true,
+                constraints: { min: 0 }
+            },
+            {
+                key: "targetY",
+                label: "Target Y",
+                type: "number",
+                defaultValue: 0,
+                required: true,
+                constraints: { min: 0 }
+            },
+            {
+                key: "locked",
+                label: "Locked",
+                type: "boolean",
+                defaultValue: false,
+                required: false
+            },
+            {
+                key: "keyRequired",
+                label: "Key Required",
+                type: "string",
+                defaultValue: "",
+                required: false
+            }
+        ]
+    },
+    {
+        id: "npc_spawn",
+        category: "spawn",
+        displayName: "NPC Spawn Point",
+        placeholderColor: "#4169E1",
+        defaultSize: [1, 1],
+        properties: [
+            {
+                key: "npcId",
+                label: "NPC ID",
+                type: "string",
+                defaultValue: "",
+                required: true
+            },
+            {
+                key: "facing",
+                label: "Initial Facing",
+                type: "enum",
+                defaultValue: "south",
+                required: true,
+                constraints: {
+                    options: ["north", "south", "east", "west"]
+                }
+            }
+        ]
+    },
+    {
+        id: "trigger_zone",
+        category: "trigger",
+        displayName: "Trigger Zone",
+        placeholderColor: "#FF69B4",
+        defaultSize: [2, 2],
+        properties: [
+            {
+                key: "triggerId",
+                label: "Trigger ID",
+                type: "string",
+                defaultValue: "",
+                required: true
+            },
+            {
+                key: "oneShot",
+                label: "One Shot",
+                type: "boolean",
+                defaultValue: false,
+                required: false,
+                description: "Trigger only fires once"
+            }
+        ]
+    },
+    {
+        id: "decoration_tree",
+        category: "decoration",
+        displayName: "Tree",
+        placeholderColor: "#228B22",
+        defaultSize: [2, 3],
+        properties: [
+            {
+                key: "variant",
+                label: "Tree Variant",
+                type: "enum",
+                defaultValue: "oak",
+                required: true,
+                constraints: {
+                    options: ["oak", "pine", "birch", "willow"]
+                }
+            },
+            {
+                key: "decorated",
+                label: "Decorated",
+                type: "boolean",
+                defaultValue: false,
+                required: false
+            }
+        ]
+    }
+];
