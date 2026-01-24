@@ -56,3 +56,15 @@ export const WithMapLoaded: Story = {
         }
     }
 };
+
+export const MapsMode: Story = {
+    parameters: {
+        store: {
+            currentMap: MOCK_MAP,
+        }
+    }
+};
+
+export const TilesetsMode: Story = {};
+
+export const ProjectMode: Story = {};

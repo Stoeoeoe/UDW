@@ -16,7 +16,7 @@ export const LayersPanel: React.FC = () => {
     // If no map loaded, show placeholder
     if (!currentMap) {
         return (
-            <div className="p-4 text-xs text-neutral-500 italic text-center mt-10">
+            <div className="p-4 text-xs text-slate-500 italic text-center mt-10">
                 No map active.
             </div>
         )
@@ -26,11 +26,11 @@ export const LayersPanel: React.FC = () => {
     const layers = [...currentMap.layers].reverse();
 
     return (
-        <div className="flex flex-col h-full bg-neutral-900 text-neutral-300">
+        <div className="flex flex-col h-full bg-slate-900 text-slate-200">
             {/* Header */}
-            <div className="p-3 border-b border-neutral-800 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Layers</h2>
-                <button className="text-neutral-500 hover:text-white">+</button>
+            <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Layers</h2>
+                <button className="text-slate-500 hover:text-white">+</button>
             </div>
 
             {/* List */}
@@ -42,8 +42,8 @@ export const LayersPanel: React.FC = () => {
                         className={clsx(
                             "group flex items-center px-3 py-2 text-sm cursor-pointer border-l-2 transition-colors",
                             layer.id === selectedLayerId
-                                ? "bg-neutral-800 border-blue-500 text-white"
-                                : "border-transparent hover:bg-neutral-800/50"
+                                ? "bg-slate-800 border-blue-500 text-white"
+                                : "border-transparent hover:bg-slate-800/50"
                         )}
                     >
                         {/* Visibility Toggle */}
@@ -51,21 +51,21 @@ export const LayersPanel: React.FC = () => {
                             onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id); }}
                             className={clsx(
                                 "mr-3 flex-shrink-0 hover:text-white focus:outline-none",
-                                layer.visible ? "text-neutral-400" : "text-neutral-600"
+                                layer.visible ? "text-slate-400" : "text-slate-600"
                             )}
                         >
                             {layer.visible ? <EyeOpen /> : <EyeClosed />}
                         </button>
 
                         {/* Name */}
-                        <span className={clsx("flex-1 truncate select-none", !layer.visible && "text-neutral-500")}>
+                        <span className={clsx("flex-1 truncate select-none", !layer.visible && "text-slate-500")}>
                             {layer.name}
                         </span>
 
                         {/* Icons */}
-                        <div className="flex space-x-2 text-neutral-500">
+                        <div className="flex space-x-2 text-slate-500">
                             {layer.locked && <Lock />}
-                            <span className="text-[10px] uppercase font-mono bg-neutral-800 px-1 rounded text-neutral-600">
+                            <span className="text-[10px] uppercase font-mono bg-slate-800 px-1 rounded text-slate-600">
                                 {layer.kind[0]}
                             </span>
                         </div>

@@ -76,13 +76,13 @@ export const TilesetPanel: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-neutral-900 text-neutral-300 relative">
+        <div className="flex flex-col h-full bg-slate-900 text-slate-200 relative">
             {/* Header / Selector */}
-            <div className="p-3 border-b border-neutral-800 space-y-2">
+            <div className="p-3 border-b border-slate-800 space-y-2">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Tilesets</h2>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Tilesets</h2>
                     <button
-                        className="text-neutral-500 hover:text-white"
+                        className="text-slate-500 hover:text-white"
                         onClick={() => setIsImporterOpen(true)}
                     >
                         +
@@ -91,7 +91,7 @@ export const TilesetPanel: React.FC = () => {
 
                 {tilesets.size > 0 && (
                     <select
-                        className="w-full bg-neutral-800 text-xs border border-neutral-700 rounded px-2 py-1 focus:outline-none"
+                        className="w-full bg-slate-800 text-xs border border-slate-700 rounded px-2 py-1 focus:outline-none"
                         value={activeTilesetId || ''}
                         onChange={(e) => setActiveTilesetId(e.target.value)}
                     >
@@ -103,9 +103,9 @@ export const TilesetPanel: React.FC = () => {
             </div>
 
             {/* Tiles Grid */}
-            <div className="flex-1 overflow-y-auto p-2 bg-neutral-900">
+            <div className="flex-1 overflow-y-auto p-2 bg-slate-900">
                 {!activeTileset && (
-                    <div className="text-center text-xs text-neutral-600 mt-10">
+                    <div className="text-center text-xs text-slate-600 mt-10">
                         No tilesets loaded.
                     </div>
                 )}
@@ -136,7 +136,7 @@ export const TilesetPanel: React.FC = () => {
                                         "relative group rounded-sm overflow-hidden border transition-all",
                                         selectedTileId === tile.id
                                             ? "border-blue-500 ring-1 ring-blue-500 z-10"
-                                            : "border-transparent hover:border-neutral-600"
+                                            : "border-transparent hover:border-slate-600"
                                     )}
                                     style={{
                                         width: activeTileset.tileWidth,

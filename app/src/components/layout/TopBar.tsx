@@ -75,17 +75,17 @@ export const TopBar: React.FC = () => {
                 {/* Left: Branding & Menus */}
                 <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center font-bold text-white text-xs shadow-sm">
+                        <div className="w-6 h-6 bg-primary-600 rounded-md flex items-center justify-center font-bold text-white text-xs shadow-sm">
                             ED
                         </div>
-                        <span className="font-semibold text-neutral-200 text-sm tracking-tight">PixelEditor</span>
+                        <span className="font-semibold text-slate-300 text-sm tracking-tight">PixelEditor</span>
                     </div>
 
-                    <div className="h-6 w-px bg-neutral-700" />
+                    <div className="h-6 w-px bg-slate-700" />
 
-                    <div className="flex space-x-4 text-xs font-medium text-neutral-400 relative">
+                    <div className="flex space-x-4 text-xs font-medium text-slate-400 relative">
                         <button
-                            className="hover:text-neutral-100 transition-colors focus:outline-none"
+                            className="hover:text-slate-100 transition-colors focus:outline-none"
                             onClick={() => setIsFileMenuOpen(!isFileMenuOpen)}
                         >
                             File
@@ -93,11 +93,11 @@ export const TopBar: React.FC = () => {
 
                         {/* File Menu Dropdown */}
                         {isFileMenuOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-48 bg-neutral-800 border border-neutral-700 rounded shadow-xl py-1 z-50 flex flex-col items-start">
-                                <button onClick={handleNewProject} className="w-full text-left px-4 py-2 hover:bg-neutral-700 text-neutral-300">New Project...</button>
-                                <button onClick={handleOpenProject} className="w-full text-left px-4 py-2 hover:bg-neutral-700 text-neutral-300">Open Project...</button>
-                                <div className="h-px bg-neutral-700 w-full my-1"></div>
-                                <button className="w-full text-left px-4 py-2 hover:bg-neutral-700 text-neutral-300">Exit</button>
+                            <div className="absolute top-full left-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded shadow-xl py-1 z-50 flex flex-col items-start">
+                                <button onClick={handleNewProject} className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200">New Project...</button>
+                                <button onClick={handleOpenProject} className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200">Open Project...</button>
+                                <div className="h-px bg-slate-700 w-full my-1"></div>
+                                <button className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200">Exit</button>
                             </div>
                         )}
                         {/* Invisible Overlay to close menu */}
@@ -108,14 +108,14 @@ export const TopBar: React.FC = () => {
                             />
                         )}
 
-                        <button className="hover:text-neutral-100 transition-colors">Edit</button>
-                        <button className="hover:text-neutral-100 transition-colors">View</button>
-                        <button className="hover:text-neutral-100 transition-colors">Window</button>
+                        <button className="hover:text-slate-100 transition-colors">Edit</button>
+                        <button className="hover:text-slate-100 transition-colors">View</button>
+                        <button className="hover:text-slate-100 transition-colors">Window</button>
                     </div>
                 </div>
 
                 {/* Center: Toolbar */}
-                <div className="flex items-center space-x-1 bg-neutral-800 p-1 rounded-lg border border-neutral-700/50">
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700/50">
                     {TOOL_BUTTONS.map((tool) => (
                         <button
                             key={tool.id}
@@ -124,8 +124,8 @@ export const TopBar: React.FC = () => {
                             className={clsx(
                                 "p-1.5 rounded-md transition-all duration-150",
                                 activeTool === tool.id
-                                    ? "bg-neutral-600 text-white shadow-sm"
-                                    : "text-neutral-400 hover:bg-neutral-700/50 hover:text-neutral-200"
+                                    ? "bg-slate-600 text-white shadow-sm"
+                                    : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-300"
                             )}
                         >
                             <tool.icon />

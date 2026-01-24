@@ -1,3 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Custom base styles */
+@layer base {
+    body {
+        @apply bg-slate-950 text-slate-100;
+    }
+}
+
+/* Utility for pixelated images */
+.image-pixelated {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}

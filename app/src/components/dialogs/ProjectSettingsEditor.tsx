@@ -40,13 +40,13 @@ const schema = z.object({
 // Input Helper
 const InputField = ({ label, error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string, error?: string }) => (
     <div className="space-y-1">
-        <label className="text-xs font-bold uppercase text-neutral-500">{label}</label>
+        <label className="text-xs font-bold uppercase text-slate-500">{label}</label>
         <input
             className={clsx(
-                "w-full bg-neutral-950 border rounded px-3 py-2 text-sm focus:outline-none",
+                "w-full bg-slate-950 border rounded px-3 py-2 text-sm focus:outline-none",
                 error
                     ? "border-red-500 focus:border-red-500"
-                    : "border-neutral-700 focus:border-blue-500"
+                    : "border-slate-700 focus:border-blue-500"
             )}
             {...props}
         />
@@ -72,9 +72,9 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
     };
 
     return (
-        <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl w-[500px] overflow-hidden text-neutral-300">
-            <div className="bg-neutral-800 px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-                <h3 className="font-bold text-neutral-100">Project Settings</h3>
+        <div className="bg-slate-900 border border-slate-700 rounded-lg shadow-xl w-[500px] overflow-hidden text-slate-200">
+            <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+                <h3 className="font-bold text-slate-100">Project Settings</h3>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
@@ -96,11 +96,11 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
 
                     {/* Version (Read-only) */}
                     <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-neutral-500">Version</label>
+                        <label className="text-xs font-bold uppercase text-slate-500">Version</label>
                         <input
                             type="number"
                             disabled
-                            className="w-full bg-neutral-800 border border-neutral-800 rounded px-3 py-2 text-sm text-neutral-500 cursor-not-allowed"
+                            className="w-full bg-slate-800 border border-slate-800 rounded px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
                             value={initialProject?.version || 1}
                         />
                     </div>
@@ -121,7 +121,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                     />
                 </div>
 
-                <hr className="border-neutral-800" />
+                <hr className="border-slate-800" />
 
                 {/* Metadata */}
                 <div className="space-y-3">
@@ -131,20 +131,20 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                         error={errors.metadata?.author?.message}
                     />
                     <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-neutral-500">Description</label>
+                        <label className="text-xs font-bold uppercase text-slate-500">Description</label>
                         <textarea
                             rows={3}
-                            className="w-full bg-neutral-950 border border-neutral-700 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none resize-none"
+                            className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none resize-none"
                             {...register('metadata.description')}
                         />
                     </div>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t border-neutral-800">
+                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-4 py-2 rounded text-sm font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                        className="px-4 py-2 rounded text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                     >
                         Cancel
                     </button>

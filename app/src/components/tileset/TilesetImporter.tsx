@@ -23,13 +23,13 @@ type FormData = z.infer<typeof schema>;
 // Input Helper
 const InputField = ({ label, error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string, error?: string }) => (
     <div className="space-y-1">
-        <label className="text-xs font-bold uppercase text-neutral-500">{label}</label>
+        <label className="text-xs font-bold uppercase text-slate-500">{label}</label>
         <input
             className={clsx(
-                "w-full bg-neutral-950 border rounded px-3 py-2 text-sm focus:outline-none",
+                "w-full bg-slate-950 border rounded px-3 py-2 text-sm focus:outline-none",
                 error
                     ? "border-red-500 focus:border-red-500"
-                    : "border-neutral-700 focus:border-blue-500"
+                    : "border-slate-700 focus:border-blue-500"
             )}
             {...props}
         />
@@ -81,9 +81,9 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCanc
     };
 
     return (
-        <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl w-[500px] overflow-hidden text-neutral-300 flex flex-col max-h-[90vh]">
-            <div className="bg-neutral-800 px-4 py-3 border-b border-neutral-700">
-                <h3 className="font-bold text-neutral-100">Import Tileset</h3>
+        <div className="bg-slate-900 border border-slate-700 rounded-lg shadow-xl w-[500px] overflow-hidden text-slate-200 flex flex-col max-h-[90vh]">
+            <div className="bg-slate-800 px-4 py-3 border-b border-slate-700">
+                <h3 className="font-bold text-slate-100">Import Tileset</h3>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -120,15 +120,15 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCanc
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-neutral-500">Sprite Sheet (PNG)</label>
-                        <div className="border-2 border-dashed border-neutral-700 rounded-lg p-4 text-center hover:bg-neutral-800 transition-colors relative">
+                        <label className="text-xs font-bold uppercase text-slate-500">Sprite Sheet (PNG)</label>
+                        <div className="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:bg-slate-800 transition-colors relative">
                             <input
                                 type="file"
                                 accept="image/png"
                                 onChange={handleFileChange}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                             />
-                            <div className="text-sm text-neutral-400">
+                            <div className="text-sm text-slate-400">
                                 {selectedFile ? selectedFile.name : "Click or drag to upload PNG"}
                             </div>
                         </div>
@@ -136,18 +136,18 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCanc
 
                     {/* Preview */}
                     {previewUrl && (
-                        <div className="border border-neutral-700 rounded bg-neutral-950 p-2 overflow-auto max-h-48 flex justify-center">
+                        <div className="border border-slate-700 rounded bg-slate-950 p-2 overflow-auto max-h-48 flex justify-center">
                             <img src={previewUrl} alt="Preview" className="max-w-full object-contain image-pixelated" />
                         </div>
                     )}
                 </form>
             </div>
 
-            <div className="flex justify-end space-x-3 p-4 border-t border-neutral-800 bg-neutral-900">
+            <div className="flex justify-end space-x-3 p-4 border-t border-slate-800 bg-slate-900">
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-4 py-2 rounded text-sm font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                    className="px-4 py-2 rounded text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 >
                     Cancel
                 </button>

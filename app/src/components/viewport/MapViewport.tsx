@@ -22,7 +22,7 @@ export const MapViewport: React.FC = () => {
         }
 
         // 2. Clear
-        ctx.fillStyle = '#171717'; // neutral-900
+        ctx.fillStyle = '#171717'; // slate-900
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // 3. Apply Camera Transform
@@ -47,7 +47,7 @@ export const MapViewport: React.FC = () => {
             const pixelHeight = currentMap.height * 16;
 
             // Draw grid behind
-            ctx.strokeStyle = '#262626'; // neutral-800
+            ctx.strokeStyle = '#262626'; // slate-800
             ctx.lineWidth = 1 / camera.zoom;
             ctx.beginPath();
             for (let x = 0; x <= pixelWidth; x += 16) {
@@ -114,7 +114,7 @@ export const MapViewport: React.FC = () => {
             });
 
             // Draw Bounds Border
-            ctx.strokeStyle = '#525252'; // neutral-600
+            ctx.strokeStyle = '#525252'; // slate-600
             ctx.lineWidth = 2 / camera.zoom;
             ctx.strokeRect(0, 0, pixelWidth, pixelHeight);
         }
@@ -124,13 +124,13 @@ export const MapViewport: React.FC = () => {
     }, [camera, currentMap, /* Add window resize listener dep later */]);
 
     return (
-        <div className="w-full h-full relative overflow-hidden bg-neutral-900">
+        <div className="w-full h-full relative overflow-hidden bg-slate-900">
             <canvas
                 ref={canvasRef}
                 className="block touch-none"
             />
             {/* Overlay UI (e.g. Zoom level indicator) */}
-            <div className="absolute bottom-4 right-4 bg-neutral-800 text-neutral-400 text-xs px-2 py-1 rounded border border-neutral-700 pointer-events-none">
+            <div className="absolute bottom-4 right-4 bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded border border-slate-700 pointer-events-none">
                 {Math.round(camera.zoom * 100)}%
             </div>
         </div>
