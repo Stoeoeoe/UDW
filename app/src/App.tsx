@@ -15,18 +15,16 @@ import { useEditorStore } from './store/useEditorStore';
 
 function App() {
   const project = useEditorStore(state => state.project);
-  const [leftOpen] = useState(true);
-  const [rightOpen] = useState(true);
-  const [editorMode, setEditorMode] = useState<EditorMode>('maps');
+  const [editorMode, setEditorMode] = useState<EditorMode>('project');
 
   if (!project) {
     return <LandingScreen />;
   }
 
+  const isProjectMode = editorMode === 'project';
+
   const renderLeftPanelContent = () => {
     switch (editorMode) {
-      case 'project':
-        return <ProjectPanel />;
       case 'maps':
         return <MapsPanel />;
       case 'tilesets':
@@ -41,9 +39,11 @@ function App() {
   const LeftPanel = (
     <Flex h="full">
       <Sidebar activeMode={editorMode} onModeChange={setEditorMode} />
-      <Box flex={1} overflow="hidden">
-        {renderLeftPanelContent()}
-      </Box>
+      {!isProjectMode && (
+        <Box flex={1} overflow="hidden">
+          {renderLeftPanelContent()}
+        </Box>
+      )}
     </Flex>
   );
 
@@ -51,10 +51,11 @@ function App() {
     <AppLayout
       topBar={<TopBar />}
       leftPanel={LeftPanel}
-      rightPanel={<PropertiesPanel />}
-      viewport={<MainViewport mode={editorMode} />}
-      leftPanelOpen={leftOpen}
-      rightPanelOpen={rightOpen}
+      rightPanel={!isProjectMode ? <PropertiesPanel /> : null}
+      viewport={isProjectMode ? <ProjectPanel /> : <MainViewport mode={editorMode} />}
+      leftPanelOpen={true}
+      rightPanelOpen={!isProjectMode}
+      leftWidth={isProjectMode ? "16" : "80"}
     />
   );
 }

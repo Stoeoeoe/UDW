@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-    Box,
     Button,
     FormControl,
     FormLabel,
@@ -14,7 +13,6 @@ import {
     VStack,
     HStack,
     Divider,
-    Heading,
 } from '@chakra-ui/react';
 import { Project } from '../../types/schema';
 
@@ -85,117 +83,127 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
     };
 
     return (
-        <Box
-            bg="gray.900"
-            border="1px"
-            borderColor="gray.700"
-            rounded="lg"
-            shadow="2xl"
-            w="full"
-            maxW="500px"
-            overflow="hidden"
-        >
-            <Box bg="gray.800" px="4" py="3" borderBottom="1px" borderColor="gray.700">
-                <Heading size="sm">Project Settings</Heading>
-            </Box>
-
-            <form onSubmit={handleSubmit(onSubmit)}>
-                <VStack p="4" spacing="4" align="stretch">
-                    {/* Project Name */}
-                    <FormControl isInvalid={!!errors.name}>
-                        <FormLabel>Project Name</FormLabel>
-                        <Input
-                            placeholder="e.g. My Awesome Game"
-                            {...register('name')}
-                        />
-                        <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
-                    </FormControl>
-
-                    <SimpleGrid columns={2} spacing={4}>
-                        <FormControl isInvalid={!!errors.tileSize}>
-                            <FormLabel>Tile Size (px)</FormLabel>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ width: '100%' }}>
+            <VStack spacing="6" align="stretch">
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                    {/* Left Column: Core Info */}
+                    <VStack spacing={4} align="stretch">
+                        <FormControl isInvalid={!!errors.name}>
+                            <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Project Name</FormLabel>
                             <Input
-                                type="number"
-                                {...register('tileSize', {
-                                    setValueAs: v => v === '' ? 0 : Number(v)
-                                })}
+                                bg="gray.950"
+                                borderColor="gray.700"
+                                _hover={{ borderColor: 'blue.500' }}
+                                _focus={{ borderColor: 'blue.500', ring: 1, ringColor: 'blue.500' }}
+                                placeholder="e.g. My Awesome Game"
+                                {...register('name')}
                             />
-                            <FormErrorMessage>{errors.tileSize?.message}</FormErrorMessage>
+                            <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
                         </FormControl>
 
-                        <FormControl isReadOnly>
-                            <FormLabel>Version</FormLabel>
-                            <Input
-                                disabled={true}
-                                value={initialProject?.version || "1.0"}
-                            />
-                        </FormControl>
-                    </SimpleGrid>
+                        <SimpleGrid columns={2} spacing={4}>
+                            <FormControl isInvalid={!!errors.tileSize}>
+                                <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Tile Size (px)</FormLabel>
+                                <Input
+                                    bg="gray.950"
+                                    borderColor="gray.700"
+                                    type="number"
+                                    {...register('tileSize', {
+                                        setValueAs: v => v === '' ? 0 : Number(v)
+                                    })}
+                                />
+                                <FormErrorMessage>{errors.tileSize?.message}</FormErrorMessage>
+                            </FormControl>
 
-                    <SimpleGrid columns={2} spacing={4}>
-                        <FormControl isInvalid={!!errors.defaultMapWidth}>
-                            <FormLabel>Default Width</FormLabel>
-                            <Input
-                                type="number"
-                                {...register('defaultMapWidth', {
-                                    setValueAs: v => v === '' ? 0 : Number(v)
-                                })}
-                            />
-                            <FormErrorMessage>{errors.defaultMapWidth?.message}</FormErrorMessage>
-                        </FormControl>
+                            <FormControl isReadOnly>
+                                <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Version</FormLabel>
+                                <Input
+                                    bg="gray.800"
+                                    borderColor="gray.700"
+                                    disabled={true}
+                                    value={initialProject?.version || "1.0"}
+                                />
+                            </FormControl>
+                        </SimpleGrid>
 
-                        <FormControl isInvalid={!!errors.defaultMapHeight}>
-                            <FormLabel>Default Height</FormLabel>
-                            <Input
-                                type="number"
-                                {...register('defaultMapHeight', {
-                                    setValueAs: v => v === '' ? 0 : Number(v)
-                                })}
-                            />
-                            <FormErrorMessage>{errors.defaultMapHeight?.message}</FormErrorMessage>
-                        </FormControl>
-                    </SimpleGrid>
+                        <SimpleGrid columns={2} spacing={4}>
+                            <FormControl isInvalid={!!errors.defaultMapWidth}>
+                                <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Default Width</FormLabel>
+                                <Input
+                                    bg="gray.950"
+                                    borderColor="gray.700"
+                                    type="number"
+                                    {...register('defaultMapWidth', {
+                                        setValueAs: v => v === '' ? 0 : Number(v)
+                                    })}
+                                />
+                                <FormErrorMessage>{errors.defaultMapWidth?.message}</FormErrorMessage>
+                            </FormControl>
 
-                    <Divider />
+                            <FormControl isInvalid={!!errors.defaultMapHeight}>
+                                <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Default Height</FormLabel>
+                                <Input
+                                    bg="gray.950"
+                                    borderColor="gray.700"
+                                    type="number"
+                                    {...register('defaultMapHeight', {
+                                        setValueAs: v => v === '' ? 0 : Number(v)
+                                    })}
+                                />
+                                <FormErrorMessage>{errors.defaultMapHeight?.message}</FormErrorMessage>
+                            </FormControl>
+                        </SimpleGrid>
+                    </VStack>
 
-                    {/* Metadata */}
-                    <VStack spacing="3" align="stretch">
+                    {/* Right Column: Metadata */}
+                    <VStack spacing={4} align="stretch">
                         <FormControl isInvalid={!!errors.metadata?.author}>
-                            <FormLabel>Author</FormLabel>
+                            <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Author</FormLabel>
                             <Input
+                                bg="gray.950"
+                                borderColor="gray.700"
                                 {...register('metadata.author')}
                             />
                             <FormErrorMessage>{errors.metadata?.author?.message}</FormErrorMessage>
                         </FormControl>
 
-                        <FormControl isInvalid={!!errors.metadata?.description}>
-                            <FormLabel>Description</FormLabel>
+                        <FormControl isInvalid={!!errors.metadata?.description} flex={1} display="flex" flexDirection="column">
+                            <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">Description</FormLabel>
                             <Textarea
-                                rows={3}
+                                flex={1}
+                                bg="gray.950"
+                                borderColor="gray.700"
+                                rows={6}
                                 resize="none"
                                 {...register('metadata.description')}
                             />
                             <FormErrorMessage>{errors.metadata?.description?.message}</FormErrorMessage>
                         </FormControl>
                     </VStack>
+                </SimpleGrid>
 
-                    <HStack justify="flex-end" spacing="3" pt="4" borderTop="1px" borderColor="gray.800">
-                        <Button
-                            variant="ghost"
-                            onClick={onCancel}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            colorScheme="blue"
-                            fontWeight="bold"
-                        >
-                            Save Project
-                        </Button>
-                    </HStack>
-                </VStack>
-            </form>
-        </Box>
+                <Divider borderColor="gray.800" />
+
+                <HStack justify="flex-end" spacing="3">
+                    <Button
+                        variant="ghost"
+                        color="gray.500"
+                        _hover={{ color: 'white', bg: 'gray.800' }}
+                        onClick={onCancel}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        colorScheme="blue"
+                        px={8}
+                        fontWeight="bold"
+                        shadow="0 4px 12px rgba(49, 130, 206, 0.3)"
+                    >
+                        Save Project
+                    </Button>
+                </HStack>
+            </VStack>
+        </form>
     );
 };

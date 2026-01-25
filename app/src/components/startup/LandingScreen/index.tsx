@@ -94,7 +94,7 @@ export const LandingScreen: React.FC = () => {
     };
 
     return (
-        <Box h="100vh" w="100vw" bg="gray.950" display="flex" alignItems="center" justifyContent="center">
+        <Box h="100vh" w="100vw" bg="gray.900" display="flex" alignItems="center" justifyContent="center">
             <VStack spacing={12} maxW="container.md" textAlign="center" w="full" px={4}>
                 <Box>
                     <Heading size="2xl" color="white" mb={2}>Map Editor</Heading>

@@ -11,6 +11,7 @@ interface EditorStore extends EditorState {
     closeProject: () => void;
     loadProjectResources: () => Promise<void>; // Load all maps, tilesets, sprites
     loadSprite: (path: string, blob: Blob) => Promise<string>; // Returns object URL
+    updateProject: (project: Project) => Promise<void>;
 
     // Map Actions
     setCurrentMap: (map: Map) => void;
@@ -146,6 +147,14 @@ export const useEditorStore = create<EditorStore>()(
             });
 
             return url;
+        },
+
+        updateProject: async (project) => {
+            const { fileSystem } = await import('../lib/fileSystem');
+            await fileSystem.saveJson('', 'project.json', project);
+            set(state => {
+                state.project = project;
+            });
         },
 
         setCurrentMap: (map) => {

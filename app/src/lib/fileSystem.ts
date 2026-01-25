@@ -155,9 +155,9 @@ export class FileSystemManager {
     }
 
     /**
-     * Save a JSON file (Map or Tileset)
+     * Save a JSON file (Map, Tileset, or Project)
      */
-    async saveJson(subDir: 'maps' | 'tilesets', filename: string, data: any): Promise<void> {
+    async saveJson(subDir: 'maps' | 'tilesets' | '', filename: string, data: any): Promise<void> {
         if (this.isElectron()) {
             await (window as any).ipcRenderer.invoke('app:fs-write-json', {
                 projectPath: this.projectPath,
