@@ -25,7 +25,7 @@ interface ProjectSettingsEditorProps {
 }
 
 const DEFAULT_PROJECT: Project = {
-    version: 1,
+    version: "1.0",
     name: "New Project",
     tileSize: 16,
     defaultMapWidth: 32,
@@ -78,7 +78,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
 
     const onSubmit = (data: FormData) => {
         const project: Project = {
-            version: initialProject?.version || 1,
+            version: initialProject?.version || "1.0",
             ...data
         };
         onSave(project);
