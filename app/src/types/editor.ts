@@ -75,4 +75,4 @@ export interface ValidationError {
     };
 }
 
-export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities';
+export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities' | 'settings';

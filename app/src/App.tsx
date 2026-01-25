@@ -2,7 +2,7 @@ import { Box, Flex } from '@chakra-ui/react';
 import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/navigation/Sidebar';
 import { ProjectPanel } from './components/panels/ProjectPanel';
-import { MapEditor, TilesetEditor, EntityEditor } from './components/editor';
+import { MapEditor, TilesetEditor, EntityEditor, SettingsEditor } from './components/editor';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 
@@ -25,6 +25,8 @@ function App() {
         return <TilesetEditor />;
       case 'entities':
         return <EntityEditor />;
+      case 'settings':
+        return <SettingsEditor />;
       default:
         return null;
     }
