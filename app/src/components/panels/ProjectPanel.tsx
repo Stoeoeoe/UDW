@@ -111,7 +111,6 @@ export const ProjectPanel: React.FC = () => {
                             <ProjectSettingsEditor
                                 initialProject={project}
                                 onSave={handleSave}
-                                onCancel={() => { }}
                             />
                         </Box>
                     </Box>
