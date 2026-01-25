@@ -10,12 +10,24 @@ import {
     FormLabel,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { TilesetInspector } from '../tileset/TilesetInspector';
 
 export const PropertiesPanel: React.FC = () => {
+    const editorMode = useEditorStore(state => state.mode);
     const selectedEntityIds = useEditorStore(state => state.selectedEntityIds);
     const currentMap = useEditorStore(state => state.currentMap);
+    const activeTilesetId = useEditorStore(state => state.activeTilesetId);
+    const tilesets = useEditorStore(state => state.tilesets);
 
-    // Derived selection logic
+    // Contextual rendering
+    if (editorMode === 'tilesets') {
+        const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
+        if (activeTileset) {
+            return <TilesetInspector tileset={activeTileset} />;
+        }
+    }
+
+    // Default Entity Properties
     const selectionCount = selectedEntityIds.size;
     const singleSelectedEntity = selectionCount === 1
         ? currentMap?.entities.find(e => e.id === Array.from(selectedEntityIds)[0])

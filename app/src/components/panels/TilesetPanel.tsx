@@ -1,199 +1,155 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
+    VStack,
+    HStack,
     Box,
-    Flex,
     Text,
     IconButton,
-    Select,
-    Grid,
+    Button,
+    useDisclosure,
     Modal,
     ModalOverlay,
     ModalContent,
-    useDisclosure,
+    useToast,
+    Spacer,
+    Heading,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { TilesetImporter } from '../tileset/TilesetImporter';
-import { Tileset, TileDefinition } from '../../types/schema';
-import { fileSystem } from '../../lib/fileSystem';
+import { WangEditor } from '../tileset/WangEditor';
 
 export const TilesetPanel: React.FC = () => {
-    const tilesets = useEditorStore(state => state.tilesets);
-    const loadedSprites = useEditorStore(state => state.loadedSprites);
-    const selectedTileId = useEditorStore(state => state.selectedTileId);
-    const selectTile = useEditorStore(state => state.selectTile);
-    const loadSprite = useEditorStore(state => state.loadSprite);
+    const tilesets = Array.from(useEditorStore(state => state.tilesets).values());
+    const activeId = useEditorStore(state => state.activeTilesetId);
+    const setActive = useEditorStore(state => state.setActiveTileset);
+    const deleteTileset = useEditorStore(state => state.deleteTileset);
 
-    const { isOpen: isImporterOpen, onOpen: openImporter, onClose: closeImporter } = useDisclosure();
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const toast = useToast();
 
-    const [activeTilesetId, setActiveTilesetId] = useState<string | null>(
-        tilesets.size > 0 ? Array.from(tilesets.keys())[0] : null
-    );
+    const activeTileset = activeId ? useEditorStore.getState().tilesets.get(activeId) : null;
 
-    const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
-    const activeSprite = activeTileset ? loadedSprites.get(activeTileset.spriteSheet) : null;
-
-    // derived tiles list
-    const tiles = useMemo(() => {
-        if (!activeTileset) return [];
-        return activeTileset.tiles;
-    }, [activeTileset]);
-
-    const handleImport = async (config: Tileset, file: File) => {
-        try {
-            // 1. Save the sprite image to assets/
-            const spritePath = await fileSystem.saveAsset(file.name, file);
-
-            // 2. Update config with actual saved path
-            config.spriteSheet = spritePath;
-
-            // 3. Load Sprite to Store
-            await loadSprite(spritePath, file);
-
-            // 4. Get image dimensions to calculate columns/count
-            const img = useEditorStore.getState().loadedSprites.get(spritePath);
-            if (!img) throw new Error("Failed to load sprite image");
-
-            const columns = Math.floor(img.width / config.tileWidth);
-            const rows = Math.floor(img.height / config.tileHeight);
-            const tileCount = columns * rows;
-
-            // 5. Generate default tiles
-            const tiles: TileDefinition[] = [];
-            for (let i = 0; i < tileCount; i++) {
-                tiles.push({
-                    id: `${config.id}_${i}`,
-                    spriteIndex: i,
-                    tags: [],
-                    collision: 'none'
+    const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+        e.stopPropagation();
+        if (confirm(`Are you sure you want to delete tileset "${name}"? This will not delete the image file, but the metadata will be lost.`)) {
+            try {
+                await deleteTileset(id);
+                toast({
+                    title: "Tileset deleted",
+                    status: "info",
+                    duration: 2000,
+                });
+            } catch (err: any) {
+                toast({
+                    title: "Error deleting tileset",
+                    description: err.message,
+                    status: "error",
                 });
             }
-
-            const fullTileset: Tileset = {
-                ...config,
-                columns,
-                tileCount,
-                tiles
-            };
-
-            // 6. Save tileset to disk
-            await fileSystem.saveTileset(fullTileset);
-
-            // 7. Add to Store
-            useEditorStore.setState(state => {
-                state.tilesets.set(fullTileset.id, fullTileset);
-            });
-
-            setActiveTilesetId(fullTileset.id);
-            closeImporter();
-
-        } catch (e) {
-            console.error(e);
-            alert("Failed to import tileset: " + (e as Error).message);
         }
     };
 
     return (
-        <Flex direction="column" h="full" bg="gray.900" color="gray.200" position="relative">
-            {/* Header / Selector */}
-            <Box p="3" borderBottom="1px" borderColor="gray.800">
-                <Flex justify="space-between" align="center" mb="2">
-                    <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">
-                        Tilesets
-                    </Text>
-                    <IconButton
-                        aria-label="Add Tileset"
-                        icon={<Text fontSize="lg">+</Text>}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white', bg: 'gray.800' }}
-                        onClick={openImporter}
-                    />
-                </Flex>
+        <Flex direction="column" h="full" bg="gray.950" borderLeft="1px" borderColor="gray.800">
+            {/* Top Section: Tileset List */}
+            <VStack flex="0 0 45%" spacing={0} align="stretch" borderBottom="1px" borderColor="gray.800">
+                <Box bg="gray.900" borderBottom="1px" borderColor="gray.800">
+                    <HStack px={4} py={3} justify="space-between">
+                        <Text fontSize="xs" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.400">
+                            Tilesets
+                        </Text>
+                        <Button
+                            leftIcon={<AddIcon fontSize="10px" />}
+                            size="xs"
+                            colorScheme="blue"
+                            variant="solid"
+                            onClick={onOpen}
+                            px={3}
+                            fontWeight="bold"
+                        >
+                            IMPORT
+                        </Button>
+                    </HStack>
+                </Box>
 
-                {tilesets.size > 0 && (
-                    <Select
-                        size="xs"
-                        bg="gray.800"
-                        borderColor="gray.700"
-                        _hover={{ borderColor: 'gray.600' }}
-                        _focus={{ borderColor: 'blue.500', boxShadow: 'none' }}
-                        value={activeTilesetId || ''}
-                        onChange={(e) => setActiveTilesetId(e.target.value)}
-                    >
-                        {Array.from(tilesets.values()).map(ts => (
-                            <option key={ts.id} value={ts.id}>{ts.name}</option>
-                        ))}
-                    </Select>
-                )}
-            </Box>
-
-            {/* Tiles Grid */}
-            <Box flex={1} overflowY="auto" p="2" bg="blackAlpha.200">
-                {!activeTileset && (
-                    <Text textAlign="center" fontSize="xs" color="gray.600" mt="10">
-                        No tilesets loaded.
-                    </Text>
-                )}
-
-                {activeTileset && !activeSprite && (
-                    <Text textAlign="center" fontSize="xs" color="red.700" mt="10">
-                        Image not found: {activeTileset.spriteSheet}
-                    </Text>
-                )}
-
-                {activeTileset && activeSprite && (
-                    <Grid
-                        templateColumns={`repeat(auto-fill, minmax(${activeTileset.tileWidth}px, 1fr))`}
-                        gap="1"
-                    >
-                        {tiles.map(tile => {
-                            // Calculate background position
-                            const col = tile.spriteIndex % activeTileset.columns;
-                            const row = Math.floor(tile.spriteIndex / activeTileset.columns);
-
-                            return (
+                <Box flex={1} overflowY="auto" p={2}>
+                    <VStack spacing={1} align="stretch">
+                        {tilesets.length === 0 ? (
+                            <Box py={8} textAlign="center" px={4}>
+                                <Text fontSize="xs" color="gray.600">No tilesets in project</Text>
+                            </Box>
+                        ) : (
+                            tilesets.map(ts => (
                                 <Box
-                                    as="button"
-                                    key={tile.id}
-                                    title={tile.id}
-                                    position="relative"
-                                    rounded="sm"
-                                    overflow="hidden"
+                                    key={ts.id}
+                                    px={3}
+                                    py={2}
+                                    rounded="md"
+                                    cursor="pointer"
+                                    bg={activeId === ts.id ? "blue.900" : "transparent"}
                                     border="1px"
-                                    borderColor={selectedTileId === tile.id ? "blue.500" : "transparent"}
-                                    boxShadow={selectedTileId === tile.id ? "0 0 0 1px #3182ce" : "none"}
-                                    zIndex={selectedTileId === tile.id ? 10 : 0}
-                                    _hover={{ borderColor: selectedTileId === tile.id ? "blue.500" : "gray.600" }}
-                                    transition="all 0.1s"
-                                    w={`${activeTileset.tileWidth}px`}
-                                    h={`${activeTileset.tileHeight}px`}
-                                    onClick={() => selectTile(tile.id)}
+                                    borderColor={activeId === ts.id ? "blue.500" : "transparent"}
+                                    _hover={{ bg: activeId === ts.id ? "blue.900" : "gray.800" }}
+                                    onClick={() => setActive(ts.id)}
+                                    transition="all 0.2s"
                                 >
-                                    <Box
-                                        w="100%"
-                                        h="100%"
-                                        backgroundImage={`url(${activeSprite.src})`}
-                                        backgroundPosition={`-${col * activeTileset.tileWidth}px -${row * activeTileset.tileHeight}px`}
-                                        style={{ imageRendering: 'pixelated' }}
-                                    />
+                                    <HStack justify="space-between" align="center">
+                                        <VStack align="start" spacing={0}>
+                                            <Text fontSize="xs" fontWeight="bold" noOfLines={1} color={activeId === ts.id ? "white" : "gray.300"}>
+                                                {ts.name}
+                                            </Text>
+                                            <Text fontSize="9px" color="gray.500" fontWeight="mono">
+                                                {ts.tileWidth}x{ts.tileHeight} • {ts.tileCount} tiles
+                                            </Text>
+                                        </VStack>
+
+                                        <IconButton
+                                            aria-label="Delete Tileset"
+                                            icon={<DeleteIcon fontSize="10px" />}
+                                            size="xs"
+                                            variant="ghost"
+                                            colorScheme="red"
+                                            opacity={0.3}
+                                            _hover={{ opacity: 1 }}
+                                            onClick={(e) => handleDelete(e, ts.id, ts.name)}
+                                        />
+                                    </HStack>
                                 </Box>
-                            );
-                        })}
-                    </Grid>
+                            ))
+                        )}
+                    </VStack>
+                </Box>
+            </VStack>
+
+            {/* Bottom Section: Terrain Config (Dynamic) */}
+            <VStack flex={1} spacing={0} align="stretch" overflow="hidden" bg="gray.950">
+                <Box bg="gray.900" borderBottom="1px" borderColor="gray.800" px={4} py={2}>
+                    <Text fontSize="xs" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.400">
+                        Terrain
+                    </Text>
+                </Box>
+
+                {activeTileset ? (
+                    <Box flex={1} overflowY="auto">
+                        <WangEditor tileset={activeTileset} />
+                    </Box>
+                ) : (
+                    <Flex flex={1} align="center" justify="center" p={8} textAlign="center" opacity={0.3}>
+                        <Text fontSize="xs" color="gray.500">Select a tileset to configure terrain rules</Text>
+                    </Flex>
                 )}
-            </Box>
+            </VStack>
 
             {/* Importer Modal */}
-            <Modal isOpen={isImporterOpen} onClose={closeImporter} size="xl" isCentered>
-                <ModalOverlay backdropFilter="blur(4px)" bg="blackAlpha.800" />
+            <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
+                <ModalOverlay backdropFilter="blur(4px)" />
                 <ModalContent bg="transparent" border="none" boxShadow="none">
-                    <TilesetImporter
-                        onSave={handleImport}
-                        onCancel={closeImporter}
-                    />
+                    <TilesetImporter onImport={onClose} onCancel={onClose} />
                 </ModalContent>
             </Modal>
         </Flex>
     );
 };
+
+import { Flex } from '@chakra-ui/react';

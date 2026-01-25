@@ -167,8 +167,25 @@ export class FileSystemManager {
             });
         } else {
             if (!this.projectRoot) throw new Error("No project open.");
-            const dir = await this.projectRoot.getDirectoryHandle(subDir, { create: true });
+            const dir = await this.projectRoot.getDirectoryHandle(subDir || '.', { create: true });
             await this.writeJSONWeb(dir, filename, data);
+        }
+    }
+
+    /**
+     * Delete a JSON file
+     */
+    async deleteJson(subDir: 'maps' | 'tilesets' | '', filename: string): Promise<void> {
+        if (this.isElectron()) {
+            await (window as any).ipcRenderer.invoke('app:fs-delete-json', {
+                projectPath: this.projectPath,
+                subDir,
+                filename
+            });
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const dir = await this.projectRoot.getDirectoryHandle(subDir || '.', { create: false });
+            await dir.removeEntry(filename);
         }
     }
 
@@ -214,6 +231,21 @@ export class FileSystemManager {
             const fileHandle = await currentDir.getFileHandle(parts[parts.length - 1]);
             return await fileHandle.getFile();
         }
+    }
+
+    async selectAsset(): Promise<string | null> {
+        if (this.isElectron()) {
+            return await (window as any).ipcRenderer.invoke('app:select-asset');
+        }
+        return null; // Browser should use standard <input type="file">
+    }
+
+    async readFileAsBlob(filePath: string): Promise<Blob> {
+        if (this.isElectron()) {
+            const data = await (window as any).ipcRenderer.invoke('app:read-file-buffer', filePath);
+            return new Blob([data]);
+        }
+        throw new Error("Direct file reading from path is only supported in Electron.");
     }
 
     private async writeJSONWeb(dirHandle: FileSystemDirectoryHandle, filename: string, data: any): Promise<void> {

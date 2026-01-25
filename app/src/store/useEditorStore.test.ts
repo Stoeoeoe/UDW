@@ -44,7 +44,7 @@ describe('useEditorStore', () => {
         const mockPath = "/test/path";
 
         const { loadProject } = useEditorStore.getState();
-        await loadProject(mockPath, mockProject);
+        await loadProject(mockPath, mockProject as any);
 
         const state = useEditorStore.getState();
         expect(state.project).toEqual(mockProject);
@@ -68,7 +68,7 @@ describe('useEditorStore', () => {
         expect(useEditorStore.getState().activeTool).toBe('tilePaint');
     });
 
-    it('should update project and persist changes', async () => {
+    it('should update project', async () => {
         const { updateProject, loadProject } = useEditorStore.getState();
         const initialProject = {
             version: "1.0",
@@ -79,11 +79,21 @@ describe('useEditorStore', () => {
             metadata: { author: "", description: "" }
         };
 
-        await loadProject("/path", initialProject);
+        await loadProject("/path", initialProject as any);
 
         const updatedProject = { ...initialProject, name: "Updated Name" };
-        await updateProject(updatedProject);
+        await updateProject(updatedProject as any);
 
         expect(useEditorStore.getState().project?.name).toBe("Updated Name");
+    });
+
+    it('should handle tileset selection', () => {
+        const { setActiveTileset, setSelectedTile } = useEditorStore.getState();
+
+        setActiveTileset('village');
+        expect(useEditorStore.getState().activeTilesetId).toBe('village');
+
+        setSelectedTile(5);
+        expect(useEditorStore.getState().selectedTileIndex).toBe(5);
     });
 });

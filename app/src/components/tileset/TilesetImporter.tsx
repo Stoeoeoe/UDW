@@ -1,210 +1,232 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import React, { useState } from 'react';
 import {
-    Box,
-    Button,
-    FormControl,
-    FormLabel,
-    Input,
-    FormErrorMessage,
-    SimpleGrid,
     VStack,
     HStack,
+    Box,
     Text,
+    Button,
+    Input,
+    FormControl,
+    FormLabel,
     Heading,
     Image,
+    SimpleGrid,
+    useToast,
 } from '@chakra-ui/react';
+import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
+import { fileSystem } from '../../lib/fileSystem';
 
 interface TilesetImporterProps {
-    onSave: (tilesetConfig: Tileset, file: File) => void;
+    onImport: () => void;
     onCancel: () => void;
 }
 
-const schema = z.object({
-    id: z.string().min(2, "ID is required").regex(/^[a-z0-9-_]+$/, "ID must be kebab-case (lowercase, numbers, dashes)"),
-    name: z.string().min(2, "Name is required"),
-    tileWidth: z.number().min(8).max(128),
-    tileHeight: z.number().min(8).max(128),
-});
+export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCancel }) => {
+    const addTileset = useEditorStore(state => state.addTileset);
+    const toast = useToast();
 
-type FormData = z.infer<typeof schema>;
+    const [fileData, setFileData] = useState<{ name: string; path: string; url: string; blob: Blob } | null>(null);
+    const [tilesetName, setTilesetName] = useState('');
+    const [tileSize, setTileSize] = useState(16);
+    const [imageDimensions, setImageDimensions] = useState({ w: 0, h: 0 });
+    const [isProcessing, setIsProcessing] = useState(false);
 
-export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCancel }) => {
-    const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-        resolver: zodResolver(schema),
-        defaultValues: {
-            tileWidth: 16,
-            tileHeight: 16
-        }
-    });
+    const handleSelectFile = async () => {
+        try {
+            const rawPath = await fileSystem.selectAsset();
+            if (!rawPath) return;
 
-    const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+            setIsProcessing(true);
+            const blob = await fileSystem.readFileAsBlob(rawPath);
+            const url = URL.createObjectURL(blob);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
+            // Extract filename from path
+            const name = rawPath.split(/[\\/]/).pop() || 'tileset';
+
+            const img = new globalThis.Image();
+            img.src = url;
+            await new Promise((resolve) => (img.onload = resolve));
+
+            setImageDimensions({ w: img.width, h: img.height });
+            setFileData({
+                name,
+                path: rawPath,
+                url,
+                blob
+            });
+            setTilesetName(name.replace(/\.[^/.]+$/, ""));
+        } catch (e: any) {
+            toast({
+                title: "File error",
+                description: e.message,
+                status: "error"
+            });
+        } finally {
+            setIsProcessing(false);
         }
     };
 
-    const onSubmit = (data: FormData) => {
-        if (!selectedFile) {
-            alert("Please select a sprite sheet image.");
-            return;
+    const handleImport = async () => {
+        if (!fileData) return;
+
+        setIsProcessing(true);
+        try {
+            // 1. Copy image to project/assets
+            const internalPath = await fileSystem.saveAsset(fileData.name, fileData.blob);
+
+            // 2. Define tileset
+            const columns = Math.floor(imageDimensions.w / tileSize);
+            const rows = Math.floor(imageDimensions.h / tileSize);
+            const tileCount = columns * rows;
+
+            // Generate default tile definitions for every tile
+            const tiles: Record<number, any> = {};
+            for (let i = 0; i < tileCount; i++) {
+                const col = i % columns;
+                const row = Math.floor(i / columns);
+                tiles[i] = {
+                    id: `tile_${col}_${row}`,
+                    spriteIndex: i,
+                    collision: { type: 'none' }
+                };
+            }
+
+            const newTileset: Tileset = {
+                version: 1,
+                id: tilesetName.toLowerCase().replace(/\s+/g, '-'),
+                name: tilesetName,
+                spriteSheet: internalPath,
+                tileWidth: tileSize,
+                tileHeight: tileSize,
+                columns: columns,
+                tileCount: tileCount,
+                tiles: tiles,
+                wangSets: []
+            };
+
+            // 3. Save to store (this also saves the JSON)
+            await addTileset(newTileset);
+
+            toast({
+                title: "Tileset Imported",
+                description: `Created ${tileCount} tiles using ${tileSize}px grid.`,
+                status: "success",
+                duration: 3000,
+            });
+            onImport();
+        } catch (e: any) {
+            toast({
+                title: "Import Failed",
+                description: e.message,
+                status: "error",
+            });
+        } finally {
+            setIsProcessing(false);
         }
-
-        const newTileset: Tileset = {
-            version: 1,
-            id: data.id,
-            name: data.name,
-            spriteSheet: `assets/${selectedFile.name}`, // Virtual path
-            tileWidth: data.tileWidth,
-            tileHeight: data.tileHeight,
-            columns: 0, // Placeholder
-            tileCount: 0, // Placeholder
-            tiles: []
-        };
-
-        onSave(newTileset, selectedFile);
     };
 
     return (
-        <Box
-            bg="gray.900"
-            border="1px"
-            borderColor="gray.700"
-            rounded="lg"
-            shadow="2xl"
-            w="full"
-            maxW="500px"
-            overflow="hidden"
-            display="flex"
-            flexDirection="column"
-            maxH="90vh"
-        >
-            <Box bg="gray.800" px="4" py="3" borderBottom="1px" borderColor="gray.700">
-                <Heading size="sm">Import Tileset</Heading>
-            </Box>
+        <Box bg="gray.900" p={8} rounded="2xl" border="2px" borderColor="gray.800" shadow="2xl">
+            <VStack spacing={6} align="stretch">
+                <VStack align="start" spacing={1}>
+                    <Heading size="md" color="white">Import New Tileset</Heading>
+                    <Text color="gray.500" fontSize="sm">Select an image from your computer to add to the project</Text>
+                </VStack>
 
-            <Box flex={1} overflowY="auto" p="4">
-                <form id="tileset-form" onSubmit={handleSubmit(onSubmit)}>
-                    <VStack spacing="4" align="stretch">
-                        <SimpleGrid columns={2} spacing={4}>
-                            <FormControl isInvalid={!!errors.id}>
-                                <FormLabel>Tileset ID</FormLabel>
-                                <Input
-                                    placeholder="e.g. dungeon-base"
-                                    {...register('id')}
-                                />
-                                <FormErrorMessage>{errors.id?.message}</FormErrorMessage>
-                            </FormControl>
-                            <FormControl isInvalid={!!errors.name}>
-                                <FormLabel>Display Name</FormLabel>
-                                <Input
-                                    placeholder="e.g. Dungeon Base"
-                                    {...register('name')}
-                                />
-                                <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
-                            </FormControl>
-                        </SimpleGrid>
-
-                        <SimpleGrid columns={2} spacing={4}>
-                            <FormControl isInvalid={!!errors.tileWidth}>
-                                <FormLabel>Tile Width</FormLabel>
-                                <Input
-                                    type="number"
-                                    {...register('tileWidth', { valueAsNumber: true })}
-                                />
-                                <FormErrorMessage>{errors.tileWidth?.message}</FormErrorMessage>
-                            </FormControl>
-                            <FormControl isInvalid={!!errors.tileHeight}>
-                                <FormLabel>Tile Height</FormLabel>
-                                <Input
-                                    type="number"
-                                    {...register('tileHeight', { valueAsNumber: true })}
-                                />
-                                <FormErrorMessage>{errors.tileHeight?.message}</FormErrorMessage>
-                            </FormControl>
-                        </SimpleGrid>
-
-                        <FormControl>
-                            <FormLabel>Sprite Sheet (PNG)</FormLabel>
+                {!fileData ? (
+                    <Box
+                        h="48"
+                        border="2px dashed"
+                        borderColor="gray.700"
+                        rounded="xl"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        _hover={{ borderColor: 'blue.500', bg: 'whiteAlpha.50' }}
+                        cursor="pointer"
+                        onClick={handleSelectFile}
+                        transition="all 0.2s"
+                    >
+                        <VStack spacing={3}>
                             <Box
-                                border="2px"
-                                borderStyle="dashed"
-                                borderColor="gray.700"
+                                w="12"
+                                h="12"
+                                bg="blue.900"
                                 rounded="lg"
-                                p="4"
-                                textAlign="center"
-                                position="relative"
-                                _hover={{ bg: 'gray.800', borderColor: 'gray.600' }}
-                                transition="all 0.2s"
-                            >
-                                <Input
-                                    type="file"
-                                    accept="image/png"
-                                    onChange={handleFileChange}
-                                    position="absolute"
-                                    top="0"
-                                    left="0"
-                                    w="100%"
-                                    h="100%"
-                                    opacity="0"
-                                    cursor="pointer"
-                                />
-                                <Text fontSize="sm" color="gray.400">
-                                    {selectedFile ? selectedFile.name : "Click or drag to upload PNG"}
-                                </Text>
-                            </Box>
-                        </FormControl>
-
-                        {/* Preview */}
-                        {previewUrl && (
-                            <Box
-                                border="1px"
-                                borderColor="gray.700"
-                                rounded="md"
-                                bg="gray.950"
-                                p="2"
-                                overflow="auto"
-                                maxH="48"
                                 display="flex"
+                                alignItems="center"
                                 justifyContent="center"
+                                color="blue.200"
                             >
-                                <Image
-                                    src={previewUrl}
-                                    alt="Preview"
-                                    maxW="full"
-                                    objectFit="contain"
-                                    style={{ imageRendering: 'pixelated' }}
-                                />
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
                             </Box>
-                        )}
-                    </VStack>
-                </form>
-            </Box>
+                            <VStack spacing={0}>
+                                <Text color="gray.300" fontWeight="bold">Select Tileset Image</Text>
+                                <Text color="gray.600" fontSize="xs">PNG format recommended</Text>
+                            </VStack>
+                        </VStack>
+                    </Box>
+                ) : (
+                    <SimpleGrid columns={2} spacing={8}>
+                        <Box bg="blackAlpha.400" rounded="xl" p={4} display="flex" alignItems="center" justifyContent="center" border="1px" borderColor="gray.800">
+                            <Image src={fileData.url} maxH="200px" objectFit="contain" style={{ imageRendering: 'pixelated' }} />
+                        </Box>
 
-            <HStack justify="flex-end" spacing="3" p="4" borderTop="1px" borderColor="gray.800" bg="gray.900">
-                <Button
-                    variant="ghost"
-                    onClick={onCancel}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="submit"
-                    form="tileset-form"
-                    colorScheme="blue"
-                    isDisabled={!selectedFile}
-                >
-                    Import
-                </Button>
-            </HStack>
+                        <VStack spacing={4} align="stretch">
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="xs" fontWeight="bold" textTransform="uppercase">Tileset Name</FormLabel>
+                                <Input
+                                    bg="gray.950"
+                                    borderColor="gray.700"
+                                    value={tilesetName}
+                                    onChange={(e) => setTilesetName(e.target.value)}
+                                />
+                            </FormControl>
+
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="xs" fontWeight="bold" textTransform="uppercase">Tile Size (px)</FormLabel>
+                                <Input
+                                    type="number"
+                                    bg="gray.950"
+                                    borderColor="gray.700"
+                                    value={tileSize}
+                                    onChange={(e) => setTileSize(Number(e.target.value))}
+                                />
+                            </FormControl>
+
+                            <Box bg="whiteAlpha.50" p={3} rounded="lg">
+                                <HStack justify="space-between" fontSize="xs">
+                                    <Text color="gray.400">Dimensions</Text>
+                                    <Text color="white" fontWeight="mono">{imageDimensions.w} x {imageDimensions.h}px</Text>
+                                </HStack>
+                                <HStack justify="space-between" fontSize="xs" mt={1}>
+                                    <Text color="gray.400">Grid Resolution</Text>
+                                    <Text color="blue.300" fontWeight="bold">{Math.floor(imageDimensions.w / tileSize)} x {Math.floor(imageDimensions.h / tileSize)} tiles</Text>
+                                </HStack>
+                            </Box>
+                        </VStack>
+                    </SimpleGrid>
+                )}
+
+                <HStack justify="flex-end" spacing={4} pt={2}>
+                    <Button variant="ghost" onClick={fileData ? () => setFileData(null) : onCancel} size="sm">
+                        {fileData ? "Change File" : "Cancel"}
+                    </Button>
+                    <Button
+                        colorScheme="blue"
+                        isDisabled={!fileData || isProcessing}
+                        isLoading={isProcessing}
+                        onClick={handleImport}
+                        size="sm"
+                        px={10}
+                        fontWeight="black"
+                        boxShadow="0 4px 14px rgba(49, 130, 206, 0.4)"
+                    >
+                        IMPORT
+                    </Button>
+                </HStack>
+            </VStack>
         </Box>
     );
 };

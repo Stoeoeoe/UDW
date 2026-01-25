@@ -22,7 +22,8 @@ export interface EditorState {
     // Selection & active tool
     activeTool: ToolType;
     selectedLayerId: string | null;
-    selectedTileId: string | null;        // For tile painting
+    selectedTileIndex: number | null;     // Selected index within active tileset
+    activeTilesetId: string | null;       // Currently visible tileset in palette
     selectedEntityTypeId: string | null;  // For entity placement
     selectedEntityIds: Set<string>;       // Currently selected entities
 

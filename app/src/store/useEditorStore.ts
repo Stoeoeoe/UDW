@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { castDraft } from 'immer';
 import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
-import { Project, Map, Layer, Variation, EntityInstance } from '../types/schema';
+import { Project, Map, Layer, Variation, EntityInstance, Tileset, TileDefinition } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 
 interface EditorStore extends EditorState {
@@ -21,8 +21,16 @@ interface EditorStore extends EditorState {
     setActiveTool: (tool: ToolType) => void;
     setMode: (mode: EditorMode) => void;
 
+    // Tileset actions
+    setActiveTileset: (id: string | null) => void;
+    setSelectedTile: (index: number | null) => void;
+    addTileset: (tileset: Tileset) => Promise<void>;
+    updateTileset: (id: string, updates: Partial<Tileset>) => Promise<void>;
+    deleteTileset: (id: string) => Promise<void>;
+    updateTileDefinition: (tilesetId: string, index: number, definition: TileDefinition) => void;
+
     // Tile actions
-    paintTile: (layerId: string, x: number, y: number, tileId: string) => void;
+    paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
     eraseTile: (layerId: string, x: number, y: number) => void;
 
     // Entity actions
@@ -36,7 +44,6 @@ interface EditorStore extends EditorState {
     reorderLayer: (layerId: string, newZOrder: number) => void;
     toggleLayerVisibility: (layerId: string) => void;
     selectLayer: (layerId: string) => void;
-    selectTile: (tileId: string) => void;
 
     // Variation actions
     setActiveVariation: (variationId: string | null) => void;
@@ -65,7 +72,8 @@ export const useEditorStore = create<EditorStore>()(
         timeOfDay: 0.5,
         activeTool: 'select',
         selectedLayerId: null,
-        selectedTileId: null,
+        selectedTileIndex: null,
+        activeTilesetId: null,
         selectedEntityTypeId: null,
         selectedEntityIds: new Set(),
         camera: { x: 0, y: 0, zoom: 1.0 },
@@ -89,7 +97,8 @@ export const useEditorStore = create<EditorStore>()(
                 state.tilesets = new globalThis.Map();
                 state.loadedSprites = new globalThis.Map();
                 state.selectedLayerId = null;
-                state.selectedTileId = null;
+                state.activeTilesetId = null;
+                state.selectedTileIndex = null;
             });
             recentProjects.add(project.name, path);
         },
@@ -101,6 +110,8 @@ export const useEditorStore = create<EditorStore>()(
                 state.currentMap = null;
                 state.tilesets = new globalThis.Map();
                 state.loadedSprites = new globalThis.Map();
+                state.activeTilesetId = null;
+                state.selectedTileIndex = null;
             });
         },
 
@@ -111,7 +122,7 @@ export const useEditorStore = create<EditorStore>()(
             const tilesets = await fileSystem.loadAllTilesets();
             for (const tileset of tilesets) {
                 set(state => {
-                    state.tilesets.set(tileset.id, tileset);
+                    state.tilesets.set(tileset.id, castDraft(tileset));
                 });
 
                 // Load sprite for each tileset
@@ -125,12 +136,11 @@ export const useEditorStore = create<EditorStore>()(
 
             // 2. Load all maps (metadata only, not setting as current)
             const maps = await fileSystem.loadAllMaps();
-            console.log(`Loaded ${maps.length} maps:`, maps.map(m => m.name));
 
             // Optionally load the first map as current
             if (maps.length > 0) {
                 set(state => {
-                    state.currentMap = maps[0];
+                    state.currentMap = castDraft(maps[0]);
                 });
             }
         },
@@ -161,7 +171,7 @@ export const useEditorStore = create<EditorStore>()(
 
         setCurrentMap: (map) => {
             set(state => {
-                state.currentMap = map;
+                state.currentMap = castDraft(map);
             });
         },
 
@@ -181,10 +191,76 @@ export const useEditorStore = create<EditorStore>()(
             });
         },
 
-        paintTile: (layerId, x, y, tileId) => set(state => {
+        setActiveTileset: (id) => set(state => {
+            state.activeTilesetId = id;
+            state.selectedTileIndex = null;
+        }),
+
+        setSelectedTile: (index) => set(state => {
+            state.selectedTileIndex = index;
+        }),
+
+        addTileset: async (tileset) => {
+            const { fileSystem } = await import('../lib/fileSystem');
+            await fileSystem.saveJson('tilesets', `${tileset.id}.tileset.json`, tileset);
+
+            set(state => {
+                state.tilesets.set(tileset.id, castDraft(tileset));
+                if (!state.activeTilesetId) state.activeTilesetId = tileset.id;
+            });
+
+            // Load sprite
+            try {
+                const blob = await fileSystem.loadAsset(tileset.spriteSheet);
+                await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
+            } catch (e) {
+                console.warn("Failed to load sprite for new tileset:", e);
+            }
+        },
+
+        updateTileset: async (id, updates) => {
+            const { fileSystem } = await import('../lib/fileSystem');
+            let updatedTileset: Tileset | undefined;
+
+            set(state => {
+                const ts = state.tilesets.get(id);
+                if (ts) {
+                    Object.assign(ts, updates);
+                    updatedTileset = JSON.parse(JSON.stringify(ts)); // Clone for safety
+                }
+            });
+
+            if (updatedTileset) {
+                await fileSystem.saveJson('tilesets', `${id}.tileset.json`, updatedTileset);
+            }
+        },
+
+        deleteTileset: async (id) => {
+            const { fileSystem } = await import('../lib/fileSystem');
+
+            set(state => {
+                state.tilesets.delete(id);
+                if (state.activeTilesetId === id) {
+                    state.activeTilesetId = null;
+                    state.selectedTileIndex = null;
+                }
+            });
+
+            await fileSystem.deleteJson('tilesets', `${id}.tileset.json`);
+        },
+
+        updateTileDefinition: (tilesetId, index, definition) => set(state => {
+            const ts = state.tilesets.get(tilesetId);
+            if (ts) {
+                ts.tiles[index] = castDraft(definition);
+            }
+        }),
+
+        paintTile: (layerId, x, y, tilesetId, tileIndex) => set(state => {
             const layer = state.currentMap?.layers.find(l => l.id === layerId);
             if (layer && layer.data[y] && !layer.locked) {
-                layer.data[y][x] = tileId;
+                // String format for composite reference: "tilesetId:index"
+                layer.data[y][x] = `${tilesetId}:${tileIndex}`;
             }
         }),
 
@@ -197,7 +273,7 @@ export const useEditorStore = create<EditorStore>()(
 
         placeEntity: (entity) => set(state => {
             if (state.currentMap) {
-                state.currentMap.entities.push(entity);
+                state.currentMap.entities.push(castDraft(entity));
             }
         }),
 
@@ -218,7 +294,7 @@ export const useEditorStore = create<EditorStore>()(
 
         addLayer: (layer) => set(state => {
             if (state.currentMap) {
-                state.currentMap.layers.push(layer);
+                state.currentMap.layers.push(castDraft(layer));
             }
         }),
 
@@ -241,11 +317,6 @@ export const useEditorStore = create<EditorStore>()(
 
         selectLayer: (layerId) => set(state => {
             state.selectedLayerId = layerId;
-        }),
-
-        selectTile: (tileId) => set(state => {
-            state.selectedTileId = tileId;
-            // Also set tool to paint automatically? Maybe later.
         }),
 
         setActiveVariation: (variationId) => {

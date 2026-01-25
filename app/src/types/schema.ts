@@ -14,39 +14,58 @@ export interface Project {
 }
 
 export interface Tileset {
-    version: string;
+    version: number;
     id: string;                   // Unique identifier (kebab-case)
     name: string;                 // Display name
-    spriteSheet: string;          // Relative path to PNG file
+    spriteSheet: string;          // Relative path to PNG file (from project root or assets)
     tileWidth: number;            // Width in pixels
     tileHeight: number;           // Height in pixels
     columns: number;              // Number of columns in sprite sheet
     tileCount: number;            // Total number of tiles
-    tiles: TileDefinition[];
-    terrainDefinitions?: TerrainDefinition[];  // Optional, Phase 2
+    tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)
+    wangSets?: WangSet[];         // Modern autotiling logic (Tiled-compatible)
 }
 
 export interface TileDefinition {
-    id: string;                   // Stable identifier (e.g., "grass_01")
-    spriteIndex: number;          // Position in sprite sheet (row * columns + col)
-    tags: string[];               // Semantic tags (e.g., ["walkable", "grass"])
-    collision: CollisionType;
-    metadata?: Record<string, any>;  // Custom key-value data
+    id?: string;                  // Optional semantic string ID (e.g. "player_spawn")
+    tags?: string[];              // Semantic tags (e.g. ["walkable", "water"])
+    collision?: CollisionDefinition;
+    properties?: PropertyInstance[];
 }
 
-export type CollisionType = "none" | "full" | "partial";
+export interface CollisionDefinition {
+    type: "none" | "full" | "complex";
+    shapes?: CollisionShape[];    // Reserved for complex geometry (rects, polygons)
+}
 
-export interface TerrainDefinition {
+export interface CollisionShape {
+    id: string;
+    type: "rectangle" | "polygon" | "circle";
+    points?: [number, number][];  // Local tile coordinates (0.0 to 1.0 or pixels)
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+}
+
+export interface WangSet {
     id: string;
     name: string;
-    matchMode: "edge" | "corner" | "blob";
-    tiles: TerrainTile[];
+    type: "corner" | "edge" | "mixed";
+    colors: WangColor[];
+    tileMappings: Record<number, number[]>; // tileIndex -> [T, TR, R, BR, B, BL, L, TL]
 }
 
-export interface TerrainTile {
-    tileId: string;
-    edges?: number;               // Bitmask for edge matching
-    corners?: number;             // Bitmask for corner matching
+export interface WangColor {
+    id: number;                   // 1-indexed (0 is none/neutral)
+    name: string;
+    color: string;                // Hex color for editor visualization
+    labelIcon?: string;           // Optional placeholder for terrain type
+}
+
+export interface PropertyInstance {
+    key: string;
+    value: any;
 }
 
 export interface Map {
