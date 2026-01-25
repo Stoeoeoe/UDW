@@ -35,6 +35,9 @@ export const MapViewport: React.FC = () => {
     const placeEntity = useEditorStore(state => state.placeEntity);
     const selectEntity = useEditorStore(state => state.selectEntity);
     const setHoveredTile = useEditorStore(state => state.setHoveredTile);
+    const setActiveTileset = useEditorStore(state => state.setActiveTileset);
+    const setSelectedTile = useEditorStore(state => state.setSelectedTile);
+    const selectLayer = useEditorStore(state => state.selectLayer);
 
     // Resources
     const tilesets = useEditorStore(state => state.tilesets);
@@ -44,7 +47,6 @@ export const MapViewport: React.FC = () => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [drawStart, setDrawStart] = useState<{ x: number, y: number } | null>(null);
     const [mouseWorld, setMouseWorld] = useState({ x: 0, y: 0 });
-    const lastMousePos = useRef({ x: 0, y: 0 });
     const spaceHeld = useRef(false);
 
     const panZoom = usePanZoom({
@@ -342,6 +344,27 @@ export const MapViewport: React.FC = () => {
             window.removeEventListener('keyup', handleKeyUp);
         };
     }, []);
+
+    // Ensure prerequisites for painting are present when paint tool is active.
+    useEffect(() => {
+        if (activeTool === 'tilePaint') {
+            // Ensure a layer is selected
+            if (!selectedLayerId && currentMap && currentMap.layers.length > 0) {
+                selectLayer(currentMap.layers[0].id);
+            }
+
+            // Ensure a tileset is active
+            if (!activeTilesetId && tilesets && tilesets.size > 0) {
+                const firstTs = Array.from(tilesets.values())[0];
+                if (firstTs) setActiveTileset(firstTs.id);
+            }
+
+            // Ensure a tile index is selected
+            if (selectedTileIndex === null) {
+                setSelectedTile(0);
+            }
+        }
+    }, [activeTool, currentMap, tilesets, selectedLayerId, activeTilesetId, selectedTileIndex, selectLayer, setActiveTileset, setSelectedTile]);
 
     // Cancel drawing when tool or drawMode changes to avoid sticky draw states
     useEffect(() => {

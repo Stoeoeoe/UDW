@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { VStack, Text, Center, Button, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
 // icons
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -16,6 +16,7 @@ import { TilesetPalette } from '../../tileset/TilesetPalette';
  */
 export const MapEditor: React.FC = () => {
     const currentMap = useEditorStore(state => state.currentMap);
+    const setActiveTool = useEditorStore(state => state.setActiveTool);
     const { isOpen, onOpen, onClose } = useDisclosure();
 
     // No map loaded state — use shared EmptyScreen
@@ -39,6 +40,13 @@ export const MapEditor: React.FC = () => {
             </>
         );
     }
+
+    // When a map becomes active, switch to tile paint tool by default
+    useEffect(() => {
+        if (currentMap) {
+            setActiveTool('tilePaint');
+        }
+    }, [currentMap, setActiveTool]);
 
     return (
         <EditorLayout
