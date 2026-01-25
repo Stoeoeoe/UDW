@@ -5,5 +5,6 @@ export { MapEditor } from './map/MapEditor';
 export { TilesetEditor } from './tileset/TilesetEditor';
 export { EntityEditor } from './entity/EntityEditor';
 export { SettingsEditor } from './settings/SettingsEditor';
+export { TerrainEditor } from './terrain/TerrainEditor';
 
 export * from './common';

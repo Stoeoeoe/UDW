@@ -62,6 +62,11 @@ interface EditorStore extends EditorState {
     selectEntity: (id: string | null) => void;
     setSelectedEntityType: (id: string | null) => void;
 
+    // Terrain actions
+    addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
+    updateTerrainType: (id: string, updates: Partial<{ displayName: string; color: string }>) => Promise<void>;
+    deleteTerrainType: (id: string) => Promise<void>;
+
     // Camera actions
     setCamera: (camera: Partial<EditorState['camera']>) => void;
     resetCamera: () => void;
@@ -102,6 +107,7 @@ export const useEditorStore = create<EditorStore>()(
             inspectorOpen: true,
             variationsOpen: true
         },
+        terrainTypes: [],
         validationErrors: [],
 
         // Actions implementation
@@ -118,6 +124,7 @@ export const useEditorStore = create<EditorStore>()(
                 state.activeTilesetId = null;
                 state.selectedTileIndex = null;
                 state.activeVariationId = null;
+                state.terrainTypes = [];
             });
             recentProjects.add(project.name, path);
         },
@@ -160,6 +167,14 @@ export const useEditorStore = create<EditorStore>()(
                     state.selectedTileIndex = 0;
                 }
             });
+
+            // 1.5 Load terrain types from project.json (if present)
+            const proj = useEditorStore.getState().project;
+            if (proj && Array.isArray((proj as any).terrainTypes)) {
+                set(state => {
+                    state.terrainTypes = (proj as any).terrainTypes.map((t: any) => castDraft(t));
+                });
+            }
 
             // 2. Load all maps
             const maps = await fileSystem.loadAllMaps();
@@ -640,6 +655,49 @@ export const useEditorStore = create<EditorStore>()(
                 state.activeTool = 'entityPlace';
             }
         }),
+
+        // Terrain actions
+        addTerrainType: async (terrain) => {
+            set(state => {
+                state.terrainTypes.push(castDraft(terrain));
+            });
+            // Persist into project.json if project open
+            const { fileSystem } = await import('../lib/fileSystem');
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await fileSystem.saveJson('', 'project.json', projectToSave);
+                set(state => { state.project = projectToSave as any; });
+            }
+        },
+
+        updateTerrainType: async (id, updates) => {
+            set(state => {
+                const t = state.terrainTypes.find(tt => tt.id === id);
+                if (t) Object.assign(t, updates as any);
+            });
+            const { fileSystem } = await import('../lib/fileSystem');
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await fileSystem.saveJson('', 'project.json', projectToSave);
+                set(state => { state.project = projectToSave as any; });
+            }
+        },
+
+        deleteTerrainType: async (id) => {
+            set(state => {
+                state.terrainTypes = state.terrainTypes.filter(t => t.id !== id);
+                if (state.selectedTerrainId === id) state.selectedTerrainId = null;
+            });
+            const { fileSystem } = await import('../lib/fileSystem');
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await fileSystem.saveJson('', 'project.json', projectToSave);
+                set(state => { state.project = projectToSave as any; });
+            }
+        },
 
         setCamera: (camera) => set(state => {
             state.camera = { ...state.camera, ...camera };

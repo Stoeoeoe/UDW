@@ -49,8 +49,17 @@ export interface EditorState {
         variationsOpen: boolean;
     };
 
+    // Project-level terrain types (for autotiling / labeling)
+    terrainTypes: TerrainType[];
+
     // Validation
     validationErrors: ValidationError[];
+}
+
+export interface TerrainType {
+    id: string;
+    displayName: string;
+    color: string; // hex
 }
 
 export type ToolType =
@@ -75,4 +84,4 @@ export interface ValidationError {
     };
 }
 
-export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities' | 'settings';
+export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities' | 'settings' | 'terrain';

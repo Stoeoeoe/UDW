@@ -85,6 +85,16 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
         await fs.writeFile(path.join(dirPath, filename), JSON.stringify(data, null, 2));
     });
 
+    ipcMain.handle('app:fs-read-json', async (_event, { projectPath, subDir, filename }) => {
+        try {
+            const filePath = path.join(projectPath, subDir || '', filename);
+            const content = await fs.readFile(filePath, 'utf-8');
+            return JSON.parse(content);
+        } catch (e) {
+            return null;
+        }
+    });
+
     ipcMain.handle('app:fs-delete-json', async (_event, { projectPath, subDir, filename }) => {
         const filePath = path.join(projectPath, subDir, filename);
         await fs.unlink(filePath);

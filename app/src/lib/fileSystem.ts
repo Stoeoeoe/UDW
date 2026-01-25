@@ -240,6 +240,30 @@ export class FileSystemManager {
         return null; // Browser should use standard <input type="file">
     }
 
+    /**
+     * Read an arbitrary JSON file from the project (root or subdir)
+     */
+    async readJson(subDir: string, filename: string): Promise<any | null> {
+        if (this.isElectron()) {
+            return await (window as any).ipcRenderer.invoke('app:fs-read-json', {
+                projectPath: this.projectPath,
+                subDir,
+                filename
+            });
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const dir = subDir ? await this.projectRoot.getDirectoryHandle(subDir, { create: false }) : this.projectRoot;
+            try {
+                const fh = await dir.getFileHandle(filename);
+                const file = await fh.getFile();
+                const text = await file.text();
+                return JSON.parse(text);
+            } catch (e) {
+                return null;
+            }
+        }
+    }
+
     async readFileAsBlob(filePath: string): Promise<Blob> {
         if (this.isElectron()) {
             const data = await (window as any).ipcRenderer.invoke('app:read-file-buffer', filePath);

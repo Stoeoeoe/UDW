@@ -45,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
             <NavIcon icon="🗺️" label="Maps" mode="maps" active={activeMode === 'maps'} onClick={onModeChange} />
             <NavIcon icon="🎨" label="Tiles" mode="tilesets" active={activeMode === 'tilesets'} onClick={onModeChange} />
             <NavIcon icon="👾" label="Entities" mode="entities" active={activeMode === 'entities'} onClick={onModeChange} />
+            <NavIcon icon="🧭" label="Terrain" mode="terrain" active={activeMode === 'terrain'} onClick={onModeChange} />
             <Spacer />
             <NavIcon icon="⚙️" label="Settings" mode="settings" active={activeMode === 'settings'} onClick={onModeChange} />
         </VStack>

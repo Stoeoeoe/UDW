@@ -11,6 +11,8 @@ export interface Project {
         created?: string;           // ISO date string
         modified?: string;          // ISO date string
     };
+    // Optional project-level terrain types for autotiling and labeling
+    terrainTypes?: { id: string; displayName: string; color: string }[];
 }
 
 export interface Tileset {
