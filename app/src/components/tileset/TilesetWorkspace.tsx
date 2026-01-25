@@ -50,7 +50,7 @@ export const TilesetWorkspace: React.FC = () => {
                     <TilesetCanvas
                         tileset={activeTileset}
                         selectedIndex={selectedIndex}
-                        onSelect={setSelectedIndex}
+                        onSelect={(i) => setSelectedIndex(i)}
                     />
                 </Box>
             </Flex>

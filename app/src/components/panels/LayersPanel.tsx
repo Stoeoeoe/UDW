@@ -6,8 +6,10 @@ import {
     VStack,
     IconButton,
     HStack,
+    useToast,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { DeleteIcon, AddIcon } from '@chakra-ui/icons';
 
 // Icon helpers
 const EyeOpen = () => <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" /><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" /></svg>;
@@ -19,80 +21,116 @@ export const LayersPanel: React.FC = () => {
     const selectedLayerId = useEditorStore(state => state.selectedLayerId);
     const selectLayer = useEditorStore(state => state.selectLayer);
     const toggleVisibility = useEditorStore(state => state.toggleLayerVisibility);
+    const addLayer = useEditorStore(state => state.addLayer);
+    const removeLayer = useEditorStore(state => state.removeLayer);
+    const toast = useToast();
 
-    // If no map loaded, show placeholder
     if (!currentMap) {
         return (
             <Box p="4" fontSize="xs" color="gray.500" fontStyle="italic" textAlign="center" mt="10">
-                No map active.
+                No active map.
             </Box>
-        )
+        );
     }
 
-    // Reverse layers to show top-on-top visually
     const layers = [...currentMap.layers].reverse();
+
+    const handleAddLayer = () => {
+        const name = prompt("Enter layer name:");
+        if (!name) return;
+
+        const id = `layer-${Date.now()}`;
+        addLayer({
+            id,
+            name,
+            kind: 'visual',
+            visible: true,
+            locked: false,
+            opacity: 1,
+            zOrder: currentMap.layers.length,
+            data: Array(currentMap.height).fill(null).map(() => Array(currentMap.width).fill(null))
+        });
+        selectLayer(id);
+    };
+
+    const handleDeleteLayer = (id: string, name: string) => {
+        if (confirm(`Delete layer "${name}"?`)) {
+            removeLayer(id);
+            toast({ title: "Layer removed", status: "info", duration: 2000 });
+        }
+    };
 
     return (
         <Flex direction="column" h="full" bg="gray.900" color="gray.200">
             {/* Header */}
-            <Flex p="3" borderBottom="1px" borderColor="gray.800" align="center" justify="space-between">
-                <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">
+            <Flex p="3" borderBottom="1px" borderColor="gray.800" align="center" justify="space-between" bg="gray.950">
+                <Text fontSize="10px" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
                     Layers
                 </Text>
                 <IconButton
                     aria-label="Add Layer"
-                    icon={<Text fontSize="lg">+</Text>}
+                    icon={<AddIcon fontSize="10px" />}
                     size="xs"
                     variant="ghost"
-                    color="gray.500"
+                    color="gray.400"
                     _hover={{ color: 'white', bg: 'gray.800' }}
+                    onClick={handleAddLayer}
                 />
             </Flex>
 
             {/* List */}
-            <Box flex={1} overflowY="auto">
-                <VStack spacing={0} align="stretch">
+            <Box flex={1} overflowY="auto" p={1}>
+                <VStack spacing={1} align="stretch">
                     {layers.map(layer => (
-                        <Flex
+                        <Box
                             key={layer.id}
                             onClick={() => selectLayer(layer.id)}
-                            align="center"
                             px="3"
                             py="2"
-                            fontSize="sm"
+                            rounded="md"
                             cursor="pointer"
-                            borderLeftWidth="2px"
+                            bg={layer.id === selectedLayerId ? "blue.900" : "transparent"}
+                            border="1px"
                             borderColor={layer.id === selectedLayerId ? "blue.500" : "transparent"}
-                            bg={layer.id === selectedLayerId ? "gray.800" : "transparent"}
-                            color={layer.id === selectedLayerId ? "white" : "inherit"}
-                            _hover={{ bg: layer.id === selectedLayerId ? "gray.800" : "gray.800" }}
-                            transition="colors 0.2s"
+                            _hover={{ bg: layer.id === selectedLayerId ? "blue.900" : "whiteAlpha.50" }}
+                            transition="all 0.1s"
                         >
-                            {/* Visibility Toggle */}
-                            <IconButton
-                                aria-label="Toggle Visibility"
-                                icon={layer.visible ? <EyeOpen /> : <EyeClosed />}
-                                size="xs"
-                                variant="ghost"
-                                mr="3"
-                                color={layer.visible ? "gray.400" : "gray.600"}
-                                _hover={{ color: 'white', bg: 'transparent' }}
-                                onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id); }}
-                            />
+                            <HStack spacing={2}>
+                                {/* Visibility Toggle */}
+                                <IconButton
+                                    aria-label="Toggle Visibility"
+                                    icon={layer.visible ? <EyeOpen /> : <EyeClosed />}
+                                    size="xs"
+                                    variant="ghost"
+                                    color={layer.visible ? "blue.400" : "gray.600"}
+                                    _hover={{ bg: 'transparent', color: 'blue.300' }}
+                                    onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id); }}
+                                />
 
-                            {/* Name */}
-                            <Text flex={1} isTruncated noOfLines={1} userSelect="none" color={!layer.visible ? "gray.500" : "inherit"}>
-                                {layer.name}
-                            </Text>
+                                {/* Name */}
+                                <Text flex={1} fontSize="xs" fontWeight={layer.id === selectedLayerId ? "bold" : "normal"} color={!layer.visible ? "gray.600" : "inherit"}>
+                                    {layer.name}
+                                </Text>
 
-                            {/* Icons */}
-                            <HStack spacing="2" color="gray.500">
-                                {layer.locked && <Lock />}
-                                <Box fontSize="10px" textTransform="uppercase" fontFamily="mono" bg="gray.800" px="1" rounded="sm" color="gray.600">
-                                    {layer.kind[0]}
-                                </Box>
+                                {/* Action Icons */}
+                                <HStack spacing="1">
+                                    {layer.locked && <Lock />}
+                                    <Box fontSize="8px" fontWeight="bold" textTransform="uppercase" fontFamily="mono" bg="blackAlpha.500" px="1" rounded="sm" color="gray.500">
+                                        {layer.kind[0]}
+                                    </Box>
+                                    <IconButton
+                                        aria-label="Delete"
+                                        icon={<DeleteIcon fontSize="10px" />}
+                                        size="xs"
+                                        variant="ghost"
+                                        colorScheme="red"
+                                        opacity={0.3}
+                                        _hover={{ opacity: 1 }}
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteLayer(layer.id, layer.name); }}
+                                    />
+                                </HStack>
                             </HStack>
-                        </Flex>
+                        </Box>
                     ))}
                 </VStack>
             </Box>

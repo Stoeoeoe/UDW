@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     VStack,
     HStack,
@@ -11,8 +11,7 @@ import {
     ModalOverlay,
     ModalContent,
     useToast,
-    Spacer,
-    Heading,
+    Flex,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
@@ -151,5 +150,3 @@ export const TilesetPanel: React.FC = () => {
         </Flex>
     );
 };
-
-import { Flex } from '@chakra-ui/react';

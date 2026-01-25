@@ -8,18 +8,28 @@ import {
     Input,
     FormControl,
     FormLabel,
+    Switch,
+    Select,
+    NumberInput,
+    NumberInputField,
+    Heading,
+    HStack,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
+import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
+import { resolveEntities } from '../../lib/mapUtils';
 
 export const PropertiesPanel: React.FC = () => {
     const editorMode = useEditorStore(state => state.mode);
-    const selectedEntityIds = useEditorStore(state => state.selectedEntityIds);
+    const selectedEntityId = useEditorStore(state => state.selectedEntityId);
+    const updateEntityProperties = useEditorStore(state => state.updateEntityProperties);
     const currentMap = useEditorStore(state => state.currentMap);
+    const activeVariationId = useEditorStore(state => state.activeVariationId);
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const tilesets = useEditorStore(state => state.tilesets);
 
-    // Contextual rendering
+    // Contextual rendering for Tileset mode
     if (editorMode === 'tilesets') {
         const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
         if (activeTileset) {
@@ -27,74 +37,142 @@ export const PropertiesPanel: React.FC = () => {
         }
     }
 
-    // Default Entity Properties
-    const selectionCount = selectedEntityIds.size;
-    const singleSelectedEntity = selectionCount === 1
-        ? currentMap?.entities.find(e => e.id === Array.from(selectedEntityIds)[0])
-        : null;
+    // Resolve entities for the current variation
+    const resolvedEntities = currentMap ? resolveEntities(currentMap, activeVariationId) : [];
+    const selectedEntity = resolvedEntities.find(e => e.id === selectedEntityId);
+    const entityType = selectedEntity ? DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntity.typeId) : null;
+
+    const handlePropertyChange = (key: string, value: any) => {
+        if (selectedEntityId) {
+            updateEntityProperties(selectedEntityId, { [key]: value });
+        }
+    };
 
     return (
-        <Flex direction="column" h="full" bg="gray.900" color="gray.200">
+        <Flex direction="column" h="full" bg="gray.950" color="gray.200">
             {/* Header */}
-            <Box p="3" borderBottom="1px" borderColor="gray.800">
-                <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">
-                    Properties
-                </Text>
+            <Box bg="gray.900" borderBottom="1px" borderColor="gray.800" px={4} py={3}>
+                <VStack align="start" spacing={0}>
+                    <Text fontSize="xs" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
+                        Inspector
+                    </Text>
+                    <Heading size="xs" color="white">
+                        {selectedEntity ? (entityType?.displayName || 'Entity') : 'Selection'}
+                    </Heading>
+                </VStack>
             </Box>
 
-            <Box p="4" overflowY="auto" flex={1}>
-                <VStack spacing="6" align="stretch">
-                    {/* Scenario: Nothing Selected */}
-                    {selectionCount === 0 && (
-                        <VStack mt="10" spacing="2" textAlign="center">
-                            <Text color="gray.600">No selection</Text>
-                            <Text fontSize="xs" color="gray.500">Select an entity or tile to view properties</Text>
+            <Box p={4} overflowY="auto" flex={1}>
+                {!selectedEntity ? (
+                    <VStack mt="10" spacing={2} textAlign="center" opacity={0.4}>
+                        <Text fontSize="4xl">🔍</Text>
+                        <Text color="gray.500" fontSize="sm">No Object Selected</Text>
+                        <Text fontSize="10px" color="gray.600">Select an entity on the map to view and edit properties</Text>
+                    </VStack>
+                ) : (
+                    <VStack align="stretch" spacing={5}>
+                        {/* Static Identity Section */}
+                        <VStack align="stretch" spacing={3}>
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Core ID</FormLabel>
+                                <Input
+                                    size="xs"
+                                    variant="filled"
+                                    bg="gray.900"
+                                    value={selectedEntity.id}
+                                    isReadOnly
+                                    fontFamily="mono"
+                                    _hover={{ bg: 'gray.800' }}
+                                />
+                            </FormControl>
+
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Entity Type</FormLabel>
+                                <Text fontSize="xs" color="blue.400" fontWeight="bold">{selectedEntity.typeId}</Text>
+                            </FormControl>
+
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Position</FormLabel>
+                                <HStack>
+                                    <Text fontSize="xs" color="gray.400" w="8">X:</Text>
+                                    <Text fontSize="xs" fontWeight="bold">{selectedEntity.position[0]}</Text>
+                                    <Box w={4} />
+                                    <Text fontSize="xs" color="gray.400" w="8">Y:</Text>
+                                    <Text fontSize="xs" fontWeight="bold">{selectedEntity.position[1]}</Text>
+                                </HStack>
+                            </FormControl>
                         </VStack>
-                    )}
 
-                    {/* Scenario: Single Entity Selected */}
-                    {singleSelectedEntity && (
-                        <VStack spacing="4" align="stretch">
-                            {/* Header Info */}
-                            <FormControl>
-                                <FormLabel fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase">ID</FormLabel>
-                                <Box bg="gray.800" px="2" py="1.5" rounded="md" fontSize="sm" color="gray.300" fontFamily="mono" userSelect="all">
-                                    {singleSelectedEntity.id}
-                                </Box>
-                            </FormControl>
+                        <Divider borderColor="gray.800" />
 
-                            <FormControl>
-                                <FormLabel fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase">Type</FormLabel>
-                                <Text fontSize="sm" color="blue.400" fontWeight="medium">
-                                    {singleSelectedEntity.typeId}
-                                </Text>
-                            </FormControl>
+                        {/* Dynamic Properties Section */}
+                        <VStack align="stretch" spacing={4}>
+                            <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">Behavior Properties</Text>
 
-                            <Divider borderColor="gray.800" />
+                            {entityType?.properties.map(prop => {
+                                const currentValue = selectedEntity.properties[prop.key] ?? prop.defaultValue;
 
-                            {/* Properties (Dynamic) */}
-                            <VStack spacing="3" align="stretch">
-                                <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase">Custom Properties</Text>
-                                {/* Placeholder for dynamic property loop */}
-                                {Object.entries(singleSelectedEntity.properties).map(([key, value]) => (
-                                    <FormControl key={key}>
-                                        <FormLabel fontSize="xs" color="gray.400" mb="1">{key}</FormLabel>
-                                        <Input
-                                            size="sm"
-                                            value={String(value)}
-                                            isReadOnly // Read-only until we implement updates
-                                            bg="gray.800"
-                                            border="none"
-                                            rounded="md"
-                                            color="gray.200"
-                                            _focus={{ ring: 1, ringColor: 'blue.500' }}
-                                        />
+                                return (
+                                    <FormControl key={prop.key}>
+                                        <FormLabel fontSize="xs" color="gray.300" mb={1}>{prop.label}</FormLabel>
+
+                                        {prop.type === 'string' && (
+                                            <Input
+                                                size="sm"
+                                                bg="gray.900"
+                                                borderColor="gray.800"
+                                                value={currentValue}
+                                                onChange={(e) => handlePropertyChange(prop.key, e.target.value)}
+                                            />
+                                        )}
+
+                                        {prop.type === 'number' && (
+                                            <NumberInput
+                                                size="sm"
+                                                value={currentValue}
+                                                min={prop.constraints?.min}
+                                                max={prop.constraints?.max}
+                                                onChange={(_, val) => handlePropertyChange(prop.key, val)}
+                                            >
+                                                <NumberInputField bg="gray.900" borderColor="gray.800" />
+                                            </NumberInput>
+                                        )}
+
+                                        {prop.type === 'boolean' && (
+                                            <Switch
+                                                colorScheme="blue"
+                                                isChecked={currentValue}
+                                                onChange={(e) => handlePropertyChange(prop.key, e.target.checked)}
+                                            />
+                                        )}
+
+                                        {prop.type === 'enum' && (
+                                            <Select
+                                                size="sm"
+                                                bg="gray.900"
+                                                borderColor="gray.800"
+                                                value={currentValue}
+                                                onChange={(e) => handlePropertyChange(prop.key, e.target.value)}
+                                            >
+                                                {prop.constraints?.options?.map(opt => (
+                                                    <option key={opt} value={opt} style={{ background: '#1a202c' }}>{opt}</option>
+                                                ))}
+                                            </Select>
+                                        )}
+
+                                        {prop.description && (
+                                            <Text fontSize="9px" color="gray.600" mt={1}>{prop.description}</Text>
+                                        )}
                                     </FormControl>
-                                ))}
-                            </VStack>
+                                );
+                            })}
+
+                            {(!entityType || entityType.properties.length === 0) && (
+                                <Text fontSize="xs" color="gray.600" fontStyle="italic">No configurable properties</Text>
+                            )}
                         </VStack>
-                    )}
-                </VStack>
+                    </VStack>
+                )}
             </Box>
         </Flex>
     );

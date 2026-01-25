@@ -7,6 +7,7 @@ import { MapsPanel } from './components/panels/MapsPanel';
 import { TilesetPanel } from './components/panels/TilesetPanel';
 import { EntitiesPanel } from './components/panels/EntitiesPanel';
 import { PropertiesPanel } from './components/panels/PropertiesPanel';
+import { TilesetPalette } from './components/tileset/TilesetPalette';
 import { MainViewport } from './components/viewport/MainViewport';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
@@ -21,6 +22,7 @@ function App() {
   }
 
   const isProjectMode = editorMode === 'project';
+  const isMapsMode = editorMode === 'maps';
 
   const renderLeftPanelContent = () => {
     switch (editorMode) {
@@ -36,7 +38,7 @@ function App() {
   };
 
   const LeftPanel = (
-    <Flex h="full">
+    <Flex h="full" w="full">
       <Sidebar activeMode={editorMode} onModeChange={setEditorMode} />
       {!isProjectMode && (
         <Box flex={1} overflow="hidden">
@@ -46,11 +48,27 @@ function App() {
     </Flex>
   );
 
+  const RightPanel = (
+    <Flex h="full" direction="column" w="full">
+      {/* Properties / Inspector on Top */}
+      <Box flex={1} overflow="hidden">
+        <PropertiesPanel />
+      </Box>
+
+      {/* Tileset Palette on Bottom (Only in Map Mode) */}
+      {isMapsMode && (
+        <Box flex={1} overflow="hidden" minH="200px">
+          <TilesetPalette />
+        </Box>
+      )}
+    </Flex>
+  );
+
   return (
     <AppLayout
       topBar={<TopBar />}
       leftPanel={LeftPanel}
-      rightPanel={!isProjectMode ? <PropertiesPanel /> : null}
+      rightPanel={!isProjectMode ? RightPanel : null}
       viewport={isProjectMode ? <ProjectPanel /> : <MainViewport mode={editorMode} />}
       leftPanelOpen={true}
       rightPanelOpen={!isProjectMode}

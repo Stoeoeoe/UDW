@@ -15,7 +15,7 @@ export interface EditorState {
     currentMapPath: string | null;
 
     // Variation & temporal context
-    activeVariation: string | null;       // null = base
+    activeVariationId: string | null;       // null = base
     timePreviewEnabled: boolean;
     timeOfDay: number;                    // 0.0 to 1.0, normalized
 
@@ -23,9 +23,15 @@ export interface EditorState {
     activeTool: ToolType;
     selectedLayerId: string | null;
     selectedTileIndex: number | null;     // Selected index within active tileset
+    selectedTileIndices: number[];        // Multiple selected indices for stencil selection
+    selectedTerrainId: string | null;     // Selected terrain for autotiling
     activeTilesetId: string | null;       // Currently visible tileset in palette
     selectedEntityTypeId: string | null;  // For entity placement
-    selectedEntityIds: Set<string>;       // Currently selected entities
+    selectedEntityId: string | null;      // Currently active entity for inspection
+    selectedEntityIds: Set<string>;       // Multiple selected entities
+
+    drawMode: 'point' | 'rect' | 'circle'; // How tools behave
+    hoveredTile: { x: number, y: number } | null; // Currently hovered tile in viewport
 
     // Camera
     camera: {

@@ -14,16 +14,22 @@ interface EditorStore extends EditorState {
     updateProject: (project: Project) => Promise<void>;
 
     // Map Actions
-    setCurrentMap: (map: Map) => void;
-    createNewMap: (name: string, width: number, height: number, tilesetId: string) => void;
+    setCurrentMap: (map: Map | null) => void;
+    createNewMap: (name: string, width: number, height: number, tilesetId: string) => Promise<void>;
+    addMap: (map: Map) => void;
 
     // Tool actions
     setActiveTool: (tool: ToolType) => void;
+    setDrawMode: (mode: 'point' | 'rect' | 'circle') => void;
     setMode: (mode: EditorMode) => void;
+    setHoveredTile: (pos: { x: number, y: number } | null) => void;
 
     // Tileset actions
     setActiveTileset: (id: string | null) => void;
     setSelectedTile: (index: number | null) => void;
+    setSelectedTiles: (indexes: number[]) => void;
+    toggleSelectedTile: (index: number) => void;
+    setSelectedTerrain: (id: string | null) => void;
     addTileset: (tileset: Tileset) => Promise<void>;
     updateTileset: (id: string, updates: Partial<Tileset>) => Promise<void>;
     deleteTileset: (id: string) => Promise<void>;
@@ -32,6 +38,7 @@ interface EditorStore extends EditorState {
     // Tile actions
     paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
     eraseTile: (layerId: string, x: number, y: number) => void;
+    bucketFill: (layerId: string, startX: number, startY: number, tilesetId: string, tileIndex: number) => void;
 
     // Entity actions
     placeEntity: (entity: EntityInstance) => void;
@@ -48,6 +55,12 @@ interface EditorStore extends EditorState {
     // Variation actions
     setActiveVariation: (variationId: string | null) => void;
     addVariation: (variation: Variation) => void;
+    updateVariation: (id: string, updates: Partial<Variation>) => void;
+    removeVariation: (id: string) => void;
+
+    // Entity Actions
+    selectEntity: (id: string | null) => void;
+    setSelectedEntityType: (id: string | null) => void;
 
     // Camera actions
     setCamera: (camera: Partial<EditorState['camera']>) => void;
@@ -67,22 +80,27 @@ export const useEditorStore = create<EditorStore>()(
         loadedSprites: new globalThis.Map(),
         currentMap: null,
         currentMapPath: null,
-        activeVariation: null,
+        activeVariationId: null,
         timePreviewEnabled: false,
         timeOfDay: 0.5,
         activeTool: 'select',
+        drawMode: 'point',
+        hoveredTile: null,
         selectedLayerId: null,
         selectedTileIndex: null,
+        selectedTileIndices: [],
+        selectedTerrainId: null,
         activeTilesetId: null,
         selectedEntityTypeId: null,
+        selectedEntityId: null,
         selectedEntityIds: new Set(),
-        camera: { x: 0, y: 0, zoom: 1.0 },
+        camera: { x: 0, y: 0, zoom: 2.0 },
         panels: {
             layersOpen: true,
             tilesetPaletteOpen: true,
-            entitiesOpen: false,
+            entitiesOpen: true,
             inspectorOpen: true,
-            variationsOpen: false
+            variationsOpen: true
         },
         validationErrors: [],
 
@@ -99,6 +117,7 @@ export const useEditorStore = create<EditorStore>()(
                 state.selectedLayerId = null;
                 state.activeTilesetId = null;
                 state.selectedTileIndex = null;
+                state.activeVariationId = null;
             });
             recentProjects.add(project.name, path);
         },
@@ -134,13 +153,25 @@ export const useEditorStore = create<EditorStore>()(
                 }
             }
 
-            // 2. Load all maps (metadata only, not setting as current)
+            // Set first tileset as active if none is set
+            set(state => {
+                if (!state.activeTilesetId && tilesets.length > 0) {
+                    state.activeTilesetId = tilesets[0].id;
+                    state.selectedTileIndex = 0;
+                }
+            });
+
+            // 2. Load all maps
             const maps = await fileSystem.loadAllMaps();
 
             // Optionally load the first map as current
             if (maps.length > 0) {
                 set(state => {
                     state.currentMap = castDraft(maps[0]);
+                    // Auto-select first layer
+                    if (maps[0].layers.length > 0) {
+                        state.selectedLayerId = maps[0].layers[0].id;
+                    }
                 });
             }
         },
@@ -175,15 +206,65 @@ export const useEditorStore = create<EditorStore>()(
             });
         },
 
-        createNewMap: (_name, _width, _height, _tilesetId) => {
-            // Implementation placeholder
+        createNewMap: async (name, width, height, tilesetId) => {
+            const { fileSystem } = await import('../lib/fileSystem');
+            const id = name.toLowerCase().replace(/\s+/g, '-');
+
+            const newMap: Map = {
+                version: 1,
+                id,
+                name,
+                width,
+                height,
+                baseTilesetId: tilesetId,
+                layers: [
+                    {
+                        id: 'ground',
+                        name: 'Ground',
+                        kind: 'visual',
+                        visible: true,
+                        locked: false,
+                        opacity: 1,
+                        zOrder: 0,
+                        data: Array(height).fill(null).map(() => Array(width).fill(null))
+                    }
+                ],
+                entities: []
+            };
+
+            await fileSystem.saveJson('maps', `${id}.map.json`, newMap);
+
+            set(state => {
+                state.currentMap = castDraft(newMap);
+                state.activeVariationId = null;
+                state.selectedLayerId = 'ground';
+            });
+        },
+
+        addMap: (map: Map) => {
+            // This might be used for loading, but currentMap is the primary state
+            set(state => {
+                state.currentMap = castDraft(map);
+            });
         },
 
         setActiveTool: (tool) => {
             set(state => {
                 state.activeTool = tool;
+                // If switching to paint tool and no layer selected, select first
+                if (tool === 'tilePaint' && !state.selectedLayerId && state.currentMap) {
+                    state.selectedLayerId = state.currentMap.layers[0]?.id || null;
+                }
             });
         },
+
+        setDrawMode: (mode) => set(state => {
+            state.drawMode = mode;
+        }),
+
+        setHoveredTile: (pos) => set(state => {
+            state.hoveredTile = pos;
+        }),
 
         setMode: (mode) => {
             set(state => {
@@ -193,11 +274,33 @@ export const useEditorStore = create<EditorStore>()(
 
         setActiveTileset: (id) => set(state => {
             state.activeTilesetId = id;
-            state.selectedTileIndex = null;
+            state.selectedTileIndex = 0;
+            state.selectedTerrainId = null; // Selection clear terrain
         }),
 
         setSelectedTile: (index) => set(state => {
             state.selectedTileIndex = index;
+            if (index !== null) state.selectedTerrainId = null;
+            state.selectedTileIndices = index !== null ? [index] : [];
+        }),
+
+        setSelectedTiles: (indexes) => set(state => {
+            state.selectedTileIndices = indexes.slice();
+            state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
+            if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+        }),
+
+        toggleSelectedTile: (index) => set(state => {
+            const idx = state.selectedTileIndices.indexOf(index);
+            if (idx === -1) state.selectedTileIndices.push(index);
+            else state.selectedTileIndices.splice(idx, 1);
+            state.selectedTileIndex = state.selectedTileIndices.length > 0 ? state.selectedTileIndices[state.selectedTileIndices.length - 1] : null;
+            if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+        }),
+
+        setSelectedTerrain: (id) => set(state => {
+            state.selectedTerrainId = id;
+            if (id !== null) state.selectedTileIndex = null;
         }),
 
         addTileset: async (tileset) => {
@@ -257,38 +360,204 @@ export const useEditorStore = create<EditorStore>()(
         }),
 
         paintTile: (layerId, x, y, tilesetId, tileIndex) => set(state => {
-            const layer = state.currentMap?.layers.find(l => l.id === layerId);
-            if (layer && layer.data[y] && !layer.locked) {
-                // String format for composite reference: "tilesetId:index"
-                layer.data[y][x] = `${tilesetId}:${tileIndex}`;
+            if (!state.currentMap) return;
+
+            const tileRef = `${tilesetId}:${tileIndex}`;
+
+            // If we are in a variation, paint in the variation override
+            if (state.activeVariationId) {
+                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
+                if (variation) {
+                    if (!variation.layerOverrides) variation.layerOverrides = {};
+                    if (!variation.layerOverrides[layerId]) {
+                        // Create a sparse grid for the override
+                        variation.layerOverrides[layerId] = {
+                            mode: 'merge',
+                            data: Array(state.currentMap?.height || 0).fill(null).map(() => Array(state.currentMap?.width || 0).fill(null))
+                        };
+                    }
+                    variation.layerOverrides[layerId].data[y][x] = tileRef;
+                    return;
+                }
+            }
+
+            // Otherwise paint in the base layer
+            if (state.currentMap) {
+                const layer = state.currentMap.layers.find(l => l.id === layerId);
+                if (layer && layer.data[y] && !layer.locked) {
+                    layer.data[y][x] = tileRef;
+                }
             }
         }),
 
         eraseTile: (layerId, x, y) => set(state => {
-            const layer = state.currentMap?.layers.find(l => l.id === layerId);
+            if (!state.currentMap) return;
+
+            if (state.activeVariationId) {
+                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
+                if (variation) {
+                    if (!variation.layerOverrides) variation.layerOverrides = {};
+                    if (!variation.layerOverrides[layerId]) {
+                        variation.layerOverrides[layerId] = {
+                            mode: 'merge',
+                            data: Array(state.currentMap?.height || 0).fill(null).map(() => Array(state.currentMap?.width || 0).fill(null))
+                        };
+                    }
+                    variation.layerOverrides[layerId].data[y][x] = null;
+                    return;
+                }
+            }
+
+            const layer = state.currentMap.layers.find(l => l.id === layerId);
             if (layer && layer.data[y] && !layer.locked) {
                 layer.data[y][x] = null;
             }
         }),
 
-        placeEntity: (entity) => set(state => {
-            if (state.currentMap) {
-                state.currentMap.entities.push(castDraft(entity));
+        bucketFill: (layerId: string, startX: number, startY: number, tilesetId: string, tileIndex: number) => set(state => {
+            if (!state.currentMap) return;
+            const map = state.currentMap;
+            const targetTileRef = `${tilesetId}:${tileIndex}`;
+
+            // Helper to get tile with variation resolution
+            const getTile = (lx: number, ly: number) => {
+                const context = state.activeVariationId
+                    ? map.variations?.find(v => v.id === state.activeVariationId)
+                    : null;
+
+                if (context) {
+                    const override = context.layerOverrides?.[layerId];
+                    if (override && override.data[ly]?.[lx] !== undefined) {
+                        return override.data[ly][lx];
+                    }
+                }
+                const layer = map.layers.find(l => l.id === layerId);
+                return layer?.data[ly]?.[lx] || null;
+            };
+
+            const startTile = getTile(startX, startY);
+            if (startTile === targetTileRef) return;
+
+            const stack: [number, number][] = [[startX, startY]];
+            const visited = new Set<string>();
+
+            while (stack.length > 0) {
+                const [cx, cy] = stack.pop()!;
+                const key = `${cx},${cy}`;
+                if (visited.has(key)) continue;
+                visited.add(key);
+
+                if (getTile(cx, cy) === startTile) {
+                    // Apply paint
+                    if (state.activeVariationId) {
+                        const v = map.variations?.find(v => v.id === state.activeVariationId)!;
+                        if (!v.layerOverrides) v.layerOverrides = {};
+                        if (!v.layerOverrides[layerId]) {
+                            v.layerOverrides[layerId] = {
+                                mode: 'merge',
+                                data: Array(map.height).fill(null).map(() => Array(map.width).fill(null))
+                            };
+                        }
+                        v.layerOverrides[layerId].data[cy][cx] = targetTileRef;
+                    } else {
+                        const l = map.layers.find(l => l.id === layerId);
+                        if (l && !l.locked) l.data[cy][cx] = targetTileRef;
+                    }
+
+                    // Push neighbors
+                    if (cx > 0) stack.push([cx - 1, cy]);
+                    if (cx < map.width - 1) stack.push([cx + 1, cy]);
+                    if (cy > 0) stack.push([cx, cy - 1]);
+                    if (cy < map.height - 1) stack.push([cx, cy + 1]);
+                }
             }
+        }),
+
+        placeEntity: (entity) => set(state => {
+            if (!state.currentMap) return;
+
+            // If variation active, add to overrides
+            if (state.activeVariationId) {
+                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
+                if (variation) {
+                    if (!variation.entityOverrides) variation.entityOverrides = [];
+                    variation.entityOverrides.push({
+                        action: 'add',
+                        entity: castDraft(entity)
+                    });
+                    return;
+                }
+            }
+
+            // Otherwise add to base
+            state.currentMap.entities.push(castDraft(entity));
         }),
 
         removeEntity: (entityId) => set(state => {
-            if (state.currentMap) {
-                state.currentMap.entities = state.currentMap.entities.filter(e => e.id !== entityId);
+            if (!state.currentMap) return;
+
+            if (state.activeVariationId) {
+                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
+                if (variation) {
+                    if (!variation.entityOverrides) variation.entityOverrides = [];
+
+                    // If it was an "add" override, just remove it
+                    const existingAddIdx = variation.entityOverrides.findIndex(o => o.action === 'add' && o.entity?.id === entityId);
+                    if (existingAddIdx !== -1) {
+                        variation.entityOverrides.splice(existingAddIdx, 1);
+                        return;
+                    }
+
+                    // Otherwise add a "remove" override for the base entity
+                    variation.entityOverrides.push({
+                        action: 'remove',
+                        entityId
+                    });
+                    return;
+                }
             }
+
+            state.currentMap.entities = state.currentMap.entities.filter(e => e.id !== entityId);
         }),
 
         updateEntityProperties: (entityId, properties) => set(state => {
-            if (state.currentMap) {
-                const entity = state.currentMap.entities.find(e => e.id === entityId);
-                if (entity) {
-                    entity.properties = { ...entity.properties, ...properties };
+            if (!state.currentMap) return;
+
+            if (state.activeVariationId) {
+                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
+                if (variation) {
+                    if (!variation.entityOverrides) variation.entityOverrides = [];
+
+                    // Check if we already have an override for this entity in this variation
+                    const existingOverride = variation.entityOverrides.find(o =>
+                        (o.action === 'add' && o.entity?.id === entityId) ||
+                        (o.action === 'modify' && o.entityId === entityId)
+                    );
+
+                    if (existingOverride) {
+                        if (existingOverride.action === 'add' && existingOverride.entity) {
+                            existingOverride.entity.properties = { ...existingOverride.entity.properties, ...properties };
+                        } else if (existingOverride.action === 'modify') {
+                            if (!existingOverride.entity) existingOverride.entity = { properties: {} } as any;
+                            if (existingOverride.entity) {
+                                existingOverride.entity.properties = { ...existingOverride.entity.properties, ...properties };
+                            }
+                        }
+                    } else {
+                        // Create a new "modify" override
+                        variation.entityOverrides.push({
+                            action: 'modify',
+                            entityId,
+                            entity: { properties } as any // Sparse entity for properties override
+                        });
+                    }
+                    return;
                 }
+            }
+
+            const entity = state.currentMap.entities.find(e => e.id === entityId);
+            if (entity) {
+                entity.properties = { ...entity.properties, ...properties };
             }
         }),
 
@@ -304,9 +573,15 @@ export const useEditorStore = create<EditorStore>()(
             }
         }),
 
-        reorderLayer: (_layerId, _newZOrder) => {
-            // Implementation placeholder
-        },
+        reorderLayer: (layerId, newZOrder) => set(state => {
+            if (!state.currentMap) return;
+            const layer = state.currentMap.layers.find(l => l.id === layerId);
+            if (layer) {
+                layer.zOrder = newZOrder;
+                // Stability: Sort layers by zOrder to keep indices predictable
+                state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
+            }
+        }),
 
         toggleLayerVisibility: (layerId) => set(state => {
             const layer = state.currentMap?.layers.find(l => l.id === layerId);
@@ -321,13 +596,50 @@ export const useEditorStore = create<EditorStore>()(
 
         setActiveVariation: (variationId) => {
             set(state => {
-                state.activeVariation = variationId;
+                state.activeVariationId = variationId;
             });
         },
 
-        addVariation: (_variation) => {
-            // Implementation placeholder
+        addVariation: (variation) => {
+            set(state => {
+                if (state.currentMap) {
+                    if (!state.currentMap.variations) state.currentMap.variations = [];
+                    state.currentMap.variations.push(castDraft(variation));
+                }
+            });
         },
+
+        updateVariation: (id, updates) => {
+            set(state => {
+                const variation = state.currentMap?.variations?.find(v => v.id === id);
+                if (variation) {
+                    Object.assign(variation, updates);
+                }
+            });
+        },
+
+        removeVariation: (id) => {
+            set(state => {
+                if (state.currentMap) {
+                    state.currentMap.variations = state.currentMap.variations?.filter(v => v.id !== id);
+                    if (state.activeVariationId === id) state.activeVariationId = null;
+                }
+            });
+        },
+
+        selectEntity: (id) => set(state => {
+            state.selectedEntityId = id;
+            if (id) {
+                state.activeTool = 'select'; // Switch to selection tool when selecting
+            }
+        }),
+
+        setSelectedEntityType: (id) => set(state => {
+            state.selectedEntityTypeId = id;
+            if (id) {
+                state.activeTool = 'entityPlace';
+            }
+        }),
 
         setCamera: (camera) => set(state => {
             state.camera = { ...state.camera, ...camera };

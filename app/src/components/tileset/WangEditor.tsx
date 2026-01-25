@@ -75,7 +75,7 @@ export const WangEditor: React.FC<WangEditorProps> = ({ tileset }) => {
                     />
                 </HStack>
                 {wangSets.length === 0 ? (
-                    <Text fontSize="10px" color="gray.600" italic>No terrain sets</Text>
+                    <Text fontSize="10px" color="gray.600" fontStyle="italic">No terrain sets</Text>
                 ) : (
                     <VStack align="stretch" spacing={1}>
                         {wangSets.map((set, idx) => (

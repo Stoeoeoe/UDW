@@ -1,30 +1,160 @@
-import React from 'react';
-import { Box, Flex, Text, IconButton } from '@chakra-ui/react';
+import React, { useState } from 'react';
+import {
+    VStack,
+    HStack,
+    Box,
+    Text,
+    IconButton,
+    Button,
+    Spacer,
+    Collapse,
+    Heading,
+    useDisclosure,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+} from '@chakra-ui/react';
+import { useEditorStore } from '../../store/useEditorStore';
+import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { LayersPanel } from './LayersPanel';
+import { MapCreator } from '../dialogs/MapCreator';
 
 export const MapsPanel: React.FC = () => {
+    const currentMap = useEditorStore(state => state.currentMap);
+    const activeVariationId = useEditorStore(state => state.activeVariationId);
+    const setActiveVariation = useEditorStore(state => state.setActiveVariation);
+    const addVariation = useEditorStore(state => state.addVariation);
+    const removeVariation = useEditorStore(state => state.removeVariation);
+
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [variationsOpen, setVariationsOpen] = useState(true);
+
+    const handleAddVariation = () => {
+        if (!currentMap) return;
+        const name = prompt("Enter variation name:");
+        if (!name) return;
+
+        const id = name.toLowerCase().replace(/\s+/g, '-');
+        addVariation({
+            id,
+            displayName: name,
+            kind: 'generic',
+            layerOverrides: {},
+            entityOverrides: []
+        });
+        setActiveVariation(id);
+    };
+
     return (
-        <Flex direction="column" h="full">
-            {/* Map List Area */}
-            <Box p="3" borderBottom="1px" borderColor="gray.800">
-                <Flex justify="space-between" align="center" mb="2">
-                    <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">Maps</Text>
+        <VStack h="full" bg="gray.950" spacing={0} align="stretch" borderLeft="1px" borderColor="gray.800">
+            {/* Header: Map Title */}
+            <Box bg="gray.900" borderBottom="1px" borderColor="gray.800" px={4} py={3}>
+                <HStack justify="space-between">
+                    <VStack align="start" spacing={0}>
+                        <Text fontSize="xs" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
+                            Active Map
+                        </Text>
+                        <Heading size="xs" color="white" noOfLines={1}>
+                            {currentMap?.name || 'No Map Loaded'}
+                        </Heading>
+                    </VStack>
                     <IconButton
-                        aria-label="Add Map"
-                        icon={<Text fontSize="md">+</Text>}
+                        aria-label="New Map"
+                        icon={<AddIcon fontSize="10px" />}
                         size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white' }}
+                        colorScheme="blue"
+                        onClick={onOpen}
                     />
-                </Flex>
-                <Text fontSize="xs" color="gray.600">No maps yet</Text>
+                </HStack>
             </Box>
 
-            {/* Layers for active map */}
-            <Box flex={1} overflow="hidden">
-                <LayersPanel />
-            </Box>
-        </Flex>
+            <VStack spacing={0} align="stretch" flex={1} overflow="hidden">
+                {/* Variations Section */}
+                <Box flex="0 0 auto" borderBottom="1px" borderColor="gray.800">
+                    <Box
+                        bg="gray.900"
+                        px={4}
+                        py={2}
+                        cursor="pointer"
+                        onClick={() => setVariationsOpen(!variationsOpen)}
+                        _hover={{ bg: 'gray.800' }}
+                    >
+                        <HStack>
+                            <Text fontSize="10px" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.400">
+                                Variations
+                            </Text>
+                            <Spacer />
+                            <IconButton
+                                aria-label="Add Variation"
+                                icon={<AddIcon fontSize="10px" />}
+                                size="xs"
+                                variant="ghost"
+                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleAddVariation(); }}
+                            />
+                            {variationsOpen ? <ChevronUpIcon color="gray.500" /> : <ChevronDownIcon color="gray.500" />}
+                        </HStack>
+                    </Box>
+
+                    <Collapse in={variationsOpen}>
+                        <VStack align="stretch" spacing={1} p={2} maxH="200px" overflowY="auto">
+                            <Button
+                                size="xs"
+                                variant={activeVariationId === null ? "solid" : "ghost"}
+                                colorScheme={activeVariationId === null ? "blue" : "gray"}
+                                justifyContent="start"
+                                onClick={() => setActiveVariation(null)}
+                                fontSize="xs"
+                                h="7"
+                                isDisabled={!currentMap}
+                            >
+                                <Text as="span" opacity={0.5} mr={2}>🌳</Text>
+                                Base Map
+                            </Button>
+
+                            {currentMap?.variations?.map(v => (
+                                <HStack key={v.id} spacing={0}>
+                                    <Button
+                                        flex={1}
+                                        size="xs"
+                                        variant={activeVariationId === v.id ? "solid" : "ghost"}
+                                        colorScheme={activeVariationId === v.id ? "blue" : "gray"}
+                                        justifyContent="start"
+                                        onClick={() => setActiveVariation(v.id)}
+                                        fontSize="xs"
+                                        h="7"
+                                    >
+                                        <Text as="span" opacity={0.5} mr={1} ml={2}>↳</Text>
+                                        {v.displayName}
+                                    </Button>
+                                    <IconButton
+                                        aria-label="Delete Variation"
+                                        icon={<DeleteIcon fontSize="10px" />}
+                                        size="xs"
+                                        variant="ghost"
+                                        colorScheme="red"
+                                        opacity={0.3}
+                                        _hover={{ opacity: 1 }}
+                                        onClick={() => removeVariation(v.id)}
+                                    />
+                                </HStack>
+                            ))}
+                        </VStack>
+                    </Collapse>
+                </Box>
+
+                {/* Layers Section */}
+                <Box flex={1} overflow="hidden">
+                    <LayersPanel />
+                </Box>
+            </VStack>
+
+            {/* Map Creator Modal */}
+            <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
+                <ModalOverlay backdropFilter="blur(4px)" />
+                <ModalContent bg="transparent" border="none" boxShadow="none">
+                    <MapCreator onCreate={onClose} onCancel={onClose} />
+                </ModalContent>
+            </Modal>
+        </VStack>
     );
 };

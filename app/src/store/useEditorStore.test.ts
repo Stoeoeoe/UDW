@@ -96,4 +96,98 @@ describe('useEditorStore', () => {
         setSelectedTile(5);
         expect(useEditorStore.getState().selectedTileIndex).toBe(5);
     });
+
+    describe('Map & Variation Logic', () => {
+        const mockMap = {
+            version: 1,
+            id: 'test-map',
+            name: 'Test Map',
+            width: 10,
+            height: 10,
+            baseTilesetId: 'village',
+            layers: [
+                {
+                    id: 'ground',
+                    name: 'Ground',
+                    kind: 'visual' as const,
+                    visible: true,
+                    locked: false,
+                    opacity: 1,
+                    zOrder: 0,
+                    data: Array(10).fill(null).map(() => Array(10).fill(null))
+                }
+            ],
+            entities: []
+        };
+
+        beforeEach(() => {
+            const { setCurrentMap } = useEditorStore.getState();
+            setCurrentMap(mockMap as any);
+        });
+
+        it('should paint a tile in the base layer', () => {
+            const { paintTile } = useEditorStore.getState();
+            paintTile('ground', 0, 0, 'village', 5);
+
+            const state = useEditorStore.getState();
+            expect(state.currentMap?.layers[0].data[0][0]).toBe('village:5');
+        });
+
+        it('should add a variation', () => {
+            const { addVariation } = useEditorStore.getState();
+            addVariation({
+                id: 'winter',
+                displayName: 'Winter',
+                kind: 'season',
+                layerOverrides: {},
+                entityOverrides: []
+            });
+
+            const state = useEditorStore.getState();
+            expect(state.currentMap?.variations).toHaveLength(1);
+            expect(state.currentMap?.variations?.[0].id).toBe('winter');
+        });
+
+        it('should paint a tile in a variation override', () => {
+            const { addVariation, setActiveVariation, paintTile } = useEditorStore.getState();
+
+            addVariation({
+                id: 'winter',
+                displayName: 'Winter',
+                kind: 'season',
+                layerOverrides: {},
+                entityOverrides: []
+            });
+            setActiveVariation('winter');
+
+            paintTile('ground', 5, 5, 'village', 10);
+
+            const state = useEditorStore.getState();
+            // Base layer should still be null
+            expect(state.currentMap?.layers[0].data[5][5]).toBeNull();
+
+            // Variation override should have the tile
+            const winterVar = state.currentMap?.variations?.find(v => v.id === 'winter');
+            expect(winterVar?.layerOverrides?.['ground'].data[5][5]).toBe('village:10');
+        });
+
+        it('should erase a tile in a variation override', () => {
+            const { addVariation, setActiveVariation, paintTile, eraseTile } = useEditorStore.getState();
+
+            addVariation({
+                id: 'winter',
+                displayName: 'Winter',
+                kind: 'season',
+                layerOverrides: {},
+                entityOverrides: []
+            });
+            setActiveVariation('winter');
+
+            paintTile('ground', 1, 1, 'village', 20);
+            expect(useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1]).toBe('village:20');
+
+            eraseTile('ground', 1, 1);
+            expect(useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1]).toBeNull();
+        });
+    });
 });
