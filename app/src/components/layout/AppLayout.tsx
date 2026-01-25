@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import clsx from 'clsx';
+import { Box, Flex, Text } from '@chakra-ui/react';
 
 interface AppLayoutProps {
     topBar: ReactNode;
@@ -19,50 +19,56 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     rightPanelOpen = true,
 }) => {
     return (
-        <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-900 text-slate-200 font-sans select-none">
+        <Flex direction="column" h="100vh" w="100vw" overflow="hidden" bg="gray.900" color="gray.200" userSelect="none">
             {/* Top Bar Area */}
-            <div className="h-12 border-b border-slate-800 bg-slate-900 z-20 flex-shrink-0">
+            <Box h="12" borderBottom="1px" borderColor="gray.800" bg="gray.900" zIndex="20" flexShrink={0}>
                 {topBar}
-            </div>
+            </Box>
 
             {/* Main Workspace Area */}
-            <div className="flex flex-1 overflow-hidden min-h-0">
+            <Flex flex={1} overflow="hidden" minH={0}>
 
                 {/* Left Panel */}
-                <div
-                    className={clsx(
-                        "flex-shrink-0 bg-slate-900 border-r border-slate-800 transition-all duration-200 ease-in-out",
-                        leftPanelOpen ? "w-80" : "w-0 border-r-0"
-                    )}
+                <Box
+                    flexShrink={0}
+                    bg="gray.900"
+                    borderRightWidth={leftPanelOpen ? "1px" : "0"}
+                    borderColor="gray.800"
+                    transition="all 0.2s ease-in-out"
+                    w={leftPanelOpen ? "80" : "0"}
+                    overflow="hidden"
                 >
-                    <div className="h-full w-80 overflow-hidden flex flex-col">
+                    <Flex direction="column" h="full" w="80">
                         {leftPanel}
-                    </div>
-                </div>
+                    </Flex>
+                </Box>
 
                 {/* Viewport (Center) */}
-                <div className="flex-1 bg-slate-950 relative z-0 overflow-hidden shadow-inner flex flex-col">
+                <Box flex={1} bg="black" position="relative" zIndex={0} overflow="hidden" boxShadow="inner" display="flex" flexDirection="column">
                     {viewport}
-                </div>
+                </Box>
 
                 {/* Right Panel */}
-                <div
-                    className={clsx(
-                        "flex-shrink-0 bg-slate-900 border-l border-slate-800 transition-all duration-200 ease-in-out",
-                        rightPanelOpen ? "w-80" : "w-0 border-l-0"
-                    )}
+                <Box
+                    flexShrink={0}
+                    bg="gray.900"
+                    borderLeftWidth={rightPanelOpen ? "1px" : "0"}
+                    borderColor="gray.800"
+                    transition="all 0.2s ease-in-out"
+                    w={rightPanelOpen ? "80" : "0"}
+                    overflow="hidden"
                 >
-                    <div className="h-full w-80 overflow-hidden flex flex-col">
+                    <Flex direction="column" h="full" w="80">
                         {rightPanel}
-                    </div>
-                </div>
+                    </Flex>
+                </Box>
 
-            </div>
+            </Flex>
 
-            {/* Optional Status Bar (future) */}
-            <div className="h-6 bg-slate-900 border-t border-slate-800 flex items-center px-2 text-xs text-slate-500 z-20 flex-shrink-0">
-                <span>Ready</span>
-            </div>
-        </div>
+            {/* Status Bar */}
+            <Flex h="6" bg="gray.900" borderTop="1px" borderColor="gray.800" alignItems="center" px="2" fontSize="xs" color="gray.500" zIndex="20" flexShrink={0}>
+                <Text>Ready</Text>
+            </Flex>
+        </Flex>
     );
 };

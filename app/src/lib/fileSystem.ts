@@ -22,6 +22,7 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
     kind: 'directory';
     getFileHandle(name: string, options?: { create?: boolean }): Promise<FileSystemFileHandle>;
     getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<FileSystemDirectoryHandle>;
+    removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
     values(): AsyncIterable<FileSystemHandle>;
 }
 
@@ -38,6 +39,13 @@ declare global {
 
 export class FileSystemManager {
     private projectRoot: FileSystemDirectoryHandle | null = null;
+
+    /**
+     * Get the current project root handle
+     */
+    getProjectRoot(): FileSystemDirectoryHandle | null {
+        return this.projectRoot;
+    }
 
     /**
      * Open a directory as a project root.
@@ -87,15 +95,147 @@ export class FileSystemManager {
     }
 
     /**
+     * Save the project.json file
+     */
+    async saveProject(project: Project): Promise<void> {
+        if (!this.projectRoot) throw new Error("No project open.");
+        await this.writeJSON(this.projectRoot, 'project.json', project);
+    }
+
+    /**
+     * Load all maps from the maps/ directory
+     */
+    async loadAllMaps(): Promise<GameMap[]> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        const maps: GameMap[] = [];
+        try {
+            const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
+
+            for await (const entry of mapsDir.values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.map.json')) {
+                    const fileHandle = entry as FileSystemFileHandle;
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    const map = JSON.parse(text) as GameMap;
+                    maps.push(map);
+                }
+            }
+        } catch (e) {
+            console.warn("Maps directory not found or empty", e);
+        }
+
+        return maps;
+    }
+
+    /**
+     * Load a specific map by ID
+     */
+    async loadMap(mapId: string): Promise<GameMap> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
+        const filename = `${mapId}.map.json`;
+        const fileHandle = await mapsDir.getFileHandle(filename);
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        return JSON.parse(text) as GameMap;
+    }
+
+    /**
      * Save a Map file
      */
     async saveMap(map: GameMap): Promise<void> {
         if (!this.projectRoot) throw new Error("No project open.");
 
-        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
-        // Use map.id for filename to be safe, or sanitize map.name
+        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: true });
         const filename = `${map.id}.map.json`;
         await this.writeJSON(mapsDir, filename, map);
+    }
+
+    /**
+     * Delete a map file
+     */
+    async deleteMap(mapId: string): Promise<void> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
+        const filename = `${mapId}.map.json`;
+        await mapsDir.removeEntry(filename);
+    }
+
+    /**
+     * Load all tilesets from the tilesets/ directory
+     */
+    async loadAllTilesets(): Promise<Tileset[]> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        const tilesets: Tileset[] = [];
+        try {
+            const tilesetsDir = await this.projectRoot.getDirectoryHandle('tilesets', { create: false });
+
+            for await (const entry of tilesetsDir.values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.tileset.json')) {
+                    const fileHandle = entry as FileSystemFileHandle;
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    const tileset = JSON.parse(text) as Tileset;
+                    tilesets.push(tileset);
+                }
+            }
+        } catch (e) {
+            console.warn("Tilesets directory not found or empty", e);
+        }
+
+        return tilesets;
+    }
+
+    /**
+     * Save a Tileset file
+     */
+    async saveTileset(tileset: Tileset): Promise<void> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        const tilesetsDir = await this.projectRoot.getDirectoryHandle('tilesets', { create: true });
+        const filename = `${tileset.id}.tileset.json`;
+        await this.writeJSON(tilesetsDir, filename, tileset);
+    }
+
+    /**
+     * Save an asset file (image, etc.)
+     */
+    async saveAsset(filename: string, blob: Blob): Promise<string> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        const assetsDir = await this.projectRoot.getDirectoryHandle('assets', { create: true });
+        const fileHandle = await assetsDir.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+
+        return `assets/${filename}`;
+    }
+
+    /**
+     * Load an asset file as a Blob
+     */
+    async loadAsset(relativePath: string): Promise<Blob> {
+        if (!this.projectRoot) throw new Error("No project open.");
+
+        // Parse path like "assets/spritesheet.png"
+        const parts = relativePath.split('/');
+        let currentDir = this.projectRoot;
+
+        // Navigate to parent directory
+        for (let i = 0; i < parts.length - 1; i++) {
+            currentDir = await currentDir.getDirectoryHandle(parts[i], { create: false });
+        }
+
+        // Get file
+        const filename = parts[parts.length - 1];
+        const fileHandle = await currentDir.getFileHandle(filename);
+        const file = await fileHandle.getFile();
+        return file;
     }
 
     /**

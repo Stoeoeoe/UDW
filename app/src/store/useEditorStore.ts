@@ -7,6 +7,7 @@ import { Project, Tileset, Map, Layer, Variation, EntityInstance } from '../type
 interface EditorStore extends EditorState {
     // Actions
     loadProject: (path: string, project: Project) => Promise<void>;
+    loadProjectResources: () => Promise<void>; // Load all maps, tilesets, sprites
     loadSprite: (path: string, blob: Blob) => Promise<string>; // Returns object URL
 
     // Map Actions
@@ -78,6 +79,37 @@ export const useEditorStore = create<EditorStore>()(
                 state.project = project;
                 state.projectPath = path;
             });
+        },
+
+        loadProjectResources: async () => {
+            const { fileSystem } = await import('../lib/fileSystem');
+
+            // 1. Load all tilesets
+            const tilesets = await fileSystem.loadAllTilesets();
+            for (const tileset of tilesets) {
+                set(state => {
+                    state.tilesets.set(tileset.id, tileset);
+                });
+
+                // Load sprite for each tileset
+                try {
+                    const blob = await fileSystem.loadAsset(tileset.spriteSheet);
+                    await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
+                } catch (e) {
+                    console.warn(`Failed to load sprite for tileset ${tileset.id}:`, e);
+                }
+            }
+
+            // 2. Load all maps (metadata only, not setting as current)
+            const maps = await fileSystem.loadAllMaps();
+            console.log(`Loaded ${maps.length} maps:`, maps.map(m => m.name));
+
+            // Optionally load the first map as current
+            if (maps.length > 0) {
+                set(state => {
+                    state.currentMap = maps[0];
+                });
+            }
         },
 
         loadSprite: async (path, blob) => {

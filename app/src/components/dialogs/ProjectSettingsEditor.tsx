@@ -2,8 +2,21 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import {
+    Box,
+    Button,
+    FormControl,
+    FormLabel,
+    Input,
+    FormErrorMessage,
+    SimpleGrid,
+    Textarea,
+    VStack,
+    HStack,
+    Divider,
+    Heading,
+} from '@chakra-ui/react';
 import { Project } from '../../types/schema';
-import clsx from 'clsx';
 
 interface ProjectSettingsEditorProps {
     initialProject?: Project;
@@ -23,140 +36,166 @@ const DEFAULT_PROJECT: Project = {
     }
 };
 
-// Validation Schema using Zod
+// Validation Schema
 const schema = z.object({
-    version: z.number(), // Added version to match type
     name: z.string().min(2, "Name must be at least 2 characters"),
-    tileSize: z.number().min(8, "Minimum tile size is 8px").max(128, "Max tile size is 128px")
-        .refine(val => val ? (val & (val - 1)) === 0 : true, { message: 'Tile size should ideally be power of 2 (e.g. 16, 32)' }),
-    defaultMapWidth: z.number().min(1).max(1024),
-    defaultMapHeight: z.number().min(1).max(1024),
+    tileSize: z.number().min(8, "Minimum tile size is 8px")
+        .max(128, "Max tile size is 128px")
+        .refine(val => (val & (val - 1)) === 0, {
+            message: 'Tile size should be power of 2 (e.g. 16, 32)'
+        }),
+    defaultMapWidth: z.number().min(1, "Must be at least 1")
+        .max(1024, "Maximum is 1024"),
+    defaultMapHeight: z.number().min(1, "Must be at least 1")
+        .max(1024, "Maximum is 1024"),
     metadata: z.object({
-        author: z.string().optional(),
-        description: z.string().optional()
-    }).optional()
+        author: z.string(),
+        description: z.string()
+    })
 });
 
-// Input Helper
-const InputField = ({ label, error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string, error?: string }) => (
-    <div className="space-y-1">
-        <label className="text-xs font-bold uppercase text-slate-500">{label}</label>
-        <input
-            className={clsx(
-                "w-full bg-slate-950 border rounded px-3 py-2 text-sm focus:outline-none",
-                error
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-slate-700 focus:border-blue-500"
-            )}
-            {...props}
-        />
-        {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
-    </div>
-);
+type FormData = z.infer<typeof schema>;
 
 export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
     initialProject,
     onSave,
     onCancel
 }) => {
-    const { register, handleSubmit, formState: { errors } } = useForm<Project>({
+    const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
-        defaultValues: initialProject || DEFAULT_PROJECT
+        defaultValues: {
+            name: initialProject?.name || DEFAULT_PROJECT.name,
+            tileSize: initialProject?.tileSize || DEFAULT_PROJECT.tileSize,
+            defaultMapWidth: initialProject?.defaultMapWidth || DEFAULT_PROJECT.defaultMapWidth,
+            defaultMapHeight: initialProject?.defaultMapHeight || DEFAULT_PROJECT.defaultMapHeight,
+            metadata: {
+                author: initialProject?.metadata?.author || "",
+                description: initialProject?.metadata?.description || ""
+            }
+        },
+        mode: 'onSubmit'
     });
 
-    const onSubmit = (data: Project) => {
-        onSave({
-            ...data,
-            version: initialProject?.version || 1 // Preserve version or default
-        });
+    const onSubmit = (data: FormData) => {
+        const project: Project = {
+            version: initialProject?.version || 1,
+            ...data
+        };
+        onSave(project);
     };
 
     return (
-        <div className="bg-slate-900 border border-slate-700 rounded-lg shadow-xl w-[500px] overflow-hidden text-slate-200">
-            <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
-                <h3 className="font-bold text-slate-100">Project Settings</h3>
-            </div>
+        <Box
+            bg="gray.900"
+            border="1px"
+            borderColor="gray.700"
+            rounded="lg"
+            shadow="2xl"
+            w="full"
+            maxW="500px"
+            overflow="hidden"
+        >
+            <Box bg="gray.800" px="4" py="3" borderBottom="1px" borderColor="gray.700">
+                <Heading size="sm">Project Settings</Heading>
+            </Box>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
-
-                {/* Project Name */}
-                <InputField
-                    label="Project Name"
-                    {...register('name')}
-                    error={errors.name?.message}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                    <InputField
-                        type="number"
-                        label="Tile Size (px)"
-                        {...register('tileSize')}
-                        error={errors.tileSize?.message}
-                    />
-
-                    {/* Version (Read-only) */}
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-slate-500">Version</label>
-                        <input
-                            type="number"
-                            disabled
-                            className="w-full bg-slate-800 border border-slate-800 rounded px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
-                            value={initialProject?.version || 1}
+            <form onSubmit={handleSubmit(onSubmit)}>
+                <VStack p="4" spacing="4" align="stretch">
+                    {/* Project Name */}
+                    <FormControl isInvalid={!!errors.name}>
+                        <FormLabel>Project Name</FormLabel>
+                        <Input
+                            placeholder="e.g. My Awesome Game"
+                            {...register('name')}
                         />
-                    </div>
-                </div>
+                        <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
+                    </FormControl>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <InputField
-                        type="number"
-                        label="Default Width"
-                        {...register('defaultMapWidth')}
-                        error={errors.defaultMapWidth?.message}
-                    />
-                    <InputField
-                        type="number"
-                        label="Default Height"
-                        {...register('defaultMapHeight')}
-                        error={errors.defaultMapHeight?.message}
-                    />
-                </div>
+                    <SimpleGrid columns={2} spacing={4}>
+                        <FormControl isInvalid={!!errors.tileSize}>
+                            <FormLabel>Tile Size (px)</FormLabel>
+                            <Input
+                                type="number"
+                                {...register('tileSize', {
+                                    setValueAs: v => v === '' ? 0 : Number(v)
+                                })}
+                            />
+                            <FormErrorMessage>{errors.tileSize?.message}</FormErrorMessage>
+                        </FormControl>
 
-                <hr className="border-slate-800" />
+                        <FormControl isReadOnly>
+                            <FormLabel>Version</FormLabel>
+                            <Input
+                                disabled={true}
+                                value={initialProject?.version || "1.0"}
+                            />
+                        </FormControl>
+                    </SimpleGrid>
 
-                {/* Metadata */}
-                <div className="space-y-3">
-                    <InputField
-                        label="Author"
-                        {...register('metadata.author')}
-                        error={errors.metadata?.author?.message}
-                    />
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-slate-500">Description</label>
-                        <textarea
-                            rows={3}
-                            className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none resize-none"
-                            {...register('metadata.description')}
-                        />
-                    </div>
-                </div>
+                    <SimpleGrid columns={2} spacing={4}>
+                        <FormControl isInvalid={!!errors.defaultMapWidth}>
+                            <FormLabel>Default Width</FormLabel>
+                            <Input
+                                type="number"
+                                {...register('defaultMapWidth', {
+                                    setValueAs: v => v === '' ? 0 : Number(v)
+                                })}
+                            />
+                            <FormErrorMessage>{errors.defaultMapWidth?.message}</FormErrorMessage>
+                        </FormControl>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="px-4 py-2 rounded text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        className="px-4 py-2 rounded text-sm font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-sm"
-                    >
-                        Save Project
-                    </button>
-                </div>
+                        <FormControl isInvalid={!!errors.defaultMapHeight}>
+                            <FormLabel>Default Height</FormLabel>
+                            <Input
+                                type="number"
+                                {...register('defaultMapHeight', {
+                                    setValueAs: v => v === '' ? 0 : Number(v)
+                                })}
+                            />
+                            <FormErrorMessage>{errors.defaultMapHeight?.message}</FormErrorMessage>
+                        </FormControl>
+                    </SimpleGrid>
 
+                    <Divider />
+
+                    {/* Metadata */}
+                    <VStack spacing="3" align="stretch">
+                        <FormControl isInvalid={!!errors.metadata?.author}>
+                            <FormLabel>Author</FormLabel>
+                            <Input
+                                {...register('metadata.author')}
+                            />
+                            <FormErrorMessage>{errors.metadata?.author?.message}</FormErrorMessage>
+                        </FormControl>
+
+                        <FormControl isInvalid={!!errors.metadata?.description}>
+                            <FormLabel>Description</FormLabel>
+                            <Textarea
+                                rows={3}
+                                resize="none"
+                                {...register('metadata.description')}
+                            />
+                            <FormErrorMessage>{errors.metadata?.description?.message}</FormErrorMessage>
+                        </FormControl>
+                    </VStack>
+
+                    <HStack justify="flex-end" spacing="3" pt="4" borderTop="1px" borderColor="gray.800">
+                        <Button
+                            variant="ghost"
+                            onClick={onCancel}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            colorScheme="blue"
+                            fontWeight="bold"
+                        >
+                            Save Project
+                        </Button>
+                    </HStack>
+                </VStack>
             </form>
-        </div>
+        </Box>
     );
 };

@@ -1,5 +1,22 @@
-import React, { useState } from 'react';
-import clsx from 'clsx';
+import React from 'react';
+import {
+    Box,
+    Flex,
+    HStack,
+    Text,
+    Button,
+    Menu,
+    MenuButton,
+    MenuList,
+    MenuItem,
+    MenuDivider,
+    IconButton,
+    Tooltip,
+    useDisclosure,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+} from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
 import { ProjectSettingsEditor } from '../dialogs/ProjectSettingsEditor';
@@ -11,7 +28,7 @@ const CursorIcon = () => <svg width="16" height="16" fill="currentColor" viewBox
 const PaintBrushIcon = () => <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 2a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3h6z M6.5 7a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3z" /></svg>;
 const EraserIcon = () => <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828l6.879-6.879zm2.121.707a1 1 0 0 0-1.414 0L4.16 7.547l5.293 5.293 4.633-4.633a1 1 0 0 0 0-1.414l-3.879-3.879zM8.746 13.547 3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293l.16-.16z" /></svg>;
 
-const TOOL_BUTTONS: { id: ToolType; icon: React.FC; label: string }[] = [
+const TOOL_BUTTONS: { id: ToolType; icon: any; label: string }[] = [
     { id: 'select', icon: CursorIcon, label: 'Select (V)' },
     { id: 'tilePaint', icon: PaintBrushIcon, label: 'Paint (B)' },
     { id: 'tileErase', icon: EraserIcon, label: 'Erase (E)' },
@@ -22,17 +39,14 @@ export const TopBar: React.FC = () => {
     const setActiveTool = useEditorStore(state => state.setActiveTool);
     const loadProject = useEditorStore(state => state.loadProject);
 
-    const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
-    const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
+    const { isOpen: isProjectDialogOpen, onOpen: openProjectDialog, onClose: closeProjectDialog } = useDisclosure();
 
     // Handlers
     const handleNewProject = () => {
-        setIsFileMenuOpen(false);
-        setIsProjectDialogOpen(true);
+        openProjectDialog();
     };
 
     const handleOpenProject = async () => {
-        setIsFileMenuOpen(false);
         try {
             // @ts-ignore - window.showDirectoryPicker is experimental
             if (!window.showDirectoryPicker) {
@@ -42,6 +56,9 @@ export const TopBar: React.FC = () => {
 
             const { project, handle } = await fileSystem.openProject();
             await loadProject(handle.name, project);
+
+            // Load all resources (maps, tilesets, sprites)
+            await useEditorStore.getState().loadProjectResources();
         } catch (e: any) {
             if (e.name !== 'AbortError') {
                 console.error(e);
@@ -60,7 +77,7 @@ export const TopBar: React.FC = () => {
 
             const handle = await fileSystem.createProject(project);
             await loadProject(handle.name, project);
-            setIsProjectDialogOpen(false);
+            closeProjectDialog();
         } catch (e: any) {
             if (e.name !== 'AbortError') {
                 console.error(e);
@@ -70,86 +87,101 @@ export const TopBar: React.FC = () => {
     };
 
     return (
-        <>
-            <div className="flex items-center justify-between h-full px-4 select-none relative z-50">
-                {/* Left: Branding & Menus */}
-                <div className="flex items-center space-x-6">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-primary-600 rounded-md flex items-center justify-center font-bold text-white text-xs shadow-sm">
-                            ED
-                        </div>
-                        <span className="font-semibold text-slate-300 text-sm tracking-tight">PixelEditor</span>
-                    </div>
+        <Flex align="center" justify="space-between" h="full" px="4" userSelect="none">
+            {/* Left: Branding & Menus */}
+            <HStack spacing="6">
+                <HStack spacing="2">
+                    <Flex
+                        w="6"
+                        h="6"
+                        bg="blue.600"
+                        rounded="md"
+                        align="center"
+                        justify="center"
+                        fontWeight="bold"
+                        color="white"
+                        fontSize="xs"
+                        boxShadow="sm"
+                    >
+                        ED
+                    </Flex>
+                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" letterSpacing="tight">
+                        PixelEditor
+                    </Text>
+                </HStack>
 
-                    <div className="h-6 w-px bg-slate-700" />
+                <Box h="6" w="1px" bg="gray.700" />
 
-                    <div className="flex space-x-4 text-xs font-medium text-slate-400 relative">
-                        <button
-                            className="hover:text-slate-100 transition-colors focus:outline-none"
-                            onClick={() => setIsFileMenuOpen(!isFileMenuOpen)}
+                <HStack spacing="1">
+                    <Menu gutter={8}>
+                        <MenuButton
+                            as={Button}
+                            variant="ghost"
+                            size="xs"
+                            color="gray.400"
+                            _hover={{ color: 'white', bg: 'gray.800' }}
+                            _active={{ bg: 'gray.700' }}
+                            fontWeight="medium"
                         >
                             File
-                        </button>
+                        </MenuButton>
+                        <MenuList bg="gray.800" borderColor="gray.700" color="gray.200" boxShadow="xl" py="1" zIndex="50">
+                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleNewProject}>New Project...</MenuItem>
+                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleOpenProject}>Open Project...</MenuItem>
+                            <MenuDivider borderColor="gray.700" />
+                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }}>Exit</MenuItem>
+                        </MenuList>
+                    </Menu>
 
-                        {/* File Menu Dropdown */}
-                        {isFileMenuOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded shadow-xl py-1 z-50 flex flex-col items-start">
-                                <button onClick={handleNewProject} className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200">New Project...</button>
-                                <button onClick={handleOpenProject} className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200">Open Project...</button>
-                                <div className="h-px bg-slate-700 w-full my-1"></div>
-                                <button className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200">Exit</button>
-                            </div>
-                        )}
-                        {/* Invisible Overlay to close menu */}
-                        {isFileMenuOpen && (
-                            <div
-                                className="fixed inset-0 z-40"
-                                onClick={() => setIsFileMenuOpen(false)}
-                            />
-                        )}
+                    <Button variant="ghost" size="xs" color="gray.400" _hover={{ color: 'white', bg: 'gray.800' }} fontWeight="medium">
+                        Edit
+                    </Button>
+                    <Button variant="ghost" size="xs" color="gray.400" _hover={{ color: 'white', bg: 'gray.800' }} fontWeight="medium">
+                        View
+                    </Button>
+                    <Button variant="ghost" size="xs" color="gray.400" _hover={{ color: 'white', bg: 'gray.800' }} fontWeight="medium">
+                        Window
+                    </Button>
+                </HStack>
+            </HStack>
 
-                        <button className="hover:text-slate-100 transition-colors">Edit</button>
-                        <button className="hover:text-slate-100 transition-colors">View</button>
-                        <button className="hover:text-slate-100 transition-colors">Window</button>
-                    </div>
-                </div>
-
-                {/* Center: Toolbar */}
-                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700/50">
-                    {TOOL_BUTTONS.map((tool) => (
-                        <button
-                            key={tool.id}
+            {/* Center: Toolbar */}
+            <HStack bg="gray.800" p="1" rounded="lg" border="1px" borderColor="gray.700" spacing="1">
+                {TOOL_BUTTONS.map((tool) => (
+                    <Tooltip key={tool.id} label={tool.label} placement="bottom" hasArrow>
+                        <IconButton
+                            aria-label={tool.label}
+                            icon={<tool.icon />}
+                            size="sm"
+                            variant={activeTool === tool.id ? 'solid' : 'ghost'}
+                            colorScheme={activeTool === tool.id ? 'gray' : 'whiteAlpha'}
+                            bg={activeTool === tool.id ? 'gray.600' : 'transparent'}
+                            _hover={{ bg: activeTool === tool.id ? 'gray.500' : 'gray.700' }}
                             onClick={() => setActiveTool(tool.id)}
-                            title={tool.label}
-                            className={clsx(
-                                "p-1.5 rounded-md transition-all duration-150",
-                                activeTool === tool.id
-                                    ? "bg-slate-600 text-white shadow-sm"
-                                    : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-300"
-                            )}
-                        >
-                            <tool.icon />
-                        </button>
-                    ))}
-                </div>
+                            minW="32px"
+                            h="32px"
+                        />
+                    </Tooltip>
+                ))}
+            </HStack>
 
-                {/* Right: Actions */}
-                <div className="flex items-center space-x-3">
-                    <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-md shadow-sm transition-colors border border-blue-500">
-                        Export
-                    </button>
-                </div>
-            </div>
+            {/* Right: Actions */}
+            <HStack spacing="3">
+                <Button colorScheme="blue" size="xs" fontWeight="medium" boxShadow="sm">
+                    Export
+                </Button>
+            </HStack>
 
-            {/* Dialogs Overlay */}
-            {isProjectDialogOpen && (
-                <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
+            {/* Project Dialog */}
+            <Modal isOpen={isProjectDialogOpen} onClose={closeProjectDialog} size="xl" isCentered>
+                <ModalOverlay backdropFilter="blur(4px)" bg="blackAlpha.600" />
+                <ModalContent bg="transparent" boxShadow="none" border="none">
                     <ProjectSettingsEditor
                         onSave={handleSaveNewProject}
-                        onCancel={() => setIsProjectDialogOpen(false)}
+                        onCancel={closeProjectDialog}
                     />
-                </div>
-            )}
-        </>
+                </ModalContent>
+            </Modal>
+        </Flex>
     );
 };

@@ -1,6 +1,13 @@
 import React from 'react';
+import {
+    Box,
+    Flex,
+    Text,
+    VStack,
+    IconButton,
+    HStack,
+} from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
-import clsx from 'clsx';
 
 // Icon helpers
 const EyeOpen = () => <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" /><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" /></svg>;
@@ -16,9 +23,9 @@ export const LayersPanel: React.FC = () => {
     // If no map loaded, show placeholder
     if (!currentMap) {
         return (
-            <div className="p-4 text-xs text-slate-500 italic text-center mt-10">
+            <Box p="4" fontSize="xs" color="gray.500" fontStyle="italic" textAlign="center" mt="10">
                 No map active.
-            </div>
+            </Box>
         )
     }
 
@@ -26,52 +33,69 @@ export const LayersPanel: React.FC = () => {
     const layers = [...currentMap.layers].reverse();
 
     return (
-        <div className="flex flex-col h-full bg-slate-900 text-slate-200">
+        <Flex direction="column" h="full" bg="gray.900" color="gray.200">
             {/* Header */}
-            <div className="p-3 border-b border-slate-800 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Layers</h2>
-                <button className="text-slate-500 hover:text-white">+</button>
-            </div>
+            <Flex p="3" borderBottom="1px" borderColor="gray.800" align="center" justify="space-between">
+                <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">
+                    Layers
+                </Text>
+                <IconButton
+                    aria-label="Add Layer"
+                    icon={<Text fontSize="lg">+</Text>}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.500"
+                    _hover={{ color: 'white', bg: 'gray.800' }}
+                />
+            </Flex>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto">
-                {layers.map(layer => (
-                    <div
-                        key={layer.id}
-                        onClick={() => selectLayer(layer.id)}
-                        className={clsx(
-                            "group flex items-center px-3 py-2 text-sm cursor-pointer border-l-2 transition-colors",
-                            layer.id === selectedLayerId
-                                ? "bg-slate-800 border-blue-500 text-white"
-                                : "border-transparent hover:bg-slate-800/50"
-                        )}
-                    >
-                        {/* Visibility Toggle */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id); }}
-                            className={clsx(
-                                "mr-3 flex-shrink-0 hover:text-white focus:outline-none",
-                                layer.visible ? "text-slate-400" : "text-slate-600"
-                            )}
+            <Box flex={1} overflowY="auto">
+                <VStack spacing={0} align="stretch">
+                    {layers.map(layer => (
+                        <Flex
+                            key={layer.id}
+                            onClick={() => selectLayer(layer.id)}
+                            align="center"
+                            px="3"
+                            py="2"
+                            fontSize="sm"
+                            cursor="pointer"
+                            borderLeftWidth="2px"
+                            borderColor={layer.id === selectedLayerId ? "blue.500" : "transparent"}
+                            bg={layer.id === selectedLayerId ? "gray.800" : "transparent"}
+                            color={layer.id === selectedLayerId ? "white" : "inherit"}
+                            _hover={{ bg: layer.id === selectedLayerId ? "gray.800" : "gray.800" }}
+                            transition="colors 0.2s"
                         >
-                            {layer.visible ? <EyeOpen /> : <EyeClosed />}
-                        </button>
+                            {/* Visibility Toggle */}
+                            <IconButton
+                                aria-label="Toggle Visibility"
+                                icon={layer.visible ? <EyeOpen /> : <EyeClosed />}
+                                size="xs"
+                                variant="ghost"
+                                mr="3"
+                                color={layer.visible ? "gray.400" : "gray.600"}
+                                _hover={{ color: 'white', bg: 'transparent' }}
+                                onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id); }}
+                            />
 
-                        {/* Name */}
-                        <span className={clsx("flex-1 truncate select-none", !layer.visible && "text-slate-500")}>
-                            {layer.name}
-                        </span>
+                            {/* Name */}
+                            <Text flex={1} isTruncated noOfLines={1} userSelect="none" color={!layer.visible ? "gray.500" : "inherit"}>
+                                {layer.name}
+                            </Text>
 
-                        {/* Icons */}
-                        <div className="flex space-x-2 text-slate-500">
-                            {layer.locked && <Lock />}
-                            <span className="text-[10px] uppercase font-mono bg-slate-800 px-1 rounded text-slate-600">
-                                {layer.kind[0]}
-                            </span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+                            {/* Icons */}
+                            <HStack spacing="2" color="gray.500">
+                                {layer.locked && <Lock />}
+                                <Box fontSize="10px" textTransform="uppercase" fontFamily="mono" bg="gray.800" px="1" rounded="sm" color="gray.600">
+                                    {layer.kind[0]}
+                                </Box>
+                            </HStack>
+                        </Flex>
+                    ))}
+                </VStack>
+            </Box>
+        </Flex>
     );
 };

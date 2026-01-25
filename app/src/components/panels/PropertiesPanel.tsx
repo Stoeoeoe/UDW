@@ -1,4 +1,14 @@
 import React from 'react';
+import {
+    Box,
+    Flex,
+    Text,
+    VStack,
+    Divider,
+    Input,
+    FormControl,
+    FormLabel,
+} from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 
 export const PropertiesPanel: React.FC = () => {
@@ -12,62 +22,68 @@ export const PropertiesPanel: React.FC = () => {
         : null;
 
     return (
-        <div className="flex flex-col h-full bg-slate-900 text-slate-200">
+        <Flex direction="column" h="full" bg="gray.900" color="gray.200">
             {/* Header */}
-            <div className="p-3 border-b border-slate-800">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Properties</h2>
-            </div>
+            <Box p="3" borderBottom="1px" borderColor="gray.800">
+                <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">
+                    Properties
+                </Text>
+            </Box>
 
-            <div className="p-4 space-y-6 overflow-y-auto flex-1">
+            <Box p="4" overflowY="auto" flex={1}>
+                <VStack spacing="6" align="stretch">
+                    {/* Scenario: Nothing Selected */}
+                    {selectionCount === 0 && (
+                        <VStack mt="10" spacing="2" textAlign="center">
+                            <Text color="gray.600">No selection</Text>
+                            <Text fontSize="xs" color="gray.500">Select an entity or tile to view properties</Text>
+                        </VStack>
+                    )}
 
-                {/* Scenario: Nothing Selected */}
-                {selectionCount === 0 && (
-                    <div className="text-center mt-10 space-y-2">
-                        <div className="text-slate-600">No selection</div>
-                        <div className="text-xs text-slate-500">Select an entity or tile to view properties</div>
-                    </div>
-                )}
+                    {/* Scenario: Single Entity Selected */}
+                    {singleSelectedEntity && (
+                        <VStack spacing="4" align="stretch">
+                            {/* Header Info */}
+                            <FormControl>
+                                <FormLabel fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase">ID</FormLabel>
+                                <Box bg="gray.800" px="2" py="1.5" rounded="md" fontSize="sm" color="gray.300" fontFamily="mono" userSelect="all">
+                                    {singleSelectedEntity.id}
+                                </Box>
+                            </FormControl>
 
-                {/* Scenario: Single Entity Selected */}
-                {singleSelectedEntity && (
-                    <div className="space-y-4">
-                        {/* Header Info */}
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">ID</label>
-                            <div className="bg-slate-800 px-2 py-1.5 rounded text-sm text-slate-300 font-mono select-all">
-                                {singleSelectedEntity.id}
-                            </div>
-                        </div>
+                            <FormControl>
+                                <FormLabel fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase">Type</FormLabel>
+                                <Text fontSize="sm" color="blue.400" fontWeight="medium">
+                                    {singleSelectedEntity.typeId}
+                                </Text>
+                            </FormControl>
 
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Type</label>
-                            <div className="text-sm text-blue-400 font-medium">
-                                {singleSelectedEntity.typeId}
-                            </div>
-                        </div>
+                            <Divider borderColor="gray.800" />
 
-                        <hr className="border-slate-800" />
-
-                        {/* Properties (Dynamic) */}
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Custom Properties</h3>
-                            {/* Placeholder for dynamic property loop */}
-                            {Object.entries(singleSelectedEntity.properties).map(([key, value]) => (
-                                <div key={key} className="space-y-1">
-                                    <label className="text-xs text-slate-400">{key}</label>
-                                    <input
-                                        type="text"
-                                        value={String(value)}
-                                        readOnly // Read-only until we implement updates
-                                        className="w-full bg-slate-800 border-none rounded px-2 py-1 text-sm text-slate-200 focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-            </div>
-        </div>
+                            {/* Properties (Dynamic) */}
+                            <VStack spacing="3" align="stretch">
+                                <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase">Custom Properties</Text>
+                                {/* Placeholder for dynamic property loop */}
+                                {Object.entries(singleSelectedEntity.properties).map(([key, value]) => (
+                                    <FormControl key={key}>
+                                        <FormLabel fontSize="xs" color="gray.400" mb="1">{key}</FormLabel>
+                                        <Input
+                                            size="sm"
+                                            value={String(value)}
+                                            isReadOnly // Read-only until we implement updates
+                                            bg="gray.800"
+                                            border="none"
+                                            rounded="md"
+                                            color="gray.200"
+                                            _focus={{ ring: 1, ringColor: 'blue.500' }}
+                                        />
+                                    </FormControl>
+                                ))}
+                            </VStack>
+                        </VStack>
+                    )}
+                </VStack>
+            </Box>
+        </Flex>
     );
 };

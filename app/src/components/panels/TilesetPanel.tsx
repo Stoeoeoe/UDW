@@ -1,8 +1,19 @@
 import React, { useMemo, useState } from 'react';
+import {
+    Box,
+    Flex,
+    Text,
+    IconButton,
+    Select,
+    Grid,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    useDisclosure,
+} from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetImporter } from '../tileset/TilesetImporter';
 import { Tileset, TileDefinition } from '../../types/schema';
-import clsx from 'clsx';
 import { fileSystem } from '../../lib/fileSystem';
 
 export const TilesetPanel: React.FC = () => {
@@ -12,13 +23,11 @@ export const TilesetPanel: React.FC = () => {
     const selectTile = useEditorStore(state => state.selectTile);
     const loadSprite = useEditorStore(state => state.loadSprite);
 
-    // Actions needed from store (we need a way to addTileset)
-    // We'll add it to the component logic for now, but ideally it's a store action
+    const { isOpen: isImporterOpen, onOpen: openImporter, onClose: closeImporter } = useDisclosure();
 
     const [activeTilesetId, setActiveTilesetId] = useState<string | null>(
         tilesets.size > 0 ? Array.from(tilesets.keys())[0] : null
     );
-    const [isImporterOpen, setIsImporterOpen] = useState(false);
 
     const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
     const activeSprite = activeTileset ? loadedSprites.get(activeTileset.spriteSheet) : null;
@@ -31,19 +40,24 @@ export const TilesetPanel: React.FC = () => {
 
     const handleImport = async (config: Tileset, file: File) => {
         try {
-            // 1. Load Sprite to Store (and get URL)
-            // Note: In a real app we'd save the file to disk here too via fileSystem
-            await loadSprite(config.spriteSheet, file);
+            // 1. Save the sprite image to assets/
+            const spritePath = await fileSystem.saveAsset(file.name, file);
 
-            // 2. Get image dimensions to calculate columns/count
-            const img = useEditorStore.getState().loadedSprites.get(config.spriteSheet);
+            // 2. Update config with actual saved path
+            config.spriteSheet = spritePath;
+
+            // 3. Load Sprite to Store
+            await loadSprite(spritePath, file);
+
+            // 4. Get image dimensions to calculate columns/count
+            const img = useEditorStore.getState().loadedSprites.get(spritePath);
             if (!img) throw new Error("Failed to load sprite image");
 
             const columns = Math.floor(img.width / config.tileWidth);
             const rows = Math.floor(img.height / config.tileHeight);
             const tileCount = columns * rows;
 
-            // 3. Generate default tiles
+            // 5. Generate default tiles
             const tiles: TileDefinition[] = [];
             for (let i = 0; i < tileCount; i++) {
                 tiles.push({
@@ -61,67 +75,77 @@ export const TilesetPanel: React.FC = () => {
                 tiles
             };
 
-            // 4. Add to Store (Need to ensure this action exists or use setState hack for prototype)
+            // 6. Save tileset to disk
+            await fileSystem.saveTileset(fullTileset);
+
+            // 7. Add to Store
             useEditorStore.setState(state => {
                 state.tilesets.set(fullTileset.id, fullTileset);
             });
 
             setActiveTilesetId(fullTileset.id);
-            setIsImporterOpen(false);
+            closeImporter();
 
         } catch (e) {
             console.error(e);
-            alert("Failed to import tileset");
+            alert("Failed to import tileset: " + (e as Error).message);
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-900 text-slate-200 relative">
+        <Flex direction="column" h="full" bg="gray.900" color="gray.200" position="relative">
             {/* Header / Selector */}
-            <div className="p-3 border-b border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Tilesets</h2>
-                    <button
-                        className="text-slate-500 hover:text-white"
-                        onClick={() => setIsImporterOpen(true)}
-                    >
-                        +
-                    </button>
-                </div>
+            <Box p="3" borderBottom="1px" borderColor="gray.800">
+                <Flex justify="space-between" align="center" mb="2">
+                    <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="gray.500">
+                        Tilesets
+                    </Text>
+                    <IconButton
+                        aria-label="Add Tileset"
+                        icon={<Text fontSize="lg">+</Text>}
+                        size="xs"
+                        variant="ghost"
+                        color="gray.500"
+                        _hover={{ color: 'white', bg: 'gray.800' }}
+                        onClick={openImporter}
+                    />
+                </Flex>
 
                 {tilesets.size > 0 && (
-                    <select
-                        className="w-full bg-slate-800 text-xs border border-slate-700 rounded px-2 py-1 focus:outline-none"
+                    <Select
+                        size="xs"
+                        bg="gray.800"
+                        borderColor="gray.700"
+                        _hover={{ borderColor: 'gray.600' }}
+                        _focus={{ borderColor: 'blue.500', boxShadow: 'none' }}
                         value={activeTilesetId || ''}
                         onChange={(e) => setActiveTilesetId(e.target.value)}
                     >
                         {Array.from(tilesets.values()).map(ts => (
                             <option key={ts.id} value={ts.id}>{ts.name}</option>
                         ))}
-                    </select>
+                    </Select>
                 )}
-            </div>
+            </Box>
 
             {/* Tiles Grid */}
-            <div className="flex-1 overflow-y-auto p-2 bg-slate-900">
+            <Box flex={1} overflowY="auto" p="2" bg="blackAlpha.200">
                 {!activeTileset && (
-                    <div className="text-center text-xs text-slate-600 mt-10">
+                    <Text textAlign="center" fontSize="xs" color="gray.600" mt="10">
                         No tilesets loaded.
-                    </div>
+                    </Text>
                 )}
 
                 {activeTileset && !activeSprite && (
-                    <div className="text-center text-xs text-red-900 mt-10">
+                    <Text textAlign="center" fontSize="xs" color="red.700" mt="10">
                         Image not found: {activeTileset.spriteSheet}
-                    </div>
+                    </Text>
                 )}
 
                 {activeTileset && activeSprite && (
-                    <div
-                        className="grid gap-1"
-                        style={{
-                            gridTemplateColumns: `repeat(auto-fill, minmax(${activeTileset.tileWidth}px, 1fr))`
-                        }}
+                    <Grid
+                        templateColumns={`repeat(auto-fill, minmax(${activeTileset.tileWidth}px, 1fr))`}
+                        gap="1"
                     >
                         {tiles.map(tile => {
                             // Calculate background position
@@ -129,46 +153,47 @@ export const TilesetPanel: React.FC = () => {
                             const row = Math.floor(tile.spriteIndex / activeTileset.columns);
 
                             return (
-                                <button
+                                <Box
+                                    as="button"
                                     key={tile.id}
                                     title={tile.id}
-                                    className={clsx(
-                                        "relative group rounded-sm overflow-hidden border transition-all",
-                                        selectedTileId === tile.id
-                                            ? "border-blue-500 ring-1 ring-blue-500 z-10"
-                                            : "border-transparent hover:border-slate-600"
-                                    )}
-                                    style={{
-                                        width: activeTileset.tileWidth,
-                                        height: activeTileset.tileHeight,
-                                    }}
+                                    position="relative"
+                                    rounded="sm"
+                                    overflow="hidden"
+                                    border="1px"
+                                    borderColor={selectedTileId === tile.id ? "blue.500" : "transparent"}
+                                    boxShadow={selectedTileId === tile.id ? "0 0 0 1px #3182ce" : "none"}
+                                    zIndex={selectedTileId === tile.id ? 10 : 0}
+                                    _hover={{ borderColor: selectedTileId === tile.id ? "blue.500" : "gray.600" }}
+                                    transition="all 0.1s"
+                                    w={`${activeTileset.tileWidth}px`}
+                                    h={`${activeTileset.tileHeight}px`}
                                     onClick={() => selectTile(tile.id)}
                                 >
-                                    <div
-                                        style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            backgroundImage: `url(${activeSprite.src})`,
-                                            backgroundPosition: `-${col * activeTileset.tileWidth}px -${row * activeTileset.tileHeight}px`,
-                                            imageRendering: 'pixelated'
-                                        }}
+                                    <Box
+                                        w="100%"
+                                        h="100%"
+                                        backgroundImage={`url(${activeSprite.src})`}
+                                        backgroundPosition={`-${col * activeTileset.tileWidth}px -${row * activeTileset.tileHeight}px`}
+                                        style={{ imageRendering: 'pixelated' }}
                                     />
-                                </button>
+                                </Box>
                             );
                         })}
-                    </div>
+                    </Grid>
                 )}
-            </div>
+            </Box>
 
-            {/* Importer Overlay */}
-            {isImporterOpen && (
-                <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+            {/* Importer Modal */}
+            <Modal isOpen={isImporterOpen} onClose={closeImporter} size="xl" isCentered>
+                <ModalOverlay backdropFilter="blur(4px)" bg="blackAlpha.800" />
+                <ModalContent bg="transparent" border="none" boxShadow="none">
                     <TilesetImporter
                         onSave={handleImport}
-                        onCancel={() => setIsImporterOpen(false)}
+                        onCancel={closeImporter}
                     />
-                </div>
-            )}
-        </div>
+                </ModalContent>
+            </Modal>
+        </Flex>
     );
 };

@@ -1,6 +1,6 @@
 
 export interface Project {
-    version: number;              // File format version (starts at 1)
+    version: string;              // File format version (starts at 1.0)
     name: string;                 // Display name
     tileSize: number;             // Tile dimensions in pixels (e.g., 16)
     defaultMapWidth: number;      // Default new map width in tiles
@@ -14,7 +14,7 @@ export interface Project {
 }
 
 export interface Tileset {
-    version: number;
+    version: string;
     id: string;                   // Unique identifier (kebab-case)
     name: string;                 // Display name
     spriteSheet: string;          // Relative path to PNG file

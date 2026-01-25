@@ -2,7 +2,20 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import clsx from 'clsx';
+import {
+    Box,
+    Button,
+    FormControl,
+    FormLabel,
+    Input,
+    FormErrorMessage,
+    SimpleGrid,
+    VStack,
+    HStack,
+    Text,
+    Heading,
+    Image,
+} from '@chakra-ui/react';
 import { Tileset } from '../../types/schema';
 
 interface TilesetImporterProps {
@@ -15,27 +28,9 @@ const schema = z.object({
     name: z.string().min(2, "Name is required"),
     tileWidth: z.number().min(8).max(128),
     tileHeight: z.number().min(8).max(128),
-    // File validation is handled manually for now as input[type=file] is tricky in RHF
 });
 
 type FormData = z.infer<typeof schema>;
-
-// Input Helper
-const InputField = ({ label, error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string, error?: string }) => (
-    <div className="space-y-1">
-        <label className="text-xs font-bold uppercase text-slate-500">{label}</label>
-        <input
-            className={clsx(
-                "w-full bg-slate-950 border rounded px-3 py-2 text-sm focus:outline-none",
-                error
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-slate-700 focus:border-blue-500"
-            )}
-            {...props}
-        />
-        {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
-    </div>
-);
 
 export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCancel }) => {
     const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -63,8 +58,6 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCanc
             return;
         }
 
-        // Construct complete Tileset object (minus the image data which is handled separately)
-        // Note: columns/count will be calculated by the store upon loading the image
         const newTileset: Tileset = {
             version: 1,
             id: data.id,
@@ -81,85 +74,137 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onSave, onCanc
     };
 
     return (
-        <div className="bg-slate-900 border border-slate-700 rounded-lg shadow-xl w-[500px] overflow-hidden text-slate-200 flex flex-col max-h-[90vh]">
-            <div className="bg-slate-800 px-4 py-3 border-b border-slate-700">
-                <h3 className="font-bold text-slate-100">Import Tileset</h3>
-            </div>
+        <Box
+            bg="gray.900"
+            border="1px"
+            borderColor="gray.700"
+            rounded="lg"
+            shadow="2xl"
+            w="full"
+            maxW="500px"
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+            maxH="90vh"
+        >
+            <Box bg="gray.800" px="4" py="3" borderBottom="1px" borderColor="gray.700">
+                <Heading size="sm">Import Tileset</Heading>
+            </Box>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <form id="tileset-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Box flex={1} overflowY="auto" p="4">
+                <form id="tileset-form" onSubmit={handleSubmit(onSubmit)}>
+                    <VStack spacing="4" align="stretch">
+                        <SimpleGrid columns={2} spacing={4}>
+                            <FormControl isInvalid={!!errors.id}>
+                                <FormLabel>Tileset ID</FormLabel>
+                                <Input
+                                    placeholder="e.g. dungeon-base"
+                                    {...register('id')}
+                                />
+                                <FormErrorMessage>{errors.id?.message}</FormErrorMessage>
+                            </FormControl>
+                            <FormControl isInvalid={!!errors.name}>
+                                <FormLabel>Display Name</FormLabel>
+                                <Input
+                                    placeholder="e.g. Dungeon Base"
+                                    {...register('name')}
+                                />
+                                <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
+                            </FormControl>
+                        </SimpleGrid>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <InputField
-                            label="Tileset ID"
-                            placeholder="e.g. dungeon-base"
-                            {...register('id')}
-                            error={errors.id?.message}
-                        />
-                        <InputField
-                            label="Display Name"
-                            placeholder="e.g. Dungeon Base"
-                            {...register('name')}
-                            error={errors.name?.message}
-                        />
-                    </div>
+                        <SimpleGrid columns={2} spacing={4}>
+                            <FormControl isInvalid={!!errors.tileWidth}>
+                                <FormLabel>Tile Width</FormLabel>
+                                <Input
+                                    type="number"
+                                    {...register('tileWidth', { valueAsNumber: true })}
+                                />
+                                <FormErrorMessage>{errors.tileWidth?.message}</FormErrorMessage>
+                            </FormControl>
+                            <FormControl isInvalid={!!errors.tileHeight}>
+                                <FormLabel>Tile Height</FormLabel>
+                                <Input
+                                    type="number"
+                                    {...register('tileHeight', { valueAsNumber: true })}
+                                />
+                                <FormErrorMessage>{errors.tileHeight?.message}</FormErrorMessage>
+                            </FormControl>
+                        </SimpleGrid>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <InputField
-                            type="number"
-                            label="Tile Width"
-                            {...register('tileWidth', { valueAsNumber: true })}
-                            error={errors.tileWidth?.message}
-                        />
-                        <InputField
-                            type="number"
-                            label="Tile Height"
-                            {...register('tileHeight', { valueAsNumber: true })}
-                            error={errors.tileHeight?.message}
-                        />
-                    </div>
+                        <FormControl>
+                            <FormLabel>Sprite Sheet (PNG)</FormLabel>
+                            <Box
+                                border="2px"
+                                borderStyle="dashed"
+                                borderColor="gray.700"
+                                rounded="lg"
+                                p="4"
+                                textAlign="center"
+                                position="relative"
+                                _hover={{ bg: 'gray.800', borderColor: 'gray.600' }}
+                                transition="all 0.2s"
+                            >
+                                <Input
+                                    type="file"
+                                    accept="image/png"
+                                    onChange={handleFileChange}
+                                    position="absolute"
+                                    top="0"
+                                    left="0"
+                                    w="100%"
+                                    h="100%"
+                                    opacity="0"
+                                    cursor="pointer"
+                                />
+                                <Text fontSize="sm" color="gray.400">
+                                    {selectedFile ? selectedFile.name : "Click or drag to upload PNG"}
+                                </Text>
+                            </Box>
+                        </FormControl>
 
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-slate-500">Sprite Sheet (PNG)</label>
-                        <div className="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center hover:bg-slate-800 transition-colors relative">
-                            <input
-                                type="file"
-                                accept="image/png"
-                                onChange={handleFileChange}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            <div className="text-sm text-slate-400">
-                                {selectedFile ? selectedFile.name : "Click or drag to upload PNG"}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Preview */}
-                    {previewUrl && (
-                        <div className="border border-slate-700 rounded bg-slate-950 p-2 overflow-auto max-h-48 flex justify-center">
-                            <img src={previewUrl} alt="Preview" className="max-w-full object-contain image-pixelated" />
-                        </div>
-                    )}
+                        {/* Preview */}
+                        {previewUrl && (
+                            <Box
+                                border="1px"
+                                borderColor="gray.700"
+                                rounded="md"
+                                bg="gray.950"
+                                p="2"
+                                overflow="auto"
+                                maxH="48"
+                                display="flex"
+                                justifyContent="center"
+                            >
+                                <Image
+                                    src={previewUrl}
+                                    alt="Preview"
+                                    maxW="full"
+                                    objectFit="contain"
+                                    style={{ imageRendering: 'pixelated' }}
+                                />
+                            </Box>
+                        )}
+                    </VStack>
                 </form>
-            </div>
+            </Box>
 
-            <div className="flex justify-end space-x-3 p-4 border-t border-slate-800 bg-slate-900">
-                <button
-                    type="button"
+            <HStack justify="flex-end" spacing="3" p="4" borderTop="1px" borderColor="gray.800" bg="gray.900">
+                <Button
+                    variant="ghost"
                     onClick={onCancel}
-                    className="px-4 py-2 rounded text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 >
                     Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                     type="submit"
                     form="tileset-form"
-                    className="px-4 py-2 rounded text-sm font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!selectedFile}
+                    colorScheme="blue"
+                    isDisabled={!selectedFile}
                 >
                     Import
-                </button>
-            </div>
-        </div>
+                </Button>
+            </HStack>
+        </Box>
     );
 };

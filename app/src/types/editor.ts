@@ -1,4 +1,4 @@
-import { Project, Tileset, Map, Variation } from './schema';
+import { Project, Tileset, Map } from './schema';
 
 export interface EditorState {
     // Project data
@@ -66,3 +66,5 @@ export interface ValidationError {
         position?: [number, number];
     };
 }
+
+export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities';
