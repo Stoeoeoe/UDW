@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Box, HStack, IconButton, Text, Button } from '@chakra-ui/react';
-import { ZoomControls } from '../common/ZoomControls';
-import { AddIcon, MinusIcon, RepeatIcon } from '@chakra-ui/icons';
+import { Box } from '@chakra-ui/react';
 import { usePanZoom } from '../../hooks/usePanZoom';
+import { ZoomControls } from '../common/ZoomControls';
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
 
@@ -25,7 +24,6 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const loadedSprites = useEditorStore(state => state.loadedSprites);
     const sprite = loadedSprites.get(tileset.spriteSheet);
     const setSelectedTiles = useEditorStore(state => state.setSelectedTiles);
-    const toggleSelectedTile = useEditorStore(state => state.toggleSelectedTile);
     const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
 
     const [isSelecting, setIsSelecting] = useState(false);
@@ -37,7 +35,6 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const [internalZoom, setInternalZoom] = useState(1.0);
     const [camera, setCamera] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
-    const lastMousePos = useRef({ x: 0, y: 0 });
 
     const panZoom = usePanZoom({
         canvasRef,

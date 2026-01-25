@@ -3,11 +3,7 @@ import {
     VStack,
     HStack,
     Text,
-    Button,
     Box,
-    FormControl,
-    FormLabel,
-    Input,
     Select,
 } from '@chakra-ui/react';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';

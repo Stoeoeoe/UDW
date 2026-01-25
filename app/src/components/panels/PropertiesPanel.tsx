@@ -1,26 +1,20 @@
 import React from 'react';
 import {
     Box,
-    Flex,
     Text,
     VStack,
     Divider,
     Input,
     FormControl,
     FormLabel,
-    Switch,
-    Select,
-    NumberInput,
-    NumberInputField,
-    Heading,
     HStack,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
-import { PanelShell } from '../common/PanelShell';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
 import { resolveEntities } from '../../lib/mapUtils';
+import { InspectorPanel, InspectorEmptyState } from '../editor/panels';
 
 export const PropertiesPanel: React.FC = () => {
     const editorMode = useEditorStore(state => state.mode);
@@ -37,6 +31,11 @@ export const PropertiesPanel: React.FC = () => {
         if (activeTileset) {
             return <TilesetInspector tileset={activeTileset} />;
         }
+        return (
+            <InspectorPanel title="Tile Properties">
+                <InspectorEmptyState icon="🎨" message="No Tileset Selected" hint="Select a tileset to inspect tiles" />
+            </InspectorPanel>
+        );
     }
 
     // Resolve entities for the current variation
@@ -49,86 +48,72 @@ export const PropertiesPanel: React.FC = () => {
             updateEntityProperties(selectedEntityId, { [key]: value });
         }
     };
-                return (
-                    <PanelShell title="Tile Properties">
-                        <TilesetInspector tileset={activeTileset} />
-                    </PanelShell>
-                );
+
     return (
-        <Flex direction="column" h="full" bg="#03040a" color="gray.200">
-            {/* Header */}
-            <Box bg="#05060a" borderBottom="1px" borderColor="#071018" px={4} py={3}>
-                <VStack align="start" spacing={0}>
-                    <Text fontSize="xs" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
-                        Inspector
-                    </Text>
-                    <Heading size="xs" color="white">
-                        {selectedEntity ? (entityType?.displayName || 'Entity') : 'Selection'}
-                    </Heading>
+        <InspectorPanel
+            title={selectedEntity ? (entityType?.displayName || 'Entity') : 'Selection'}
+            emptyState={
+                <InspectorEmptyState
+                    icon="🔍"
+                    message="No Object Selected"
+                    hint="Select an entity on the map to view and edit properties"
+                />
+            }
+        >
+            {selectedEntity && (
+                <VStack align="stretch" spacing={5}>
+                    {/* Static Identity Section */}
+                    <VStack align="stretch" spacing={3}>
+                        <FormControl>
+                            <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Core ID</FormLabel>
+                            <Input
+                                size="xs"
+                                variant="filled"
+                                bg="#0a0a0b"
+                                value={selectedEntity.id}
+                                isReadOnly
+                                fontFamily="mono"
+                                _hover={{ bg: '#071018' }}
+                            />
+                        </FormControl>
+
+                        <FormControl>
+                            <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Entity Type</FormLabel>
+                            <Text fontSize="xs" color="blue.400" fontWeight="bold">{selectedEntity.typeId}</Text>
+                        </FormControl>
+
+                        <FormControl>
+                            <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Position</FormLabel>
+                            <HStack>
+                                <Text fontSize="xs" color="gray.400" w="8">X:</Text>
+                                <Text fontSize="xs" fontWeight="bold">{selectedEntity.position[0]}</Text>
+                                <Box w={4} />
+                                <Text fontSize="xs" color="gray.400" w="8">Y:</Text>
+                                <Text fontSize="xs" fontWeight="bold">{selectedEntity.position[1]}</Text>
+                            </HStack>
+                        </FormControl>
+                    </VStack>
+
+                    <Divider borderColor="#071018" />
+
+                    {/* Dynamic Properties Section */}
+                    <VStack align="stretch" spacing={4}>
+                        <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">Behavior Properties</Text>
+
+                        {entityType?.properties && (
+                            <PropertyForm
+                                schema={(entityType.properties as any as PropertySchema[])}
+                                values={selectedEntity?.properties || {}}
+                                onChange={(k, v) => handlePropertyChange(k, v)}
+                            />
+                        )}
+
+                        {(!entityType || entityType.properties.length === 0) && (
+                            <Text fontSize="xs" color="gray.600" fontStyle="italic">No configurable properties</Text>
+                        )}
+                    </VStack>
                 </VStack>
-            </Box>
-
-        return (
-            <PanelShell title={selectedEntity ? (entityType?.displayName || 'Entity') : 'Selection'}>
-                {!selectedEntity ? (
-                    <VStack mt="10" spacing={2} textAlign="center" opacity={0.4}>
-                        <Text fontSize="4xl">🔍</Text>
-                        <Text color="gray.500" fontSize="sm">No Object Selected</Text>
-                        <Text fontSize="10px" color="gray.600">Select an entity on the map to view and edit properties</Text>
-                    </VStack>
-                ) : (
-                    <VStack align="stretch" spacing={5}>
-                        {/* Static Identity Section */}
-                        <VStack align="stretch" spacing={3}>
-                            <FormControl>
-                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Core ID</FormLabel>
-                                <Input
-                                    size="xs"
-                                    variant="filled"
-                                    bg="gray.900"
-                                    value={selectedEntity.id}
-                                    isReadOnly
-                                    fontFamily="mono"
-                                    _hover={{ bg: 'gray.800' }}
-                                />
-                            </FormControl>
-
-                            <FormControl>
-                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Entity Type</FormLabel>
-                                <Text fontSize="xs" color="blue.400" fontWeight="bold">{selectedEntity.typeId}</Text>
-                            </FormControl>
-
-                            <FormControl>
-                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>Position</FormLabel>
-                                <HStack>
-                                    <Text fontSize="xs" color="gray.400" w="8">X:</Text>
-                                    <Text fontSize="xs" fontWeight="bold">{selectedEntity.position[0]}</Text>
-                                    <Box w={4} />
-                                    <Text fontSize="xs" color="gray.400" w="8">Y:</Text>
-                                    <Text fontSize="xs" fontWeight="bold">{selectedEntity.position[1]}</Text>
-                                </HStack>
-                            </FormControl>
-                        </VStack>
-
-                        <Divider borderColor="gray.800" />
-
-                        {/* Dynamic Properties Section */}
-                        <VStack align="stretch" spacing={4}>
-                            <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">Behavior Properties</Text>
-
-                            {entityType?.properties && (
-                                <PropertyForm
-                                    schema={(entityType.properties as any as PropertySchema[])}
-                                    values={selectedEntity?.properties || {}}
-                                    onChange={(k, v) => handlePropertyChange(k, v)}
-                                />
-                            )}
-
-                            {(!entityType || entityType.properties.length === 0) && (
-                                <Text fontSize="xs" color="gray.600" fontStyle="italic">No configurable properties</Text>
-                            )}
-                        </VStack>
-                    </VStack>
-                )}
-            </PanelShell>
-        );
+            )}
+        </InspectorPanel>
+    );
+};

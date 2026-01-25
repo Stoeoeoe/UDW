@@ -61,9 +61,9 @@ export const LayersPanel: React.FC = () => {
     };
 
     return (
-        <Flex direction="column" h="full" bg="gray.900" color="gray.200">
+        <Flex direction="column" h="full" bg="#03040a" color="gray.200">
             {/* Header */}
-            <Flex p="3" borderBottom="1px" borderColor="gray.800" align="center" justify="space-between" bg="gray.950">
+            <Flex p="3" borderBottom="1px" borderColor="#071018" align="center" justify="space-between" bg="#05060a">
                 <Text fontSize="10px" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
                     Layers
                 </Text>
@@ -73,7 +73,7 @@ export const LayersPanel: React.FC = () => {
                     size="xs"
                     variant="ghost"
                     color="gray.400"
-                    _hover={{ color: 'white', bg: 'gray.800' }}
+                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
                     onClick={handleAddLayer}
                 />
             </Flex>

@@ -1,14 +1,8 @@
 import { Box, Flex } from '@chakra-ui/react';
-import { AppLayout } from './components/layout/AppLayout';
 import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/navigation/Sidebar';
 import { ProjectPanel } from './components/panels/ProjectPanel';
-import { MapsPanel } from './components/panels/MapsPanel';
-import { TilesetPanel } from './components/panels/TilesetPanel';
-import { EntitiesPanel } from './components/panels/EntitiesPanel';
-import { PropertiesPanel } from './components/panels/PropertiesPanel';
-import { TilesetPalette } from './components/tileset/TilesetPalette';
-import { MainViewport } from './components/viewport/MainViewport';
+import { MapEditor, TilesetEditor, EntityEditor } from './components/editor';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 
@@ -21,59 +15,44 @@ function App() {
     return <LandingScreen />;
   }
 
-  const isProjectMode = editorMode === 'project';
-  const isMapsMode = editorMode === 'maps';
-
-  const renderLeftPanelContent = () => {
+  const renderEditor = () => {
     switch (editorMode) {
+      case 'project':
+        return <ProjectPanel />;
       case 'maps':
-        return <MapsPanel />;
+        return <MapEditor />;
       case 'tilesets':
-        return <TilesetPanel />;
+        return <TilesetEditor />;
       case 'entities':
-        return <EntitiesPanel />;
+        return <EntityEditor />;
       default:
         return null;
     }
   };
 
-  const LeftPanel = (
-    <Flex h="full" w="full">
-      <Sidebar activeMode={editorMode} onModeChange={setEditorMode} />
-      {!isProjectMode && (
-        <Box flex={1} overflow="hidden">
-          {renderLeftPanelContent()}
-        </Box>
-      )}
-    </Flex>
-  );
-
-  const RightPanel = (
-    <Flex h="full" direction="column" w="full">
-      {/* Properties / Inspector on Top */}
-      <Box flex={1} overflow="hidden">
-        <PropertiesPanel />
+  return (
+    <Flex direction="column" h="100vh" w="100vw" overflow="hidden" bg="gray.900" color="gray.200" userSelect="none">
+      {/* Top Bar */}
+      <Box h="12" borderBottom="1px" borderColor="gray.800" bg="gray.950" zIndex="20" flexShrink={0}>
+        <TopBar />
       </Box>
 
-      {/* Tileset Palette on Bottom (Only in Map Mode) */}
-      {isMapsMode && (
-        <Box flex={1} overflow="hidden" minH="200px">
-          <TilesetPalette />
-        </Box>
-      )}
-    </Flex>
-  );
+      {/* Main Workspace */}
+      <Flex flex={1} overflow="hidden" minH={0}>
+        {/* Sidebar (always visible) */}
+        <Sidebar activeMode={editorMode} onModeChange={setEditorMode} />
 
-  return (
-    <AppLayout
-      topBar={<TopBar />}
-      leftPanel={LeftPanel}
-      rightPanel={!isProjectMode ? RightPanel : null}
-      viewport={isProjectMode ? <ProjectPanel /> : <MainViewport mode={editorMode} />}
-      leftPanelOpen={true}
-      rightPanelOpen={!isProjectMode}
-      leftWidth={isProjectMode ? "16" : "80"}
-    />
+        {/* Editor Content */}
+        <Box flex={1} overflow="hidden">
+          {renderEditor()}
+        </Box>
+      </Flex>
+
+      {/* Status Bar */}
+      <Flex h="6" bg="gray.900" borderTop="1px" borderColor="gray.800" alignItems="center" px="2" fontSize="xs" color="gray.500" zIndex="20" flexShrink={0}>
+        Ready
+      </Flex>
+    </Flex>
   );
 }
 

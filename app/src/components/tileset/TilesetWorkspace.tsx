@@ -1,6 +1,5 @@
 import React from 'react';
-import { Box, Flex, VStack, Text, Center, Button } from '@chakra-ui/react';
-import { AddIcon } from '@chakra-ui/icons';
+import { Box, Flex, VStack, Text, Center } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetCanvas } from './TilesetCanvas';
 import { ViewportShell } from '../common/ViewportShell';
@@ -9,7 +8,30 @@ export const TilesetWorkspace: React.FC = () => {
     const activeId = useEditorStore(state => state.activeTilesetId);
     const tilesets = useEditorStore(state => state.tilesets);
     const selectedIndex = useEditorStore(state => state.selectedTileIndex);
-    const setSelectedIndex = useEditorStore(state => state.setSelectedTile);
+    const selectedIndices = useEditorStore(state => state.selectedTileIndices);
+    const setSelectedTile = useEditorStore(state => state.setSelectedTile);
+    const setSelectedTiles = useEditorStore(state => state.setSelectedTiles);
+    const toggleSelectedTile = useEditorStore(state => state.toggleSelectedTile);
+
+    const handleTileSelect = (index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => {
+        if (meta?.ctrlKey) {
+            toggleSelectedTile(index);
+            setSelectedTile(index);
+            return;
+        }
+        if (meta?.shiftKey && selectedIndices.length > 0) {
+            const last = selectedIndices[selectedIndices.length - 1] ?? (selectedIndex ?? 0);
+            const start = Math.min(last, index);
+            const end = Math.max(last, index);
+            const range: number[] = [];
+            for (let i = start; i <= end; i++) range.push(i);
+            setSelectedTiles(range);
+            setSelectedTile(index);
+            return;
+        }
+        setSelectedTiles([index]);
+        setSelectedTile(index);
+    };
 
     const activeTileset = activeId ? tilesets.get(activeId) : null;
 
@@ -34,7 +56,7 @@ export const TilesetWorkspace: React.FC = () => {
                     <TilesetCanvas
                         tileset={activeTileset}
                         selectedIndex={selectedIndex}
-                        onSelect={(i, meta) => setSelectedIndex(i, meta)}
+                        onSelect={handleTileSelect}
                     />
                 </Box>
             </Flex>
