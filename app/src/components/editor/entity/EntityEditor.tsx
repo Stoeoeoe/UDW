@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { VStack, Text, Center, Circle, HStack, Box } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EditorLayout } from '../common/EditorLayout';
@@ -22,6 +22,13 @@ export const EntityEditor: React.FC = () => {
     }));
 
     const selectedType = DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntityTypeId);
+
+    // Auto-select first entity type when opening the Entity editor
+    useEffect(() => {
+        if (DEFAULT_ENTITY_TYPES.length > 0 && !selectedEntityTypeId) {
+            setSelectedEntityType(DEFAULT_ENTITY_TYPES[0].id);
+        }
+    }, [selectedEntityTypeId, setSelectedEntityType]);
 
     // Left panel: entity type list
     const leftPanel = (

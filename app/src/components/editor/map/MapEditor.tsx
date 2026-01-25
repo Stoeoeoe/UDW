@@ -1,8 +1,9 @@
 import React from 'react';
 import { VStack, Text, Center, Button, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
-import { AddIcon } from '@chakra-ui/icons';
+// icons
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EditorLayout } from '../common/EditorLayout';
+import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewport } from '../../viewport/MapViewport';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { LayersPanel } from '../../panels/LayersPanel';
@@ -17,26 +18,17 @@ export const MapEditor: React.FC = () => {
     const currentMap = useEditorStore(state => state.currentMap);
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    // No map loaded state
+    // No map loaded state — use shared EmptyScreen
     if (!currentMap) {
         return (
-            <Center w="full" h="full" bg="#0a0a0b">
-                <VStack spacing={6}>
-                    <VStack spacing={2}>
-                        <Text fontSize="6xl">🗺️</Text>
-                        <Text color="white" fontWeight="bold" fontSize="xl">No Map Active</Text>
-                        <Text color="gray.500">Create a new map to start building your world.</Text>
-                    </VStack>
-                    <Button
-                        leftIcon={<AddIcon />}
-                        colorScheme="blue"
-                        size="lg"
-                        onClick={onOpen}
-                        px={8}
-                    >
-                        Create First Map
-                    </Button>
-                </VStack>
+            <>
+                <EmptyScreen
+                    icon="🗺️"
+                    title="No Map Active"
+                    description="Create a new map to start building your world."
+                    buttonLabel="Create First Map"
+                    onCreate={onOpen}
+                />
 
                 <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
                     <ModalOverlay backdropFilter="blur(4px)" />
@@ -44,7 +36,7 @@ export const MapEditor: React.FC = () => {
                         <MapCreator onCreate={onClose} onCancel={onClose} />
                     </ModalContent>
                 </Modal>
-            </Center>
+            </>
         );
     }
 

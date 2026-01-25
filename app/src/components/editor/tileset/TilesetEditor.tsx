@@ -1,10 +1,11 @@
-import React from 'react';
-import { VStack, Text, Center, Flex, Box } from '@chakra-ui/react';
+import React, { useEffect } from 'react';
+import { VStack, Text, Center, Flex, Box, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EditorLayout } from '../common/EditorLayout';
 import { TilesetCanvas } from '../../tileset/TilesetCanvas';
 import { TilesetInspector } from '../../tileset/TilesetInspector';
-import { ListPanel, ListPanelItem } from '../common';
+import { TilesetImporter } from '../../tileset/TilesetImporter';
+import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
 
 /**
  * TilesetEditor - The complete tileset editing experience.
@@ -60,28 +61,45 @@ export const TilesetEditor: React.FC = () => {
         />
     );
 
+    // Auto-select first tileset when editor opens if tilesets exist
+    useEffect(() => {
+        if (tilesets.size > 0 && !activeTilesetId) {
+            const first = Array.from(tilesets.values())[0];
+            if (first) setActiveTileset(first.id);
+        }
+    }, [tilesets, activeTilesetId, setActiveTileset]);
+
+    const { isOpen, onOpen, onClose } = useDisclosure();
+
     // Right panel: tile inspector (only if tileset active)
     const rightPanel = activeTileset ? (
         <TilesetInspector tileset={activeTileset} />
     ) : null;
 
-    // No tileset active state
+    // No tileset active state — use EmptyScreen and allow quick import
     if (!activeTileset) {
         return (
-            <EditorLayout
-                content={
-                    <Center w="full" h="full">
-                        <VStack spacing={6}>
-                            <VStack spacing={2}>
-                                <Text fontSize="6xl">🎨</Text>
-                                <Text color="white" fontWeight="bold" fontSize="xl">No Tileset Active</Text>
-                                <Text color="gray.500">Select or import a tileset from the sidebar.</Text>
-                            </VStack>
-                        </VStack>
-                    </Center>
-                }
-                leftPanel={leftPanel}
-            />
+            <>
+                <EditorLayout
+                    content={
+                        <EmptyScreen
+                            icon="🎨"
+                            title="No Tileset Active"
+                            description="Select or import a tileset from the sidebar."
+                            buttonLabel="Import Tileset"
+                            onCreate={onOpen}
+                        />
+                    }
+                    leftPanel={leftPanel}
+                />
+
+                <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
+                    <ModalOverlay backdropFilter="blur(4px)" />
+                    <ModalContent bg="transparent" border="none" boxShadow="none">
+                        <TilesetImporter onImport={onClose} onCancel={onClose} />
+                    </ModalContent>
+                </Modal>
+            </>
         );
     }
 
