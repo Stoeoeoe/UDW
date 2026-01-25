@@ -2,11 +2,13 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { castDraft } from 'immer';
 import { EditorState, ToolType, ValidationError } from '../types/editor';
-import { Project, Tileset, Map, Layer, Variation, EntityInstance } from '../types/schema';
+import { Project, Map, Layer, Variation, EntityInstance } from '../types/schema';
+import { recentProjects } from '../lib/recentProjects';
 
 interface EditorStore extends EditorState {
     // Actions
     loadProject: (path: string, project: Project) => Promise<void>;
+    closeProject: () => void;
     loadProjectResources: () => Promise<void>; // Load all maps, tilesets, sprites
     loadSprite: (path: string, blob: Blob) => Promise<string>; // Returns object URL
 
@@ -47,7 +49,7 @@ interface EditorStore extends EditorState {
 }
 
 export const useEditorStore = create<EditorStore>()(
-    immer((set, get) => ({
+    immer((set) => ({
         // Initial state
         project: null,
         projectPath: null,
@@ -78,6 +80,24 @@ export const useEditorStore = create<EditorStore>()(
             set(state => {
                 state.project = project;
                 state.projectPath = path;
+                // Reset resources and map state
+                state.currentMap = null;
+                state.currentMapPath = null;
+                state.tilesets = new globalThis.Map();
+                state.loadedSprites = new globalThis.Map();
+                state.selectedLayerId = null;
+                state.selectedTileId = null;
+            });
+            recentProjects.add(project.name, path);
+        },
+
+        closeProject: () => {
+            set(state => {
+                state.project = null;
+                state.projectPath = null;
+                state.currentMap = null;
+                state.tilesets = new globalThis.Map();
+                state.loadedSprites = new globalThis.Map();
             });
         },
 
@@ -134,7 +154,7 @@ export const useEditorStore = create<EditorStore>()(
             });
         },
 
-        createNewMap: (name, width, height, tilesetId) => {
+        createNewMap: (_name, _width, _height, _tilesetId) => {
             // Implementation placeholder
         },
 
@@ -191,7 +211,7 @@ export const useEditorStore = create<EditorStore>()(
             }
         }),
 
-        reorderLayer: (layerId, newZOrder) => {
+        reorderLayer: (_layerId, _newZOrder) => {
             // Implementation placeholder
         },
 
@@ -217,7 +237,7 @@ export const useEditorStore = create<EditorStore>()(
             });
         },
 
-        addVariation: (variation) => {
+        addVariation: (_variation) => {
             // Implementation placeholder
         },
 

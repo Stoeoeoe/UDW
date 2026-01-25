@@ -9,12 +9,19 @@ import { TilesetPanel } from './components/panels/TilesetPanel';
 import { EntitiesPanel } from './components/panels/EntitiesPanel';
 import { PropertiesPanel } from './components/panels/PropertiesPanel';
 import { MainViewport } from './components/viewport/MainViewport';
+import { LandingScreen } from './components/startup/LandingScreen';
 import { EditorMode } from './types/editor';
+import { useEditorStore } from './store/useEditorStore';
 
 function App() {
+  const project = useEditorStore(state => state.project);
   const [leftOpen] = useState(true);
   const [rightOpen] = useState(true);
   const [editorMode, setEditorMode] = useState<EditorMode>('maps');
+
+  if (!project) {
+    return <LandingScreen />;
+  }
 
   const renderLeftPanelContent = () => {
     switch (editorMode) {

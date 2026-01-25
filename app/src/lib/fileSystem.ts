@@ -1,12 +1,12 @@
 /**
- * File System Access API Abstraction
- * Handles interaction with the local file system.
+ * File System Access Abstraction
+ * Handles interaction with the local file system using either
+ * Electron IPC (Native) or Web File System Access API.
  */
 
 import { Project, Map as GameMap, Tileset } from '../types/schema';
 
-// Browser specific types for File System Access API
-// These are often available in modern browsers but may need explicit typing if tsconfig is strict
+// Types for Web API fallback
 interface FileSystemHandle {
     kind: 'file' | 'directory';
     name: string;
@@ -34,214 +34,189 @@ interface FileSystemWritableFileStream extends WritableStream {
 declare global {
     interface Window {
         showDirectoryPicker(options?: { mode?: 'read' | 'readwrite' }): Promise<FileSystemDirectoryHandle>;
+        showOpenFilePicker(options?: any): Promise<FileSystemFileHandle[]>;
     }
 }
 
 export class FileSystemManager {
-    private projectRoot: FileSystemDirectoryHandle | null = null;
+    private projectPath: string | null = null; // Used for Electron
+    private projectRoot: FileSystemDirectoryHandle | null = null; // Used for Web
 
-    /**
-     * Get the current project root handle
-     */
-    getProjectRoot(): FileSystemDirectoryHandle | null {
-        return this.projectRoot;
+    isElectron(): boolean {
+        return !!(window as any).ipcRenderer;
     }
 
     /**
-     * Open a directory as a project root.
-     * Returns the project configuration if found, or throws if invalid.
+     * Open a project by selecting project.json (Electron) or a folder (Web fallback)
      */
-    async openProject(): Promise<{ project: Project, handle: FileSystemDirectoryHandle }> {
-        if (!window.showDirectoryPicker) {
-            throw new Error("File System Access API not supported in this browser.");
-        }
+    async openProject(): Promise<{ project: Project, path: string }> {
+        if (this.isElectron()) {
+            const result = await (window as any).ipcRenderer.invoke('app:open-project');
+            if (!result) throw new Error("Open project cancelled.");
 
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        this.projectRoot = handle;
+            this.projectPath = result.projectPath;
+            return { project: result.project, path: result.projectPath };
+        } else {
+            if (!window.showDirectoryPicker) {
+                throw new Error("File System Access API not supported.");
+            }
 
-        // Verify project structure
-        try {
+            const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            this.projectRoot = handle;
+
             const projectFileHandle = await handle.getFileHandle('project.json');
             const file = await projectFileHandle.getFile();
             const text = await file.text();
             const project = JSON.parse(text) as Project;
-            return { project, handle };
-        } catch (e) {
-            console.error("Failed to load project.json", e);
-            throw new Error("Selected directory is not a valid project (missing project.json).");
+            return { project, path: handle.name };
         }
     }
 
     /**
-     * Create a new project structure in the selected directory.
+     * Load a project by its direct path (Electron only)
      */
-    async createProject(projectConfig: Project): Promise<FileSystemDirectoryHandle> {
-        if (!window.showDirectoryPicker) {
-            throw new Error("File System Access API not supported.");
+    async loadProjectByPath(path: string): Promise<{ project: Project, path: string }> {
+        if (this.isElectron()) {
+            const result = await (window as any).ipcRenderer.invoke('app:load-project-by-path', path);
+            this.projectPath = result.projectPath;
+            return { project: result.project, path: result.projectPath };
+        } else {
+            throw new Error("Direct path loading not supported in browser.");
         }
-
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        this.projectRoot = handle;
-
-        // 1. Write project.json
-        await this.writeJSON(handle, 'project.json', projectConfig);
-
-        // 2. Create subdirectories
-        await handle.getDirectoryHandle('maps', { create: true });
-        await handle.getDirectoryHandle('tilesets', { create: true });
-        await handle.getDirectoryHandle('assets', { create: true });
-
-        return handle;
     }
 
     /**
-     * Save the project.json file
+     * Create a new project structure.
      */
-    async saveProject(project: Project): Promise<void> {
-        if (!this.projectRoot) throw new Error("No project open.");
-        await this.writeJSON(this.projectRoot, 'project.json', project);
+    async createProject(projectConfig: Project): Promise<{ path: string }> {
+        if (this.isElectron()) {
+            const result = await (window as any).ipcRenderer.invoke('app:create-project', projectConfig);
+            if (!result) throw new Error("Create project cancelled.");
+
+            this.projectPath = result.projectPath;
+            return { path: result.projectPath };
+        } else {
+            const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            this.projectRoot = handle;
+
+            await this.writeJSONWeb(handle, 'project.json', projectConfig);
+            await handle.getDirectoryHandle('maps', { create: true });
+            await handle.getDirectoryHandle('tilesets', { create: true });
+            await handle.getDirectoryHandle('assets', { create: true });
+
+            return { path: handle.name };
+        }
     }
 
     /**
      * Load all maps from the maps/ directory
      */
     async loadAllMaps(): Promise<GameMap[]> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const maps: GameMap[] = [];
-        try {
-            const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
-
-            for await (const entry of mapsDir.values()) {
+        if (this.isElectron()) {
+            return await (window as any).ipcRenderer.invoke('app:fs-read-dir', {
+                projectPath: this.projectPath,
+                subDir: 'maps'
+            });
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const maps: GameMap[] = [];
+            const dir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
+            for await (const entry of dir.values()) {
                 if (entry.kind === 'file' && entry.name.endsWith('.map.json')) {
-                    const fileHandle = entry as FileSystemFileHandle;
-                    const file = await fileHandle.getFile();
-                    const text = await file.text();
-                    const map = JSON.parse(text) as GameMap;
-                    maps.push(map);
+                    const file = await (entry as FileSystemFileHandle).getFile();
+                    maps.push(JSON.parse(await file.text()));
                 }
             }
-        } catch (e) {
-            console.warn("Maps directory not found or empty", e);
+            return maps;
         }
-
-        return maps;
-    }
-
-    /**
-     * Load a specific map by ID
-     */
-    async loadMap(mapId: string): Promise<GameMap> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
-        const filename = `${mapId}.map.json`;
-        const fileHandle = await mapsDir.getFileHandle(filename);
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        return JSON.parse(text) as GameMap;
-    }
-
-    /**
-     * Save a Map file
-     */
-    async saveMap(map: GameMap): Promise<void> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: true });
-        const filename = `${map.id}.map.json`;
-        await this.writeJSON(mapsDir, filename, map);
-    }
-
-    /**
-     * Delete a map file
-     */
-    async deleteMap(mapId: string): Promise<void> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const mapsDir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
-        const filename = `${mapId}.map.json`;
-        await mapsDir.removeEntry(filename);
     }
 
     /**
      * Load all tilesets from the tilesets/ directory
      */
     async loadAllTilesets(): Promise<Tileset[]> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const tilesets: Tileset[] = [];
-        try {
-            const tilesetsDir = await this.projectRoot.getDirectoryHandle('tilesets', { create: false });
-
-            for await (const entry of tilesetsDir.values()) {
+        if (this.isElectron()) {
+            return await (window as any).ipcRenderer.invoke('app:fs-read-dir', {
+                projectPath: this.projectPath,
+                subDir: 'tilesets'
+            });
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const tilesets: Tileset[] = [];
+            const dir = await this.projectRoot.getDirectoryHandle('tilesets', { create: false });
+            for await (const entry of dir.values()) {
                 if (entry.kind === 'file' && entry.name.endsWith('.tileset.json')) {
-                    const fileHandle = entry as FileSystemFileHandle;
-                    const file = await fileHandle.getFile();
-                    const text = await file.text();
-                    const tileset = JSON.parse(text) as Tileset;
-                    tilesets.push(tileset);
+                    const file = await (entry as FileSystemFileHandle).getFile();
+                    tilesets.push(JSON.parse(await file.text()));
                 }
             }
-        } catch (e) {
-            console.warn("Tilesets directory not found or empty", e);
+            return tilesets;
         }
-
-        return tilesets;
     }
 
     /**
-     * Save a Tileset file
+     * Save a JSON file (Map or Tileset)
      */
-    async saveTileset(tileset: Tileset): Promise<void> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const tilesetsDir = await this.projectRoot.getDirectoryHandle('tilesets', { create: true });
-        const filename = `${tileset.id}.tileset.json`;
-        await this.writeJSON(tilesetsDir, filename, tileset);
+    async saveJson(subDir: 'maps' | 'tilesets', filename: string, data: any): Promise<void> {
+        if (this.isElectron()) {
+            await (window as any).ipcRenderer.invoke('app:fs-write-json', {
+                projectPath: this.projectPath,
+                subDir,
+                filename,
+                data
+            });
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const dir = await this.projectRoot.getDirectoryHandle(subDir, { create: true });
+            await this.writeJSONWeb(dir, filename, data);
+        }
     }
 
     /**
      * Save an asset file (image, etc.)
      */
     async saveAsset(filename: string, blob: Blob): Promise<string> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        const assetsDir = await this.projectRoot.getDirectoryHandle('assets', { create: true });
-        const fileHandle = await assetsDir.getFileHandle(filename, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-
-        return `assets/${filename}`;
+        if (this.isElectron()) {
+            const buffer = await blob.arrayBuffer();
+            return await (window as any).ipcRenderer.invoke('app:fs-write-asset', {
+                projectPath: this.projectPath,
+                filename,
+                buffer: new Uint8Array(buffer)
+            });
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const dir = await this.projectRoot.getDirectoryHandle('assets', { create: true });
+            const fileHandle = await dir.getFileHandle(filename, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return `assets/${filename}`;
+        }
     }
 
     /**
      * Load an asset file as a Blob
      */
     async loadAsset(relativePath: string): Promise<Blob> {
-        if (!this.projectRoot) throw new Error("No project open.");
-
-        // Parse path like "assets/spritesheet.png"
-        const parts = relativePath.split('/');
-        let currentDir = this.projectRoot;
-
-        // Navigate to parent directory
-        for (let i = 0; i < parts.length - 1; i++) {
-            currentDir = await currentDir.getDirectoryHandle(parts[i], { create: false });
+        if (this.isElectron()) {
+            const data = await (window as any).ipcRenderer.invoke('app:fs-read-asset', {
+                projectPath: this.projectPath,
+                relativePath
+            });
+            return new Blob([data]);
+        } else {
+            if (!this.projectRoot) throw new Error("No project open.");
+            const parts = relativePath.split('/');
+            let currentDir = this.projectRoot;
+            for (let i = 0; i < parts.length - 1; i++) {
+                currentDir = await currentDir.getDirectoryHandle(parts[i], { create: false });
+            }
+            const fileHandle = await currentDir.getFileHandle(parts[parts.length - 1]);
+            return await fileHandle.getFile();
         }
-
-        // Get file
-        const filename = parts[parts.length - 1];
-        const fileHandle = await currentDir.getFileHandle(filename);
-        const file = await fileHandle.getFile();
-        return file;
     }
 
-    /**
-     * Helper to write JSON to a file handle
-     */
-    private async writeJSON(dirHandle: FileSystemDirectoryHandle, filename: string, data: any): Promise<void> {
+    private async writeJSONWeb(dirHandle: FileSystemDirectoryHandle, filename: string, data: any): Promise<void> {
         const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(JSON.stringify(data, null, 2));

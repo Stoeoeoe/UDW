@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { setupIpcHandlers } from './ipcHandlers'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -33,6 +34,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
+
+  // Initialize IPC Handlers
+  setupIpcHandlers(win);
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-ssr/
+dist-electron/
+*.local
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.log

@@ -12,16 +12,11 @@ import {
     MenuDivider,
     IconButton,
     Tooltip,
-    useDisclosure,
-    Modal,
-    ModalOverlay,
-    ModalContent,
+    useToast,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
-import { ProjectSettingsEditor } from '../dialogs/ProjectSettingsEditor';
 import { fileSystem } from '../../lib/fileSystem';
-import { Project } from '../../types/schema';
 
 // Icons
 const CursorIcon = () => <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z" /></svg>;
@@ -37,51 +32,39 @@ const TOOL_BUTTONS: { id: ToolType; icon: any; label: string }[] = [
 export const TopBar: React.FC = () => {
     const activeTool = useEditorStore(state => state.activeTool);
     const setActiveTool = useEditorStore(state => state.setActiveTool);
+    const closeProject = useEditorStore(state => state.closeProject);
     const loadProject = useEditorStore(state => state.loadProject);
-
-    const { isOpen: isProjectDialogOpen, onOpen: openProjectDialog, onClose: closeProjectDialog } = useDisclosure();
+    const loadProjectResources = useEditorStore(state => state.loadProjectResources);
+    const project = useEditorStore(state => state.project);
+    const toast = useToast();
 
     // Handlers
-    const handleNewProject = () => {
-        openProjectDialog();
+    const handleCloseProject = () => {
+        if (confirm("Are you sure you want to close the project? Unsaved changes may be lost.")) {
+            closeProject();
+        }
     };
 
     const handleOpenProject = async () => {
         try {
-            // @ts-ignore - window.showDirectoryPicker is experimental
-            if (!window.showDirectoryPicker) {
-                alert("Your browser does not support the File System Access API. Please use Chrome or Edge.");
-                return;
-            }
-
-            const { project, handle } = await fileSystem.openProject();
-            await loadProject(handle.name, project);
-
-            // Load all resources (maps, tilesets, sprites)
-            await useEditorStore.getState().loadProjectResources();
+            const { project: nextProject, path } = await fileSystem.openProject();
+            await loadProject(path, nextProject);
+            await loadProjectResources();
+            toast({
+                title: "Project Changed",
+                description: `Switched to ${nextProject.name}`,
+                status: "success",
+                duration: 3000,
+            });
         } catch (e: any) {
-            if (e.name !== 'AbortError') {
+            if (e.message !== "Open project cancelled.") {
                 console.error(e);
-                alert(e.message || "Failed to open project");
-            }
-        }
-    };
-
-    const handleSaveNewProject = async (project: Project) => {
-        try {
-            // @ts-ignore
-            if (!window.showDirectoryPicker) {
-                alert("Your browser does not support the File System Access API.");
-                return;
-            }
-
-            const handle = await fileSystem.createProject(project);
-            await loadProject(handle.name, project);
-            closeProjectDialog();
-        } catch (e: any) {
-            if (e.name !== 'AbortError') {
-                console.error(e);
-                alert(e.message || "Failed to create project");
+                toast({
+                    title: "Failed to open project",
+                    description: e.message,
+                    status: "error",
+                    duration: 5000,
+                });
             }
         }
     };
@@ -106,7 +89,7 @@ export const TopBar: React.FC = () => {
                         ED
                     </Flex>
                     <Text fontWeight="semibold" color="gray.300" fontSize="sm" letterSpacing="tight">
-                        PixelEditor
+                        {project?.name || 'PixelEditor'}
                     </Text>
                 </HStack>
 
@@ -126,10 +109,11 @@ export const TopBar: React.FC = () => {
                             File
                         </MenuButton>
                         <MenuList bg="gray.800" borderColor="gray.700" color="gray.200" boxShadow="xl" py="1" zIndex="50">
-                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleNewProject}>New Project...</MenuItem>
                             <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleOpenProject}>Open Project...</MenuItem>
+                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }}>Save Project</MenuItem>
                             <MenuDivider borderColor="gray.700" />
-                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }}>Exit</MenuItem>
+                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} color="red.400" onClick={handleCloseProject}>Close Project</MenuItem>
+                            <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }}>Exit Control Panel</MenuItem>
                         </MenuList>
                     </Menu>
 
@@ -171,17 +155,6 @@ export const TopBar: React.FC = () => {
                     Export
                 </Button>
             </HStack>
-
-            {/* Project Dialog */}
-            <Modal isOpen={isProjectDialogOpen} onClose={closeProjectDialog} size="xl" isCentered>
-                <ModalOverlay backdropFilter="blur(4px)" bg="blackAlpha.600" />
-                <ModalContent bg="transparent" boxShadow="none" border="none">
-                    <ProjectSettingsEditor
-                        onSave={handleSaveNewProject}
-                        onCancel={closeProjectDialog}
-                    />
-                </ModalContent>
-            </Modal>
         </Flex>
     );
 };
