@@ -1,13 +1,13 @@
 import React from 'react';
 import { VStack, Text, Center, Button, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
-import { useEditorStore } from '../../store/useEditorStore';
-import { EditorLayout } from './EditorLayout';
-import { MapViewport } from '../viewport/MapViewport';
-import { MapCreator } from '../dialogs/MapCreator';
-import { LayersPanel } from '../panels/LayersPanel';
-import { PropertiesPanel } from '../panels/PropertiesPanel';
-import { TilesetPalette } from '../tileset/TilesetPalette';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { EditorLayout } from '../common/EditorLayout';
+import { MapViewport } from '../../viewport/MapViewport';
+import { MapCreator } from '../../dialogs/MapCreator';
+import { LayersPanel } from '../../panels/LayersPanel';
+import { PropertiesPanel } from '../../panels/PropertiesPanel';
+import { TilesetPalette } from '../../tileset/TilesetPalette';
 
 /**
  * MapEditor - The complete map editing experience.

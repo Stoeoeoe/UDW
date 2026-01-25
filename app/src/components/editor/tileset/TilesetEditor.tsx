@@ -1,10 +1,10 @@
 import React from 'react';
 import { VStack, Text, Center, Flex, Box } from '@chakra-ui/react';
-import { useEditorStore } from '../../store/useEditorStore';
-import { EditorLayout } from './EditorLayout';
-import { TilesetCanvas } from '../tileset/TilesetCanvas';
-import { TilesetInspector } from '../tileset/TilesetInspector';
-import { ListPanel, ListPanelItem } from './panels';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { EditorLayout } from '../common/EditorLayout';
+import { TilesetCanvas } from '../../tileset/TilesetCanvas';
+import { TilesetInspector } from '../../tileset/TilesetInspector';
+import { ListPanel, ListPanelItem } from '../common';
 
 /**
  * TilesetEditor - The complete tileset editing experience.

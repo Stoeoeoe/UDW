@@ -1,9 +1,9 @@
-export { EditorLayout } from './EditorLayout';
-export type { EditorLayoutProps } from './EditorLayout';
+export { EditorLayout } from './common/EditorLayout';
+export type { EditorLayoutProps } from './common/EditorLayout';
 
-export { MapEditor } from './MapEditor';
-export { TilesetEditor } from './TilesetEditor';
-export { EntityEditor } from './EntityEditor';
-export { SettingsEditor } from './SettingsEditor';
+export { MapEditor } from './map/MapEditor';
+export { TilesetEditor } from './tileset/TilesetEditor';
+export { EntityEditor } from './entity/EntityEditor';
+export { SettingsEditor } from './settings/SettingsEditor';
 
-export * from './panels';
+export * from './common';

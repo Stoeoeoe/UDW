@@ -14,8 +14,8 @@ import {
     Divider,
     Badge,
 } from '@chakra-ui/react';
-import { EditorLayout } from './EditorLayout';
-import { ListPanel, ListPanelItem } from './panels';
+import { EditorLayout } from '../common/EditorLayout';
+import { ListPanel, ListPanelItem } from '../common';
 
 // Settings categories
 type SettingsCategory = 'general' | 'editor' | 'grid' | 'export' | 'shortcuts';
@@ -86,7 +86,7 @@ export const SettingsEditor: React.FC = () => {
             title="Settings"
             items={categories}
             selectedId={activeCategory}
-            onSelect={(id) => setActiveCategory(id as SettingsCategory)}
+            onSelect={(id: string) => setActiveCategory(id as SettingsCategory)}
         />
     );
 

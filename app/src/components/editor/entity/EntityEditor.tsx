@@ -1,9 +1,9 @@
 import React from 'react';
 import { VStack, Text, Center, Circle, HStack, Box } from '@chakra-ui/react';
-import { useEditorStore } from '../../store/useEditorStore';
-import { EditorLayout } from './EditorLayout';
-import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from './panels';
-import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { EditorLayout } from '../common/EditorLayout';
+import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from '../common';
+import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 
 /**
  * EntityEditor - Browse and configure entity blueprints.
