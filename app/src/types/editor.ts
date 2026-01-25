@@ -4,6 +4,7 @@ export interface EditorState {
     // Project data
     project: Project | null;
     projectPath: string | null;           // Folder path or null if unsaved
+    mode: EditorMode;
 
     // Assets
     tilesets: globalThis.Map<string, Tileset>;       // Keyed by tileset.id

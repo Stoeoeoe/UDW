@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { castDraft } from 'immer';
-import { EditorState, ToolType, ValidationError } from '../types/editor';
+import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
 import { Project, Map, Layer, Variation, EntityInstance } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 
@@ -19,6 +19,7 @@ interface EditorStore extends EditorState {
 
     // Tool actions
     setActiveTool: (tool: ToolType) => void;
+    setMode: (mode: EditorMode) => void;
 
     // Tile actions
     paintTile: (layerId: string, x: number, y: number, tileId: string) => void;
@@ -54,6 +55,7 @@ export const useEditorStore = create<EditorStore>()(
         // Initial state
         project: null,
         projectPath: null,
+        mode: 'project',
         tilesets: new globalThis.Map(),
         loadedSprites: new globalThis.Map(),
         currentMap: null,
@@ -170,6 +172,12 @@ export const useEditorStore = create<EditorStore>()(
         setActiveTool: (tool) => {
             set(state => {
                 state.activeTool = tool;
+            });
+        },
+
+        setMode: (mode) => {
+            set(state => {
+                state.mode = mode;
             });
         },
 

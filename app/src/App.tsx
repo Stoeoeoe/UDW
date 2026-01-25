@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Box, Flex } from '@chakra-ui/react';
 import { AppLayout } from './components/layout/AppLayout';
 import { TopBar } from './components/layout/TopBar';
@@ -10,12 +9,12 @@ import { EntitiesPanel } from './components/panels/EntitiesPanel';
 import { PropertiesPanel } from './components/panels/PropertiesPanel';
 import { MainViewport } from './components/viewport/MainViewport';
 import { LandingScreen } from './components/startup/LandingScreen';
-import { EditorMode } from './types/editor';
 import { useEditorStore } from './store/useEditorStore';
 
 function App() {
   const project = useEditorStore(state => state.project);
-  const [editorMode, setEditorMode] = useState<EditorMode>('project');
+  const editorMode = useEditorStore(state => state.mode);
+  const setEditorMode = useEditorStore(state => state.setMode);
 
   if (!project) {
     return <LandingScreen />;
