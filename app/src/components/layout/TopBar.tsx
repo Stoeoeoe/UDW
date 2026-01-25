@@ -15,7 +15,7 @@ import {
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
 
-import { MapToolbar } from './MapToolbar';
+import { MapToolbar, TilesetToolbar } from './MapToolbar';
 
 export const TopBar: React.FC = () => {
     const mode = useEditorStore(state => state.mode);
@@ -116,8 +116,8 @@ export const TopBar: React.FC = () => {
                 </HStack>
             </HStack>
 
-            {/* Center: Toolbar (Only in Map Mode) */}
-            {mode === 'maps' ? <MapToolbar /> : <Box />}
+                    {/* Center: Toolbar (Map or Tileset) */}
+                    {mode === 'maps' ? <MapToolbar /> : mode === 'tilesets' ? <TilesetToolbar /> : <Box />}
 
             {/* Right: Actions */}
             <HStack spacing="3">

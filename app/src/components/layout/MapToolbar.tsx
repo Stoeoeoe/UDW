@@ -30,14 +30,19 @@ const TOOLS: { id: ToolType; icon: any; label: string; group: 'generic' | 'tiles
     { id: 'entityPlace', icon: EntityIcon, label: 'Place Entity (N)', group: 'entities' },
 ];
 
-export const MapToolbar: React.FC = () => {
+type ToolbarContext = 'map' | 'tileset';
+
+interface MapToolbarProps {
+    context?: ToolbarContext;
+}
+
+export const MapToolbar: React.FC<MapToolbarProps> = ({ context = 'map' }) => {
     const activeTool = useEditorStore(state => state.activeTool);
     const setActiveTool = useEditorStore(state => state.setActiveTool);
     const drawMode = useEditorStore(state => state.drawMode);
     const setDrawMode = useEditorStore(state => state.setDrawMode);
     const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
 
-    // Preparation for Terrain mode (UI only for now)
     const isTerrainMode = selectedTerrainId !== null;
 
     const renderGroup = (groupName: string) => {
@@ -100,12 +105,31 @@ export const MapToolbar: React.FC = () => {
                         _hover={{ bg: isTerrainMode ? 'blue.500' : 'gray.800' }}
                         fontSize="9px"
                         fontWeight="black"
-                        isDisabled // Not implemented yet
+                        isDisabled
                     >
                         TERRAIN
                     </Button>
                 </ButtonGroup>
             )}
+        </HStack>
+    );
+};
+
+export const TilesetToolbar: React.FC = () => {
+    const tilesetToolMode = useEditorStore(state => state.tilesetToolMode);
+    const setTilesetToolMode = useEditorStore(state => state.setTilesetToolMode);
+    const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
+
+    return (
+        <HStack spacing={4}>
+            <HStack bg="gray.900" p="1" rounded="xl" border="1px" borderColor="gray.800" spacing="1" boxShadow="lg">
+                <Tooltip label="Select" placement="bottom" hasArrow>
+                    <IconButton aria-label="Select" icon={<CursorIcon />} size="sm" variant={tilesetToolMode === 'select' ? 'solid' : 'ghost'} colorScheme={tilesetToolMode === 'select' ? 'blue' : 'gray'} onClick={() => setTilesetToolMode('select')} />
+                </Tooltip>
+                <Tooltip label="Terrain Paint" placement="bottom" hasArrow>
+                    <IconButton aria-label="Terrain" icon={<PaintBrushIcon />} size="sm" variant={tilesetToolMode === 'terrain' ? 'solid' : 'ghost'} colorScheme={tilesetToolMode === 'terrain' ? 'blue' : 'gray'} onClick={() => setTilesetToolMode('terrain')} />
+                </Tooltip>
+            </HStack>
         </HStack>
     );
 };

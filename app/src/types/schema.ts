@@ -34,6 +34,9 @@ export interface TileDefinition {
     collision?: CollisionDefinition;
     properties?: PropertyInstance[];
     terrain?: string;             // Optional terrain id referencing a WangColor or terrain set
+    // Optional per-corner terrain assignments for corner-based Wang tiles
+    // Order: [top-left, top-right, bottom-left, bottom-right]
+    terrainCorners?: (string | null)[];
 }
 
 export interface CollisionDefinition {

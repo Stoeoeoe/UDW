@@ -39,6 +39,8 @@ interface EditorStore extends EditorState {
     paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
     eraseTile: (layerId: string, x: number, y: number) => void;
     bucketFill: (layerId: string, startX: number, startY: number, tilesetId: string, tileIndex: number) => void;
+    // Tileset corner terrain actions
+    setTileCornerTerrain: (tilesetId: string, index: number, corner: number, terrainId: string | null) => Promise<void>;
 
     // Entity actions
     placeEntity: (entity: EntityInstance) => void;
@@ -71,6 +73,10 @@ interface EditorStore extends EditorState {
     setCamera: (camera: Partial<EditorState['camera']>) => void;
     resetCamera: () => void;
 
+    // Tileset toolbar mode
+    tilesetToolMode: 'select' | 'terrain';
+    setTilesetToolMode: (mode: 'select' | 'terrain') => void;
+
     // Validation
     validate: () => ValidationError[];
 }
@@ -100,6 +106,7 @@ export const useEditorStore = create<EditorStore>()(
         selectedEntityId: null,
         selectedEntityIds: new Set(),
         camera: { x: 0, y: 0, zoom: 2.0 },
+        tilesetToolMode: 'select',
         panels: {
             layersOpen: true,
             tilesetPaletteOpen: true,
@@ -220,6 +227,14 @@ export const useEditorStore = create<EditorStore>()(
                 state.currentMap = castDraft(map);
             });
         },
+
+        setTilesetToolMode: (mode) => set(state => {
+            state.tilesetToolMode = mode;
+            // Auto-select first terrain when entering terrain mode
+            if (mode === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
+                state.selectedTerrainId = state.terrainTypes[0].id;
+            }
+        }),
 
         createNewMap: async (name, width, height, tilesetId) => {
             const { fileSystem } = await import('../lib/fileSystem');
@@ -373,6 +388,25 @@ export const useEditorStore = create<EditorStore>()(
                 ts.tiles[index] = castDraft(definition);
             }
         }),
+
+        setTileCornerTerrain: async (tilesetId, index, corner, terrainId) => {
+            const { fileSystem } = await import('../lib/fileSystem');
+            let updatedTileset: Tileset | undefined;
+
+            set(state => {
+                const ts = state.tilesets.get(tilesetId);
+                if (!ts) return;
+                const tile = ts.tiles[index] || {} as TileDefinition;
+                if (!tile.terrainCorners) tile.terrainCorners = [null, null, null, null];
+                tile.terrainCorners[corner] = terrainId;
+                ts.tiles[index] = castDraft(tile);
+                updatedTileset = JSON.parse(JSON.stringify(ts));
+            });
+
+            if (updatedTileset) {
+                await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, updatedTileset);
+            }
+        },
 
         paintTile: (layerId, x, y, tilesetId, tileIndex) => set(state => {
             if (!state.currentMap) return;

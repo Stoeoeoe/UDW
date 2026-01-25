@@ -11,6 +11,7 @@ interface TilesetCanvasProps {
     onSelect: (index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => void;
     mode?: 'interactive' | 'static';
     zoom?: number;
+    tool?: 'select' | 'terrain';
 }
 
 export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
@@ -19,17 +20,26 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     onSelect,
     mode = 'interactive',
     zoom: forcedZoom
+    ,
+    tool = 'select'
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const loadedSprites = useEditorStore(state => state.loadedSprites);
     const sprite = loadedSprites.get(tileset.spriteSheet);
     const setSelectedTiles = useEditorStore(state => state.setSelectedTiles);
     const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
+    const terrainTypes = useEditorStore(state => state.terrainTypes);
+    const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
+    const setTileCornerTerrain = useEditorStore(state => state.setTileCornerTerrain);
 
     const [isSelecting, setIsSelecting] = useState(false);
     const selectionStart = useRef<{ col: number; row: number } | null>(null);
     const selectionEnd = useRef<{ col: number; row: number } | null>(null);
     const mouseMovedDuringDown = useRef(false);
+
+    // Terrain painting state (drag-to-paint)
+    const [isTerrainPainting, setIsTerrainPainting] = useState(false);
+    const lastPaintedCorner = useRef<{ tileIdx: number; corner: number } | null>(null);
 
     // Zoom and Camera State
     const [internalZoom, setInternalZoom] = useState(1.0);
@@ -92,13 +102,70 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         panZoom.handleWheel(e);
     }, [panZoom, mode]);
 
+    // Helper to compute corner index from tile-local coordinates
+    const computeCorner = useCallback((tileX: number, tileY: number, col: number, row: number) => {
+        const localX = tileX - col * tileset.tileWidth;
+        const localY = tileY - row * tileset.tileHeight;
+        const isLeft = localX < tileset.tileWidth / 2;
+        const isTop = localY < tileset.tileHeight / 2;
+        if (isTop && isLeft) return 0;      // TL
+        if (isTop && !isLeft) return 1;     // TR
+        if (!isTop && isLeft) return 2;     // BL
+        return 3;                            // BR
+    }, [tileset.tileWidth, tileset.tileHeight]);
+
+    // Helper to get tile coords from mouse position
+    const getTileCoords = useCallback((mouseX: number, mouseY: number) => {
+        const canvas = canvasRef.current;
+        if (!canvas || !sprite) return null;
+
+        let tileX: number, tileY: number;
+        if (mode === 'interactive') {
+            const sheetX = -sprite.width / 2;
+            const sheetY = -sprite.height / 2;
+            const worldX = (mouseX - canvas.width / 2) / effectiveZoom + camera.x;
+            const worldY = (mouseY - canvas.height / 2) / effectiveZoom + camera.y;
+            tileX = worldX - sheetX;
+            tileY = worldY - sheetY;
+        } else {
+            tileX = mouseX / effectiveZoom;
+            tileY = mouseY / effectiveZoom;
+        }
+
+        const col = Math.floor(tileX / tileset.tileWidth);
+        const row = Math.floor(tileY / tileset.tileHeight);
+
+        if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
+            const index = row * tileset.columns + col;
+            if (index >= 0 && index < tileset.tileCount) {
+                return { tileX, tileY, col, row, index };
+            }
+        }
+        return null;
+    }, [mode, effectiveZoom, camera, sprite, tileset]);
+
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.button === 1 || (e.button === 0 && e.altKey)) {
             setIsPanning(true);
             panZoom.startPan(e.clientX, e.clientY);
             e.preventDefault();
+        } else if (e.button === 0 && tool === 'terrain') {
+            // Start terrain painting (drag-to-paint)
+            if (!selectedTerrainId) return;
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const coords = getTileCoords(mouseX, mouseY);
+            if (coords) {
+                setIsTerrainPainting(true);
+                const corner = computeCorner(coords.tileX, coords.tileY, coords.col, coords.row);
+                lastPaintedCorner.current = { tileIdx: coords.index, corner };
+                setTileCornerTerrain(tileset.id, coords.index, corner, selectedTerrainId);
+            }
         } else if (e.button === 0) {
-            // start selection drag
+            // start selection drag (only in select mode)
             const canvas = canvasRef.current;
             if (!canvas || !sprite) return;
             const rect = canvas.getBoundingClientRect();
@@ -127,11 +194,31 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
                 mouseMovedDuringDown.current = false;
             }
         }
-    }, [mode]);
+    }, [mode, tool, effectiveZoom, camera, sprite, tileset, panZoom, selectedTerrainId, getTileCoords, computeCorner, setTileCornerTerrain]);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         if (isPanning) {
             if (panZoom.panMove(e.clientX, e.clientY)) return;
+        }
+
+        // Terrain painting while dragging
+        if (isTerrainPainting && selectedTerrainId) {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const coords = getTileCoords(mouseX, mouseY);
+            if (coords) {
+                const corner = computeCorner(coords.tileX, coords.tileY, coords.col, coords.row);
+                // Only paint if different from last painted corner
+                const last = lastPaintedCorner.current;
+                if (!last || last.tileIdx !== coords.index || last.corner !== corner) {
+                    lastPaintedCorner.current = { tileIdx: coords.index, corner };
+                    setTileCornerTerrain(tileset.id, coords.index, corner, selectedTerrainId);
+                }
+            }
+            return;
         }
 
         // selection dragging (use canvas bounds)
@@ -163,9 +250,15 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             }
             return;
         }
-    }, [isPanning, effectiveZoom, getConstrainedPos, isSelecting, sprite, mode, camera]);
+    }, [isPanning, effectiveZoom, getConstrainedPos, isSelecting, sprite, mode, camera, isTerrainPainting, selectedTerrainId, getTileCoords, computeCorner, setTileCornerTerrain, tileset.id]);
 
     const handleMouseUp = useCallback(() => {
+        // Stop terrain painting
+        if (isTerrainPainting) {
+            setIsTerrainPainting(false);
+            lastPaintedCorner.current = null;
+        }
+
         if (isSelecting) {
             // finalize selection
             const s = selectionStart.current;
@@ -193,7 +286,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         }
         panZoom.stopPan();
         setIsPanning(false);
-    }, [isSelecting, tileset, setSelectedTiles]);
+    }, [isSelecting, isTerrainPainting, tileset, setSelectedTiles]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -313,6 +406,116 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             );
         }
 
+        // Draw terrain corner overlays when in terrain tool (50% opacity quadrants with rounded outer corners)
+        if (tool === 'terrain') {
+            // Helper to convert hex to rgba with alpha
+            const hexToRgba = (hex: string, alpha: number) => {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r},${g},${b},${alpha})`;
+            };
+
+            // Helper to get terrain at a specific corner of a tile
+            const getCornerTerrain = (tileCol: number, tileRow: number, cornerIdx: number): string | null => {
+                if (tileCol < 0 || tileRow < 0 || tileCol >= tileset.columns) return null;
+                const tileIdx = tileRow * tileset.columns + tileCol;
+                if (tileIdx < 0 || tileIdx >= tileset.tileCount) return null;
+                const td = tileset.tiles?.[tileIdx];
+                return td?.terrainCorners?.[cornerIdx] || null;
+            };
+
+            const halfW = tileset.tileWidth / 2;
+            const halfH = tileset.tileHeight / 2;
+            const radius = Math.min(halfW, halfH) * 0.35;
+
+            // For each tile, draw quadrant fills for assigned corners
+            for (let idx = 0; idx < tileset.tileCount; idx++) {
+                const col = idx % tileset.columns;
+                const row = Math.floor(idx / tileset.columns);
+                const tileDef = tileset.tiles?.[idx];
+                const corners = tileDef?.terrainCorners || null;
+                if (!corners) continue;
+
+                const x = sheetX + col * tileset.tileWidth;
+                const y = sheetY + row * tileset.tileHeight;
+
+                // corner positions: 0=TL, 1=TR, 2=BL, 3=BR
+                for (let ci = 0; ci < 4; ci++) {
+                    const tid = corners[ci];
+                    if (!tid) continue;
+                    const tt = terrainTypes.find(t => t.id === tid);
+                    if (!tt) continue;
+
+                    // Determine which corners of this quadrant should be rounded
+                    // Inner corner (toward tile center) is never rounded
+                    // Outer corner is rounded if adjacent quadrants have different terrain
+                    let qx = 0, qy = 0;
+                    let roundTL = false, roundTR = false, roundBL = false, roundBR = false;
+
+                    if (ci === 0) { // TL quadrant
+                        qx = x; qy = y;
+                        // Outer corner is top-left; check adjacent: left tile's TR, top tile's BL, diag's BR
+                        const adjLeft = getCornerTerrain(col - 1, row, 1);   // TR of left tile
+                        const adjTop = getCornerTerrain(col, row - 1, 2);    // BL of top tile
+                        const adjDiag = getCornerTerrain(col - 1, row - 1, 3); // BR of diag tile
+                        roundTL = (adjLeft !== tid || adjTop !== tid || adjDiag !== tid);
+                        // Check if right edge should connect (TR quadrant same terrain)
+                        roundTR = corners[1] !== tid;
+                        // Check if bottom edge should connect (BL quadrant same terrain)
+                        roundBL = corners[2] !== tid;
+                    } else if (ci === 1) { // TR quadrant
+                        qx = x + halfW; qy = y;
+                        const adjRight = getCornerTerrain(col + 1, row, 0);  // TL of right tile
+                        const adjTop = getCornerTerrain(col, row - 1, 3);    // BR of top tile
+                        const adjDiag = getCornerTerrain(col + 1, row - 1, 2); // BL of diag tile
+                        roundTR = (adjRight !== tid || adjTop !== tid || adjDiag !== tid);
+                        roundTL = corners[0] !== tid;
+                        roundBR = corners[3] !== tid;
+                    } else if (ci === 2) { // BL quadrant
+                        qx = x; qy = y + halfH;
+                        const adjLeft = getCornerTerrain(col - 1, row, 3);   // BR of left tile
+                        const adjBot = getCornerTerrain(col, row + 1, 0);    // TL of bottom tile
+                        const adjDiag = getCornerTerrain(col - 1, row + 1, 1); // TR of diag tile
+                        roundBL = (adjLeft !== tid || adjBot !== tid || adjDiag !== tid);
+                        roundTL = corners[0] !== tid;
+                        roundBR = corners[3] !== tid;
+                    } else { // BR quadrant (ci === 3)
+                        qx = x + halfW; qy = y + halfH;
+                        const adjRight = getCornerTerrain(col + 1, row, 2);  // BL of right tile
+                        const adjBot = getCornerTerrain(col, row + 1, 1);    // TR of bottom tile
+                        const adjDiag = getCornerTerrain(col + 1, row + 1, 0); // TL of diag tile
+                        roundBR = (adjRight !== tid || adjBot !== tid || adjDiag !== tid);
+                        roundTR = corners[1] !== tid;
+                        roundBL = corners[2] !== tid;
+                    }
+
+                    ctx.fillStyle = hexToRgba(tt.color, 0.5);
+                    ctx.beginPath();
+                    // Draw rounded rect with selective corner radii
+                    const rTL = roundTL ? radius : 0;
+                    const rTR = roundTR ? radius : 0;
+                    const rBL = roundBL ? radius : 0;
+                    const rBR = roundBR ? radius : 0;
+                    ctx.moveTo(qx + rTL, qy);
+                    ctx.lineTo(qx + halfW - rTR, qy);
+                    if (rTR > 0) ctx.arcTo(qx + halfW, qy, qx + halfW, qy + rTR, rTR);
+                    else ctx.lineTo(qx + halfW, qy);
+                    ctx.lineTo(qx + halfW, qy + halfH - rBR);
+                    if (rBR > 0) ctx.arcTo(qx + halfW, qy + halfH, qx + halfW - rBR, qy + halfH, rBR);
+                    else ctx.lineTo(qx + halfW, qy + halfH);
+                    ctx.lineTo(qx + rBL, qy + halfH);
+                    if (rBL > 0) ctx.arcTo(qx, qy + halfH, qx, qy + halfH - rBL, rBL);
+                    else ctx.lineTo(qx, qy + halfH);
+                    ctx.lineTo(qx, qy + rTL);
+                    if (rTL > 0) ctx.arcTo(qx, qy, qx + rTL, qy, rTL);
+                    else ctx.lineTo(qx, qy);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
         ctx.restore();
         // Draw selection rectangle if dragging
         if (isSelecting && selectionStart.current && selectionEnd.current) {
@@ -340,7 +543,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             ctx.fillRect(x, y, w, h);
             ctx.restore();
         }
-    }, [sprite, tileset, selectedIndex, effectiveZoom, camera, mode]);
+    }, [sprite, tileset, selectedIndex, selectedTileIndices, effectiveZoom, camera, mode, tool, terrainTypes, isSelecting]);
 
     const handleClick = (e: React.MouseEvent) => {
         // Ignore click if it was a drag-selection
@@ -348,6 +551,9 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             mouseMovedDuringDown.current = false;
             return;
         }
+
+        // Terrain painting is handled in mouseDown/mouseMove, skip here
+        if (tool === 'terrain') return;
 
         if (isPanning) return;
         const canvas = canvasRef.current;

@@ -33,6 +33,9 @@ export interface EditorState {
     drawMode: 'point' | 'rect' | 'circle'; // How tools behave
     hoveredTile: { x: number, y: number } | null; // Currently hovered tile in viewport
 
+    // Tileset-specific tool mode used by the Tileset toolbar
+    tilesetToolMode?: 'select' | 'terrain';
+
     // Camera
     camera: {
         x: number;                          // Pan offset X in pixels

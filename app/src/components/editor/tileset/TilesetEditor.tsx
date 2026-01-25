@@ -4,6 +4,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { EditorLayout } from '../common/EditorLayout';
 import { TilesetCanvas } from '../../tileset/TilesetCanvas';
 import { TilesetInspector } from '../../tileset/TilesetInspector';
+import { TilesetTerrainPanel } from '../../tileset/TilesetTerrainPanel';
 import { TilesetImporter } from '../../tileset/TilesetImporter';
 import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
 
@@ -12,6 +13,8 @@ import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
  * Provides: canvas viewport, tileset list, tile inspector.
  */
 export const TilesetEditor: React.FC = () => {
+    const tilesetMode = useEditorStore(state => state.tilesetToolMode);
+    const setTilesetMode = useEditorStore(state => state.setTilesetToolMode);
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const tilesets = useEditorStore(state => state.tilesets);
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);
@@ -71,9 +74,9 @@ export const TilesetEditor: React.FC = () => {
 
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    // Right panel: tile inspector (only if tileset active)
+    // Right panel: switch between inspector and terrain palette when tileset active
     const rightPanel = activeTileset ? (
-        <TilesetInspector tileset={activeTileset} />
+        tilesetMode === 'terrain' ? <TilesetTerrainPanel tileset={activeTileset} /> : <TilesetInspector tileset={activeTileset} />
     ) : null;
 
     // No tileset active state — use EmptyScreen and allow quick import
@@ -112,10 +115,11 @@ export const TilesetEditor: React.FC = () => {
             content={
                 <Flex h="full" overflow="hidden" position="relative">
                     <Box flex={1} position="relative">
-                        <TilesetCanvas
+                            <TilesetCanvas
                             tileset={activeTileset}
                             selectedIndex={selectedTileIndex}
-                            onSelect={handleTileSelect}
+                                onSelect={handleTileSelect}
+                                tool={tilesetMode}
                         />
                     </Box>
                 </Flex>

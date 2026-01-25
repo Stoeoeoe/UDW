@@ -10,19 +10,14 @@
   },
   "terrainTypes": [
     {
-      "id": "terrain-1769375940460",
-      "displayName": "asdasdads",
+      "id": "water",
+      "displayName": "Water",
       "color": "#3182ce"
     },
     {
-      "id": "terrain-1769375946222",
-      "displayName": "New Terrain",
-      "color": "#3182ce"
-    },
-    {
-      "id": "terrain-1769376092983",
-      "displayName": "New Terrain",
-      "color": "#3182ce"
+      "id": "grass",
+      "displayName": "Grass",
+      "color": "#30cf60"
     }
   ]
 }
