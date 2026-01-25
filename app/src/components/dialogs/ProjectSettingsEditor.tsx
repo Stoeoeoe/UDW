@@ -19,7 +19,6 @@ import { Project } from '../../types/schema';
 interface ProjectSettingsEditorProps {
     initialProject?: Project;
     onSave: (project: Project) => void;
-    onCancel: () => void;
 }
 
 const DEFAULT_PROJECT: Project = {
@@ -56,8 +55,7 @@ type FormData = z.infer<typeof schema>;
 
 export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
     initialProject,
-    onSave,
-    onCancel
+    onSave
 }) => {
     const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
@@ -185,14 +183,6 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                 <Divider borderColor="gray.800" />
 
                 <HStack justify="flex-end" spacing="3">
-                    <Button
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white', bg: 'gray.800' }}
-                        onClick={onCancel}
-                    >
-                        Cancel
-                    </Button>
                     <Button
                         type="submit"
                         colorScheme="blue"
