@@ -31,6 +31,7 @@ export interface TileDefinition {
     tags?: string[];              // Semantic tags (e.g. ["walkable", "water"])
     collision?: CollisionDefinition;
     properties?: PropertyInstance[];
+    terrain?: string;             // Optional terrain id referencing a WangColor or terrain set
 }
 
 export interface CollisionDefinition {

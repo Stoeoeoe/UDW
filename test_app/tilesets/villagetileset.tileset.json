@@ -7177,5 +7177,19 @@
       }
     }
   },
-  "wangSets": []
+  "wangSets": [
+    {
+      "id": "set-1769355729726",
+      "name": "New Terrain",
+      "type": "corner",
+      "colors": [
+        {
+          "id": 1,
+          "name": "Base",
+          "color": "#3182ce"
+        }
+      ],
+      "tileMappings": {}
+    }
+  ]
 }

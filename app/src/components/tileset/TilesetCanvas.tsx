@@ -234,7 +234,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = mode === 'interactive' ? '#171923' : 'transparent';
+        // Match central viewport background used in MapViewport / ViewportShell
+        ctx.fillStyle = mode === 'interactive' ? '#0a0a0b' : 'transparent';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.imageSmoothingEnabled = false;

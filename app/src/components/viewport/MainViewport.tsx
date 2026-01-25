@@ -4,6 +4,7 @@ import { AddIcon } from '@chakra-ui/icons';
 import { EditorMode } from '../../types/editor';
 import { MapViewport } from './MapViewport';
 import { TilesetWorkspace } from '../tileset/TilesetWorkspace';
+import { ViewportShell } from '../common/ViewportShell';
 import { useEditorStore } from '../../store/useEditorStore';
 import { MapCreator } from '../dialogs/MapCreator';
 
@@ -46,7 +47,11 @@ export const MainViewport: React.FC<MainViewportProps> = ({ mode }) => {
                     </Center>
                 );
             }
-            return <MapViewport />;
+            return (
+                <ViewportShell title={currentMap.name || 'Map'}>
+                    <MapViewport />
+                </ViewportShell>
+            );
 
         case 'tilesets':
             return <TilesetWorkspace />;

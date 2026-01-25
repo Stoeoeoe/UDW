@@ -17,6 +17,8 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
+import { PanelShell } from '../common/PanelShell';
+import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
 import { resolveEntities } from '../../lib/mapUtils';
 
@@ -47,11 +49,15 @@ export const PropertiesPanel: React.FC = () => {
             updateEntityProperties(selectedEntityId, { [key]: value });
         }
     };
-
+                return (
+                    <PanelShell title="Tile Properties">
+                        <TilesetInspector tileset={activeTileset} />
+                    </PanelShell>
+                );
     return (
-        <Flex direction="column" h="full" bg="gray.950" color="gray.200">
+        <Flex direction="column" h="full" bg="#03040a" color="gray.200">
             {/* Header */}
-            <Box bg="gray.900" borderBottom="1px" borderColor="gray.800" px={4} py={3}>
+            <Box bg="#05060a" borderBottom="1px" borderColor="#071018" px={4} py={3}>
                 <VStack align="start" spacing={0}>
                     <Text fontSize="xs" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
                         Inspector
@@ -62,7 +68,8 @@ export const PropertiesPanel: React.FC = () => {
                 </VStack>
             </Box>
 
-            <Box p={4} overflowY="auto" flex={1}>
+        return (
+            <PanelShell title={selectedEntity ? (entityType?.displayName || 'Entity') : 'Selection'}>
                 {!selectedEntity ? (
                     <VStack mt="10" spacing={2} textAlign="center" opacity={0.4}>
                         <Text fontSize="4xl">🔍</Text>
@@ -109,63 +116,13 @@ export const PropertiesPanel: React.FC = () => {
                         <VStack align="stretch" spacing={4}>
                             <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">Behavior Properties</Text>
 
-                            {entityType?.properties.map(prop => {
-                                const currentValue = selectedEntity.properties[prop.key] ?? prop.defaultValue;
-
-                                return (
-                                    <FormControl key={prop.key}>
-                                        <FormLabel fontSize="xs" color="gray.300" mb={1}>{prop.label}</FormLabel>
-
-                                        {prop.type === 'string' && (
-                                            <Input
-                                                size="sm"
-                                                bg="gray.900"
-                                                borderColor="gray.800"
-                                                value={currentValue}
-                                                onChange={(e) => handlePropertyChange(prop.key, e.target.value)}
-                                            />
-                                        )}
-
-                                        {prop.type === 'number' && (
-                                            <NumberInput
-                                                size="sm"
-                                                value={currentValue}
-                                                min={prop.constraints?.min}
-                                                max={prop.constraints?.max}
-                                                onChange={(_, val) => handlePropertyChange(prop.key, val)}
-                                            >
-                                                <NumberInputField bg="gray.900" borderColor="gray.800" />
-                                            </NumberInput>
-                                        )}
-
-                                        {prop.type === 'boolean' && (
-                                            <Switch
-                                                colorScheme="blue"
-                                                isChecked={currentValue}
-                                                onChange={(e) => handlePropertyChange(prop.key, e.target.checked)}
-                                            />
-                                        )}
-
-                                        {prop.type === 'enum' && (
-                                            <Select
-                                                size="sm"
-                                                bg="gray.900"
-                                                borderColor="gray.800"
-                                                value={currentValue}
-                                                onChange={(e) => handlePropertyChange(prop.key, e.target.value)}
-                                            >
-                                                {prop.constraints?.options?.map(opt => (
-                                                    <option key={opt} value={opt} style={{ background: '#1a202c' }}>{opt}</option>
-                                                ))}
-                                            </Select>
-                                        )}
-
-                                        {prop.description && (
-                                            <Text fontSize="9px" color="gray.600" mt={1}>{prop.description}</Text>
-                                        )}
-                                    </FormControl>
-                                );
-                            })}
+                            {entityType?.properties && (
+                                <PropertyForm
+                                    schema={(entityType.properties as any as PropertySchema[])}
+                                    values={selectedEntity?.properties || {}}
+                                    onChange={(k, v) => handlePropertyChange(k, v)}
+                                />
+                            )}
 
                             {(!entityType || entityType.properties.length === 0) && (
                                 <Text fontSize="xs" color="gray.600" fontStyle="italic">No configurable properties</Text>
@@ -173,7 +130,5 @@ export const PropertiesPanel: React.FC = () => {
                         </VStack>
                     </VStack>
                 )}
-            </Box>
-        </Flex>
-    );
-};
+            </PanelShell>
+        );

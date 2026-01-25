@@ -40,7 +40,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) => {
     return (
-        <VStack spacing={0} h="full" bg="gray.950" borderRight="1px" borderColor="gray.900" w="16" flexShrink={0}>
+        <VStack spacing={0} h="full" bg="#03040a" borderRight="1px" borderColor="#071018" w="16" flexShrink={0}>
             <NavIcon icon="📋" label="Project" mode="project" active={activeMode === 'project'} onClick={onModeChange} />
             <NavIcon icon="🗺️" label="Maps" mode="maps" active={activeMode === 'maps'} onClick={onModeChange} />
             <NavIcon icon="🎨" label="Tiles" mode="tilesets" active={activeMode === 'tilesets'} onClick={onModeChange} />
