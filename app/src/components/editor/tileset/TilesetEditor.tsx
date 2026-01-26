@@ -60,17 +60,13 @@ export const TilesetEditor: React.FC = () => {
             items={tilesetItems}
             selectedId={activeTilesetId}
             onSelect={setActiveTileset}
+            autoSelectFirst={true}
             emptyMessage="No tilesets imported"
         />
     );
 
     // Auto-select first tileset when editor opens if tilesets exist
-    useEffect(() => {
-        if (tilesets.size > 0 && !activeTilesetId) {
-            const first = Array.from(tilesets.values())[0];
-            if (first) setActiveTileset(first.id);
-        }
-    }, [tilesets, activeTilesetId, setActiveTileset]);
+    // NOTE: auto-selection is now handled by ListPanel via `autoSelectFirst` prop
 
     const { isOpen, onOpen, onClose } = useDisclosure();
 

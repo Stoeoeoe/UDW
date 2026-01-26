@@ -26,6 +26,7 @@ export interface ListPanelProps {
     emptyMessage?: string;
     renderItem?: (item: ListPanelItem, isSelected: boolean) => React.ReactNode;
     actions?: React.ReactNode;
+    autoSelectFirst?: boolean;
 }
 
 export const ListPanel: React.FC<ListPanelProps> = ({
@@ -37,7 +38,17 @@ export const ListPanel: React.FC<ListPanelProps> = ({
     emptyMessage = 'No items',
     renderItem,
     actions,
+    autoSelectFirst = false,
 }) => {
+    React.useEffect(() => {
+        if (!onSelect || !autoSelectFirst) return;
+        if (!items || items.length === 0) return;
+        const hasSelected = selectedId != null && items.some(i => i.id === selectedId);
+        if (!hasSelected) {
+            onSelect(items[0].id);
+        }
+    }, [items, selectedId, onSelect, autoSelectFirst]);
+
     return (
         <Flex direction="column" h="full" overflow="hidden">
             {/* Header */}

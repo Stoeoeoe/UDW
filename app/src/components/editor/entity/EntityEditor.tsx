@@ -23,12 +23,6 @@ export const EntityEditor: React.FC = () => {
 
     const selectedType = DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntityTypeId);
 
-    // Auto-select first entity type when opening the Entity editor
-    useEffect(() => {
-        if (DEFAULT_ENTITY_TYPES.length > 0 && !selectedEntityTypeId) {
-            setSelectedEntityType(DEFAULT_ENTITY_TYPES[0].id);
-        }
-    }, [selectedEntityTypeId, setSelectedEntityType]);
 
     // Left panel: entity type list
     const leftPanel = (
@@ -37,6 +31,7 @@ export const EntityEditor: React.FC = () => {
             items={entityItems}
             selectedId={selectedEntityTypeId}
             onSelect={setSelectedEntityType}
+            autoSelectFirst={true}
             emptyMessage="No entity types defined"
         />
     );

@@ -69,6 +69,7 @@ export const TerrainEditor: React.FC = () => {
             selectedId={selectedTerrainId}
             onSelect={(id) => setSelectedTerrain(id)}
             onAdd={handleAdd}
+            autoSelectFirst={true}
             emptyMessage="No terrain types defined"
         />
     );
