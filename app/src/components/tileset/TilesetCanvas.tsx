@@ -42,7 +42,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const lastPaintedCorner = useRef<{ tileIdx: number; corner: number } | null>(null);
 
     // Zoom and Camera State
-    const [internalZoom, setInternalZoom] = useState(1.0);
+    const [internalZoom, setInternalZoom] = useState(1.5);
     const [camera, setCamera] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
 

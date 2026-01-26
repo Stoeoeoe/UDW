@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { VStack, Text, Center, Circle, HStack, Box } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EditorLayout } from '../common/EditorLayout';

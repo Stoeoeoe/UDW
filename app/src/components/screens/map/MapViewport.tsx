@@ -55,6 +55,64 @@ export const MapViewport: React.FC = () => {
         contentSize: currentMap ? { width: currentMap.width * 16, height: currentMap.height * 16 } : null
     });
 
+    // Center the map in the viewport when a map becomes active. Observe the parent
+    // container (which determines the canvas final size) and center once it's measured.
+    React.useEffect(() => {
+        if (!currentMap) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const parent = canvas.parentElement || canvas;
+        if (!parent) return;
+
+        let ro: ResizeObserver | null = null;
+        const tryCenter = () => {
+            const pw = parent.clientWidth;
+            const ph = parent.clientHeight;
+            if (pw === 0 || ph === 0) return false;
+
+            const mapPixelW = currentMap.width * 16;
+            const mapPixelH = currentMap.height * 16;
+
+            // Apply the same constraint logic as usePanZoom.getConstrainedPos so
+            // the camera we set here matches pan/zoom constraints.
+            const viewW = pw / camera.zoom;
+            const viewH = ph / camera.zoom;
+            const limitX = Math.max(mapPixelW, viewW * 0.4);
+            const limitY = Math.max(mapPixelH, viewH * 0.4);
+
+            const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b);
+            const desiredX = mapPixelW / 2;
+            const desiredY = mapPixelH / 2;
+            const minX = -limitX / 2;
+            const maxX = limitX * 1.5;
+            const minY = -limitY / 2;
+            const maxY = limitY * 1.5;
+
+            const finalX = clamp(desiredX, minX, maxX);
+            const finalY = clamp(desiredY, minY, maxY);
+
+            setCamera({ x: finalX, y: finalY });
+            return true;
+        };
+
+        // If parent already measured, center immediately
+        if (!tryCenter()) {
+            ro = new ResizeObserver(() => {
+                if (tryCenter() && ro) {
+                    ro.disconnect();
+                    ro = null;
+                }
+            });
+            try { ro.observe(parent); } catch (e) { /* ignore */ }
+
+            const raf = requestAnimationFrame(() => { tryCenter(); });
+            return () => { if (ro) ro.disconnect(); cancelAnimationFrame(raf); };
+        }
+
+        return undefined;
+    }, [currentMap, setCamera, camera.zoom]);
+
     const handleWheel = useCallback((e: WheelEvent) => panZoom.handleWheel(e), [panZoom]);
 
     const screenToWorld = useCallback((clientX: number, clientY: number) => {

@@ -105,7 +105,8 @@ export const useEditorStore = create<EditorStore>()(
         selectedEntityTypeId: null,
         selectedEntityId: null,
         selectedEntityIds: new Set(),
-        camera: { x: 0, y: 0, zoom: 2.0 },
+        camera: { x: 0, y: 0, zoom: 1.5 },
+        mapCameras: {},
         tilesetToolMode: 'select',
         panels: {
             layersOpen: true,
@@ -225,6 +226,9 @@ export const useEditorStore = create<EditorStore>()(
         setCurrentMap: (map) => {
             set(state => {
                 state.currentMap = castDraft(map);
+                if (map && state.mapCameras && state.mapCameras[map.id]) {
+                    state.camera = { ...state.mapCameras[map.id] };
+                }
             });
         },
 
@@ -735,10 +739,19 @@ export const useEditorStore = create<EditorStore>()(
 
         setCamera: (camera) => set(state => {
             state.camera = { ...state.camera, ...camera };
+            // Persist camera per-map so reopening a map restores its last view
+            if (state.currentMap) {
+                try {
+                    state.mapCameras = state.mapCameras || {};
+                    state.mapCameras[state.currentMap.id] = { ...state.camera };
+                } catch (e) {
+                    // ignore
+                }
+            }
         }),
 
         resetCamera: () => set(state => {
-            state.camera = { x: 0, y: 0, zoom: 1.0 };
+            state.camera = { x: 0, y: 0, zoom: 1.5 };
         }),
 
         validate: () => {
