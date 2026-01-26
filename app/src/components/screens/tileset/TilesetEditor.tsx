@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { VStack, Text, Center, Flex, Box, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
+import React from 'react';
+import { Flex, Box, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EditorLayout } from '../common/EditorLayout';
 import { TilesetCanvas } from '../../tileset/TilesetCanvas';
@@ -14,7 +14,6 @@ import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
  */
 export const TilesetEditor: React.FC = () => {
     const tilesetMode = useEditorStore(state => state.tilesetToolMode);
-    const setTilesetMode = useEditorStore(state => state.setTilesetToolMode);
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const tilesets = useEditorStore(state => state.tilesets);
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);

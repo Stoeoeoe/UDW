@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Box, Text } from '@chakra-ui/react';
-import { usePanZoom } from '../../hooks/usePanZoom';
-import { ZoomControls } from '../common/ZoomControls';
-import { AddIcon, MinusIcon, RepeatIcon } from '@chakra-ui/icons';
-import { useEditorStore } from '../../store/useEditorStore';
-import { resolveTileAt, resolveEntities } from '../../lib/mapUtils';
-import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
+import { usePanZoom } from '../../../hooks/usePanZoom';
+import { ZoomControls } from '../../common/ZoomControls';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { resolveTileAt, resolveEntities } from '../../../lib/mapUtils';
+import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 
 export const MapViewport: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -372,7 +371,7 @@ export const MapViewport: React.FC = () => {
             setIsDrawing(false);
             setDrawStart(null);
         }
-    }, [activeTool, drawMode]);
+    }, [activeTool, drawMode, isDrawing]);
 
     // RENDER LOOP
     useEffect(() => {

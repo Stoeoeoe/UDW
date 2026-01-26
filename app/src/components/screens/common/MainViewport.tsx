@@ -1,12 +1,12 @@
 import React from 'react';
 import { Center, VStack, Text, Button, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
-import { EditorMode } from '../../types/editor';
-import { MapViewport } from './MapViewport';
-import { TilesetWorkspace } from '../tileset/TilesetWorkspace';
-import { ViewportShell } from '../common/ViewportShell';
-import { useEditorStore } from '../../store/useEditorStore';
-import { MapCreator } from '../dialogs/MapCreator';
+import { EditorMode } from '../../../types/editor';
+import { MapViewport } from '../map/MapViewport';
+import { TilesetWorkspace } from '../../tileset/TilesetWorkspace';
+import { ViewportShell } from '../../common/ViewportShell';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { MapCreator } from '../../dialogs/MapCreator';
 
 interface MainViewportProps {
     mode: EditorMode;

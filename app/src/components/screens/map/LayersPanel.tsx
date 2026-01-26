@@ -8,7 +8,7 @@ import {
     HStack,
     useToast,
 } from '@chakra-ui/react';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useEditorStore } from '../../../store/useEditorStore';
 import { DeleteIcon, AddIcon } from '@chakra-ui/icons';
 
 // Icon helpers

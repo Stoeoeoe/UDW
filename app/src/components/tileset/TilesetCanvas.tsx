@@ -296,12 +296,12 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         window.addEventListener('mouseup', handleMouseUp);
         // also listen to canvas mouseup to finalize selection when mouse released on canvas
         const canvasMouseUp = () => handleMouseUp();
-        canvas.addEventListener('mouseup', canvasMouseUp as any);
+        canvas.addEventListener('mouseup', canvasMouseUp);
         return () => {
             canvas.removeEventListener('wheel', handleWheel);
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
-            canvas.removeEventListener('mouseup', canvasMouseUp as any);
+            canvas.removeEventListener('mouseup', canvasMouseUp);
         };
     }, [handleWheel, handleMouseMove, handleMouseUp]);
 

@@ -14,10 +14,10 @@ import {
     ModalOverlay,
     ModalContent,
 } from '@chakra-ui/react';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useEditorStore } from '../../../store/useEditorStore';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
+import { MapCreator } from '../../dialogs/MapCreator';
 import { LayersPanel } from './LayersPanel';
-import { MapCreator } from '../dialogs/MapCreator';
 
 export const MapsPanel: React.FC = () => {
     const currentMap = useEditorStore(state => state.currentMap);

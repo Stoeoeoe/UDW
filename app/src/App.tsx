@@ -2,7 +2,7 @@ import { Box, Flex } from '@chakra-ui/react';
 import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/navigation/Sidebar';
 import { ProjectPanel } from './components/panels/ProjectPanel';
-import { MapEditor, TilesetEditor, EntityEditor, SettingsEditor, TerrainEditor } from './components/editor';
+import { MapEditor, TilesetEditor, EntityEditor, SettingsEditor, TerrainEditor } from './components/screens';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 

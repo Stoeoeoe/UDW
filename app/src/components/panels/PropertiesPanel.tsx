@@ -14,7 +14,7 @@ import { TilesetInspector } from '../tileset/TilesetInspector';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
 import { resolveEntities } from '../../lib/mapUtils';
-import { InspectorPanel, InspectorEmptyState } from '../editor/common';
+import { InspectorPanel, InspectorEmptyState } from '../screens/common';
 
 export const PropertiesPanel: React.FC = () => {
     const editorMode = useEditorStore(state => state.mode);
