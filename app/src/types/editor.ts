@@ -1,4 +1,4 @@
-import { Project, Tileset, Map } from './schema';
+import { Project, Tileset, Map, LayerDefinition } from './schema';
 
 export interface EditorState {
     // Project data
@@ -42,6 +42,7 @@ export interface EditorState {
         y: number;                          // Pan offset Y in pixels
         zoom: number;                       // Zoom level (0.5 = 50%, 2.0 = 200%)
     };
+    mapCameras: Record<string, { x: number; y: number; zoom: number }>; // Per-map camera state
 
     // UI state
     panels: {
@@ -54,6 +55,10 @@ export interface EditorState {
 
     // Project-level terrain types (for autotiling / labeling)
     terrainTypes: TerrainType[];
+
+    // Project-level layer definitions (template layers for maps)
+    layerDefinitions: LayerDefinition[];
+    selectedLayerDefinitionId: string | null;
 
     // Validation
     validationErrors: ValidationError[];
@@ -87,4 +92,4 @@ export interface ValidationError {
     };
 }
 
-export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities' | 'settings' | 'terrain';
+export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities' | 'settings' | 'terrain' | 'layers';

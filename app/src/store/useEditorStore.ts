@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { castDraft } from 'immer';
 import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
-import { Project, Map, Layer, Variation, EntityInstance, Tileset, TileDefinition } from '../types/schema';
+import { Project, Map, Layer, Variation, EntityInstance, Tileset, TileDefinition, LayerDefinition } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 
 interface EditorStore extends EditorState {
@@ -50,6 +50,7 @@ interface EditorStore extends EditorState {
     // Layer actions
     addLayer: (layer: Layer) => void;
     removeLayer: (layerId: string) => void;
+    updateLayer: (layerId: string, updates: Partial<Layer>) => void;
     reorderLayer: (layerId: string, newZOrder: number) => void;
     toggleLayerVisibility: (layerId: string) => void;
     selectLayer: (layerId: string) => void;
@@ -68,6 +69,14 @@ interface EditorStore extends EditorState {
     addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
     updateTerrainType: (id: string, updates: Partial<{ displayName: string; color: string }>) => Promise<void>;
     deleteTerrainType: (id: string) => Promise<void>;
+
+    // Layer definition actions
+    layerDefinitions: LayerDefinition[];
+    selectedLayerDefinitionId: string | null;
+    setSelectedLayerDefinition: (id: string | null) => void;
+    addLayerDefinition: (definition: LayerDefinition) => Promise<void>;
+    updateLayerDefinition: (id: string, updates: Partial<LayerDefinition>) => Promise<void>;
+    deleteLayerDefinition: (id: string) => Promise<void>;
 
     // Camera actions
     setCamera: (camera: Partial<EditorState['camera']>) => void;
@@ -116,6 +125,8 @@ export const useEditorStore = create<EditorStore>()(
             variationsOpen: true
         },
         terrainTypes: [],
+        layerDefinitions: [],
+        selectedLayerDefinitionId: null,
         validationErrors: [],
 
         // Actions implementation
@@ -184,16 +195,55 @@ export const useEditorStore = create<EditorStore>()(
                 });
             }
 
+            // 1.6 Load layer definitions from project.json (if present)
+            if (proj && Array.isArray((proj as any).layerDefinitions)) {
+                set(state => {
+                    state.layerDefinitions = (proj as any).layerDefinitions.map((d: any) => castDraft(d));
+                });
+            }
+
             // 2. Load all maps
             const maps = await fileSystem.loadAllMaps();
 
-            // Optionally load the first map as current
+            // Get layer definitions to inject into maps
+            const layerDefs = useEditorStore.getState().layerDefinitions;
+
+            // Helper: add missing layers from definitions to a map
+            const addMissingDefinitionLayers = (map: Map): Map => {
+                if (layerDefs.length === 0) return map;
+
+                const existingDefIds = new Set(
+                    map.layers.filter(l => l.definitionId).map(l => l.definitionId)
+                );
+
+                const missingDefs = layerDefs.filter(def => !existingDefIds.has(def.id));
+                if (missingDefs.length === 0) return map;
+
+                const newLayers: Layer[] = missingDefs.map(def => ({
+                    id: def.id,
+                    name: def.name,
+                    kind: def.type === 'tile' ? 'visual' as const : 'visual' as const,
+                    visible: true,
+                    locked: false,
+                    opacity: 1,
+                    zOrder: def.zIndex,
+                    data: Array(map.height).fill(null).map(() => Array(map.width).fill(null)),
+                    definitionId: def.id,
+                }));
+
+                // Merge and sort by zOrder
+                const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
+                return { ...map, layers: allLayers };
+            };
+
+            // Optionally load the first map as current (with missing layers added)
             if (maps.length > 0) {
+                const enrichedMap = addMissingDefinitionLayers(maps[0]);
                 set(state => {
-                    state.currentMap = castDraft(maps[0]);
+                    state.currentMap = castDraft(enrichedMap);
                     // Auto-select first layer
-                    if (maps[0].layers.length > 0) {
-                        state.selectedLayerId = maps[0].layers[0].id;
+                    if (enrichedMap.layers.length > 0) {
+                        state.selectedLayerId = enrichedMap.layers[0].id;
                     }
                 });
             }
@@ -225,9 +275,38 @@ export const useEditorStore = create<EditorStore>()(
 
         setCurrentMap: (map) => {
             set(state => {
-                state.currentMap = castDraft(map);
-                if (map && state.mapCameras && state.mapCameras[map.id]) {
-                    state.camera = { ...state.mapCameras[map.id] };
+                if (!map) {
+                    state.currentMap = null;
+                    return;
+                }
+
+                // Add missing layers from layer definitions
+                const layerDefs = state.layerDefinitions;
+                const existingDefIds = new Set(
+                    map.layers.filter(l => l.definitionId).map(l => l.definitionId)
+                );
+                const missingDefs = layerDefs.filter(def => !existingDefIds.has(def.id));
+
+                let enrichedMap = map;
+                if (missingDefs.length > 0) {
+                    const newLayers: Layer[] = missingDefs.map(def => ({
+                        id: def.id,
+                        name: def.name,
+                        kind: def.type === 'tile' ? 'visual' as const : 'visual' as const,
+                        visible: true,
+                        locked: false,
+                        opacity: 1,
+                        zOrder: def.zIndex,
+                        data: Array(map.height).fill(null).map(() => Array(map.width).fill(null)),
+                        definitionId: def.id,
+                    }));
+                    const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
+                    enrichedMap = { ...map, layers: allLayers };
+                }
+
+                state.currentMap = castDraft(enrichedMap);
+                if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
+                    state.camera = { ...state.mapCameras[enrichedMap.id] };
                 }
             });
         },
@@ -244,6 +323,39 @@ export const useEditorStore = create<EditorStore>()(
             const { fileSystem } = await import('../lib/fileSystem');
             const id = name.toLowerCase().replace(/\s+/g, '-');
 
+            // Get layer definitions from store to create default layers
+            const layerDefs = useEditorStore.getState().layerDefinitions;
+
+            // Create layers from definitions, sorted by zIndex
+            const definedLayers: Layer[] = layerDefs
+                .slice()
+                .sort((a, b) => a.zIndex - b.zIndex)
+                .map(def => ({
+                    id: def.id,
+                    name: def.name,
+                    kind: def.type === 'tile' ? 'visual' as const : 'visual' as const, // entity layers use same kind for now
+                    visible: true,
+                    locked: false,
+                    opacity: 1,
+                    zOrder: def.zIndex,
+                    data: Array(height).fill(null).map(() => Array(width).fill(null)),
+                    definitionId: def.id, // Link back to definition
+                }));
+
+            // If no definitions, create a default ground layer
+            const layers = definedLayers.length > 0 ? definedLayers : [
+                {
+                    id: 'ground',
+                    name: 'Ground',
+                    kind: 'visual' as const,
+                    visible: true,
+                    locked: false,
+                    opacity: 1,
+                    zOrder: 0,
+                    data: Array(height).fill(null).map(() => Array(width).fill(null))
+                }
+            ];
+
             const newMap: Map = {
                 version: 1,
                 id,
@@ -251,18 +363,7 @@ export const useEditorStore = create<EditorStore>()(
                 width,
                 height,
                 baseTilesetId: tilesetId,
-                layers: [
-                    {
-                        id: 'ground',
-                        name: 'Ground',
-                        kind: 'visual',
-                        visible: true,
-                        locked: false,
-                        opacity: 1,
-                        zOrder: 0,
-                        data: Array(height).fill(null).map(() => Array(width).fill(null))
-                    }
-                ],
+                layers,
                 entities: []
             };
 
@@ -271,7 +372,7 @@ export const useEditorStore = create<EditorStore>()(
             set(state => {
                 state.currentMap = castDraft(newMap);
                 state.activeVariationId = null;
-                state.selectedLayerId = 'ground';
+                state.selectedLayerId = layers[0]?.id || null;
             });
         },
 
@@ -647,6 +748,17 @@ export const useEditorStore = create<EditorStore>()(
             state.selectedLayerId = layerId;
         }),
 
+        updateLayer: (layerId, updates) => set(state => {
+            const layer = state.currentMap?.layers.find(l => l.id === layerId);
+            if (layer) {
+                Object.assign(layer, updates);
+                // Re-sort layers by zOrder if zOrder changed
+                if (updates.zOrder !== undefined && state.currentMap) {
+                    state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
+                }
+            }
+        }),
+
         setActiveVariation: (variationId) => {
             set(state => {
                 state.activeVariationId = variationId;
@@ -732,6 +844,52 @@ export const useEditorStore = create<EditorStore>()(
             const proj = useEditorStore.getState().project;
             if (proj) {
                 const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await fileSystem.saveJson('', 'project.json', projectToSave);
+                set(state => { state.project = projectToSave as any; });
+            }
+        },
+
+        // Layer definition actions
+        setSelectedLayerDefinition: (id) => set(state => {
+            state.selectedLayerDefinitionId = id;
+        }),
+
+        addLayerDefinition: async (definition) => {
+            set(state => {
+                state.layerDefinitions.push(castDraft(definition));
+            });
+            const { fileSystem } = await import('../lib/fileSystem');
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                await fileSystem.saveJson('', 'project.json', projectToSave);
+                set(state => { state.project = projectToSave as any; });
+            }
+        },
+
+        updateLayerDefinition: async (id, updates) => {
+            set(state => {
+                const def = state.layerDefinitions.find(d => d.id === id);
+                if (def) Object.assign(def, updates as any);
+            });
+            const { fileSystem } = await import('../lib/fileSystem');
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                await fileSystem.saveJson('', 'project.json', projectToSave);
+                set(state => { state.project = projectToSave as any; });
+            }
+        },
+
+        deleteLayerDefinition: async (id) => {
+            set(state => {
+                state.layerDefinitions = state.layerDefinitions.filter(d => d.id !== id);
+                if (state.selectedLayerDefinitionId === id) state.selectedLayerDefinitionId = null;
+            });
+            const { fileSystem } = await import('../lib/fileSystem');
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
                 set(state => { state.project = projectToSave as any; });
             }

@@ -44,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
             <NavIcon icon="📋" label="Project" mode="project" active={activeMode === 'project'} onClick={onModeChange} />
             <NavIcon icon="🗺️" label="Maps" mode="maps" active={activeMode === 'maps'} onClick={onModeChange} />
             <NavIcon icon="🎨" label="Tiles" mode="tilesets" active={activeMode === 'tilesets'} onClick={onModeChange} />
+            <NavIcon icon="🧱" label="Layers" mode="layers" active={activeMode === 'layers'} onClick={onModeChange} />
             <NavIcon icon="👾" label="Entities" mode="entities" active={activeMode === 'entities'} onClick={onModeChange} />
             <NavIcon icon="🧭" label="Terrain" mode="terrain" active={activeMode === 'terrain'} onClick={onModeChange} />
             <Spacer />

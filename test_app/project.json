@@ -19,5 +19,21 @@
       "displayName": "Grass",
       "color": "#30cf60"
     }
+  ],
+  "layerDefinitions": [
+    {
+      "id": "layer-1769464326893",
+      "name": "Test",
+      "type": "tile",
+      "color": "#3182ce",
+      "zIndex": 0
+    },
+    {
+      "id": "layer-1769464347677",
+      "name": "Test 2",
+      "type": "tile",
+      "color": "#43283a",
+      "zIndex": 10
+    }
   ]
 }

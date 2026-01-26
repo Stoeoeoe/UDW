@@ -13,6 +13,20 @@ export interface Project {
     };
     // Optional project-level terrain types for autotiling and labeling
     terrainTypes?: { id: string; displayName: string; color: string }[];
+    // Default layer definitions for maps
+    layerDefinitions?: LayerDefinition[];
+}
+
+export type LayerType = 'tile' | 'entity';
+
+export interface LayerDefinition {
+    id: string;                   // Unique identifier
+    name: string;                 // Display name
+    type: LayerType;              // Layer type (tile or entity)
+    color: string;                // Hex color for display in layer list
+    zIndex: number;               // Z-index for rendering order
+    icon?: string;                // Optional icon identifier (e.g., 'tree', 'building')
+    description?: string;         // Optional description
 }
 
 export interface Tileset {
@@ -96,7 +110,9 @@ export interface Layer {
     locked: boolean;              // Prevent editing
     opacity: number;              // 0.0 to 1.0
     zOrder: number;               // Rendering order
+    icon?: string;                // Optional icon identifier
     data: (string | null)[][];    // Tile IDs, row-major [y][x]
+    definitionId?: string;        // Reference to LayerDefinition (if from project template)
 }
 
 export type LayerKind =
