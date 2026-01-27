@@ -83,8 +83,7 @@ interface EditorStore extends EditorState {
     resetCamera: () => void;
 
     // Tileset toolbar mode
-    tilesetToolMode: 'select' | 'terrain';
-    setTilesetToolMode: (mode: 'select' | 'terrain') => void;
+    setTilesetToolMode: (mode: string) => void;
 
     // Validation
     validate: () => ValidationError[];

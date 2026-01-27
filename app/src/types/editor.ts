@@ -70,6 +70,14 @@ export interface TerrainType {
     color: string; // hex
 }
 
+export type ToolIcon = {
+    id: string
+    icon: React.ReactElement;
+    label: string;
+    tooltip?: string;
+    group: string;
+}
+
 export type ToolType =
     | "select"
     | "tilePaint"
@@ -91,5 +99,7 @@ export interface ValidationError {
         position?: [number, number];
     };
 }
+
+
 
 export type EditorMode = 'project' | 'maps' | 'tilesets' | 'entities' | 'settings' | 'terrain' | 'layers';

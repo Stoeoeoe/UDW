@@ -16,16 +16,18 @@ import { LayersPanel } from './LayersPanel';
  */
 export const MapEditor: React.FC = () => {
     const currentMap = useEditorStore(state => state.currentMap);
+    const currentMapPath = useEditorStore(state => state.currentMapPath);
     const setActiveTool = useEditorStore(state => state.setActiveTool);
     const { isOpen, onOpen, onClose } = useDisclosure();
 
 
-    // When a map becomes active, switch to tile paint tool by default
+    // When a map becomes active (different map), switch to tile paint tool by default
+    // Use mapPath instead of map object to avoid triggering on every tile edit
     useEffect(() => {
         if (currentMap) {
             setActiveTool('tilePaint');
         }
-    }, [currentMap, setActiveTool]);
+    }, [currentMapPath, setActiveTool]);
 
     // No map loaded state — use shared EmptyScreen
     if (!currentMap) {

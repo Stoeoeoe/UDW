@@ -332,7 +332,7 @@ export const MapViewport: React.FC = () => {
                 }
             }
         }
-    }, [isPanning, setCamera, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, paintTile, eraseTile, screenToWorld, setHoveredTile]);
+    }, [isPanning, setCamera, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, paintTile, eraseTile, screenToWorld, setHoveredTile, panZoom]);
 
     const handleMouseUp = useCallback((e: MouseEvent) => {
         if (isDrawing && drawStart && currentMap) {
@@ -345,7 +345,7 @@ export const MapViewport: React.FC = () => {
         setIsPanning(false);
         setIsDrawing(false);
         setDrawStart(null);
-    }, [isDrawing, drawStart, drawMode, activeTool, currentMap, screenToWorld]);
+    }, [isDrawing, drawStart, drawMode, activeTool, currentMap, screenToWorld, applyShape, panZoom]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -425,11 +425,9 @@ export const MapViewport: React.FC = () => {
 
     // Cancel drawing when tool or drawMode changes to avoid sticky draw states
     useEffect(() => {
-        if (isDrawing) {
-            setIsDrawing(false);
-            setDrawStart(null);
-        }
-    }, [activeTool, drawMode, isDrawing]);
+        setIsDrawing(false);
+        setDrawStart(null);
+    }, [activeTool, drawMode]);
 
     // RENDER LOOP
     useEffect(() => {

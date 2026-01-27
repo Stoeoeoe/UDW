@@ -14,8 +14,9 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
+import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
+import { MapToolbar } from './MapToolbar';
 
-import { MapToolbar, TilesetToolbar } from './MapToolbar';
 
 export const TopBar: React.FC = () => {
     const mode = useEditorStore(state => state.mode);
@@ -43,8 +44,8 @@ export const TopBar: React.FC = () => {
                 status: "success",
                 duration: 3000,
             });
-        } catch (e: any) {
-            if (e.message !== "Open project cancelled.") {
+        } catch (e: unknown) {
+            if (e instanceof Error && e.message !== "Open project cancelled.") {
                 console.error(e);
                 toast({
                     title: "Failed to open project",
