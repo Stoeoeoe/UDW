@@ -436,6 +436,8 @@ export const MapViewport: React.FC = () => {
         const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) return;
 
+        ctx.imageSmoothingEnabled = false;
+
         // Resize
         const parent = canvas.parentElement;
         if (parent) {
@@ -480,6 +482,7 @@ export const MapViewport: React.FC = () => {
                             if (sprite) {
                                 const sx = (index % effectiveTileset.columns) * effectiveTileset.tileWidth;
                                 const sy = Math.floor(index / effectiveTileset.columns) * effectiveTileset.tileHeight;
+                                ctx.imageSmoothingEnabled = false;
                                 ctx.drawImage(
                                     sprite,
                                     sx, sy, effectiveTileset.tileWidth, effectiveTileset.tileHeight,
