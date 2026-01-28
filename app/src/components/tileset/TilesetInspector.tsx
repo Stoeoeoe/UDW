@@ -5,7 +5,6 @@ import {
     Text,
     Box,
     Select,
-    Button,
 } from '@chakra-ui/react';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -21,10 +20,6 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset }) =
 
     // Selection & terrain helpers
     const selectedTileDef = selectedIndex !== null ? (tileset.tiles[selectedIndex] || {}) : {};
-    const terrainTypes = useEditorStore(state => state.terrainTypes);
-    const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
-    const setSelectedTerrain = useEditorStore(state => state.setSelectedTerrain);
-    const setTileCornerTerrain = useEditorStore(state => state.setTileCornerTerrain);
 
     return (
         <VStack align="stretch" spacing={6} p={6}>
@@ -52,7 +47,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset }) =
                             { key: 'collision.type', label: 'Collision', type: 'enum', constraints: { options: ['none', 'full'] } },
                             {
                                 key: 'terrain',
-                                label: 'Terrain',
+                                label: 'Terrain (Main)',
                                 type: 'custom',
                                 customRenderer: (value: any, onChange: (v: any) => void) => {
                                     const options: { id: string; name: string; color?: string }[] = [];
@@ -90,57 +85,6 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset }) =
                             if (k === 'terrain') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, terrain: v });
                         }}
                     />
-
-                        {/* Terrain palette - choose active terrain for painting (only in terrain tool mode) */}
-                        {useEditorStore.getState().tilesetToolMode === 'terrain' && (
-                            <VStack align="stretch" spacing={2} pt={2}>
-                                <Text fontSize="xs" fontWeight="black" color="gray.500" textTransform="uppercase">Terrain Palette</Text>
-                                <HStack spacing={3} wrap="wrap">
-                                    {terrainTypes.length === 0 ? (
-                                        <Text color="gray.500" fontSize="sm">No terrains defined in project</Text>
-                                    ) : terrainTypes.map(t => (
-                                        <Box key={t.id}>
-                                            <Button
-                                                size="sm"
-                                                leftIcon={<Box w={3} h={3} rounded="full" bg={t.color} borderWidth={1} borderColor="gray.700" />}
-                                                bg={selectedTerrainId === t.id ? 'blue.700' : 'gray.800'}
-                                                color={selectedTerrainId === t.id ? 'white' : 'gray.200'}
-                                                _hover={{ bg: selectedTerrainId === t.id ? 'blue.600' : 'gray.700' }}
-                                                onClick={() => setSelectedTerrain(t.id)}
-                                            >
-                                                {t.displayName}
-                                            </Button>
-                                        </Box>
-                                    ))}
-                                    {terrainTypes.length > 0 && (
-                                        <Button size="sm" colorScheme="red" onClick={() => setSelectedTerrain(null)}>Clear</Button>
-                                    )}
-                                </HStack>
-                            </VStack>
-                        )}
-
-                    {/* Corner terrain inspector (if present) */}
-                    {selectedTileDef && (
-                        <VStack align="stretch" spacing={2} pt={2}>
-                            <Text fontSize="xs" fontWeight="black" color="gray.500" textTransform="uppercase">Corner Terrains</Text>
-                            <HStack spacing={3}>
-                                {([0,1,2,3] as number[]).map(ci => {
-                                    const tid = (selectedTileDef as any).terrainCorners?.[ci] as string | null | undefined;
-                                    const tt = terrainTypes.find(t => t.id === tid);
-                                    return (
-                                        <VStack key={ci} align="center" spacing={1}>
-                                            <Box w={10} h={10} rounded="md" bg={tt ? tt.color : 'transparent'} borderWidth={1} borderColor="gray.700" />
-                                            <Text fontSize="xs">{['TL','TR','BL','BR'][ci]}</Text>
-                                            <HStack>
-                                                <Box as="button" onClick={() => setTileCornerTerrain(tileset.id, selectedIndex!, ci, selectedTerrainId || null)} px={2} py={1} bg="gray.800" borderRadius="4px">Apply</Box>
-                                                <Box as="button" onClick={() => setTileCornerTerrain(tileset.id, selectedIndex!, ci, null)} px={2} py={1} bg="red.700" borderRadius="4px">Clear</Box>
-                                            </HStack>
-                                        </VStack>
-                                    );
-                                })}
-                            </HStack>
-                        </VStack>
-                    )}
                 </VStack>
             )}
         </VStack>

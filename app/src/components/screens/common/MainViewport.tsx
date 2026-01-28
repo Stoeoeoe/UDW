@@ -1,12 +1,13 @@
 import React from 'react';
-import { Center, VStack, Text, Button, useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
+import { Center, VStack, Text, Button, useDisclosure } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import { EditorMode } from '../../../types/editor';
 import { MapViewport } from '../map/MapViewport';
-import { TilesetWorkspace } from '../../tileset/TilesetWorkspace';
+import { TilesetEditor } from '../tileset/TilesetEditor';
 import { ViewportShell } from '../../common/ViewportShell';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { MapCreator } from '../../dialogs/MapCreator';
+import { EditorModal } from '../../common/EditorModal';
 
 interface MainViewportProps {
     mode: EditorMode;
@@ -38,12 +39,9 @@ export const MainViewport: React.FC<MainViewportProps> = ({ mode }) => {
                             </Button>
                         </VStack>
 
-                        <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
-                            <ModalOverlay backdropFilter="blur(4px)" />
-                            <ModalContent bg="transparent" border="none" boxShadow="none">
-                                <MapCreator onCreate={onClose} onCancel={onClose} />
-                            </ModalContent>
-                        </Modal>
+                        <EditorModal isOpen={isOpen} onClose={onClose}>
+                            <MapCreator onCreate={onClose} onCancel={onClose} />
+                        </EditorModal>
                     </Center>
                 );
             }
@@ -54,7 +52,7 @@ export const MainViewport: React.FC<MainViewportProps> = ({ mode }) => {
             );
 
         case 'tilesets':
-            return <TilesetWorkspace />;
+            return <TilesetEditor />;
 
         case 'project':
         case 'entities':

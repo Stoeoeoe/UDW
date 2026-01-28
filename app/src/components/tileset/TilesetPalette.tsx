@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-    VStack,
     Box,
     Text,
     Select,
@@ -11,42 +10,17 @@ import {
 import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetCanvas } from './TilesetCanvas';
+import { useTileSelection } from '../../hooks/useTileSelection';
 
 export const TilesetPalette: React.FC = () => {
     const tilesets = Array.from(useEditorStore(state => state.tilesets).values());
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);
-    const selectedTileIndex = useEditorStore(state => state.selectedTileIndex);
-    const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
-    const setTileIndex = useEditorStore(state => state.setSelectedTile);
-    const setSelectedTiles = useEditorStore(state => state.setSelectedTiles);
-    const toggleSelectedTile = useEditorStore(state => state.toggleSelectedTile);
-    const setActiveTool = useEditorStore(state => state.setActiveTool);
+
+    // Use the shared tile selection hook
+    const { selectedTileIndex, handleTileSelect } = useTileSelection();
 
     const [zoom, setZoom] = useState(2.0); // Default to 200% for pixel art
-
-    const handleTileSelect = (index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => {
-        if (meta?.ctrlKey) {
-            toggleSelectedTile(index);
-            setTileIndex(index);
-            return;
-        }
-
-        if (meta?.shiftKey && selectedTileIndices.length > 0) {
-            const last = selectedTileIndices[selectedTileIndices.length - 1] ?? (selectedTileIndex ?? 0);
-            const start = Math.min(last, index);
-            const end = Math.max(last, index);
-            const range: number[] = [];
-            for (let i = start; i <= end; i++) range.push(i);
-            setSelectedTiles(range);
-            setTileIndex(index);
-            return;
-        }
-
-        // default single-select
-        setSelectedTiles([index]);
-        setTileIndex(index);
-    };
 
     if (tilesets.length === 0) {
         return (
@@ -59,15 +33,15 @@ export const TilesetPalette: React.FC = () => {
     const currentTileset = activeTilesetId ? useEditorStore.getState().tilesets.get(activeTilesetId) : null;
 
     return (
-        <Flex direction="column" h="full" overflow="hidden" bg="#03040a">
+        <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
             {/* Header Row */}
-            <HStack px={3} py={2} bg="#05060a" borderBottom="1px" borderColor="#071018" justify="space-between" flexShrink={0}>
+            <HStack px={3} py={2} bg="editor.headerBg" borderBottom="1px" borderColor="editor.border" justify="space-between" flexShrink={0}>
                 <Select
                     size="xs"
                     variant="filled"
-                    bg="#0a0a0b"
-                    borderColor="#0b1116"
-                    _hover={{ bg: '#071018' }}
+                    bg="editor.viewportBg"
+                    borderColor="editor.inputBorder"
+                    _hover={{ bg: 'editor.border' }}
                     value={activeTilesetId || ''}
                     onChange={(e) => setActiveTileset(e.target.value)}
                     color="blue.300"
@@ -118,7 +92,7 @@ export const TilesetPalette: React.FC = () => {
             </HStack>
 
             {/* Scrollable Canvas */}
-            <Box flex={1} overflow="auto" bg="#0a0a0b">
+            <Box flex={1} overflow="auto" bg="editor.viewportBg">
                 {currentTileset ? (
                     <Box p={2}>
                         <TilesetCanvas

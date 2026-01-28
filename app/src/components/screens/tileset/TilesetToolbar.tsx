@@ -15,7 +15,7 @@ export const TilesetToolbar: React.FC = () => {
 
     return (
         <HStack spacing={4}>
-            <Toolbar items={TOOLS} activeId={tilesetToolMode} onActivate={(id) => setTilesetToolMode(id)} />
+            <Toolbar items={TOOLS} activeId={tilesetToolMode} onActivate={(id) => setTilesetToolMode(id as 'select' | 'terrain')} />
         </HStack>
     );
 };

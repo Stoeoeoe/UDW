@@ -14,7 +14,7 @@ import {
     Divider,
     Badge,
 } from '@chakra-ui/react';
-import { EditorLayout } from '../common/EditorLayout';
+import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
 
 // Settings categories
@@ -334,7 +334,7 @@ export const SettingsEditor: React.FC = () => {
     };
 
     return (
-        <EditorLayout
+        <ResizableEditorLayout
             header={{
                 title: 'Settings',
                 subtitle: 'Configure application preferences',
@@ -350,7 +350,7 @@ export const SettingsEditor: React.FC = () => {
                 </Box>
             }
             leftPanel={leftPanel}
-            leftWidth="200px"
+            leftPanelDefaultSize={15}
         />
     );
 };

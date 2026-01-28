@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { AppLayout } from './AppLayout';
-import React from 'react';
 
 const meta: Meta<typeof AppLayout> = {
     title: 'Layout/AppLayout',

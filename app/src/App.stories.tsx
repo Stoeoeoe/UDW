@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import App from '../App';
-import { Map, LayerKind } from '../types/schema';
+import App from './App';
+import { Map, LayerKind } from './types/schema';
 
 const meta: Meta<typeof App> = {
     title: 'App/FullEditor',

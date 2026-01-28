@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
-import { useDisclosure, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
+import { useDisclosure } from '@chakra-ui/react';
 // icons
 import { useEditorStore } from '../../../store/useEditorStore';
-import { EditorLayout } from '../common/EditorLayout';
+import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewport } from './MapViewport';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { LayersPanel } from './LayersPanel';
+import { EditorModal } from '../../common/EditorModal';
 
 /**
  * MapEditor - The complete map editing experience.
@@ -41,19 +42,16 @@ export const MapEditor: React.FC = () => {
                     onCreate={onOpen}
                 />
 
-                <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
-                    <ModalOverlay backdropFilter="blur(4px)" />
-                    <ModalContent bg="transparent" border="none" boxShadow="none">
-                        <MapCreator onCreate={onClose} onCancel={onClose} />
-                    </ModalContent>
-                </Modal>
+                <EditorModal isOpen={isOpen} onClose={onClose}>
+                    <MapCreator onCreate={onClose} onCancel={onClose} />
+                </EditorModal>
             </>
         );
     }
 
 
     return (
-        <EditorLayout
+        <ResizableEditorLayout
             header={{
                 title: currentMap.name || 'Map',
                 subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers`,
@@ -62,9 +60,9 @@ export const MapEditor: React.FC = () => {
             leftPanel={<LayersPanel />}
             rightPanel={<PropertiesPanel />}
             bottomPanel={<TilesetPalette />}
-            leftWidth="240px"
-            rightWidth="280px"
-            bottomHeight="220px"
+            leftPanelDefaultSize={18}
+            rightPanelDefaultSize={20}
+            bottomPanelDefaultSize={25}
         />
     );
 };

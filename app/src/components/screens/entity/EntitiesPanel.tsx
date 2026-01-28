@@ -7,8 +7,8 @@ import {
     HStack,
     Circle,
 } from '@chakra-ui/react';
-import { useEditorStore } from '../../store/useEditorStore';
-import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 
 export const EntitiesPanel: React.FC = () => {
     const selectedEntityTypeId = useEditorStore(state => state.selectedEntityTypeId);

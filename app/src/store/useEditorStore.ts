@@ -83,7 +83,7 @@ interface EditorStore extends EditorState {
     resetCamera: () => void;
 
     // Tileset toolbar mode
-    setTilesetToolMode: (mode: string) => void;
+    setTilesetToolMode: (mode: 'select' | 'terrain') => void;
 
     // Validation
     validate: () => ValidationError[];
@@ -503,6 +503,19 @@ export const useEditorStore = create<EditorStore>()(
                 const tile = ts.tiles[index] || {} as TileDefinition;
                 if (!tile.terrainCorners) tile.terrainCorners = [null, null, null, null];
                 tile.terrainCorners[corner] = terrainId;
+
+                // If terrainId is null, clear the terrain information for the corner
+                if (terrainId === null) {
+                    const updatedCorners = [...tile.terrainCorners];
+                    updatedCorners[corner] = null;
+                    // Check if all corners are null, and if so, remove the terrainCorners property
+                    if (updatedCorners.every(corner => corner === null)) {
+                        delete tile.terrainCorners;
+                    } else {
+                        tile.terrainCorners = updatedCorners;
+                    }
+                }
+
                 ts.tiles[index] = castDraft(tile);
                 updatedTileset = JSON.parse(JSON.stringify(ts));
             });

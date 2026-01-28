@@ -26,9 +26,7 @@ export const MapToolbar: React.FC = () => {
     const setActiveTool = useEditorStore(state => state.setActiveTool);
     const drawMode = useEditorStore(state => state.drawMode);
     const setDrawMode = useEditorStore(state => state.setDrawMode);
-    const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
 
-    const isTerrainMode = selectedTerrainId !== null;
     const showDrawModes = activeTool === 'tilePaint' || activeTool === 'tileErase';
 
     return (

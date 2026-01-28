@@ -15,14 +15,13 @@ type Story = StoryObj<typeof ProjectSettingsEditor>;
 export const NewProject: Story = {
     args: {
         onSave: (p) => console.log('Save', p),
-        onCancel: () => console.log('Cancel'),
     },
 };
 
 export const EditExisting: Story = {
     args: {
         initialProject: {
-            version: 1,
+            version: "1",
             name: "Stardew Clone",
             tileSize: 32,
             defaultMapWidth: 50,
@@ -33,6 +32,5 @@ export const EditExisting: Story = {
             }
         },
         onSave: (p) => console.log('Save', p),
-        onCancel: () => console.log('Cancel'),
     },
 };

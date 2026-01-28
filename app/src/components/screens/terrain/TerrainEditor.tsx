@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { VStack, Box, HStack, Text, Input, Button, Circle, Spacer, useToast } from '@chakra-ui/react';
 import { ListPanel, ListPanelItem, InspectorPanel, EmptyScreen } from '../common';
-import { EditorLayout } from '../common/EditorLayout';
+import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { useEditorStore } from '../../../store/useEditorStore';
 
 export const TerrainEditor: React.FC = () => {
@@ -130,13 +130,13 @@ export const TerrainEditor: React.FC = () => {
     );
 
     return (
-        <EditorLayout
+        <ResizableEditorLayout
             header={{ title: 'Terrain', subtitle: `${terrainTypes.length} types` }}
             content={content}
             leftPanel={leftPanel}
             rightPanel={rightPanel}
-            leftWidth="260px"
-            rightWidth="340px"
+            leftPanelDefaultSize={20}
+            rightPanelDefaultSize={25}
         />
     );
 };

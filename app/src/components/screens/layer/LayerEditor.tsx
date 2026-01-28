@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { VStack, Box, HStack, Text, Input, Button, Circle, Spacer, Select, useToast } from '@chakra-ui/react';
 import { ListPanel, ListPanelItem, InspectorPanel, EmptyScreen } from '../common';
-import { EditorLayout } from '../common/EditorLayout';
+import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { LayerType } from '../../../types/schema';
 import { BsTree, BsBuilding, BsWater, BsLayersHalf, BsStack } from 'react-icons/bs';
@@ -258,13 +258,13 @@ export const LayerEditor: React.FC = () => {
     );
 
     return (
-        <EditorLayout
+        <ResizableEditorLayout
             header={{ title: 'Layers', subtitle: `${layerDefinitions.length} definitions` }}
             content={content}
             leftPanel={leftPanel}
             rightPanel={rightPanel}
-            leftWidth="260px"
-            rightWidth="340px"
+            leftPanelDefaultSize={20}
+            rightPanelDefaultSize={25}
         />
     );
 };

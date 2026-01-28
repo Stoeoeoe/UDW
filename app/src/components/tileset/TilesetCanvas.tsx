@@ -150,8 +150,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             panZoom.startPan(e.clientX, e.clientY);
             e.preventDefault();
         } else if (e.button === 0 && tool === 'terrain') {
-            // Start terrain painting (drag-to-paint)
-            if (!selectedTerrainId) return;
+            // Start terrain painting (drag-to-paint) or clearing if selectedTerrainId is null
             const canvas = canvasRef.current;
             if (!canvas) return;
             const rect = canvas.getBoundingClientRect();
@@ -159,8 +158,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             const mouseY = e.clientY - rect.top;
             const coords = getTileCoords(mouseX, mouseY);
             if (coords) {
-                setIsTerrainPainting(true);
                 const corner = computeCorner(coords.tileX, coords.tileY, coords.col, coords.row);
+                setIsTerrainPainting(true);
                 lastPaintedCorner.current = { tileIdx: coords.index, corner };
                 setTileCornerTerrain(tileset.id, coords.index, corner, selectedTerrainId);
             }
@@ -202,7 +201,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         }
 
         // Terrain painting while dragging
-        if (isTerrainPainting && selectedTerrainId) {
+        if (isTerrainPainting) {
             const canvas = canvasRef.current;
             if (!canvas) return;
             const rect = canvas.getBoundingClientRect();
@@ -304,6 +303,15 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             canvas.removeEventListener('mouseup', canvasMouseUp);
         };
     }, [handleWheel, handleMouseMove, handleMouseUp]);
+
+    // Initialize camera when sprite loads to center the tileset
+    useEffect(() => {
+        if (!sprite || mode !== 'interactive') return;
+        // Center the sprite on the canvas by keeping camera at (0, 0)
+        // The rendering logic already handles centering with sheetX/sheetY = -sprite.width/2, -sprite.height/2
+        setCamera({ x: 0, y: 0 });
+        setInternalZoom(1.5);
+    }, [sprite, mode]);
 
     // Redraw loop
     useEffect(() => {

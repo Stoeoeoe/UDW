@@ -7,6 +7,17 @@ const config: ThemeConfig = {
 
 export const theme = extendTheme({
     config,
+    colors: {
+        // Semantic editor colors - centralized color tokens
+        editor: {
+            panelBg: '#03040a',
+            headerBg: '#05060a',
+            border: '#071018',
+            viewportBg: '#0a0a0b',
+            inputBg: '#05060a',
+            inputBorder: '#0b1116',
+        },
+    },
     styles: {
         global: {
             body: {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import type { Decorator } from '@storybook/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { EditorState } from '../../types/editor';
@@ -28,7 +28,6 @@ export const withStore: Decorator = (Story, context) => {
         // 2. Cleanup: We could reset here, but typically the next story
         // will overwrite the state or the page reload will clear it.
         // For strict isolation, we would reset to a default state here.
-        const originalState = useEditorStore.getState();
 
         return () => {
             // Optional: Reset store on unmount if needed

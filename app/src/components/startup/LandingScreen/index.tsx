@@ -149,7 +149,6 @@ export const LandingScreen: React.FC = () => {
                 <ModalContent bg="transparent" border="none" boxShadow="none">
                     <ProjectSettingsEditor
                         onSave={handleCreateProject}
-                        onCancel={onClose}
                     />
                 </ModalContent>
             </Modal>

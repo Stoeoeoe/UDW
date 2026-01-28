@@ -10,14 +10,12 @@ import {
     Collapse,
     Heading,
     useDisclosure,
-    Modal,
-    ModalOverlay,
-    ModalContent,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { LayersPanel } from './LayersPanel';
+import { EditorModal } from '../../common/EditorModal';
 
 export const MapsPanel: React.FC = () => {
     const currentMap = useEditorStore(state => state.currentMap);
@@ -149,12 +147,9 @@ export const MapsPanel: React.FC = () => {
             </VStack>
 
             {/* Map Creator Modal */}
-            <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
-                <ModalOverlay backdropFilter="blur(4px)" />
-                <ModalContent bg="transparent" border="none" boxShadow="none">
-                    <MapCreator onCreate={onClose} onCancel={onClose} />
-                </ModalContent>
-            </Modal>
+            <EditorModal isOpen={isOpen} onClose={onClose}>
+                <MapCreator onCreate={onClose} onCancel={onClose} />
+            </EditorModal>
         </VStack>
     );
 };

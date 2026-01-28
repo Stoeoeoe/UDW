@@ -5,6 +5,7 @@ import { ZoomControls } from '../../common/ZoomControls';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveTileAt, resolveEntities } from '../../../lib/mapUtils';
 import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
+import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 
 export const MapViewport: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -52,7 +53,7 @@ export const MapViewport: React.FC = () => {
         canvasRef,
         getCamera: () => useEditorStore.getState().camera,
         setCamera: (c) => setCamera(c),
-        contentSize: currentMap ? { width: currentMap.width * 16, height: currentMap.height * 16 } : null
+        contentSize: currentMap ? { width: currentMap.width * DEFAULT_TILE_SIZE, height: currentMap.height * DEFAULT_TILE_SIZE } : null
     });
 
     // Center the map in the viewport when a map becomes active. Observe the parent
@@ -71,8 +72,8 @@ export const MapViewport: React.FC = () => {
             const ph = parent.clientHeight;
             if (pw === 0 || ph === 0) return false;
 
-            const mapPixelW = currentMap.width * 16;
-            const mapPixelH = currentMap.height * 16;
+            const mapPixelW = currentMap.width * DEFAULT_TILE_SIZE;
+            const mapPixelH = currentMap.height * DEFAULT_TILE_SIZE;
 
             // Apply the same constraint logic as usePanZoom.getConstrainedPos so
             // the camera we set here matches pan/zoom constraints.

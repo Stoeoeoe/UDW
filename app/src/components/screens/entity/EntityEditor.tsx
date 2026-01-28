@@ -1,7 +1,7 @@
 import React from 'react';
 import { VStack, Text, Center, Circle, HStack, Box } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { EditorLayout } from '../common/EditorLayout';
+import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from '../common';
 import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 
@@ -110,7 +110,7 @@ export const EntityEditor: React.FC = () => {
     );
 
     return (
-        <EditorLayout
+        <ResizableEditorLayout
             header={{
                 title: 'Entities',
                 subtitle: `${DEFAULT_ENTITY_TYPES.length} entity types`,
@@ -118,8 +118,8 @@ export const EntityEditor: React.FC = () => {
             content={content}
             leftPanel={leftPanel}
             rightPanel={rightPanel}
-            leftWidth="240px"
-            rightWidth="280px"
+            leftPanelDefaultSize={18}
+            rightPanelDefaultSize={22}
         />
     );
 };
