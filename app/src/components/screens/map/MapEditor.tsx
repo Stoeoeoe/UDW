@@ -4,7 +4,7 @@ import { useDisclosure } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
-import { MapViewport } from './MapViewport';
+import { MapViewportPixi } from './MapViewportPixi';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
@@ -56,7 +56,7 @@ export const MapEditor: React.FC = () => {
                 title: currentMap.name || 'Map',
                 subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers`,
             }}
-            content={<MapViewport />}
+            content={<MapViewportPixi />}
             leftPanel={<LayersPanel />}
             rightPanel={<PropertiesPanel />}
             bottomPanel={<TilesetPalette />}

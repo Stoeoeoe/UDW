@@ -2,7 +2,7 @@ import React from 'react';
 import { Center, VStack, Text, Button, useDisclosure } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import { EditorMode } from '../../../types/editor';
-import { MapViewport } from '../map/MapViewport';
+import { MapViewportPixi } from '../map/MapViewportPixi';
 import { TilesetEditor } from '../tileset/TilesetEditor';
 import { ViewportShell } from '../../common/ViewportShell';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -47,7 +47,7 @@ export const MainViewport: React.FC<MainViewportProps> = ({ mode }) => {
             }
             return (
                 <ViewportShell title={currentMap.name || 'Map'}>
-                    <MapViewport />
+                    <MapViewportPixi />
                 </ViewportShell>
             );
 
