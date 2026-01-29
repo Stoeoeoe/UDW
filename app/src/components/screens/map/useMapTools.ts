@@ -25,7 +25,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const tilesets = useEditorStore(state => state.tilesets);
 
     const paintTile = useEditorStore(state => state.paintTile);
+    const paintTilesBatch = useEditorStore(state => state.paintTilesBatch);
     const eraseTile = useEditorStore(state => state.eraseTile);
+    const eraseTilesBatch = useEditorStore(state => state.eraseTilesBatch);
     const bucketFill = useEditorStore(state => state.bucketFill);
     const placeEntity = useEditorStore(state => state.placeEntity);
     const selectEntity = useEditorStore(state => state.selectEntity);
@@ -94,7 +96,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         return { pattern, patternW, patternH };
     }, [selectedTileIndices, activeTilesetId, tilesets]);
 
-    // Apply a shape (point, rect, circle)
+    // Apply a shape (point, rect, circle) - uses batch updates for performance
     const applyShape = useCallback((
         mode: 'point' | 'rect' | 'circle',
         start: { x: number; y: number },
@@ -106,10 +108,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
         const patternData = getPattern();
         const pattern = patternData?.pattern;
-        const patternW = patternData?.patternW || 0;
-        const patternH = patternData?.patternH || 0;
+        const patternW = patternData?.patternW || 1;
+        const patternH = patternData?.patternH || 1;
 
-        const doAction = (tx: number, ty: number) => {
+        // Collect tiles for batch update
+        const tilesToPaint: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }> = [];
+        const tilesToErase: Array<{ x: number; y: number }> = [];
+
+        const collectTile = (tx: number, ty: number) => {
             if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
             if (action === 'paint') {
                 if (pattern && patternW > 0 && patternH > 0 && activeTilesetId) {
@@ -117,28 +123,34 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                         for (let px = 0; px < patternW; px++) {
                             const tileIdx = pattern[py][px];
                             if (tileIdx !== null) {
-                                paintTile(selectedLayerId, tx + px, ty + py, activeTilesetId, tileIdx);
+                                const nx = tx + px, ny = ty + py;
+                                if (nx >= 0 && nx < currentMap.width && ny >= 0 && ny < currentMap.height) {
+                                    tilesToPaint.push({ x: nx, y: ny, tilesetId: activeTilesetId, tileIndex: tileIdx });
+                                }
                             }
                         }
                     }
-                } else {
-                    paintTile(selectedLayerId, tx, ty, activeTilesetId!, selectedTileIndex!);
+                } else if (activeTilesetId && selectedTileIndex !== null) {
+                    tilesToPaint.push({ x: tx, y: ty, tilesetId: activeTilesetId, tileIndex: selectedTileIndex });
                 }
             } else {
                 if (pattern && patternW > 0 && patternH > 0) {
                     for (let py = 0; py < patternH; py++) {
                         for (let px = 0; px < patternW; px++) {
-                            eraseTile(selectedLayerId, tx + px, ty + py);
+                            const nx = tx + px, ny = ty + py;
+                            if (nx >= 0 && nx < currentMap.width && ny >= 0 && ny < currentMap.height) {
+                                tilesToErase.push({ x: nx, y: ny });
+                            }
                         }
                     }
                 } else {
-                    eraseTile(selectedLayerId, tx, ty);
+                    tilesToErase.push({ x: tx, y: ty });
                 }
             }
         };
 
         if (mode === 'point') {
-            doAction(end.x, end.y);
+            collectTile(end.x, end.y);
         } else if (mode === 'rect') {
             const minX = Math.min(start.x, end.x);
             const maxX = Math.max(start.x, end.x);
@@ -154,12 +166,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                         const py = ((dy % patternH) + patternH) % patternH;
                         const tileIdx = pattern[py][px];
                         if (tileIdx !== null && action === 'paint' && activeTilesetId) {
-                            paintTile(selectedLayerId, x, y, activeTilesetId, tileIdx);
+                            tilesToPaint.push({ x, y, tilesetId: activeTilesetId, tileIndex: tileIdx });
                         } else if (action === 'erase') {
-                            eraseTile(selectedLayerId, x, y);
+                            tilesToErase.push({ x, y });
                         }
                     } else {
-                        doAction(x, y);
+                        collectTile(x, y);
                     }
                 }
             }
@@ -181,18 +193,26 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                             const py = ((dy % patternH) + patternH) % patternH;
                             const tileIdx = pattern[py][px];
                             if (tileIdx !== null && action === 'paint' && activeTilesetId) {
-                                paintTile(selectedLayerId, x, y, activeTilesetId, tileIdx);
+                                tilesToPaint.push({ x, y, tilesetId: activeTilesetId, tileIndex: tileIdx });
                             } else if (action === 'erase') {
-                                eraseTile(selectedLayerId, x, y);
+                                tilesToErase.push({ x, y });
                             }
                         } else {
-                            doAction(x, y);
+                            collectTile(x, y);
                         }
                     }
                 }
             }
         }
-    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, getPattern, paintTile, eraseTile]);
+
+        // Execute batch updates (single store mutation each)
+        if (tilesToPaint.length > 0) {
+            paintTilesBatch(selectedLayerId, tilesToPaint);
+        }
+        if (tilesToErase.length > 0) {
+            eraseTilesBatch(selectedLayerId, tilesToErase);
+        }
+    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, getPattern, paintTilesBatch, eraseTilesBatch]);
 
     // Handle pointer down
     const handlePointerDown = useCallback((e: PointerEvent) => {

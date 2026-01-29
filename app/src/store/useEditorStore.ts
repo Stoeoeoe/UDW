@@ -38,7 +38,9 @@ interface EditorStore extends EditorState {
 
     // Tile actions
     paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
+    paintTilesBatch: (layerId: string, tiles: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }>) => void;
     eraseTile: (layerId: string, x: number, y: number) => void;
+    eraseTilesBatch: (layerId: string, positions: Array<{ x: number; y: number }>) => void;
     bucketFill: (layerId: string, startX: number, startY: number, tilesetId: string, tileIndex: number) => void;
     // Tileset corner terrain actions
     setTileCornerTerrain: (tilesetId: string, index: number, corner: number, terrainId: string | null) => Promise<void>;
@@ -563,6 +565,33 @@ export const useEditorStore = create<EditorStore>()(
             }
         }),
 
+        paintTilesBatch: (layerId, tiles) => set(state => {
+            if (!state.currentMap) return;
+
+            const layer = state.currentMap.layers.find(l => l.id === layerId);
+            const variation = state.activeVariationId
+                ? state.currentMap.variations?.find(v => v.id === state.activeVariationId)
+                : null;
+
+            for (const { x, y, tilesetId, tileIndex } of tiles) {
+                if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height) continue;
+                const tileRef = `${tilesetId}:${tileIndex}`;
+
+                if (variation) {
+                    if (!variation.layerOverrides) variation.layerOverrides = {};
+                    if (!variation.layerOverrides[layerId]) {
+                        variation.layerOverrides[layerId] = {
+                            mode: 'merge',
+                            data: Array(state.currentMap.height).fill(null).map(() => Array(state.currentMap!.width).fill(null))
+                        };
+                    }
+                    variation.layerOverrides[layerId].data[y][x] = tileRef;
+                } else if (layer && layer.data[y] && !layer.locked) {
+                    layer.data[y][x] = tileRef;
+                }
+            }
+        }),
+
         eraseTile: (layerId, x, y) => set(state => {
             if (!state.currentMap) return;
 
@@ -584,6 +613,32 @@ export const useEditorStore = create<EditorStore>()(
             const layer = state.currentMap.layers.find(l => l.id === layerId);
             if (layer && layer.data[y] && !layer.locked) {
                 layer.data[y][x] = null;
+            }
+        }),
+
+        eraseTilesBatch: (layerId, positions) => set(state => {
+            if (!state.currentMap) return;
+
+            const layer = state.currentMap.layers.find(l => l.id === layerId);
+            const variation = state.activeVariationId
+                ? state.currentMap.variations?.find(v => v.id === state.activeVariationId)
+                : null;
+
+            for (const { x, y } of positions) {
+                if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height) continue;
+
+                if (variation) {
+                    if (!variation.layerOverrides) variation.layerOverrides = {};
+                    if (!variation.layerOverrides[layerId]) {
+                        variation.layerOverrides[layerId] = {
+                            mode: 'merge',
+                            data: Array(state.currentMap.height).fill(null).map(() => Array(state.currentMap!.width).fill(null))
+                        };
+                    }
+                    variation.layerOverrides[layerId].data[y][x] = null;
+                } else if (layer && layer.data[y] && !layer.locked) {
+                    layer.data[y][x] = null;
+                }
             }
         }),
 
