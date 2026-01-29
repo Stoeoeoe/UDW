@@ -30,6 +30,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const placeEntity = useEditorStore(state => state.placeEntity);
     const selectEntity = useEditorStore(state => state.selectEntity);
     const setHoveredTile = useEditorStore(state => state.setHoveredTile);
+    const setDrawPreview = useEditorStore(state => state.setDrawPreview);
 
     const isDrawingRef = useRef(false);
     const drawStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -221,6 +222,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             } else {
                 drawStartRef.current = { x: tx, y: ty };
                 isDrawingRef.current = true;
+                setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty } });
             }
         } else if (activeTool === 'tileFill' && selectedLayerId && activeTilesetId && selectedTileIndex !== null) {
             if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
@@ -250,6 +252,11 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             setHoveredTile(null);
         }
 
+        // Update live draw preview while dragging a rect/circle
+        if (isDrawingRef.current && drawStartRef.current && tile) {
+            setDrawPreview({ isDrawing: true, start: drawStartRef.current, end: { x: tile.x, y: tile.y } });
+        }
+
         // Paint/erase while dragging in point mode
         if (e.buttons === 1 && !e.altKey && drawMode === 'point' && selectedLayerId && tile) {
             const { x: tx, y: ty } = tile;
@@ -267,12 +274,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const handlePointerUp = useCallback((e: PointerEvent) => {
         if (isDrawingRef.current && drawStartRef.current && currentMap) {
             const tile = screenToTile(e.clientX, e.clientY);
+            // Clear preview immediately to avoid flicker after commit
+            setDrawPreview({ isDrawing: false, start: null, end: null });
             if (tile) {
                 applyShape(drawMode, drawStartRef.current, tile, activeTool === 'tilePaint' ? 'paint' : 'erase');
             }
         }
         isDrawingRef.current = false;
         drawStartRef.current = null;
+        setDrawPreview({ isDrawing: false, start: null, end: null });
     }, [currentMap, drawMode, activeTool, screenToTile, applyShape]);
 
     // Set up event listeners

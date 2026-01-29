@@ -1,1 +1,0 @@
-TODO: Layer icon prepared but not done.

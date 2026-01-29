@@ -251,12 +251,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // Render tile preview
     const renderPreview = useCallback(() => {
         const previewContainer = previewContainerRef.current;
-        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex } = useEditorStore.getState();
+        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode } = useEditorStore.getState();
         if (!previewContainer) return;
 
         previewContainer.removeChildren();
 
-        if (activeTool !== 'tilePaint' || !activeTilesetId || !hoveredTile) return;
+        if (activeTool !== 'tilePaint' || !activeTilesetId) return;
 
         const ts = tilesets.get(activeTilesetId);
         if (!ts) return;
@@ -267,6 +267,113 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             const suffixed = tilesets.get(`${activeTilesetId}${variation.tilesetSuffix}`);
             if (suffixed) effectiveTileset = suffixed;
         }
+
+        // If the user is actively drawing a shape, render the shape preview
+        if (drawPreview && drawPreview.isDrawing && drawPreview.start && drawPreview.end && drawMode && drawMode !== 'point') {
+            const patternData = (() => {
+                if (!selectedTileIndices || selectedTileIndices.length === 0) return null;
+                const cols = effectiveTileset.columns;
+                let minC = Infinity, minR = Infinity, maxC = -Infinity, maxR = -Infinity;
+                for (const idx of selectedTileIndices) {
+                    const c = idx % cols;
+                    const r = Math.floor(idx / cols);
+                    if (c < minC) minC = c;
+                    if (c > maxC) maxC = c;
+                    if (r < minR) minR = r;
+                    if (r > maxR) maxR = r;
+                }
+                if (minC === Infinity) return null;
+                const patternW = maxC - minC + 1;
+                const patternH = maxR - minR + 1;
+                const pattern: (number | null)[][] = Array.from({ length: patternH }, () => Array(patternW).fill(null));
+                for (const idx of selectedTileIndices) {
+                    const c = idx % cols;
+                    const r = Math.floor(idx / cols);
+                    pattern[r - minR][c - minC] = idx;
+                }
+                return { pattern, patternW, patternH, minC, minR };
+            })();
+
+            const sx = drawPreview.start.x;
+            const sy = drawPreview.start.y;
+            const ex = drawPreview.end.x;
+            const ey = drawPreview.end.y;
+
+            if (drawMode === 'rect') {
+                const minX = Math.min(sx, ex);
+                const maxX = Math.max(sx, ex);
+                const minY = Math.min(sy, ey);
+                const maxY = Math.max(sy, ey);
+
+                for (let y = minY; y <= maxY; y++) {
+                    for (let x = minX; x <= maxX; x++) {
+                        let tileIdx: number | null = null;
+                        if (patternData) {
+                            const dx = x - sx;
+                            const dy = y - sy;
+                            const px = ((dx % patternData.patternW) + patternData.patternW) % patternData.patternW;
+                            const py = ((dy % patternData.patternH) + patternData.patternH) % patternData.patternH;
+                            tileIdx = patternData.pattern[py][px];
+                        } else if (selectedTileIndex !== null) {
+                            tileIdx = selectedTileIndex;
+                        }
+
+                        if (tileIdx !== null && tileIdx !== undefined) {
+                            const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
+                            if (texture) {
+                                const sprite = new Sprite(texture);
+                                sprite.x = x * DEFAULT_TILE_SIZE;
+                                sprite.y = y * DEFAULT_TILE_SIZE;
+                                sprite.width = DEFAULT_TILE_SIZE;
+                                sprite.height = DEFAULT_TILE_SIZE;
+                                previewContainer.addChild(sprite);
+                            }
+                        }
+                    }
+                }
+            } else if (drawMode === 'circle') {
+                const radius = Math.sqrt(Math.pow(ex - sx, 2) + Math.pow(ey - sy, 2));
+                const minX = Math.floor(sx - radius);
+                const maxX = Math.ceil(sx + radius);
+                const minY = Math.floor(sy - radius);
+                const maxY = Math.ceil(sy + radius);
+
+                for (let y = minY; y <= maxY; y++) {
+                    for (let x = minX; x <= maxX; x++) {
+                        const dist = Math.sqrt(Math.pow(x - sx, 2) + Math.pow(y - sy, 2));
+                        if (dist <= radius) {
+                            let tileIdx: number | null = null;
+                            if (patternData) {
+                                const dx = x - sx;
+                                const dy = y - sy;
+                                const px = ((dx % patternData.patternW) + patternData.patternW) % patternData.patternW;
+                                const py = ((dy % patternData.patternH) + patternData.patternH) % patternData.patternH;
+                                tileIdx = patternData.pattern[py][px];
+                            } else if (selectedTileIndex !== null) {
+                                tileIdx = selectedTileIndex;
+                            }
+
+                            if (tileIdx !== null && tileIdx !== undefined) {
+                                const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
+                                if (texture) {
+                                    const sprite = new Sprite(texture);
+                                    sprite.x = x * DEFAULT_TILE_SIZE;
+                                    sprite.y = y * DEFAULT_TILE_SIZE;
+                                    sprite.width = DEFAULT_TILE_SIZE;
+                                    sprite.height = DEFAULT_TILE_SIZE;
+                                    previewContainer.addChild(sprite);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+        }
+
+        // Default hover preview (single tile or multi-tile stencil)
+        if (!hoveredTile) return;
 
         if (selectedTileIndices && selectedTileIndices.length > 0) {
             // Multi-tile preview

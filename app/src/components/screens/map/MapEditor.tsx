@@ -25,7 +25,7 @@ export const MapEditor: React.FC = () => {
     // When a map becomes active (different map), switch to tile paint tool by default
     // Use mapPath instead of map object to avoid triggering on every tile edit
     useEffect(() => {
-        if (currentMap) {
+        if (currentMapPath) {
             setActiveTool('tilePaint');
         }
     }, [currentMapPath, setActiveTool]);
@@ -59,7 +59,7 @@ export const MapEditor: React.FC = () => {
             content={<MapViewportPixi />}
             leftPanel={<LayersPanel />}
             rightPanel={<PropertiesPanel />}
-            bottomPanel={<TilesetPalette />}
+            bottomPanel={<TilesetPalette enableMultiSelect={true} />}
             leftPanelDefaultSize={18}
             rightPanelDefaultSize={20}
             bottomPanelDefaultSize={25}

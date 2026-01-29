@@ -23,6 +23,7 @@ interface EditorStore extends EditorState {
     setDrawMode: (mode: 'point' | 'rect' | 'circle') => void;
     setMode: (mode: EditorMode) => void;
     setHoveredTile: (pos: { x: number, y: number } | null) => void;
+    setDrawPreview: (preview: { isDrawing: boolean; start: { x: number; y: number } | null; end: { x: number; y: number } | null }) => void;
 
     // Tileset actions
     setActiveTileset: (id: string | null) => void;
@@ -105,6 +106,7 @@ export const useEditorStore = create<EditorStore>()(
         activeTool: 'select',
         drawMode: 'point',
         hoveredTile: null,
+            drawPreview: { isDrawing: false, start: null, end: null },
         selectedLayerId: null,
         selectedTileIndex: null,
         selectedTileIndices: [],
@@ -395,6 +397,11 @@ export const useEditorStore = create<EditorStore>()(
         setDrawMode: (mode) => set(state => {
             state.drawMode = mode;
         }),
+
+            // Drawing preview used while dragging shapes
+            setDrawPreview: (preview) => set(state => {
+                state.drawPreview = preview;
+            }),
 
         setHoveredTile: (pos) => set(state => {
             state.hoveredTile = pos;

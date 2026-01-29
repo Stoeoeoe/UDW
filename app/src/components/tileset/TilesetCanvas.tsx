@@ -12,6 +12,7 @@ interface TilesetCanvasProps {
     mode?: 'interactive' | 'static';
     zoom?: number;
     tool?: 'select' | 'terrain';
+    enableMultiSelect?: boolean;
 }
 
 export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
@@ -21,7 +22,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     mode = 'interactive',
     zoom: forcedZoom
     ,
-    tool = 'select'
+    tool = 'select',
+    enableMultiSelect = false
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const loadedSprites = useEditorStore(state => state.loadedSprites);
@@ -33,9 +35,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const setTileCornerTerrain = useEditorStore(state => state.setTileCornerTerrain);
 
     const [isSelecting, setIsSelecting] = useState(false);
-    const selectionStart = useRef<{ col: number; row: number } | null>(null);
-    const selectionEnd = useRef<{ col: number; row: number } | null>(null);
+    const [selectionStart, setSelectionStart] = useState<{ col: number; row: number } | null>(null);
+    const [selectionEnd, setSelectionEnd] = useState<{ col: number; row: number } | null>(null);
     const mouseMovedDuringDown = useRef(false);
+    const ignoreClickRef = useRef(false);
 
     // Terrain painting state (drag-to-paint)
     const [isTerrainPainting, setIsTerrainPainting] = useState(false);
@@ -188,8 +191,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             const row = Math.floor(tileY / tileset.tileHeight);
             if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
                 setIsSelecting(true);
-                selectionStart.current = { col, row };
-                selectionEnd.current = { col, row };
+                setSelectionStart({ col, row });
+                setSelectionEnd({ col, row });
                 mouseMovedDuringDown.current = false;
             }
         }
@@ -244,12 +247,12 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             const col = Math.floor(tileX / tileset.tileWidth);
             const row = Math.floor(tileY / tileset.tileHeight);
             if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
-                selectionEnd.current = { col, row };
+                setSelectionEnd({ col, row });
                 mouseMovedDuringDown.current = true;
             }
             return;
         }
-    }, [isPanning, effectiveZoom, getConstrainedPos, isSelecting, sprite, mode, camera, isTerrainPainting, selectedTerrainId, getTileCoords, computeCorner, setTileCornerTerrain, tileset.id]);
+    }, [isPanning, effectiveZoom, isSelecting, sprite, mode, camera, isTerrainPainting, selectedTerrainId, getTileCoords, computeCorner, setTileCornerTerrain, tileset.id, panZoom, tileset.columns, tileset.tileWidth, tileset.tileHeight]);
 
     const handleMouseUp = useCallback(() => {
         // Stop terrain painting
@@ -260,8 +263,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         if (isSelecting) {
             // finalize selection
-            const s = selectionStart.current;
-            const e = selectionEnd.current;
+            const s = selectionStart;
+            const e = selectionEnd;
             if (s && e) {
                 const startCol = Math.min(s.col, e.col);
                 const endCol = Math.max(s.col, e.col);
@@ -275,17 +278,25 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
                     }
                 }
                 if (range.length > 0) {
-                    setSelectedTiles(range);
+                    // Respect enableMultiSelect prop: only bulk-select when allowed
+                    if (typeof enableMultiSelect !== 'undefined' ? enableMultiSelect : true) {
+                        setSelectedTiles(range);
+                        // Prevent the subsequent click event from turning this into a single select
+                        ignoreClickRef.current = true;
+                    } else {
+                        // If multi-select not enabled, pick first tile of range as single select
+                        onSelect(range[0]);
+                    }
                 }
             }
             setIsSelecting(false);
-            selectionStart.current = null;
-            selectionEnd.current = null;
+            setSelectionStart(null);
+            setSelectionEnd(null);
             mouseMovedDuringDown.current = false;
         }
         panZoom.stopPan();
         setIsPanning(false);
-    }, [isSelecting, isTerrainPainting, tileset, setSelectedTiles]);
+    }, [isSelecting, isTerrainPainting, tileset, setSelectedTiles, enableMultiSelect, onSelect, panZoom, selectionStart, selectionEnd]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -376,7 +387,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             ctx.strokeStyle = '#3182ce';
             ctx.lineWidth = 2 / effectiveZoom;
             ctx.fillStyle = 'rgba(49, 130, 206, 0.15)';
-            for (const si of selectedTileIndices) {
+            if (selectedTileIndices.length === 1) {
+                const si = selectedTileIndices[0];
                 const col = si % tileset.columns;
                 const row = Math.floor(si / tileset.columns);
                 ctx.strokeRect(
@@ -391,6 +403,25 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
                     tileset.tileWidth,
                     tileset.tileHeight
                 );
+            } else {
+                // Draw a single bounding rect covering the selection
+                let minC = Infinity, minR = Infinity, maxC = -Infinity, maxR = -Infinity;
+                for (const si of selectedTileIndices) {
+                    const c = si % tileset.columns;
+                    const r = Math.floor(si / tileset.columns);
+                    if (c < minC) minC = c;
+                    if (r < minR) minR = r;
+                    if (c > maxC) maxC = c;
+                    if (r > maxR) maxR = r;
+                }
+                if (minC !== Infinity) {
+                    const x = sheetX + minC * tileset.tileWidth;
+                    const y = sheetY + minR * tileset.tileHeight;
+                    const w = (maxC - minC + 1) * tileset.tileWidth;
+                    const h = (maxR - minR + 1) * tileset.tileHeight;
+                    ctx.strokeRect(x, y, w, h);
+                    ctx.fillRect(x, y, w, h);
+                }
             }
         } else if (selectedIndex !== null) {
             const col = selectedIndex % tileset.columns;
@@ -526,9 +557,9 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         ctx.restore();
         // Draw selection rectangle if dragging
-        if (isSelecting && selectionStart.current && selectionEnd.current) {
-            const s = selectionStart.current;
-            const e = selectionEnd.current;
+        if (isSelecting && selectionStart && selectionEnd) {
+            const s = selectionStart;
+            const e = selectionEnd;
             const startCol = Math.min(s.col, e.col);
             const endCol = Math.max(s.col, e.col);
             const startRow = Math.min(s.row, e.row);
@@ -551,12 +582,13 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
             ctx.fillRect(x, y, w, h);
             ctx.restore();
         }
-    }, [sprite, tileset, selectedIndex, selectedTileIndices, effectiveZoom, camera, mode, tool, terrainTypes, isSelecting]);
+    }, [sprite, tileset, selectedIndex, selectedTileIndices, effectiveZoom, camera, mode, tool, terrainTypes, isSelecting, selectionStart, selectionEnd]);
 
     const handleClick = (e: React.MouseEvent) => {
-        // Ignore click if it was a drag-selection
-        if (mouseMovedDuringDown.current) {
+        // Ignore click if it was a drag-selection or we've just set a multi-selection
+        if (mouseMovedDuringDown.current || ignoreClickRef.current) {
             mouseMovedDuringDown.current = false;
+            ignoreClickRef.current = false;
             return;
         }
 

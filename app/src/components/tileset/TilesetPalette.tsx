@@ -12,13 +12,18 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetCanvas } from './TilesetCanvas';
 import { useTileSelection } from '../../hooks/useTileSelection';
 
-export const TilesetPalette: React.FC = () => {
+interface TilesetPaletteProps {
+    enableMultiSelect?: boolean;
+}
+
+export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelect = false }) => {
     const tilesets = Array.from(useEditorStore(state => state.tilesets).values());
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);
 
     // Use the shared tile selection hook
     const { selectedTileIndex, handleTileSelect } = useTileSelection();
+    const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
 
     const [zoom, setZoom] = useState(2.0); // Default to 200% for pixel art
 
@@ -79,7 +84,13 @@ export const TilesetPalette: React.FC = () => {
                     />
                 </HStack>
 
-                {selectedTileIndex !== null && (
+                {enableMultiSelect && selectedTileIndices.length > 0 ? (
+                    <HStack spacing={2}>
+                        <Text fontSize="9px" fontWeight="black" color="blue.500" textTransform="uppercase">
+                            {selectedTileIndices.length} selected
+                        </Text>
+                    </HStack>
+                ) : selectedTileIndex !== null ? (
                     <HStack spacing={2}>
                         <Text fontSize="9px" fontWeight="black" color="blue.500" textTransform="uppercase">
                             Tile {selectedTileIndex}
@@ -88,7 +99,7 @@ export const TilesetPalette: React.FC = () => {
                             {currentTileset ? `(${(selectedTileIndex % currentTileset.columns)}, ${Math.floor(selectedTileIndex / currentTileset.columns)})` : ''}
                         </Text>
                     </HStack>
-                )}
+                ) : null}
             </HStack>
 
             {/* Scrollable Canvas */}
@@ -101,6 +112,7 @@ export const TilesetPalette: React.FC = () => {
                             onSelect={handleTileSelect}
                             mode="static"
                             zoom={zoom}
+                            enableMultiSelect={enableMultiSelect}
                         />
                     </Box>
                 ) : (

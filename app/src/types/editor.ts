@@ -32,6 +32,12 @@ export interface EditorState {
 
     drawMode: 'point' | 'rect' | 'circle'; // How tools behave
     hoveredTile: { x: number, y: number } | null; // Currently hovered tile in viewport
+    // Live drawing preview (used to render shape previews while dragging)
+    drawPreview?: {
+        isDrawing: boolean;
+        start: { x: number; y: number } | null;
+        end: { x: number; y: number } | null;
+    };
 
     // Tileset-specific tool mode used by the Tileset toolbar
     tilesetToolMode?: 'select' | 'terrain';
