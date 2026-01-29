@@ -105,7 +105,7 @@ export const useEditorStore = create<EditorStore>()(
         activeVariationId: null,
         timePreviewEnabled: false,
         timeOfDay: 0.5,
-        activeTool: 'select',
+        activeTool: 'tilePaint',
         drawMode: 'point',
         hoveredTile: null,
             drawPreview: { isDrawing: false, start: null, end: null },
@@ -308,6 +308,8 @@ export const useEditorStore = create<EditorStore>()(
                 }
 
                 state.currentMap = castDraft(enrichedMap);
+                // When a map is loaded, switch to tile paint tool by default
+                state.activeTool = 'tilePaint';
                 if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
                     state.camera = { ...state.mapCameras[enrichedMap.id] };
                 }
