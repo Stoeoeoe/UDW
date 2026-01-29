@@ -210,9 +210,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
         const pixelWidth = currentMap.width * DEFAULT_TILE_SIZE;
         const pixelHeight = currentMap.height * DEFAULT_TILE_SIZE;
-
         // Grid lines - draw each line individually with stroke
-        gridGraphics.setStrokeStyle({ width: 1, color: 0x2d3748, alpha: 0.5 });
+        // Make stroke thinner when zoomed in by adjusting width inversely to viewport scale
+        const vp = viewport;
+        const zoomScale = vp?.scale?.x ?? 1;
+        const gridLineWidth = Math.max(0.25, 1 / zoomScale);
+        gridGraphics.setStrokeStyle({ width: gridLineWidth, color: 0x2d3748, alpha: 0.5 });
         for (let x = 0; x <= pixelWidth; x += DEFAULT_TILE_SIZE) {
             gridGraphics.moveTo(x, 0);
             gridGraphics.lineTo(x, pixelHeight);
@@ -224,10 +227,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         gridGraphics.stroke();
 
         // Border - thicker line
-        gridGraphics.setStrokeStyle({ width: 2, color: 0x4a5568 });
+        const borderLineWidth = Math.max(0.5, 2 / zoomScale);
+        gridGraphics.setStrokeStyle({ width: borderLineWidth, color: 0x4a5568 });
         gridGraphics.rect(0, 0, pixelWidth, pixelHeight);
         gridGraphics.stroke();
-    }, []);
+    }, [viewport]);
 
     // Render hover highlight
     const renderHover = useCallback(() => {

@@ -196,6 +196,12 @@ export const MapViewportPixi: React.FC = () => {
         return unsubscribe;
     }, [isReady, renderTiles, renderEntities, renderGrid, renderHover, renderPreview]);
 
+    // Re-render grid when viewport zoom changes
+    useEffect(() => {
+        if (!isReady) return;
+        renderGrid();
+    }, [isReady, zoomLevel, renderGrid]);
+
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
