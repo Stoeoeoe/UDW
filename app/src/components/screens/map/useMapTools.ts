@@ -20,13 +20,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
     const activeTool = useEditorStore(state => state.activeTool);
     const drawMode = useEditorStore(state => state.drawMode);
+    const brushSize = useEditorStore(state => state.brushSize);
     const selectedLayerId = useEditorStore(state => state.selectedLayerId);
     const selectedEntityTypeId = useEditorStore(state => state.selectedEntityTypeId);
     const tilesets = useEditorStore(state => state.tilesets);
 
-    const paintTile = useEditorStore(state => state.paintTile);
     const paintTilesBatch = useEditorStore(state => state.paintTilesBatch);
-    const eraseTile = useEditorStore(state => state.eraseTile);
     const eraseTilesBatch = useEditorStore(state => state.eraseTilesBatch);
     const bucketFill = useEditorStore(state => state.bucketFill);
     const placeEntity = useEditorStore(state => state.placeEntity);
@@ -179,8 +178,35 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             }
         };
 
+        // Collect tiles in a circular brush around a center point
+        // Note: brush size only applies when NOT using a multi-tile pattern
+        const collectBrush = (cx: number, cy: number, radius: number) => {
+            // If we have a multi-tile pattern, don't apply brush - just place the stencil once
+            if (pattern && patternW > 0 && patternH > 0) {
+                collectTile(cx, cy);
+                return;
+            }
+            
+            if (radius <= 1) {
+                collectTile(cx, cy);
+                return;
+            }
+            const r = radius - 1; // radius=1 means single tile, radius=2 means 3x3 area, etc.
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= r) {
+                        collectTile(cx + dx, cy + dy);
+                    }
+                }
+            }
+        };
+
+        // Get effective brush size (only for point/line modes)
+        const effectiveBrushSize = (mode === 'point' || mode === 'line') ? brushSize : 1;
+
         if (mode === 'point') {
-            collectTile(end.x, end.y);
+            collectBrush(end.x, end.y, effectiveBrushSize);
         } else if (mode === 'rect') {
             const minX = Math.min(start.x, end.x);
             const maxX = Math.max(start.x, end.x);
@@ -234,7 +260,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 }
             }
         } else if (mode === 'line') {
-            // Bresenham's line algorithm
+            // Bresenham's line algorithm with brush size
             let x0 = start.x, y0 = start.y;
             const x1 = end.x, y1 = end.y;
             const dx = Math.abs(x1 - x0);
@@ -244,7 +270,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             let err = dx - dy;
 
             while (true) {
-                collectTile(x0, y0);
+                collectBrush(x0, y0, effectiveBrushSize);
                 if (x0 === x1 && y0 === y1) break;
                 const e2 = 2 * err;
                 if (e2 > -dy) { err -= dy; x0 += sx; }
@@ -259,7 +285,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (tilesToErase.length > 0) {
             eraseTilesBatch(selectedLayerId, tilesToErase);
         }
-    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, activeTool, tilesets, getPattern, paintTilesBatch, eraseTilesBatch]);
+    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, activeTool, brushSize, tilesets, getPattern, paintTilesBatch, eraseTilesBatch]);
 
     // Handle pointer down
     const handlePointerDown = useCallback((e: PointerEvent) => {
@@ -346,37 +372,18 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             setDrawPreview({ isDrawing: true, start: drawStartRef.current, end: { x: tile.x, y: tile.y } });
         }
 
-        // Paint/erase while dragging in point mode
-        if (e.buttons === 1 && !e.altKey && drawMode === 'point' && selectedLayerId && tile) {
+        // Paint/erase while dragging in point mode - use applyShape for proper brush/stencil support
+        if (e.buttons === 1 && !e.altKey && !e.shiftKey && drawMode === 'point' && selectedLayerId && tile) {
             const { x: tx, y: ty } = tile;
             if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
                 if ((activeTool === 'tilePaint' || activeTool === 'randomTile') && activeTilesetId) {
-                    if (activeTool === 'randomTile' && selectedTileIndices && selectedTileIndices.length > 0) {
-                        // Sample per-tile for randomTile
-                        const ts = tilesets.get(activeTilesetId);
-                        const weights = selectedTileIndices.map(i => {
-                            const def = ts?.tiles?.[i];
-                            return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
-                        });
-                        const total = weights.reduce((a, b) => a + b, 0);
-                        let chosen = selectedTileIndex;
-                        if (total > 0) {
-                            let r = Math.random() * total;
-                            for (let k = 0; k < selectedTileIndices.length; k++) {
-                                r -= weights[k];
-                                if (r <= 0) { chosen = selectedTileIndices[k]; break; }
-                            }
-                        }
-                        if (chosen !== null) paintTile(selectedLayerId, tx, ty, activeTilesetId, chosen);
-                    } else if (selectedTileIndex !== null) {
-                        paintTile(selectedLayerId, tx, ty, activeTilesetId, selectedTileIndex);
-                    }
+                    applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'paint');
                 } else if (activeTool === 'tileErase') {
-                    eraseTile(selectedLayerId, tx, ty);
+                    applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'erase');
                 }
             }
         }
-    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTileIndex, selectedTileIndices, tilesets, screenToTile, setHoveredTile, setDrawPreview, paintTile, eraseTile]);
+    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, screenToTile, setHoveredTile, setDrawPreview, applyShape]);
 
     // Handle pointer up
     const handlePointerUp = useCallback((e: PointerEvent) => {

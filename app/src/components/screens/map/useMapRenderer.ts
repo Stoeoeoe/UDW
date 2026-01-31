@@ -255,7 +255,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // Render tile preview
     const renderPreview = useCallback(() => {
         const previewContainer = previewContainerRef.current;
-        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode } = useEditorStore.getState();
+        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode, brushSize } = useEditorStore.getState();
         if (!previewContainer) return;
 
         previewContainer.removeChildren();
@@ -417,7 +417,76 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                     }
                 }
             } else if (effectiveDrawMode === 'line') {
-                // Bresenham's line algorithm for preview
+                // Get effective brush size for line preview
+                const effectiveBrushSize = brushSize || 1;
+
+                // Helper to render a brush circle at a position
+                const renderBrushAt = (cx: number, cy: number) => {
+                    if (effectiveBrushSize <= 1) {
+                        // Single tile
+                        let tileIdx: number | null = null;
+                        if (activeTool === 'randomTile') {
+                            tileIdx = sampleRandomTile(cx, cy, cursorSeed);
+                        } else if (patternData) {
+                            const pdx = cx - sx;
+                            const pdy = cy - sy;
+                            const px = ((pdx % patternData.patternW) + patternData.patternW) % patternData.patternW;
+                            const py = ((pdy % patternData.patternH) + patternData.patternH) % patternData.patternH;
+                            tileIdx = patternData.pattern[py][px];
+                        } else if (selectedTileIndex !== null) {
+                            tileIdx = selectedTileIndex;
+                        }
+
+                        if (tileIdx !== null && tileIdx !== undefined) {
+                            const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
+                            if (texture) {
+                                const sprite = new Sprite(texture);
+                                sprite.x = cx * DEFAULT_TILE_SIZE;
+                                sprite.y = cy * DEFAULT_TILE_SIZE;
+                                sprite.width = DEFAULT_TILE_SIZE;
+                                sprite.height = DEFAULT_TILE_SIZE;
+                                previewContainer.addChild(sprite);
+                            }
+                        }
+                    } else {
+                        // Circular brush
+                        const r = effectiveBrushSize - 1;
+                        for (let bdy = -r; bdy <= r; bdy++) {
+                            for (let bdx = -r; bdx <= r; bdx++) {
+                                const dist = Math.sqrt(bdx * bdx + bdy * bdy);
+                                if (dist <= r) {
+                                    const bx = cx + bdx, by = cy + bdy;
+                                    let tileIdx: number | null = null;
+                                    if (activeTool === 'randomTile') {
+                                        tileIdx = sampleRandomTile(bx, by, cursorSeed);
+                                    } else if (patternData) {
+                                        const pdx = bx - sx;
+                                        const pdy = by - sy;
+                                        const px = ((pdx % patternData.patternW) + patternData.patternW) % patternData.patternW;
+                                        const py = ((pdy % patternData.patternH) + patternData.patternH) % patternData.patternH;
+                                        tileIdx = patternData.pattern[py][px];
+                                    } else if (selectedTileIndex !== null) {
+                                        tileIdx = selectedTileIndex;
+                                    }
+
+                                    if (tileIdx !== null && tileIdx !== undefined) {
+                                        const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
+                                        if (texture) {
+                                            const sprite = new Sprite(texture);
+                                            sprite.x = bx * DEFAULT_TILE_SIZE;
+                                            sprite.y = by * DEFAULT_TILE_SIZE;
+                                            sprite.width = DEFAULT_TILE_SIZE;
+                                            sprite.height = DEFAULT_TILE_SIZE;
+                                            previewContainer.addChild(sprite);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // Bresenham's line algorithm for preview with brush
                 let x0 = sx, y0 = sy;
                 const x1 = ex, y1 = ey;
                 const dx = Math.abs(x1 - x0);
@@ -427,31 +496,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 let err = dx - dy;
 
                 while (true) {
-                    let tileIdx: number | null = null;
-                    if (activeTool === 'randomTile') {
-                        tileIdx = sampleRandomTile(x0, y0, cursorSeed);
-                    } else if (patternData) {
-                        const pdx = x0 - sx;
-                        const pdy = y0 - sy;
-                        const px = ((pdx % patternData.patternW) + patternData.patternW) % patternData.patternW;
-                        const py = ((pdy % patternData.patternH) + patternData.patternH) % patternData.patternH;
-                        tileIdx = patternData.pattern[py][px];
-                    } else if (selectedTileIndex !== null) {
-                        tileIdx = selectedTileIndex;
-                    }
-
-                    if (tileIdx !== null && tileIdx !== undefined) {
-                        const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
-                        if (texture) {
-                            const sprite = new Sprite(texture);
-                            sprite.x = x0 * DEFAULT_TILE_SIZE;
-                            sprite.y = y0 * DEFAULT_TILE_SIZE;
-                            sprite.width = DEFAULT_TILE_SIZE;
-                            sprite.height = DEFAULT_TILE_SIZE;
-                            previewContainer.addChild(sprite);
-                        }
-                    }
-
+                    renderBrushAt(x0, y0);
                     if (x0 === x1 && y0 === y1) break;
                     const e2 = 2 * err;
                     if (e2 > -dy) { err -= dy; x0 += stepX; }
@@ -465,25 +510,53 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         // Default hover preview (single tile or multi-tile stencil)
         if (!hoveredTile) return;
 
+        // Brush size only applies to point mode
+        const effectiveBrushSize = (drawMode === 'point') ? (brushSize || 1) : 1;
+
+        // Helper to render a tile at a position
+        const renderTileAt = (tx: number, ty: number, tileIdx: number) => {
+            const texture = getTileTexture(
+                effectiveTileset.spriteSheet,
+                tileIdx,
+                effectiveTileset.tileWidth,
+                effectiveTileset.tileHeight,
+                effectiveTileset.columns
+            );
+            if (texture) {
+                const sprite = new Sprite(texture);
+                sprite.x = tx * DEFAULT_TILE_SIZE;
+                sprite.y = ty * DEFAULT_TILE_SIZE;
+                sprite.width = DEFAULT_TILE_SIZE;
+                sprite.height = DEFAULT_TILE_SIZE;
+                previewContainer.addChild(sprite);
+            }
+        };
+
+        // Helper to render brush at hover position
+        const renderBrushPreview = (getTileIdxForPos: (x: number, y: number) => number | null) => {
+            if (effectiveBrushSize <= 1) {
+                const idx = getTileIdxForPos(hoveredTile.x, hoveredTile.y);
+                if (idx !== null) renderTileAt(hoveredTile.x, hoveredTile.y, idx);
+            } else {
+                const r = effectiveBrushSize - 1;
+                for (let dy = -r; dy <= r; dy++) {
+                    for (let dx = -r; dx <= r; dx++) {
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= r) {
+                            const bx = hoveredTile.x + dx, by = hoveredTile.y + dy;
+                            const idx = getTileIdxForPos(bx, by);
+                            if (idx !== null) renderTileAt(bx, by, idx);
+                        }
+                    }
+                }
+            }
+        };
+
         // For randomTile, sample a random tile for the hover preview
         if (activeTool === 'randomTile') {
             if (!selectedTileIndices || selectedTileIndices.length === 0) {
                 if (selectedTileIndex !== null && selectedTileIndex !== undefined) {
-                    const texture = getTileTexture(
-                        effectiveTileset.spriteSheet,
-                        selectedTileIndex,
-                        effectiveTileset.tileWidth,
-                        effectiveTileset.tileHeight,
-                        effectiveTileset.columns
-                    );
-                    if (texture) {
-                        const sprite = new Sprite(texture);
-                        sprite.x = hoveredTile.x * DEFAULT_TILE_SIZE;
-                        sprite.y = hoveredTile.y * DEFAULT_TILE_SIZE;
-                        sprite.width = DEFAULT_TILE_SIZE;
-                        sprite.height = DEFAULT_TILE_SIZE;
-                        previewContainer.addChild(sprite);
-                    }
+                    renderBrushPreview(() => selectedTileIndex);
                 }
                 return;
             }
@@ -502,40 +575,23 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             });
             const total = weights.reduce((a, b) => a + b, 0);
             
-            let previewIdx = indices[0];
-            if (total > 0) {
-                const r = seededRandom(hoveredTile.x, hoveredTile.y) * total;
+            const sampleTileForPos = (x: number, y: number): number | null => {
+                if (total <= 0) return indices[0];
+                const r = seededRandom(x, y) * total;
                 let acc = 0;
                 for (let k = 0; k < indices.length; k++) {
                     acc += weights[k];
-                    if (r < acc) {
-                        previewIdx = indices[k];
-                        break;
-                    }
+                    if (r < acc) return indices[k];
                 }
-            }
+                return indices[indices.length - 1];
+            };
             
-            const texture = getTileTexture(
-                effectiveTileset.spriteSheet,
-                previewIdx,
-                effectiveTileset.tileWidth,
-                effectiveTileset.tileHeight,
-                effectiveTileset.columns
-            );
-
-            if (texture) {
-                const sprite = new Sprite(texture);
-                sprite.x = hoveredTile.x * DEFAULT_TILE_SIZE;
-                sprite.y = hoveredTile.y * DEFAULT_TILE_SIZE;
-                sprite.width = DEFAULT_TILE_SIZE;
-                sprite.height = DEFAULT_TILE_SIZE;
-                previewContainer.addChild(sprite);
-            }
+            renderBrushPreview(sampleTileForPos);
             return;
         }
 
         if (selectedTileIndices && selectedTileIndices.length > 0) {
-            // Multi-tile preview
+            // Multi-tile stencil preview (no brush size for multi-tile)
             const cols = effectiveTileset.columns;
             let minC = Infinity, minR = Infinity;
             for (const idx of selectedTileIndices) {
@@ -548,41 +604,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             for (const idx of selectedTileIndices) {
                 const c = idx % cols;
                 const r = Math.floor(idx / cols);
-                const texture = getTileTexture(
-                    effectiveTileset.spriteSheet,
-                    idx,
-                    effectiveTileset.tileWidth,
-                    effectiveTileset.tileHeight,
-                    effectiveTileset.columns
-                );
-
-                if (texture) {
-                    const sprite = new Sprite(texture);
-                    sprite.x = (hoveredTile.x + (c - minC)) * DEFAULT_TILE_SIZE;
-                    sprite.y = (hoveredTile.y + (r - minR)) * DEFAULT_TILE_SIZE;
-                    sprite.width = DEFAULT_TILE_SIZE;
-                    sprite.height = DEFAULT_TILE_SIZE;
-                    previewContainer.addChild(sprite);
-                }
+                renderTileAt(hoveredTile.x + (c - minC), hoveredTile.y + (r - minR), idx);
             }
         } else if (selectedTileIndex !== null) {
-            // Single tile preview
-            const texture = getTileTexture(
-                effectiveTileset.spriteSheet,
-                selectedTileIndex,
-                effectiveTileset.tileWidth,
-                effectiveTileset.tileHeight,
-                effectiveTileset.columns
-            );
-
-            if (texture) {
-                const sprite = new Sprite(texture);
-                sprite.x = hoveredTile.x * DEFAULT_TILE_SIZE;
-                sprite.y = hoveredTile.y * DEFAULT_TILE_SIZE;
-                sprite.width = DEFAULT_TILE_SIZE;
-                sprite.height = DEFAULT_TILE_SIZE;
-                previewContainer.addChild(sprite);
-            }
+            // Single tile preview with brush size
+            renderBrushPreview(() => selectedTileIndex);
         }
     }, [getTileTexture]);
 

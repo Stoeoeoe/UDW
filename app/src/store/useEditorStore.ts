@@ -21,6 +21,7 @@ interface EditorStore extends EditorState {
     // Tool actions
     setActiveTool: (tool: ToolType) => void;
     setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line') => void;
+    setBrushSize: (size: number) => void;
     setMode: (mode: EditorMode) => void;
     setHoveredTile: (pos: { x: number, y: number } | null) => void;
     setDrawPreview: (preview: { isDrawing: boolean; start: { x: number; y: number } | null; end: { x: number; y: number } | null }) => void;
@@ -107,6 +108,7 @@ export const useEditorStore = create<EditorStore>()(
         timeOfDay: 0.5,
         activeTool: 'tilePaint',
         drawMode: 'point',
+        brushSize: 1,
         hoveredTile: null,
             drawPreview: { isDrawing: false, start: null, end: null },
         selectedLayerId: null,
@@ -400,6 +402,10 @@ export const useEditorStore = create<EditorStore>()(
 
         setDrawMode: (mode) => set(state => {
             state.drawMode = mode;
+        }),
+
+        setBrushSize: (size) => set(state => {
+            state.brushSize = Math.max(1, Math.round(size));
         }),
 
             // Drawing preview used while dragging shapes

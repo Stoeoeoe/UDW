@@ -31,6 +31,7 @@ export interface EditorState {
     selectedEntityIds: Set<string>;       // Multiple selected entities
 
     drawMode: 'point' | 'rect' | 'circle' | 'line'; // How tools behave
+    brushSize: number; // Brush radius for point/line modes (1 = single tile)
     hoveredTile: { x: number, y: number } | null; // Currently hovered tile in viewport
     // Live drawing preview (used to render shape previews while dragging)
     drawPreview?: {
