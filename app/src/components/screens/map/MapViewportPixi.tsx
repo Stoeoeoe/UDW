@@ -185,11 +185,13 @@ export const MapViewportPixi: React.FC = () => {
                 renderHover();
                 renderPreview();
             }
-            // Re-render preview on tool/tile selection change
+            // Re-render preview on tool/tile selection/brush size/draw mode change
             if (state.activeTool !== prevState.activeTool || 
                 state.selectedTileIndex !== prevState.selectedTileIndex ||
                 state.selectedTileIndices !== prevState.selectedTileIndices ||
-                state.drawPreview !== prevState.drawPreview) {
+                state.drawPreview !== prevState.drawPreview ||
+                state.brushSize !== prevState.brushSize ||
+                state.drawMode !== prevState.drawMode) {
                 renderPreview();
             }
         });
@@ -211,10 +213,10 @@ export const MapViewportPixi: React.FC = () => {
 
             // Tool shortcuts
             if (e.key === 'v' || e.key === 'V') useEditorStore.getState().setActiveTool('select');
-            if (e.key === 'b' || e.key === 'B') useEditorStore.getState().setActiveTool('tilePaint');
-            if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('randomTile');
-            if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('tileErase');
-            if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setActiveTool('tileFill');
+            if (e.key === 'b' || e.key === 'B') useEditorStore.getState().setActiveTool('stamp');
+            if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('random');
+            if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('erase');
+            if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setDrawMode('flood'); // G for flood fill shape
             if (e.key === 'n' || e.key === 'N') useEditorStore.getState().setActiveTool('entityPlace');
         };
 
@@ -250,7 +252,7 @@ export const MapViewportPixi: React.FC = () => {
 
     // Cursor based on tool
     const getCursor = () => {
-        if (activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase' || activeTool === 'tileFill') {
+        if (activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') {
             return 'crosshair';
         }
         return 'default';

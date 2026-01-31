@@ -29,7 +29,7 @@ describe('useEditorStore', () => {
         const state = useEditorStore.getState();
         expect(state.project).toBeNull();
         expect(state.mode).toBe('project');
-        expect(state.activeTool).toBe('select');
+        expect(state.activeTool).toBe('stamp');
     });
 
     it('should load a project', async () => {
@@ -64,8 +64,8 @@ describe('useEditorStore', () => {
     it('should update active tool', () => {
         const { setActiveTool } = useEditorStore.getState();
 
-        setActiveTool('tilePaint');
-        expect(useEditorStore.getState().activeTool).toBe('tilePaint');
+        setActiveTool('stamp');
+        expect(useEditorStore.getState().activeTool).toBe('stamp');
     });
 
     it('should update project', async () => {

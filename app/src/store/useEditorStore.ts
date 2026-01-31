@@ -20,7 +20,7 @@ interface EditorStore extends EditorState {
 
     // Tool actions
     setActiveTool: (tool: ToolType) => void;
-    setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line') => void;
+    setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
     setBrushSize: (size: number) => void;
     setMode: (mode: EditorMode) => void;
     setHoveredTile: (pos: { x: number, y: number } | null) => void;
@@ -43,6 +43,13 @@ interface EditorStore extends EditorState {
     eraseTile: (layerId: string, x: number, y: number) => void;
     eraseTilesBatch: (layerId: string, positions: Array<{ x: number; y: number }>) => void;
     bucketFill: (layerId: string, startX: number, startY: number, tilesetId: string, tileIndex: number) => void;
+    bucketFillAdvanced: (layerId: string, startX: number, startY: number, options: {
+        mode: 'stamp' | 'random' | 'erase';
+        tilesetId?: string;
+        tileIndex?: number;
+        tileIndices?: number[];  // For stencil or random selection
+        pattern?: { pattern: (number | null)[][]; patternW: number; patternH: number };  // For stencil fill
+    }) => void;
     // Tileset corner terrain actions
     setTileCornerTerrain: (tilesetId: string, index: number, corner: number, terrainId: string | null) => Promise<void>;
 
@@ -106,7 +113,7 @@ export const useEditorStore = create<EditorStore>()(
         activeVariationId: null,
         timePreviewEnabled: false,
         timeOfDay: 0.5,
-        activeTool: 'tilePaint',
+        activeTool: 'stamp',
         drawMode: 'point',
         brushSize: 1,
         hoveredTile: null,
@@ -311,7 +318,7 @@ export const useEditorStore = create<EditorStore>()(
 
                 state.currentMap = castDraft(enrichedMap);
                 // When a map is loaded, switch to tile paint tool by default
-                state.activeTool = 'tilePaint';
+                state.activeTool = 'stamp';
                 if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
                     state.camera = { ...state.mapCameras[enrichedMap.id] };
                 }
@@ -394,7 +401,7 @@ export const useEditorStore = create<EditorStore>()(
             set(state => {
                 state.activeTool = tool;
                 // If switching to paint tool and no layer selected, select first
-                if (tool === 'tilePaint' && !state.selectedLayerId && state.currentMap) {
+                if (tool === 'stamp' && !state.selectedLayerId && state.currentMap) {
                     state.selectedLayerId = state.currentMap.layers[0]?.id || null;
                 }
             });
@@ -705,6 +712,117 @@ export const useEditorStore = create<EditorStore>()(
                     if (cx < map.width - 1) stack.push([cx + 1, cy]);
                     if (cy > 0) stack.push([cx, cy - 1]);
                     if (cy < map.height - 1) stack.push([cx, cy + 1]);
+                }
+            }
+        }),
+
+        bucketFillAdvanced: (layerId, startX, startY, options) => set(state => {
+            if (!state.currentMap) return;
+            const map = state.currentMap;
+            const { mode, tilesetId, tileIndex, tileIndices, pattern } = options;
+
+            // Helper to get tile with variation resolution
+            const getTile = (lx: number, ly: number) => {
+                const context = state.activeVariationId
+                    ? map.variations?.find(v => v.id === state.activeVariationId)
+                    : null;
+
+                if (context) {
+                    const override = context.layerOverrides?.[layerId];
+                    if (override && override.data[ly]?.[lx] !== undefined) {
+                        return override.data[ly][lx];
+                    }
+                }
+                const layer = map.layers.find(l => l.id === layerId);
+                return layer?.data[ly]?.[lx] || null;
+            };
+
+            // Helper to set tile
+            const setTile = (cx: number, cy: number, tileRef: string | null) => {
+                if (state.activeVariationId) {
+                    const v = map.variations?.find(v => v.id === state.activeVariationId);
+                    if (!v) return;
+                    if (!v.layerOverrides) v.layerOverrides = {};
+                    if (!v.layerOverrides[layerId]) {
+                        v.layerOverrides[layerId] = {
+                            mode: 'merge',
+                            data: Array(map.height).fill(null).map(() => Array(map.width).fill(null))
+                        };
+                    }
+                    v.layerOverrides[layerId].data[cy][cx] = tileRef;
+                } else {
+                    const l = map.layers.find(l => l.id === layerId);
+                    if (l && !l.locked) l.data[cy][cx] = tileRef;
+                }
+            };
+
+            // Sample tile for random mode using probability weights
+            const sampleRandomTile = (): number | null => {
+                if (!tileIndices || tileIndices.length === 0) {
+                    return tileIndex ?? null;
+                }
+                const ts = tilesetId ? state.tilesets.get(tilesetId) : undefined;
+                const weights = tileIndices.map(i => {
+                    const def = ts?.tiles?.[i];
+                    return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
+                });
+                const total = weights.reduce((a, b) => a + b, 0);
+                if (total <= 0) return tileIndices[0];
+                let r = Math.random() * total;
+                for (let k = 0; k < tileIndices.length; k++) {
+                    r -= weights[k];
+                    if (r <= 0) return tileIndices[k];
+                }
+                return tileIndices[tileIndices.length - 1];
+            };
+
+            const startTile = getTile(startX, startY);
+            
+            // Collect all tiles to fill first
+            const stack: [number, number][] = [[startX, startY]];
+            const visited = new Set<string>();
+            const tilesToFill: Array<{ x: number; y: number }> = [];
+
+            while (stack.length > 0) {
+                const [cx, cy] = stack.pop()!;
+                const key = `${cx},${cy}`;
+                if (visited.has(key)) continue;
+                visited.add(key);
+
+                if (getTile(cx, cy) === startTile) {
+                    tilesToFill.push({ x: cx, y: cy });
+
+                    // Push neighbors
+                    if (cx > 0) stack.push([cx - 1, cy]);
+                    if (cx < map.width - 1) stack.push([cx + 1, cy]);
+                    if (cy > 0) stack.push([cx, cy - 1]);
+                    if (cy < map.height - 1) stack.push([cx, cy + 1]);
+                }
+            }
+
+            // Apply fill based on mode
+            for (const { x, y } of tilesToFill) {
+                if (mode === 'erase') {
+                    setTile(x, y, null);
+                } else if (mode === 'random' && tilesetId) {
+                    const randomIdx = sampleRandomTile();
+                    if (randomIdx !== null) {
+                        setTile(x, y, `${tilesetId}:${randomIdx}`);
+                    }
+                } else if (mode === 'stamp' && tilesetId) {
+                    if (pattern && pattern.patternW > 0 && pattern.patternH > 0) {
+                        // Stencil fill: tile the pattern
+                        const dx = x - startX;
+                        const dy = y - startY;
+                        const px = ((dx % pattern.patternW) + pattern.patternW) % pattern.patternW;
+                        const py = ((dy % pattern.patternH) + pattern.patternH) % pattern.patternH;
+                        const tileIdx = pattern.pattern[py][px];
+                        if (tileIdx !== null) {
+                            setTile(x, y, `${tilesetId}:${tileIdx}`);
+                        }
+                    } else if (tileIndex !== undefined && tileIndex !== null) {
+                        setTile(x, y, `${tilesetId}:${tileIndex}`);
+                    }
                 }
             }
         }),

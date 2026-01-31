@@ -30,7 +30,7 @@ export interface EditorState {
     selectedEntityId: string | null;      // Currently active entity for inspection
     selectedEntityIds: Set<string>;       // Multiple selected entities
 
-    drawMode: 'point' | 'rect' | 'circle' | 'line'; // How tools behave
+    drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood'; // Shape mode for tools
     brushSize: number; // Brush radius for point/line modes (1 = single tile)
     hoveredTile: { x: number, y: number } | null; // Currently hovered tile in viewport
     // Live drawing preview (used to render shape previews while dragging)
@@ -87,10 +87,10 @@ export type ToolIcon = {
 
 export type ToolType =
     | "select"
-    | "tilePaint"
-    | "randomTile"
-    | "tileErase"
-    | "tileFill"        // Phase 2
+    | "stamp"
+    | "random"
+    | "erase"
+    | "fill"            // Phase 2
     | "entityPlace"
     | "entitySelect"
     | "pathDraw"        // Phase 2

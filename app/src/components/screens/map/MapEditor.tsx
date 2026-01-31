@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useDisclosure } from '@chakra-ui/react';
+import { useDisclosure, VStack } from '@chakra-ui/react';
 // icons
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -7,9 +7,22 @@ import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewportPixi } from './MapViewportPixi';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
+import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { LayersPanel } from './LayersPanel';
 import { EditorModal } from '../../common/EditorModal';
+
+/**
+ * Combined right panel showing tool properties and entity inspector
+ */
+const MapRightPanel: React.FC = () => {
+    return (
+        <VStack align="stretch" spacing={0} h="full" overflow="auto">
+            <ToolPropertiesPanel />
+            <PropertiesPanel />
+        </VStack>
+    );
+};
 
 /**
  * MapEditor - The complete map editing experience.
@@ -26,7 +39,7 @@ export const MapEditor: React.FC = () => {
     // Use mapPath instead of map object to avoid triggering on every tile edit
     useEffect(() => {
         if (currentMapPath) {
-            setActiveTool('tilePaint');
+            setActiveTool('stamp');
         }
     }, [currentMapPath, setActiveTool]);
 
@@ -58,7 +71,7 @@ export const MapEditor: React.FC = () => {
             }}
             content={<MapViewportPixi />}
             leftPanel={<LayersPanel />}
-            rightPanel={<PropertiesPanel />}
+            rightPanel={<MapRightPanel />}
             bottomPanel={<TilesetPalette enableMultiSelect={true} />}
             leftPanelDefaultSize={18}
             rightPanelDefaultSize={20}

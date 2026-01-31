@@ -20,14 +20,13 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
     const activeTool = useEditorStore(state => state.activeTool);
     const drawMode = useEditorStore(state => state.drawMode);
-    const brushSize = useEditorStore(state => state.brushSize);
     const selectedLayerId = useEditorStore(state => state.selectedLayerId);
     const selectedEntityTypeId = useEditorStore(state => state.selectedEntityTypeId);
     const tilesets = useEditorStore(state => state.tilesets);
 
     const paintTilesBatch = useEditorStore(state => state.paintTilesBatch);
     const eraseTilesBatch = useEditorStore(state => state.eraseTilesBatch);
-    const bucketFill = useEditorStore(state => state.bucketFill);
+    const bucketFillAdvanced = useEditorStore(state => state.bucketFillAdvanced);
     const placeEntity = useEditorStore(state => state.placeEntity);
     const selectEntity = useEditorStore(state => state.selectEntity);
     const setHoveredTile = useEditorStore(state => state.setHoveredTile);
@@ -63,9 +62,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
     }, [viewport]);
 
-    // Build pattern from multi-tile selection (skip for randomTile as it samples per-tile)
+    // Build pattern from multi-tile selection (skip for random tool as it samples per-tile)
     const getPattern = useCallback(() => {
-        if (activeTool === 'randomTile') return null;
+        if (activeTool === 'random') return null;
         if (!selectedTileIndices || selectedTileIndices.length === 0 || !activeTilesetId) return null;
 
         const ts = tilesets.get(activeTilesetId);
@@ -108,6 +107,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (!currentMap || !selectedLayerId) return;
         if (action === 'paint' && (!activeTilesetId || (selectedTileIndex === null && (!selectedTileIndices || selectedTileIndices.length === 0)))) return;
 
+        // Read brushSize directly from store to ensure we have the latest value
+        const currentBrushSize = useEditorStore.getState().brushSize;
+        
         const patternData = getPattern();
         const pattern = patternData?.pattern;
         const patternW = patternData?.patternW || 1;
@@ -151,7 +153,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                             }
                         }
                     }
-                } else if (activeTool === 'randomTile' && activeTilesetId) {
+                } else if (activeTool === 'random' && activeTilesetId) {
                     // For random tile tool, sample from selected indices using probability weights
                     if (selectedTileIndices && selectedTileIndices.length > 0) {
                         const chosen = sampleTileIndex(selectedTileIndices, activeTilesetId);
@@ -202,8 +204,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             }
         };
 
-        // Get effective brush size (only for point/line modes)
-        const effectiveBrushSize = (mode === 'point' || mode === 'line') ? brushSize : 1;
+        // Get effective brush size (only for point/line modes) - use currentBrushSize from getState()
+        const effectiveBrushSize = (mode === 'point' || mode === 'line') ? currentBrushSize : 1;
 
         if (mode === 'point') {
             collectBrush(end.x, end.y, effectiveBrushSize);
@@ -285,7 +287,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (tilesToErase.length > 0) {
             eraseTilesBatch(selectedLayerId, tilesToErase);
         }
-    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, activeTool, brushSize, tilesets, getPattern, paintTilesBatch, eraseTilesBatch]);
+    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, activeTool, tilesets, getPattern, paintTilesBatch, eraseTilesBatch]);
 
     // Handle pointer down
     const handlePointerDown = useCallback((e: PointerEvent) => {
@@ -309,28 +311,50 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                        worldPos.y >= ey && worldPos.y < ey + DEFAULT_TILE_SIZE;
             });
             selectEntity(hit?.id || null);
-        } else if (activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase') {
-            if (drawMode === 'point') {
+        } else if (activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') {
+            if (drawMode === 'flood') {
+                // Flood fill mode: uses bucketFillAdvanced with stencil/random/erase support
+                if (selectedLayerId && tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
+                    const patternData = getPattern();
+                    
+                    if (activeTool === 'erase') {
+                        // Erase flood fill - clears all tiles in the area
+                        bucketFillAdvanced(selectedLayerId, tx, ty, { mode: 'erase' });
+                    } else if (activeTool === 'random' && activeTilesetId) {
+                        // Random flood fill - each tile gets a random selection
+                        bucketFillAdvanced(selectedLayerId, tx, ty, {
+                            mode: 'random',
+                            tilesetId: activeTilesetId,
+                            tileIndex: selectedTileIndex ?? undefined,
+                            tileIndices: selectedTileIndices && selectedTileIndices.length > 0 ? selectedTileIndices : undefined,
+                        });
+                    } else if (activeTool === 'stamp' && activeTilesetId) {
+                        // Stamp flood fill - supports stencil patterns
+                        bucketFillAdvanced(selectedLayerId, tx, ty, {
+                            mode: 'stamp',
+                            tilesetId: activeTilesetId,
+                            tileIndex: selectedTileIndex ?? undefined,
+                            pattern: patternData ?? undefined,
+                        });
+                    }
+                }
+            } else if (drawMode === 'point') {
                 // Point mode: click to paint single tile, or shift+click to draw line from anchor
                 if (e.shiftKey && lineAnchorRef.current) {
                     // Draw line from anchor to current position
-                    applyShape('line', lineAnchorRef.current, { x: tx, y: ty }, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
+                    applyShape('line', lineAnchorRef.current, { x: tx, y: ty }, (activeTool === 'stamp' || activeTool === 'random') ? 'paint' : 'erase');
                     // Update anchor to end of line for chaining
                     lineAnchorRef.current = { x: tx, y: ty };
                 } else {
                     // Set new anchor point and paint single tile
                     lineAnchorRef.current = { x: tx, y: ty };
-                    applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
+                    applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, (activeTool === 'stamp' || activeTool === 'random') ? 'paint' : 'erase');
                 }
             } else {
                 // Rect, circle, line modes: click-drag-release
                 drawStartRef.current = { x: tx, y: ty };
                 isDrawingRef.current = true;
                 setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty } });
-            }
-        } else if (activeTool === 'tileFill' && selectedLayerId && activeTilesetId && selectedTileIndex !== null) {
-            if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-                bucketFill(selectedLayerId, tx, ty, activeTilesetId, selectedTileIndex);
             }
         } else if (activeTool === 'entityPlace' && selectedEntityTypeId) {
             const type = DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntityTypeId);
@@ -343,7 +367,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 });
             }
         }
-    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedEntityTypeId, activeVariationId, screenToTile, applyShape, selectEntity, bucketFill, placeEntity, setDrawPreview]);
+    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, screenToTile, applyShape, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview]);
 
     // Handle pointer move
     const handlePointerMove = useCallback((e: PointerEvent) => {
@@ -376,9 +400,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (e.buttons === 1 && !e.altKey && !e.shiftKey && drawMode === 'point' && selectedLayerId && tile) {
             const { x: tx, y: ty } = tile;
             if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-                if ((activeTool === 'tilePaint' || activeTool === 'randomTile') && activeTilesetId) {
+                if ((activeTool === 'stamp' || activeTool === 'random') && activeTilesetId) {
                     applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'paint');
-                } else if (activeTool === 'tileErase') {
+                } else if (activeTool === 'erase') {
                     applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'erase');
                 }
             }
@@ -387,12 +411,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
     // Handle pointer up
     const handlePointerUp = useCallback((e: PointerEvent) => {
-        if (isDrawingRef.current && drawStartRef.current && currentMap) {
+        if (isDrawingRef.current && drawStartRef.current && currentMap && drawMode !== 'flood') {
             const tile = screenToTile(e.clientX, e.clientY);
             // Clear preview immediately to avoid flicker after commit
             setDrawPreview({ isDrawing: false, start: null, end: null });
             if (tile) {
-                applyShape(drawMode, drawStartRef.current, tile, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
+                applyShape(drawMode as 'point' | 'rect' | 'circle' | 'line', drawStartRef.current, tile, (activeTool === 'stamp' || activeTool === 'random') ? 'paint' : 'erase');
             }
         }
         isDrawingRef.current = false;

@@ -31,7 +31,7 @@ interface AppSettings {
     showTileIndices: boolean;
     snapToGrid: boolean;
     highlightHoveredTile: boolean;
-    defaultTool: 'select' | 'tilePaint' | 'entityPlace';
+    defaultTool: 'select' | 'stamp' | 'entityPlace';
 
     // Grid
     showGrid: boolean;
@@ -204,7 +204,7 @@ export const SettingsEditor: React.FC = () => {
                     borderColor="#071018"
                 >
                     <option value="select" style={{ background: '#0a0a0b' }}>Select</option>
-                    <option value="tilePaint" style={{ background: '#0a0a0b' }}>Tile Paint</option>
+                    <option value="stamp" style={{ background: '#0a0a0b' }}>Stamp</option>
                     <option value="entityPlace" style={{ background: '#0a0a0b' }}>Entity Place</option>
                 </Select>
             )}

@@ -10,7 +10,7 @@ import { EditorState } from '../../types/editor';
  * export const MyStory = {
  *   parameters: {
  *     store: {
- *       activeTool: 'tilePaint',
+ *       activeTool: 'stamp',
  *       currentMap: { ... }
  *     }
  *   }
