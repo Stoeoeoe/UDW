@@ -1,5 +1,5 @@
 import React from 'react';
-import { VStack, Text, HStack, Slider, SliderTrack, SliderFilledTrack, SliderThumb, Tooltip, Button, Box, Divider } from '@chakra-ui/react';
+import { VStack, Text, HStack, Slider, SliderTrack, SliderFilledTrack, SliderThumb, Tooltip, Button, Box, Divider, Circle } from '@chakra-ui/react';
 import { FiCrosshair, FiSquare, FiCircle, FiMinus, FiDroplet } from 'react-icons/fi';
 import { useEditorStore } from '../../store/useEditorStore';
 import { PanelShell } from '../common/PanelShell';
@@ -28,11 +28,16 @@ export const ToolPropertiesPanel: React.FC = () => {
     const setDrawMode = useEditorStore(state => state.setDrawMode);
     const brushSize = useEditorStore(state => state.brushSize);
     const setBrushSize = useEditorStore(state => state.setBrushSize);
+    const terrainTypes = useEditorStore(state => state.terrainTypes);
+    const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
+    const setSelectedTerrain = useEditorStore(state => state.setSelectedTerrain);
     const [showTooltip, setShowTooltip] = React.useState(false);
 
-    // Only show for stamp, random, erase tools
+    // Show for stamp, random, erase, terrain tools
     const isTileTool = activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase';
-    if (!isTileTool) return null;
+    const isTerrainTool = activeTool === 'terrain';
+    
+    if (!isTileTool && !isTerrainTool) return null;
 
     // Show brush size for point and line modes only
     const showBrushSize = drawMode === 'point' || drawMode === 'line';
@@ -43,9 +48,74 @@ export const ToolPropertiesPanel: React.FC = () => {
             case 'stamp': return 'Stamp Tool';
             case 'random': return 'Random Tool';
             case 'erase': return 'Erase Tool';
+            case 'terrain': return 'Terrain Brush';
             default: return 'Tool';
         }
     };
+
+    // Terrain tool UI
+    if (isTerrainTool) {
+        return (
+            <PanelShell title={getToolName()}>
+                <VStack align="stretch" spacing={4} p={3}>
+                    {/* Terrain Type Selector */}
+                    <Box>
+                        <Text fontSize="xs" color="gray.400" mb={2} fontWeight="medium">Terrain Type</Text>
+                        {terrainTypes.length === 0 ? (
+                            <Text fontSize="sm" color="gray.500">
+                                No terrain types defined. Add terrain types in Settings → Terrain.
+                            </Text>
+                        ) : (
+                            <VStack align="stretch" spacing={1}>
+                                {terrainTypes.map(t => (
+                                    <HStack
+                                        key={t.id}
+                                        spacing={3}
+                                        align="center"
+                                        px={3}
+                                        py={2}
+                                        rounded="md"
+                                        cursor="pointer"
+                                        bg={selectedTerrainId === t.id ? 'blue.700' : 'transparent'}
+                                        _hover={{ bg: selectedTerrainId === t.id ? 'blue.600' : 'gray.700' }}
+                                        onClick={() => setSelectedTerrain(t.id)}
+                                    >
+                                        <Circle size="14px" bg={t.color} />
+                                        <Text fontSize="sm" flex={1} fontWeight={selectedTerrainId === t.id ? 'semibold' : 'normal'} color={selectedTerrainId === t.id ? 'white' : 'gray.300'}>
+                                            {t.displayName}
+                                        </Text>
+                                    </HStack>
+                                ))}
+                                <HStack
+                                    spacing={3}
+                                    align="center"
+                                    px={3}
+                                    py={2}
+                                    rounded="md"
+                                    cursor="pointer"
+                                    bg={selectedTerrainId === null ? 'blue.700' : 'transparent'}
+                                    _hover={{ bg: selectedTerrainId === null ? 'blue.600' : 'gray.700' }}
+                                    onClick={() => setSelectedTerrain(null)}
+                                >
+                                    <Circle size="14px" bg="gray.500" />
+                                    <Text fontSize="sm" flex={1} fontWeight={selectedTerrainId === null ? 'semibold' : 'normal'} color={selectedTerrainId === null ? 'white' : 'gray.300'}>
+                                        Erase
+                                    </Text>
+                                </HStack>
+                            </VStack>
+                        )}
+                    </Box>
+
+                    {/* Help text */}
+                    <Box pt={2}>
+                        <Text fontSize="xs" color="gray.500" fontStyle="italic">
+                            Click and drag to paint terrain. Tiles will automatically update to match corner configurations.
+                        </Text>
+                    </Box>
+                </VStack>
+            </PanelShell>
+        );
+    }
 
     return (
         <PanelShell title={getToolName()}>

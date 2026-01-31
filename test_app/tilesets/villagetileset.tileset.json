@@ -41,78 +41,42 @@
       "spriteIndex": 3,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "4": {
       "id": "tile_4_0",
       "spriteIndex": 4,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "5": {
       "id": "tile_5_0",
       "spriteIndex": 5,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "6": {
       "id": "tile_6_0",
       "spriteIndex": 6,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "7": {
       "id": "tile_7_0",
       "spriteIndex": 7,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "8": {
       "id": "tile_8_0",
       "spriteIndex": 8,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "9": {
       "id": "tile_9_0",
@@ -168,28 +132,52 @@
       "spriteIndex": 16,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "17": {
       "id": "tile_17_0",
       "spriteIndex": 17,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "water"
+      ]
     },
     "18": {
       "id": "tile_18_0",
       "spriteIndex": 18,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "water",
+        "water"
+      ]
     },
     "19": {
       "id": "tile_19_0",
       "spriteIndex": 19,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "water",
+        "grass"
+      ]
     },
     "20": {
       "id": "tile_20_0",
@@ -288,104 +276,56 @@
       "collision": {
         "type": "none"
       },
-      "probability": 0.2,
-      "terrainCorners": [
-        "water",
-        "water",
-        "grass",
-        "grass"
-      ]
+      "probability": 0.2
     },
     "34": {
       "id": "tile_2_1",
       "spriteIndex": 34,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        null,
-        "water",
-        null
-      ]
+      }
     },
     "35": {
       "id": "tile_3_1",
       "spriteIndex": 35,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "36": {
       "id": "tile_4_1",
       "spriteIndex": 36,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "37": {
       "id": "tile_5_1",
       "spriteIndex": 37,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "38": {
       "id": "tile_6_1",
       "spriteIndex": 38,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "39": {
       "id": "tile_7_1",
       "spriteIndex": 39,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "40": {
       "id": "tile_8_1",
       "spriteIndex": 40,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "41": {
       "id": "tile_9_1",
@@ -406,13 +346,7 @@
       "spriteIndex": 43,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        null,
-        null,
-        "water",
-        "water"
-      ]
+      }
     },
     "44": {
       "id": "tile_12_1",
@@ -447,28 +381,52 @@
       "spriteIndex": 48,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "49": {
       "id": "tile_17_1",
       "spriteIndex": 49,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "grass",
+        "water"
+      ]
     },
     "50": {
       "id": "tile_18_1",
       "spriteIndex": 50,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "51": {
       "id": "tile_19_1",
       "spriteIndex": 51,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "water",
+        "grass"
+      ]
     },
     "52": {
       "id": "tile_20_1",
@@ -566,104 +524,56 @@
       "spriteIndex": 65,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        null,
-        null
-      ]
+      }
     },
     "66": {
       "id": "tile_2_2",
       "spriteIndex": 66,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        null,
-        null,
-        null
-      ]
+      }
     },
     "67": {
       "id": "tile_3_2",
       "spriteIndex": 67,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "68": {
       "id": "tile_4_2",
       "spriteIndex": 68,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "69": {
       "id": "tile_5_2",
       "spriteIndex": 69,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "70": {
       "id": "tile_6_2",
       "spriteIndex": 70,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "71": {
       "id": "tile_7_2",
       "spriteIndex": 71,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "72": {
       "id": "tile_8_2",
       "spriteIndex": 72,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "73": {
       "id": "tile_9_2",
@@ -684,13 +594,7 @@
       "spriteIndex": 75,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        "water",
-        "water"
-      ]
+      }
     },
     "76": {
       "id": "tile_12_2",
@@ -725,28 +629,52 @@
       "spriteIndex": 80,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "81": {
       "id": "tile_17_2",
       "spriteIndex": 81,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "grass",
+        "grass"
+      ]
     },
     "82": {
       "id": "tile_18_2",
       "spriteIndex": 82,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "grass",
+        "grass"
+      ]
     },
     "83": {
       "id": "tile_19_2",
       "spriteIndex": 83,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "84": {
       "id": "tile_20_2",
@@ -900,13 +828,7 @@
       "spriteIndex": 105,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        null,
-        null,
-        null,
-        "grass"
-      ]
+      }
     },
     "106": {
       "id": "tile_10_3",
@@ -920,13 +842,7 @@
       "spriteIndex": 107,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "water",
-        "water",
-        null,
-        null
-      ]
+      }
     },
     "108": {
       "id": "tile_12_3",
@@ -961,28 +877,52 @@
       "spriteIndex": 112,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "113": {
       "id": "tile_17_3",
       "spriteIndex": 113,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "grass"
+      ]
     },
     "114": {
       "id": "tile_18_3",
       "spriteIndex": 114,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "grass",
+        "water"
+      ]
     },
     "115": {
       "id": "tile_19_3",
       "spriteIndex": 115,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "water",
+        "grass"
+      ]
     },
     "116": {
       "id": "tile_20_3",
@@ -1129,26 +1069,14 @@
       "spriteIndex": 136,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        null,
-        "grass",
-        null,
-        "grass"
-      ]
+      }
     },
     "137": {
       "id": "tile_9_4",
       "spriteIndex": 137,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        "grass",
-        null,
-        "grass",
-        null
-      ]
+      }
     },
     "138": {
       "id": "tile_10_4",
@@ -1197,28 +1125,52 @@
       "spriteIndex": 144,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "145": {
       "id": "tile_17_4",
       "spriteIndex": 145,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "water",
+        "water"
+      ]
     },
     "146": {
       "id": "tile_18_4",
       "spriteIndex": 146,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "147": {
       "id": "tile_19_4",
       "spriteIndex": 147,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "grass",
+        "water"
+      ]
     },
     "148": {
       "id": "tile_20_4",
@@ -1365,13 +1317,7 @@
       "spriteIndex": 168,
       "collision": {
         "type": "none"
-      },
-      "terrainCorners": [
-        null,
-        "grass",
-        null,
-        null
-      ]
+      }
     },
     "169": {
       "id": "tile_9_5",
@@ -1441,14 +1387,26 @@
       "spriteIndex": 178,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "179": {
       "id": "tile_19_5",
       "spriteIndex": 179,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "180": {
       "id": "tile_20_5",
@@ -1665,14 +1623,26 @@
       "spriteIndex": 210,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "211": {
       "id": "tile_19_6",
       "spriteIndex": 211,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "212": {
       "id": "tile_20_6",
@@ -2141,28 +2111,52 @@
       "spriteIndex": 278,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "water"
+      ]
     },
     "279": {
       "id": "tile_23_8",
       "spriteIndex": 279,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "water",
+        "water"
+      ]
     },
     "280": {
       "id": "tile_24_8",
       "spriteIndex": 280,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "water",
+        "water"
+      ]
     },
     "281": {
       "id": "tile_25_8",
       "spriteIndex": 281,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "water",
+        "grass"
+      ]
     },
     "282": {
       "id": "tile_26_8",
@@ -2365,28 +2359,52 @@
       "spriteIndex": 310,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "grass",
+        "water"
+      ]
     },
     "311": {
       "id": "tile_23_9",
       "spriteIndex": 311,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "grass",
+        "grass"
+      ]
     },
     "312": {
       "id": "tile_24_9",
       "spriteIndex": 312,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        "grass",
+        "grass"
+      ]
     },
     "313": {
       "id": "tile_25_9",
       "spriteIndex": 313,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "water",
+        "grass"
+      ]
     },
     "314": {
       "id": "tile_26_9",
@@ -2589,28 +2607,52 @@
       "spriteIndex": 342,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "grass",
+        "water"
+      ]
     },
     "343": {
       "id": "tile_23_10",
       "spriteIndex": 343,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "grass",
+        "water",
+        "grass",
+        "grass"
+      ]
     },
     "344": {
       "id": "tile_24_10",
       "spriteIndex": 344,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "345": {
       "id": "tile_25_10",
       "spriteIndex": 345,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "grass",
+        "water",
+        "grass"
+      ]
     },
     "346": {
       "id": "tile_26_10",

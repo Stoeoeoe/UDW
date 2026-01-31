@@ -1,6 +1,6 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiTrash2, FiUser, FiShuffle } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiTrash2, FiUser, FiShuffle, FiGrid } from 'react-icons/fi';
 import { FaEyeDropper } from "react-icons/fa6";
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
@@ -13,6 +13,7 @@ const MAP_TOOLS: ToolItem[] = [
     { id: 'random', icon: FiShuffle, label: 'Random (R)', group: 'tiles' },
     { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'tiles' },
     { id: 'eyedropper', icon: FaEyeDropper, label: 'Eyedropper (I) - Alt+Click', group: 'tiles' },
+    { id: 'terrain', icon: FiGrid, label: 'Terrain Brush (T)', group: 'tiles' },
     { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
 ];
 
