@@ -273,7 +273,14 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         }
 
         // If the user is actively drawing a shape, render the shape preview
-        if (drawPreview && drawPreview.isDrawing && drawPreview.start && drawPreview.end && drawMode && drawMode !== 'point') {
+        // For point mode with shift held, we show a line preview
+        const isShiftLinePreview = drawMode === 'point' && drawPreview?.isDrawing;
+        const showShapePreview = drawPreview && drawPreview.isDrawing && drawPreview.start && drawPreview.end && 
+            (drawMode !== 'point' || isShiftLinePreview);
+        
+        if (showShapePreview && drawPreview.start && drawPreview.end) {
+            // Determine effective draw mode for preview (point mode with shift shows as line)
+            const effectiveDrawMode = drawMode === 'point' ? 'line' : drawMode;
             // For randomTile, skip pattern - sample randomly per tile position
             const patternData = activeTool === 'randomTile' ? null : (() => {
                 if (!selectedTileIndices || selectedTileIndices.length === 0) return null;
@@ -335,7 +342,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             const ex = drawPreview.end.x;
             const ey = drawPreview.end.y;
 
-            if (drawMode === 'rect') {
+            if (effectiveDrawMode === 'rect') {
                 const minX = Math.min(sx, ex);
                 const maxX = Math.max(sx, ex);
                 const minY = Math.min(sy, ey);
@@ -370,7 +377,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                         }
                     }
                 }
-            } else if (drawMode === 'circle') {
+            } else if (effectiveDrawMode === 'circle') {
                 const radius = Math.sqrt(Math.pow(ex - sx, 2) + Math.pow(ey - sy, 2));
                 const minX = Math.floor(sx - radius);
                 const maxX = Math.ceil(sx + radius);
@@ -408,6 +415,47 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                             }
                         }
                     }
+                }
+            } else if (effectiveDrawMode === 'line') {
+                // Bresenham's line algorithm for preview
+                let x0 = sx, y0 = sy;
+                const x1 = ex, y1 = ey;
+                const dx = Math.abs(x1 - x0);
+                const dy = Math.abs(y1 - y0);
+                const stepX = x0 < x1 ? 1 : -1;
+                const stepY = y0 < y1 ? 1 : -1;
+                let err = dx - dy;
+
+                while (true) {
+                    let tileIdx: number | null = null;
+                    if (activeTool === 'randomTile') {
+                        tileIdx = sampleRandomTile(x0, y0, cursorSeed);
+                    } else if (patternData) {
+                        const pdx = x0 - sx;
+                        const pdy = y0 - sy;
+                        const px = ((pdx % patternData.patternW) + patternData.patternW) % patternData.patternW;
+                        const py = ((pdy % patternData.patternH) + patternData.patternH) % patternData.patternH;
+                        tileIdx = patternData.pattern[py][px];
+                    } else if (selectedTileIndex !== null) {
+                        tileIdx = selectedTileIndex;
+                    }
+
+                    if (tileIdx !== null && tileIdx !== undefined) {
+                        const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
+                        if (texture) {
+                            const sprite = new Sprite(texture);
+                            sprite.x = x0 * DEFAULT_TILE_SIZE;
+                            sprite.y = y0 * DEFAULT_TILE_SIZE;
+                            sprite.width = DEFAULT_TILE_SIZE;
+                            sprite.height = DEFAULT_TILE_SIZE;
+                            previewContainer.addChild(sprite);
+                        }
+                    }
+
+                    if (x0 === x1 && y0 === y1) break;
+                    const e2 = 2 * err;
+                    if (e2 > -dy) { err -= dy; x0 += stepX; }
+                    if (e2 < dx) { err += dx; y0 += stepY; }
                 }
             }
 

@@ -36,6 +36,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
     const isDrawingRef = useRef(false);
     const drawStartRef = useRef<{ x: number; y: number } | null>(null);
+    const lineAnchorRef = useRef<{ x: number; y: number } | null>(null); // For line tool: last clicked anchor
+    const isShiftHeldRef = useRef(false); // Track shift key state
 
     // Convert screen coordinates to tile coordinates
     const screenToTile = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
@@ -97,9 +99,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         return { pattern, patternW, patternH };
     }, [activeTool, selectedTileIndices, activeTilesetId, tilesets]);
 
-    // Apply a shape (point, rect, circle) - uses batch updates for performance
+    // Apply a shape (point, rect, circle, line) - uses batch updates for performance
     const applyShape = useCallback((
-        mode: 'point' | 'rect' | 'circle',
+        mode: 'point' | 'rect' | 'circle' | 'line',
         start: { x: number; y: number },
         end: { x: number; y: number },
         action: 'paint' | 'erase'
@@ -231,6 +233,23 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                     }
                 }
             }
+        } else if (mode === 'line') {
+            // Bresenham's line algorithm
+            let x0 = start.x, y0 = start.y;
+            const x1 = end.x, y1 = end.y;
+            const dx = Math.abs(x1 - x0);
+            const dy = Math.abs(y1 - y0);
+            const sx = x0 < x1 ? 1 : -1;
+            const sy = y0 < y1 ? 1 : -1;
+            let err = dx - dy;
+
+            while (true) {
+                collectTile(x0, y0);
+                if (x0 === x1 && y0 === y1) break;
+                const e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x0 += sx; }
+                if (e2 < dx) { err += dx; y0 += sy; }
+            }
         }
 
         // Execute batch updates (single store mutation each)
@@ -266,8 +285,19 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             selectEntity(hit?.id || null);
         } else if (activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase') {
             if (drawMode === 'point') {
-                applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
+                // Point mode: click to paint single tile, or shift+click to draw line from anchor
+                if (e.shiftKey && lineAnchorRef.current) {
+                    // Draw line from anchor to current position
+                    applyShape('line', lineAnchorRef.current, { x: tx, y: ty }, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
+                    // Update anchor to end of line for chaining
+                    lineAnchorRef.current = { x: tx, y: ty };
+                } else {
+                    // Set new anchor point and paint single tile
+                    lineAnchorRef.current = { x: tx, y: ty };
+                    applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
+                }
             } else {
+                // Rect, circle, line modes: click-drag-release
                 drawStartRef.current = { x: tx, y: ty };
                 isDrawingRef.current = true;
                 setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty } });
@@ -287,7 +317,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 });
             }
         }
-    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedEntityTypeId, activeVariationId, screenToTile, applyShape, selectEntity, bucketFill, placeEntity]);
+    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedEntityTypeId, activeVariationId, screenToTile, applyShape, selectEntity, bucketFill, placeEntity, setDrawPreview]);
 
     // Handle pointer move
     const handlePointerMove = useCallback((e: PointerEvent) => {
@@ -300,7 +330,18 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             setHoveredTile(null);
         }
 
-        // Update live draw preview while dragging a rect/circle
+        // Update shift key state for line preview
+        isShiftHeldRef.current = e.shiftKey;
+
+        // Show line preview when in point mode with anchor and shift held
+        if (drawMode === 'point' && lineAnchorRef.current && tile && e.shiftKey) {
+            setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: { x: tile.x, y: tile.y } });
+        } else if (drawMode === 'point' && !e.shiftKey && !isDrawingRef.current) {
+            // Clear line preview when shift released in point mode
+            setDrawPreview({ isDrawing: false, start: null, end: null });
+        }
+
+        // Update live draw preview while dragging a rect/circle/line
         if (isDrawingRef.current && drawStartRef.current && tile) {
             setDrawPreview({ isDrawing: true, start: drawStartRef.current, end: { x: tile.x, y: tile.y } });
         }
@@ -335,7 +376,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 }
             }
         }
-    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTileIndex, selectedTileIndices, tilesets, screenToTile, setHoveredTile, paintTile, eraseTile]);
+    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTileIndex, selectedTileIndices, tilesets, screenToTile, setHoveredTile, setDrawPreview, paintTile, eraseTile]);
 
     // Handle pointer up
     const handlePointerUp = useCallback((e: PointerEvent) => {
@@ -350,7 +391,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         isDrawingRef.current = false;
         drawStartRef.current = null;
         setDrawPreview({ isDrawing: false, start: null, end: null });
-    }, [currentMap, drawMode, activeTool, screenToTile, applyShape]);
+    }, [currentMap, drawMode, activeTool, screenToTile, applyShape, setDrawPreview]);
 
     // Set up event listeners
     useEffect(() => {
@@ -374,7 +415,37 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     useEffect(() => {
         isDrawingRef.current = false;
         drawStartRef.current = null;
-    }, [activeTool, drawMode]);
+        lineAnchorRef.current = null;
+        setDrawPreview({ isDrawing: false, start: null, end: null });
+    }, [activeTool, drawMode, setDrawPreview]);
+
+    // Keyboard listeners for shift key (for point mode line preview)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift' && drawMode === 'point' && lineAnchorRef.current) {
+                isShiftHeldRef.current = true;
+                // Trigger preview update via hoveredTile
+                const hoveredTile = useEditorStore.getState().hoveredTile;
+                if (hoveredTile) {
+                    setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: hoveredTile });
+                }
+            }
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                isShiftHeldRef.current = false;
+                setDrawPreview({ isDrawing: false, start: null, end: null });
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [drawMode, setDrawPreview]);
 
     return {
         screenToTile,

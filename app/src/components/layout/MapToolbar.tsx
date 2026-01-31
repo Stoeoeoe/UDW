@@ -1,6 +1,6 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiTrash2, FiDroplet, FiUser, FiCircle, FiSquare, FiCrosshair, FiShuffle } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiTrash2, FiDroplet, FiUser, FiCircle, FiSquare, FiCrosshair, FiShuffle, FiMinus } from 'react-icons/fi';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
 import { Toolbar, ToolItem } from '../common/Toolbar';
@@ -20,6 +20,7 @@ const DRAW_MODE_TOOLS: ToolItem[] = [
     { id: 'point', icon: FiCrosshair, label: 'Single Point' },
     { id: 'rect', icon: FiSquare, label: 'Rectangle' },
     { id: 'circle', icon: FiCircle, label: 'Circle' },
+    { id: 'line', icon: FiMinus, label: 'Line (Shift+Click)' },
 ];
 
 export const MapToolbar: React.FC = () => {
@@ -44,7 +45,7 @@ export const MapToolbar: React.FC = () => {
                 <Toolbar
                     items={DRAW_MODE_TOOLS}
                     activeId={drawMode}
-                    onActivate={(id) => setDrawMode(id as 'point' | 'rect' | 'circle')}
+                    onActivate={(id) => setDrawMode(id as 'point' | 'rect' | 'circle' | 'line')}
                     size="sm"
                 />
             )}

@@ -30,7 +30,7 @@ export interface EditorState {
     selectedEntityId: string | null;      // Currently active entity for inspection
     selectedEntityIds: Set<string>;       // Multiple selected entities
 
-    drawMode: 'point' | 'rect' | 'circle'; // How tools behave
+    drawMode: 'point' | 'rect' | 'circle' | 'line'; // How tools behave
     hoveredTile: { x: number, y: number } | null; // Currently hovered tile in viewport
     // Live drawing preview (used to render shape previews while dragging)
     drawPreview?: {

@@ -20,7 +20,7 @@ interface EditorStore extends EditorState {
 
     // Tool actions
     setActiveTool: (tool: ToolType) => void;
-    setDrawMode: (mode: 'point' | 'rect' | 'circle') => void;
+    setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line') => void;
     setMode: (mode: EditorMode) => void;
     setHoveredTile: (pos: { x: number, y: number } | null) => void;
     setDrawPreview: (preview: { isDrawing: boolean; start: { x: number; y: number } | null; end: { x: number; y: number } | null }) => void;
