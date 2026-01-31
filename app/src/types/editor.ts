@@ -26,6 +26,13 @@ export interface EditorState {
     selectedTileIndices: number[];        // Multiple selected indices for stencil selection
     selectedTerrainId: string | null;     // Selected terrain for autotiling
     activeTilesetId: string | null;       // Currently visible tileset in palette
+    // Sampled pattern from right-click copy (preserves exact spatial arrangement)
+    sampledPattern: {
+        tilesetId: string;
+        pattern: (number | null)[][];  // 2D array of tile indices, null for empty
+        width: number;
+        height: number;
+    } | null;
     selectedEntityTypeId: string | null;  // For entity placement
     selectedEntityId: string | null;      // Currently active entity for inspection
     selectedEntityIds: Set<string>;       // Multiple selected entities
@@ -38,6 +45,7 @@ export interface EditorState {
         isDrawing: boolean;
         start: { x: number; y: number } | null;
         end: { x: number; y: number } | null;
+        mode?: 'draw' | 'select';  // 'draw' = stamp preview, 'select' = selection rectangle
     };
 
     // Tileset-specific tool mode used by the Tileset toolbar

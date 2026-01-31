@@ -27,6 +27,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const selectedTileIndex = useEditorStore(state => state.selectedTileIndex);
     const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
+    const sampledPattern = useEditorStore(state => state.sampledPattern);
     const activeTool = useEditorStore(state => state.activeTool);
     const drawMode = useEditorStore(state => state.drawMode);
     const selectedLayerId = useEditorStore(state => state.selectedLayerId);
@@ -41,7 +42,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const setHoveredTile = useEditorStore(state => state.setHoveredTile);
     const setDrawPreview = useEditorStore(state => state.setDrawPreview);
     const setSelectedTile = useEditorStore(state => state.setSelectedTile);
+    const setSelectedTiles = useEditorStore(state => state.setSelectedTiles);
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);
+    const setSampledPattern = useEditorStore(state => state.setSampledPattern);
     const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
 
     const isDrawingRef = useRef(false);
@@ -50,6 +53,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const isShiftHeldRef = useRef(false); // Track shift key state
     const terrainGridRef = useRef<Map<string, string | null>>(new Map()); // Terrain grid cache for terrain brush
     const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null); // Track last painted position to avoid duplicates
+    const isSamplingRef = useRef(false); // Track right-click eyedropper sampling mode
+    const sampleStartRef = useRef<{ x: number; y: number } | null>(null); // Start position for sampling rectangle
 
     // Convert screen coordinates to tile coordinates
     const screenToTile = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
@@ -76,20 +81,30 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
     }, [viewport]);
 
-    // Build pattern from multi-tile selection (skip for random tool as it samples per-tile)
-    // Only creates a pattern when multiple tiles are selected (length > 1)
-    // Single tile selection should use brush size, not pattern placement
+    // Build pattern from multi-tile selection or use sampled pattern from right-click copy
+    // Priority: sampledPattern > multi-tile selection > single tile (no pattern)
     const getPattern = useCallback(() => {
         if (activeTool === 'random') return null;
-        // Only create pattern for multi-tile selections (2+ tiles)
-        // Single tile should use brush, not pattern
+        
+        // Priority 1: Use sampled pattern if available (from right-click copy)
+        if (sampledPattern && sampledPattern.tilesetId === activeTilesetId) {
+            return {
+                pattern: sampledPattern.pattern,
+                patternW: sampledPattern.width,
+                patternH: sampledPattern.height,
+                minCol: 0,
+                minRow: 0
+            };
+        }
+        
+        // Priority 2: Build pattern from multi-tile selection (2+ tiles)
         if (!selectedTileIndices || selectedTileIndices.length <= 1 || !activeTilesetId) return null;
 
         const ts = tilesets.get(activeTilesetId);
         if (!ts) return null;
 
         return buildPatternFromSelection(selectedTileIndices, ts);
-    }, [activeTool, selectedTileIndices, activeTilesetId, tilesets]);
+    }, [activeTool, sampledPattern, selectedTileIndices, activeTilesetId, tilesets]);
 
     // Apply a shape (point, rect, circle, line) - uses batch updates for performance
     const applyShape = useCallback((
@@ -310,29 +325,19 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const tile = screenToTile(e.clientX, e.clientY);
         if (!tile) return;
 
-        // ALT+Left Click = Eyedropper: pick tile under cursor (when in stamp/random mode)
-        // OR when eyedropper tool is active, just click to pick
-        if (e.button === 0 && ((e.altKey && (activeTool === 'stamp' || activeTool === 'random')) || activeTool === 'eyedropper')) {
+        // Right Click = Eyedropper: sample tiles from map (supports drag for multi-tile patterns)
+        // Works in stamp/random/erase modes or when eyedropper tool is active
+        if (e.button === 2 && ((activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') || activeTool === 'eyedropper')) {
             if (!selectedLayerId) return;
             const { x: tx, y: ty } = tile;
             if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
             
-            const tileRef = resolveTileAt(currentMap, selectedLayerId, tx, ty, activeVariationId);
-            if (tileRef) {
-                // Parse tile reference format: "tilesetId:tileIndex"
-                const colonIdx = tileRef.lastIndexOf(':');
-                if (colonIdx > 0) {
-                    const tilesetId = tileRef.substring(0, colonIdx);
-                    const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
-                    if (!isNaN(tileIndex)) {
-                        setActiveTileset(tilesetId);
-                        setSelectedTile(tileIndex);
-                    }
-                }
-            }
+            // Start sampling mode - will complete on pointer up
+            isSamplingRef.current = true;
+            sampleStartRef.current = { x: tx, y: ty };
+            e.preventDefault();
             return;
         }
-        if (!tile) return;
 
         const { x: tx, y: ty } = tile;
 
@@ -389,7 +394,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 // Rect, circle, line modes: click-drag-release
                 drawStartRef.current = { x: tx, y: ty };
                 isDrawingRef.current = true;
-                setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty } });
+                setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty }, mode: 'draw' });
             }
         } else if (activeTool === 'terrain') {
             // Terrain brush: paint terrain at clicked position
@@ -411,7 +416,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 });
             }
         }
-    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, selectedTerrainId, screenToTile, applyShape, applyTerrainBrush, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview, setSelectedTile, setActiveTileset]);
+    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, selectedTerrainId, screenToTile, applyShape, applyTerrainBrush, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview]);
 
     // Handle pointer move
     const handlePointerMove = useCallback((e: PointerEvent) => {
@@ -429,7 +434,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
         // Show line preview when in point mode with anchor and shift held
         if (drawMode === 'point' && lineAnchorRef.current && tile && e.shiftKey) {
-            setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: { x: tile.x, y: tile.y } });
+            setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: { x: tile.x, y: tile.y }, mode: 'draw' });
         } else if (drawMode === 'point' && !e.shiftKey && !isDrawingRef.current) {
             // Clear line preview when shift released in point mode
             setDrawPreview({ isDrawing: false, start: null, end: null });
@@ -437,7 +442,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
         // Update live draw preview while dragging a rect/circle/line
         if (isDrawingRef.current && drawStartRef.current && tile) {
-            setDrawPreview({ isDrawing: true, start: drawStartRef.current, end: { x: tile.x, y: tile.y } });
+            setDrawPreview({ isDrawing: true, start: drawStartRef.current, end: { x: tile.x, y: tile.y }, mode: 'draw' });
         }
 
         // Paint/erase while dragging in point mode - use applyShape for proper brush/stencil support
@@ -463,10 +468,149 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 }
             }
         }
+
+        // Show preview rectangle while sampling with right-click drag
+        if (e.buttons === 2 && isSamplingRef.current && sampleStartRef.current && tile) {
+            setDrawPreview({ isDrawing: true, start: sampleStartRef.current, end: { x: tile.x, y: tile.y }, mode: 'select' });
+        }
     }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTerrainId, screenToTile, setHoveredTile, setDrawPreview, applyShape, applyTerrainBrush]);
 
     // Handle pointer up
     const handlePointerUp = useCallback((e: PointerEvent) => {
+        // Handle right-click sampling completion
+        if (isSamplingRef.current && sampleStartRef.current && currentMap && selectedLayerId) {
+            const tile = screenToTile(e.clientX, e.clientY);
+            if (tile) {
+                const minX = Math.min(sampleStartRef.current.x, tile.x);
+                const maxX = Math.max(sampleStartRef.current.x, tile.x);
+                const minY = Math.min(sampleStartRef.current.y, tile.y);
+                const maxY = Math.max(sampleStartRef.current.y, tile.y);
+                const width = maxX - minX + 1;
+                const height = maxY - minY + 1;
+
+                // Single tile click (no drag) - use simple eyedropper
+                if (width === 1 && height === 1) {
+                    const tileRef = resolveTileAt(currentMap, selectedLayerId, tile.x, tile.y, activeVariationId);
+                    if (tileRef) {
+                        const colonIdx = tileRef.lastIndexOf(':');
+                        if (colonIdx > 0) {
+                            const tilesetId = tileRef.substring(0, colonIdx);
+                            const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
+                            if (!isNaN(tileIndex)) {
+                                setActiveTileset(tilesetId);
+                                setSelectedTile(tileIndex);
+                            }
+                        }
+                    }
+                    
+                    isSamplingRef.current = false;
+                    sampleStartRef.current = null;
+                    setDrawPreview({ isDrawing: false, start: null, end: null });
+                    return;
+                }
+
+                // Multi-tile drag - build pattern
+                const pattern: (number | null)[][] = Array.from(
+                    { length: height },
+                    () => Array(width).fill(null)
+                );
+                let firstTilesetId: string | null = null;
+
+                for (let ty = minY; ty <= maxY; ty++) {
+                    for (let tx = minX; tx <= maxX; tx++) {
+                        if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
+                            const tileRef = resolveTileAt(currentMap, selectedLayerId, tx, ty, activeVariationId);
+                            if (tileRef) {
+                                const colonIdx = tileRef.lastIndexOf(':');
+                                if (colonIdx > 0) {
+                                    const tilesetId = tileRef.substring(0, colonIdx);
+                                    const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
+                                    if (!isNaN(tileIndex)) {
+                                        if (!firstTilesetId) firstTilesetId = tilesetId;
+                                        // Only include tiles from the same tileset
+                                        if (tilesetId === firstTilesetId) {
+                                            pattern[ty - minY][tx - minX] = tileIndex;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (firstTilesetId) {
+                    // Set the active tileset
+                    setActiveTileset(firstTilesetId);
+                    
+                    // Store the sampled pattern for stamping
+                    setSampledPattern({
+                        tilesetId: firstTilesetId,
+                        pattern,
+                        width,
+                        height
+                    });
+
+                    // Check if tiles form a contiguous rectangle in the tileset
+                    // Only highlight in tileset palette if they do
+                    const ts = tilesets.get(firstTilesetId);
+                    if (ts) {
+                        const cols = ts.columns;
+                        // Collect unique tile indices and their positions in tileset
+                        const tileIndices: number[] = [];
+                        for (let py = 0; py < height; py++) {
+                            for (let px = 0; px < width; px++) {
+                                const idx = pattern[py][px];
+                                if (idx !== null && !tileIndices.includes(idx)) {
+                                    tileIndices.push(idx);
+                                }
+                            }
+                        }
+
+                        // Check if tiles form a contiguous rectangle in tileset
+                        if (tileIndices.length > 0) {
+                            // Find bounding box in tileset
+                            let minCol = Infinity, maxCol = -Infinity;
+                            let minRow = Infinity, maxRow = -Infinity;
+                            for (const idx of tileIndices) {
+                                const c = idx % cols;
+                                const r = Math.floor(idx / cols);
+                                minCol = Math.min(minCol, c);
+                                maxCol = Math.max(maxCol, c);
+                                minRow = Math.min(minRow, r);
+                                maxRow = Math.max(maxRow, r);
+                            }
+                            
+                            const tilesetW = maxCol - minCol + 1;
+                            const tilesetH = maxRow - minRow + 1;
+                            
+                            // Check if all expected tiles in the bounding box are present
+                            const expectedCount = tilesetW * tilesetH;
+                            const allPresent = expectedCount === tileIndices.length;
+                            
+                            // Also check if the arrangement matches (same dimensions)
+                            const dimensionsMatch = tilesetW === width && tilesetH === height;
+                            
+                            if (allPresent && dimensionsMatch) {
+                                // Tiles form a contiguous rectangle - highlight in tileset
+                                if (tileIndices.length === 1) {
+                                    setSelectedTile(tileIndices[0]);
+                                } else {
+                                    setSelectedTiles(tileIndices);
+                                }
+                            }
+                            // If not contiguous, don't update tileset selection - 
+                            // the sampledPattern will still be used for stamping
+                        }
+                    }
+                }
+            }
+            
+            isSamplingRef.current = false;
+            sampleStartRef.current = null;
+            setDrawPreview({ isDrawing: false, start: null, end: null });
+            return;
+        }
+
         if (isDrawingRef.current && drawStartRef.current && currentMap && drawMode !== 'flood' && activeTool !== 'terrain') {
             const tile = screenToTile(e.clientX, e.clientY);
             // Clear preview immediately to avoid flicker after commit
@@ -479,7 +623,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         drawStartRef.current = null;
         lastTerrainPaintRef.current = null;
         setDrawPreview({ isDrawing: false, start: null, end: null });
-    }, [currentMap, drawMode, activeTool, screenToTile, applyShape, setDrawPreview]);
+    }, [currentMap, selectedLayerId, activeVariationId, drawMode, activeTool, tilesets, screenToTile, applyShape, setDrawPreview, setActiveTileset, setSelectedTile, setSelectedTiles, setSampledPattern]);
 
     // Set up event listeners
     useEffect(() => {
@@ -488,14 +632,21 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const view = viewport.options.events?.domElement;
         if (!view) return;
 
+        // Prevent context menu on right-click (we use right-click for eyedropper)
+        const preventContextMenu = (e: Event) => {
+            e.preventDefault();
+        };
+
         view.addEventListener('pointerdown', handlePointerDown);
         view.addEventListener('pointermove', handlePointerMove);
         view.addEventListener('pointerup', handlePointerUp);
+        view.addEventListener('contextmenu', preventContextMenu);
 
         return () => {
             view.removeEventListener('pointerdown', handlePointerDown);
             view.removeEventListener('pointermove', handlePointerMove);
             view.removeEventListener('pointerup', handlePointerUp);
+            view.removeEventListener('contextmenu', preventContextMenu);
         };
     }, [viewport, handlePointerDown, handlePointerMove, handlePointerUp]);
 
@@ -515,7 +666,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 // Trigger preview update via hoveredTile
                 const hoveredTile = useEditorStore.getState().hoveredTile;
                 if (hoveredTile) {
-                    setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: hoveredTile });
+                    setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: hoveredTile, mode: 'draw' });
                 }
             }
         };

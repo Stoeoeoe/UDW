@@ -258,7 +258,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // Render tile preview
     const renderPreview = useCallback(() => {
         const previewContainer = previewContainerRef.current;
-        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode, brushSize } = useEditorStore.getState();
+        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode, brushSize, sampledPattern } = useEditorStore.getState();
         if (!previewContainer) return;
 
         previewContainer.removeChildren();
@@ -358,10 +358,35 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             if (suffixed) effectiveTileset = suffixed;
         }
 
+        // If the user is right-click dragging to select tiles, show selection rectangle
+        if (drawPreview && drawPreview.isDrawing && drawPreview.mode === 'select' && drawPreview.start && drawPreview.end) {
+            const sx = drawPreview.start.x;
+            const sy = drawPreview.start.y;
+            const ex = drawPreview.end.x;
+            const ey = drawPreview.end.y;
+            const minX = Math.min(sx, ex);
+            const maxX = Math.max(sx, ex);
+            const minY = Math.min(sy, ey);
+            const maxY = Math.max(sy, ey);
+            
+            // Draw selection rectangle outline
+            const g = new Graphics();
+            g.rect(
+                minX * DEFAULT_TILE_SIZE,
+                minY * DEFAULT_TILE_SIZE,
+                (maxX - minX + 1) * DEFAULT_TILE_SIZE,
+                (maxY - minY + 1) * DEFAULT_TILE_SIZE
+            );
+            g.fill({ color: 0x4488ff, alpha: 0.2 });
+            g.stroke({ width: 2, color: 0x4488ff, alpha: 0.8 });
+            previewContainer.addChild(g);
+            return;  // Don't show stamp preview when selecting
+        }
+
         // If the user is actively drawing a shape, render the shape preview
         // For point mode with shift held, we show a line preview
-        const isShiftLinePreview = drawMode === 'point' && drawPreview?.isDrawing;
-        const showShapePreview = drawPreview && drawPreview.isDrawing && drawPreview.start && drawPreview.end && 
+        const isShiftLinePreview = drawMode === 'point' && drawPreview?.isDrawing && drawPreview?.mode !== 'select';
+        const showShapePreview = drawPreview && drawPreview.isDrawing && drawPreview.mode !== 'select' && drawPreview.start && drawPreview.end && 
             (drawMode !== 'point' || isShiftLinePreview);
         
         if (showShapePreview && drawPreview.start && drawPreview.end) {
@@ -595,6 +620,20 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             return;
         }
 
+        // Priority 1: Use sampled pattern (from right-click copy)
+        if (sampledPattern && sampledPattern.tilesetId === activeTilesetId) {
+            for (let py = 0; py < sampledPattern.height; py++) {
+                for (let px = 0; px < sampledPattern.width; px++) {
+                    const tileIdx = sampledPattern.pattern[py][px];
+                    if (tileIdx !== null) {
+                        renderTileAt(hoveredTile.x + px, hoveredTile.y + py, tileIdx);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Priority 2: Multi-tile stencil from tileset selection (2+ tiles)
         if (selectedTileIndices && selectedTileIndices.length > 1) {
             // Multi-tile stencil preview (no brush size for multi-tile)
             const patternData = buildPatternFromSelection(selectedTileIndices, effectiveTileset);

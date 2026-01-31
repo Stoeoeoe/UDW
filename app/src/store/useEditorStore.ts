@@ -24,7 +24,7 @@ interface EditorStore extends EditorState {
     setBrushSize: (size: number) => void;
     setMode: (mode: EditorMode) => void;
     setHoveredTile: (pos: { x: number, y: number } | null) => void;
-    setDrawPreview: (preview: { isDrawing: boolean; start: { x: number; y: number } | null; end: { x: number; y: number } | null }) => void;
+    setDrawPreview: (preview: { isDrawing: boolean; start: { x: number; y: number } | null; end: { x: number; y: number } | null; mode?: 'draw' | 'select' }) => void;
 
     // Tileset actions
     setActiveTileset: (id: string | null) => void;
@@ -32,6 +32,7 @@ interface EditorStore extends EditorState {
     setSelectedTiles: (indexes: number[]) => void;
     toggleSelectedTile: (index: number) => void;
     setSelectedTerrain: (id: string | null) => void;
+    setSampledPattern: (pattern: { tilesetId: string; pattern: (number | null)[][]; width: number; height: number } | null) => void;
     addTileset: (tileset: Tileset) => Promise<void>;
     updateTileset: (id: string, updates: Partial<Tileset>) => Promise<void>;
     deleteTileset: (id: string) => Promise<void>;
@@ -123,6 +124,7 @@ export const useEditorStore = create<EditorStore>()(
         selectedTileIndices: [],
         selectedTerrainId: null,
         activeTilesetId: null,
+        sampledPattern: null,
         selectedEntityTypeId: null,
         selectedEntityId: null,
         selectedEntityIds: new Set(),
@@ -440,12 +442,14 @@ export const useEditorStore = create<EditorStore>()(
             state.selectedTileIndex = index;
             if (index !== null) state.selectedTerrainId = null;
             state.selectedTileIndices = index !== null ? [index] : [];
+            state.sampledPattern = null; // Clear sampled pattern when selecting tiles normally
         }),
 
         setSelectedTiles: (indexes) => set(state => {
             state.selectedTileIndices = indexes.slice();
             state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
             if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+            state.sampledPattern = null; // Clear sampled pattern when selecting tiles normally
         }),
 
         toggleSelectedTile: (index) => set(state => {
@@ -459,6 +463,14 @@ export const useEditorStore = create<EditorStore>()(
         setSelectedTerrain: (id) => set(state => {
             state.selectedTerrainId = id;
             if (id !== null) state.selectedTileIndex = null;
+        }),
+
+        setSampledPattern: (pattern) => set(state => {
+            state.sampledPattern = pattern;
+            // Clear normal tile selection when setting a sampled pattern
+            if (pattern) {
+                state.selectedTileIndices = [];
+            }
         }),
 
         addTileset: async (tileset) => {
