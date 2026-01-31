@@ -7,7 +7,9 @@ interface TilesetTerrainPanelProps {
     tileset: Tileset;
 }
 
-export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tileset: _tileset }) => {
+export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tileset }) => {
+    // tileset prop available for future terrain-tileset integration
+    void tileset;
     const terrainTypes = useEditorStore(state => state.terrainTypes);
     const selectedTerrainId = useEditorStore(state => state.selectedTerrainId);
     const setSelectedTerrain = useEditorStore(state => state.setSelectedTerrain);

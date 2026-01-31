@@ -5,6 +5,9 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveTileAt, resolveEntities } from '../../../lib/mapUtils';
 import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
+import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
+import { sampleSeededTile } from '../../../lib/randomUtils';
+import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 
 interface UseMapRendererProps {
     viewport: Viewport | null;
@@ -331,20 +334,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                         }
                     }
                 } else if (effectiveEraseDrawMode === 'line') {
-                    // Bresenham's line for erase with brush size
-                    let x0 = sx, y0 = sy;
-                    const x1 = ex, y1 = ey;
-                    const dx = Math.abs(x1 - x0);
-                    const dy = Math.abs(y1 - y0);
-                    const stepX = x0 < x1 ? 1 : -1;
-                    const stepY = y0 < y1 ? 1 : -1;
-                    let err = dx - dy;
-                    while (true) {
-                        renderBrushErase(x0, y0);
-                        if (x0 === x1 && y0 === y1) break;
-                        const e2 = 2 * err;
-                        if (e2 > -dy) { err -= dy; x0 += stepX; }
-                        if (e2 < dx) { err += dx; y0 += stepY; }
+                    // Use shared Bresenham algorithm for erase with brush size
+                    for (const { x, y } of bresenhamLine(sx, sy, ex, ey)) {
+                        renderBrushErase(x, y);
                     }
                 }
             } else {
@@ -376,60 +368,21 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             // Determine effective draw mode for preview (point mode with shift shows as line)
             const effectiveDrawMode = drawMode === 'point' ? 'line' : drawMode;
             // For random tool, skip pattern - sample randomly per tile position
-            const patternData = activeTool === 'random' ? null : (() => {
-                if (!selectedTileIndices || selectedTileIndices.length === 0) return null;
-                const cols = effectiveTileset.columns;
-                let minC = Infinity, minR = Infinity, maxC = -Infinity, maxR = -Infinity;
-                for (const idx of selectedTileIndices) {
-                    const c = idx % cols;
-                    const r = Math.floor(idx / cols);
-                    if (c < minC) minC = c;
-                    if (c > maxC) maxC = c;
-                    if (r < minR) minR = r;
-                    if (r > maxR) maxR = r;
-                }
-                if (minC === Infinity) return null;
-                const patternW = maxC - minC + 1;
-                const patternH = maxR - minR + 1;
-                const pattern: (number | null)[][] = Array.from({ length: patternH }, () => Array(patternW).fill(null));
-                for (const idx of selectedTileIndices) {
-                    const c = idx % cols;
-                    const r = Math.floor(idx / cols);
-                    pattern[r - minR][c - minC] = idx;
-                }
-                return { pattern, patternW, patternH, minC, minR };
-            })();
-
-            // Seeded random for stable preview per position (changes when cursor moves)
-            const seededRandom = (x: number, y: number, seed: number) => {
-                const n = Math.sin(x * 12.9898 + y * 78.233 + seed * 43758.5453) * 43758.5453;
-                return n - Math.floor(n);
-            };
-
-            // Sample a random tile from selection using probability weights
-            const sampleRandomTile = (x: number, y: number, seed: number): number | null => {
-                if (!selectedTileIndices || selectedTileIndices.length === 0) {
-                    return selectedTileIndex;
-                }
-                const indices = selectedTileIndices;
-                const weights = indices.map(i => {
-                    const def = effectiveTileset.tiles?.[i];
-                    return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
-                });
-                const total = weights.reduce((a, b) => a + b, 0);
-                if (total <= 0) return indices[0];
-                
-                const r = seededRandom(x, y, seed) * total;
-                let acc = 0;
-                for (let k = 0; k < indices.length; k++) {
-                    acc += weights[k];
-                    if (r < acc) return indices[k];
-                }
-                return indices[indices.length - 1];
-            };
+            const patternData: TilePattern | null = activeTool === 'random' ? null : 
+                (selectedTileIndices && selectedTileIndices.length > 0 
+                    ? buildPatternFromSelection(selectedTileIndices, effectiveTileset) 
+                    : null);
 
             // Use cursor end position as seed so preview changes when cursor moves
             const cursorSeed = (drawPreview.end.x * 1000 + drawPreview.end.y);
+
+            // Sample a random tile from selection using probability weights
+            const sampleTileForPreview = (x: number, y: number): number | null => {
+                if (!selectedTileIndices || selectedTileIndices.length === 0) {
+                    return selectedTileIndex;
+                }
+                return sampleSeededTile(x, y, selectedTileIndices, effectiveTileset, cursorSeed);
+            };
 
             const sx = drawPreview.start.x;
             const sy = drawPreview.start.y;
@@ -447,7 +400,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                         let tileIdx: number | null = null;
                         if (activeTool === 'random') {
                             // For random tool, sample a random tile for each position
-                            tileIdx = sampleRandomTile(x, y, cursorSeed);
+                            tileIdx = sampleTileForPreview(x, y);
                         } else if (patternData) {
                             const dx = x - sx;
                             const dy = y - sy;
@@ -485,7 +438,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                             let tileIdx: number | null = null;
                             if (activeTool === 'random') {
                                 // For random tool, sample a random tile for each position
-                                tileIdx = sampleRandomTile(x, y, cursorSeed);
+                                tileIdx = sampleTileForPreview(x, y);
                             } else if (patternData) {
                                 const dx = x - sx;
                                 const dy = y - sy;
@@ -541,7 +494,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                         // Single tile (no brush)
                         let tileIdx: number | null = null;
                         if (activeTool === 'random') {
-                            tileIdx = sampleRandomTile(cx, cy, cursorSeed);
+                            tileIdx = sampleTileForPreview(cx, cy);
                         } else if (selectedTileIndex !== null) {
                             tileIdx = selectedTileIndex;
                         }
@@ -558,52 +511,33 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                             }
                         }
                     } else {
-                        // Circular brush of single/random tiles
-                        const r = effectiveBrushSize - 1;
-                        for (let bdy = -r; bdy <= r; bdy++) {
-                            for (let bdx = -r; bdx <= r; bdx++) {
-                                const dist = Math.sqrt(bdx * bdx + bdy * bdy);
-                                if (dist <= r) {
-                                    const bx = cx + bdx, by = cy + bdy;
-                                    let tileIdx: number | null = null;
-                                    if (activeTool === 'random') {
-                                        tileIdx = sampleRandomTile(bx, by, cursorSeed);
-                                    } else if (selectedTileIndex !== null) {
-                                        tileIdx = selectedTileIndex;
-                                    }
+                        // Circular brush of single/random tiles using shared utility
+                        for (const { x: bx, y: by } of circularBrush(cx, cy, effectiveBrushSize)) {
+                            let tileIdx: number | null = null;
+                            if (activeTool === 'random') {
+                                tileIdx = sampleTileForPreview(bx, by);
+                            } else if (selectedTileIndex !== null) {
+                                tileIdx = selectedTileIndex;
+                            }
 
-                                    if (tileIdx !== null && tileIdx !== undefined) {
-                                        const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
-                                        if (texture) {
-                                            const sprite = new Sprite(texture);
-                                            sprite.x = bx * DEFAULT_TILE_SIZE;
-                                            sprite.y = by * DEFAULT_TILE_SIZE;
-                                            sprite.width = DEFAULT_TILE_SIZE;
-                                            sprite.height = DEFAULT_TILE_SIZE;
-                                            previewContainer.addChild(sprite);
-                                        }
-                                    }
+                            if (tileIdx !== null && tileIdx !== undefined) {
+                                const texture = getTileTexture(effectiveTileset.spriteSheet, tileIdx, effectiveTileset.tileWidth, effectiveTileset.tileHeight, effectiveTileset.columns);
+                                if (texture) {
+                                    const sprite = new Sprite(texture);
+                                    sprite.x = bx * DEFAULT_TILE_SIZE;
+                                    sprite.y = by * DEFAULT_TILE_SIZE;
+                                    sprite.width = DEFAULT_TILE_SIZE;
+                                    sprite.height = DEFAULT_TILE_SIZE;
+                                    previewContainer.addChild(sprite);
                                 }
                             }
                         }
                     }
                 };
 
-                // Bresenham's line algorithm for preview
-                let x0 = sx, y0 = sy;
-                const x1 = ex, y1 = ey;
-                const dx = Math.abs(x1 - x0);
-                const dy = Math.abs(y1 - y0);
-                const stepX = x0 < x1 ? 1 : -1;
-                const stepY = y0 < y1 ? 1 : -1;
-                let err = dx - dy;
-
-                while (true) {
-                    renderAtLinePos(x0, y0);
-                    if (x0 === x1 && y0 === y1) break;
-                    const e2 = 2 * err;
-                    if (e2 > -dy) { err -= dy; x0 += stepX; }
-                    if (e2 < dx) { err += dx; y0 += stepY; }
+                // Use shared Bresenham algorithm for preview
+                for (const { x, y } of bresenhamLine(sx, sy, ex, ey)) {
+                    renderAtLinePos(x, y);
                 }
             }
 
@@ -635,23 +569,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             }
         };
 
-        // Helper to render brush at hover position
+        // Helper to render brush at hover position using shared utility
         const renderBrushPreview = (getTileIdxForPos: (x: number, y: number) => number | null) => {
-            if (effectiveBrushSize <= 1) {
-                const idx = getTileIdxForPos(hoveredTile.x, hoveredTile.y);
-                if (idx !== null) renderTileAt(hoveredTile.x, hoveredTile.y, idx);
-            } else {
-                const r = effectiveBrushSize - 1;
-                for (let dy = -r; dy <= r; dy++) {
-                    for (let dx = -r; dx <= r; dx++) {
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist <= r) {
-                            const bx = hoveredTile.x + dx, by = hoveredTile.y + dy;
-                            const idx = getTileIdxForPos(bx, by);
-                            if (idx !== null) renderTileAt(bx, by, idx);
-                        }
-                    }
-                }
+            for (const { x: bx, y: by } of circularBrush(hoveredTile.x, hoveredTile.y, effectiveBrushSize)) {
+                const idx = getTileIdxForPos(bx, by);
+                if (idx !== null) renderTileAt(bx, by, idx);
             }
         };
 
@@ -664,50 +586,27 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 return;
             }
 
-            // Seeded random for stable preview per position
-            const seededRandom = (x: number, y: number) => {
-                const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-                return n - Math.floor(n);
-            };
-
-            // Sample a random tile using probability weights
-            const indices = selectedTileIndices;
-            const weights = indices.map(i => {
-                const def = effectiveTileset.tiles?.[i];
-                return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
-            });
-            const total = weights.reduce((a, b) => a + b, 0);
-            
+            // Use shared seeded random for stable preview per position
             const sampleTileForPos = (x: number, y: number): number | null => {
-                if (total <= 0) return indices[0];
-                const r = seededRandom(x, y) * total;
-                let acc = 0;
-                for (let k = 0; k < indices.length; k++) {
-                    acc += weights[k];
-                    if (r < acc) return indices[k];
-                }
-                return indices[indices.length - 1];
+                return sampleSeededTile(x, y, selectedTileIndices, effectiveTileset, 0);
             };
             
             renderBrushPreview(sampleTileForPos);
             return;
         }
 
-        if (selectedTileIndices && selectedTileIndices.length > 0) {
+        if (selectedTileIndices && selectedTileIndices.length > 1) {
             // Multi-tile stencil preview (no brush size for multi-tile)
-            const cols = effectiveTileset.columns;
-            let minC = Infinity, minR = Infinity;
-            for (const idx of selectedTileIndices) {
-                const c = idx % cols;
-                const r = Math.floor(idx / cols);
-                if (c < minC) minC = c;
-                if (r < minR) minR = r;
-            }
-
-            for (const idx of selectedTileIndices) {
-                const c = idx % cols;
-                const r = Math.floor(idx / cols);
-                renderTileAt(hoveredTile.x + (c - minC), hoveredTile.y + (r - minR), idx);
+            const patternData = buildPatternFromSelection(selectedTileIndices, effectiveTileset);
+            if (patternData) {
+                for (let py = 0; py < patternData.patternH; py++) {
+                    for (let px = 0; px < patternData.patternW; px++) {
+                        const tileIdx = patternData.pattern[py][px];
+                        if (tileIdx !== null) {
+                            renderTileAt(hoveredTile.x + px, hoveredTile.y + py, tileIdx);
+                        }
+                    }
+                }
             }
         } else if (selectedTileIndex !== null) {
             // Single tile preview with brush size

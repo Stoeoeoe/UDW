@@ -10,6 +10,9 @@ import {
     getCornerTerrainsForTile,
     findBestMatchingTile
 } from '../../../lib/terrainUtils';
+import { buildPatternFromSelection } from '../../../lib/tileUtils';
+import { sampleRandomTile } from '../../../lib/randomUtils';
+import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 
 interface UseMapToolsProps {
     viewport: Viewport | null;
@@ -74,38 +77,18 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     }, [viewport]);
 
     // Build pattern from multi-tile selection (skip for random tool as it samples per-tile)
+    // Only creates a pattern when multiple tiles are selected (length > 1)
+    // Single tile selection should use brush size, not pattern placement
     const getPattern = useCallback(() => {
         if (activeTool === 'random') return null;
-        if (!selectedTileIndices || selectedTileIndices.length === 0 || !activeTilesetId) return null;
+        // Only create pattern for multi-tile selections (2+ tiles)
+        // Single tile should use brush, not pattern
+        if (!selectedTileIndices || selectedTileIndices.length <= 1 || !activeTilesetId) return null;
 
         const ts = tilesets.get(activeTilesetId);
         if (!ts) return null;
 
-        const cols = ts.columns;
-        let minC = Infinity, minR = Infinity, maxC = -Infinity, maxR = -Infinity;
-
-        for (const idx of selectedTileIndices) {
-            const c = idx % cols;
-            const r = Math.floor(idx / cols);
-            if (c < minC) minC = c;
-            if (c > maxC) maxC = c;
-            if (r < minR) minR = r;
-            if (r > maxR) maxR = r;
-        }
-
-        if (minC === Infinity) return null;
-
-        const patternW = maxC - minC + 1;
-        const patternH = maxR - minR + 1;
-        const pattern: (number | null)[][] = Array.from({ length: patternH }, () => Array(patternW).fill(null));
-
-        for (const idx of selectedTileIndices) {
-            const c = idx % cols;
-            const r = Math.floor(idx / cols);
-            pattern[r - minR][c - minC] = idx;
-        }
-
-        return { pattern, patternW, patternH };
+        return buildPatternFromSelection(selectedTileIndices, ts);
     }, [activeTool, selectedTileIndices, activeTilesetId, tilesets]);
 
     // Apply a shape (point, rect, circle, line) - uses batch updates for performance
@@ -126,24 +109,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const patternW = patternData?.patternW || 1;
         const patternH = patternData?.patternH || 1;
 
-        // Helper to sample a tile index from selected indices using probability weights
-        const sampleTileIndex = (indices: number[], tilesetId?: string): number | null => {
-            if (!indices || indices.length === 0) return null;
-            const ts = tilesetId ? tilesets.get(tilesetId) : undefined;
-            const weights = indices.map(i => {
-                const def = ts?.tiles?.[i];
-                const w = def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
-                return w;
-            });
-            const total = weights.reduce((a, b) => a + b, 0);
-            if (total <= 0) return indices[0];
-            let r = Math.random() * total;
-            for (let k = 0; k < indices.length; k++) {
-                r -= weights[k];
-                if (r <= 0) return indices[k];
-            }
-            return indices[indices.length - 1];
-        };
+        // Get tileset for random sampling
+        const ts = activeTilesetId ? tilesets.get(activeTilesetId) : undefined;
 
         // Collect tiles for batch update
         const tilesToPaint: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }> = [];
@@ -167,7 +134,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 } else if (activeTool === 'random' && activeTilesetId) {
                     // For random tile tool, sample from selected indices using probability weights
                     if (selectedTileIndices && selectedTileIndices.length > 0) {
-                        const chosen = sampleTileIndex(selectedTileIndices, activeTilesetId);
+                        const chosen = sampleRandomTile(selectedTileIndices, ts);
                         if (chosen !== null) tilesToPaint.push({ x: tx, y: ty, tilesetId: activeTilesetId, tileIndex: chosen });
                     } else if (selectedTileIndex !== null) {
                         tilesToPaint.push({ x: tx, y: ty, tilesetId: activeTilesetId, tileIndex: selectedTileIndex });
@@ -200,18 +167,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 return;
             }
             
-            if (radius <= 1) {
-                collectTile(cx, cy);
-                return;
-            }
-            const r = radius - 1; // radius=1 means single tile, radius=2 means 3x3 area, etc.
-            for (let dy = -r; dy <= r; dy++) {
-                for (let dx = -r; dx <= r; dx++) {
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist <= r) {
-                        collectTile(cx + dx, cy + dy);
-                    }
-                }
+            // Use shared circular brush utility
+            for (const { x, y } of circularBrush(cx, cy, radius)) {
+                collectTile(x, y);
             }
         };
 
@@ -273,21 +231,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 }
             }
         } else if (mode === 'line') {
-            // Bresenham's line algorithm with brush size
-            let x0 = start.x, y0 = start.y;
-            const x1 = end.x, y1 = end.y;
-            const dx = Math.abs(x1 - x0);
-            const dy = Math.abs(y1 - y0);
-            const sx = x0 < x1 ? 1 : -1;
-            const sy = y0 < y1 ? 1 : -1;
-            let err = dx - dy;
-
-            while (true) {
-                collectBrush(x0, y0, effectiveBrushSize);
-                if (x0 === x1 && y0 === y1) break;
-                const e2 = 2 * err;
-                if (e2 > -dy) { err -= dy; x0 += sx; }
-                if (e2 < dx) { err += dx; y0 += sy; }
+            // Use shared Bresenham algorithm with brush size
+            for (const { x, y } of bresenhamLine(start.x, start.y, end.x, end.y)) {
+                collectBrush(x, y, effectiveBrushSize);
             }
         }
 

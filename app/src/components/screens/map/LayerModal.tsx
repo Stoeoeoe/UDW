@@ -15,16 +15,7 @@ import {
     VStack,
 } from '@chakra-ui/react';
 import { LayerKind } from '../../../types/schema';
-
-/** Available icons for the dropdown */
-export const LAYER_ICONS = [
-    { value: '', label: 'None' },
-    { value: 'tree', label: '🌳 Tree' },
-    { value: 'building', label: '🏢 Building' },
-    { value: 'water', label: '🌊 Water' },
-    { value: 'ground', label: '📊 Ground' },
-    { value: 'overlay', label: '📐 Overlay' },
-];
+import { LAYER_ICONS } from './layerConstants';
 
 export interface LayerFormData {
     name: string;

@@ -201,16 +201,16 @@ export const useEditorStore = create<EditorStore>()(
 
             // 1.5 Load terrain types from project.json (if present)
             const proj = useEditorStore.getState().project;
-            if (proj && Array.isArray((proj as any).terrainTypes)) {
+            if (proj?.terrainTypes && Array.isArray(proj.terrainTypes)) {
                 set(state => {
-                    state.terrainTypes = (proj as any).terrainTypes.map((t: any) => castDraft(t));
+                    state.terrainTypes = proj.terrainTypes!.map(t => castDraft(t));
                 });
             }
 
             // 1.6 Load layer definitions from project.json (if present)
-            if (proj && Array.isArray((proj as any).layerDefinitions)) {
+            if (proj?.layerDefinitions && Array.isArray(proj.layerDefinitions)) {
                 set(state => {
-                    state.layerDefinitions = (proj as any).layerDefinitions.map((d: any) => castDraft(d));
+                    state.layerDefinitions = proj.layerDefinitions!.map(d => castDraft(d));
                 });
             }
 
@@ -693,7 +693,8 @@ export const useEditorStore = create<EditorStore>()(
                 if (getTile(cx, cy) === startTile) {
                     // Apply paint
                     if (state.activeVariationId) {
-                        const v = map.variations?.find(v => v.id === state.activeVariationId)!;
+                        const v = map.variations?.find(v => v.id === state.activeVariationId);
+                        if (!v) continue;
                         if (!v.layerOverrides) v.layerOverrides = {};
                         if (!v.layerOverrides[layerId]) {
                             v.layerOverrides[layerId] = {
@@ -1015,23 +1016,23 @@ export const useEditorStore = create<EditorStore>()(
             const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                const projectToSave: Project = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
-                set(state => { state.project = projectToSave as any; });
+                set(state => { state.project = castDraft(projectToSave); });
             }
         },
 
         updateTerrainType: async (id, updates) => {
             set(state => {
                 const t = state.terrainTypes.find(tt => tt.id === id);
-                if (t) Object.assign(t, updates as any);
+                if (t) Object.assign(t, updates);
             });
             const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                const projectToSave: Project = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
-                set(state => { state.project = projectToSave as any; });
+                set(state => { state.project = castDraft(projectToSave); });
             }
         },
 
@@ -1043,9 +1044,9 @@ export const useEditorStore = create<EditorStore>()(
             const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                const projectToSave: Project = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
-                set(state => { state.project = projectToSave as any; });
+                set(state => { state.project = castDraft(projectToSave); });
             }
         },
 
@@ -1061,23 +1062,23 @@ export const useEditorStore = create<EditorStore>()(
             const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                const projectToSave: Project = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
-                set(state => { state.project = projectToSave as any; });
+                set(state => { state.project = castDraft(projectToSave); });
             }
         },
 
         updateLayerDefinition: async (id, updates) => {
             set(state => {
                 const def = state.layerDefinitions.find(d => d.id === id);
-                if (def) Object.assign(def, updates as any);
+                if (def) Object.assign(def, updates);
             });
             const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                const projectToSave: Project = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
-                set(state => { state.project = projectToSave as any; });
+                set(state => { state.project = castDraft(projectToSave); });
             }
         },
 
@@ -1089,9 +1090,9 @@ export const useEditorStore = create<EditorStore>()(
             const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                const projectToSave: Project = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
                 await fileSystem.saveJson('', 'project.json', projectToSave);
-                set(state => { state.project = projectToSave as any; });
+                set(state => { state.project = castDraft(projectToSave); });
             }
         },
 
