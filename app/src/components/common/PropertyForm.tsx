@@ -6,6 +6,9 @@ import {
     Input,
     NumberInput,
     NumberInputField,
+    NumberInputStepper,
+    NumberIncrementStepper,
+    NumberDecrementStepper,
     Switch,
     Select,
     Text,
@@ -22,6 +25,7 @@ export interface PropertySchema {
     constraints?: {
         min?: number;
         max?: number;
+        step?: number;
         options?: string[];
     };
     // Optional custom renderer for complex fields. Receives current value and an onChange callback.
@@ -35,11 +39,40 @@ interface PropertyFormProps {
 }
 
 export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onChange }) => {
+    const [localValues, setLocalValues] = React.useState<Record<string, string>>({});
+    const focusedRef = React.useRef<Record<string, boolean>>({});
+
+    // Sync incoming values into localValues when not focused
+    React.useEffect(() => {
+        const next: Record<string, string> = {};
+        for (const prop of schema) {
+            if (focusedRef.current[prop.key]) continue;
+            const rawVal = values[prop.key];
+            const v = rawVal !== undefined ? rawVal : (prop.type === 'number' ? 0 : prop.type === 'boolean' ? false : '');
+            next[prop.key] = String(v);
+        }
+        setLocalValues(prev => ({ ...prev, ...next }));
+    }, [schema, values]);
+
+    const numericRegex = /^-?\d+(?:\.\d+)?$/;
+
+    const commitValue = (key: string) => {
+        const str = localValues[key] ?? '';
+        if (numericRegex.test(str)) {
+            onChange(key, parseFloat(str));
+        } else {
+            // Fallback: try parseFloat even if not strict match
+            const n = parseFloat(str);
+            onChange(key, isNaN(n) ? str : n);
+        }
+    };
+
     return (
         <VStack align="stretch" spacing={5} px={2}>
             {schema.map(prop => {
                 const rawVal = values[prop.key];
                 const currentValue = rawVal !== undefined ? rawVal : (prop.type === 'number' ? 0 : prop.type === 'boolean' ? false : '');
+                const localVal = localValues[prop.key] ?? String(currentValue);
 
                 return (
                     <FormControl key={prop.key}>
@@ -55,20 +88,38 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                                     borderColor="#0b1116"
                                     _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 2px rgba(66,153,225,0.6)' }}
                                     color="white"
-                                    value={currentValue}
-                                    onChange={(e) => onChange(prop.key, e.target.value)}
+                                    value={localVal}
+                                    onChange={(e) => {
+                                        setLocalValues(prev => ({ ...prev, [prop.key]: e.target.value }));
+                                        onChange(prop.key, e.target.value);
+                                    }}
+                                    onFocus={() => { focusedRef.current[prop.key] = true; }}
+                                    onBlur={() => { focusedRef.current[prop.key] = false; commitValue(prop.key); }}
                                 />
                             )}
 
                             {prop.type === 'number' && (
                             <NumberInput
                                 size="sm"
-                                value={Number(currentValue)}
+                                value={localVal}
                                 min={prop.constraints?.min}
                                 max={prop.constraints?.max}
-                                onChange={(_, val) => onChange(prop.key, val)}
+                                step={prop.constraints?.step ?? 0.01}
+                                onChange={(str) => {
+                                    setLocalValues(prev => ({ ...prev, [prop.key]: str }));
+                                    // If string is a valid number, commit immediately (this covers steppers)
+                                    if (numericRegex.test(str)) {
+                                        onChange(prop.key, parseFloat(str));
+                                    }
+                                }}
+                                onFocus={() => { focusedRef.current[prop.key] = true; }}
+                                onBlur={() => { focusedRef.current[prop.key] = false; commitValue(prop.key); }}
                             >
                                 <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                                <NumberInputStepper>
+                                    <NumberIncrementStepper />
+                                    <NumberDecrementStepper />
+                                </NumberInputStepper>
                             </NumberInput>
                             )}
 
@@ -77,7 +128,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                             )}
 
                             {prop.type === 'enum' && (
-                                <Select size="sm" bg="#05060a" borderColor="#0b1116" color="white" value={currentValue} onChange={(e) => onChange(prop.key, e.target.value)}>
+                                <Select size="sm" bg="#05060a" borderColor="#0b1116" color="white" value={localVal} onChange={(e) => { setLocalValues(prev => ({ ...prev, [prop.key]: e.target.value })); onChange(prop.key, e.target.value); }}>
                                     {(prop.constraints?.options || []).map(opt => (
                                         <option key={opt} value={opt} style={{ background: '#05060a', color: '#fff' }}>{opt}</option>
                                     ))}
@@ -86,7 +137,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
 
                             {prop.type === 'custom' && prop.customRenderer && (
                                 <Box>
-                                    {prop.customRenderer(currentValue, (v) => onChange(prop.key, v))}
+                                    {prop.customRenderer(localVal, (v) => { setLocalValues(prev => ({ ...prev, [prop.key]: String(v) })); onChange(prop.key, v); })}
                                 </Box>
                             )}
                         </Box>

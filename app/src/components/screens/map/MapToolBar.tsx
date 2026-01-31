@@ -1,6 +1,6 @@
 import React from 'react';
 import { HStack, Button, ButtonGroup } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiSlash, FiDroplet, FiUser, FiCircle, FiSquare, FiTarget } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiSlash, FiDroplet, FiUser, FiCircle, FiSquare, FiTarget, FiShuffle } from 'react-icons/fi';
 import Toolbar, { ToolItem } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ToolType } from '../../../types/editor';
@@ -17,6 +17,7 @@ export const MapToolbar: React.FC = () => {
     const TOOLS: ToolItem[] = [
         { id: 'select', icon: FiMousePointer, label: 'Select Object (V)', group: 'generic' },
         { id: 'tilePaint', icon: FiEdit2, label: 'Paint Tile (B)', group: 'tiles' },
+        { id: 'randomTile', icon: FiShuffle, label: 'Random Tile (R)', group: 'tiles' },
         { id: 'tileErase', icon: FiSlash, label: 'Erase Tile (E)', group: 'tiles' },
         { id: 'tileFill', icon: FiDroplet, label: 'Bucket Fill (G)', group: 'tiles' },
         { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
@@ -26,7 +27,7 @@ export const MapToolbar: React.FC = () => {
         <HStack spacing={4}>
             <Toolbar items={TOOLS} activeId={activeTool} onActivate={(id) => setActiveTool(id as ToolType)} />
 
-            {(activeTool === 'tilePaint' || activeTool === 'tileErase') && (
+            {(activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase') && (
                 <HStack bg="gray.900" p="1" rounded="xl" border="1px" borderColor="gray.800" spacing="1" boxShadow="lg">
                     <Button aria-label="Point" onClick={() => setDrawMode('point')} size="xs" variant={drawMode === 'point' ? 'solid' : 'ghost'} colorScheme="blue"><FiTarget /></Button>
                     <Button aria-label="Rect" onClick={() => setDrawMode('rect')} size="xs" variant={drawMode === 'rect' ? 'solid' : 'ghost'} colorScheme="blue"><FiSquare /></Button>

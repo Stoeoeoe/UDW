@@ -44,6 +44,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset }) =
                     <PropertyForm
                         schema={[
                             { key: 'id', label: 'Semantic ID', type: 'string', description: 'Human-friendly semantic identifier' },
+                            { key: 'probability', label: 'Probability', type: 'number', description: 'Weight for random tile selection (higher = more likely)' },
                             { key: 'collision.type', label: 'Collision', type: 'enum', constraints: { options: ['none', 'full'] } },
                             {
                                 key: 'terrain',
@@ -75,12 +76,14 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset }) =
                         ] as PropertySchema[]}
                         values={{
                             id: selectedTileDef.id || '',
+                            probability: selectedTileDef.probability ?? 1,
                             'collision.type': selectedTileDef.collision?.type || 'none',
                             terrain: selectedTileDef.terrain || ''
                         }}
                         onChange={(k, v) => {
                             if (!tileset || selectedIndex === null) return;
                             if (k === 'id') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, id: v });
+                            if (k === 'probability') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, probability: parseFloat(v) || 1 });
                             if (k === 'collision.type') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, collision: { type: v } });
                             if (k === 'terrain') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, terrain: v });
                         }}

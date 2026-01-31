@@ -1,6 +1,6 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiTrash2, FiDroplet, FiUser, FiCircle, FiSquare, FiCrosshair } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiTrash2, FiDroplet, FiUser, FiCircle, FiSquare, FiCrosshair, FiShuffle } from 'react-icons/fi';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
 import { Toolbar, ToolItem } from '../common/Toolbar';
@@ -9,6 +9,7 @@ import { Toolbar, ToolItem } from '../common/Toolbar';
 const MAP_TOOLS: ToolItem[] = [
     { id: 'select', icon: FiMousePointer, label: 'Select Object (V)', group: 'generic' },
     { id: 'tilePaint', icon: FiEdit2, label: 'Paint Tile (B)', group: 'tiles' },
+    { id: 'randomTile', icon: FiShuffle, label: 'Random Tile (R)', group: 'tiles' },
     { id: 'tileErase', icon: FiTrash2, label: 'Erase Tile (E)', group: 'tiles' },
     { id: 'tileFill', icon: FiDroplet, label: 'Bucket Fill (G)', group: 'tiles' },
     { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
@@ -27,7 +28,7 @@ export const MapToolbar: React.FC = () => {
     const drawMode = useEditorStore(state => state.drawMode);
     const setDrawMode = useEditorStore(state => state.setDrawMode);
 
-    const showDrawModes = activeTool === 'tilePaint' || activeTool === 'tileErase';
+    const showDrawModes = activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase';
 
     return (
         <HStack spacing={4}>

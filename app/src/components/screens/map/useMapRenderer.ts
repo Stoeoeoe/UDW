@@ -260,7 +260,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
         previewContainer.removeChildren();
 
-        if (activeTool !== 'tilePaint' || !activeTilesetId) return;
+        if ((activeTool !== 'tilePaint' && activeTool !== 'randomTile') || !activeTilesetId) return;
 
         const ts = tilesets.get(activeTilesetId);
         if (!ts) return;
@@ -274,7 +274,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
         // If the user is actively drawing a shape, render the shape preview
         if (drawPreview && drawPreview.isDrawing && drawPreview.start && drawPreview.end && drawMode && drawMode !== 'point') {
-            const patternData = (() => {
+            // For randomTile, skip pattern - sample randomly per tile position
+            const patternData = activeTool === 'randomTile' ? null : (() => {
                 if (!selectedTileIndices || selectedTileIndices.length === 0) return null;
                 const cols = effectiveTileset.columns;
                 let minC = Infinity, minR = Infinity, maxC = -Infinity, maxR = -Infinity;
@@ -298,6 +299,37 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 return { pattern, patternW, patternH, minC, minR };
             })();
 
+            // Seeded random for stable preview per position (changes when cursor moves)
+            const seededRandom = (x: number, y: number, seed: number) => {
+                const n = Math.sin(x * 12.9898 + y * 78.233 + seed * 43758.5453) * 43758.5453;
+                return n - Math.floor(n);
+            };
+
+            // Sample a random tile from selection using probability weights
+            const sampleRandomTile = (x: number, y: number, seed: number): number | null => {
+                if (!selectedTileIndices || selectedTileIndices.length === 0) {
+                    return selectedTileIndex;
+                }
+                const indices = selectedTileIndices;
+                const weights = indices.map(i => {
+                    const def = effectiveTileset.tiles?.[i];
+                    return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
+                });
+                const total = weights.reduce((a, b) => a + b, 0);
+                if (total <= 0) return indices[0];
+                
+                const r = seededRandom(x, y, seed) * total;
+                let acc = 0;
+                for (let k = 0; k < indices.length; k++) {
+                    acc += weights[k];
+                    if (r < acc) return indices[k];
+                }
+                return indices[indices.length - 1];
+            };
+
+            // Use cursor end position as seed so preview changes when cursor moves
+            const cursorSeed = (drawPreview.end.x * 1000 + drawPreview.end.y);
+
             const sx = drawPreview.start.x;
             const sy = drawPreview.start.y;
             const ex = drawPreview.end.x;
@@ -312,7 +344,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 for (let y = minY; y <= maxY; y++) {
                     for (let x = minX; x <= maxX; x++) {
                         let tileIdx: number | null = null;
-                        if (patternData) {
+                        if (activeTool === 'randomTile') {
+                            // For randomTile, sample a random tile for each position
+                            tileIdx = sampleRandomTile(x, y, cursorSeed);
+                        } else if (patternData) {
                             const dx = x - sx;
                             const dy = y - sy;
                             const px = ((dx % patternData.patternW) + patternData.patternW) % patternData.patternW;
@@ -347,7 +382,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                         const dist = Math.sqrt(Math.pow(x - sx, 2) + Math.pow(y - sy, 2));
                         if (dist <= radius) {
                             let tileIdx: number | null = null;
-                            if (patternData) {
+                            if (activeTool === 'randomTile') {
+                                // For randomTile, sample a random tile for each position
+                                tileIdx = sampleRandomTile(x, y, cursorSeed);
+                            } else if (patternData) {
                                 const dx = x - sx;
                                 const dy = y - sy;
                                 const px = ((dx % patternData.patternW) + patternData.patternW) % patternData.patternW;
@@ -378,6 +416,75 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
         // Default hover preview (single tile or multi-tile stencil)
         if (!hoveredTile) return;
+
+        // For randomTile, sample a random tile for the hover preview
+        if (activeTool === 'randomTile') {
+            if (!selectedTileIndices || selectedTileIndices.length === 0) {
+                if (selectedTileIndex !== null && selectedTileIndex !== undefined) {
+                    const texture = getTileTexture(
+                        effectiveTileset.spriteSheet,
+                        selectedTileIndex,
+                        effectiveTileset.tileWidth,
+                        effectiveTileset.tileHeight,
+                        effectiveTileset.columns
+                    );
+                    if (texture) {
+                        const sprite = new Sprite(texture);
+                        sprite.x = hoveredTile.x * DEFAULT_TILE_SIZE;
+                        sprite.y = hoveredTile.y * DEFAULT_TILE_SIZE;
+                        sprite.width = DEFAULT_TILE_SIZE;
+                        sprite.height = DEFAULT_TILE_SIZE;
+                        previewContainer.addChild(sprite);
+                    }
+                }
+                return;
+            }
+
+            // Seeded random for stable preview per position
+            const seededRandom = (x: number, y: number) => {
+                const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+                return n - Math.floor(n);
+            };
+
+            // Sample a random tile using probability weights
+            const indices = selectedTileIndices;
+            const weights = indices.map(i => {
+                const def = effectiveTileset.tiles?.[i];
+                return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
+            });
+            const total = weights.reduce((a, b) => a + b, 0);
+            
+            let previewIdx = indices[0];
+            if (total > 0) {
+                const r = seededRandom(hoveredTile.x, hoveredTile.y) * total;
+                let acc = 0;
+                for (let k = 0; k < indices.length; k++) {
+                    acc += weights[k];
+                    if (r < acc) {
+                        previewIdx = indices[k];
+                        break;
+                    }
+                }
+            }
+            
+            const texture = getTileTexture(
+                effectiveTileset.spriteSheet,
+                previewIdx,
+                effectiveTileset.tileWidth,
+                effectiveTileset.tileHeight,
+                effectiveTileset.columns
+            );
+
+            if (texture) {
+                const sprite = new Sprite(texture);
+                sprite.x = hoveredTile.x * DEFAULT_TILE_SIZE;
+                sprite.y = hoveredTile.y * DEFAULT_TILE_SIZE;
+                sprite.width = DEFAULT_TILE_SIZE;
+                sprite.height = DEFAULT_TILE_SIZE;
+                previewContainer.addChild(sprite);
+            }
+            return;
+        }
 
         if (selectedTileIndices && selectedTileIndices.length > 0) {
             // Multi-tile preview

@@ -188,7 +188,8 @@ export const MapViewportPixi: React.FC = () => {
             // Re-render preview on tool/tile selection change
             if (state.activeTool !== prevState.activeTool || 
                 state.selectedTileIndex !== prevState.selectedTileIndex ||
-                state.selectedTileIndices !== prevState.selectedTileIndices) {
+                state.selectedTileIndices !== prevState.selectedTileIndices ||
+                state.drawPreview !== prevState.drawPreview) {
                 renderPreview();
             }
         });
@@ -211,6 +212,7 @@ export const MapViewportPixi: React.FC = () => {
             // Tool shortcuts
             if (e.key === 'v' || e.key === 'V') useEditorStore.getState().setActiveTool('select');
             if (e.key === 'b' || e.key === 'B') useEditorStore.getState().setActiveTool('tilePaint');
+            if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('randomTile');
             if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('tileErase');
             if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setActiveTool('tileFill');
             if (e.key === 'n' || e.key === 'N') useEditorStore.getState().setActiveTool('entityPlace');
@@ -248,7 +250,7 @@ export const MapViewportPixi: React.FC = () => {
 
     // Cursor based on tool
     const getCursor = () => {
-        if (activeTool === 'tilePaint' || activeTool === 'tileErase' || activeTool === 'tileFill') {
+        if (activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase' || activeTool === 'tileFill') {
             return 'crosshair';
         }
         return 'default';

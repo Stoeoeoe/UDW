@@ -87,6 +87,7 @@ export type ToolIcon = {
 export type ToolType =
     | "select"
     | "tilePaint"
+    | "randomTile"
     | "tileErase"
     | "tileFill"        // Phase 2
     | "entityPlace"

@@ -62,8 +62,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
     }, [viewport]);
 
-    // Build pattern from multi-tile selection
+    // Build pattern from multi-tile selection (skip for randomTile as it samples per-tile)
     const getPattern = useCallback(() => {
+        if (activeTool === 'randomTile') return null;
         if (!selectedTileIndices || selectedTileIndices.length === 0 || !activeTilesetId) return null;
 
         const ts = tilesets.get(activeTilesetId);
@@ -94,7 +95,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
 
         return { pattern, patternW, patternH };
-    }, [selectedTileIndices, activeTilesetId, tilesets]);
+    }, [activeTool, selectedTileIndices, activeTilesetId, tilesets]);
 
     // Apply a shape (point, rect, circle) - uses batch updates for performance
     const applyShape = useCallback((
@@ -110,6 +111,25 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const pattern = patternData?.pattern;
         const patternW = patternData?.patternW || 1;
         const patternH = patternData?.patternH || 1;
+
+        // Helper to sample a tile index from selected indices using probability weights
+        const sampleTileIndex = (indices: number[], tilesetId?: string): number | null => {
+            if (!indices || indices.length === 0) return null;
+            const ts = tilesetId ? tilesets.get(tilesetId) : undefined;
+            const weights = indices.map(i => {
+                const def = ts?.tiles?.[i];
+                const w = def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
+                return w;
+            });
+            const total = weights.reduce((a, b) => a + b, 0);
+            if (total <= 0) return indices[0];
+            let r = Math.random() * total;
+            for (let k = 0; k < indices.length; k++) {
+                r -= weights[k];
+                if (r <= 0) return indices[k];
+            }
+            return indices[indices.length - 1];
+        };
 
         // Collect tiles for batch update
         const tilesToPaint: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }> = [];
@@ -129,6 +149,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                                 }
                             }
                         }
+                    }
+                } else if (activeTool === 'randomTile' && activeTilesetId) {
+                    // For random tile tool, sample from selected indices using probability weights
+                    if (selectedTileIndices && selectedTileIndices.length > 0) {
+                        const chosen = sampleTileIndex(selectedTileIndices, activeTilesetId);
+                        if (chosen !== null) tilesToPaint.push({ x: tx, y: ty, tilesetId: activeTilesetId, tileIndex: chosen });
+                    } else if (selectedTileIndex !== null) {
+                        tilesToPaint.push({ x: tx, y: ty, tilesetId: activeTilesetId, tileIndex: selectedTileIndex });
                     }
                 } else if (activeTilesetId && selectedTileIndex !== null) {
                     tilesToPaint.push({ x: tx, y: ty, tilesetId: activeTilesetId, tileIndex: selectedTileIndex });
@@ -212,7 +240,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (tilesToErase.length > 0) {
             eraseTilesBatch(selectedLayerId, tilesToErase);
         }
-    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, getPattern, paintTilesBatch, eraseTilesBatch]);
+    }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, activeTool, tilesets, getPattern, paintTilesBatch, eraseTilesBatch]);
 
     // Handle pointer down
     const handlePointerDown = useCallback((e: PointerEvent) => {
@@ -236,9 +264,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                        worldPos.y >= ey && worldPos.y < ey + DEFAULT_TILE_SIZE;
             });
             selectEntity(hit?.id || null);
-        } else if (activeTool === 'tilePaint' || activeTool === 'tileErase') {
+        } else if (activeTool === 'tilePaint' || activeTool === 'randomTile' || activeTool === 'tileErase') {
             if (drawMode === 'point') {
-                applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, activeTool === 'tilePaint' ? 'paint' : 'erase');
+                applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
             } else {
                 drawStartRef.current = { x: tx, y: ty };
                 isDrawingRef.current = true;
@@ -281,14 +309,33 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (e.buttons === 1 && !e.altKey && drawMode === 'point' && selectedLayerId && tile) {
             const { x: tx, y: ty } = tile;
             if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-                if (activeTool === 'tilePaint' && activeTilesetId && selectedTileIndex !== null) {
-                    paintTile(selectedLayerId, tx, ty, activeTilesetId, selectedTileIndex);
+                if ((activeTool === 'tilePaint' || activeTool === 'randomTile') && activeTilesetId) {
+                    if (activeTool === 'randomTile' && selectedTileIndices && selectedTileIndices.length > 0) {
+                        // Sample per-tile for randomTile
+                        const ts = tilesets.get(activeTilesetId);
+                        const weights = selectedTileIndices.map(i => {
+                            const def = ts?.tiles?.[i];
+                            return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
+                        });
+                        const total = weights.reduce((a, b) => a + b, 0);
+                        let chosen = selectedTileIndex;
+                        if (total > 0) {
+                            let r = Math.random() * total;
+                            for (let k = 0; k < selectedTileIndices.length; k++) {
+                                r -= weights[k];
+                                if (r <= 0) { chosen = selectedTileIndices[k]; break; }
+                            }
+                        }
+                        if (chosen !== null) paintTile(selectedLayerId, tx, ty, activeTilesetId, chosen);
+                    } else if (selectedTileIndex !== null) {
+                        paintTile(selectedLayerId, tx, ty, activeTilesetId, selectedTileIndex);
+                    }
                 } else if (activeTool === 'tileErase') {
                     eraseTile(selectedLayerId, tx, ty);
                 }
             }
         }
-    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTileIndex, screenToTile, setHoveredTile, paintTile, eraseTile]);
+    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTileIndex, selectedTileIndices, tilesets, screenToTile, setHoveredTile, paintTile, eraseTile]);
 
     // Handle pointer up
     const handlePointerUp = useCallback((e: PointerEvent) => {
@@ -297,7 +344,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             // Clear preview immediately to avoid flicker after commit
             setDrawPreview({ isDrawing: false, start: null, end: null });
             if (tile) {
-                applyShape(drawMode, drawStartRef.current, tile, activeTool === 'tilePaint' ? 'paint' : 'erase');
+                applyShape(drawMode, drawStartRef.current, tile, (activeTool === 'tilePaint' || activeTool === 'randomTile') ? 'paint' : 'erase');
             }
         }
         isDrawingRef.current = false;
