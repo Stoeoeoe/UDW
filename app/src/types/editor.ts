@@ -90,6 +90,7 @@ export type ToolType =
     | "stamp"
     | "random"
     | "erase"
+    | "eyedropper"
     | "fill"            // Phase 2
     | "entityPlace"
     | "entitySelect"

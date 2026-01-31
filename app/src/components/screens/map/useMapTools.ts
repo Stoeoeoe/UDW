@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { resolveEntities } from '../../../lib/mapUtils';
+import { resolveEntities, resolveTileAt } from '../../../lib/mapUtils';
 import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 
@@ -31,6 +31,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const selectEntity = useEditorStore(state => state.selectEntity);
     const setHoveredTile = useEditorStore(state => state.setHoveredTile);
     const setDrawPreview = useEditorStore(state => state.setDrawPreview);
+    const setSelectedTile = useEditorStore(state => state.setSelectedTile);
+    const setActiveTileset = useEditorStore(state => state.setActiveTileset);
 
     const isDrawingRef = useRef(false);
     const drawStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -293,10 +295,34 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const handlePointerDown = useCallback((e: PointerEvent) => {
         if (!viewport || !currentMap) return;
 
-        // Let viewport handle middle mouse and alt+left for panning
-        if (e.button === 1 || (e.button === 0 && e.altKey)) return;
+        // Let viewport handle middle mouse for panning
+        if (e.button === 1) return;
 
         const tile = screenToTile(e.clientX, e.clientY);
+        if (!tile) return;
+
+        // ALT+Left Click = Eyedropper: pick tile under cursor (when in stamp/random mode)
+        // OR when eyedropper tool is active, just click to pick
+        if (e.button === 0 && ((e.altKey && (activeTool === 'stamp' || activeTool === 'random')) || activeTool === 'eyedropper')) {
+            if (!selectedLayerId) return;
+            const { x: tx, y: ty } = tile;
+            if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
+            
+            const tileRef = resolveTileAt(currentMap, selectedLayerId, tx, ty, activeVariationId);
+            if (tileRef) {
+                // Parse tile reference format: "tilesetId:tileIndex"
+                const colonIdx = tileRef.lastIndexOf(':');
+                if (colonIdx > 0) {
+                    const tilesetId = tileRef.substring(0, colonIdx);
+                    const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
+                    if (!isNaN(tileIndex)) {
+                        setActiveTileset(tilesetId);
+                        setSelectedTile(tileIndex);
+                    }
+                }
+            }
+            return;
+        }
         if (!tile) return;
 
         const { x: tx, y: ty } = tile;
@@ -367,7 +393,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 });
             }
         }
-    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, screenToTile, applyShape, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview]);
+    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, screenToTile, applyShape, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview, setSelectedTile, setActiveTileset]);
 
     // Handle pointer move
     const handlePointerMove = useCallback((e: PointerEvent) => {

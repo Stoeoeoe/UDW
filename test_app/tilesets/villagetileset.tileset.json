@@ -19,7 +19,8 @@
         null,
         null,
         null
-      ]
+      ],
+      "probability": 0.2
     },
     "1": {
       "id": "tile_1_0",
@@ -286,14 +287,27 @@
       "spriteIndex": 33,
       "collision": {
         "type": "none"
-      }
+      },
+      "probability": 0.2,
+      "terrainCorners": [
+        "water",
+        "water",
+        "grass",
+        "grass"
+      ]
     },
     "34": {
       "id": "tile_2_1",
       "spriteIndex": 34,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        null,
+        "water",
+        null
+      ]
     },
     "35": {
       "id": "tile_3_1",
@@ -552,14 +566,26 @@
       "spriteIndex": 65,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        "water",
+        null,
+        null
+      ]
     },
     "66": {
       "id": "tile_2_2",
       "spriteIndex": 66,
       "collision": {
         "type": "none"
-      }
+      },
+      "terrainCorners": [
+        "water",
+        null,
+        null,
+        null
+      ]
     },
     "67": {
       "id": "tile_3_2",

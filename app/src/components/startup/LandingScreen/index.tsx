@@ -139,7 +139,7 @@ export const LandingScreen: React.FC = () => {
                 </VStack>
 
                 <Text fontSize="xs" color="gray.700">
-                    Map Editor v1.0.0-alpha • Powered by Chakra UI & React
+                    Map Editor v1.0.0-alpha • Powered by Raven Dung
                 </Text>
             </VStack>
 
