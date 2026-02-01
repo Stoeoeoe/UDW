@@ -58,6 +58,31 @@ export const ToolPropertiesPanel: React.FC = () => {
         return (
             <PanelShell title={getToolName()}>
                 <VStack align="stretch" spacing={4} p={3}>
+                    {/* Shape Selector - same as tile tools */}
+                    <Box>
+                        <Text fontSize="xs" color="gray.400" mb={2} fontWeight="medium">Shape</Text>
+                        <HStack spacing={1} flexWrap="wrap">
+                            {DRAW_MODE_OPTIONS.filter(opt => opt.id !== 'flood').map(option => {
+                                const Icon = option.icon;
+                                const isActive = drawMode === option.id;
+                                return (
+                                    <Tooltip key={option.id} label={option.label} placement="top" hasArrow>
+                                        <Button
+                                            size="sm"
+                                            variant={isActive ? 'solid' : 'ghost'}
+                                            colorScheme={isActive ? 'blue' : 'gray'}
+                                            onClick={() => setDrawMode(option.id)}
+                                            p={2}
+                                            minW="32px"
+                                        >
+                                            <Icon />
+                                        </Button>
+                                    </Tooltip>
+                                );
+                            })}
+                        </HStack>
+                    </Box>
+
                     {/* Terrain Type Selector */}
                     <Box>
                         <Text fontSize="xs" color="gray.400" mb={2} fontWeight="medium">Terrain Type</Text>
@@ -86,25 +111,46 @@ export const ToolPropertiesPanel: React.FC = () => {
                                         </Text>
                                     </HStack>
                                 ))}
-                                <HStack
-                                    spacing={3}
-                                    align="center"
-                                    px={3}
-                                    py={2}
-                                    rounded="md"
-                                    cursor="pointer"
-                                    bg={selectedTerrainId === null ? 'blue.700' : 'transparent'}
-                                    _hover={{ bg: selectedTerrainId === null ? 'blue.600' : 'gray.700' }}
-                                    onClick={() => setSelectedTerrain(null)}
-                                >
-                                    <Circle size="14px" bg="gray.500" />
-                                    <Text fontSize="sm" flex={1} fontWeight={selectedTerrainId === null ? 'semibold' : 'normal'} color={selectedTerrainId === null ? 'white' : 'gray.300'}>
-                                        Erase
-                                    </Text>
-                                </HStack>
                             </VStack>
                         )}
                     </Box>
+
+                    {/* Brush Size for Point Mode */}
+                    {drawMode === 'point' && (
+                        <>
+                            <Divider borderColor="gray.700" />
+                            <Box>
+                                <HStack justify="space-between" mb={2}>
+                                    <Text fontSize="xs" color="gray.400" fontWeight="medium">Brush Size</Text>
+                                    <Text fontSize="xs" color="gray.300" fontWeight="bold">{brushSize}</Text>
+                                </HStack>
+                                <Slider
+                                    aria-label="Brush size"
+                                    min={1}
+                                    max={10}
+                                    step={1}
+                                    value={brushSize}
+                                    onChange={setBrushSize}
+                                    onMouseEnter={() => setShowTooltip(true)}
+                                    onMouseLeave={() => setShowTooltip(false)}
+                                >
+                                    <SliderTrack bg="gray.600">
+                                        <SliderFilledTrack bg="blue.500" />
+                                    </SliderTrack>
+                                    <Tooltip
+                                        hasArrow
+                                        bg="blue.500"
+                                        color="white"
+                                        placement="top"
+                                        isOpen={showTooltip}
+                                        label={brushSize}
+                                    >
+                                        <SliderThumb boxSize={4} />
+                                    </Tooltip>
+                                </Slider>
+                            </Box>
+                        </>
+                    )}
 
                     {/* Help text */}
                     <Box pt={2}>

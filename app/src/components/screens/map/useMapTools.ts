@@ -6,9 +6,9 @@ import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import {
     buildTerrainGridFromLayer,
-    applyTerrainAtCorner,
+    applyTerrainToTile,
     getCornerTerrainsForTile,
-    findBestMatchingTile
+    findBestMatchingTileWithFallback,
 } from '../../../lib/terrainUtils';
 import { buildPatternFromSelection } from '../../../lib/tileUtils';
 import { sampleRandomTile } from '../../../lib/randomUtils';
@@ -261,49 +261,107 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
     }, [currentMap, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, activeTool, tilesets, getPattern, paintTilesBatch, eraseTilesBatch]);
 
-    // Apply terrain brush at a corner point (intersection of 4 tiles)
-    const applyTerrainBrush = useCallback((cornerX: number, cornerY: number, terrainId: string | null) => {
+    // Apply terrain brush over a shape (point, rect, circle, line)
+    const applyTerrainShape = useCallback((
+        mode: 'point' | 'rect' | 'circle' | 'line',
+        start: { x: number; y: number },
+        end: { x: number; y: number },
+        terrainId: string | null
+    ) => {
         if (!currentMap || !selectedLayerId || !activeTilesetId) return;
         
         const tileset = tilesets.get(activeTilesetId);
         if (!tileset) return;
 
-        // Get the layer data
         const layer = currentMap.layers.find(l => l.id === selectedLayerId);
         if (!layer) return;
 
-        // Build or update terrain grid from current layer
-        if (terrainGridRef.current.size === 0) {
-            terrainGridRef.current = buildTerrainGridFromLayer(layer.data, tilesets);
+        // Get brush size for point and line modes
+        const currentBrushSize = useEditorStore.getState().brushSize;
+        const effectiveBrushSize = (mode === 'point' || mode === 'line') ? currentBrushSize : 1;
+
+        // Helper to collect tiles in a circular brush
+        const collectBrush = (cx: number, cy: number, positions: Array<{ x: number; y: number }>) => {
+            for (const { x, y } of circularBrush(cx, cy, effectiveBrushSize)) {
+                if (x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
+                    positions.push({ x, y });
+                }
+            }
+        };
+
+        // Collect all tile positions to paint
+        const positions: Array<{ x: number; y: number }> = [];
+
+        if (mode === 'point') {
+            collectBrush(end.x, end.y, positions);
+        } else if (mode === 'rect') {
+            const minX = Math.min(start.x, end.x);
+            const maxX = Math.max(start.x, end.x);
+            const minY = Math.min(start.y, end.y);
+            const maxY = Math.max(start.y, end.y);
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    if (x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
+                        positions.push({ x, y });
+                    }
+                }
+            }
+        } else if (mode === 'circle') {
+            const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+            const minX = Math.floor(start.x - radius);
+            const maxX = Math.ceil(start.x + radius);
+            const minY = Math.floor(start.y - radius);
+            const maxY = Math.ceil(start.y + radius);
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const dist = Math.sqrt(Math.pow(x - start.x, 2) + Math.pow(y - start.y, 2));
+                    if (dist <= radius && x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
+                        positions.push({ x, y });
+                    }
+                }
+            }
+        } else if (mode === 'line') {
+            for (const { x, y } of bresenhamLine(start.x, start.y, end.x, end.y)) {
+                collectBrush(x, y, positions);
+            }
         }
 
-        // Apply terrain at the corner point and get affected tiles
-        const tilesToUpdate = applyTerrainAtCorner(
-            cornerX,
-            cornerY,
-            terrainId,
-            terrainGridRef.current,
-            currentMap.width,
-            currentMap.height
-        );
+        if (positions.length === 0) return;
 
-        // For each affected tile, find the best matching tile and paint it
+        // Build terrain grid fresh for this operation
+        terrainGridRef.current = buildTerrainGridFromLayer(layer.data, tilesets);
+
+        // Apply terrain to all positions and collect all affected tiles
+        const allTilesToUpdate = new Map<string, { tileX: number; tileY: number }>();
+
+        for (const pos of positions) {
+            const tilesToUpdate = applyTerrainToTile(
+                pos.x,
+                pos.y,
+                terrainId,
+                terrainGridRef.current,
+                currentMap.width,
+                currentMap.height
+            );
+            for (const tile of tilesToUpdate) {
+                allTilesToUpdate.set(`${tile.tileX},${tile.tileY}`, tile);
+            }
+        }
+
+        // Resolve tiles and paint
         const tilesToPaint: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }> = [];
         const tilesToErase: Array<{ x: number; y: number }> = [];
 
-        for (const { tileX, tileY } of tilesToUpdate) {
+        for (const { tileX, tileY } of allTilesToUpdate.values()) {
             if (tileX < 0 || tileX >= currentMap.width || tileY < 0 || tileY >= currentMap.height) continue;
 
             const corners = getCornerTerrainsForTile(tileX, tileY, terrainGridRef.current);
-            const matchingTile = findBestMatchingTile(tileset, corners);
+            const matchingTile = findBestMatchingTileWithFallback(tileset, corners, true);
 
             if (matchingTile !== null) {
                 tilesToPaint.push({ x: tileX, y: tileY, tilesetId: activeTilesetId, tileIndex: matchingTile });
-            } else {
-                // No matching tile found - if all corners are null, erase the tile
-                if (corners.every(c => c === null)) {
-                    tilesToErase.push({ x: tileX, y: tileY });
-                }
+            } else if (corners.every(c => c === null)) {
+                tilesToErase.push({ x: tileX, y: tileY });
             }
         }
 
@@ -402,9 +460,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             terrainGridRef.current = new Map();
             lastTerrainPaintRef.current = { x: tx, y: ty };
             isDrawingRef.current = true;
+            drawStartRef.current = { x: tx, y: ty };
             
-            // Apply terrain at the tile position (corner-based painting)
-            applyTerrainBrush(tx, ty, selectedTerrainId);
+            if (drawMode === 'point') {
+                // Point mode: paint immediately on click with brush size support
+                applyTerrainShape('point', { x: tx, y: ty }, { x: tx, y: ty }, selectedTerrainId);
+            } else {
+                // Rect, circle, line modes: show preview, apply on release
+                setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty }, mode: 'draw' });
+            }
         } else if (activeTool === 'entityPlace' && selectedEntityTypeId) {
             const type = DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntityTypeId);
             if (type) {
@@ -416,7 +480,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 });
             }
         }
-    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, selectedTerrainId, screenToTile, applyShape, applyTerrainBrush, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview]);
+    }, [viewport, currentMap, activeTool, drawMode, selectedLayerId, activeTilesetId, selectedTileIndex, selectedTileIndices, selectedEntityTypeId, activeVariationId, selectedTerrainId, screenToTile, applyShape, applyTerrainShape, selectEntity, bucketFillAdvanced, getPattern, placeEntity, setDrawPreview]);
 
     // Handle pointer move
     const handlePointerMove = useCallback((e: PointerEvent) => {
@@ -433,15 +497,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         isShiftHeldRef.current = e.shiftKey;
 
         // Show line preview when in point mode with anchor and shift held
-        if (drawMode === 'point' && lineAnchorRef.current && tile && e.shiftKey) {
+        if (drawMode === 'point' && lineAnchorRef.current && tile && e.shiftKey && activeTool !== 'terrain') {
             setDrawPreview({ isDrawing: true, start: lineAnchorRef.current, end: { x: tile.x, y: tile.y }, mode: 'draw' });
-        } else if (drawMode === 'point' && !e.shiftKey && !isDrawingRef.current) {
+        } else if (drawMode === 'point' && !e.shiftKey && !isDrawingRef.current && activeTool !== 'terrain') {
             // Clear line preview when shift released in point mode
             setDrawPreview({ isDrawing: false, start: null, end: null });
         }
 
-        // Update live draw preview while dragging a rect/circle/line
-        if (isDrawingRef.current && drawStartRef.current && tile) {
+        // Update live draw preview while dragging a rect/circle/line (for both tile tools and terrain)
+        if (isDrawingRef.current && drawStartRef.current && tile && drawMode !== 'point') {
             setDrawPreview({ isDrawing: true, start: drawStartRef.current, end: { x: tile.x, y: tile.y }, mode: 'draw' });
         }
 
@@ -457,14 +521,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             }
         }
 
-        // Continuous terrain painting while dragging
-        if (e.buttons === 1 && activeTool === 'terrain' && isDrawingRef.current && tile) {
+        // Continuous terrain painting while dragging (point mode only) - use applyTerrainShape for brush support
+        if (e.buttons === 1 && activeTool === 'terrain' && isDrawingRef.current && tile && drawMode === 'point') {
             const { x: tx, y: ty } = tile;
             // Only paint if we've moved to a new position
             if (lastTerrainPaintRef.current?.x !== tx || lastTerrainPaintRef.current?.y !== ty) {
                 lastTerrainPaintRef.current = { x: tx, y: ty };
                 if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-                    applyTerrainBrush(tx, ty, selectedTerrainId);
+                    applyTerrainShape('point', { x: tx, y: ty }, { x: tx, y: ty }, selectedTerrainId);
                 }
             }
         }
@@ -473,7 +537,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (e.buttons === 2 && isSamplingRef.current && sampleStartRef.current && tile) {
             setDrawPreview({ isDrawing: true, start: sampleStartRef.current, end: { x: tile.x, y: tile.y }, mode: 'select' });
         }
-    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTerrainId, screenToTile, setHoveredTile, setDrawPreview, applyShape, applyTerrainBrush]);
+    }, [viewport, currentMap, drawMode, selectedLayerId, activeTool, activeTilesetId, selectedTerrainId, screenToTile, setHoveredTile, setDrawPreview, applyShape, applyTerrainShape]);
 
     // Handle pointer up
     const handlePointerUp = useCallback((e: PointerEvent) => {
@@ -611,6 +675,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             return;
         }
 
+        // Handle terrain shape drawing on pointer up
+        if (isDrawingRef.current && drawStartRef.current && currentMap && activeTool === 'terrain' && drawMode !== 'point') {
+            const tile = screenToTile(e.clientX, e.clientY);
+            setDrawPreview({ isDrawing: false, start: null, end: null });
+            if (tile) {
+                applyTerrainShape(drawMode as 'rect' | 'circle' | 'line', drawStartRef.current, tile, selectedTerrainId);
+            }
+        }
+
         if (isDrawingRef.current && drawStartRef.current && currentMap && drawMode !== 'flood' && activeTool !== 'terrain') {
             const tile = screenToTile(e.clientX, e.clientY);
             // Clear preview immediately to avoid flicker after commit
@@ -623,7 +696,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         drawStartRef.current = null;
         lastTerrainPaintRef.current = null;
         setDrawPreview({ isDrawing: false, start: null, end: null });
-    }, [currentMap, selectedLayerId, activeVariationId, drawMode, activeTool, tilesets, screenToTile, applyShape, setDrawPreview, setActiveTileset, setSelectedTile, setSelectedTiles, setSampledPattern]);
+    }, [currentMap, selectedLayerId, activeVariationId, drawMode, activeTool, selectedTerrainId, tilesets, screenToTile, applyShape, applyTerrainShape, setDrawPreview, setActiveTileset, setSelectedTile, setSelectedTiles, setSampledPattern]);
 
     // Set up event listeners
     useEffect(() => {

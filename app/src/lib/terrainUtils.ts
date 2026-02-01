@@ -46,6 +46,114 @@ export function findMatchingTiles(
 }
 
 /**
+ * Score how well a tile's terrain corners match the target configuration.
+ * Returns a score from 0-4 (number of matching corners).
+ * null corners in the target match null corners in the tile.
+ */
+export function scoreTileMatch(
+    tileCorners: (string | null)[],
+    targetCorners: TerrainCorners
+): number {
+    let score = 0;
+    for (let i = 0; i < 4; i++) {
+        const tileVal = tileCorners[i] ?? null;
+        const targetVal = targetCorners[i];
+        if (tileVal === targetVal) {
+            score++;
+        }
+    }
+    return score;
+}
+
+/**
+ * Find tiles that have at least one corner matching the target terrain.
+ * Useful for finding fallback tiles when no exact match exists.
+ * Returns tiles sorted by match score (best first).
+ */
+export function findFuzzyMatchingTiles(
+    tileset: Tileset,
+    corners: TerrainCorners,
+    minScore: number = 1
+): Array<{ index: number; score: number }> {
+    const matches: Array<{ index: number; score: number }> = [];
+
+    for (const [indexStr, tileDef] of Object.entries(tileset.tiles)) {
+        const index = parseInt(indexStr, 10);
+        if (isNaN(index)) continue;
+
+        const tileCorners = tileDef.terrainCorners;
+        // Skip tiles without terrain corners defined
+        if (!tileCorners) continue;
+
+        const score = scoreTileMatch(tileCorners, corners);
+        if (score >= minScore) {
+            matches.push({ index, score });
+        }
+    }
+
+    // Sort by score descending
+    matches.sort((a, b) => b.score - a.score);
+    return matches;
+}
+
+/**
+ * Find the best matching tile, with fallback to fuzzy matching.
+ * If an exact match exists, returns it. Otherwise, finds the closest match.
+ * 
+ * For partial corner configurations (like outer corners with only 1 terrain corner),
+ * this will try progressively lower thresholds to find a suitable match.
+ * 
+ * @param tileset The tileset to search in
+ * @param corners The target corner configuration
+ * @param fallbackToFuzzy If true, will return a fuzzy match when no exact match exists
+ * @returns The tile index, or null if no suitable match found
+ */
+export function findBestMatchingTileWithFallback(
+    tileset: Tileset,
+    corners: TerrainCorners,
+    fallbackToFuzzy: boolean = true
+): number | null {
+    // First try exact match
+    const exactMatch = findBestMatchingTile(tileset, corners);
+    if (exactMatch !== null) return exactMatch;
+
+    if (!fallbackToFuzzy) return null;
+
+    // Count how many non-null corners we have
+    const nonNullCount = corners.filter(c => c !== null).length;
+    
+    // For tiles with very few terrain corners, we need to be more lenient
+    // Require at least half the non-null corners to match, but at least 1
+    const minScore = Math.max(1, Math.ceil(nonNullCount / 2));
+    
+    // Try fuzzy matching with calculated minimum score
+    const fuzzyMatches = findFuzzyMatchingTiles(tileset, corners, minScore);
+    if (fuzzyMatches.length === 0) return null;
+
+    // Get all tiles with the best score
+    const bestScore = fuzzyMatches[0].score;
+    const bestMatches = fuzzyMatches.filter(m => m.score === bestScore);
+
+    // Use probability weights to select from best matches
+    const weights = bestMatches.map(m => {
+        const def = tileset.tiles[m.index];
+        return def && typeof def.probability === 'number' && def.probability > 0
+            ? def.probability
+            : 1;
+    });
+
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+
+    for (let i = 0; i < bestMatches.length; i++) {
+        r -= weights[i];
+        if (r <= 0) return bestMatches[i].index;
+    }
+
+    return bestMatches[bestMatches.length - 1].index;
+}
+
+/**
  * Find the best matching tile for a given corner configuration.
  * If multiple tiles match, picks one based on probability weights.
  * Returns null if no matching tile is found.
@@ -214,4 +322,142 @@ export function applyTerrainAtCorner(
     }
 
     return Array.from(unique.values());
+}
+
+/**
+ * Apply terrain paint to an entire tile (setting all 4 corners).
+ * This is useful when painting on empty tiles where we want to fill the whole tile.
+ * Also updates adjacent tiles' shared corners to maintain consistency.
+ * 
+ * IMPORTANT: Only updates neighbors that already have terrain set.
+ * When painting on an empty canvas, this will only paint the target tile.
+ * This prevents creating partial corner configurations on empty neighbors.
+ * 
+ * Returns the list of tiles that need to be re-resolved and painted.
+ */
+export function applyTerrainToTile(
+    tileX: number,
+    tileY: number,
+    terrainId: string | null,
+    terrainGrid: Map<string, string | null>,
+    mapWidth: number,
+    mapHeight: number
+): Array<{ tileX: number; tileY: number }> {
+    const key = (x: number, y: number, corner: number) => `${x},${y},${corner}`;
+    const tilesToUpdate: Array<{ tileX: number; tileY: number }> = [];
+
+    // Skip if outside map bounds
+    if (tileX < 0 || tileX >= mapWidth || tileY < 0 || tileY >= mapHeight) {
+        return [];
+    }
+
+    // Set all 4 corners of the target tile
+    terrainGrid.set(key(tileX, tileY, CORNER_TOP_LEFT), terrainId);
+    terrainGrid.set(key(tileX, tileY, CORNER_TOP_RIGHT), terrainId);
+    terrainGrid.set(key(tileX, tileY, CORNER_BOTTOM_LEFT), terrainId);
+    terrainGrid.set(key(tileX, tileY, CORNER_BOTTOM_RIGHT), terrainId);
+    tilesToUpdate.push({ tileX, tileY });
+
+    // Only update neighbors that already have terrain set
+    // This prevents creating partial corner configs on empty tiles
+    
+    // Top neighbor: update its bottom corners if it has existing terrain
+    if (tileY > 0 && hasAnyTerrain(tileX, tileY - 1, terrainGrid)) {
+        terrainGrid.set(key(tileX, tileY - 1, CORNER_BOTTOM_LEFT), terrainId);
+        terrainGrid.set(key(tileX, tileY - 1, CORNER_BOTTOM_RIGHT), terrainId);
+        tilesToUpdate.push({ tileX, tileY: tileY - 1 });
+    }
+
+    // Bottom neighbor: update its top corners if it has existing terrain
+    if (tileY < mapHeight - 1 && hasAnyTerrain(tileX, tileY + 1, terrainGrid)) {
+        terrainGrid.set(key(tileX, tileY + 1, CORNER_TOP_LEFT), terrainId);
+        terrainGrid.set(key(tileX, tileY + 1, CORNER_TOP_RIGHT), terrainId);
+        tilesToUpdate.push({ tileX, tileY: tileY + 1 });
+    }
+
+    // Left neighbor: update its right corners if it has existing terrain
+    if (tileX > 0 && hasAnyTerrain(tileX - 1, tileY, terrainGrid)) {
+        terrainGrid.set(key(tileX - 1, tileY, CORNER_TOP_RIGHT), terrainId);
+        terrainGrid.set(key(tileX - 1, tileY, CORNER_BOTTOM_RIGHT), terrainId);
+        tilesToUpdate.push({ tileX: tileX - 1, tileY });
+    }
+
+    // Right neighbor: update its left corners if it has existing terrain
+    if (tileX < mapWidth - 1 && hasAnyTerrain(tileX + 1, tileY, terrainGrid)) {
+        terrainGrid.set(key(tileX + 1, tileY, CORNER_TOP_LEFT), terrainId);
+        terrainGrid.set(key(tileX + 1, tileY, CORNER_BOTTOM_LEFT), terrainId);
+        tilesToUpdate.push({ tileX: tileX + 1, tileY });
+    }
+
+    // Corner neighbors (diagonals) - only update if they already have terrain
+    
+    // Top-left neighbor
+    if (tileX > 0 && tileY > 0 && hasAnyTerrain(tileX - 1, tileY - 1, terrainGrid)) {
+        terrainGrid.set(key(tileX - 1, tileY - 1, CORNER_BOTTOM_RIGHT), terrainId);
+        tilesToUpdate.push({ tileX: tileX - 1, tileY: tileY - 1 });
+    }
+
+    // Top-right neighbor
+    if (tileX < mapWidth - 1 && tileY > 0 && hasAnyTerrain(tileX + 1, tileY - 1, terrainGrid)) {
+        terrainGrid.set(key(tileX + 1, tileY - 1, CORNER_BOTTOM_LEFT), terrainId);
+        tilesToUpdate.push({ tileX: tileX + 1, tileY: tileY - 1 });
+    }
+
+    // Bottom-left neighbor
+    if (tileX > 0 && tileY < mapHeight - 1 && hasAnyTerrain(tileX - 1, tileY + 1, terrainGrid)) {
+        terrainGrid.set(key(tileX - 1, tileY + 1, CORNER_TOP_RIGHT), terrainId);
+        tilesToUpdate.push({ tileX: tileX - 1, tileY: tileY + 1 });
+    }
+
+    // Bottom-right neighbor
+    if (tileX < mapWidth - 1 && tileY < mapHeight - 1 && hasAnyTerrain(tileX + 1, tileY + 1, terrainGrid)) {
+        terrainGrid.set(key(tileX + 1, tileY + 1, CORNER_TOP_LEFT), terrainId);
+        tilesToUpdate.push({ tileX: tileX + 1, tileY: tileY + 1 });
+    }
+
+    // Remove duplicates
+    const unique = new Map<string, { tileX: number; tileY: number }>();
+    for (const tile of tilesToUpdate) {
+        unique.set(`${tile.tileX},${tile.tileY}`, tile);
+    }
+
+    return Array.from(unique.values());
+}
+
+/**
+ * Check if a tile has any terrain corners set (non-null).
+ */
+function hasAnyTerrain(
+    tileX: number,
+    tileY: number,
+    terrainGrid: Map<string, string | null>
+): boolean {
+    const key = (x: number, y: number, corner: number) => `${x},${y},${corner}`;
+    for (let corner = 0; corner < 4; corner++) {
+        const val = terrainGrid.get(key(tileX, tileY, corner));
+        if (val !== undefined && val !== null) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Determine if terrain should be applied as a tile fill vs corner paint.
+ * Returns true if the target tile is "empty" (has no terrain corners set).
+ */
+export function isTileEmpty(
+    tileX: number,
+    tileY: number,
+    terrainGrid: Map<string, string | null>
+): boolean {
+    const key = (x: number, y: number, corner: number) => `${x},${y},${corner}`;
+    
+    // Check if any corner has terrain set
+    for (let corner = 0; corner < 4; corner++) {
+        if (terrainGrid.has(key(tileX, tileY, corner)) && terrainGrid.get(key(tileX, tileY, corner)) !== null) {
+            return false;
+        }
+    }
+    return true;
 }

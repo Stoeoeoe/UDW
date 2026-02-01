@@ -258,7 +258,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // Render tile preview
     const renderPreview = useCallback(() => {
         const previewContainer = previewContainerRef.current;
-        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode, brushSize, sampledPattern } = useEditorStore.getState();
+        const { activeTool, activeTilesetId, hoveredTile, tilesets, currentMap, activeVariationId, selectedTileIndices, selectedTileIndex, drawPreview, drawMode, brushSize, sampledPattern, selectedTerrainId, terrainTypes } = useEditorStore.getState();
         if (!previewContainer) return;
 
         previewContainer.removeChildren();
@@ -342,6 +342,91 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             } else {
                 // Hover preview with brush
                 renderBrushErase(hoveredTile.x, hoveredTile.y);
+            }
+            return;
+        }
+
+        // Terrain tool preview - show colored brush area
+        if (activeTool === 'terrain') {
+            if (!hoveredTile) return;
+            
+            // Get terrain color from terrainTypes
+            const terrain = terrainTypes.find(t => t.id === selectedTerrainId);
+            const terrainColor = terrain ? parseInt(terrain.color.replace('#', '0x'), 16) : 0x00ff00;
+            
+            const effectiveBrushSize = (drawMode === 'point' || drawMode === 'line') ? (brushSize || 1) : 1;
+            
+            // Helper to render terrain indicator at a position
+            const renderTerrainAt = (tx: number, ty: number) => {
+                const g = new Graphics();
+                g.rect(tx * DEFAULT_TILE_SIZE, ty * DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE);
+                g.fill({ color: terrainColor, alpha: 0.4 });
+                g.stroke({ width: 1, color: terrainColor, alpha: 0.8 });
+                previewContainer.addChild(g);
+            };
+            
+            // Helper to render brush
+            const renderBrushTerrain = (cx: number, cy: number) => {
+                if (effectiveBrushSize <= 1) {
+                    renderTerrainAt(cx, cy);
+                } else {
+                    const r = effectiveBrushSize - 1;
+                    for (let dy = -r; dy <= r; dy++) {
+                        for (let dx = -r; dx <= r; dx++) {
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist <= r) {
+                                renderTerrainAt(cx + dx, cy + dy);
+                            }
+                        }
+                    }
+                }
+            };
+            
+            // Check if drawing a shape
+            const isShiftLinePreviewTerrain = drawMode === 'point' && drawPreview?.isDrawing;
+            const showShapePreviewTerrain = drawPreview && drawPreview.isDrawing && drawPreview.start && drawPreview.end && 
+                (drawMode !== 'point' || isShiftLinePreviewTerrain);
+            
+            if (showShapePreviewTerrain && drawPreview.start && drawPreview.end) {
+                const effectiveTerrainDrawMode = drawMode === 'point' ? 'line' : drawMode;
+                const sx = drawPreview.start.x;
+                const sy = drawPreview.start.y;
+                const ex = drawPreview.end.x;
+                const ey = drawPreview.end.y;
+                
+                if (effectiveTerrainDrawMode === 'rect') {
+                    const minX = Math.min(sx, ex);
+                    const maxX = Math.max(sx, ex);
+                    const minY = Math.min(sy, ey);
+                    const maxY = Math.max(sy, ey);
+                    for (let y = minY; y <= maxY; y++) {
+                        for (let x = minX; x <= maxX; x++) {
+                            renderTerrainAt(x, y);
+                        }
+                    }
+                } else if (effectiveTerrainDrawMode === 'circle') {
+                    const radius = Math.sqrt(Math.pow(ex - sx, 2) + Math.pow(ey - sy, 2));
+                    const minX = Math.floor(sx - radius);
+                    const maxX = Math.ceil(sx + radius);
+                    const minY = Math.floor(sy - radius);
+                    const maxY = Math.ceil(sy + radius);
+                    for (let y = minY; y <= maxY; y++) {
+                        for (let x = minX; x <= maxX; x++) {
+                            const dist = Math.sqrt(Math.pow(x - sx, 2) + Math.pow(y - sy, 2));
+                            if (dist <= radius) {
+                                renderTerrainAt(x, y);
+                            }
+                        }
+                    }
+                } else if (effectiveTerrainDrawMode === 'line') {
+                    // Use shared Bresenham algorithm with brush size
+                    for (const { x, y } of bresenhamLine(sx, sy, ex, ey)) {
+                        renderBrushTerrain(x, y);
+                    }
+                }
+            } else {
+                // Hover preview with brush
+                renderBrushTerrain(hoveredTile.x, hoveredTile.y);
             }
             return;
         }

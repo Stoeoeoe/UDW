@@ -44,20 +44,6 @@ export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tilese
                             <Text flex={1} fontWeight={selectedTerrainId === t.id ? 'semibold' : 'normal'} color={selectedTerrainId === t.id ? 'white' : 'gray.300'}>{t.displayName}</Text>
                         </HStack>
                     ))}
-                    <HStack
-                        spacing={3}
-                        align="center"
-                        px={3}
-                        py={2}
-                        rounded="md"
-                        cursor="pointer"
-                        bg={selectedTerrainId === null ? 'blue.700' : 'transparent'}
-                        _hover={{ bg: selectedTerrainId === null ? 'blue.600' : 'gray.800' }}
-                        onClick={() => setSelectedTerrain(null)}
-                    >
-                        <Box w={4} h={4} rounded="sm" bg="gray.500" borderWidth={1} borderColor="gray.600" />
-                        <Text flex={1} fontWeight={selectedTerrainId === null ? 'semibold' : 'normal'} color={selectedTerrainId === null ? 'white' : 'gray.300'}>None</Text>
-                    </HStack>
                 </VStack>
             )}
         </VStack>
