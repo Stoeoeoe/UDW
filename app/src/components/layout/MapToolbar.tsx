@@ -1,6 +1,7 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiTrash2, FiUser, FiShuffle, FiGrid } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiTrash2, FiUser, FiShuffle } from 'react-icons/fi';
+import { FaMountain, FaRandom } from 'react-icons/fa';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
 import { Toolbar, ToolItem } from '../common/Toolbar';
@@ -9,9 +10,9 @@ import { Toolbar, ToolItem } from '../common/Toolbar';
 const MAP_TOOLS: ToolItem[] = [
     { id: 'select', icon: FiMousePointer, label: 'Select Object (V)', group: 'generic' },
     { id: 'stamp', icon: FiEdit2, label: 'Stamp (B)', group: 'tiles' },
+    { id: 'terrain', icon: FaMountain, label: 'Terrain Brush (T)', group: 'tiles' },
     { id: 'random', icon: FiShuffle, label: 'Random (R)', group: 'tiles' },
     { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'tiles' },
-    { id: 'terrain', icon: FiGrid, label: 'Terrain Brush (T)', group: 'tiles' },
     { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
 ];
 
