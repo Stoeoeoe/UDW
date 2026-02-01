@@ -216,7 +216,6 @@ export const MapViewportPixi: React.FC = () => {
             if (e.key === 'b' || e.key === 'B') useEditorStore.getState().setActiveTool('stamp');
             if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('random');
             if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('erase');
-            if (e.key === 'i' || e.key === 'I') useEditorStore.getState().setActiveTool('eyedropper');
             if (e.key === 't' || e.key === 'T') useEditorStore.getState().setActiveTool('terrain');
             if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setDrawMode('flood'); // G for flood fill shape
             if (e.key === 'n' || e.key === 'N') useEditorStore.getState().setActiveTool('entityPlace');

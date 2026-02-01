@@ -98,7 +98,6 @@ export type ToolType =
     | "stamp"
     | "random"
     | "erase"
-    | "eyedropper"
     | "terrain"         // Terrain brush for autotiling
     | "fill"            // Phase 2
     | "entityPlace"

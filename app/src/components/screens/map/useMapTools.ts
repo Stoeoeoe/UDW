@@ -326,8 +326,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (!tile) return;
 
         // Right Click = Eyedropper: sample tiles from map (supports drag for multi-tile patterns)
-        // Works in stamp/random/erase modes or when eyedropper tool is active
-        if (e.button === 2 && ((activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') || activeTool === 'eyedropper')) {
+        // Works in stamp/random/erase modes
+        if (e.button === 2 && ((activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase'))) {
             if (!selectedLayerId) return;
             const { x: tx, y: ty } = tile;
             if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
