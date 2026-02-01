@@ -105,6 +105,7 @@ describe('useEditorStore', () => {
             width: 10,
             height: 10,
             baseTilesetId: 'village',
+            tilesetRefs: ['village'],
             layers: [
                 {
                     id: 'ground',
@@ -130,7 +131,7 @@ describe('useEditorStore', () => {
             paintTile('ground', 0, 0, 'village', 5);
 
             const state = useEditorStore.getState();
-            expect(state.currentMap?.layers[0].data[0][0]).toBe('village:5');
+            expect(state.currentMap?.layers[0].data[0][0]).toBe(5); // Encoded: 0 << 16 | 5
         });
 
         it('should add a variation', () => {

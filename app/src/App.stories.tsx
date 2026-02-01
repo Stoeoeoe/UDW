@@ -22,18 +22,19 @@ const MOCK_MAP: Map = {
     width: 20,
     height: 15,
     baseTilesetId: "town",
+    tilesetRefs: ["town"],
     layers: [
         {
             id: "l1", name: "Ground", kind: "visual" as LayerKind, visible: true, locked: false, opacity: 1, zOrder: 0,
-            data: Array(15).fill(Array(20).fill("grass_01"))
+            data: Array(15).fill(Array(20).fill(0))
         },
         {
             id: "l2", name: "Decoration", kind: "visual" as LayerKind, visible: true, locked: false, opacity: 1, zOrder: 1,
-            data: []
+            data: Array(15).fill(Array(20).fill(null))
         },
         {
             id: "l3", name: "Collision", kind: "collision" as LayerKind, visible: false, locked: true, opacity: 0.5, zOrder: 2,
-            data: []
+            data: Array(15).fill(Array(20).fill(null))
         }
     ],
     entities: [

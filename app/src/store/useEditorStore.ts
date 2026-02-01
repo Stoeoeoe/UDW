@@ -11,13 +11,19 @@ import { samplePatternAt, createTileRef } from '../lib/tileUtils';
 import { fileSystem } from '../lib/fileSystem';
 import { floodFillCollect } from '../lib/algorithms';
 import { saveMapDebounced, useSaveStore } from '../lib/saveManager';
+import { encodeTileRef } from '../lib/tileRef';
 
 // ============================================================================
 // Helper functions for layer management
 // ============================================================================
 
 /** Creates an empty 2D grid filled with null values */
-function createEmptyGrid(width: number, height: number): (string | null)[][] {
+function createEmptyGrid(width: number, height: number): (number | null)[][] {
+    return Array.from({ length: height }, () => Array(width).fill(null));
+}
+
+/** Creates an empty 2D grid filled with null values for variations */
+function createEmptyStringGrid(width: number, height: number): (string | null)[][] {
     return Array.from({ length: height }, () => Array(width).fill(null));
 }
 
@@ -85,7 +91,7 @@ function ensureVariationLayerOverride(variation: Variation, layerId: string, wid
     if (!variation.layerOverrides[layerId]) {
         variation.layerOverrides[layerId] = {
             mode: 'merge',
-            data: createEmptyGrid(width, height)
+            data: createEmptyStringGrid(width, height)
         };
     }
 }
@@ -103,13 +109,14 @@ function setTileInState(
         const variation = map.variations?.find(v => v.id === activeVariationId);
         if (variation) {
             ensureVariationLayerOverride(variation, layerId, map.width, map.height);
-            variation.layerOverrides![layerId].data[y][x] = value;
+            variation.layerOverrides![layerId].data[y][x] = value; // Keep as string for variations
             return;
         }
     }
+    const encodedValue = value ? encodeTileRef(value, map.tilesetRefs) : null;
     const layer = map.layers.find(l => l.id === layerId);
     if (layer && layer.data[y] && !layer.locked) {
-        layer.data[y][x] = value;
+        layer.data[y][x] = encodedValue;
     }
 }
 
@@ -430,6 +437,7 @@ export const useEditorStore = create<EditorStore>()(
                 width,
                 height,
                 baseTilesetId: tilesetId,
+                tilesetRefs: [tilesetId], // Start with base tileset
                 layers,
                 entities: []
             };

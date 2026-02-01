@@ -1,4 +1,5 @@
 import { Tileset } from '../types/schema';
+import { decodeTileRef } from './tileRef';
 
 /**
  * Corner indices for terrainCorners array:
@@ -249,8 +250,9 @@ export function getCornerTerrainsForTile(
  * This extracts the terrainCorners from each tile and builds a lookup map.
  */
 export function buildTerrainGridFromLayer(
-    layerData: (string | null)[][],
-    tilesets: Map<string, Tileset>
+    layerData: (number | null)[][],
+    tilesets: Map<string, Tileset>,
+    tilesetRefs: string[]
 ): Map<string, string | null> {
     const grid = new Map<string, string | null>();
     const key = (x: number, y: number, corner: number) => `${x},${y},${corner}`;
@@ -260,7 +262,11 @@ export function buildTerrainGridFromLayer(
         if (!row) continue;
 
         for (let x = 0; x < row.length; x++) {
-            const tileRef = row[x];
+            const encoded = row[x];
+            if (encoded === null) continue;
+
+            // Decode tile reference
+            const tileRef = typeof encoded === 'string' ? encoded : decodeTileRef(encoded, tilesetRefs);
             if (!tileRef) continue;
 
             // Parse tile reference "tilesetId:tileIndex"

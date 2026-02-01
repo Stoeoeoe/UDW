@@ -10,6 +10,7 @@ describe('mapUtils', () => {
         width: 2,
         height: 2,
         baseTilesetId: 'ts1',
+        tilesetRefs: ['ts1'],
         layers: [
             {
                 id: 'l1',
@@ -20,8 +21,8 @@ describe('mapUtils', () => {
                 opacity: 1,
                 zOrder: 0,
                 data: [
-                    ['ts1:0', 'ts1:1'],
-                    ['ts1:2', 'ts1:3']
+                    [0, 1],
+                    [2, 3]
                 ]
             }
         ],

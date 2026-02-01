@@ -5,6 +5,7 @@
  */
 
 import { Project, Map as GameMap, Tileset } from '../types/schema';
+import { migrateMapToEncodedData } from './tileRef';
 
 // Types for Web API fallback
 interface FileSystemHandle {
@@ -113,10 +114,11 @@ export class FileSystemManager {
      */
     async loadAllMaps(): Promise<GameMap[]> {
         if (this.isElectron()) {
-            return await (window as any).ipcRenderer.invoke('app:fs-read-dir', {
+            const maps = await (window as any).ipcRenderer.invoke('app:fs-read-dir', {
                 projectPath: this.projectPath,
                 subDir: 'maps'
             });
+            return maps.map(migrateMapToEncodedData);
         } else {
             if (!this.projectRoot) throw new Error("No project open.");
             const maps: GameMap[] = [];
@@ -124,7 +126,8 @@ export class FileSystemManager {
             for await (const entry of dir.values()) {
                 if (entry.kind === 'file' && entry.name.endsWith('.map.json')) {
                     const file = await (entry as FileSystemFileHandle).getFile();
-                    maps.push(JSON.parse(await file.text()));
+                    const mapData = JSON.parse(await file.text());
+                    maps.push(migrateMapToEncodedData(mapData));
                 }
             }
             return maps;

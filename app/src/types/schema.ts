@@ -96,6 +96,7 @@ export interface Map {
     width: number;                // Width in tiles
     height: number;               // Height in tiles
     baseTilesetId: string;        // Reference to tileset
+    tilesetRefs: string[];        // Ordered list of tileset IDs used in this map
     layers: Layer[];
     entities: EntityInstance[];
     spatialPrimitives?: SpatialPrimitives;  // Optional paths/areas/anchors
@@ -112,7 +113,7 @@ export interface Layer {
     opacity: number;              // 0.0 to 1.0
     zOrder: number;               // Rendering order
     icon?: string;                // Optional icon identifier
-    data: (string | null)[][];    // Tile IDs, row-major [y][x]
+    data: (number | null)[][];    // Encoded tile IDs, row-major [y][x] (tilesetIndex << 16 | tileIndex)
     definitionId?: string;        // Reference to LayerDefinition (if from project template)
 }
 

@@ -317,20 +317,20 @@ describe('buildTerrainGridFromLayer', () => {
     tilesets.set('test-tileset', tileset);
 
     it('should build empty grid from empty layer', () => {
-        const layerData: (string | null)[][] = [
+        const layerData: (number | null)[][] = [
             [null, null],
             [null, null],
         ];
-        const grid = buildTerrainGridFromLayer(layerData, tilesets);
+        const grid = buildTerrainGridFromLayer(layerData, tilesets, []);
         expect(grid.size).toBe(0);
     });
 
     it('should extract terrain corners from tiles', () => {
-        const layerData: (string | null)[][] = [
-            ['test-tileset:0', null], // All grass tile at (0,0)
+        const layerData: (number | null)[][] = [
+            [0, null], // Encoded tile 0 (test-tileset:0)
             [null, null],
         ];
-        const grid = buildTerrainGridFromLayer(layerData, tilesets);
+        const grid = buildTerrainGridFromLayer(layerData, tilesets, ['test-tileset']);
         
         expect(grid.get('0,0,0')).toBe('grass');
         expect(grid.get('0,0,1')).toBe('grass');
@@ -339,11 +339,11 @@ describe('buildTerrainGridFromLayer', () => {
     });
 
     it('should handle multiple tiles', () => {
-        const layerData: (string | null)[][] = [
-            ['test-tileset:0', 'test-tileset:1'], // Grass, Water
+        const layerData: (number | null)[][] = [
+            [0, 1], // Encoded tiles 0 and 1 (test-tileset:0, test-tileset:1)
             [null, null],
         ];
-        const grid = buildTerrainGridFromLayer(layerData, tilesets);
+        const grid = buildTerrainGridFromLayer(layerData, tilesets, ['test-tileset']);
         
         // Tile (0,0) should be all grass
         expect(grid.get('0,0,0')).toBe('grass');
@@ -414,7 +414,7 @@ describe('applyTerrainToTile', () => {
 
     it('should NOT update empty edge neighbors', () => {
         // When painting on empty canvas, edge neighbors should NOT be updated
-        const tiles = applyTerrainToTile(2, 2, 'grass', grid, 5, 5);
+        applyTerrainToTile(2, 2, 'grass', grid, 5, 5);
         
         // Edge neighbors should NOT have their corners set since they're empty
         expect(grid.get('2,1,2')).toBeUndefined(); // Top neighbor's bottom-left
@@ -443,7 +443,7 @@ describe('applyTerrainToTile', () => {
     });
 
     it('should NOT update empty diagonal neighbors', () => {
-        const tiles = applyTerrainToTile(2, 2, 'grass', grid, 5, 5);
+        applyTerrainToTile(2, 2, 'grass', grid, 5, 5);
         
         // Diagonal neighbors should NOT have their corners set since they're empty
         expect(grid.get('1,1,3')).toBeUndefined(); // Top-left's bottom-right

@@ -51,7 +51,8 @@ describe('getTileWeight', () => {
             tileWidth: 16,
             tileHeight: 16,
             columns: 4,
-            tiles: [{ collision: false }],
+            tileCount: 1,
+            tiles: [{ collision: { type: 'none' } }],
         };
         const result = getTileWeight(tileset, 0);
         expect(result).toBe(1);
@@ -66,7 +67,8 @@ describe('getTileWeight', () => {
             tileWidth: 16,
             tileHeight: 16,
             columns: 4,
-            tiles: [{ collision: false, probability: 0.5 }],
+            tileCount: 1,
+            tiles: [{ collision: { type: 'none' }, probability: 0.5 }],
         };
         const result = getTileWeight(tileset, 0);
         expect(result).toBe(0.5);
@@ -81,7 +83,8 @@ describe('getTileWeight', () => {
             tileWidth: 16,
             tileHeight: 16,
             columns: 4,
-            tiles: [{ collision: false, probability: 0 }],
+            tileCount: 1,
+            tiles: [{ collision: { type: 'none' }, probability: 0 }],
         };
         const result = getTileWeight(tileset, 0);
         expect(result).toBe(1);
@@ -103,9 +106,10 @@ describe('sampleRandomTile', () => {
             tileWidth: 16,
             tileHeight: 16,
             columns: 4,
+            tileCount: 2,
             tiles: [
-                { collision: false, probability: 10 },
-                { collision: false, probability: 1 },
+                { collision: { type: 'none' }, probability: 10 },
+                { collision: { type: 'none' }, probability: 1 },
             ],
         };
         // With random = 0, should pick the first (highest weight doesn't matter, order does)
@@ -152,7 +156,8 @@ describe('sampleSeededTile', () => {
             tileWidth: 16,
             tileHeight: 16,
             columns: 4,
-            tiles: [{ collision: false }, { collision: false }, { collision: false }],
+            tileCount: 3,
+            tiles: [{ collision: { type: 'none' } }, { collision: { type: 'none' } }, { collision: { type: 'none' } }],
         };
 
         const tile1 = sampleSeededTile(5, 10, [0, 1, 2], tileset, 42);
@@ -169,7 +174,8 @@ describe('sampleSeededTile', () => {
             tileWidth: 16,
             tileHeight: 16,
             columns: 4,
-            tiles: [{ collision: false }, { collision: false }, { collision: false }],
+            tileCount: 3,
+            tiles: [{ collision: { type: 'none' } }, { collision: { type: 'none' } }, { collision: { type: 'none' } }],
         };
 
         // Different positions should likely give different tiles (not guaranteed but very probable)

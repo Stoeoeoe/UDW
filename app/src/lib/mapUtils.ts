@@ -1,4 +1,5 @@
 import { Map, Variation } from '../types/schema';
+import { decodeTileRef } from './tileRef';
 
 /**
  * Resolves the inheritance chain for a variation.
@@ -40,11 +41,14 @@ export function resolveTileAt(
     for (const context of chain) {
         if (context === 'base') {
             const layer = map.layers.find(l => l.id === layerId);
-            return layer?.data[y]?.[x] || null;
+            const cell = layer?.data[y]?.[x];
+            if (cell === null || cell === undefined) return null;
+            if (typeof cell === 'string') return cell;
+            return decodeTileRef(cell, map.tilesetRefs);
         } else {
             const override = context.layerOverrides?.[layerId];
             if (override && override.data[y]?.[x] !== null) {
-                return override.data[y][x];
+                return override.data[y][x] as string; // Variations store as strings
             }
         }
     }

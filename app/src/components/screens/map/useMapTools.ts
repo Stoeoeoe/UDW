@@ -329,7 +329,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (positions.length === 0) return;
 
         // Build terrain grid fresh for this operation
-        terrainGridRef.current = buildTerrainGridFromLayer(layer.data, tilesets);
+        terrainGridRef.current = buildTerrainGridFromLayer(layer.data, tilesets, currentMap.tilesetRefs);
 
         // Apply terrain to all positions and collect all affected tiles
         const allTilesToUpdate = new Map<string, { tileX: number; tileY: number }>();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
 import { FiMousePointer, FiEdit2, FiTrash2, FiUser, FiShuffle } from 'react-icons/fi';
-import { FaMountain, FaRandom } from 'react-icons/fa';
+import { FaMountain } from 'react-icons/fa';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ToolType } from '../../types/editor';
 import { Toolbar, ToolItem } from '../common/Toolbar';

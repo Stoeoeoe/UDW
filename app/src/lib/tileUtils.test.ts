@@ -15,6 +15,7 @@ const mockTileset: Tileset = {
     tileWidth: 16,
     tileHeight: 16,
     columns: 4, // 4 tiles per row
+    tileCount: 0,
     tiles: [],
 };
 
