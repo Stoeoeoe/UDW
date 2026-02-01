@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { castDraft } from 'immer';
 import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
 import { Project, Map, Layer, Variation, EntityInstance, Tileset, TileDefinition, LayerDefinition } from '../types/schema';
@@ -9,6 +10,7 @@ import { sampleRandomTile } from '../lib/randomUtils';
 import { samplePatternAt, createTileRef } from '../lib/tileUtils';
 import { fileSystem } from '../lib/fileSystem';
 import { floodFillCollect } from '../lib/algorithms';
+import { saveMapDebounced, useSaveStore } from '../lib/saveManager';
 
 // ============================================================================
 // Helper functions for layer management
@@ -111,9 +113,12 @@ function setTileInState(
     }
 }
 
-/** Persists project data to project.json */
+/** Persists project data to project.json with save status feedback */
 async function persistProject(project: Project): Promise<void> {
+    useSaveStore.getState().setStatus('saving');
     await fileSystem.saveJson('', 'project.json', project);
+    useSaveStore.getState().setStatus('saved');
+    setTimeout(() => { if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle'); }, 2000);
 }
 
 interface EditorStore extends EditorState {
@@ -216,6 +221,7 @@ interface EditorStore extends EditorState {
 }
 
 export const useEditorStore = create<EditorStore>()(
+    subscribeWithSelector(
     immer((set) => ({
         // Initial state
         project: null,
@@ -526,8 +532,10 @@ export const useEditorStore = create<EditorStore>()(
         }),
 
         addTileset: async (tileset) => {
-            
+            useSaveStore.getState().setStatus('saving');
             await fileSystem.saveJson('tilesets', `${tileset.id}.tileset.json`, tileset);
+            useSaveStore.getState().setStatus('saved');
+            setTimeout(() => { if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle'); }, 2000);
 
             set(state => {
                 state.tilesets.set(tileset.id, castDraft(tileset));
@@ -556,7 +564,10 @@ export const useEditorStore = create<EditorStore>()(
             });
 
             if (updatedTileset) {
+                useSaveStore.getState().setStatus('saving');
                 await fileSystem.saveJson('tilesets', `${id}.tileset.json`, updatedTileset);
+                useSaveStore.getState().setStatus('saved');
+                setTimeout(() => { if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle'); }, 2000);
             }
         },
 
@@ -571,7 +582,10 @@ export const useEditorStore = create<EditorStore>()(
                 }
             });
 
+            useSaveStore.getState().setStatus('saving');
             await fileSystem.deleteJson('tilesets', `${id}.tileset.json`);
+            useSaveStore.getState().setStatus('saved');
+            setTimeout(() => { if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle'); }, 2000);
         },
 
         updateTileDefinition: (tilesetId, index, definition) => set(state => {
@@ -609,7 +623,10 @@ export const useEditorStore = create<EditorStore>()(
             });
 
             if (updatedTileset) {
+                useSaveStore.getState().setStatus('saving');
                 await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, updatedTileset);
+                useSaveStore.getState().setStatus('saved');
+                setTimeout(() => { if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle'); }, 2000);
             }
         },
 
@@ -982,5 +999,54 @@ export const useEditorStore = create<EditorStore>()(
         validate: () => {
             return []; // Placeholder
         }
-    }))
+    })))
+);
+
+// =============================================================================
+// Auto-save subscription: Save currentMap whenever it changes
+// =============================================================================
+
+// Track the last saved map state to avoid re-saving on initial load
+let lastSavedMapJson: string | null = null;
+
+// Subscribe to currentMap changes and auto-save with debouncing
+useEditorStore.subscribe(
+    (state) => state.currentMap,
+    (currentMap, prevMap) => {
+        if (!currentMap) {
+            lastSavedMapJson = null;
+            return;
+        }
+
+        // Skip if this is just loading a map (not a mutation)
+        const currentJson = JSON.stringify(currentMap);
+        if (currentMap.id !== prevMap?.id) {
+            // Map changed (loaded different map), just track it
+            lastSavedMapJson = currentJson;
+            return;
+        }
+
+        // If content actually changed, save it
+        if (currentJson !== lastSavedMapJson) {
+            lastSavedMapJson = currentJson;
+            saveMapDebounced(currentMap);
+        }
+    },
+    { fireImmediately: false }
+);
+
+// Subscribe to project settings changes and update save status
+useEditorStore.subscribe(
+    (state) => ({ terrainTypes: state.terrainTypes, layerDefinitions: state.layerDefinitions }),
+    () => {
+        // The individual actions already call persistProject, 
+        // but we update save status here for visual feedback
+        useSaveStore.getState().setStatus('saved');
+        setTimeout(() => {
+            if (useSaveStore.getState().status === 'saved') {
+                useSaveStore.getState().setStatus('idle');
+            }
+        }, 2000);
+    },
+    { equalityFn: (a, b) => JSON.stringify(a) === JSON.stringify(b) }
 );

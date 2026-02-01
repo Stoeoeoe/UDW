@@ -16,6 +16,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
 import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
 import { MapToolbar } from './MapToolbar';
+import { SaveIndicator } from '../common/SaveIndicator';
 
 
 export const TopBar: React.FC = () => {
@@ -120,8 +121,9 @@ export const TopBar: React.FC = () => {
                     {/* Center: Toolbar (Map or Tileset) */}
                     {mode === 'maps' ? <MapToolbar /> : mode === 'tilesets' ? <TilesetToolbar /> : <Box />}
 
-            {/* Right: Actions */}
+            {/* Right: Save Status & Actions */}
             <HStack spacing="3">
+                <SaveIndicator />
                 <Button colorScheme="blue" size="xs" fontWeight="medium" boxShadow="sm">
                     Export
                 </Button>
