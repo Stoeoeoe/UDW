@@ -4,6 +4,117 @@ import { castDraft } from 'immer';
 import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
 import { Project, Map, Layer, Variation, EntityInstance, Tileset, TileDefinition, LayerDefinition } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
+import { resolveTileAt } from '../lib/mapUtils';
+import { sampleRandomTile } from '../lib/randomUtils';
+import { samplePatternAt, createTileRef } from '../lib/tileUtils';
+import { fileSystem } from '../lib/fileSystem';
+import { floodFillCollect } from '../lib/algorithms';
+
+// ============================================================================
+// Helper functions for layer management
+// ============================================================================
+
+/** Creates an empty 2D grid filled with null values */
+function createEmptyGrid(width: number, height: number): (string | null)[][] {
+    return Array.from({ length: height }, () => Array(width).fill(null));
+}
+
+/** Adds missing layers from layer definitions to a map */
+function addMissingDefinitionLayers(map: Map, layerDefs: LayerDefinition[]): Map {
+    if (layerDefs.length === 0) return map;
+
+    const existingDefIds = new Set(
+        map.layers.filter(l => l.definitionId).map(l => l.definitionId)
+    );
+    const missingDefs = layerDefs.filter(def => !existingDefIds.has(def.id));
+    if (missingDefs.length === 0) return map;
+
+    const newLayers: Layer[] = missingDefs.map(def => ({
+        id: def.id,
+        name: def.name,
+        kind: 'visual' as const,
+        visible: true,
+        locked: false,
+        opacity: 1,
+        zOrder: def.zIndex,
+        data: createEmptyGrid(map.width, map.height),
+        definitionId: def.id,
+    }));
+
+    const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
+    return { ...map, layers: allLayers };
+}
+
+/** Creates layers from layer definitions */
+function createLayersFromDefinitions(layerDefs: LayerDefinition[], width: number, height: number): Layer[] {
+    return layerDefs
+        .slice()
+        .sort((a, b) => a.zIndex - b.zIndex)
+        .map(def => ({
+            id: def.id,
+            name: def.name,
+            kind: 'visual' as const,
+            visible: true,
+            locked: false,
+            opacity: 1,
+            zOrder: def.zIndex,
+            data: createEmptyGrid(width, height),
+            definitionId: def.id,
+        }));
+}
+
+/** Creates a default ground layer */
+function createDefaultLayer(width: number, height: number): Layer {
+    return {
+        id: 'ground',
+        name: 'Ground',
+        kind: 'visual',
+        visible: true,
+        locked: false,
+        opacity: 1,
+        zOrder: 0,
+        data: createEmptyGrid(width, height)
+    };
+}
+
+/** Ensures a variation has a layer override initialized */
+function ensureVariationLayerOverride(variation: Variation, layerId: string, width: number, height: number): void {
+    if (!variation.layerOverrides) variation.layerOverrides = {};
+    if (!variation.layerOverrides[layerId]) {
+        variation.layerOverrides[layerId] = {
+            mode: 'merge',
+            data: createEmptyGrid(width, height)
+        };
+    }
+}
+
+/** Sets a tile value, handling variation overrides */
+function setTileInState(
+    map: Map,
+    activeVariationId: string | null,
+    layerId: string,
+    x: number,
+    y: number,
+    value: string | null
+): void {
+    if (activeVariationId) {
+        const variation = map.variations?.find(v => v.id === activeVariationId);
+        if (variation) {
+            ensureVariationLayerOverride(variation, layerId, map.width, map.height);
+            variation.layerOverrides![layerId].data[y][x] = value;
+            return;
+        }
+    }
+    const layer = map.layers.find(l => l.id === layerId);
+    if (layer && layer.data[y] && !layer.locked) {
+        layer.data[y][x] = value;
+    }
+}
+
+/** Persists project data to project.json */
+async function persistProject(project: Project): Promise<void> {
+    await fileSystem.saveJson('', 'project.json', project);
+}
 
 interface EditorStore extends EditorState {
     // Actions
@@ -175,7 +286,7 @@ export const useEditorStore = create<EditorStore>()(
         },
 
         loadProjectResources: async () => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
 
             // 1. Load all tilesets
             const tilesets = await fileSystem.loadAllTilesets();
@@ -222,37 +333,9 @@ export const useEditorStore = create<EditorStore>()(
             // Get layer definitions to inject into maps
             const layerDefs = useEditorStore.getState().layerDefinitions;
 
-            // Helper: add missing layers from definitions to a map
-            const addMissingDefinitionLayers = (map: Map): Map => {
-                if (layerDefs.length === 0) return map;
-
-                const existingDefIds = new Set(
-                    map.layers.filter(l => l.definitionId).map(l => l.definitionId)
-                );
-
-                const missingDefs = layerDefs.filter(def => !existingDefIds.has(def.id));
-                if (missingDefs.length === 0) return map;
-
-                const newLayers: Layer[] = missingDefs.map(def => ({
-                    id: def.id,
-                    name: def.name,
-                    kind: def.type === 'tile' ? 'visual' as const : 'visual' as const,
-                    visible: true,
-                    locked: false,
-                    opacity: 1,
-                    zOrder: def.zIndex,
-                    data: Array(map.height).fill(null).map(() => Array(map.width).fill(null)),
-                    definitionId: def.id,
-                }));
-
-                // Merge and sort by zOrder
-                const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
-                return { ...map, layers: allLayers };
-            };
-
             // Optionally load the first map as current (with missing layers added)
             if (maps.length > 0) {
-                const enrichedMap = addMissingDefinitionLayers(maps[0]);
+                const enrichedMap = addMissingDefinitionLayers(maps[0], layerDefs);
                 set(state => {
                     state.currentMap = castDraft(enrichedMap);
                     // Auto-select first layer
@@ -280,7 +363,7 @@ export const useEditorStore = create<EditorStore>()(
         },
 
         updateProject: async (project) => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
             await fileSystem.saveJson('', 'project.json', project);
             set(state => {
                 state.project = project;
@@ -295,28 +378,7 @@ export const useEditorStore = create<EditorStore>()(
                 }
 
                 // Add missing layers from layer definitions
-                const layerDefs = state.layerDefinitions;
-                const existingDefIds = new Set(
-                    map.layers.filter(l => l.definitionId).map(l => l.definitionId)
-                );
-                const missingDefs = layerDefs.filter(def => !existingDefIds.has(def.id));
-
-                let enrichedMap = map;
-                if (missingDefs.length > 0) {
-                    const newLayers: Layer[] = missingDefs.map(def => ({
-                        id: def.id,
-                        name: def.name,
-                        kind: def.type === 'tile' ? 'visual' as const : 'visual' as const,
-                        visible: true,
-                        locked: false,
-                        opacity: 1,
-                        zOrder: def.zIndex,
-                        data: Array(map.height).fill(null).map(() => Array(map.width).fill(null)),
-                        definitionId: def.id,
-                    }));
-                    const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
-                    enrichedMap = { ...map, layers: allLayers };
-                }
+                const enrichedMap = addMissingDefinitionLayers(map, state.layerDefinitions);
 
                 state.currentMap = castDraft(enrichedMap);
                 // When a map is loaded, switch to tile paint tool by default
@@ -336,41 +398,17 @@ export const useEditorStore = create<EditorStore>()(
         }),
 
         createNewMap: async (name, width, height, tilesetId) => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
             const id = name.toLowerCase().replace(/\s+/g, '-');
 
             // Get layer definitions from store to create default layers
             const layerDefs = useEditorStore.getState().layerDefinitions;
 
-            // Create layers from definitions, sorted by zIndex
-            const definedLayers: Layer[] = layerDefs
-                .slice()
-                .sort((a, b) => a.zIndex - b.zIndex)
-                .map(def => ({
-                    id: def.id,
-                    name: def.name,
-                    kind: def.type === 'tile' ? 'visual' as const : 'visual' as const, // entity layers use same kind for now
-                    visible: true,
-                    locked: false,
-                    opacity: 1,
-                    zOrder: def.zIndex,
-                    data: Array(height).fill(null).map(() => Array(width).fill(null)),
-                    definitionId: def.id, // Link back to definition
-                }));
-
-            // If no definitions, create a default ground layer
-            const layers = definedLayers.length > 0 ? definedLayers : [
-                {
-                    id: 'ground',
-                    name: 'Ground',
-                    kind: 'visual' as const,
-                    visible: true,
-                    locked: false,
-                    opacity: 1,
-                    zOrder: 0,
-                    data: Array(height).fill(null).map(() => Array(width).fill(null))
-                }
-            ];
+            // Create layers from definitions, or use a default ground layer
+            const definedLayers = createLayersFromDefinitions(layerDefs, width, height);
+            const layers = definedLayers.length > 0 
+                ? definedLayers 
+                : [createDefaultLayer(width, height)];
 
             const newMap: Map = {
                 version: 1,
@@ -474,7 +512,7 @@ export const useEditorStore = create<EditorStore>()(
         }),
 
         addTileset: async (tileset) => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
             await fileSystem.saveJson('tilesets', `${tileset.id}.tileset.json`, tileset);
 
             set(state => {
@@ -492,7 +530,7 @@ export const useEditorStore = create<EditorStore>()(
         },
 
         updateTileset: async (id, updates) => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
             let updatedTileset: Tileset | undefined;
 
             set(state => {
@@ -509,7 +547,7 @@ export const useEditorStore = create<EditorStore>()(
         },
 
         deleteTileset: async (id) => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
 
             set(state => {
                 state.tilesets.delete(id);
@@ -530,7 +568,7 @@ export const useEditorStore = create<EditorStore>()(
         }),
 
         setTileCornerTerrain: async (tilesetId, index, corner, terrainId) => {
-            const { fileSystem } = await import('../lib/fileSystem');
+            
             let updatedTileset: Tileset | undefined;
 
             set(state => {
@@ -563,169 +601,46 @@ export const useEditorStore = create<EditorStore>()(
 
         paintTile: (layerId, x, y, tilesetId, tileIndex) => set(state => {
             if (!state.currentMap) return;
-
-            const tileRef = `${tilesetId}:${tileIndex}`;
-
-            // If we are in a variation, paint in the variation override
-            if (state.activeVariationId) {
-                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
-                if (variation) {
-                    if (!variation.layerOverrides) variation.layerOverrides = {};
-                    if (!variation.layerOverrides[layerId]) {
-                        // Create a sparse grid for the override
-                        variation.layerOverrides[layerId] = {
-                            mode: 'merge',
-                            data: Array(state.currentMap?.height || 0).fill(null).map(() => Array(state.currentMap?.width || 0).fill(null))
-                        };
-                    }
-                    variation.layerOverrides[layerId].data[y][x] = tileRef;
-                    return;
-                }
-            }
-
-            // Otherwise paint in the base layer
-            if (state.currentMap) {
-                const layer = state.currentMap.layers.find(l => l.id === layerId);
-                if (layer && layer.data[y] && !layer.locked) {
-                    layer.data[y][x] = tileRef;
-                }
-            }
+            const tileRef = createTileRef(tilesetId, tileIndex);
+            setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, tileRef);
         }),
 
         paintTilesBatch: (layerId, tiles) => set(state => {
             if (!state.currentMap) return;
-
-            const layer = state.currentMap.layers.find(l => l.id === layerId);
-            const variation = state.activeVariationId
-                ? state.currentMap.variations?.find(v => v.id === state.activeVariationId)
-                : null;
-
             for (const { x, y, tilesetId, tileIndex } of tiles) {
                 if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height) continue;
-                const tileRef = `${tilesetId}:${tileIndex}`;
-
-                if (variation) {
-                    if (!variation.layerOverrides) variation.layerOverrides = {};
-                    if (!variation.layerOverrides[layerId]) {
-                        variation.layerOverrides[layerId] = {
-                            mode: 'merge',
-                            data: Array(state.currentMap.height).fill(null).map(() => Array(state.currentMap!.width).fill(null))
-                        };
-                    }
-                    variation.layerOverrides[layerId].data[y][x] = tileRef;
-                } else if (layer && layer.data[y] && !layer.locked) {
-                    layer.data[y][x] = tileRef;
-                }
+                setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, createTileRef(tilesetId, tileIndex));
             }
         }),
 
         eraseTile: (layerId, x, y) => set(state => {
             if (!state.currentMap) return;
-
-            if (state.activeVariationId) {
-                const variation = state.currentMap.variations?.find(v => v.id === state.activeVariationId);
-                if (variation) {
-                    if (!variation.layerOverrides) variation.layerOverrides = {};
-                    if (!variation.layerOverrides[layerId]) {
-                        variation.layerOverrides[layerId] = {
-                            mode: 'merge',
-                            data: Array(state.currentMap?.height || 0).fill(null).map(() => Array(state.currentMap?.width || 0).fill(null))
-                        };
-                    }
-                    variation.layerOverrides[layerId].data[y][x] = null;
-                    return;
-                }
-            }
-
-            const layer = state.currentMap.layers.find(l => l.id === layerId);
-            if (layer && layer.data[y] && !layer.locked) {
-                layer.data[y][x] = null;
-            }
+            setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, null);
         }),
 
         eraseTilesBatch: (layerId, positions) => set(state => {
             if (!state.currentMap) return;
-
-            const layer = state.currentMap.layers.find(l => l.id === layerId);
-            const variation = state.activeVariationId
-                ? state.currentMap.variations?.find(v => v.id === state.activeVariationId)
-                : null;
-
             for (const { x, y } of positions) {
                 if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height) continue;
-
-                if (variation) {
-                    if (!variation.layerOverrides) variation.layerOverrides = {};
-                    if (!variation.layerOverrides[layerId]) {
-                        variation.layerOverrides[layerId] = {
-                            mode: 'merge',
-                            data: Array(state.currentMap.height).fill(null).map(() => Array(state.currentMap!.width).fill(null))
-                        };
-                    }
-                    variation.layerOverrides[layerId].data[y][x] = null;
-                } else if (layer && layer.data[y] && !layer.locked) {
-                    layer.data[y][x] = null;
-                }
+                setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, null);
             }
         }),
 
         bucketFill: (layerId: string, startX: number, startY: number, tilesetId: string, tileIndex: number) => set(state => {
             if (!state.currentMap) return;
             const map = state.currentMap;
-            const targetTileRef = `${tilesetId}:${tileIndex}`;
-
-            // Helper to get tile with variation resolution
-            const getTile = (lx: number, ly: number) => {
-                const context = state.activeVariationId
-                    ? map.variations?.find(v => v.id === state.activeVariationId)
-                    : null;
-
-                if (context) {
-                    const override = context.layerOverrides?.[layerId];
-                    if (override && override.data[ly]?.[lx] !== undefined) {
-                        return override.data[ly][lx];
-                    }
-                }
-                const layer = map.layers.find(l => l.id === layerId);
-                return layer?.data[ly]?.[lx] || null;
-            };
-
-            const startTile = getTile(startX, startY);
+            const targetTileRef = createTileRef(tilesetId, tileIndex);
+            const startTile = resolveTileAt(map, layerId, startX, startY, state.activeVariationId);
+            
             if (startTile === targetTileRef) return;
 
-            const stack: [number, number][] = [[startX, startY]];
-            const visited = new Set<string>();
+            const tilesToFill = floodFillCollect(
+                startX, startY, map.width, map.height,
+                (x, y) => resolveTileAt(map, layerId, x, y, state.activeVariationId) === startTile
+            );
 
-            while (stack.length > 0) {
-                const [cx, cy] = stack.pop()!;
-                const key = `${cx},${cy}`;
-                if (visited.has(key)) continue;
-                visited.add(key);
-
-                if (getTile(cx, cy) === startTile) {
-                    // Apply paint
-                    if (state.activeVariationId) {
-                        const v = map.variations?.find(v => v.id === state.activeVariationId);
-                        if (!v) continue;
-                        if (!v.layerOverrides) v.layerOverrides = {};
-                        if (!v.layerOverrides[layerId]) {
-                            v.layerOverrides[layerId] = {
-                                mode: 'merge',
-                                data: Array(map.height).fill(null).map(() => Array(map.width).fill(null))
-                            };
-                        }
-                        v.layerOverrides[layerId].data[cy][cx] = targetTileRef;
-                    } else {
-                        const l = map.layers.find(l => l.id === layerId);
-                        if (l && !l.locked) l.data[cy][cx] = targetTileRef;
-                    }
-
-                    // Push neighbors
-                    if (cx > 0) stack.push([cx - 1, cy]);
-                    if (cx < map.width - 1) stack.push([cx + 1, cy]);
-                    if (cy > 0) stack.push([cx, cy - 1]);
-                    if (cy < map.height - 1) stack.push([cx, cy + 1]);
-                }
+            for (const { x, y } of tilesToFill) {
+                setTileInState(map, state.activeVariationId, layerId, x, y, targetTileRef);
             }
         }),
 
@@ -733,108 +648,33 @@ export const useEditorStore = create<EditorStore>()(
             if (!state.currentMap) return;
             const map = state.currentMap;
             const { mode, tilesetId, tileIndex, tileIndices, pattern } = options;
-
-            // Helper to get tile with variation resolution
-            const getTile = (lx: number, ly: number) => {
-                const context = state.activeVariationId
-                    ? map.variations?.find(v => v.id === state.activeVariationId)
-                    : null;
-
-                if (context) {
-                    const override = context.layerOverrides?.[layerId];
-                    if (override && override.data[ly]?.[lx] !== undefined) {
-                        return override.data[ly][lx];
-                    }
-                }
-                const layer = map.layers.find(l => l.id === layerId);
-                return layer?.data[ly]?.[lx] || null;
-            };
-
-            // Helper to set tile
-            const setTile = (cx: number, cy: number, tileRef: string | null) => {
-                if (state.activeVariationId) {
-                    const v = map.variations?.find(v => v.id === state.activeVariationId);
-                    if (!v) return;
-                    if (!v.layerOverrides) v.layerOverrides = {};
-                    if (!v.layerOverrides[layerId]) {
-                        v.layerOverrides[layerId] = {
-                            mode: 'merge',
-                            data: Array(map.height).fill(null).map(() => Array(map.width).fill(null))
-                        };
-                    }
-                    v.layerOverrides[layerId].data[cy][cx] = tileRef;
-                } else {
-                    const l = map.layers.find(l => l.id === layerId);
-                    if (l && !l.locked) l.data[cy][cx] = tileRef;
-                }
-            };
-
-            // Sample tile for random mode using probability weights
-            const sampleRandomTile = (): number | null => {
-                if (!tileIndices || tileIndices.length === 0) {
-                    return tileIndex ?? null;
-                }
-                const ts = tilesetId ? state.tilesets.get(tilesetId) : undefined;
-                const weights = tileIndices.map(i => {
-                    const def = ts?.tiles?.[i];
-                    return def && typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
-                });
-                const total = weights.reduce((a, b) => a + b, 0);
-                if (total <= 0) return tileIndices[0];
-                let r = Math.random() * total;
-                for (let k = 0; k < tileIndices.length; k++) {
-                    r -= weights[k];
-                    if (r <= 0) return tileIndices[k];
-                }
-                return tileIndices[tileIndices.length - 1];
-            };
-
-            const startTile = getTile(startX, startY);
+            const tileset = tilesetId ? state.tilesets.get(tilesetId) : undefined;
+            const startTile = resolveTileAt(map, layerId, startX, startY, state.activeVariationId);
             
-            // Collect all tiles to fill first
-            const stack: [number, number][] = [[startX, startY]];
-            const visited = new Set<string>();
-            const tilesToFill: Array<{ x: number; y: number }> = [];
+            const tilesToFill = floodFillCollect(
+                startX, startY, map.width, map.height,
+                (x, y) => resolveTileAt(map, layerId, x, y, state.activeVariationId) === startTile
+            );
 
-            while (stack.length > 0) {
-                const [cx, cy] = stack.pop()!;
-                const key = `${cx},${cy}`;
-                if (visited.has(key)) continue;
-                visited.add(key);
-
-                if (getTile(cx, cy) === startTile) {
-                    tilesToFill.push({ x: cx, y: cy });
-
-                    // Push neighbors
-                    if (cx > 0) stack.push([cx - 1, cy]);
-                    if (cx < map.width - 1) stack.push([cx + 1, cy]);
-                    if (cy > 0) stack.push([cx, cy - 1]);
-                    if (cy < map.height - 1) stack.push([cx, cy + 1]);
-                }
-            }
-
-            // Apply fill based on mode
             for (const { x, y } of tilesToFill) {
                 if (mode === 'erase') {
-                    setTile(x, y, null);
+                    setTileInState(map, state.activeVariationId, layerId, x, y, null);
                 } else if (mode === 'random' && tilesetId) {
-                    const randomIdx = sampleRandomTile();
+                    const randomIdx = sampleRandomTile(tileIndices || (tileIndex !== undefined ? [tileIndex] : []), tileset);
                     if (randomIdx !== null) {
-                        setTile(x, y, `${tilesetId}:${randomIdx}`);
+                        setTileInState(map, state.activeVariationId, layerId, x, y, createTileRef(tilesetId, randomIdx));
                     }
                 } else if (mode === 'stamp' && tilesetId) {
                     if (pattern && pattern.patternW > 0 && pattern.patternH > 0) {
-                        // Stencil fill: tile the pattern
-                        const dx = x - startX;
-                        const dy = y - startY;
-                        const px = ((dx % pattern.patternW) + pattern.patternW) % pattern.patternW;
-                        const py = ((dy % pattern.patternH) + pattern.patternH) % pattern.patternH;
-                        const tileIdx = pattern.pattern[py][px];
+                        const tileIdx = samplePatternAt(
+                            { pattern: pattern.pattern, patternW: pattern.patternW, patternH: pattern.patternH, minCol: 0, minRow: 0 },
+                            startX, startY, x, y
+                        );
                         if (tileIdx !== null) {
-                            setTile(x, y, `${tilesetId}:${tileIdx}`);
+                            setTileInState(map, state.activeVariationId, layerId, x, y, createTileRef(tilesetId, tileIdx));
                         }
                     } else if (tileIndex !== undefined && tileIndex !== null) {
-                        setTile(x, y, `${tilesetId}:${tileIndex}`);
+                        setTileInState(map, state.activeVariationId, layerId, x, y, createTileRef(tilesetId, tileIndex));
                     }
                 }
             }
@@ -1024,12 +864,10 @@ export const useEditorStore = create<EditorStore>()(
             set(state => {
                 state.terrainTypes.push(castDraft(terrain));
             });
-            // Persist into project.json if project open
-            const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave: Project = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
-                await fileSystem.saveJson('', 'project.json', projectToSave);
+                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await persistProject(projectToSave);
                 set(state => { state.project = castDraft(projectToSave); });
             }
         },
@@ -1039,11 +877,10 @@ export const useEditorStore = create<EditorStore>()(
                 const t = state.terrainTypes.find(tt => tt.id === id);
                 if (t) Object.assign(t, updates);
             });
-            const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave: Project = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
-                await fileSystem.saveJson('', 'project.json', projectToSave);
+                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await persistProject(projectToSave);
                 set(state => { state.project = castDraft(projectToSave); });
             }
         },
@@ -1053,11 +890,10 @@ export const useEditorStore = create<EditorStore>()(
                 state.terrainTypes = state.terrainTypes.filter(t => t.id !== id);
                 if (state.selectedTerrainId === id) state.selectedTerrainId = null;
             });
-            const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave: Project = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
-                await fileSystem.saveJson('', 'project.json', projectToSave);
+                const projectToSave = { ...proj, terrainTypes: useEditorStore.getState().terrainTypes };
+                await persistProject(projectToSave);
                 set(state => { state.project = castDraft(projectToSave); });
             }
         },
@@ -1071,11 +907,10 @@ export const useEditorStore = create<EditorStore>()(
             set(state => {
                 state.layerDefinitions.push(castDraft(definition));
             });
-            const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave: Project = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
-                await fileSystem.saveJson('', 'project.json', projectToSave);
+                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                await persistProject(projectToSave);
                 set(state => { state.project = castDraft(projectToSave); });
             }
         },
@@ -1085,11 +920,10 @@ export const useEditorStore = create<EditorStore>()(
                 const def = state.layerDefinitions.find(d => d.id === id);
                 if (def) Object.assign(def, updates);
             });
-            const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave: Project = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
-                await fileSystem.saveJson('', 'project.json', projectToSave);
+                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                await persistProject(projectToSave);
                 set(state => { state.project = castDraft(projectToSave); });
             }
         },
@@ -1099,11 +933,10 @@ export const useEditorStore = create<EditorStore>()(
                 state.layerDefinitions = state.layerDefinitions.filter(d => d.id !== id);
                 if (state.selectedLayerDefinitionId === id) state.selectedLayerDefinitionId = null;
             });
-            const { fileSystem } = await import('../lib/fileSystem');
             const proj = useEditorStore.getState().project;
             if (proj) {
-                const projectToSave: Project = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
-                await fileSystem.saveJson('', 'project.json', projectToSave);
+                const projectToSave = { ...proj, layerDefinitions: useEditorStore.getState().layerDefinitions };
+                await persistProject(projectToSave);
                 set(state => { state.project = castDraft(projectToSave); });
             }
         },

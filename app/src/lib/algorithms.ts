@@ -115,3 +115,45 @@ export function* filledCircle(
         }
     }
 }
+
+/**
+ * Generic flood fill that collects all connected positions matching a predicate.
+ * Uses a stack-based approach to avoid recursion limits.
+ * 
+ * @param startX Starting X coordinate
+ * @param startY Starting Y coordinate
+ * @param width Grid width (for bounds checking)
+ * @param height Grid height (for bounds checking)
+ * @param shouldFill Predicate that returns true if a position should be filled
+ * @returns Array of positions that should be filled
+ */
+export function floodFillCollect(
+    startX: number,
+    startY: number,
+    width: number,
+    height: number,
+    shouldFill: (x: number, y: number) => boolean
+): Array<{ x: number; y: number }> {
+    const result: Array<{ x: number; y: number }> = [];
+    const stack: [number, number][] = [[startX, startY]];
+    const visited = new Set<string>();
+
+    while (stack.length > 0) {
+        const [cx, cy] = stack.pop()!;
+        const key = `${cx},${cy}`;
+        
+        if (visited.has(key)) continue;
+        if (cx < 0 || cy < 0 || cx >= width || cy >= height) continue;
+        
+        visited.add(key);
+
+        if (shouldFill(cx, cy)) {
+            result.push({ x: cx, y: cy });
+            
+            // Push 4-connected neighbors
+            stack.push([cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]);
+        }
+    }
+
+    return result;
+}
