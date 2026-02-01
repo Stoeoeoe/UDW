@@ -208,6 +208,9 @@ interface EditorStore extends EditorState {
     // Tileset toolbar mode
     setTilesetToolMode: (mode: 'select' | 'terrain') => void;
 
+    // Reset selected tiles in global editor state
+    resetSelectedTiles: () => void;
+
     // Validation
     validate: () => ValidationError[];
 }
@@ -233,6 +236,10 @@ export const useEditorStore = create<EditorStore>()(
         selectedLayerId: null,
         selectedTileIndex: null,
         selectedTileIndices: [],
+        mapEditorSelectedTileIndex: null,
+        mapEditorSelectedTileIndices: [],
+        tilesetEditorSelectedTileIndex: null,
+        tilesetEditorSelectedTileIndices: [],
         selectedTerrainId: null,
         activeTilesetId: null,
         sampledPattern: null,
@@ -467,6 +474,13 @@ export const useEditorStore = create<EditorStore>()(
         setMode: (mode) => {
             set(state => {
                 state.mode = mode;
+                // Reset all tile selection state when changing screen
+                state.selectedTileIndex = null;
+                state.selectedTileIndices = [];
+                state.mapEditorSelectedTileIndex = null;
+                state.mapEditorSelectedTileIndices = [];
+                state.tilesetEditorSelectedTileIndex = null;
+                state.tilesetEditorSelectedTileIndices = [];
             });
         },
 
@@ -956,6 +970,13 @@ export const useEditorStore = create<EditorStore>()(
 
         resetCamera: () => set(state => {
             state.camera = { x: 0, y: 0, zoom: 1.5 };
+        }),
+
+        resetSelectedTiles: () => set(state => {
+            state.selectedTileIndex = null;
+            state.selectedTileIndices = [];
+            state.selectedTerrainId = null;
+            state.sampledPattern = null;
         }),
 
         validate: () => {

@@ -26,6 +26,11 @@ export interface EditorState {
     selectedTileIndices: number[];        // Multiple selected indices for stencil selection
     selectedTerrainId: string | null;     // Selected terrain for autotiling
     activeTilesetId: string | null;       // Currently visible tileset in palette
+    // Per-editor selection (keeps map and tileset selections independent when needed)
+    mapEditorSelectedTileIndex?: number | null;
+    mapEditorSelectedTileIndices?: number[];
+    tilesetEditorSelectedTileIndex?: number | null;
+    tilesetEditorSelectedTileIndices?: number[];
     // Sampled pattern from right-click copy (preserves exact spatial arrangement)
     sampledPattern: {
         tilesetId: string;

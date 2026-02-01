@@ -5,17 +5,44 @@ import { useEditorStore } from '../store/useEditorStore';
  * Custom hook for tile selection with Ctrl+click (toggle) and Shift+click (range) support.
  * Eliminates duplicate selection logic across TilesetEditor, TilesetPalette, etc.
  */
-export function useTileSelection() {
-    const selectedTileIndex = useEditorStore(state => state.selectedTileIndex);
-    const selectedTileIndices = useEditorStore(state => state.selectedTileIndices);
-    const setSelectedTile = useEditorStore(state => state.setSelectedTile);
-    const setSelectedTiles = useEditorStore(state => state.setSelectedTiles);
-    const toggleSelectedTile = useEditorStore(state => state.toggleSelectedTile);
+import { useState, useMemo } from 'react';
+
+export function useTileSelection(options?: { local?: boolean }) {
+    // Always call hooks in the same order
+    const storeSelectedTileIndex = useEditorStore(state => state.selectedTileIndex);
+    const storeSelectedTileIndices = useEditorStore(state => state.selectedTileIndices);
+    const storeSetSelectedTile = useEditorStore(state => state.setSelectedTile);
+    const storeSetSelectedTiles = useEditorStore(state => state.setSelectedTiles);
+    const storeToggleSelectedTile = useEditorStore(state => state.toggleSelectedTile);
+
+    const [localSelectedTileIndex, setLocalSelectedTileIndex] = useState<number | null>(null);
+    const [localSelectedTileIndices, setLocalSelectedTileIndices] = useState<number[]>([]);
+
+    const useLocal = options?.local;
+
+    const selectedTileIndex = useLocal ? localSelectedTileIndex : storeSelectedTileIndex;
+    const selectedTileIndices = useLocal ? localSelectedTileIndices : storeSelectedTileIndices;
+    const setSelectedTile = useLocal ? setLocalSelectedTileIndex : storeSetSelectedTile;
+    const setSelectedTiles = useLocal ? setLocalSelectedTileIndices : storeSetSelectedTiles;
+
+    const toggleSelectedTile = useMemo(() => {
+        if (!useLocal) return storeToggleSelectedTile;
+        return (index: number) => {
+            setLocalSelectedTileIndices(prev => {
+                if (prev.includes(index)) {
+                    return prev.filter(i => i !== index);
+                } else {
+                    return [...prev, index];
+                }
+            });
+            setLocalSelectedTileIndex(index);
+        };
+    }, [useLocal, storeToggleSelectedTile]);
 
     const handleTileSelect = useCallback((index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => {
         // Ctrl+click: toggle individual tile in selection
+        toggleSelectedTile(index);
         if (meta?.ctrlKey) {
-            toggleSelectedTile(index);
             setSelectedTile(index);
             return;
         }

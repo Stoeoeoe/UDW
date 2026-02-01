@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Flex, Box, useDisclosure } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -19,9 +19,10 @@ export const TilesetEditor: React.FC = () => {
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
     const tilesets = useEditorStore(state => state.tilesets);
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);
+    const resetSelectedTiles = useEditorStore(state => state.resetSelectedTiles);
 
-    // Use the shared tile selection hook
-    const { selectedTileIndex, handleTileSelect } = useTileSelection();
+    // Use local tile selection state for independence from map editor
+    const { selectedTileIndex, handleTileSelect } = useTileSelection({ local: true });
 
     const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
 
@@ -74,6 +75,10 @@ export const TilesetEditor: React.FC = () => {
             </>
         );
     }
+    useEffect(() => {
+        // Ensure global editor selected tiles are cleared when opening tileset editor
+        resetSelectedTiles?.();
+    }, [resetSelectedTiles]);
 
     return (
         <ResizableEditorLayout
