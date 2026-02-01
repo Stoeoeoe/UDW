@@ -49,7 +49,9 @@ export const TilesetEditor: React.FC = () => {
 
     // Right panel: switch between inspector and terrain palette when tileset active
     const rightPanel = activeTileset ? (
-        tilesetMode === 'terrain' ? <TilesetTerrainPanel tileset={activeTileset} /> : <TilesetInspector tileset={activeTileset} />
+        tilesetMode === 'terrain'
+            ? <TilesetTerrainPanel tileset={activeTileset} />
+            : <TilesetInspector tileset={activeTileset} selectedIndex={selectedTileIndex} />
     ) : null;
 
     // No tileset active state — use EmptyScreen and allow quick import

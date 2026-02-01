@@ -12,10 +12,12 @@ import { Tileset } from '../../types/schema';
 
 interface TilesetInspectorProps {
     tileset: Tileset;
+    selectedIndex?: number | null;
 }
 
-export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset }) => {
-    const selectedIndex = useEditorStore(state => state.selectedTileIndex);
+export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset, selectedIndex: propSelectedIndex }) => {
+    const storeSelectedIndex = useEditorStore(state => state.selectedTileIndex);
+    const selectedIndex = typeof propSelectedIndex !== 'undefined' ? propSelectedIndex : storeSelectedIndex;
     const updateTileDef = useEditorStore(state => state.updateTileDefinition);
 
     // Selection & terrain helpers

@@ -1373,14 +1373,28 @@
       "spriteIndex": 176,
       "collision": {
         "type": "none"
-      }
+      },
+      "probability": 0.02,
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "177": {
       "id": "tile_17_5",
       "spriteIndex": 177,
       "collision": {
         "type": "none"
-      }
+      },
+      "probability": 0.02,
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "178": {
       "id": "tile_18_5",
@@ -1609,14 +1623,28 @@
       "spriteIndex": 208,
       "collision": {
         "type": "none"
-      }
+      },
+      "probability": 0.02,
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "209": {
       "id": "tile_17_6",
       "spriteIndex": 209,
       "collision": {
         "type": "none"
-      }
+      },
+      "probability": 0.02,
+      "terrainCorners": [
+        "water",
+        "water",
+        "water",
+        "water"
+      ]
     },
     "210": {
       "id": "tile_18_6",
