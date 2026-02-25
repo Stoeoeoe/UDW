@@ -5,8 +5,8 @@ export interface EmptyScreenProps {
     icon: string;
     title: string;
     description: string;
-    buttonLabel: string;
-    onCreate: () => void;
+    buttonLabel?: string;
+    onCreate?: () => void;
 }
 
 export const EmptyScreen: React.FC<EmptyScreenProps> = ({ icon, title, description, buttonLabel, onCreate }) => (
@@ -17,9 +17,11 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({ icon, title, descripti
                 <Text color="white" fontWeight="bold" fontSize="xl">{title}</Text>
                 <Text color="gray.500">{description}</Text>
             </VStack>
-            <Button colorScheme="blue" size="lg" px={8} onClick={onCreate}>
-                {buttonLabel}
-            </Button>
+            {buttonLabel && onCreate && (
+                <Button colorScheme="blue" size="lg" px={8} onClick={onCreate}>
+                    {buttonLabel}
+                </Button>
+            )}
         </VStack>
     </Center>
 );

@@ -138,7 +138,9 @@ interface EditorStore extends EditorState {
 
     // Map Actions
     setCurrentMap: (map: Map | null) => void;
+    loadMap: (mapId: string) => void;
     createNewMap: (name: string, width: number, height: number, tilesetId: string) => Promise<void>;
+    deleteMap: (mapId: string) => Promise<void>;
     addMap: (map: Map) => void;
 
     // Tool actions
@@ -217,6 +219,10 @@ interface EditorStore extends EditorState {
     setCamera: (camera: Partial<EditorState['camera']>) => void;
     resetCamera: () => void;
 
+    // Time preview actions
+    setTimePreviewEnabled: (enabled: boolean) => void;
+    setTimeOfDay: (time: number) => void;
+
     // Tileset toolbar mode
     setTilesetToolMode: (mode: 'select' | 'terrain') => void;
 
@@ -236,6 +242,7 @@ export const useEditorStore = create<EditorStore>()(
         mode: 'project',
         tilesets: new globalThis.Map(),
         loadedSprites: new globalThis.Map(),
+        maps: [],
         currentMap: null,
         currentMapPath: null,
         activeVariationId: null,
@@ -282,6 +289,7 @@ export const useEditorStore = create<EditorStore>()(
                 // Reset resources and map state
                 state.currentMap = null;
                 state.currentMapPath = null;
+                state.maps = [];
                 state.tilesets = new globalThis.Map();
                 state.loadedSprites = new globalThis.Map();
                 state.selectedLayerId = null;
@@ -298,6 +306,7 @@ export const useEditorStore = create<EditorStore>()(
                 state.project = null;
                 state.projectPath = null;
                 state.currentMap = null;
+                state.maps = [];
                 state.tilesets = new globalThis.Map();
                 state.loadedSprites = new globalThis.Map();
                 state.activeTilesetId = null;
@@ -353,14 +362,20 @@ export const useEditorStore = create<EditorStore>()(
             // Get layer definitions to inject into maps
             const layerDefs = useEditorStore.getState().layerDefinitions;
 
-            // Optionally load the first map as current (with missing layers added)
-            if (maps.length > 0) {
-                const enrichedMap = addMissingDefinitionLayers(maps[0], layerDefs);
+            // Enrich all maps with missing layers and store the full list
+            const enrichedMaps = maps.map(m => addMissingDefinitionLayers(m, layerDefs));
+
+            set(state => {
+                state.maps = castDraft(enrichedMaps);
+            });
+
+            // Optionally load the first map as current
+            if (enrichedMaps.length > 0) {
                 set(state => {
-                    state.currentMap = castDraft(enrichedMap);
+                    state.currentMap = castDraft(enrichedMaps[0]);
                     // Auto-select first layer
-                    if (enrichedMap.layers.length > 0) {
-                        state.selectedLayerId = enrichedMap.layers[0].id;
+                    if (enrichedMaps[0].layers.length > 0) {
+                        state.selectedLayerId = enrichedMaps[0].layers[0].id;
                     }
                 });
             }
@@ -409,6 +424,39 @@ export const useEditorStore = create<EditorStore>()(
             });
         },
 
+        loadMap: (mapId) => {
+            set(state => {
+                const map = state.maps.find(m => m.id === mapId);
+                if (!map) return;
+
+                // Save camera for current map before switching
+                if (state.currentMap) {
+                    state.mapCameras = state.mapCameras || {};
+                    state.mapCameras[state.currentMap.id] = { ...state.camera };
+                }
+
+                state.currentMap = castDraft(map);
+                state.activeVariationId = null;
+                state.activeTool = 'stamp';
+                state.selectedEntityId = null;
+                state.selectedEntityIds = new Set();
+
+                // Restore camera for the loaded map
+                if (state.mapCameras && state.mapCameras[mapId]) {
+                    state.camera = { ...state.mapCameras[mapId] };
+                } else {
+                    state.camera = { x: 0, y: 0, zoom: 1.5 };
+                }
+
+                // Auto-select first layer
+                if (map.layers.length > 0) {
+                    state.selectedLayerId = map.layers[0].id;
+                } else {
+                    state.selectedLayerId = null;
+                }
+            });
+        },
+
         setTilesetToolMode: (mode) => set(state => {
             state.tilesetToolMode = mode;
             // Auto-select first terrain when entering terrain mode
@@ -445,6 +493,7 @@ export const useEditorStore = create<EditorStore>()(
             await fileSystem.saveJson('maps', `${id}.map.json`, newMap);
 
             set(state => {
+                state.maps.push(castDraft(newMap));
                 state.currentMap = castDraft(newMap);
                 state.activeVariationId = null;
                 state.selectedLayerId = layers[0]?.id || null;
@@ -455,6 +504,33 @@ export const useEditorStore = create<EditorStore>()(
             // This might be used for loading, but currentMap is the primary state
             set(state => {
                 state.currentMap = castDraft(map);
+            });
+        },
+
+        deleteMap: async (mapId) => {
+            const map = useEditorStore.getState().maps.find(m => m.id === mapId);
+            if (!map) return;
+
+            // Delete from filesystem
+            const filename = `${mapId}.map.json`;
+            await fileSystem.deleteJson('maps', filename);
+
+            set(state => {
+                // Remove from maps list
+                state.maps = state.maps.filter(m => m.id !== mapId);
+
+                // If we just deleted the current map, clear or switch
+                if (state.currentMap?.id === mapId) {
+                    if (state.maps.length > 0) {
+                        state.currentMap = castDraft(state.maps[0]);
+                        state.activeVariationId = null;
+                        state.selectedLayerId = state.maps[0].layers[0]?.id || null;
+                    } else {
+                        state.currentMap = null;
+                        state.activeVariationId = null;
+                        state.selectedLayerId = null;
+                    }
+                }
             });
         },
 
@@ -997,6 +1073,14 @@ export const useEditorStore = create<EditorStore>()(
             state.camera = { x: 0, y: 0, zoom: 1.5 };
         }),
 
+        // Time preview
+        setTimePreviewEnabled: (enabled) => set(state => {
+            state.timePreviewEnabled = enabled;
+        }),
+        setTimeOfDay: (time) => set(state => {
+            state.timeOfDay = Math.max(0, Math.min(1, time));
+        }),
+
         resetSelectedTiles: () => set(state => {
             state.selectedTileIndex = null;
             state.selectedTileIndices = [];
@@ -1038,6 +1122,14 @@ useEditorStore.subscribe(
         if (currentJson !== lastSavedMapJson) {
             lastSavedMapJson = currentJson;
             saveMapDebounced(currentMap);
+
+            // Sync changes back to the maps list so browsing stays up-to-date
+            useEditorStore.setState(state => {
+                const idx = state.maps.findIndex(m => m.id === currentMap.id);
+                if (idx !== -1) {
+                    state.maps[idx] = currentMap as any;
+                }
+            });
         }
     },
     { fireImmediately: false }

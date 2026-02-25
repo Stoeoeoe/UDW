@@ -10,6 +10,9 @@ export interface EditorState {
     tilesets: globalThis.Map<string, Tileset>;       // Keyed by tileset.id
     loadedSprites: globalThis.Map<string, HTMLImageElement>;  // Keyed by sprite path
 
+    // All maps in the project (lightweight, for browsing)
+    maps: Map[];
+
     // Current editing context
     currentMap: Map | null;
     currentMapPath: string | null;

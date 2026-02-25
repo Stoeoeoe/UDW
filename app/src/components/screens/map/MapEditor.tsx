@@ -9,7 +9,7 @@ import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
-import { LayersPanel } from './LayersPanel';
+import { MapBrowser } from './MapBrowser';
 import { EditorModal } from '../../common/EditorModal';
 
 /**
@@ -25,12 +25,24 @@ const MapRightPanel: React.FC = () => {
 };
 
 /**
+ * Combined left panel: Map browser (maps + variations) on top, layers on bottom
+ */
+const MapLeftPanel: React.FC = () => {
+    return (
+        <VStack align="stretch" spacing={0} h="full" overflow="hidden">
+            <MapBrowser />
+        </VStack>
+    );
+};
+
+/**
  * MapEditor - The complete map editing experience.
  * Provides: canvas viewport, layers panel, properties inspector, tileset palette.
  */
 export const MapEditor: React.FC = () => {
     const currentMap = useEditorStore(state => state.currentMap);
     const currentMapPath = useEditorStore(state => state.currentMapPath);
+    const maps = useEditorStore(state => state.maps);
     const setActiveTool = useEditorStore(state => state.setActiveTool);
     const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -43,8 +55,30 @@ export const MapEditor: React.FC = () => {
         }
     }, [currentMapPath, setActiveTool]);
 
-    // No map loaded state — use shared EmptyScreen
+    // No map loaded state — show map browser on left with empty content on right
     if (!currentMap) {
+        // If we have maps, show the browser so user can select one
+        if (maps.length > 0) {
+            return (
+                <ResizableEditorLayout
+                    header={{
+                        title: 'Maps',
+                        subtitle: `${maps.length} map${maps.length !== 1 ? 's' : ''} in project`,
+                    }}
+                    content={
+                        <EmptyScreen
+                            icon="👈"
+                            title="Select a Map"
+                            description="Choose a map from the browser to start editing."
+                        />
+                    }
+                    leftPanel={<MapLeftPanel />}
+                    leftPanelDefaultSize={20}
+                />
+            );
+        }
+
+        // No maps at all
         return (
             <>
                 <EmptyScreen
@@ -70,10 +104,10 @@ export const MapEditor: React.FC = () => {
                 subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers`,
             }}
             content={<MapViewportPixi />}
-            leftPanel={<LayersPanel />}
+            leftPanel={<MapLeftPanel />}
             rightPanel={<MapRightPanel />}
             bottomPanel={<TilesetPalette enableMultiSelect={true} />}
-            leftPanelDefaultSize={18}
+            leftPanelDefaultSize={20}
             rightPanelDefaultSize={20}
             bottomPanelDefaultSize={25}
         />
