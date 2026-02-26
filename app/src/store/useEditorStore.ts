@@ -17,6 +17,7 @@ import {
   Tileset,
   TileDefinition,
   LayerDefinition,
+  EntityType,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 import { resolveTileAt } from '../lib/mapUtils';
@@ -297,6 +298,11 @@ interface EditorStore extends EditorState {
   selectEntity: (id: string | null) => void;
   setSelectedEntityType: (id: string | null) => void;
 
+  // Entity type CRUD (project-level)
+  addEntityType: (entityType: EntityType) => Promise<void>;
+  updateEntityType: (id: string, updates: Partial<EntityType>) => Promise<void>;
+  deleteEntityType: (id: string) => Promise<void>;
+
   // Terrain actions
   addTerrainType: (terrain: {
     id: string;
@@ -382,6 +388,7 @@ export const useEditorStore = create<EditorStore>()(
         variationsOpen: true,
       },
       terrainTypes: [],
+      entityTypes: [],
       layerDefinitions: [],
       selectedLayerDefinitionId: null,
       validationErrors: [],
@@ -402,6 +409,7 @@ export const useEditorStore = create<EditorStore>()(
           state.selectedTileIndex = null;
           state.activeVariationId = null;
           state.terrainTypes = [];
+          state.entityTypes = [];
         });
         recentProjects.add(project.name, path);
       },
@@ -416,6 +424,7 @@ export const useEditorStore = create<EditorStore>()(
           state.loadedSprites = new globalThis.Map();
           state.activeTilesetId = null;
           state.selectedTileIndex = null;
+          state.entityTypes = [];
         });
       },
 
@@ -460,6 +469,13 @@ export const useEditorStore = create<EditorStore>()(
             state.layerDefinitions = proj.layerDefinitions!.map((d) =>
               castDraft(d),
             );
+          });
+        }
+
+        // 1.7 Load entity types from project.json (if present)
+        if (proj?.entityTypes && Array.isArray(proj.entityTypes)) {
+          set((state) => {
+            state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
           });
         }
 
@@ -1342,6 +1358,61 @@ export const useEditorStore = create<EditorStore>()(
         }
       },
 
+      // Entity type CRUD actions
+      addEntityType: async (entityType) => {
+        set((state) => {
+          state.entityTypes.push(castDraft(entityType));
+        });
+        const proj = useEditorStore.getState().project;
+        if (proj) {
+          const projectToSave = {
+            ...proj,
+            entityTypes: useEditorStore.getState().entityTypes,
+          };
+          await persistProject(projectToSave);
+          set((state) => {
+            state.project = castDraft(projectToSave);
+          });
+        }
+      },
+
+      updateEntityType: async (id, updates) => {
+        set((state) => {
+          const et = state.entityTypes.find((e) => e.id === id);
+          if (et) Object.assign(et, updates);
+        });
+        const proj = useEditorStore.getState().project;
+        if (proj) {
+          const projectToSave = {
+            ...proj,
+            entityTypes: useEditorStore.getState().entityTypes,
+          };
+          await persistProject(projectToSave);
+          set((state) => {
+            state.project = castDraft(projectToSave);
+          });
+        }
+      },
+
+      deleteEntityType: async (id) => {
+        set((state) => {
+          state.entityTypes = state.entityTypes.filter((e) => e.id !== id);
+          if (state.selectedEntityTypeId === id)
+            state.selectedEntityTypeId = null;
+        });
+        const proj = useEditorStore.getState().project;
+        if (proj) {
+          const projectToSave = {
+            ...proj,
+            entityTypes: useEditorStore.getState().entityTypes,
+          };
+          await persistProject(projectToSave);
+          set((state) => {
+            state.project = castDraft(projectToSave);
+          });
+        }
+      },
+
       // Layer definition actions
       setSelectedLayerDefinition: (id) =>
         set((state) => {
@@ -1493,6 +1564,7 @@ useEditorStore.subscribe(
 useEditorStore.subscribe(
   (state) => ({
     terrainTypes: state.terrainTypes,
+    entityTypes: state.entityTypes,
     layerDefinitions: state.layerDefinitions,
   }),
   () => {

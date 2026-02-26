@@ -1,28 +1,107 @@
-import React from 'react';
-import { VStack, Text, Center, Circle, HStack, Box } from '@chakra-ui/react';
+import React, { useMemo } from 'react';
+import {
+    VStack,
+    HStack,
+    Text,
+    Box,
+    Input,
+    Select,
+    FormControl,
+    FormLabel,
+    Circle,
+    Button,
+    useDisclosure,
+    Divider,
+    Badge,
+} from '@chakra-ui/react';
+import { DeleteIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from '../common';
-import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
+import {
+    ListPanel,
+    ListPanelItem,
+    InspectorPanel,
+    InspectorEmptyState,
+} from '../common';
+import { EntityType, PropertyDefinition, EntityCategory } from '../../../types/schema';
+import { EditorModal } from '../../common/EditorModal';
+import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
+import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
+import { EmptyScreen } from '../common/EmptyScreen';
+
+const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
+    { value: 'object', label: 'Object', icon: '📦' },
+    { value: 'trigger', label: 'Trigger', icon: '⚡' },
+    { value: 'spawn', label: 'Spawn', icon: '🎯' },
+    { value: 'transition', label: 'Transition', icon: '🚪' },
+    { value: 'decoration', label: 'Decoration', icon: '🌿' },
+];
 
 /**
- * EntityEditor - Browse and configure entity blueprints.
- * Provides: entity type list, entity blueprint inspector.
+ * EntityEditor - Browse, create, edit, and delete entity type definitions.
+ * Entity types are stored per-project and persisted to project.json.
  */
 export const EntityEditor: React.FC = () => {
+    const entityTypes = useEditorStore(state => state.entityTypes);
     const selectedEntityTypeId = useEditorStore(state => state.selectedEntityTypeId);
     const setSelectedEntityType = useEditorStore(state => state.setSelectedEntityType);
+    const updateEntityType = useEditorStore(state => state.updateEntityType);
+    const deleteEntityType = useEditorStore(state => state.deleteEntityType);
+    const { isOpen, onOpen, onClose } = useDisclosure();
 
-    // Build entity type list items
-    const entityItems: ListPanelItem[] = DEFAULT_ENTITY_TYPES.map(type => ({
-        id: type.id,
-        label: type.displayName,
-        sublabel: type.category.toUpperCase(),
-        icon: <Circle size="10px" bg={type.placeholderColor} />,
-    }));
+    const selectedType = entityTypes.find(t => t.id === selectedEntityTypeId);
 
-    const selectedType = DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntityTypeId);
+    // Group entity items for the list panel
+    const entityItems: ListPanelItem[] = useMemo(() =>
+        entityTypes.map(type => ({
+            id: type.id,
+            label: type.displayName,
+            sublabel: type.group
+                ? `${type.group} • ${type.category}`
+                : type.category.toUpperCase(),
+            icon: (
+                <Box
+                    w="20px"
+                    h="20px"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    bg={type.placeholderColor}
+                    borderRadius="sm"
+                    fontSize="11px"
+                >
+                    {type.icon || '📦'}
+                </Box>
+            ),
+        })),
+    [entityTypes]);
 
+    const handlePropertyChange = (key: string, value: any) => {
+        if (selectedEntityTypeId && selectedType) {
+            updateEntityType(selectedEntityTypeId, { [key]: value });
+        }
+    };
+
+    const handlePropertiesChange = (properties: PropertyDefinition[]) => {
+        if (selectedEntityTypeId) {
+            updateEntityType(selectedEntityTypeId, { properties });
+        }
+    };
+
+    const handleDelete = async () => {
+        if (selectedEntityTypeId) {
+            await deleteEntityType(selectedEntityTypeId);
+        }
+    };
+
+    // Collect existing groups for autocomplete
+    const existingGroups = useMemo(() => {
+        const groups = new Set<string>();
+        entityTypes.forEach(et => {
+            if (et.group) groups.add(et.group);
+        });
+        return Array.from(groups).sort();
+    }, [entityTypes]);
 
     // Left panel: entity type list
     const leftPanel = (
@@ -31,96 +110,297 @@ export const EntityEditor: React.FC = () => {
             items={entityItems}
             selectedId={selectedEntityTypeId}
             onSelect={setSelectedEntityType}
+            onAdd={onOpen}
             autoSelectFirst={true}
             emptyMessage="No entity types defined"
         />
     );
 
-    // Right panel: entity type inspector
+    // Right panel: inspector for the selected entity type
     const rightPanel = (
         <InspectorPanel
             title={selectedType?.displayName || 'Entity'}
-            subtitle={selectedType?.category}
+            subtitle={selectedType ? `${selectedType.category} • ${selectedType.properties.length} properties` : undefined}
             emptyState={
                 <InspectorEmptyState
                     icon="🎯"
                     message="No Entity Selected"
-                    hint="Select an entity type to view its properties"
+                    hint="Select an entity type to edit its definition"
                 />
             }
         >
             {selectedType && (
-                <VStack align="stretch" spacing={4}>
-                    <Box>
-                        <Text fontSize="10px" fontWeight="black" textTransform="uppercase" color="gray.500" mb={1}>
-                            ID
-                        </Text>
-                        <Text fontSize="xs" fontFamily="mono" color="gray.300">{selectedType.id}</Text>
-                    </Box>
+                <VStack align="stretch" spacing={5}>
+                    {/* Identity */}
+                    <VStack align="stretch" spacing={3}>
+                        <FormControl>
+                            <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                ID
+                            </FormLabel>
+                            <Text fontSize="xs" fontFamily="mono" color="gray.400">{selectedType.id}</Text>
+                        </FormControl>
 
-                    <Box>
-                        <Text fontSize="10px" fontWeight="black" textTransform="uppercase" color="gray.500" mb={1}>
-                            Category
-                        </Text>
-                        <Text fontSize="xs" color="gray.300">{selectedType.category}</Text>
-                    </Box>
+                        <FormControl>
+                            <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                Display Name
+                            </FormLabel>
+                            <Input
+                                size="xs"
+                                variant="filled"
+                                bg="#0a0a0b"
+                                color="white"
+                                value={selectedType.displayName}
+                                onChange={e => handlePropertyChange('displayName', e.target.value)}
+                                _hover={{ bg: '#071018' }}
+                            />
+                        </FormControl>
 
+                        <HStack spacing={3}>
+                            <FormControl flex={1}>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                    Category
+                                </FormLabel>
+                                <Select
+                                    size="xs"
+                                    bg="#0a0a0b"
+                                    borderColor="#1a1a2e"
+                                    color="white"
+                                    value={selectedType.category}
+                                    onChange={e => handlePropertyChange('category', e.target.value)}
+                                >
+                                    {CATEGORIES.map(c => (
+                                        <option key={c.value} value={c.value} style={{ background: '#0a0a0b' }}>
+                                            {c.icon} {c.label}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            <FormControl flex={1}>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                    Group
+                                </FormLabel>
+                                <Input
+                                    size="xs"
+                                    variant="filled"
+                                    bg="#0a0a0b"
+                                    color="white"
+                                    value={selectedType.group ?? ''}
+                                    onChange={e => handlePropertyChange('group', e.target.value || undefined)}
+                                    placeholder="Ungrouped"
+                                    list="inspector-entity-groups"
+                                    _hover={{ bg: '#071018' }}
+                                />
+                                {existingGroups.length > 0 && (
+                                    <datalist id="inspector-entity-groups">
+                                        {existingGroups.map(g => (
+                                            <option key={g} value={g} />
+                                        ))}
+                                    </datalist>
+                                )}
+                            </FormControl>
+                        </HStack>
+
+                        <FormControl>
+                            <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                Description
+                            </FormLabel>
+                            <Input
+                                size="xs"
+                                variant="filled"
+                                bg="#0a0a0b"
+                                color="white"
+                                value={selectedType.description ?? ''}
+                                onChange={e => handlePropertyChange('description', e.target.value || undefined)}
+                                placeholder="Optional"
+                                _hover={{ bg: '#071018' }}
+                            />
+                        </FormControl>
+
+                        <HStack spacing={3}>
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                    Icon
+                                </FormLabel>
+                                <Text fontSize="lg">{selectedType.icon || '📦'}</Text>
+                            </FormControl>
+                            <FormControl>
+                                <FormLabel color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={1}>
+                                    Color
+                                </FormLabel>
+                                <Circle size="16px" bg={selectedType.placeholderColor} />
+                            </FormControl>
+                        </HStack>
+                    </VStack>
+
+                    <Divider borderColor="#071018" />
+
+                    {/* Property Definitions */}
+                    <PropertyDefinitionEditor
+                        properties={selectedType.properties}
+                        onChange={handlePropertiesChange}
+                    />
+
+                    <Divider borderColor="#071018" />
+
+                    {/* Danger Zone */}
                     <Box>
-                        <Text fontSize="10px" fontWeight="black" textTransform="uppercase" color="gray.500" mb={1}>
-                            Properties
+                        <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={2}>
+                            Danger Zone
                         </Text>
-                        {selectedType.properties.length === 0 ? (
-                            <Text fontSize="xs" color="gray.600" fontStyle="italic">No configurable properties</Text>
-                        ) : (
-                            <VStack align="stretch" spacing={1}>
-                                {selectedType.properties.map((prop: { key: string; label: string; type: string }) => (
-                                    <HStack key={prop.key} justify="space-between">
-                                        <Text fontSize="xs" color="gray.400">{prop.label}</Text>
-                                        <Text fontSize="xs" color="gray.600" fontFamily="mono">{prop.type}</Text>
-                                    </HStack>
-                                ))}
-                            </VStack>
-                        )}
+                        <Button
+                            size="xs"
+                            colorScheme="red"
+                            variant="outline"
+                            leftIcon={<DeleteIcon fontSize="10px" />}
+                            onClick={handleDelete}
+                        >
+                            Delete Entity Type
+                        </Button>
                     </Box>
                 </VStack>
             )}
         </InspectorPanel>
     );
 
-    // Main content: placeholder for future entity canvas/preview
-    const content = (
-        <Center w="full" h="full">
-            <VStack spacing={4}>
-                <Text fontSize="6xl">🎯</Text>
-                <Text color="white" fontWeight="bold" fontSize="xl">Entity Editor</Text>
-                <Text color="gray.500" textAlign="center" maxW="300px">
-                    Browse entity blueprints. Place entities on maps using the Map Editor.
-                </Text>
-
-                <Box mt={4} p={4} bg="blue.900" rounded="md" border="1px" borderColor="blue.800" maxW="300px">
-                    <VStack spacing={1} align="start">
-                        <Text fontSize="9px" fontWeight="black" color="blue.200" textTransform="uppercase">Tip</Text>
-                        <Text fontSize="xs" color="blue.100">
-                            Select an entity type from the list, then switch to Map Editor to place it on your map.
-                        </Text>
-                    </VStack>
-                </Box>
-            </VStack>
-        </Center>
+    // Main content: summary view
+    const content = entityTypes.length === 0 ? (
+        <EmptyScreen
+            icon="🎯"
+            title="No Entity Types"
+            description="Define entity blueprints that can be placed on maps. Entity types describe objects, NPCs, triggers, and other game elements."
+            buttonLabel="Create First Entity"
+            onCreate={onOpen}
+        />
+    ) : (
+        <EntityTypeGrid entityTypes={entityTypes} selectedId={selectedEntityTypeId} onSelect={setSelectedEntityType} />
     );
 
     return (
-        <ResizableEditorLayout
-            header={{
-                title: 'Entities',
-                subtitle: `${DEFAULT_ENTITY_TYPES.length} entity types`,
-            }}
-            content={content}
-            leftPanel={leftPanel}
-            rightPanel={rightPanel}
-            leftPanelDefaultSize={18}
-            rightPanelDefaultSize={22}
-        />
+        <>
+            <ResizableEditorLayout
+                header={{
+                    title: 'Entity Types',
+                    subtitle: `${entityTypes.length} type${entityTypes.length !== 1 ? 's' : ''} defined`,
+                }}
+                content={content}
+                leftPanel={leftPanel}
+                rightPanel={rightPanel}
+                leftPanelDefaultSize={18}
+                rightPanelDefaultSize={25}
+            />
+
+            <EditorModal isOpen={isOpen} onClose={onClose}>
+                <CreateEntityTypeDialog onClose={onClose} />
+            </EditorModal>
+        </>
+    );
+};
+
+/**
+ * Grid view of entity types grouped by their group field
+ */
+const EntityTypeGrid: React.FC<{
+    entityTypes: EntityType[];
+    selectedId: string | null;
+    onSelect: (id: string) => void;
+}> = ({ entityTypes, selectedId, onSelect }) => {
+    const grouped = useMemo(() => {
+        const groups: Record<string, EntityType[]> = {};
+        for (const et of entityTypes) {
+            const groupName = et.group || 'Ungrouped';
+            if (!groups[groupName]) groups[groupName] = [];
+            groups[groupName].push(et);
+        }
+        return groups;
+    }, [entityTypes]);
+
+    const groupNames = Object.keys(grouped).sort((a, b) => {
+        if (a === 'Ungrouped') return 1;
+        if (b === 'Ungrouped') return -1;
+        return a.localeCompare(b);
+    });
+
+    return (
+        <Box p={6} overflowY="auto" h="full">
+            <VStack spacing={6} align="stretch" maxW="800px" mx="auto">
+                {groupNames.map(groupName => (
+                    <Box key={groupName}>
+                        <HStack spacing={2} mb={3}>
+                            <Text
+                                fontSize="xs"
+                                fontWeight="black"
+                                textTransform="uppercase"
+                                letterSpacing="wider"
+                                color="gray.500"
+                            >
+                                {groupName}
+                            </Text>
+                            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+                                {grouped[groupName].length}
+                            </Badge>
+                        </HStack>
+                        <Box
+                            display="grid"
+                            gridTemplateColumns="repeat(auto-fill, minmax(160px, 1fr))"
+                            gap={3}
+                        >
+                            {grouped[groupName].map(et => (
+                                <Box
+                                    key={et.id}
+                                    p={3}
+                                    bg={selectedId === et.id ? 'blue.900' : '#0a0a0b'}
+                                    borderWidth="1px"
+                                    borderColor={selectedId === et.id ? 'blue.500' : '#1a1a2e'}
+                                    borderRadius="md"
+                                    cursor="pointer"
+                                    _hover={{
+                                        bg: selectedId === et.id ? 'blue.900' : '#0f0f1a',
+                                        borderColor: selectedId === et.id ? 'blue.500' : 'gray.600',
+                                    }}
+                                    transition="all 0.1s"
+                                    onClick={() => onSelect(et.id)}
+                                >
+                                    <VStack spacing={2} align="center">
+                                        <Box
+                                            w="36px"
+                                            h="36px"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            bg={et.placeholderColor}
+                                            borderRadius="md"
+                                            fontSize="lg"
+                                        >
+                                            {et.icon || '📦'}
+                                        </Box>
+                                        <VStack spacing={0}>
+                                            <Text
+                                                fontSize="xs"
+                                                fontWeight="bold"
+                                                color="white"
+                                                textAlign="center"
+                                                noOfLines={1}
+                                            >
+                                                {et.displayName}
+                                            </Text>
+                                            <Text fontSize="10px" color="gray.600" textAlign="center">
+                                                {et.category}
+                                            </Text>
+                                        </VStack>
+                                        {et.properties.length > 0 && (
+                                            <Text fontSize="9px" color="gray.600">
+                                                {et.properties.length} prop{et.properties.length !== 1 ? 's' : ''}
+                                            </Text>
+                                        )}
+                                    </VStack>
+                                </Box>
+                            ))}
+                        </Box>
+                    </Box>
+                ))}
+            </VStack>
+        </Box>
     );
 };
 

@@ -8,11 +8,11 @@ import {
     Circle,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 
 export const EntitiesPanel: React.FC = () => {
     const selectedEntityTypeId = useEditorStore(state => state.selectedEntityTypeId);
     const setSelectedEntityType = useEditorStore(state => state.setSelectedEntityType);
+    const entityTypes = useEditorStore(state => state.entityTypes);
 
     return (
         <VStack h="full" bg="gray.950" spacing={0} align="stretch" borderLeft="1px" borderColor="gray.800">
@@ -31,7 +31,7 @@ export const EntitiesPanel: React.FC = () => {
             {/* List */}
             <Box flex={1} overflowY="auto" p={3}>
                 <VStack spacing={2} align="stretch">
-                    {DEFAULT_ENTITY_TYPES.map(type => (
+                    {entityTypes.map(type => (
                         <Box
                             key={type.id}
                             px={3}

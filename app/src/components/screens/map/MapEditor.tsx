@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useDisclosure, VStack } from '@chakra-ui/react';
+import { Box, useDisclosure, VStack } from '@chakra-ui/react';
 // icons
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -10,16 +10,34 @@ import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
+import { EntityPalette } from '../entity/EntityPalette';
 import { EditorModal } from '../../common/EditorModal';
 
 /**
- * Combined right panel showing tool properties and entity inspector
+ * Combined right panel showing tool properties and entity inspector.
+ * When using entity tools, shows the entity palette at the top.
  */
 const MapRightPanel: React.FC = () => {
+  const activeTool = useEditorStore((state) => state.activeTool);
+  const isEntityMode = activeTool === 'entityPlace' || activeTool === 'entitySelect';
+
   return (
-    <VStack align="stretch" spacing={0} h="full" overflow="auto">
-      <ToolPropertiesPanel />
-      <PropertiesPanel />
+    <VStack align="stretch" spacing={0} h="full" overflow="hidden">
+      {isEntityMode ? (
+        <>
+          <Box flex={1} overflow="hidden" minH="200px">
+            <EntityPalette />
+          </Box>
+          <Box borderTop="1px" borderColor="editor.border" maxH="40%" overflow="auto">
+            <PropertiesPanel />
+          </Box>
+        </>
+      ) : (
+        <VStack align="stretch" spacing={0} flex={1} overflow="auto">
+          <ToolPropertiesPanel />
+          <PropertiesPanel />
+        </VStack>
+      )}
     </VStack>
   );
 };

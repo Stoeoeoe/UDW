@@ -35,5 +35,29 @@
       "color": "#43283a",
       "zIndex": 10
     }
+  ],
+  "entityTypes": [
+    {
+      "id": "gageli",
+      "displayName": "Gageli",
+      "category": "object",
+      "icon": "⚡",
+      "group": "Gugu",
+      "description": "Gaga",
+      "placeholderColor": "#3182ce",
+      "properties": [
+        {
+          "key": "prop_1772056362678",
+          "label": "hello",
+          "type": "string",
+          "defaultValue": "",
+          "required": false
+        }
+      ],
+      "defaultSize": [
+        1,
+        1
+      ]
+    }
   ]
 }

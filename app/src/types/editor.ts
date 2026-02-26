@@ -1,4 +1,4 @@
-import { Project, Tileset, Map, LayerDefinition } from './schema';
+import { Project, Tileset, Map, LayerDefinition, EntityType } from './schema';
 
 export interface EditorState {
   // Project data
@@ -78,6 +78,9 @@ export interface EditorState {
 
   // Project-level terrain types (for autotiling / labeling)
   terrainTypes: TerrainType[];
+
+  // Project-level entity type definitions
+  entityTypes: EntityType[];
 
   // Project-level layer definitions (template layers for maps)
   layerDefinitions: LayerDefinition[];

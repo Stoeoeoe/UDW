@@ -12,7 +12,6 @@ import {
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
-import { DEFAULT_ENTITY_TYPES } from '../../lib/defaultEntities';
 import { resolveEntities } from '../../lib/mapUtils';
 import { InspectorPanel, InspectorEmptyState } from '../screens/common';
 
@@ -20,6 +19,7 @@ export const PropertiesPanel: React.FC = () => {
     const editorMode = useEditorStore(state => state.mode);
     const selectedEntityId = useEditorStore(state => state.selectedEntityId);
     const updateEntityProperties = useEditorStore(state => state.updateEntityProperties);
+    const entityTypes = useEditorStore(state => state.entityTypes);
     const currentMap = useEditorStore(state => state.currentMap);
     const activeVariationId = useEditorStore(state => state.activeVariationId);
     const activeTilesetId = useEditorStore(state => state.activeTilesetId);
@@ -41,7 +41,7 @@ export const PropertiesPanel: React.FC = () => {
     // Resolve entities for the current variation
     const resolvedEntities = currentMap ? resolveEntities(currentMap, activeVariationId) : [];
     const selectedEntity = resolvedEntities.find(e => e.id === selectedEntityId);
-    const entityType = selectedEntity ? DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntity.typeId) : null;
+    const entityType = selectedEntity ? entityTypes.find(t => t.id === selectedEntity.typeId) : null;
 
     const handlePropertyChange = (key: string, value: any) => {
         if (selectedEntityId) {

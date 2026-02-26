@@ -3,7 +3,6 @@ import { Container, Graphics, Sprite, Texture, Rectangle } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveTileAt, resolveEntities } from '../../../lib/mapUtils';
-import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
@@ -174,14 +173,14 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // Render entities
     const renderEntities = useCallback(() => {
         const entityContainer = entityContainerRef.current;
-        const { currentMap, activeVariationId, selectedEntityId } = useEditorStore.getState();
+        const { currentMap, activeVariationId, selectedEntityId, entityTypes } = useEditorStore.getState();
         if (!entityContainer || !currentMap) return;
 
         entityContainer.removeChildren();
 
         const resolvedEntities = resolveEntities(currentMap, activeVariationId);
         resolvedEntities.forEach(entity => {
-            const type = DEFAULT_ENTITY_TYPES.find(t => t.id === entity.typeId);
+            const type = entityTypes.find(t => t.id === entity.typeId);
             const colorHex = type?.placeholderColor || '#ffff00';
             const color = parseInt(colorHex.replace('#', ''), 16);
 

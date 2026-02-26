@@ -3306,7 +3306,112 @@
       "definitionId": "layer-1769464347677"
     }
   ],
-  "entities": [],
+  "entities": [
+    {
+      "id": "ent-1772055645904",
+      "typeId": "npc_spawn",
+      "position": [
+        28,
+        8
+      ],
+      "properties": {
+        "npcId": "villager_1",
+        "schedule": ""
+      }
+    },
+    {
+      "id": "ent-1772055646350",
+      "typeId": "npc_spawn",
+      "position": [
+        23,
+        13
+      ],
+      "properties": {
+        "npcId": "villager_1",
+        "schedule": ""
+      }
+    },
+    {
+      "id": "ent-1772055647275",
+      "typeId": "npc_spawn",
+      "position": [
+        14,
+        17
+      ],
+      "properties": {
+        "npcId": "villager_1",
+        "schedule": ""
+      }
+    },
+    {
+      "id": "ent-1772055647687",
+      "typeId": "npc_spawn",
+      "position": [
+        10,
+        9
+      ],
+      "properties": {
+        "npcId": "villager_1",
+        "schedule": ""
+      }
+    },
+    {
+      "id": "ent-1772055648087",
+      "typeId": "npc_spawn",
+      "position": [
+        6,
+        4
+      ],
+      "properties": {
+        "npcId": "villager_1",
+        "schedule": ""
+      }
+    },
+    {
+      "id": "ent-1772056383802",
+      "typeId": "gageli",
+      "position": [
+        12,
+        8
+      ],
+      "properties": {
+        "prop_1772056362678": ""
+      }
+    },
+    {
+      "id": "ent-1772056388578",
+      "typeId": "gageli",
+      "position": [
+        12,
+        9
+      ],
+      "properties": {
+        "prop_1772056362678": ""
+      }
+    },
+    {
+      "id": "ent-1772056390214",
+      "typeId": "gageli",
+      "position": [
+        11,
+        11
+      ],
+      "properties": {
+        "prop_1772056362678": ""
+      }
+    },
+    {
+      "id": "ent-1772056390702",
+      "typeId": "gageli",
+      "position": [
+        10,
+        11
+      ],
+      "properties": {
+        "prop_1772056362678": ""
+      }
+    }
+  ],
   "tilesetRefs": [
     "villagetileset"
   ],

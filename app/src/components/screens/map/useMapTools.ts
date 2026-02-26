@@ -2,7 +2,6 @@ import { useCallback, useRef, useEffect } from 'react';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveEntities, resolveTileAt } from '../../../lib/mapUtils';
-import { DEFAULT_ENTITY_TYPES } from '../../../lib/defaultEntities';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import {
     buildTerrainGridFromLayer,
@@ -470,7 +469,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 setDrawPreview({ isDrawing: true, start: { x: tx, y: ty }, end: { x: tx, y: ty }, mode: 'draw' });
             }
         } else if (activeTool === 'entityPlace' && selectedEntityTypeId) {
-            const type = DEFAULT_ENTITY_TYPES.find(t => t.id === selectedEntityTypeId);
+            const entityTypes = useEditorStore.getState().entityTypes;
+            const type = entityTypes.find(t => t.id === selectedEntityTypeId);
             if (type) {
                 placeEntity({
                     id: `ent-${Date.now()}`,

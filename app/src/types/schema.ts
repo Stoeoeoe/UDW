@@ -15,6 +15,8 @@ export interface Project {
     terrainTypes?: { id: string; displayName: string; color: string }[];
     // Default layer definitions for maps
     layerDefinitions?: LayerDefinition[];
+    // Project-level entity type definitions
+    entityTypes?: EntityType[];
 }
 
 export type LayerType = 'tile' | 'entity';
@@ -207,10 +209,13 @@ export interface EntityType {
     category: EntityCategory;
     displayName: string;
     description?: string;
+    icon?: string;                // Emoji or icon identifier for display
+    group?: string;               // Grouping label (e.g., "NPCs", "Interactables")
     placeholderColor: string;     // Hex color for editor rendering
-    placeholderIcon?: string;     // Optional icon identifier
+    placeholderIcon?: string;     // Optional icon identifier (deprecated, use icon)
     properties: PropertyDefinition[];
     defaultSize?: [number, number];  // Tile dimensions [width, height]
+    pixelPerfect?: boolean;       // If true, position is in pixels not tiles
 }
 
 export type EntityCategory =
@@ -232,7 +237,9 @@ export interface PropertyDefinition {
 
 export type PropertyType =
     | "string"
-    | "number"
+    | "int"
+    | "float"
+    | "number"         // Legacy alias for float
     | "boolean"
     | "enum"
     | "color"
