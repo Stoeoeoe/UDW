@@ -1,0 +1,65 @@
+{
+  "name": "@editor-shell/react",
+  "version": "0.1.0",
+  "description": "Reusable editor shell, navigation, and layout components for Chakra UI-based desktop editors",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./theme": {
+      "import": "./dist/theme/index.js",
+      "types": "./dist/theme/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@chakra-ui/icons": "^2.0.0",
+    "@chakra-ui/react": "^2.0.0",
+    "@emotion/react": "^11.0.0",
+    "@emotion/styled": "^11.0.0",
+    "framer-motion": "^11.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-icons": "^5.0.0",
+    "react-resizable-panels": "^2.0.0"
+  },
+  "devDependencies": {
+    "@chakra-ui/icons": "^2.2.4",
+    "@chakra-ui/react": "^2.10.9",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "framer-motion": "^11.18.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
+    "react-resizable-panels": "^2.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "editor",
+    "shell",
+    "layout",
+    "navigation",
+    "chakra-ui",
+    "react",
+    "panels",
+    "sidebar"
+  ]
+}

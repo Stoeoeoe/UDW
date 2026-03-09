@@ -19,7 +19,8 @@ import { EditorModal } from '../../common/EditorModal';
  */
 const MapRightPanel: React.FC = () => {
   const activeTool = useEditorStore((state) => state.activeTool);
-  const isEntityMode = activeTool === 'entityPlace' || activeTool === 'entitySelect';
+  const isEntityMode =
+    activeTool === 'entityPlace' || activeTool === 'entitySelect';
 
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="hidden">
@@ -28,7 +29,12 @@ const MapRightPanel: React.FC = () => {
           <Box flex={1} overflow="hidden" minH="200px">
             <EntityPalette />
           </Box>
-          <Box borderTop="1px" borderColor="editor.border" maxH="40%" overflow="auto">
+          <Box
+            borderTop="1px"
+            borderColor="editor.border"
+            maxH="40%"
+            overflow="auto"
+          >
             <PropertiesPanel />
           </Box>
         </>
