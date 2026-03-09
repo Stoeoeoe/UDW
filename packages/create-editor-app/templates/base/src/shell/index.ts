@@ -46,7 +46,18 @@ export { PropertyForm } from './common/PropertyForm';
 export type { PropertyFormProps } from './common/PropertyForm';
 
 // Theme
-export { editorTheme, editorColors, createEditorTheme } from './theme/editorTheme';
+export {
+  editorTheme,
+  editorColors,
+  createEditorTheme,
+} from './theme/editorTheme';
 
 // Types
-export type { NavItem, PropertyType, PropertySchema, ListPanelItem, InspectorSection, ToolItem } from './types';
+export type {
+  NavItem,
+  PropertyType,
+  PropertySchema,
+  ListPanelItem,
+  InspectorSection,
+  ToolItem,
+} from './types';

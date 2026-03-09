@@ -10,13 +10,31 @@ export interface PanelShellProps {
 /**
  * PanelShell - A container for side panels with a styled header and scrollable body.
  */
-export const PanelShell: React.FC<PanelShellProps> = ({ title, subtitle, children }) => {
+export const PanelShell: React.FC<PanelShellProps> = ({
+  title,
+  subtitle,
+  children,
+}) => {
   return (
     <VStack h="full" w="full" align="stretch" spacing={0} bg="editor.panelBg">
-      <Box bg="editor.headerBg" borderBottom="1px" borderColor="editor.border" px={4} py={3}>
+      <Box
+        bg="editor.headerBg"
+        borderBottom="1px"
+        borderColor="editor.border"
+        px={4}
+        py={3}
+      >
         <VStack align="start" spacing={0}>
-          {title && <Heading size="xs" color="white">{title}</Heading>}
-          {subtitle && <Text fontSize="10px" color="gray.500">{subtitle}</Text>}
+          {title && (
+            <Heading size="xs" color="white">
+              {title}
+            </Heading>
+          )}
+          {subtitle && (
+            <Text fontSize="10px" color="gray.500">
+              {subtitle}
+            </Text>
+          )}
         </VStack>
       </Box>
       <Box p={4} overflowY="auto" flex={1}>

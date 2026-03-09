@@ -34,7 +34,8 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   React.useEffect(() => {
     if (!onSelect || !autoSelectFirst) return;
     if (!items || items.length === 0) return;
-    const hasSelected = selectedId != null && items.some((i) => i.id === selectedId);
+    const hasSelected =
+      selectedId != null && items.some((i) => i.id === selectedId);
     if (!hasSelected) {
       onSelect(items[0].id);
     }
@@ -52,7 +53,13 @@ export const ListPanel: React.FC<ListPanelProps> = ({
         justify="space-between"
         flexShrink={0}
       >
-        <Text fontSize="10px" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
+        <Text
+          fontSize="10px"
+          fontWeight="black"
+          textTransform="uppercase"
+          letterSpacing="widest"
+          color="gray.500"
+        >
           {title}
         </Text>
         <HStack spacing={1}>
@@ -74,7 +81,13 @@ export const ListPanel: React.FC<ListPanelProps> = ({
       {/* Items */}
       <Box flex={1} overflowY="auto" p={1}>
         {items.length === 0 ? (
-          <Text fontSize="xs" color="gray.600" textAlign="center" mt={4} fontStyle="italic">
+          <Text
+            fontSize="xs"
+            color="gray.600"
+            textAlign="center"
+            mt={4}
+            fontStyle="italic"
+          >
             {emptyMessage}
           </Text>
         ) : (
@@ -84,7 +97,11 @@ export const ListPanel: React.FC<ListPanelProps> = ({
 
               if (renderItem) {
                 return (
-                  <Box key={item.id} onClick={() => onSelect?.(item.id)} cursor="pointer">
+                  <Box
+                    key={item.id}
+                    onClick={() => onSelect?.(item.id)}
+                    cursor="pointer"
+                  >
                     {renderItem(item, isSelected)}
                   </Box>
                 );
@@ -108,7 +125,11 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                   <HStack spacing={2}>
                     {item.icon}
                     <VStack align="start" spacing={0} flex={1}>
-                      <Text fontSize="xs" fontWeight={isSelected ? 'bold' : 'normal'} color="gray.200">
+                      <Text
+                        fontSize="xs"
+                        fontWeight={isSelected ? 'bold' : 'normal'}
+                        color="gray.200"
+                      >
                         {item.label}
                       </Text>
                       {item.sublabel && (

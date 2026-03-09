@@ -42,7 +42,15 @@ export function Sidebar<TMode extends string = string>({
   bottomItems,
 }: SidebarProps<TMode>) {
   return (
-    <VStack spacing={0} h="full" bg="editor.panelBg" borderRight="1px" borderColor="editor.border" w="16" flexShrink={0}>
+    <VStack
+      spacing={0}
+      h="full"
+      bg="editor.panelBg"
+      borderRight="1px"
+      borderColor="editor.border"
+      w="16"
+      flexShrink={0}
+    >
       {items.map((item) => (
         <NavIcon<TMode>
           key={item.mode}

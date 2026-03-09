@@ -12,16 +12,56 @@ export interface ZoomControlsProps {
 /**
  * ZoomControls - Floating zoom control bar for viewports.
  */
-export const ZoomControls: React.FC<ZoomControlsProps> = ({ zoomPercent, onZoomIn, onZoomOut, onReset }) => {
+export const ZoomControls: React.FC<ZoomControlsProps> = ({
+  zoomPercent,
+  onZoomIn,
+  onZoomOut,
+  onReset,
+}) => {
   return (
-    <HStack position="absolute" bottom="4" left="4" bg="gray.800" p={1} rounded="lg" border="1px" borderColor="gray.700" spacing={1}>
-      <IconButton aria-label="Zoom Out" icon={<MinusIcon />} size="xs" variant="ghost" onClick={onZoomOut} />
-      <Button size="xs" variant="ghost" px={2} onClick={onReset} fontSize="xs" color="gray.300">
+    <HStack
+      position="absolute"
+      bottom="4"
+      left="4"
+      bg="gray.800"
+      p={1}
+      rounded="lg"
+      border="1px"
+      borderColor="gray.700"
+      spacing={1}
+    >
+      <IconButton
+        aria-label="Zoom Out"
+        icon={<MinusIcon />}
+        size="xs"
+        variant="ghost"
+        onClick={onZoomOut}
+      />
+      <Button
+        size="xs"
+        variant="ghost"
+        px={2}
+        onClick={onReset}
+        fontSize="xs"
+        color="gray.300"
+      >
         {Math.round(zoomPercent)}%
       </Button>
-      <IconButton aria-label="Zoom In" icon={<AddIcon />} size="xs" variant="ghost" onClick={onZoomIn} />
+      <IconButton
+        aria-label="Zoom In"
+        icon={<AddIcon />}
+        size="xs"
+        variant="ghost"
+        onClick={onZoomIn}
+      />
       <Box w="1px" h="4" bg="gray.700" mx={1} />
-      <IconButton aria-label="Home" icon={<RepeatIcon />} size="xs" variant="ghost" onClick={onReset} />
+      <IconButton
+        aria-label="Home"
+        icon={<RepeatIcon />}
+        size="xs"
+        variant="ghost"
+        onClick={onReset}
+      />
     </HStack>
   );
 };

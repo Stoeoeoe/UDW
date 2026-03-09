@@ -24,13 +24,32 @@ export interface AppShellProps {
  * </AppShell>
  * ```
  */
-export const AppShell: React.FC<AppShellProps> = ({ topBar, children, statusBar }) => {
+export const AppShell: React.FC<AppShellProps> = ({
+  topBar,
+  children,
+  statusBar,
+}) => {
   const showStatusBar = statusBar !== null;
 
   return (
-    <Flex direction="column" h="100vh" w="100vw" overflow="hidden" bg="gray.900" color="gray.200" userSelect="none">
+    <Flex
+      direction="column"
+      h="100vh"
+      w="100vw"
+      overflow="hidden"
+      bg="gray.900"
+      color="gray.200"
+      userSelect="none"
+    >
       {/* Top Bar */}
-      <Box h="12" borderBottom="1px" borderColor="gray.800" bg="gray.950" zIndex="20" flexShrink={0}>
+      <Box
+        h="12"
+        borderBottom="1px"
+        borderColor="gray.800"
+        bg="gray.950"
+        zIndex="20"
+        flexShrink={0}
+      >
         {topBar}
       </Box>
 

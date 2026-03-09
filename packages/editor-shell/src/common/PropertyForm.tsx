@@ -26,8 +26,14 @@ export interface PropertyFormProps {
  * PropertyForm - A schema-driven form for editing key/value properties.
  * Supports string, number, boolean, enum, and custom renderers.
  */
-export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onChange }) => {
-  const [localValues, setLocalValues] = React.useState<Record<string, string>>({});
+export const PropertyForm: React.FC<PropertyFormProps> = ({
+  schema,
+  values,
+  onChange,
+}) => {
+  const [localValues, setLocalValues] = React.useState<Record<string, string>>(
+    {},
+  );
   const focusedRef = React.useRef<Record<string, boolean>>({});
 
   React.useEffect(() => {
@@ -35,7 +41,14 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
     for (const prop of schema) {
       if (focusedRef.current[prop.key]) continue;
       const rawVal = values[prop.key];
-      const v = rawVal !== undefined ? rawVal : (prop.type === 'number' ? 0 : prop.type === 'boolean' ? false : '');
+      const v =
+        rawVal !== undefined
+          ? rawVal
+          : prop.type === 'number'
+            ? 0
+            : prop.type === 'boolean'
+              ? false
+              : '';
       next[prop.key] = String(v);
     }
     setLocalValues((prev) => ({ ...prev, ...next }));
@@ -57,12 +70,25 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
     <VStack align="stretch" spacing={5} px={2}>
       {schema.map((prop) => {
         const rawVal = values[prop.key];
-        const currentValue = rawVal !== undefined ? rawVal : (prop.type === 'number' ? 0 : prop.type === 'boolean' ? false : '');
+        const currentValue =
+          rawVal !== undefined
+            ? rawVal
+            : prop.type === 'number'
+              ? 0
+              : prop.type === 'boolean'
+                ? false
+                : '';
         const localVal = localValues[prop.key] ?? String(currentValue);
 
         return (
           <FormControl key={prop.key}>
-            <FormLabel fontSize="10px" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="wide">
+            <FormLabel
+              fontSize="10px"
+              color="gray.400"
+              mb={2}
+              textTransform="uppercase"
+              letterSpacing="wide"
+            >
               {prop.label}
             </FormLabel>
 
@@ -72,15 +98,26 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   size="sm"
                   bg="editor.inputBg"
                   borderColor="editor.inputBorder"
-                  _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 2px rgba(66,153,225,0.6)' }}
+                  _focus={{
+                    borderColor: 'blue.500',
+                    boxShadow: '0 0 0 2px rgba(66,153,225,0.6)',
+                  }}
                   color="white"
                   value={localVal}
                   onChange={(e) => {
-                    setLocalValues((prev) => ({ ...prev, [prop.key]: e.target.value }));
+                    setLocalValues((prev) => ({
+                      ...prev,
+                      [prop.key]: e.target.value,
+                    }));
                     onChange(prop.key, e.target.value);
                   }}
-                  onFocus={() => { focusedRef.current[prop.key] = true; }}
-                  onBlur={() => { focusedRef.current[prop.key] = false; commitValue(prop.key); }}
+                  onFocus={() => {
+                    focusedRef.current[prop.key] = true;
+                  }}
+                  onBlur={() => {
+                    focusedRef.current[prop.key] = false;
+                    commitValue(prop.key);
+                  }}
                 />
               )}
 
@@ -97,10 +134,19 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                       onChange(prop.key, parseFloat(str));
                     }
                   }}
-                  onFocus={() => { focusedRef.current[prop.key] = true; }}
-                  onBlur={() => { focusedRef.current[prop.key] = false; commitValue(prop.key); }}
+                  onFocus={() => {
+                    focusedRef.current[prop.key] = true;
+                  }}
+                  onBlur={() => {
+                    focusedRef.current[prop.key] = false;
+                    commitValue(prop.key);
+                  }}
                 >
-                  <NumberInputField bg="editor.inputBg" borderColor="editor.inputBorder" color="white" />
+                  <NumberInputField
+                    bg="editor.inputBg"
+                    borderColor="editor.inputBorder"
+                    color="white"
+                  />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
@@ -124,12 +170,21 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   color="white"
                   value={localVal}
                   onChange={(e) => {
-                    setLocalValues((prev) => ({ ...prev, [prop.key]: e.target.value }));
+                    setLocalValues((prev) => ({
+                      ...prev,
+                      [prop.key]: e.target.value,
+                    }));
                     onChange(prop.key, e.target.value);
                   }}
                 >
                   {(prop.constraints?.options || []).map((opt) => (
-                    <option key={opt} value={opt} style={{ background: '#05060a', color: '#fff' }}>{opt}</option>
+                    <option
+                      key={opt}
+                      value={opt}
+                      style={{ background: '#05060a', color: '#fff' }}
+                    >
+                      {opt}
+                    </option>
                   ))}
                 </Select>
               )}
@@ -137,14 +192,21 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
               {prop.type === 'custom' && prop.customRenderer && (
                 <Box>
                   {prop.customRenderer(localVal, (v) => {
-                    setLocalValues((prev) => ({ ...prev, [prop.key]: String(v) }));
+                    setLocalValues((prev) => ({
+                      ...prev,
+                      [prop.key]: String(v),
+                    }));
                     onChange(prop.key, v);
                   })}
                 </Box>
               )}
             </Box>
 
-            {prop.description && <Text fontSize="9px" color="gray.500" mt={2}>{prop.description}</Text>}
+            {prop.description && (
+              <Text fontSize="9px" color="gray.500" mt={2}>
+                {prop.description}
+              </Text>
+            )}
           </FormControl>
         );
       })}

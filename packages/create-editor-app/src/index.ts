@@ -18,7 +18,10 @@ interface ProjectConfig {
 
 async function main() {
   console.log();
-  console.log(bold(cyan('  create-editor-app')) + dim(' - scaffold a new editor application'));
+  console.log(
+    bold(cyan('  create-editor-app')) +
+      dim(' - scaffold a new editor application'),
+  );
   console.log();
 
   // Get target directory from args or prompt
@@ -59,7 +62,8 @@ async function main() {
       {
         type: 'text',
         name: 'navItems',
-        message: 'Sidebar modes (comma-separated, e.g. "dashboard,editor,settings"):',
+        message:
+          'Sidebar modes (comma-separated, e.g. "dashboard,editor,settings"):',
         initial: 'dashboard,editor,settings',
       },
     ],
@@ -68,7 +72,7 @@ async function main() {
         console.log(red('✖') + ' Operation cancelled');
         process.exit(1);
       },
-    }
+    },
   );
 
   const config: ProjectConfig = {
@@ -164,7 +168,9 @@ function generatePackageJson(root: string, config: ProjectConfig) {
     type: 'module',
     scripts: {
       dev: 'vite',
-      build: config.electron ? 'tsc && vite build && electron-builder' : 'tsc && vite build',
+      build: config.electron
+        ? 'tsc && vite build && electron-builder'
+        : 'tsc && vite build',
       preview: 'vite preview',
       lint: 'eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0',
     },
@@ -174,20 +180,20 @@ function generatePackageJson(root: string, config: ProjectConfig) {
       '@emotion/react': '^11.14.0',
       '@emotion/styled': '^11.14.1',
       'framer-motion': '^11.18.2',
-      'immer': '^11.1.3',
-      'react': '^18.2.0',
+      immer: '^11.1.3',
+      react: '^18.2.0',
       'react-dom': '^18.2.0',
       'react-icons': '^5.5.0',
       'react-resizable-panels': '^2.0.0',
-      'zustand': '^5.0.10',
+      zustand: '^5.0.10',
     },
     devDependencies: {
       '@types/react': '^18.2.64',
       '@types/react-dom': '^18.2.21',
       '@types/node': '^25.0.10',
       '@vitejs/plugin-react': '^4.2.1',
-      'typescript': '^5.2.2',
-      'vite': '^5.1.6',
+      typescript: '^5.2.2',
+      vite: '^5.1.6',
     },
   };
 
@@ -220,12 +226,15 @@ function generatePackageJson(root: string, config: ProjectConfig) {
 
   fs.writeFileSync(
     path.join(root, 'package.json'),
-    JSON.stringify(pkg, null, 2) + '\n'
+    JSON.stringify(pkg, null, 2) + '\n',
   );
 }
 
 function generateAppTsx(root: string, config: ProjectConfig) {
-  const modes = config.navItems.split(',').map((s) => s.trim()).filter(Boolean);
+  const modes = config.navItems
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const modeType = modes.map((m) => `'${m}'`).join(' | ');
   const firstMode = modes[0] || 'dashboard';
 
@@ -242,14 +251,18 @@ function App() {
 
   const renderContent = () => {
     switch (mode) {
-${modes.map((m) => `      case '${m}':
+${modes
+  .map(
+    (m) => `      case '${m}':
         return (
           <EmptyScreen
             icon="${getDefaultIcon(m)}"
             title="${capitalize(m)}"
             description="This is the ${m} screen. Start building here!"
           />
-        );`).join('\n')}
+        );`,
+  )
+  .join('\n')}
       default:
         return null;
     }
@@ -278,8 +291,13 @@ export default App;
 }
 
 function generateSidebarConfig(root: string, config: ProjectConfig) {
-  const modes = config.navItems.split(',').map((s) => s.trim()).filter(Boolean);
-  const settingsLike = modes.find((m) => m === 'settings' || m === 'preferences' || m === 'config');
+  const modes = config.navItems
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const settingsLike = modes.find(
+    (m) => m === 'settings' || m === 'preferences' || m === 'config',
+  );
   const topModes = modes.filter((m) => m !== settingsLike);
   const bottomModes = settingsLike ? [settingsLike] : [];
 
@@ -400,7 +418,7 @@ function generateTestSetup(root: string) {
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
   fs.writeFileSync(
     path.join(root, 'src', 'setupTests.ts'),
-    `import '@testing-library/jest-dom';\n`
+    `import '@testing-library/jest-dom';\n`,
   );
 }
 

@@ -23,7 +23,9 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
     <VStack spacing={6}>
       <VStack spacing={2}>
         <Text fontSize="6xl">{icon}</Text>
-        <Text color="white" fontWeight="bold" fontSize="xl">{title}</Text>
+        <Text color="white" fontWeight="bold" fontSize="xl">
+          {title}
+        </Text>
         <Text color="gray.500">{description}</Text>
       </VStack>
       {buttonLabel && onCreate && (

@@ -10,17 +10,44 @@ export interface SidebarProps<TMode extends string = string> {
   bottomItems?: NavItem<TMode>[];
 }
 
-export function Sidebar<TMode extends string = string>({ activeMode, onModeChange, items, bottomItems }: SidebarProps<TMode>) {
+export function Sidebar<TMode extends string = string>({
+  activeMode,
+  onModeChange,
+  items,
+  bottomItems,
+}: SidebarProps<TMode>) {
   return (
-    <VStack spacing={0} h="full" bg="editor.panelBg" borderRight="1px" borderColor="editor.border" w="16" flexShrink={0}>
+    <VStack
+      spacing={0}
+      h="full"
+      bg="editor.panelBg"
+      borderRight="1px"
+      borderColor="editor.border"
+      w="16"
+      flexShrink={0}
+    >
       {items.map((item) => (
-        <NavIcon<TMode> key={item.mode} icon={item.icon} label={item.label} mode={item.mode} active={activeMode === item.mode} onClick={onModeChange} />
+        <NavIcon<TMode>
+          key={item.mode}
+          icon={item.icon}
+          label={item.label}
+          mode={item.mode}
+          active={activeMode === item.mode}
+          onClick={onModeChange}
+        />
       ))}
       {bottomItems && bottomItems.length > 0 && (
         <>
           <Spacer />
           {bottomItems.map((item) => (
-            <NavIcon<TMode> key={item.mode} icon={item.icon} label={item.label} mode={item.mode} active={activeMode === item.mode} onClick={onModeChange} />
+            <NavIcon<TMode>
+              key={item.mode}
+              icon={item.icon}
+              label={item.label}
+              mode={item.mode}
+              active={activeMode === item.mode}
+              onClick={onModeChange}
+            />
           ))}
         </>
       )}

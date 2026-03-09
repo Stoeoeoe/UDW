@@ -19,14 +19,14 @@ npx create-editor-app
 
 The CLI will prompt you for:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| **Project name** | `my-editor-app` | Directory name & package name |
-| **App title** | `My Editor` | Shown in title bar & Electron window |
-| **Electron** | Yes | Desktop app with IPC handlers, preload, builder config |
-| **Storybook** | No | Component development environment |
-| **Vitest** | Yes | Unit testing with Testing Library |
-| **Sidebar modes** | `dashboard,editor,settings` | Nav items generated automatically |
+| Option            | Default                     | Description                                            |
+| ----------------- | --------------------------- | ------------------------------------------------------ |
+| **Project name**  | `my-editor-app`             | Directory name & package name                          |
+| **App title**     | `My Editor`                 | Shown in title bar & Electron window                   |
+| **Electron**      | Yes                         | Desktop app with IPC handlers, preload, builder config |
+| **Storybook**     | No                          | Component development environment                      |
+| **Vitest**        | Yes                         | Unit testing with Testing Library                      |
+| **Sidebar modes** | `dashboard,editor,settings` | Nav items generated automatically                      |
 
 ## Scaffolded Structure
 
@@ -64,11 +64,13 @@ my-app/
 ## Included Dependencies
 
 **Runtime:**
+
 - React 18, Chakra UI v2, Emotion, Framer Motion
 - Zustand (state management) + Immer (immutable updates)
 - react-icons, react-resizable-panels
 
 **Dev (optional):**
+
 - Electron + electron-builder + vite-plugin-electron
 - Vitest + Testing Library
 - Storybook

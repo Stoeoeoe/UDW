@@ -32,12 +32,20 @@ export function NavIcon<TMode extends string = string>({
       color={active ? 'blue.400' : 'gray.500'}
       borderLeftWidth={active ? '2px' : '0'}
       borderColor="blue.500"
-      _hover={{ bg: active ? 'gray.800' : 'blackAlpha.400', color: active ? 'blue.400' : 'gray.300' }}
+      _hover={{
+        bg: active ? 'gray.800' : 'blackAlpha.400',
+        color: active ? 'blue.400' : 'gray.300',
+      }}
       transition="all 0.2s"
       title={label}
     >
       <Text fontSize="2xl">{icon}</Text>
-      <Text fontSize="10px" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+      <Text
+        fontSize="10px"
+        fontWeight="medium"
+        textTransform="uppercase"
+        letterSpacing="wider"
+      >
         {label}
       </Text>
     </VStack>

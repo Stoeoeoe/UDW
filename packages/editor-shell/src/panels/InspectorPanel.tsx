@@ -26,13 +26,32 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   return (
     <Flex direction="column" h="full" overflow="hidden">
       {/* Header */}
-      <Box bg="editor.headerBg" borderBottom="1px" borderColor="editor.border" px={4} py={3} flexShrink={0}>
+      <Box
+        bg="editor.headerBg"
+        borderBottom="1px"
+        borderColor="editor.border"
+        px={4}
+        py={3}
+        flexShrink={0}
+      >
         <VStack align="start" spacing={0}>
-          <Text fontSize="9px" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
+          <Text
+            fontSize="9px"
+            fontWeight="black"
+            textTransform="uppercase"
+            letterSpacing="widest"
+            color="gray.500"
+          >
             Inspector
           </Text>
-          <Heading size="xs" color="white">{title}</Heading>
-          {subtitle && <Text fontSize="10px" color="gray.500" mt={0.5}>{subtitle}</Text>}
+          <Heading size="xs" color="white">
+            {title}
+          </Heading>
+          {subtitle && (
+            <Text fontSize="10px" color="gray.500" mt={0.5}>
+              {subtitle}
+            </Text>
+          )}
         </VStack>
       </Box>
 
@@ -45,12 +64,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             {sections?.map((section, idx) => (
               <VStack key={idx} align="stretch" spacing={3}>
                 {section.title && (
-                  <Text fontSize="10px" fontWeight="black" textTransform="uppercase" letterSpacing="widest" color="gray.500">
+                  <Text
+                    fontSize="10px"
+                    fontWeight="black"
+                    textTransform="uppercase"
+                    letterSpacing="widest"
+                    color="gray.500"
+                  >
                     {section.title}
                   </Text>
                 )}
                 {section.content}
-                {idx < sections.length - 1 && <Divider borderColor="editor.border" />}
+                {idx < sections.length - 1 && (
+                  <Divider borderColor="editor.border" />
+                )}
               </VStack>
             ))}
             {children}
@@ -62,14 +89,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 };
 
 /** Empty state component for when nothing is selected */
-export const InspectorEmptyState: React.FC<{ icon?: string; message: string; hint?: string }> = ({
-  icon = '🔍',
-  message,
-  hint,
-}) => (
+export const InspectorEmptyState: React.FC<{
+  icon?: string;
+  message: string;
+  hint?: string;
+}> = ({ icon = '🔍', message, hint }) => (
   <VStack mt={10} spacing={2} textAlign="center" opacity={0.4}>
     <Text fontSize="4xl">{icon}</Text>
-    <Text color="gray.500" fontSize="sm">{message}</Text>
-    {hint && <Text fontSize="10px" color="gray.600">{hint}</Text>}
+    <Text color="gray.500" fontSize="sm">
+      {message}
+    </Text>
+    {hint && (
+      <Text fontSize="10px" color="gray.600">
+        {hint}
+      </Text>
+    )}
   </VStack>
 );

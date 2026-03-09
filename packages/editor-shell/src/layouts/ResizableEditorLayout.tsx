@@ -94,7 +94,12 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
         >
           <VStack align="start" spacing={0}>
             {header?.title && (
-              <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
+              <Heading
+                size="xs"
+                color="white"
+                textTransform="uppercase"
+                letterSpacing="widest"
+              >
                 {header.title}
               </Heading>
             )}
@@ -114,8 +119,18 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
           {/* Left Panel */}
           {leftPanel && (
             <>
-              <Panel defaultSize={leftPanelDefaultSize} minSize={leftPanelMinSize} order={1}>
-                <Box h="full" bg="editor.panelBg" borderRight="1px" borderColor="editor.border" overflow="hidden">
+              <Panel
+                defaultSize={leftPanelDefaultSize}
+                minSize={leftPanelMinSize}
+                order={1}
+              >
+                <Box
+                  h="full"
+                  bg="editor.panelBg"
+                  borderRight="1px"
+                  borderColor="editor.border"
+                  overflow="hidden"
+                >
                   {leftPanel}
                 </Box>
               </Panel>
@@ -128,19 +143,41 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
             {bottomPanel ? (
               <PanelGroup direction="vertical" style={{ height: '100%' }}>
                 <Panel order={1}>
-                  <Box h="full" position="relative" bg={viewportBackground ? 'editor.viewportBg' : 'transparent'} overflow="hidden">
+                  <Box
+                    h="full"
+                    position="relative"
+                    bg={
+                      viewportBackground ? 'editor.viewportBg' : 'transparent'
+                    }
+                    overflow="hidden"
+                  >
                     {content}
                   </Box>
                 </Panel>
                 <VerticalResizeHandle />
-                <Panel defaultSize={bottomPanelDefaultSize} minSize={bottomPanelMinSize} order={2}>
-                  <Box h="full" bg="editor.panelBg" borderTop="1px" borderColor="editor.border" overflow="hidden">
+                <Panel
+                  defaultSize={bottomPanelDefaultSize}
+                  minSize={bottomPanelMinSize}
+                  order={2}
+                >
+                  <Box
+                    h="full"
+                    bg="editor.panelBg"
+                    borderTop="1px"
+                    borderColor="editor.border"
+                    overflow="hidden"
+                  >
                     {bottomPanel}
                   </Box>
                 </Panel>
               </PanelGroup>
             ) : (
-              <Box h="full" position="relative" bg={viewportBackground ? 'editor.viewportBg' : 'transparent'} overflow="hidden">
+              <Box
+                h="full"
+                position="relative"
+                bg={viewportBackground ? 'editor.viewportBg' : 'transparent'}
+                overflow="hidden"
+              >
                 {content}
               </Box>
             )}
@@ -150,8 +187,18 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
           {rightPanel && (
             <>
               <HorizontalResizeHandle />
-              <Panel defaultSize={rightPanelDefaultSize} minSize={rightPanelMinSize} order={3}>
-                <Box h="full" bg="editor.panelBg" borderLeft="1px" borderColor="editor.border" overflow="hidden">
+              <Panel
+                defaultSize={rightPanelDefaultSize}
+                minSize={rightPanelMinSize}
+                order={3}
+              >
+                <Box
+                  h="full"
+                  bg="editor.panelBg"
+                  borderLeft="1px"
+                  borderColor="editor.border"
+                  overflow="hidden"
+                >
                   {rightPanel}
                 </Box>
               </Panel>

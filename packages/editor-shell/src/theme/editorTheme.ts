@@ -122,6 +122,8 @@ export const editorTheme = extendTheme({
 /**
  * Helper to create a custom editor theme by merging overrides with the base editor theme.
  */
-export function createEditorTheme(overrides: Parameters<typeof extendTheme>[0] = {}) {
+export function createEditorTheme(
+  overrides: Parameters<typeof extendTheme>[0] = {},
+) {
   return extendTheme(editorTheme, overrides);
 }

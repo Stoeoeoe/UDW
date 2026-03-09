@@ -62,7 +62,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
         >
           <VStack align="start" spacing={0}>
             {header?.title && (
-              <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
+              <Heading
+                size="xs"
+                color="white"
+                textTransform="uppercase"
+                letterSpacing="widest"
+              >
                 {header.title}
               </Heading>
             )}

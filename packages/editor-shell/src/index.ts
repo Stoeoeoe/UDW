@@ -36,7 +36,11 @@ export { PropertyForm } from './common/PropertyForm';
 export type { PropertyFormProps } from './common/PropertyForm';
 
 // Theme (re-exported for convenience)
-export { editorTheme, editorColors, createEditorTheme } from './theme/editorTheme';
+export {
+  editorTheme,
+  editorColors,
+  createEditorTheme,
+} from './theme/editorTheme';
 
 // Types
 export type {
