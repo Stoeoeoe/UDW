@@ -53,7 +53,7 @@ namespace Plants
 
         private void SowPlantOnMap(string locationId, Vector2Int position, string plantId)
         {
-            if (!gamePlantStates.ContainsKey(locationId))
+            if (!gamePlantStates.TryGetValue(locationId, out Dictionary<Vector2Int, PlantState>? value))
             {
                 gamePlantStates[locationId] = new Dictionary<Vector2Int, PlantState>();
             }
@@ -72,7 +72,7 @@ namespace Plants
         
         public bool HasPlantAtCurrentMap(Vector2Int position)
         {
-            string locationId = (UrLevelManager.Current as UrLevelManager)!.CurrentLocationData.id;
+            string locationId = ((UrLevelManager)UrLevelManager.Current).CurrentLocationData.id;
             return HasPlantAt(locationId, position);
         }
     }
