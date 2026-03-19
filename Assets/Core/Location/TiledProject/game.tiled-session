@@ -1,0 +1,97 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "IndoorTest2.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "Alle Dateien (*)",
+    "fileStates": {
+        "": {
+            "scaleInDock": 2
+        },
+        ":/automap-tiles.tsx": {
+            "scaleInDock": 1
+        },
+        "C:/Users/Stoeoeoe/Urdew Valley/Assets/Maps/TiledProject/OutdoorsTilemap.tsx": {
+            "scaleInDock": 1
+        },
+        "IndoorTest2.tmx": {
+            "expandedObjectLayers": [
+                5
+            ],
+            "scale": 5.5,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 160,
+                "y": 148.0909090909091
+            }
+        },
+        "OutdoorsTilemap.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 3,
+            "scaleInEditor": 8
+        },
+        "SmallMap..tmx": {
+            "scale": 2,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 426.25,
+                "y": 208
+            }
+        },
+        "SmallMap.tmx": {
+            "expandedObjectLayers": [
+                5
+            ],
+            "scale": 2,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 42.5,
+                "y": 189.25
+            }
+        },
+        "TestMap.tmx": {
+            "scale": 2,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 310,
+                "y": 257.25
+            }
+        }
+    },
+    "last.exportedFilePath": "C:/Users/Stoeoeoe/Urdew Valley/Assets/Maps/TiledProject",
+    "last.imagePath": "C:/Users/Stoeoeoe/Urdew Valley/Assets/Tilesets",
+    "map.height": 24,
+    "map.lastUsedExportFilter": "All Files (*)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 48,
+    "openFiles": [
+        "IndoorTileset.tsx",
+        "IndoorTest2.tmx",
+        "C:/GameDev/UrdewValley/Assets/Core/Location/TiledProject/SmallMap.tmx",
+        "SmallMap.tmx"
+    ],
+    "project": "game.tiled-project",
+    "property.type": "FacingDirections",
+    "recentFiles": [
+        "IndoorTileset.tsx",
+        "SmallMap.tmx",
+        "C:/GameDev/UrdewValley/Assets/Core/Location/TiledProject/SmallMap.tmx",
+        "IndoorTest2.tmx",
+        "OutdoorsTilemap2.tsx",
+        "C:/GameDev/UrdewValley/Assets/Core/Location/TiledProject/SmallMap2.tmx",
+        "OutdoorsTilemap.tsx",
+        "SmallMap..tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    },
+    "tileset.type": 0
+}
