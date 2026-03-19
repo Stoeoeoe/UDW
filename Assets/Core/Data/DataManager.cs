@@ -18,16 +18,13 @@ public class DataManager : MMSingleton<DataManager>
     [FolderPath]
     public string TypewriterSoundDataPath = "TypewriterSound";
 
-    // public Dictionary<string, CharacterData> CharactersDict => characters.ToDictionary(c => c.ActorId, c=>c);
-    // public Dictionary<string, CharacterExpression> ExpressionsDict => expressions.ToDictionary(c => c.name, c=>c);
-    public Dictionary<string, TypewriterSound> TypewriterSounds => typewriterSounds.ToDictionary(c => c.name, c=>c);
-
+    private Dictionary<string, TypewriterSound> _typewriterSoundsDict;
+    public IReadOnlyDictionary<string, TypewriterSound> TypewriterSounds => _typewriterSoundsDict;
 
     private void Start()
     {
-        // this.characters = Resources.LoadAll<CharacterData>(CharacterDataPath).ToList();
-        // this.expressions = Resources.LoadAll<CharacterExpression>(CharacterExpressionDataPath).ToList();
-        this.typewriterSounds = Resources.LoadAll<TypewriterSound>(TypewriterSoundDataPath).ToList();
+        typewriterSounds = Resources.LoadAll<TypewriterSound>(TypewriterSoundDataPath).ToList();
+        _typewriterSoundsDict = typewriterSounds.ToDictionary(c => c.name, c => c);
     }
 
 }
