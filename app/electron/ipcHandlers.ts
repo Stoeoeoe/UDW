@@ -2,6 +2,33 @@ import { ipcMain, dialog, BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
+/**
+ * Resolve `segments` relative to `projectRoot` and verify the result stays
+ * inside the project directory.  Throws on any path-traversal attempt.
+ */
+function assertWithinProject(projectRoot: string, ...segments: string[]): string {
+    const root = path.resolve(projectRoot);
+    const resolved = path.resolve(root, ...segments);
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+        throw new Error(`Path traversal detected: "${resolved}" is outside project root "${root}"`);
+    }
+    return resolved;
+}
+
+/** Basic structural validation for a loaded project file. */
+function assertValidProject(obj: unknown): void {
+    if (!obj || typeof obj !== 'object') throw new Error('Invalid project: not an object');
+    const p = obj as Record<string, unknown>;
+    if (typeof p.name !== 'string' || p.name.trim() === '')
+        throw new Error('Invalid project: missing or empty "name"');
+    if (typeof p.tileSize !== 'number' || p.tileSize <= 0)
+        throw new Error('Invalid project: "tileSize" must be a positive number');
+    if (typeof p.defaultMapWidth !== 'number' || p.defaultMapWidth <= 0)
+        throw new Error('Invalid project: "defaultMapWidth" must be a positive number');
+    if (typeof p.defaultMapHeight !== 'number' || p.defaultMapHeight <= 0)
+        throw new Error('Invalid project: "defaultMapHeight" must be a positive number');
+}
+
 export function setupIpcHandlers(win: BrowserWindow | null) {
     // IPC Handlers for Native File System
     ipcMain.handle('app:open-project', async () => {
@@ -21,6 +48,7 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
 
         const content = await fs.readFile(filePath, 'utf-8');
         const project = JSON.parse(content);
+        assertValidProject(project);
         const projectPath = path.dirname(filePath);
 
         return { project, projectPath };
@@ -31,6 +59,7 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
         try {
             const content = await fs.readFile(filePath, 'utf-8');
             const project = JSON.parse(content);
+            assertValidProject(project);
             return { project, projectPath };
         } catch (e) {
             throw new Error(`Failed to load project at ${projectPath}: ${(e as Error).message}`);
@@ -63,13 +92,18 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     });
 
     ipcMain.handle('app:fs-read-dir', async (_event, { projectPath, subDir }) => {
-        const dirPath = path.join(projectPath, subDir);
+        const dirPath = assertWithinProject(projectPath, subDir);
+        // Use directory-specific extensions to avoid reading stray files
+        const expectedExt = subDir === 'maps' ? '.map.json'
+                          : subDir === 'tilesets' ? '.tileset.json'
+                          : '.json';
         try {
             const files = await fs.readdir(dirPath);
             const results = [];
             for (const file of files) {
-                if (file.endsWith('.json')) {
-                    const content = await fs.readFile(path.join(dirPath, file), 'utf-8');
+                if (file.endsWith(expectedExt)) {
+                    const filePath = assertWithinProject(projectPath, subDir, file);
+                    const content = await fs.readFile(filePath, 'utf-8');
                     results.push(JSON.parse(content));
                 }
             }
@@ -80,14 +114,15 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     });
 
     ipcMain.handle('app:fs-write-json', async (_event, { projectPath, subDir, filename, data }) => {
-        const dirPath = path.join(projectPath, subDir);
+        const dirPath = assertWithinProject(projectPath, subDir);
+        const filePath = assertWithinProject(projectPath, subDir, filename);
         await fs.mkdir(dirPath, { recursive: true });
-        await fs.writeFile(path.join(dirPath, filename), JSON.stringify(data, null, 2));
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
     });
 
     ipcMain.handle('app:fs-read-json', async (_event, { projectPath, subDir, filename }) => {
         try {
-            const filePath = path.join(projectPath, subDir || '', filename);
+            const filePath = assertWithinProject(projectPath, subDir || '.', filename);
             const content = await fs.readFile(filePath, 'utf-8');
             return JSON.parse(content);
         } catch (e) {
@@ -96,20 +131,21 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     });
 
     ipcMain.handle('app:fs-delete-json', async (_event, { projectPath, subDir, filename }) => {
-        const filePath = path.join(projectPath, subDir, filename);
+        const filePath = assertWithinProject(projectPath, subDir, filename);
         await fs.unlink(filePath);
     });
 
     ipcMain.handle('app:fs-write-asset', async (_event, { projectPath, filename, buffer }) => {
-        const dirPath = path.join(projectPath, 'assets');
+        const dirPath = assertWithinProject(projectPath, 'assets');
+        const filePath = assertWithinProject(projectPath, 'assets', filename);
         await fs.mkdir(dirPath, { recursive: true });
         // buffer is passed as Uint8Array
-        await fs.writeFile(path.join(dirPath, filename), Buffer.from(buffer));
+        await fs.writeFile(filePath, Buffer.from(buffer));
         return `assets/${filename}`;
     });
 
     ipcMain.handle('app:fs-read-asset', async (_event, { projectPath, relativePath }) => {
-        const filePath = path.join(projectPath, relativePath);
+        const filePath = assertWithinProject(projectPath, relativePath);
         const data = await fs.readFile(filePath);
         return data; // Electron will serialize this as a Buffer/Uint8Array
     });
@@ -127,6 +163,12 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     });
 
     ipcMain.handle('app:read-file-buffer', async (_event, filePath) => {
+        if (typeof filePath !== 'string') throw new Error('Invalid file path');
+        const ext = path.extname(filePath).toLowerCase();
+        const ALLOWED_IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'];
+        if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
+            throw new Error(`File type not allowed: only image files may be read via this channel`);
+        }
         return await fs.readFile(filePath);
     });
 }
