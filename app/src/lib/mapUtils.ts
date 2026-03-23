@@ -47,7 +47,7 @@ export function resolveTileAt(
             return decodeTileRef(cell, map.tilesetRefs);
         } else {
             const override = context.layerOverrides?.[layerId];
-            if (override && override.data[y]?.[x] !== null) {
+            if (override && override.data[y]?.[x] != null) {
                 return override.data[y][x] as string; // Variations store as strings
             }
         }

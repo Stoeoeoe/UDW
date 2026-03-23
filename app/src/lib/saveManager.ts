@@ -135,9 +135,12 @@ export async function saveProjectImmediate(project: Project): Promise<void> {
 
 /**
  * Flush any pending saves immediately.
- * Useful before closing project or navigating away.
+ * Pass the current map and/or project so in-flight debounces are not lost.
  */
-export async function flushPendingSaves(): Promise<void> {
+export async function flushPendingSaves(map?: GameMap | null, project?: Project | null): Promise<void> {
+    const hadMapTimer = mapSaveTimer !== null;
+    const hadProjectTimer = projectSaveTimer !== null;
+
     if (mapSaveTimer) {
         clearTimeout(mapSaveTimer);
         mapSaveTimer = null;
@@ -146,6 +149,12 @@ export async function flushPendingSaves(): Promise<void> {
         clearTimeout(projectSaveTimer);
         projectSaveTimer = null;
     }
-    // Note: The actual save would need the current map/project state
-    // This is handled by the calling code
+
+    // Execute the saves that were pending
+    if (hadMapTimer && map) {
+        await saveMapImmediate(map);
+    }
+    if (hadProjectTimer && project) {
+        await saveProjectImmediate(project);
+    }
 }

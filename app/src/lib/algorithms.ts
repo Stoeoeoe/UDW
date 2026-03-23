@@ -136,15 +136,15 @@ export function floodFillCollect(
 ): Array<{ x: number; y: number }> {
     const result: Array<{ x: number; y: number }> = [];
     const stack: [number, number][] = [[startX, startY]];
-    const visited = new Set<string>();
+    // Use numeric keys (y * width + x) to avoid string allocation overhead
+    const visited = new Set<number>();
 
     while (stack.length > 0) {
         const [cx, cy] = stack.pop()!;
-        const key = `${cx},${cy}`;
-        
-        if (visited.has(key)) continue;
+
         if (cx < 0 || cy < 0 || cx >= width || cy >= height) continue;
-        
+        const key = cy * width + cx;
+        if (visited.has(key)) continue;
         visited.add(key);
 
         if (shouldFill(cx, cy)) {
