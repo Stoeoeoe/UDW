@@ -1,48 +1,51 @@
+using System;
 using Character;
+using EditorUI.Attributes;
 using Interaction;
-using MoreMountains.TopDownEngine;
+using PixelCrushers;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Core.Location
 {
+    /// <summary>
+    /// Portal/door to another location. Calls LevelManager.Instance.LoadLocation.
+    /// Door = walk-in (button press needed). Open = no button press required.
+    /// </summary>
     public class LocationLink : AbstractInteractable
     {
-        [field: SerializeField] public string TargetLocation { get; private set; }
-        [field: SerializeField] public LocationLinkType LinkType { get; private set; }
-        /// <summary>
-        /// The name of the level this link is located in. Used to identify point of entry. For places with a single entry
-        /// point, this can be null or empty.
-        /// </summary>
-        [field: SerializeField] public string Key { get; private set; }
+        [SerializeField] private LocationData targetLocation;
+        [SerializeField] private string targetEntryKey;
+        [SerializeField] private LocationLinkType linkType;
+        [Dial(45)][SerializeField] public Vector2 exitFacingDirection;
+        [SerializeField] private float exitSpawnOffset = 0.8f;
 
-        [field: SerializeField] public MoreMountains.TopDownEngine.Character.FacingDirections ExitFacingDirection;
+        /// <summary>Key identifying this link in the current scene (used as the destination entry key elsewhere).</summary>
+        [field: SerializeField]
+        public string Key { get; private set; }
 
-        private void Start()
+        public LocationData TargetLocation  => targetLocation;
+        public Vector3      ExitSpawnOffset => exitFacingDirection.normalized * exitSpawnOffset;
+        
+        public override bool RequiresButtonPress => linkType == LocationLinkType.Door;
+
+
+        protected override void Interact(GameCharacter instigator)
         {
-            if (LinkType == LocationLinkType.Open)
+            if (!targetLocation)
             {
-                buttonActivated.enabled = true;     // We don't need the "button" if it's jut a walk-in link
+                Debug.LogWarning($"[LocationLink] {gameObject.name} has no target LocationData assigned.");
+                return;
             }
+
+            LevelManager.Instance.LoadLocation(targetLocation, targetEntryKey, instigator.Orientation.FacingDirection);
         }
 
-        private void OnTriggerEnter2D(Collider2D other)
+        private void OnDrawGizmos()
         {
-            if (LinkType != LocationLinkType.Door) return;
-
-            var character = other.GetComponent<MainCharacter>();
-            if (character == null) return;
-
-            Interact(character);
-        }
-
-        protected override void Interact(UrCharacter instigator)
-        {
-            var levelManager = UrLevelManager.Current as UrLevelManager;
-            var location = levelManager!.GetLocationDataById(TargetLocation);
-            levelManager.CurrentTargetEntry = this.Key;
-            // GameManager.Instance.StoreSelectedCharacter (MainCharacter.CurrentMainCharacter);
-            levelManager.GotoLevel(location.sceneReference.Name);
-//            MainCharacter.CurrentMainCharacter.RespawnAt();
+            Gizmos.color = Color.green;
+            var position = transform.position + (Vector3)(exitFacingDirection.normalized * 0.5f);
+            MoreGizmos.DrawArrow(position, exitFacingDirection.normalized, 0.25f);
         }
     }
 }

@@ -1,5 +1,5 @@
+using Core.Events;
 using Items;
-using MoreMountains.Tools;
 
 namespace Core.Equipment
 {
@@ -8,12 +8,7 @@ namespace Core.Equipment
         public EquippableItem HeldItem;
         public int HotbarSlotIndex;
 
-        static ItemSelectedEvent e;
         public static void Trigger(EquippableItem heldItem, int hotbarSlotIndex)
-        {
-            e.HeldItem = heldItem;
-            e.HotbarSlotIndex = hotbarSlotIndex;
-            MMEventManager.TriggerEvent(e);
-        }
+            => EventBus<ItemSelectedEvent>.Raise(new ItemSelectedEvent { HeldItem = heldItem, HotbarSlotIndex = hotbarSlotIndex });
     }
 }

@@ -3,20 +3,19 @@ using Core.Tile;
 using Interaction;
 using Interaction.Tools;
 using Items;
-using MoreMountains.TopDownEngine;
 
 namespace Core.Context
 {
     public record PlayerInteractionContextSnapshot(
-        UrCharacter Character,
-        AbstractInteractable InteractableInFront,
+        GameCharacter Character,
+        AbstractInteractable CurrentInteractable,
         TileData CurrentTileDataUnderPointer,
         AbstractInteractable InteractableUnderPointer,
         TileData TileUnderCharacter,
         ToolData CurrentTool,
         EquippableItem CurrentlyHeldItem,
-        CharacterStates.CharacterConditions? CharacterCondition,
-        CharacterStates.MovementStates? MovementState,
+        ConditionState? CharacterCondition,
+        MovementState?  MovementState,
         string CurrentConversation,
         InteractionMode Mode
     )
@@ -30,20 +29,20 @@ namespace Core.Context
         }
 
         public static PlayerInteractionContextSnapshot Create(
-            UrCharacter character,
-            AbstractInteractable interactableInFront,
+            GameCharacter character,
+            AbstractInteractable currentInteractable,
             TileData tileUnderPointer,
             AbstractInteractable interactableUnderPointer,
             TileData tileUnderCharacter,
             ToolData tool,
             EquippableItem item,
-            CharacterStates.CharacterConditions? condition,
-            CharacterStates.MovementStates? movement,
+            ConditionState? condition,
+            MovementState?  movement,
             string conversation)
         {
             var baseSnapshot = new PlayerInteractionContextSnapshot(
                 character,
-                interactableInFront,
+                currentInteractable,
                 tileUnderPointer,
                 interactableUnderPointer,
                 tileUnderCharacter,

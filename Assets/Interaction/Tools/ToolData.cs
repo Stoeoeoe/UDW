@@ -13,8 +13,8 @@ namespace Interaction.Tools
         public string toolName;
         public int maxCharge = 0;
         public int chargePerUsage = 0;
-        public int energyCost = 5;
-        public bool consumeEnergyOnFailure = true; 
+        public int staminaCost = 5;
+        public bool consumeStaminaOnFailure = true; 
         public bool isInInventory = true;
         public bool showTileHighlighterOnPrepare = true;
         // public Sprite icon;

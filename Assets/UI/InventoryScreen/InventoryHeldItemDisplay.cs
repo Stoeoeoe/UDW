@@ -1,5 +1,5 @@
-using MoreMountains.InventoryEngine;
-using MoreMountains.Tools;
+using Core.Events;
+using Core.Inventory;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -11,7 +11,7 @@ namespace UI.InventoryScreen
     /// Displays the currently held item next to the cursor.
     /// Follows the mouse position and shows the item icon and quantity.
     /// </summary>
-    public class InventoryHeldItemDisplay : MonoBehaviour, MMEventListener<InventoryHeldItemEvent>
+    public class InventoryHeldItemDisplay : MonoBehaviour, IEventListener<InventoryHeldItemEvent>
     {
         [Header("Components")]
         [Tooltip("The image that displays the held item's icon")]
@@ -28,7 +28,7 @@ namespace UI.InventoryScreen
         public Canvas ParentCanvas;
 
         // Current state
-        protected InventoryItem _currentHeldItem;
+        protected ItemDefinition _currentHeldItem;
         protected int _currentQuantity;
         protected RectTransform _rectTransform;
         protected CanvasGroup _canvasGroup;
@@ -37,7 +37,7 @@ namespace UI.InventoryScreen
         /// <summary>
         /// The currently held item
         /// </summary>
-        public InventoryItem CurrentHeldItem => _currentHeldItem;
+        public ItemDefinition CurrentHeldItem => _currentHeldItem;
 
         /// <summary>
         /// The quantity of the held item
@@ -47,7 +47,7 @@ namespace UI.InventoryScreen
         /// <summary>
         /// Whether an item is currently being held
         /// </summary>
-        public bool IsHoldingItem => !InventoryItem.IsNull(_currentHeldItem);
+        public bool IsHoldingItem => _currentHeldItem != null;
 
         protected virtual void Awake()
         {
@@ -77,12 +77,12 @@ namespace UI.InventoryScreen
 
         protected virtual void OnEnable()
         {
-            this.MMEventStartListening();
+            this.Subscribe<InventoryHeldItemEvent>();
         }
 
         protected virtual void OnDisable()
         {
-            this.MMEventStopListening();
+            this.Unsubscribe<InventoryHeldItemEvent>();
         }
 
         protected virtual void Update()
@@ -119,12 +119,12 @@ namespace UI.InventoryScreen
         /// <summary>
         /// Sets the held item to display
         /// </summary>
-        public virtual void SetHeldItem(InventoryItem item, int quantity)
+        public virtual void SetHeldItem(ItemDefinition item, int quantity)
         {
             _currentHeldItem = item;
             _currentQuantity = quantity;
 
-            if (!InventoryItem.IsNull(item))
+            if (item != null)
             {
                 // Update icon
                 if (ItemIcon != null)
@@ -182,19 +182,12 @@ namespace UI.InventoryScreen
             }
         }
 
-        /// <summary>
-        /// Responds to held item events
-        /// </summary>
-        public void OnMMEvent(InventoryHeldItemEvent eventData)
+        public void OnEvent(InventoryHeldItemEvent eventData)
         {
-            if (!InventoryItem.IsNull(eventData.HeldItem))
-            {
+            if (eventData.HeldItem != null)
                 SetHeldItem(eventData.HeldItem, eventData.Quantity);
-            }
             else
-            {
                 ClearHeldItem();
-            }
         }
     }
 }

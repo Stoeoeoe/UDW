@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Core.Game;
 using Core.Location;
-using Items.Plants;
 using MoreMountains.Tools;
 using UnityEngine;
 
@@ -15,8 +13,9 @@ namespace Plants
         /// </summary>
         /// <returns></returns>
         protected Dictionary<string, Dictionary<Vector2Int, PlantState>> gamePlantStates = new();
+
         protected Dictionary<string, PlantData> plantData = new();
-        
+
         public Dictionary<string, PlantData> PlantData => plantData;
 
         protected override void Awake()
@@ -47,13 +46,13 @@ namespace Plants
 
         public void SowPlantOnCurrentMap(Vector2Int position, string plantId)
         {
-            string locationId = (UrLevelManager.Current as UrLevelManager)!.CurrentLocationData.id;
+            string locationId = LevelManager.Instance.CurrentLocationData.id;
             SowPlantOnMap(locationId, position, plantId);
         }
 
         private void SowPlantOnMap(string locationId, Vector2Int position, string plantId)
         {
-            if (!gamePlantStates.TryGetValue(locationId, out Dictionary<Vector2Int, PlantState>? value))
+            if (!gamePlantStates.TryGetValue(locationId, out Dictionary<Vector2Int, PlantState> value))
             {
                 gamePlantStates[locationId] = new Dictionary<Vector2Int, PlantState>();
             }
@@ -62,17 +61,18 @@ namespace Plants
             {
                 gamePlantStates[locationId][position] = new PlantState(plantId);
             }
+
             SowPlantEvent.Trigger(position, plantId, locationId);
         }
-        
+
         public bool HasPlantAt(string locationId, Vector2Int position)
         {
             return gamePlantStates.ContainsKey(locationId) && gamePlantStates[locationId].ContainsKey(position);
         }
-        
+
         public bool HasPlantAtCurrentMap(Vector2Int position)
         {
-            string locationId = ((UrLevelManager)UrLevelManager.Current).CurrentLocationData.id;
+            string locationId = LevelManager.Instance.CurrentLocationData.id;
             return HasPlantAt(locationId, position);
         }
     }

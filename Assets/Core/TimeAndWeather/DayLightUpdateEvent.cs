@@ -1,4 +1,4 @@
-using MoreMountains.Tools;
+using Core.Events;
 using UnityEngine;
 
 namespace Core.TimeAndWeather
@@ -6,12 +6,8 @@ namespace Core.TimeAndWeather
     public struct DayLightUpdateEvent
     {
         public Color Color;
-        
-        static DayLightUpdateEvent e;
+
         public static void Trigger(Color color)
-        {
-            e.Color = color;
-            MMEventManager.TriggerEvent(e);
-        }
+            => EventBus<DayLightUpdateEvent>.Raise(new DayLightUpdateEvent { Color = color });
     }
 }

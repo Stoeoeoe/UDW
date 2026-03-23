@@ -1,4 +1,4 @@
-using MoreMountains.Tools;
+using Core.Events;
 
 namespace Core.TimeAndWeather
 {
@@ -6,11 +6,7 @@ namespace Core.TimeAndWeather
     {
         public WeatherData WeatherData;
 
-        static WeatherUpdateEvent e;
         public static void Trigger(WeatherData weatherData)
-        {
-            e.WeatherData = weatherData;
-            MMEventManager.TriggerEvent(e);
-        }
+            => EventBus<WeatherUpdateEvent>.Raise(new WeatherUpdateEvent { WeatherData = weatherData });
     }
 }

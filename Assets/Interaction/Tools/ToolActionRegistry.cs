@@ -19,7 +19,7 @@ namespace Interaction.Tools
         /// <summary>
         /// Initializes all tool actions with the owning character.
         /// </summary>
-        public void Initialize(UrCharacter owner)
+        public void Initialize(Character.GameCharacter owner)
         {
             foreach (var prefab in toolActionPrefabs)
             {
@@ -30,7 +30,7 @@ namespace Interaction.Tools
                 }
                 
                 var toolAction = Instantiate(prefab, transform, false);
-                var id = toolAction.ToolData.ItemID;
+                var id = toolAction.ToolData.ItemId;
                 
                 if (_toolActions.ContainsKey(id))
                 {
@@ -58,7 +58,7 @@ namespace Interaction.Tools
         /// </summary>
         public ToolAction GetToolAction(ToolData toolData)
         {
-            return toolData != null ? GetToolAction(toolData.ItemID) : null;
+            return toolData != null ? GetToolAction(toolData.ItemId) : null;
         }
     }
 }

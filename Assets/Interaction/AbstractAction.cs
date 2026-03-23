@@ -38,7 +38,7 @@ namespace Interaction
         public MMFeedbacks PostPrepareFailureFeedback { get; private set; }
 
         
-        public UrCharacter Owner { get; private set; }
+        public GameCharacter Owner { get; private set; }
         
         // Virtual properties that subclasses define differently
         public virtual float ActionDuration => 0f;
@@ -48,7 +48,7 @@ namespace Interaction
         /// <summary>
         /// Initializes the action with its owning character.
         /// </summary>
-        public virtual void Initialize(UrCharacter owner)
+        public virtual void Initialize(GameCharacter owner)
         {
             Owner = owner;
         }

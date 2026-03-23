@@ -1,9 +1,9 @@
 using Core.Equipment;
-using MoreMountains.Tools;
+using Core.Events;
 
 namespace Character
 {
-    public class MainCharacter : UrCharacter, MMEventListener<ItemSelectedEvent>
+    public class MainCharacter : GameCharacter, IEventListener<ItemSelectedEvent>
     {
         public static MainCharacter _currentMainCharacter;
 
@@ -12,49 +12,39 @@ namespace Character
             get
             {
                 if (!_currentMainCharacter)
-                {
                     _currentMainCharacter = FindFirstObjectByType<MainCharacter>();
-                }
-
                 return _currentMainCharacter;
             }
         }
-        // public static MainCharacter CurrentMainCharacter { get; private set; }
 
-        private static MainCharacter _instance;
         public int CurrentSelectedSlotIndex { get; protected set; }
-
 
         protected override void Awake()
         {
             base.Awake();
-            
-            
-            // (UrLevelManager.Current as UrLevelManager)!.RegisterPlayerCharacter(this);
-            // CurrentMainCharacter = this; // Set the static reference, TODO: currently only works for one main character
+            _currentMainCharacter = this;
         }
 
-        protected override void Initialization()
+        protected override void Start()
         {
-            base.Initialization();
+            base.Start();
+            CharacterManager.Instance.RegisterMainCharacter(this);
         }
 
-        protected override void OnEnable()
+        protected virtual void OnEnable()
         {
-            base.OnEnable();
-            this.MMEventStartListening();
+            this.Subscribe<ItemSelectedEvent>();
         }
 
-        protected override void OnDisable()
+        protected virtual void OnDisable()
         {
-            base.OnDisable();
-            this.MMEventStopListening();
+            this.Unsubscribe<ItemSelectedEvent>();
         }
 
-        public void OnMMEvent(ItemSelectedEvent itemSelectedEvent)
+        public void OnEvent(ItemSelectedEvent e)
         {
-            SetHeldItem(itemSelectedEvent.HeldItem);
-            CurrentSelectedSlotIndex = itemSelectedEvent.HotbarSlotIndex;
+            SetHeldItem(e.HeldItem);
+            CurrentSelectedSlotIndex = e.HotbarSlotIndex;
         }
     }
 }

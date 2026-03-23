@@ -1,13 +1,12 @@
-using System;
-using UnityEngine;
-using MoreMountains.InventoryEngine;
-using MoreMountains.Tools;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Equipment;
+using Core.Events;
+using Core.Inventory;
+using Core.Location;
 using Items;
-using MoreMountains.TopDownEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace UI.Hotbar
@@ -16,7 +15,7 @@ namespace UI.Hotbar
     /// Lightweight hotbar component that displays the first N items from an inventory
     /// and provides quick-use functionality via input actions or mouse clicks
     /// </summary>
-    public class ToolHotbar : MonoBehaviour, MMEventListener<MMInventoryEvent>, MMEventListener<TopDownEngineEvent>
+    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, IEventListener<SceneReadyEvent>
     {
         [Header("Inventory Binding")] [Tooltip("The name of the inventory to display in the hotbar")]
         public string TargetInventoryName = "MainInventory";
@@ -45,34 +44,31 @@ namespace UI.Hotbar
         public InputActionProperty PreviousSlotAction;
 #endif
 
-        [Header("Navigation")] [Tooltip("The currently selected slot index (0-based)")] [MMReadOnly]
+        [Header("Navigation")] [Tooltip("The currently selected slot index (0-based)")]
         public int CurrentSelectedIndex = 0;
 
         // Protected properties
-        protected Inventory _targetInventory;
+        protected SlotInventory _targetInventory;
         protected List<HotbarSlot> _hotbarSlots = new List<HotbarSlot>();
         protected bool _initialized = false;
 
         /// <summary>
         /// Gets the target inventory by name and player ID
         /// </summary>
-        public virtual Inventory TargetInventory
+        public virtual SlotInventory TargetInventory
         {
             get
             {
                 if (_targetInventory == null)
                 {
-                    _targetInventory = Inventory.FindInventory(TargetInventoryName, PlayerId);
+                    _targetInventory = SlotInventory.FindInventory(TargetInventoryName, PlayerId);
                 }
 
                 return _targetInventory;
             }
         }
 
-        private void Awake()
-        {
-            this.enabled = false; // Disable until we receive SpawnComplete event
-        }
+        private void Awake() { }
 
         /// <summary>
         /// Initialize the hotbar on Start
@@ -87,8 +83,8 @@ namespace UI.Hotbar
         /// </summary>
         protected virtual void InitializeHotbar()
         {
-            // Wait for one frame to ensure inventory is ready (TODO: Better solution?)
             if (_initialized) return;
+            if (TargetInventory == null) return;
 
             // Clear existing slots
             var existingDesignHotbarSlots = SlotContainer.transform.GetComponentsInChildren<HotbarSlot>().ToList();
@@ -126,7 +122,7 @@ namespace UI.Hotbar
             RefreshAllSlots();
 
             // Set initial selection
-            if (_hotbarSlots.Count > 0 && _targetInventory.Content.Any(item => !InventoryItem.IsNull(item)))
+            if (_hotbarSlots.Count > 0 && TargetInventory?.Content?.Any(s => !s.IsEmpty) == true)
             {
                 SetSelectedSlot(CurrentSelectedIndex);
             }
@@ -165,7 +161,7 @@ namespace UI.Hotbar
                 }
                 else
                 {
-                    _hotbarSlots[i].UpdateDisplay(null);
+                    _hotbarSlots[i].UpdateDisplay(ItemStack.Empty);
                 }
             }
 
@@ -183,7 +179,7 @@ namespace UI.Hotbar
                 return;
             }
 
-            if (TargetInventory.Content[slotIndex] == null)
+            if (TargetInventory.Content[slotIndex].IsEmpty)
             {
                 return;
             }
@@ -202,25 +198,14 @@ namespace UI.Hotbar
                 return;
             }
 
-            InventoryItem item = TargetInventory.Content[slotIndex];
+            ItemStack stack = TargetInventory.Content[slotIndex];
 
-            // TODO: Check if there are no changes, then return early
-
-            if (InventoryItem.IsNull(item))
+            if (stack.IsEmpty)
             {
-                // var player = (UrLevelManager.Current as UrLevelManager).GetPlayerById(PlayerId);
-                var player = MainCharacter.CurrentMainCharacter;
-                player.CurrentlyHeldItem?.UnEquip(PlayerId);
                 ItemSelectedEvent.Trigger(null, slotIndex);
             }
-            else if (item is EquippableItem equippableItem)
+            else if (stack.Item is EquippableItem equippableItem)
             {
-                // We don't send an equipment request because, from the point of the inventory, we are not equipping it.
-
-                // This will not yet update the "equipment" in the character and mainly serves to play feedbacks etc
-                // It is not really needed and the whole concept of "Equippable" in the InventoryEngine sense can probably
-                // be removed...
-                item.Equip(PlayerId);       
                 ItemSelectedEvent.Trigger(equippableItem, slotIndex);
             }
         }
@@ -304,82 +289,44 @@ namespace UI.Hotbar
             }
         }
 
-        /// <summary>
-        /// Responds to inventory events
-        /// </summary>
-        public virtual void OnMMEvent(MMInventoryEvent inventoryEvent)
+        public virtual void OnEvent(InventoryChangedEvent e)
         {
-            // Only respond to events for our inventory and player
-            if (inventoryEvent.TargetInventoryName != TargetInventoryName ||
-                inventoryEvent.PlayerID != PlayerId)
-            {
+            if (e.InventoryRef?.InventoryName != TargetInventoryName ||
+                e.InventoryRef?.PlayerID != PlayerId)
                 return;
-            }
 
-            // Refresh on relevant events
-            switch (inventoryEvent.InventoryEventType)
-            {
-                case MMInventoryEventType.ContentChanged:
-                    // case MMInventoryEventType.ItemUsed:
-                    // case MMInventoryEventType.ItemEquipped:
-                    // case MMInventoryEventType.ItemUnEquipped:
-                    // case MMInventoryEventType.Pick:
-                    // case MMInventoryEventType.Drop:
-                    // case MMInventoryEventType.Destroy:
-                    // case MMInventoryEventType.InventoryLoaded:
-                    RefreshAllSlots();
-                    break;
-            }
+            RefreshAllSlots();
         }
 
-        /// <summary>
-        /// Start listening to events on enable
-        /// </summary>
         protected virtual void OnEnable()
         {
-            // Enable input actions
             if (SlotActions != null)
-            {
                 foreach (var action in SlotActions)
-                {
                     action.action?.Enable();
-                }
-            }
 
             NextSlotAction.action?.Enable();
             PreviousSlotAction.action?.Enable();
 
-            this.MMEventStartListening<MMInventoryEvent>();
-            this.MMEventStartListening<TopDownEngineEvent>();
+            this.Subscribe<InventoryChangedEvent>();
+            this.Subscribe<SceneReadyEvent>();
         }
 
-        /// <summary>
-        /// Stop listening to events on disable
-        /// </summary>
         protected virtual void OnDisable()
         {
-            // Disable input actions
             if (SlotActions != null)
-            {
                 foreach (var action in SlotActions)
-                {
                     action.action?.Disable();
-                }
-            }
 
             NextSlotAction.action?.Disable();
             PreviousSlotAction.action?.Disable();
 
-            this.MMEventStopListening<MMInventoryEvent>();
-            this.MMEventStopListening<TopDownEngineEvent>();
+            this.Unsubscribe<InventoryChangedEvent>();
+            this.Unsubscribe<SceneReadyEvent>();
         }
 
-        public void OnMMEvent(TopDownEngineEvent eventType)
+        public void OnEvent(SceneReadyEvent e)
         {
-            if (eventType.EventType == TopDownEngineEventTypes.SpawnComplete)
-            {
-                this.enabled = true;
-            }
+            InitializeHotbar();
         }
     }
 }

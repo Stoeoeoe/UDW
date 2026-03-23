@@ -191,8 +191,8 @@
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Triggers\Triggers\OnEvent\SetAnimationOnDialogueEvent.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\LoveHate\Wrappers\Interaction\Misc\FactionMemberDebuggerCanvas.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Wrappers\MVC\Actor\OverrideActorName.cs" />
-    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Importers\Articy\Schemas\Articy 3.1\Articy_3_1_Tools.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Legacy\GUI Controls\Tools\Fit.cs" />
+    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Importers\Articy\Schemas\Articy 3.1\Articy_3_1_Tools.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\MVC\View\Bark\BarkDialogueUI.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Utility\ConversationPositionStack.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\LoveHate\Wrappers\Interaction\Aura\AuraTrigger.cs" />
@@ -282,8 +282,8 @@
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Options\Timeline\Playables\Continue\ContinueConversationBehaviour.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\MVC\Model\Logic\DB\DatabaseResetOptions.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Triggers\Triggers\OnEvent\ActOnDialogueEvent.cs" />
-    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Lua\Lua Interpreter\LuaValue\LuaTable.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\MVC\Model\Data\DialogueDatabase.cs" />
+    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Lua\Lua Interpreter\LuaValue\LuaTable.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Standard\Quest\Common\StandardUIToggleTemplate.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Lua\Lua Interpreter\Chunk\LocalFunc.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Wrappers\MVC\Actor\BarkGroupMember.cs" />
@@ -301,8 +301,8 @@
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Utility\EncodingType.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Utility\Attributes\LocationPopupAttribute.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Wrappers\Deprecated\Triggers\ConversationTrigger.cs" />
-    <Compile Include="Assets\Plugins\Pixel Crushers\Common\Scripts\UI\UIUtility.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\LoveHate\Scripts\Interaction\Misc\AbstractTriggerInteractor.cs" />
+    <Compile Include="Assets\Plugins\Pixel Crushers\Common\Scripts\UI\UIUtility.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Options\Timeline\Playables\PlaySequence\PlaySequenceMixerBehaviour.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Standard\Dialogue\StandardUIAlertControls.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Common\Wrappers\Save System\Transitions\StandardSceneTransitionManager.cs" />
@@ -600,8 +600,8 @@
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Standard\Dialogue\IStandardDialogueUI.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Standard\Dialogue\StandardUIResponseMenuControls.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Common\Scripts\Save System\Serializers\Binary\QuaternionSerializationSurrogate.cs" />
-    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Wrappers\Importers\Arcweave\ArcweaveLua.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Common\Scripts\Save System\Storers\EncryptionUtility.cs" />
+    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Wrappers\Importers\Arcweave\ArcweaveLua.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Utility\UIShowHideController.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\MVC\View\Bark\IBarkUI.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Legacy\Dialogue\UnityTextFieldUI.cs" />
@@ -698,8 +698,8 @@
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Importers\Celtx\CeltxToDialogueDatabase.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\LoveHate\Scripts\Core\Faction Members\Temperament.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Templates\Scripts\Aurora\TemplateNWScript.cs" />
-    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Lua\Lua Interpreter\Parser\Syntax\Expr.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\UI\Standard\Quest\Common\StandardUIButtonTemplate.cs" />
+    <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\Lua\Lua Interpreter\Parser\Syntax\Expr.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Wrappers\UI\Utility\UnityUIIgnorePauseCodes.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Dialogue System\Scripts\MVC\Model\Data\DialogueSystemFields.cs" />
     <Compile Include="Assets\Plugins\Pixel Crushers\Common\Wrappers\Save System\Misc\SaveSystemTestMenu.cs" />
@@ -1694,6 +1694,10 @@
       <Project>{bc9ec883-cc28-0476-b5f1-c5adb978a4e1}</Project>
       <Name>MoreMountains.Tools.Player</Name>
     </ProjectReference>
+    <ProjectReference Include="MCPForUnity.Runtime.Player.csproj">
+      <Project>{40ae50a0-7091-64b3-edc0-5e285e070350}</Project>
+      <Name>MCPForUnity.Runtime.Player</Name>
+    </ProjectReference>
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.Player.csproj">
       <Project>{fe91c9b9-81cb-15fd-ea6c-5df5751949b2}</Project>
       <Name>Unity.RenderPipelines.Core.Runtime.Player</Name>
@@ -1722,13 +1726,13 @@
       <Project>{f2466246-39a2-106b-9999-0869eafed8fa}</Project>
       <Name>Unity.InputSystem.ForUI.Player</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.RenderPipelines.GPUDriven.Runtime.Player.csproj">
-      <Project>{72b6f34a-57bc-5d31-27d7-f58da533c69d}</Project>
-      <Name>Unity.RenderPipelines.GPUDriven.Runtime.Player</Name>
-    </ProjectReference>
     <ProjectReference Include="MoreMountains.TopDownEngine.InputSystem.Player.csproj">
       <Project>{ba5117c7-0bde-a940-f802-d07aa4deb1bf}</Project>
       <Name>MoreMountains.TopDownEngine.InputSystem.Player</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.RenderPipelines.GPUDriven.Runtime.Player.csproj">
+      <Project>{72b6f34a-57bc-5d31-27d7-f58da533c69d}</Project>
+      <Name>Unity.RenderPipelines.GPUDriven.Runtime.Player</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.Mathematics.Player.csproj">
       <Project>{37726b96-8f18-8448-8815-f76b7f89bf71}</Project>

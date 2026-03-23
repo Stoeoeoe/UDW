@@ -1,18 +1,24 @@
 using System;
 using Character;
+using Core.Events;
+using Core.Location;
 using Interaction.Pointer;
-using MoreMountains.Tools;
-using MoreMountains.TopDownEngine;
 
 namespace Core.Context
 {
-    public class PlayerInteractionContext : MMSingleton<PlayerInteractionContext>, MMEventListener<TopDownEngineEvent>
+    public class PlayerInteractionContext : Singleton<PlayerInteractionContext>,
+        IEventListener<SceneReadyEvent>
     {
         public PlayerInteractionContextSnapshot CurrentSnapshot { get; private set; } =
             PlayerInteractionContextSnapshot.Empty();
 
         public event Action<PlayerInteractionContextSnapshot> OnContextChanged;
         public event Action<InteractionMode> OnModeChanged;
+
+        void OnEnable()  => this.Subscribe<SceneReadyEvent>();
+        void OnDisable() => this.Unsubscribe<SceneReadyEvent>();
+
+        public void OnEvent(SceneReadyEvent e) => this.enabled = true;
 
         private void Start()
         {
@@ -22,18 +28,25 @@ namespace Core.Context
         private void UpdateContextSnapshot()
         {
             var character = MainCharacter.CurrentMainCharacter;
+            // e.g. during scene transitions, the character reference may be null. In that case, we want to reset the snapshot to empty.
+            if (!character)
+            {
+                CurrentSnapshot = null;
+                return;
+            }
+
 
             var snapshot = PlayerInteractionContextSnapshot.Create(
                 character,
                 character?.CurrentInteractable,
-                PointerManager.Current.CurrentTileDataUnderPointer,
-                PointerManager.Current.CurrentInteractableUnderPointer,
+                PointerManager.Instance.CurrentTileDataUnderPointer,
+                PointerManager.Instance.CurrentInteractableUnderPointer,
                 character?.CurrentTileData,
                 character?.CurrentTool,
                 character?.CurrentlyHeldItem,
-                character?.ConditionState.CurrentState,
-                character?.MovementState.CurrentState,
-                UrDialogueManager.Current.CurrentConversation
+                character?.ConditionState,
+                character?.MovementState,
+                UrDialogueManager.Instance.CurrentConversation
             );
 
             if (CurrentSnapshot != null && CurrentSnapshot == snapshot)
@@ -51,18 +64,6 @@ namespace Core.Context
         private void LateUpdate()
         {
             UpdateContextSnapshot();
-        }
-
-        public void OnMMEvent(TopDownEngineEvent topDownEngineEvent)
-        {
-            this.enabled = topDownEngineEvent.EventType switch
-            {
-                TopDownEngineEventTypes.Pause => false,
-                TopDownEngineEventTypes.UnPause => true,
-                TopDownEngineEventTypes.LevelEnd => false,
-                TopDownEngineEventTypes.LevelStart => true,
-                _ => this.enabled
-            };
         }
     }
 }

@@ -12,9 +12,9 @@ namespace Core.Context
                 return InteractionMode.None;
 
             // Priority: interactables in front 
-            if (context.InteractableInFront)
+            if (context.CurrentInteractable)
             {
-                return context.InteractableInFront switch
+                return context.CurrentInteractable switch
                 {
                     ShowDialogueInteractable when string.IsNullOrEmpty(context.CurrentConversation) => InteractionMode.DialogueReady,
                     ShowDialogueInteractable when !string.IsNullOrEmpty(context.CurrentConversation)=> InteractionMode.DialogueInProgress,

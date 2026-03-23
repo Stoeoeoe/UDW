@@ -1,20 +1,14 @@
-using MoreMountains.Tools;
+using Character;
+using Core;
 using UnityEngine;
 
-public class CharacterManager : MMSingleton<CharacterManager>
+public class CharacterManager : PersistentSingleton<CharacterManager>
 {
-    
-    public
-    
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public MainCharacter MainCharacter { get; private set; }
 
-    // Update is called once per frame
-    void Update()
+    public void RegisterMainCharacter(MainCharacter character)
     {
-        
+        MainCharacter = character;
+        MainCharacterChangedEvent.Trigger(character);
     }
 }

@@ -37,7 +37,7 @@ namespace Interaction.Tools
         public override bool FreezeCharacterDuringAction => true; // Tools currently always freeze character
         
 
-        protected UrCharacter Character => Owner;
+        protected GameCharacter Character => Owner;
         protected TileData CurrentTileData => Character?.CurrentTileData;
         protected TileData TileDataInFront => Character?.TileDataInFront;
         protected TileData TileDataInBack => Character?.TileDataInBack;
@@ -77,7 +77,7 @@ namespace Interaction.Tools
             if (ToolData?.toolEffectConfiguration == null) 
                 return new List<TileData>();
             
-            return MapManager.Current
+            return MapManager.Instance
                 .GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration)
                 .Where(CanBeUsedOnTile)
                 .ToList();

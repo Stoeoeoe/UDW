@@ -8,7 +8,7 @@ namespace Interaction.Dialogue
 
         public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
         {
-            UrDialogueManager.Current.ContinueOrFastForwardDialogue();
+            UrDialogueManager.Instance.ContinueOrFastForwardDialogue();
             yield break;
         }
 

@@ -9,7 +9,7 @@ namespace Interaction
         public bool IsPlowingAllFields;
         public bool IsIrrigatingSomeFields;
 
-        protected override void Interact(UrCharacter instigator)
+        protected override void Interact(GameCharacter instigator)
         {
             Debug.Log($"{instigator.name} interacted with {name} at {Time.time}");
             PlowFields();
@@ -17,18 +17,18 @@ namespace Interaction
 
         private void PlowFields()
         {
-            var allFarmLand = MapManager.Current.GetTileDataForTerrainType(TerrainType.FarmLand);
+            var allFarmLand = MapManager.Instance.GetTileDataForTerrainType(TerrainType.FarmLand);
             foreach (var tileData in allFarmLand)
             {
                 if (IsPlowingAllFields)
                 {
-                    MapManager.Current.PlowTile(tileData);
+                    MapManager.Instance.PlowTile(tileData);
                     if (IsIrrigatingSomeFields)
                     {
-                        MapManager.Current.DryTile(tileData);
+                        MapManager.Instance.DryTile(tileData);
                         if (Random.value > 0.5f) continue;
                     
-                        MapManager.Current.IrrigateTile(tileData);
+                        MapManager.Instance.IrrigateTile(tileData);
                     }
                 }
 

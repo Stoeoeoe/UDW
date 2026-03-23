@@ -31,17 +31,17 @@ namespace Core.Tile.Overlay
 
         private void Start()
         {
-            if (PlayerInteractionContext.Current != null)
+            if (PlayerInteractionContext.Instance != null)
             {
-                PlayerInteractionContext.Current.OnContextChanged += OnContextChanged;
+                PlayerInteractionContext.Instance.OnContextChanged += OnContextChanged;
             }
         }
 
         private void OnDestroy()
         {
-            if (PlayerInteractionContext.Current != null)
+            if (PlayerInteractionContext.Instance != null)
             {
-                PlayerInteractionContext.Current.OnContextChanged -= OnContextChanged;
+                PlayerInteractionContext.Instance.OnContextChanged -= OnContextChanged;
             }
         }
 
@@ -102,7 +102,7 @@ namespace Core.Tile.Overlay
                 for (int dy = -defaultRadius; dy <= defaultRadius; dy++)
                 {
                     var coords = new Vector2Int(cursorTile.Coordinates.x + dx, cursorTile.Coordinates.y + dy);
-                    var tile = MapManager.Current.GetTileDataAtCoordinates(coords);
+                    var tile = MapManager.Instance.GetTileDataAtCoordinates(coords);
                     if (tile != null)
                         yield return tile;
                 }
@@ -111,7 +111,7 @@ namespace Core.Tile.Overlay
 
         private void SetTile(OverlayTileResult result)
         {
-            var overlayTilemap = MapManager.Current.OverlayTilemap; 
+            var overlayTilemap = MapManager.Instance.OverlayTilemap; 
             if (!overlayTilemap) return;
 
             var cellPos = new Vector3Int(result.Coordinates.x, result.Coordinates.y, 0);
@@ -121,7 +121,7 @@ namespace Core.Tile.Overlay
 
         private void ClearOverlay()
         {
-            var overlayTilemap = MapManager.Current.OverlayTilemap; 
+            var overlayTilemap = MapManager.Instance.OverlayTilemap; 
             if (!overlayTilemap) return;
 
             foreach (var pos in _activeTilePositions)

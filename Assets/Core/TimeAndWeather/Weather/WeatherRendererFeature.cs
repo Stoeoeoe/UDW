@@ -1,5 +1,5 @@
 using System;
-using MoreMountains.Tools;
+using Core.Events;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -8,7 +8,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Core.TimeAndWeather.Weather
 {
-    public class WeatherRendererFeature : ScriptableRendererFeature, MMEventListener<WeatherUpdateEvent>
+    public class WeatherRendererFeature : ScriptableRendererFeature, IEventListener<WeatherUpdateEvent>
     {
         /// <summary>
         /// A mask of URP textures that the assigned material will need access to. Requesting unused requirements can degrade
@@ -46,7 +46,7 @@ namespace Core.TimeAndWeather.Weather
         {
             if (Application.isPlaying)
             {
-                this.MMEventStartListening();
+                this.Subscribe<WeatherUpdateEvent>();
             }
 
             m_FullScreenPass = new FullScreenRenderPass(name);
@@ -86,6 +86,7 @@ namespace Core.TimeAndWeather.Weather
         /// <inheritdoc/>
         protected override void Dispose(bool disposing)
         {
+            this.Unsubscribe<WeatherUpdateEvent>();
             m_FullScreenPass.Dispose();
         }
 
@@ -234,9 +235,9 @@ namespace Core.TimeAndWeather.Weather
             }
         }
 
-        public void OnMMEvent(WeatherUpdateEvent weatherUpdateEvent)
+        public void OnEvent(WeatherUpdateEvent e)
         {
-            runtimeMaterial = weatherUpdateEvent.WeatherData.weatherMaterial;
+            runtimeMaterial = e.WeatherData.weatherMaterial;
         }
     }
 }

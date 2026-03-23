@@ -78,13 +78,13 @@
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\AseHeader.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Importers\WorldAssetImporter.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\LayerType.cs" />
-    <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Importers\LayerSorterHelper.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Tiles\BadTileSpriteProvider.cs" />
+    <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Importers\LayerSorterHelper.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Extensions\CollisionObjectExtensions.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\SliceFlags.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Windows\SuperPackageExport.cs" />
-    <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\IAseVisitor.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Extensions\StreamExtensions.cs" />
+    <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\IAseVisitor.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Postprocessors\AssetDependencies.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\ThirdParty\LibTessDotNet\PriorityQueue.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Extensions\ByteExtensions.cs" />
@@ -151,8 +151,8 @@
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Importers\TiledAssetImporterEditor.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\AseFrame.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Aseprite\AseReader\AseDummyChunk.cs" />
-    <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Collision\TilePolygon.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\GlobalTileDatabase.cs" />
+    <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Collision\TilePolygon.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Settings\CustomPropertiesWindow.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\Importers\RendererSorter.cs" />
     <Compile Include="Packages\com.seanba.super-tiled2unity\Editor\AssetTypes\SuperAsset.cs" />

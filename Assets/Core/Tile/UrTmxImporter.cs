@@ -58,7 +58,8 @@ namespace Core.Tile
 
 
             // Custom prefab imports (prefab replacement already took place)
-            var entityLayer = layers.First(l => l.name == "Entities") as SuperObjectLayer;
+            var entityLayer = layers.FirstOrDefault(l => l.name == "Entities") as SuperObjectLayer;
+            if (entityLayer == null) return;
 
             //     
             // var locationLinks = map.GetComponentsInChildren<LocationLink>();

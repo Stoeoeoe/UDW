@@ -13,7 +13,7 @@ namespace Interaction.Tools.Hoe
         {
             yield return ForEachAffectedTile(snapshot, tile =>
             {
-                MapManager.Current.PlowTile(tile);
+                MapManager.Instance.PlowTile(tile);
             });
         }
 

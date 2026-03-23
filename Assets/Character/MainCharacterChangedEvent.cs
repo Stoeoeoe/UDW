@@ -1,16 +1,12 @@
-using MoreMountains.Tools;
+using Core.Events;
 
 namespace Character
 {
     public struct MainCharacterChangedEvent
     {
         public MainCharacter MainCharacter;
-        private static MainCharacterChangedEvent e;
-        
+
         public static void Trigger(MainCharacter mainCharacter)
-        {
-            e.MainCharacter = mainCharacter;
-            MMEventManager.TriggerEvent(e);
-        }
+            => EventBus<MainCharacterChangedEvent>.Raise(new MainCharacterChangedEvent { MainCharacter = mainCharacter });
     }
 }

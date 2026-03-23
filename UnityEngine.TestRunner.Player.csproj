@@ -64,8 +64,8 @@
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\TestRunner\Callbacks\RemoteTestResultSender.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\NUnitExtensions\Runner\PlaymodeWorkItemFactory.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\Utils\AssemblyProvider\AssemblyLoadProxy.cs" />
-    <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\NUnitExtensions\ActionDelegator.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\NUnitExtensions\Attributes\ParametrizedIgnoreAttribute.cs" />
+    <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\NUnitExtensions\ActionDelegator.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\TestRunner\RuntimeTestRunnerFilter.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\Utils\TestRunCallbackListener.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.TestRunner\TestRunner\Callbacks\TestResultRendererCallback.cs" />

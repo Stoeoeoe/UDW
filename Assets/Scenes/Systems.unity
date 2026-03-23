@@ -119,6 +119,24 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &504053420 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4847776598586356913, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+    type: 3}
+  m_PrefabInstance: {fileID: 1542160486}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &504053422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 504053420}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68a35e69b05fd4547bc824b4e9d10644, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterManager
 --- !u!1001 &1542160486
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -159,13 +177,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 861009452615716428, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
         type: 3}
+      propertyPath: orthographic size
+      value: 9.642858
+      objectReference: {fileID: 0}
+    - target: {fileID: 861009452615716428, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
       propertyPath: m_NormalizedViewPortRect.x
-      value: 0.16666667
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 861009452615716428, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
         type: 3}
       propertyPath: m_NormalizedViewPortRect.y
-      value: 0.16666666
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 861009452615716428, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
+      propertyPath: m_NormalizedViewPortRect.width
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 861009452615716428, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
+      propertyPath: m_NormalizedViewPortRect.height
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 893779559843713635, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
         type: 3}
@@ -412,6 +445,11 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7774186223538061940, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 6.2999268
+      objectReference: {fileID: 0}
     - target: {fileID: 7837777455467206357, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
         type: 3}
       propertyPath: m_AnchorMax.y
@@ -502,11 +540,73 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedComponents:
+    - {fileID: 1539342620123525220, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+    - {fileID: 5266152712088529136, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+    - {fileID: 5798469584855244372, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+    m_RemovedGameObjects:
+    - {fileID: 4507810372529620046, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2406051593251513233, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1542160491}
+    - targetCorrespondingSourceObject: {fileID: 8294934142532049781, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1542160490}
+    - targetCorrespondingSourceObject: {fileID: 4847776598586356913, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 504053422}
   m_SourcePrefab: {fileID: 100100000, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+--- !u!225 &1542160487 stripped
+CanvasGroup:
+  m_CorrespondingSourceObject: {fileID: 7401866559396590751, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+    type: 3}
+  m_PrefabInstance: {fileID: 1542160486}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1542160488 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8294934142532049781, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+    type: 3}
+  m_PrefabInstance: {fileID: 1542160486}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1542160489 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2406051593251513233, guid: ab9a5be2e3578d64c9fa4ad546a2563a,
+    type: 3}
+  m_PrefabInstance: {fileID: 1542160486}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1542160490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1542160488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbc304537018a3f4ca1b4b5a9c840b2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Location.LevelManager
+  _transitionContext: {fileID: 11400000, guid: 96a6d33ce9555c34ebb428547725f353, type: 2}
+  _fadeCanvas: {fileID: 1542160487}
+  _fadeDuration: 0.3
+  _defaultSpawnKey: Default
+--- !u!114 &1542160491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1542160489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6487084d8e84a9146a6ea09424f0828a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Input.InputManager
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

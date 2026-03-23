@@ -52,6 +52,7 @@
     <Compile Include="Assets\SensorToolkit\Editor\SteeringRigEditor.cs" />
     <Compile Include="Assets\SensorToolkit\Editor\FOVCollider2DEditor.cs" />
     <Compile Include="Assets\SensorToolkit\Editor\RaySensor2DEditor.cs" />
+    <Compile Include="Assets\EditorUI\Editor\DirectionDial.cs" />
     <Compile Include="Assets\Interaction\Tools\Editor\ToolEffectConfigurationDrawer.cs" />
     <Compile Include="Assets\SensorToolkit\Editor\SteeringRig2DEditor.cs" />
     <Compile Include="Assets\SensorToolkit\Editor\TagSelectorPropertyDrawer.cs" />
@@ -1083,13 +1084,13 @@
       <Project>{fee2640b-36fe-0cc6-13f4-efd75dc8dae2}</Project>
       <Name>Unity.Mathematics.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.Cinemachine.Editor.csproj">
-      <Project>{581a7162-9285-5e27-b0de-3d1c65fa3b6f}</Project>
-      <Name>Unity.Cinemachine.Editor</Name>
-    </ProjectReference>
     <ProjectReference Include="SuperTiled2UnityEditor.csproj">
       <Project>{d3d866d2-6183-f479-9cfa-5fc080b24ecb}</Project>
       <Name>SuperTiled2UnityEditor</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.Cinemachine.Editor.csproj">
+      <Project>{581a7162-9285-5e27-b0de-3d1c65fa3b6f}</Project>
+      <Name>Unity.Cinemachine.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.UnifiedRayTracing.Runtime.csproj">
       <Project>{834dead4-f9fc-05da-0c99-c1087c7121e2}</Project>
@@ -1130,6 +1131,10 @@
     <ProjectReference Include="Unity.2D.Psdimporter.Editor.csproj">
       <Project>{7928bc86-faa3-dd81-ed15-4bb7a00c662f}</Project>
       <Name>Unity.2D.Psdimporter.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="MCPForUnity.Runtime.csproj">
+      <Project>{8fb34cc8-8689-ab7b-7001-cb7187628d04}</Project>
+      <Name>MCPForUnity.Runtime</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.csproj">
       <Project>{6674ee96-6f83-1f1e-860e-066d3f53d8f1}</Project>
@@ -1175,9 +1180,9 @@
       <Project>{2eaf1735-0378-59ba-0fef-acf60baae1c5}</Project>
       <Name>Unity.InputSystem.ForUI</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.RenderPipelines.GPUDriven.Runtime.csproj">
-      <Project>{b7def964-62b9-04bc-38e8-231b2cf0624c}</Project>
-      <Name>Unity.RenderPipelines.GPUDriven.Runtime</Name>
+    <ProjectReference Include="MCPForUnity.Editor.csproj">
+      <Project>{5cc66ed7-9b31-8f7c-55da-2eaca543cfda}</Project>
+      <Name>MCPForUnity.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Eflatun.SceneReference.Editor.csproj">
       <Project>{1bbd1f35-74fc-4df3-f6c3-b5fbe5392b87}</Project>
@@ -1190,6 +1195,10 @@
     <ProjectReference Include="MoreMountains.TopDownEngine.Editor.csproj">
       <Project>{45dd0dc7-e45f-f2e8-765e-ef4a93fbc007}</Project>
       <Name>MoreMountains.TopDownEngine.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.RenderPipelines.GPUDriven.Runtime.csproj">
+      <Project>{b7def964-62b9-04bc-38e8-231b2cf0624c}</Project>
+      <Name>Unity.RenderPipelines.GPUDriven.Runtime</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.Mathematics.csproj">
       <Project>{05482c71-843a-ed6d-58c4-1c9c7b6274ab}</Project>

@@ -25,8 +25,8 @@
             "scale": 5.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 160,
-                "y": 148.0909090909091
+                "x": 169.36363636363637,
+                "y": 80.0909090909091
             }
         },
         "OutdoorsTilemap.tsx": {
@@ -49,8 +49,8 @@
             "scale": 2,
             "selectedLayer": 4,
             "viewCenter": {
-                "x": 42.5,
-                "y": 189.25
+                "x": 520.25,
+                "y": 280.25
             }
         },
         "TestMap.tmx": {
@@ -73,7 +73,7 @@
     "openFiles": [
         "IndoorTileset.tsx",
         "IndoorTest2.tmx",
-        "C:/GameDev/UrdewValley/Assets/Core/Location/TiledProject/SmallMap.tmx",
+        "SmallMap.tmx",
         "SmallMap.tmx"
     ],
     "project": "game.tiled-project",
@@ -81,10 +81,10 @@
     "recentFiles": [
         "IndoorTileset.tsx",
         "SmallMap.tmx",
-        "C:/GameDev/UrdewValley/Assets/Core/Location/TiledProject/SmallMap.tmx",
+        "SmallMap.tmx",
         "IndoorTest2.tmx",
         "OutdoorsTilemap2.tsx",
-        "C:/GameDev/UrdewValley/Assets/Core/Location/TiledProject/SmallMap2.tmx",
+        "SmallMap2.tmx",
         "OutdoorsTilemap.tsx",
         "SmallMap..tmx"
     ],

@@ -13,7 +13,7 @@ namespace Interaction.Tools.WateringJar
         {
             yield return ForEachAffectedTile(snapshot, tile =>
             {
-                MapManager.Current.IrrigateTile(tile);
+                MapManager.Instance.IrrigateTile(tile);
             });
         }
 

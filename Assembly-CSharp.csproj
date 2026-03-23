@@ -50,8 +50,8 @@
     <Compile Include="Assets\Character\Abilities\UrCharacterInteractionAbility.cs" />
     <Compile Include="Assets\Core\Items\EquippableItem.cs" />
     <Compile Include="Assets\SensorToolkit\RaySensor2D.cs" />
+    <Compile Include="Assets\Core\Singleton.cs" />
     <Compile Include="Assets\Pixel Crushers\Dialogue System\Third Party Support\TopDown Engine Support\Scripts\DialogueSystemTopDownEventListener.cs" />
-    <Compile Include="Assets\Input\UrInputManager.cs" />
     <Compile Include="Assets\Character\MainCharacter.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\PulseSensor.cs" />
     <Compile Include="Assets\Core\Tile\MapManager.cs" />
@@ -64,55 +64,63 @@
     <Compile Include="Assets\Core\TimeAndWeather\Weather\WeatherData.cs" />
     <Compile Include="Assets\Core\Tile\CharacterChangedTileEvent.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorSetIgnoreList.cs" />
-    <Compile Include="Assets\Core\Context\OLD_EventDrivenPlayerInteractionContext.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\DayLightUpdateEvent.cs" />
     <Compile Include="Assets\Interaction\Tools\ToolAction.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\RaySensor2DObstructed.cs" />
     <Compile Include="Assets\Core\Location\LocationLink.cs" />
-    <Compile Include="Assets\Character\Abilities\UrCharacterPerformPrimaryActionAbility.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorGetNearestToPoint.cs" />
     <Compile Include="Assets\Interaction\ActionExecutor.cs" />
-    <Compile Include="Assets\Test\TestScript.cs" />
+    <Compile Include="Assets\Interaction\Tools\Stamina\StaminaDepletedEvent.cs" />
     <Compile Include="Assets\SensorToolkit\RaySensor.cs" />
     <Compile Include="Assets\Plants\FarmablePlant.cs" />
     <Compile Include="Assets\Interaction\Tools\UseToolAction.cs" />
     <Compile Include="Assets\Pixel Crushers\Dialogue System\Third Party Support\TopDown Engine Support\Scripts\PauseTopDownDuringConversations.cs" />
+    <Compile Include="Assets\Core\Camera\CameraManager.cs" />
     <Compile Include="Assets\UI\Hotbar\ToolHotbar.cs" />
     <Compile Include="Assets\Interaction\PrimaryAction.cs" />
     <Compile Include="Assets\SensorToolkit\SteeringRig2D.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\Weather\WeatherRendererFeature.cs" />
-    <Compile Include="Assets\Core\Game\UrGameManager.cs" />
     <Compile Include="Assets\Interaction\Pointer\PointerMode.cs" />
     <Compile Include="Assets\Interaction\Dialogue\StartDialogueAction.cs" />
     <Compile Include="Assets\Core\Context\PlayerInteractionContextDebugView.cs" />
     <Compile Include="Assets\Core\Tile\Overlay\TileOverlayManager.cs" />
     <Compile Include="Assets\Interaction\Tools\Hoe\HoeAction.cs" />
+    <Compile Include="Assets\Character\Abilities\MovementAbility.cs" />
     <Compile Include="Assets\Character\Abilities\UrCharacterAbility.cs" />
     <Compile Include="Assets\Core\Items\PlaceableItem.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\RaySensorGetRaycastHit.cs" />
-    <Compile Include="Assets\Character\NpcCharacter.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\RaySensor2DGetRaycastHit.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SetSteeringDestination2D.cs" />
     <Compile Include="Assets\Plants\GrowthStage.cs" />
+    <Compile Include="Assets\Core\Inventory\ItemDefinition.cs" />
+    <Compile Include="Assets\Core\Items\ConsumableItem.cs" />
     <Compile Include="Assets\Core\Common\SpriteOrPrefab.cs" />
+    <Compile Include="Assets\Character\GameCharacter.cs" />
+    <Compile Include="Assets\Character\ConditionState.cs" />
+    <Compile Include="Assets\Core\Events\EventBusExtensions.cs" />
+    <Compile Include="Assets\Character\Abilities\CharacterAbility.cs" />
+    <Compile Include="Assets\Core\PlayerStateManager.cs" />
     <Compile Include="Assets\Core\Tile\TileHighlight\TileHighlighter.cs" />
+    <Compile Include="Assets\Core\Location\SceneUnloadingEvent.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\UrTimeManager.cs" />
+    <Compile Include="Assets\Interaction\InteractAction.cs" />
     <Compile Include="Assets\Interaction\Dialogue\UrDialogueLifecycleEvent.cs" />
     <Compile Include="Assets\Plants\SeedItem.cs" />
-    <Compile Include="Assets\Character\UrCharacter.cs" />
     <Compile Include="Assets\SensorToolkit\src\ObjectCache.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorGetDetected.cs" />
+    <Compile Include="Assets\UI\GUIManager.cs" />
     <Compile Include="Assets\Interaction\AbstractAction.cs" />
     <Compile Include="Assets\SensorToolkit\FOVCollider2D.cs" />
     <Compile Include="Assets\Core\Tile\Overlay\AbstractOverlay.cs" />
     <Compile Include="Assets\Pixel Crushers\Common\Third Party Support\TopDown Engine Support\Scripts\OnDeathEvent.cs" />
+    <Compile Include="Assets\EditorUI\Attributes\DialAttribute.cs" />
+    <Compile Include="Assets\Character\MovementState.cs" />
     <Compile Include="Assets\Core\SystemRoot.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SetSteeringTargets2D.cs" />
     <Compile Include="Assets\SensorToolkit\RangeSensor2D.cs" />
     <Compile Include="Assets\Interaction\Tools\Hammer\HammerAction.cs" />
     <Compile Include="Assets\SensorToolkit\src\Sensor.cs" />
     <Compile Include="Assets\Pixel Crushers\Common\Third Party Support\TopDown Engine Support\Scripts\SaveSystemTopDownEventListener.cs" />
-    <Compile Include="Assets\Interaction\InteractableButtonActivated.cs" />
     <Compile Include="Assets\SensorToolkit\SteeringRig.cs" />
     <Compile Include="Assets\Interaction\Tools\ToolActionRegistry.cs" />
     <Compile Include="Assets\Interaction\ActionRegistry.cs" />
@@ -124,30 +132,35 @@
     <Compile Include="Assets\Core\Context\PlayerInteractionContext.cs" />
     <Compile Include="Assets\Interaction\TestInteractable.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorGetVisibleRaycastTargets.cs" />
+    <Compile Include="Assets\Core\Location\TransitionContext.cs" />
     <Compile Include="Assets\Interaction\Dialogue\DialogueOptions.cs" />
+    <Compile Include="Assets\Interaction\Tools\Stamina\StaminaChangedEvent.cs" />
     <Compile Include="Assets\Util\WeightedList.cs" />
     <Compile Include="Assets\Pixel Crushers\Common\Third Party Support\TopDown Engine Support\Scripts\TDECharacterSaver.cs" />
     <Compile Include="Assets\SensorToolkit\src\RenderFOVCollider.cs" />
     <Compile Include="Assets\Structures\Repairable.cs" />
+    <Compile Include="Assets\Core\Inventory\ItemStack.cs" />
     <Compile Include="Assets\Plants\PlantState.cs" />
     <Compile Include="Assets\Core\Data\DataManager.cs" />
+    <Compile Include="Assets\Core\Location\LevelManager.cs" />
     <Compile Include="Assets\Core\Tile\TileDebugger.cs" />
-    <Compile Include="Assets\Interaction\Tools\Energy\EnergyDepletedEvent.cs" />
     <Compile Include="Assets\Util\IsExternalInit.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\Seasons\SeasonStartEvent.cs" />
+    <Compile Include="Assets\Character\Controller2D.cs" />
     <Compile Include="Assets\SensorToolkit\FOVCollider.cs" />
-    <Compile Include="Assets\Interaction\Tools\Energy\Energy.cs" />
+    <Compile Include="Assets\Interaction\Tools\Stamina\Stamina.cs" />
+    <Compile Include="Assets\Core\Location\SceneReadyEvent.cs" />
     <Compile Include="Assets\InputSystem_Actions.cs" />
     <Compile Include="Assets\Core\Location\LocationData.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\GetSteeredDirection.cs" />
     <Compile Include="Assets\Interaction\BasicInteractable.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\WeatherUpdateEvent.cs" />
     <Compile Include="Assets\Core\Context\InteractionModeResolver.cs" />
-    <Compile Include="Assets\Interaction\InteractionSphere.cs" />
     <Compile Include="Assets\Character\Abilities\UrCharacterMovementAbility.cs" />
     <Compile Include="Assets\Interaction\Dialogue\UrTypewriterEffect.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorIsDetected.cs" />
     <Compile Include="Assets\Pixel Crushers\Common\Third Party Support\TopDown Engine Support\Scripts\TDEPauseUtility.cs" />
+    <Compile Include="Assets\Character\Abilities\CharacterPerformPrimaryActionAbility.cs" />
     <Compile Include="Assets\Core\Tile\SurfaceSound.cs" />
     <Compile Include="Assets\Core\Equipment\ItemSelectedEvent.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorDetectionEvent.cs" />
@@ -158,6 +171,8 @@
     <Compile Include="Assets\Interaction\Dialogue\TypewriterSound.cs" />
     <Compile Include="Assets\SensorToolkit\TriggerSensor2D.cs" />
     <Compile Include="Assets\Interaction\Dialogue\UrDialogueManager.cs" />
+    <Compile Include="Assets\Interaction\InteractionSensor.cs" />
+    <Compile Include="Assets\Core\Inventory\InventoryChangedEvent.cs" />
     <Compile Include="Assets\Core\Tile\TerrainType.cs" />
     <Compile Include="Assets\Pixel Crushers\Common\Third Party Support\TopDown Engine Support\Scripts\PixelCrushersMMSceneLoadingManager.cs" />
     <Compile Include="Assets\SensorToolkit\TriggerSensor.cs" />
@@ -166,10 +181,9 @@
     <Compile Include="Assets\Character\AnimancerFeedback.cs" />
     <Compile Include="Assets\Plants\PlantManager.cs" />
     <Compile Include="Assets\Interaction\Pointer\TileDataUnderPointerChangedEvent.cs" />
-    <Compile Include="Assets\Core\Location\UrLevelManager.cs" />
     <Compile Include="Assets\UI\InventoryScreen\InventoryHeldItemDisplay.cs" />
     <Compile Include="Assets\Core\Location\LocationLinkType.cs" />
-    <Compile Include="Assets\Character\UrTopDownController2D.cs" />
+    <Compile Include="Assets\Core\PersistentSingleton.cs" />
     <Compile Include="Assets\Interaction\ActionExecutionState.cs" />
     <Compile Include="Assets\Pixel Crushers\Dialogue System\Third Party Support\TopDown Engine Support\Scripts\AllowUINavigationDuringConversations.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SetSteeringDestination.cs" />
@@ -181,10 +195,13 @@
     <Compile Include="Assets\Interaction\Pointer\PointerInteractableChangedEvent.cs" />
     <Compile Include="Assets\ConsolePro\ConsoleProDebug.cs" />
     <Compile Include="Assets\Plants\PlantSeedAction.cs" />
+    <Compile Include="Assets\Character\Orientation2D.cs" />
+    <Compile Include="Assets\Input\InputManager.cs" />
     <Compile Include="Assets\Interaction\AbstractInteractable.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\Season.cs" />
     <Compile Include="Assets\Core\Tile\Overlay\OverlayTileResult.cs" />
     <Compile Include="Assets\Interaction\Tools\ToolData.cs" />
+    <Compile Include="Assets\Core\Events\IEventListener.cs" />
     <Compile Include="Assets\SensorToolkit\src\BaseVolumeSensor.cs" />
     <Compile Include="Assets\Core\Tile\UrTmxImporter.cs" />
     <Compile Include="Assets\Core\Location\LocationFilter.cs" />
@@ -193,6 +210,7 @@
     <Compile Include="Assets\UI\InventoryScreen\UrInventoryDisplay.cs" />
     <Compile Include="Assets\Core\Bootstrapper.cs" />
     <Compile Include="Assets\Interaction\InteractableChangedEvent.cs" />
+    <Compile Include="Assets\Character\CharacterSpawnEvent.cs" />
     <Compile Include="Assets\Character\UrCharacterAnimator.cs" />
     <Compile Include="Assets\Character\CharacterManager.cs" />
     <Compile Include="Assets\Interaction\ActionType.cs" />
@@ -204,17 +222,18 @@
     <Compile Include="Assets\Core\Context\InteractionMode.cs" />
     <Compile Include="Assets\Plants\PlantData.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SetFOVCollider.cs" />
+    <Compile Include="Assets\Core\Inventory\SlotInventory.cs" />
     <Compile Include="Assets\Core\Common\FilterMode.cs" />
-    <Compile Include="Assets\UI\UrGUIManager.cs" />
     <Compile Include="Assets\Interaction\TileAction.cs" />
+    <Compile Include="Assets\Core\Events\EventBus.cs" />
     <Compile Include="Assets\UI\InventoryScreen\UrInventorySlot.cs" />
     <Compile Include="Assets\Core\Tile\TerrainData.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorGetNearest.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorToolkitComponentAction.cs" />
     <Compile Include="Assets\UI\Hotbar\HotbarSlot.cs" />
-    <Compile Include="Assets\Structures\DestructableStructure.cs" />
     <Compile Include="Assets\Core\Tile\TileData.cs" />
     <Compile Include="Assets\Core\Tile\FarmlandInfo.cs" />
+    <Compile Include="Assets\Core\Location\SpawnPoint.cs" />
     <Compile Include="Assets\Structures\Structure.cs" />
     <None Include="Library\PackageCache\com.unity.ai.navigation@c33a115e9883\ValidationExceptions.json" />
     <None Include="Library\PackageCache\com.unity.postprocessing@4a41da475b74\PostProcessing\Shaders\StdLib.hlsl" />
@@ -262,6 +281,7 @@
     <None Include="Library\PackageCache\com.unity.modules.imgui\package.json" />
     <None Include="Library\PackageCache\com.unity.modules.tilemap\package.json" />
     <None Include="Library\PackageCache\com.unity.postprocessing@4a41da475b74\PostProcessing\Shaders\Debug\Waveform.compute" />
+    <None Include="Library\PackageCache\com.coplaydev.unity-mcp@7083705c7810\package.json" />
     <None Include="Library\PackageCache\com.unity.test-framework.performance@0840f58e4562\ValidationExceptions.json" />
     <None Include="Assets\TopDownEngine\ThirdParty\MoreMountains\MMInterface\Common\Shaders\VerticalGradient.shader" />
     <None Include="Library\PackageCache\com.unity.postprocessing@4a41da475b74\PostProcessing\Shaders\API\PSSL.hlsl" />
@@ -1406,13 +1426,13 @@
       <Project>{fee2640b-36fe-0cc6-13f4-efd75dc8dae2}</Project>
       <Name>Unity.Mathematics.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.Cinemachine.Editor.csproj">
-      <Project>{581a7162-9285-5e27-b0de-3d1c65fa3b6f}</Project>
-      <Name>Unity.Cinemachine.Editor</Name>
-    </ProjectReference>
     <ProjectReference Include="SuperTiled2UnityEditor.csproj">
       <Project>{d3d866d2-6183-f479-9cfa-5fc080b24ecb}</Project>
       <Name>SuperTiled2UnityEditor</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.Cinemachine.Editor.csproj">
+      <Project>{581a7162-9285-5e27-b0de-3d1c65fa3b6f}</Project>
+      <Name>Unity.Cinemachine.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.UnifiedRayTracing.Runtime.csproj">
       <Project>{834dead4-f9fc-05da-0c99-c1087c7121e2}</Project>
@@ -1453,6 +1473,10 @@
     <ProjectReference Include="Unity.2D.Psdimporter.Editor.csproj">
       <Project>{7928bc86-faa3-dd81-ed15-4bb7a00c662f}</Project>
       <Name>Unity.2D.Psdimporter.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="MCPForUnity.Runtime.csproj">
+      <Project>{8fb34cc8-8689-ab7b-7001-cb7187628d04}</Project>
+      <Name>MCPForUnity.Runtime</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.csproj">
       <Project>{6674ee96-6f83-1f1e-860e-066d3f53d8f1}</Project>
@@ -1498,9 +1522,9 @@
       <Project>{2eaf1735-0378-59ba-0fef-acf60baae1c5}</Project>
       <Name>Unity.InputSystem.ForUI</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.RenderPipelines.GPUDriven.Runtime.csproj">
-      <Project>{b7def964-62b9-04bc-38e8-231b2cf0624c}</Project>
-      <Name>Unity.RenderPipelines.GPUDriven.Runtime</Name>
+    <ProjectReference Include="MCPForUnity.Editor.csproj">
+      <Project>{5cc66ed7-9b31-8f7c-55da-2eaca543cfda}</Project>
+      <Name>MCPForUnity.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Eflatun.SceneReference.Editor.csproj">
       <Project>{1bbd1f35-74fc-4df3-f6c3-b5fbe5392b87}</Project>
@@ -1513,6 +1537,10 @@
     <ProjectReference Include="MoreMountains.TopDownEngine.Editor.csproj">
       <Project>{45dd0dc7-e45f-f2e8-765e-ef4a93fbc007}</Project>
       <Name>MoreMountains.TopDownEngine.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.RenderPipelines.GPUDriven.Runtime.csproj">
+      <Project>{b7def964-62b9-04bc-38e8-231b2cf0624c}</Project>
+      <Name>Unity.RenderPipelines.GPUDriven.Runtime</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.Mathematics.csproj">
       <Project>{05482c71-843a-ed6d-58c4-1c9c7b6274ab}</Project>

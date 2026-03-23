@@ -1,7 +1,7 @@
+using Core.Inventory;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using MoreMountains.InventoryEngine;
-using TMPro;
 
 namespace UI.Hotbar
 {
@@ -45,7 +45,7 @@ namespace UI.Hotbar
         // Protected properties
         protected ToolHotbar _parentHotbar;
         protected int _slotIndex;
-        protected InventoryItem _currentItem;
+        protected ItemStack _currentItem;
         
         /// <summary>
         /// Initialize the slot with parent hotbar reference and index
@@ -64,17 +64,17 @@ namespace UI.Hotbar
             
             // Initialize visual state
             SetSelected(false);
-            UpdateDisplay(null);
+            UpdateDisplay(ItemStack.Empty);
         }
         
         /// <summary>
-        /// Updates the slot's visual display based on the item
+        /// Updates the slot's visual display based on the item stack
         /// </summary>
-        public virtual void UpdateDisplay(InventoryItem item)
+        public virtual void UpdateDisplay(ItemStack stack)
         {
-            _currentItem = item;
+            _currentItem = stack;
             
-            bool hasItem = !InventoryItem.IsNull(item);
+            bool hasItem = !stack.IsEmpty;
             
             // Update icon
             if (IconImage != null)
@@ -83,13 +83,13 @@ namespace UI.Hotbar
                 
                 if (hasItem)
                 {
-                    IconImage.sprite = item.Icon;
+                    IconImage.sprite = stack.Item.Icon;
                     IconImage.color = FilledSlotColor;
                 }
             }
             
             // Update quantity
-            UpdateQuantityDisplay(item);
+            UpdateQuantityDisplay(stack);
             
             // Update background
             if (BackgroundImage != null)
@@ -101,17 +101,17 @@ namespace UI.Hotbar
         /// <summary>
         /// Updates the quantity text display
         /// </summary>
-        protected virtual void UpdateQuantityDisplay(InventoryItem item)
+        protected virtual void UpdateQuantityDisplay(ItemStack stack)
         {
             if (QuantityText == null) return;
             
-            bool hasItem = !InventoryItem.IsNull(item);
-            bool shouldShowQuantity = hasItem && item.MaximumStack > 1;
+            bool hasItem = !stack.IsEmpty;
+            bool shouldShowQuantity = hasItem && stack.Item.MaxStackSize > 1;
             
             QuantityText.enabled = shouldShowQuantity;
             if (shouldShowQuantity)
             {
-                QuantityText.text = item.Quantity.ToString();
+                QuantityText.text = stack.Quantity.ToString();
             }
         }
         

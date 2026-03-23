@@ -1,15 +1,11 @@
-using System;
 using Character;
-using MoreMountains.Tools;
-using MoreMountains.TopDownEngine;
 using UnityEngine;
 
 namespace Core.Tile
 {
-    public class TileDebugger : MonoBehaviour, MMEventListener<TopDownEngineEvent>
+    public class TileDebugger : MonoBehaviour
     {
         private MapManager _mapManager;
-        private UrCharacter _currentCharacter;
 
         [SerializeField] private bool showCurrentTileInfos = true;
 
@@ -20,19 +16,12 @@ namespace Core.Tile
         [SerializeField] private int labelHeight = 24;
         [SerializeField] private Color textColor = Color.white;
 
-        private void Awake()
-        {
-            // this._tileManager = TileManager.Instance;
-            // _currentCharacter ??= MainCharacter.CurrentMainCharacter;
-        }
-
-
         private void OnGUI()
         {
             if (!showCurrentTileInfos) return;
-            if (!_currentCharacter) return;
+            if (!MainCharacter.CurrentMainCharacter) return;
 
-            var currentTile = _currentCharacter.CurrentTileData;
+            var currentTile = MainCharacter.CurrentMainCharacter.CurrentTileData;
 
             // Prepare rect anchored to top-right
             var rect = new Rect(Screen.width - labelWidth - rightPadding, topPadding, labelWidth, labelHeight);
@@ -48,20 +37,5 @@ namespace Core.Tile
             string text = $"Tile: {currentTile?.TerrainData.TerrainType}";
             GUI.Label(rect, text, style);
         }
-
-        public void OnMMEvent(TopDownEngineEvent eventType)
-        {
-            if (_currentCharacter) return;
-            
-            if (eventType.EventType == TopDownEngineEventTypes.SpawnComplete)
-            {
-                _currentCharacter = eventType.OriginCharacter as UrCharacter;
-            }
-        }
-        
-        
-
-        protected virtual void OnEnable() => this.MMEventStartListening();
-        protected virtual void OnDisable() => this.MMEventStopListening();
     }
 }

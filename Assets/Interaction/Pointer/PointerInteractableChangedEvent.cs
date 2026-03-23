@@ -1,19 +1,12 @@
-using MoreMountains.Tools;
+using Core.Events;
 
 namespace Interaction.Pointer
 {
     public struct PointerInteractableChangedEvent
     {
-
         public AbstractInteractable Interactable;
-        
-        private static PointerInteractableChangedEvent e;
-        
+
         public static void Trigger(AbstractInteractable interactable)
-        {
-            e.Interactable = interactable;
-            MMEventManager.TriggerEvent(e);
-        }
-        
+            => EventBus<PointerInteractableChangedEvent>.Raise(new PointerInteractableChangedEvent { Interactable = interactable });
     }
 }

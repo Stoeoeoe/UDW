@@ -17,14 +17,14 @@ namespace Interaction
         public ActionExecutionState State { get; private set; } = ActionExecutionState.Idle;
         public bool IsIdle => State == ActionExecutionState.Idle;
 
-        private readonly UrCharacter _owner;
+        private readonly GameCharacter _owner;
         private readonly Func<PlayerInteractionContextSnapshot> _snapshotProvider;
         private bool _frozeCharacter;
 
-        // Cached snapshot - refreshed only when context might have changed
         private PlayerInteractionContextSnapshot _currentSnapshot;
 
-        public ActionExecutor(UrCharacter owner, Func<PlayerInteractionContextSnapshot> snapshotProvider)
+        /// <summary>New constructor — used by GameCharacter-based abilities.</summary>
+        public ActionExecutor(GameCharacter owner, Func<PlayerInteractionContextSnapshot> snapshotProvider)
         {
             _owner = owner;
             _snapshotProvider = snapshotProvider;
@@ -117,20 +117,15 @@ namespace Interaction
         private void FreezeIfNeeded(AbstractAction action)
         {
             _frozeCharacter = false;
-            if (action.FreezeCharacterDuringAction)
-            {
-                _owner.Freeze();
-                _frozeCharacter = true;
-            }
+            if (!action.FreezeCharacterDuringAction) return;
+            if (_owner != null)       { _owner.Freeze();       _frozeCharacter = true; }
         }
 
         private void Unfreeze()
         {
-            if (_frozeCharacter)
-            {
-                _owner.UnFreeze();
-                _frozeCharacter = false;
-            }
+            if (!_frozeCharacter) return;
+            if (_owner != null)       _owner.UnFreeze();
+            _frozeCharacter = false;
         }
 
         public void ContinueFromPrepare()

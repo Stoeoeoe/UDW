@@ -103,8 +103,8 @@
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\GUI\Controls\MultiValueContentProvider.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\CommandLineParser\ICommandLineOption.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRun\Tasks\CleanupConstructDelegatorTask.cs" />
-    <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRun\Tasks\SaveUndoIndexTask.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\Api\ITestRunnerApi.cs" />
+    <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRun\Tasks\SaveUndoIndexTask.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestLaunchers\Helpers\PrebuildSetupAttributeFinder.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestLaunchers\RemotePlayerLogController.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestLaunchers\Helpers\PostbuildCleanupWithJobDataAttributeFinder.cs" />
@@ -235,8 +235,8 @@
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRun\TestRunCanceledException.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\Api\TestMode.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRunner\Utils\EditorAssemblyWrapper.cs" />
-    <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\GUI\IGuiHelper.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRun\Tasks\Events\UpdateTestProgressTask.cs" />
+    <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\GUI\IGuiHelper.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\GUI\TestAssets\TestScriptAssetMenuItems.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\CommandLineTest\ExecutionSettings.cs" />
     <Compile Include="Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEditor.TestRunner\TestRun\Tasks\FilterTestTreeTask.cs" />

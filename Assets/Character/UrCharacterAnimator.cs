@@ -1,12 +1,10 @@
 using System.Collections.Generic;
 using Animancer;
+using Character;
 using Core.Context;
 using Interaction;
 using Interaction.Tools;
-using MoreMountains.Tools;
-using MoreMountains.TopDownEngine;
 using UnityEngine;
-using FacingDirections = MoreMountains.TopDownEngine.Character.FacingDirections;
 using InteractionMode = Core.Context.InteractionMode;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -17,7 +15,7 @@ namespace Character
     public class UrCharacterAnimator : MonoBehaviour
     {
         [SerializeField] private NamedAnimancerComponent animancer;
-        [SerializeField] private UrCharacter character;
+        [SerializeField] private GameCharacter character;
 
         // [Header("Walk Animations")] [SerializeField]
         // private float walkSpeedMultiplier = 1.0f;
@@ -35,7 +33,7 @@ namespace Character
         [SerializeField] private string usePrefix = "UseTool";
 
         // Collected clips from aseprite subresources keyed by name
-        private Dictionary<string, AnimationClip> asepriteClips = new Dictionary<string, AnimationClip>();
+        private readonly Dictionary<string, AnimationClip> _asepriteClips = new();
 
 
         // [Header("Run Animations")] [SerializeField]
@@ -48,15 +46,66 @@ namespace Character
             {
                 Debug.LogError("Animancer or Character reference is missing in UrCharacterAnimator.");
             }
-            PlayerInteractionContext.Current.OnContextChanged += UpdateAnimator;
 
             // Collect animation clips from the referenced aseprite prefab/asset
             LoadClipsFromAseprite();
+
+            PlayerInteractionContext.Instance.OnContextChanged += UpdateAnimator;
+            character.OnMovementStateChanged += OnMovementStateChanged;
+            character.Orientation.OnFacingDirectionChanged += OnFacingDirectionChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (PlayerInteractionContext.Instance != null)
+                PlayerInteractionContext.Instance.OnContextChanged -= UpdateAnimator;
+            if (character != null)
+            {
+                character.OnMovementStateChanged -= OnMovementStateChanged;
+                character.Orientation.OnFacingDirectionChanged -= OnFacingDirectionChanged;
+            }
+        }
+
+        private void OnFacingDirectionChanged(Vector2 newDirection)
+        {
+            // Re-play whichever animation is appropriate for the new direction immediately.
+            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
+            if (snapshot == null || !MainCharacter.CurrentMainCharacter.IsReady) return;
+            var actionState = MainCharacter.CurrentMainCharacter.PerformPrimaryAction.ActionExecutor.State;
+            if (snapshot.Mode == InteractionMode.Tool)
+            {
+                if (actionState == ActionExecutionState.Preparing) { PlayToolPrepareAnimation(newDirection, character.CurrentTool); return; }
+                if (actionState == ActionExecutionState.Executing)  { PlayToolUseAnimation(newDirection, character.CurrentTool); return; }
+            }
+            switch (character.MovementState)
+            {
+                case MovementState.Walking:
+                case MovementState.Running: PlayWalkAnimation(newDirection); break;
+                case MovementState.Idle:    PlayIdleAnimation(newDirection); break;
+            }
+        }
+
+        private void OnMovementStateChanged(MovementState newState)
+        {
+            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
+            if (snapshot == null) return;
+            // Snapshot.MovementState may be stale (LateUpdate hasn't run yet), so use the live value.
+            var facingDirection = character.Orientation.FacingDirection;
+            switch (newState)
+            {
+                case MovementState.Walking:
+                case MovementState.Running:
+                    PlayWalkAnimation(facingDirection);
+                    break;
+                case MovementState.Idle:
+                    PlayIdleAnimation(facingDirection);
+                    break;
+            }
         }
 
         private void LoadClipsFromAseprite()
         {
-            asepriteClips.Clear();
+            _asepriteClips.Clear();
             if (asepriteFile == null) return;
 
             // Only load AnimationClip sub-assets from the referenced asset (Aseprite-exported clips).
@@ -71,49 +120,48 @@ namespace Character
             var assets = AssetDatabase.LoadAllAssetsAtPath(path);
             foreach (var asset in assets)
             {
-                if (asset is AnimationClip clip && clip != null && !asepriteClips.ContainsKey(clip.name))
-                    asepriteClips[clip.name] = clip;
+                if (asset is AnimationClip clip && clip != null && !_asepriteClips.ContainsKey(clip.name))
+                    _asepriteClips[clip.name] = clip;
             }
 #else
             Debug.LogWarning("Loading Aseprite subresources requires the Unity editor (AssetDatabase). At runtime, provide clips via another workflow.");
 #endif
         }
 
-        // Build names like "{prefix}_L" / "_R" / "_U" / "_D" and return the matching aseprite clip if present.
-        private AnimationClip GetAsepriteClip(string prefix, FacingDirections direction)
+        // Build names like "{prefix}_L" / "_R" / "_U" / "_D" from a cardinal facing Vector2.
+        private AnimationClip GetAsepriteClip(string prefix, Vector2 facing)
         {
             if (string.IsNullOrEmpty(prefix)) return null;
-            string suffix = direction switch
-            {
-                FacingDirections.North => "_U",
-                FacingDirections.East => "_R",
-                FacingDirections.South => "_D",
-                FacingDirections.West => "_L",
-                _ => "_D"
-            };
+            string suffix;
+            if (Mathf.Abs(facing.x) >= Mathf.Abs(facing.y))
+                suffix = facing.x >= 0 ? "_R" : "_L";
+            else
+                suffix = facing.y >= 0 ? "_U" : "_D";
             var name = prefix + suffix;
-            asepriteClips.TryGetValue(name, out var clip);
+            _asepriteClips.TryGetValue(name, out var clip);
             return clip;
         }
 
         private void UpdateAnimator(PlayerInteractionContextSnapshot playerInteractionContextSnapshot)
         {
-            // TODO: Correct?
+            // If the main character isn't fully ready yet, we cannot update the animations
+            if (!MainCharacter.CurrentMainCharacter.IsReady)
+            {
+                return;
+            }
             
-            // TODO: Use playerInteractionContextSnapshot
-            
-            var facingDirection = character.Orientation2D.CurrentFacingDirection;
-            var snapshot = PlayerInteractionContext.Current.CurrentSnapshot;
+            var facingDirection = character.Orientation.FacingDirection;
+            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
             var actionState = MainCharacter.CurrentMainCharacter.PerformPrimaryAction.ActionExecutor.State;
             
             if (snapshot.Mode == InteractionMode.Tool)
             {
-                if(actionState == ActionExecutionState.Preparing)
+                if (actionState == ActionExecutionState.Preparing)
                 {
                     PlayToolPrepareAnimation(facingDirection, character.CurrentTool);
                     return;
                 }
-                if(actionState == ActionExecutionState.Executing)
+                if (actionState == ActionExecutionState.Executing)
                 {
                     PlayToolUseAnimation(facingDirection, character.CurrentTool);
                     return;
@@ -122,65 +170,54 @@ namespace Character
             
             switch (snapshot.MovementState)
             {
-                case CharacterStates.MovementStates.Idle:
+                case MovementState.Idle:
                     PlayIdleAnimation(facingDirection);
                     break;
-                case CharacterStates.MovementStates.Walking:
+                case MovementState.Walking:
+                case MovementState.Running:
                     PlayWalkAnimation(facingDirection);
-                    break;
-                case CharacterStates.MovementStates.Running:
-                    PlayWalkAnimation(facingDirection); // Assuming running uses the same animation as walking for now
-                    break;
-                default:
                     break;
             }
         }
 
-        private void PlayToolPrepareAnimation(FacingDirections direction, ToolData toolData)
+        private void PlayToolPrepareAnimation(Vector2 facing, ToolData toolData)
         {
-            // Tool-specific clip takes precedence, then aseprite subresource (prefix).
-            var clipFromTool = direction switch
-            {
-                FacingDirections.North => toolData.prepareUseUpAnimationClip,
-                FacingDirections.East => toolData.prepareUseRightAnimationClip,
-                FacingDirections.South => toolData.prepareUseDownAnimationClip,
-                FacingDirections.West => toolData.prepareUseLeftAnimationClip,
-                _ => null
-            };
-            var aseClip = GetAsepriteClip(preparePrefix, direction);
-            var toPlay = clipFromTool ? clipFromTool : aseClip;
+            bool horizontal = Mathf.Abs(facing.x) >= Mathf.Abs(facing.y);
+            bool positive   = horizontal ? facing.x >= 0 : facing.y >= 0;
+            AnimationClip clipFromTool = horizontal
+                ? (positive ? toolData.prepareUseRightAnimationClip : toolData.prepareUseLeftAnimationClip)
+                : (positive ? toolData.prepareUseUpAnimationClip    : toolData.prepareUseDownAnimationClip);
+            var aseClip = GetAsepriteClip(preparePrefix, facing);
+            var toPlay  = clipFromTool ? clipFromTool : aseClip;
             if (toPlay != null) animancer.Play(toPlay);
-            else Debug.LogWarning($"No prepare animation found for prefix '{preparePrefix}' and direction {direction}");
+            else Debug.LogWarning($"No prepare animation for prefix '{preparePrefix}' facing {facing}");
         }
 
-        private void PlayToolUseAnimation(FacingDirections direction, ToolData toolData)
+        private void PlayToolUseAnimation(Vector2 facing, ToolData toolData)
         {
-            var clipFromTool = direction switch
-            {
-                FacingDirections.North => toolData.useUpAnimationClip,
-                FacingDirections.East => toolData.useRightAnimationClip,
-                FacingDirections.South => toolData.useDownAnimationClip,
-                FacingDirections.West => toolData.useLeftAnimationClip,
-                _ => null
-            };
-            var aseClip = GetAsepriteClip(usePrefix, direction);
-            var toPlay = clipFromTool ? clipFromTool : aseClip;
+            bool horizontal = Mathf.Abs(facing.x) >= Mathf.Abs(facing.y);
+            bool positive   = horizontal ? facing.x >= 0 : facing.y >= 0;
+            AnimationClip clipFromTool = horizontal
+                ? (positive ? toolData.useRightAnimationClip : toolData.useLeftAnimationClip)
+                : (positive ? toolData.useUpAnimationClip    : toolData.useDownAnimationClip);
+            var aseClip = GetAsepriteClip(usePrefix, facing);
+            var toPlay  = clipFromTool ? clipFromTool : aseClip;
             if (toPlay != null) animancer.Play(toPlay);
-            else Debug.LogWarning($"No use animation found for prefix '{usePrefix}' and direction {direction}");
+            else Debug.LogWarning($"No use animation for prefix '{usePrefix}' facing {facing}");
         }
 
-        private void PlayWalkAnimation(FacingDirections direction)
+        private void PlayWalkAnimation(Vector2 facing)
         {
-            var aseClip = GetAsepriteClip(walkPrefix, direction);
+            var aseClip = GetAsepriteClip(walkPrefix, facing);
             if (aseClip != null) animancer.Play(aseClip);
-            else Debug.LogWarning($"No walk animation found for prefix '{walkPrefix}' and direction {direction}");
+            else Debug.LogWarning($"No walk animation for prefix '{walkPrefix}' facing {facing}");
         }
 
-        private void PlayIdleAnimation(FacingDirections direction)
+        private void PlayIdleAnimation(Vector2 facing)
         {
-            var aseClip = GetAsepriteClip(idlePrefix, direction);
+            var aseClip = GetAsepriteClip(idlePrefix, facing);
             if (aseClip != null) animancer.Play(aseClip);
-            else Debug.LogWarning($"No idle animation found for prefix '{idlePrefix}' and direction {direction}");
+            else Debug.LogWarning($"No idle animation for prefix '{idlePrefix}' facing {facing}");
         }
     }
 }

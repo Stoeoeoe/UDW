@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 2880249377295475237}
   - component: {fileID: 8047517984227322492}
   - component: {fileID: 4989740544348313327}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: LocationLinkPrefab
-  m_TagString: Untagged
+  m_TagString: Interactable
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -97,4 +97,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 558928d0b8efa3d4e883457a2482d547, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Teleporter
-  <TargetLocation>k__BackingField: 
+  _requiresButtonPress: 1
+  _maxActivations: -1
+  _cooldown: 0
+  targetLocation: {fileID: 0}
+  targetEntryKey: 
+  linkType: 0
+  ExitFacingDirection: {x: 0, y: 0}
+  <Key>k__BackingField: 

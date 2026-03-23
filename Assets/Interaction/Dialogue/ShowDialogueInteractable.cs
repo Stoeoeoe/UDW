@@ -1,6 +1,5 @@
 using Character;
 using Interaction.Dialog;
-using MoreMountains.TopDownEngine;
 using PixelCrushers.DialogueSystem;
 using UnityEngine;
 
@@ -14,13 +13,7 @@ namespace Interaction.Dialogue
         [SerializeField] [ConversationPopup(true)]
         protected string conversation;
 
-        protected override void Awake()
-        {
-            base.Awake();
-            buttonActivated.DelayBetweenUses = 2f;
-        }
-
-        protected override void Interact(UrCharacter instigator)
+        protected override void Interact(GameCharacter instigator)
         {
             if (!DialogueManager.IsConversationActive)
             {
@@ -31,15 +24,9 @@ namespace Interaction.Dialogue
                 }
 
                 if (!options.CanMoveWhileTalking)
-                {
                     instigator.Freeze();
-                    instigator.MovementState.ChangeState(CharacterStates.MovementStates.Idle);
-                }
 
                 DialogueManager.Instance.StartConversation(conversation, this.transform, instigator.transform);
-
-                // UrDialogueLifecycleEvent.Trigger(transform,
-                //     UrDialogueLifecycleEvent.UrDialogueLifecycleEventType.Started, options);
             }
         }
     }

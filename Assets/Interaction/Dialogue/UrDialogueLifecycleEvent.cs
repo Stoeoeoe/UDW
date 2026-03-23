@@ -1,5 +1,5 @@
-﻿using Interaction.Dialog;
-using MoreMountains.Tools;
+﻿using Core.Events;
+using Interaction.Dialog;
 using UnityEngine;
 
 namespace Interaction.Dialogue
@@ -11,16 +11,14 @@ namespace Interaction.Dialogue
         public Transform Target;
         public DialogueOptions Options;
 
-        static UrDialogueLifecycleEvent e;
-
         public static void Trigger(string conversation, Transform target, UrDialogueLifecycleEventType eventType, DialogueOptions options)
-        {
-            e.Conversation = conversation;
-            e.EventType = eventType;
-            e.Options = options;
-            e.Target = target;
-            MMEventManager.TriggerEvent(e);
-        }
+            => EventBus<UrDialogueLifecycleEvent>.Raise(new UrDialogueLifecycleEvent
+            {
+                Conversation = conversation,
+                EventType    = eventType,
+                Options      = options,
+                Target       = target,
+            });
 
         public enum UrDialogueLifecycleEventType
         {
@@ -30,6 +28,5 @@ namespace Interaction.Dialogue
             Paused,
             Unpaused
         }
-
     }
 }

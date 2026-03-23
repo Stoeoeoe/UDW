@@ -47,7 +47,6 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.3.10f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\TopDownEngine\Demos\Editor\Deadline\DeadlineProgressManagerMenu.cs" />
     <Compile Include="Assets\TopDownEngine\Common\Editor\Welcome\WelcomeWindow.cs" />
     <Compile Include="Assets\TopDownEngine\Common\Editor\Characters\Core\CharacterInspector.cs" />
     <Compile Include="Assets\TopDownEngine\Common\Editor\Characters\CharacterAbilities\CharacterAbilityInspector.cs" />
@@ -58,7 +57,6 @@
     <Compile Include="Assets\TopDownEngine\Common\Editor\Items\PickableAbilityInspector.cs" />
     <None Include="Assets\TopDownEngine\Common\ScriptsCinemachine\Editor\MoreMountains.TopDownEngine.Cinemachine.Editor.asmref" />
     <None Include="Assets\TopDownEngine\Common\Editor\MoreMountains.TopDownEngine.Editor.asmdef" />
-    <None Include="Assets\TopDownEngine\Demos\Editor\MoreMountains.TopDownEngine.Demos.Editor.asmref" />
     <Reference Include="UnityEngine">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.3.10f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
     </Reference>

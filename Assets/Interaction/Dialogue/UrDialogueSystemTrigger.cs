@@ -14,10 +14,10 @@ public class UrDialogueSystemTrigger : DialogueSystemTrigger
         if(!conversationConversant)
         {
             // Search self or in children and in parent
-            conversationConversant = GetComponentInChildren<UrCharacter>(true)?.transform;
+            conversationConversant = GetComponentInChildren<GameCharacter>(true)?.transform;
             if (!conversationConversant)
             {
-                conversationConversant = GetComponentInParent<UrCharacter>()?.transform;
+                conversationConversant = GetComponentInParent<GameCharacter>()?.transform;
             }
             else
             {

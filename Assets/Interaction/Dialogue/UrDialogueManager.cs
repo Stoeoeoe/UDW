@@ -1,14 +1,14 @@
-﻿using MoreMountains.Tools;
+﻿using Core;
+using Core.Events;
 using PixelCrushers.DialogueSystem;
 using System.Collections;
 using Character;
 using Interaction.Dialog;
 using Interaction.Dialogue;
-using MoreMountains.TopDownEngine;
 using UI;
 using UnityEngine;
 
-public class UrDialogueManager : MMSingleton<UrDialogueManager>, MMEventListener<UrDialogueLifecycleEvent>
+public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<UrDialogueLifecycleEvent>
 {
     // TODO: Dialogue Camera here, in AdvDialogue or in GUI?
 
@@ -21,12 +21,12 @@ public class UrDialogueManager : MMSingleton<UrDialogueManager>, MMEventListener
 
     void OnEnable()
     {
-        this.MMEventStartListening();
+        this.Subscribe<UrDialogueLifecycleEvent>();
     }
 
     void OnDisable()
     {
-        this.MMEventStopListening();
+        this.Unsubscribe<UrDialogueLifecycleEvent>();
     }
 
     protected override void Awake()
@@ -35,7 +35,7 @@ public class UrDialogueManager : MMSingleton<UrDialogueManager>, MMEventListener
     }
 
 
-    public void OnMMEvent(UrDialogueLifecycleEvent dialogueEvent)
+    public void OnEvent(UrDialogueLifecycleEvent dialogueEvent)
     {
         // TODO: we're both sending and receiving events, that seems odd???
         if (dialogueEvent.EventType == UrDialogueLifecycleEvent.UrDialogueLifecycleEventType.Started)
@@ -124,8 +124,8 @@ public class UrDialogueManager : MMSingleton<UrDialogueManager>, MMEventListener
     {
         // Can only do this after Dialogue UI has been instantiated
         this._defaultNPCPanel =
-            ((UrGUIManager.Current as UrGUIManager).DialogueUI.dialogueControls.npcSubtitleControls as
-                StandardUISubtitleControls).defaultNPCPanel;
+            (GUIManager.Instance.DialogueUI.dialogueControls.npcSubtitleControls as
+                StandardUISubtitleControls)?.defaultNPCPanel;
         this._typewriterEffect = _defaultNPCPanel.GetTypewriter();
         // TODO: Cache
 

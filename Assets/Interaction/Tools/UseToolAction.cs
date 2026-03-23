@@ -67,7 +67,7 @@ namespace Interaction.Tools
             }
 
             PlayFeedback(toolAction.ExecuteFeedback, toolAction, snapshot);
-            Owner.ConsumeEnergy(CurrentTool.energyCost);
+            Owner.ConsumeStamina(CurrentTool.staminaCost);
             
             yield return toolAction.OnExecute(snapshot);
         }
@@ -89,9 +89,9 @@ namespace Interaction.Tools
             var toolAction = ActiveToolAction;
             if (toolAction)
             {
-                if (toolAction.ToolData.consumeEnergyOnFailure)
+                if (toolAction.ToolData.consumeStaminaOnFailure)
                 {
-                    Owner.ConsumeEnergy(CurrentTool.energyCost);
+                    Owner.ConsumeStamina(CurrentTool.staminaCost);
                 }
                 yield return toolAction.OnFailure(snapshot);
             }

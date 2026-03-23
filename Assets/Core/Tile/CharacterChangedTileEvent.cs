@@ -1,19 +1,14 @@
 using Character;
-using MoreMountains.Tools;
+using Core.Events;
 
 namespace Core.Tile
 {
     public struct CharacterChangedTileEvent
     {
         public TileData TileData;
-        public UrCharacter Character;
+        public GameCharacter Character;
 
-        static CharacterChangedTileEvent e;
-        public static void Trigger(TileData tileData, UrCharacter character )
-        {
-            e.TileData = tileData;
-            e.Character = character;
-            MMEventManager.TriggerEvent(e);
-        }
+        public static void Trigger(TileData tileData, GameCharacter character)
+            => EventBus<CharacterChangedTileEvent>.Raise(new CharacterChangedTileEvent { TileData = tileData, Character = character });
     }
 }

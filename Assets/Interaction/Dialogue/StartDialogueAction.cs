@@ -8,9 +8,9 @@ namespace Interaction.Dialogue
         public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
         {
             var interactable =
-                snapshot.InteractableUnderPointer ?? snapshot.InteractableInFront;
+                snapshot.InteractableUnderPointer ?? snapshot.CurrentInteractable;
 
-            interactable.TriggerInteraction();
+            interactable.TriggerInteraction(this.Owner);
             yield break;
         }
     }

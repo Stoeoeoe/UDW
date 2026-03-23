@@ -1,17 +1,15 @@
-using System;
 using Core;
 using Core.Context;
-using Core.Equipment;
+using Core.Events;
+using Core.Location;
 using Core.Tile;
 using Interaction.Dialogue;
-using MoreMountains.Tools;
-using MoreMountains.TopDownEngine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Interaction.Pointer
 {
-    public class PointerManager : MMSingleton<PointerManager>, MMEventListener<TopDownEngineEvent>
+    public class PointerManager : Singleton<PointerManager>, IEventListener<SceneReadyEvent>
     {
         public PointerMode CurrentPointerMode { get; private set; } = PointerMode.Default;
 
@@ -34,17 +32,21 @@ namespace Interaction.Pointer
 
         private void OnEnable()
         {
-            PlayerInteractionContext.Current.OnContextChanged += HandleContextChange;
-            this.MMEventStartListening();
+            PlayerInteractionContext.Instance.OnContextChanged += HandleContextChange;
+            this.Subscribe();
         }
 
         private void OnDisable()
         {
-            PlayerInteractionContext.Current.OnContextChanged -= HandleContextChange;
-            // Reset cursor to default and make it visible when this manager is disabled
+            PlayerInteractionContext.Instance.OnContextChanged -= HandleContextChange;
             Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
             Cursor.visible = true;
-            this.MMEventStopListening();
+            this.Unsubscribe();
+        }
+
+        public void OnEvent(SceneReadyEvent e)
+        {
+            this.enabled = true;
         }
 
         private void HandleContextChange(PlayerInteractionContextSnapshot snapshot)
@@ -65,12 +67,11 @@ namespace Interaction.Pointer
                     SetCursorMode(PointerMode.UseTool);
                     break;
                 case InteractionMode.DialogueReady:
-                    if (snapshot.InteractableInFront is ShowDialogueInteractable)
+                    if (snapshot.CurrentInteractable is ShowDialogueInteractable)
                     {
                         SetCursorMode(PointerMode.Dialogue);
                         break;
                     }
-
                     goto default;
                 default:
                     SetCursorMode(PointerMode.Default);
@@ -78,12 +79,10 @@ namespace Interaction.Pointer
             }
         }
 
-
         private void SetCursorMode(PointerMode pointerMode)
         {
             CurrentPointerMode = pointerMode;
 
-            // MapManager.Current.StopHighlightingTilesAroundCursor();
             switch (pointerMode)
             {
                 case PointerMode.Default:
@@ -91,7 +90,6 @@ namespace Interaction.Pointer
                     break;
                 case PointerMode.PlaceItems:
                     ApplyCursorSprite(placeItemCursor);
-                    // MapManager.Current.StartHighlightingTilesAroundCursor();
                     break;
                 case PointerMode.GiftItems:
                     ApplyCursorSprite(giftItemCursor);
@@ -111,7 +109,6 @@ namespace Interaction.Pointer
             Cursor.visible = true;
         }
 
-
         private void Update()
         {
             if (Camera.main == null) return;
@@ -119,15 +116,13 @@ namespace Interaction.Pointer
             var mouseScreenPos = Mouse.current.position.ReadValue();
             var worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
-            // Check tile
-            var tileData = MapManager.Current.GetTileDataAtWorldPosition(worldPos);
+            var tileData = MapManager.Instance.GetTileDataAtWorldPosition(worldPos);
             if (tileData != CurrentTileDataUnderPointer)
             {
                 CurrentTileDataUnderPointer = tileData;
                 TileDataUnderPointerChangedEvent.Trigger(tileData);
             }
 
-            // Check for interactables
             var ray = Camera.main.ScreenPointToRay(mouseScreenPos);
             var raycastHit = Physics2D.GetRayIntersection(ray, Mathf.Infinity, _interactableLayerMask);
 
@@ -138,19 +133,6 @@ namespace Interaction.Pointer
             {
                 CurrentInteractableUnderPointer = interactable;
                 PointerInteractableChangedEvent.Trigger(interactable);
-            }
-        }
-
-
-        public void OnMMEvent(TopDownEngineEvent eventType)
-        {
-            if (eventType.EventType == TopDownEngineEventTypes.LevelEnd)
-            {
-                this.enabled = false;
-            }
-            else if (eventType.EventType == TopDownEngineEventTypes.LevelStart)
-            {
-                this.enabled = true;
             }
         }
     }

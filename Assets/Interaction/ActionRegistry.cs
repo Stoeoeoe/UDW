@@ -18,7 +18,7 @@ namespace Interaction
         // Simple key: (ActionType, InteractionMode) -> Action
         private Dictionary<InteractionMode, PrimaryAction> _actions;
 
-        public void Initialize(UrCharacter urCharacter)
+        public void Initialize(GameCharacter owner)
         {
             ValidateNoDuplicates();
             
@@ -27,7 +27,7 @@ namespace Interaction
             foreach (var prefab in actionPrefabs)
             {
                 var action = Instantiate(prefab, transform, false);
-                action.Initialize(urCharacter);
+                action.Initialize(owner);
                 _actions[action.InteractionMode] = action;
             }
         }

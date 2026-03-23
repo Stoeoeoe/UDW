@@ -263,8 +263,8 @@
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Drawing\Views\Slots\MultiIntegerSlotControlView.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Drawing\Controls\IntegerControl.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Interfaces\Graph\INode.cs" />
-    <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Util\UvChannel.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Interfaces\IMayRequireCameraOpaqueTexture.cs" />
+    <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Util\UvChannel.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Generation\Targets\CustomRenderTexture\CreateCustomRenderTextureShaderGraph.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\Math\Vector\SphereMaskNode.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Generation\Collections\KernelCollection.cs" />
@@ -333,8 +333,8 @@
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\UI\DefaultSDFTextNode.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Graphs\MatrixShaderProperty.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\Math\Trigonometry\RadiansToDegreesNode.cs" />
-    <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\SubGraph\SubGraphOutputNode.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\Math\Wave\SawtoothWaveNode.cs" />
+    <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\SubGraph\SubGraphOutputNode.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Interfaces\IMayRequireNormal.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\Utility\RedirectNodeData.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Drawing\Inspector\PropertyDrawers\TransformNodePropertyDrawer.cs" />
@@ -569,8 +569,8 @@
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\Input\Texture\Texture3DAssetNode.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Generation\Contexts\TargetPropertyGUIContext.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Nodes\Math\Trigonometry\ArccosineNode.cs" />
-    <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Drawing\Colors\CustomColorData.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Attributes\BuiltinKeywordAttribute.cs" />
+    <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Drawing\Colors\CustomColorData.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\ContextData.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Drawing\EdgeConnectorListener.cs" />
     <Compile Include="Library\PackageCache\com.unity.shadergraph@c8830f61858d\Editor\Data\Graphs\GraphDataReadOnly.cs" />

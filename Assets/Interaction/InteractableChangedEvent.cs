@@ -1,20 +1,20 @@
 using Character;
-using MoreMountains.Tools;
+using Core.Events;
 
 namespace Interaction
 {
     public struct InteractableChangedEvent
     {
         public AbstractInteractable Interactable;
-        public UrCharacter Character;
+        public GameCharacter Character;
 
-        private static InteractableChangedEvent e;
-
-        public static void Trigger(AbstractInteractable interactable, UrCharacter character)
+        public static void Trigger(AbstractInteractable interactable, GameCharacter character)
         {
-            e.Interactable = interactable;
-            e.Character = character;
-            MMEventManager.TriggerEvent(e);
+            EventBus<InteractableChangedEvent>.Raise(new InteractableChangedEvent
+            {
+                Interactable = interactable,
+                Character    = character,
+            });
         }
     }
 }
