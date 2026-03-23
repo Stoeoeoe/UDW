@@ -13,3 +13,4 @@ dist-electron/
 *.sw?
 *.log
 release/
+.claude/settings.local.json
