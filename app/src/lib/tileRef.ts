@@ -15,15 +15,30 @@ import { Map as GameMap } from '../types/schema';
  */
 export function encodeTileRef(tileRef: string | null, tilesetRefs: string[]): number | null {
     if (tileRef === null) return null;
-    
-    const [tilesetId, tileIndexStr] = tileRef.split(':');
-    const tileIndex = parseInt(tileIndexStr, 10);
+
+    const colonIdx = tileRef.lastIndexOf(':');
+    if (colonIdx <= 0) {
+        throw new Error(`Invalid tile reference format: "${tileRef}" (expected "tilesetId:tileIndex")`);
+    }
+
+    const tilesetId = tileRef.substring(0, colonIdx);
+    const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
+
+    if (isNaN(tileIndex) || tileIndex < 0) {
+        throw new Error(`Invalid tile index in reference: "${tileRef}"`);
+    }
+    if (tileIndex > 0xFFFF) {
+        throw new Error(`Tile index ${tileIndex} exceeds maximum of 65535 per tileset`);
+    }
+
     const tilesetIndex = tilesetRefs.indexOf(tilesetId);
-    
     if (tilesetIndex === -1) {
         throw new Error(`Tileset ${tilesetId} not found in tilesetRefs`);
     }
-    
+    if (tilesetIndex > 0xFFFF) {
+        throw new Error(`Tileset index ${tilesetIndex} exceeds maximum of 65535`);
+    }
+
     return (tilesetIndex << 16) | tileIndex;
 }
 
