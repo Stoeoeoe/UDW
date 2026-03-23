@@ -156,6 +156,8 @@
     <Compile Include="Assets\Interaction\BasicInteractable.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\WeatherUpdateEvent.cs" />
     <Compile Include="Assets\Core\Context\InteractionModeResolver.cs" />
+    <Compile Include="Assets\Core\Items\ItemManager.cs" />
+    <Compile Include="Assets\Core\Items\WorldItem.cs" />
     <Compile Include="Assets\Character\Abilities\UrCharacterMovementAbility.cs" />
     <Compile Include="Assets\Interaction\Dialogue\UrTypewriterEffect.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\SensorIsDetected.cs" />
@@ -235,6 +237,7 @@
     <Compile Include="Assets\Core\Tile\FarmlandInfo.cs" />
     <Compile Include="Assets\Core\Location\SpawnPoint.cs" />
     <Compile Include="Assets\Structures\Structure.cs" />
+    <Compile Include="Assets\Core\Items\WorldItemVisual.cs" />
     <None Include="Library\PackageCache\com.unity.ai.navigation@c33a115e9883\ValidationExceptions.json" />
     <None Include="Library\PackageCache\com.unity.postprocessing@4a41da475b74\PostProcessing\Shaders\StdLib.hlsl" />
     <None Include="Library\PackageCache\com.unity.postprocessing@4a41da475b74\PostProcessing\Shaders\Debug\Waveform.shader" />

@@ -2551,6 +2551,7 @@ Transform:
   - {fileID: 3406253012343050941}
   - {fileID: 78512998734796768}
   - {fileID: 4291484424771887242}
+  - {fileID: 3026813910988544568}
   - {fileID: 8477065209933732331}
   - {fileID: 122677172332635296}
   - {fileID: 356081600353874470}
@@ -6054,10 +6055,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
+    x: -0.09943715
+    y: -0.1
+    width: 1.2007505
+    height: 1.2
   near clip plane: 0.1
   far clip plane: 5000
   field of view: 40
@@ -7711,6 +7712,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6487084d8e84a9146a6ea09424f0828a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Input.InputManager
+--- !u!1 &2434946045340906254
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3026813910988544568}
+  - component: {fileID: 7585431290957103796}
+  m_Layer: 0
+  m_Name: ItemManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3026813910988544568
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2434946045340906254}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3245482728486734529}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7585431290957103796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2434946045340906254}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: feef55fd9d5310e4bb2bfc2b95ea869e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Items.ItemManager
+  _magnetRadius: 2.5
+  _pickupRadius: 0.25
+  _magnetSpeed: 500
+  _acceleration: 450
+  _defaultPickupSound: {fileID: 8300000, guid: d1a2e4156202722488318f4231504946, type: 3}
+  _audioMixerGroup: {fileID: 0}
+  _volume: 1
+  _pitchMin: 0.9
+  _pitchMax: 1.1
 --- !u!1 &2485211263405546162
 GameObject:
   m_ObjectHideFlags: 0

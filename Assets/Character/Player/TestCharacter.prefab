@@ -63,6 +63,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce94515ad334573ab4f4b9f3ea9725b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.CharacterPerformPrimaryActionAbility
+--- !u!1 &2203920392029053715
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 664460592021955459}
+  m_Layer: 10
+  m_Name: CharacterCenter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &664460592021955459
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2203920392029053715}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.9, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2334998026169977668}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2477469420848530513
 GameObject:
   m_ObjectHideFlags: 0
@@ -733,6 +764,7 @@ Transform:
   - {fileID: 6734356722685509747}
   - {fileID: 2558535847211723794}
   - {fileID: 2154222981132267359}
+  - {fileID: 664460592021955459}
   - {fileID: 4792313389428449789}
   - {fileID: 6939415270864809170}
   - {fileID: 6490586568447708027}
@@ -758,6 +790,7 @@ MonoBehaviour:
   performPrimaryActionAbility: {fileID: 6138255719784877473}
   tileHighlighter: {fileID: 789938966457487899}
   toolInteractionAnchor: {fileID: 4788149031591454284}
+  characterCenter: {fileID: 664460592021955459}
   pollTileDataEveryFrame: 1
   actionRegistry: {fileID: 2620278871642471305}
   toolActionRegistry: {fileID: 1409860011731859802}

@@ -29,6 +29,7 @@ namespace Character
         [SerializeField] protected CharacterPerformPrimaryActionAbility performPrimaryActionAbility;
         [SerializeField] protected TileHighlighter tileHighlighter;
         [SerializeField] protected Transform toolInteractionAnchor;
+        [SerializeField] protected Transform characterCenter;
         [SerializeField] protected bool pollTileDataEveryFrame;
         [SerializeField] protected ActionRegistry actionRegistry;
         [SerializeField] protected ToolActionRegistry toolActionRegistry;
@@ -57,6 +58,7 @@ namespace Character
         public InteractionSensor       InteractionSensor     => interactionSensor;
         public TileHighlighter         TileHighlighter       => tileHighlighter;
         public Transform               ToolInteractionAnchor => toolInteractionAnchor;
+        public Transform               CharacterCenter => characterCenter;
         public CharacterPerformPrimaryActionAbility PerformPrimaryAction => performPrimaryActionAbility;
 
         public ToolData                CurrentTool           => CurrentlyHeldItem as ToolData;

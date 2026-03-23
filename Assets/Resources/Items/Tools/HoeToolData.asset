@@ -12,97 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: HoeToolData
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
-  ItemID: Hoe
-  TargetInventoryName: MainInventory
-  ForceSlotIndex: 0
-  TargetIndex: 0
-  Usable: 0
-  Consumable: 1
-  ConsumeQuantity: 1
-  Equippable: 1
-  EquippableIfInventoryIsFull: 1
-  MoveWhenEquipped: 1
-  Droppable: 1
-  CanMoveObject: 1
-  CanSwapObject: 1
-  DisplayProperties:
-    DisplayEquipUseButton: 1
-    DisplayMoveButton: 1
-    DisplayDropButton: 1
-    DisplayEquipButton: 1
-    DisplayUseButton: 1
-    DisplayUnequipButton: 1
-    AllowEquipUseShortcut: 1
-    AllowMoveShortcut: 1
-    AllowDropShortcut: 1
-    AllowEquipShortcut: 1
-    AllowUseShortcut: 1
-  Quantity: 1
-  ItemName: Hoe
-  ShortDescription: 
-  Description: 
-  Icon: {fileID: 21300000, guid: c0c3b91584690fd4692faf1638a03621, type: 3}
-  Prefab: {fileID: 0}
-  ForcePrefabDropQuantity: 0
-  PrefabDropQuantity: 1
-  DropProperties:
-    Shape: 0
-    MinimumSphereRadius: 1
-    MaximumSphereRadius: 2
-    MinimumCubeBaseSize: {x: 1, y: 1, z: 1}
-    MaximumCubeBaseSize: {x: 2, y: 2, z: 2}
-    ForcePlane: 1
-    NormalToSpawnPlane: {x: 0, y: 1, z: 0}
-    MinimumNormalAxisOffset: 0
-    MaximumNormalAxisOffset: 0
-    UseNormalAxisOffsetCurve: 0
-    NormalOffsetCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    NormalOffsetCurveRemapZero: 0
-    NormalOffsetCurveRemapOne: 1
-    InvertNormalOffsetCurve: 0
-    MinimumRotation: {x: 0, y: 0, z: 0}
-    MaximumRotation: {x: 0, y: 0, z: 0}
-    MinimumScale: {x: 1, y: 1, z: 1}
-    MaximumScale: {x: 1, y: 1, z: 1}
-  MaximumStack: 1
-  MaximumQuantity: 999999999
-  ItemClass: 0
-  TargetEquipmentInventoryName: ToolInventory
-  EquippedSound: {fileID: 0}
-  UsedSound: {fileID: 0}
-  MovedSound: {fileID: 0}
-  DroppedSound: {fileID: 0}
-  UseDefaultSoundsIfNull: 1
+  <ItemId>k__BackingField: HoeToolData
+  <ItemName>k__BackingField: 
+  <Icon>k__BackingField: {fileID: 21300000, guid: c0c3b91584690fd4692faf1638a03621,
+    type: 3}
+  <Description>k__BackingField: 
+  <MaxStackSize>k__BackingField: 99
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
   toolName: Hoe
   maxCharge: 0
   chargePerUsage: 0
+  staminaCost: 5
+  consumeStaminaOnFailure: 1
   isInInventory: 1
-  icon: {fileID: 21300008, guid: e8e3b7691aa7ca7458f64e04cb4830bf, type: 3}
-  prefab: {fileID: 0}
-  freezeDuration: 0.2
+  showTileHighlighterOnPrepare: 1
+  actionDuration: 0.2
+  cooldownDuration: 0.2
   toolEffectConfiguration:
     AffectedTileOffsets:
     - {x: 0, y: 1}
