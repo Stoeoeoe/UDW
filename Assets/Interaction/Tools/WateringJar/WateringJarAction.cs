@@ -17,6 +17,11 @@ namespace Interaction.Tools.WateringJar
             });
         }
 
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            
+        }
+
         public override bool CanBeUsedOnTile(TileData tile)
         {
             return tile.TerrainData.IsFarmable && tile.FarmlandData is { IsPlowed: true };

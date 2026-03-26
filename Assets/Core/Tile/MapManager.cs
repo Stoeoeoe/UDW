@@ -16,8 +16,7 @@ using UnityEngine.Tilemaps;
 
 namespace Core.Tile
 {
-    public class MapManager : PersistentSingleton<MapManager>,
-        IEventListener<SceneReadyEvent>,
+    public class MapManager : Singleton<MapManager>,
         IEventListener<SowPlantEvent>
     {
         [SerializeField] private TerrainData[] tileDataTypes;
@@ -69,13 +68,11 @@ namespace Core.Tile
         protected void OnEnable()
         {
             this.Subscribe<SowPlantEvent>();
-            this.Subscribe<SceneReadyEvent>();
         }
 
         protected void OnDisable()
         {
             this.Unsubscribe<SowPlantEvent>();
-            this.Unsubscribe<SceneReadyEvent>();
         }
 
         #endregion
@@ -105,8 +102,13 @@ namespace Core.Tile
         public TileData GetTileDataAtWorldPosition(Vector2 worldPosition)
         {
             if (_terrainTilemap == null) return null;
-            var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
+            var cellPosition = TerrainTilemap().WorldToCell(worldPosition);
             return GetTileDataAtCoordinates(new Vector2Int(cellPosition.x, cellPosition.y));
+        }
+
+        private Tilemap TerrainTilemap()
+        {
+            return _terrainTilemap;
         }
 
         public List<TileData> GetTileDataAround(GameCharacter character, Vector2Int[] relativeTiles)
@@ -161,7 +163,7 @@ namespace Core.Tile
         public Vector2Int GetCurrentTileCoordinates(GameCharacter character)
         {
             var worldPosition = character.ToolInteractionAnchor.position;
-            var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
+                var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
             return new Vector2Int(cellPosition.x, cellPosition.y);
         }
 
@@ -285,7 +287,7 @@ namespace Core.Tile
 
         #region Map Initialization (event handlers)
 
-        public void OnEvent(SceneReadyEvent e)
+        public void InitializeForLocation(LocationData location)
         {
             InitializeMap();
         }
@@ -313,7 +315,7 @@ namespace Core.Tile
         private bool LoadTilemapReferences()
         {
             var superMap = FindFirstObjectByType<SuperMap>();
-            if (superMap == null)
+            if (!superMap)
             {
                 Debug.LogWarning("[MapManager] No SuperMap found in scene.");
                 return false;

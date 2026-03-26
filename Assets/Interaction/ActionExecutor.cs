@@ -148,6 +148,14 @@ namespace Interaction
             State = ActionExecutionState.Idle;
             _currentSnapshot = null;
         }
+        
+        public void InterruptCurrentAction()
+        {
+            _currentSnapshot = _snapshotProvider();
+            CurrentAction?.Interrupt(_currentSnapshot);
+            Reset();
+        }
+
 
         public override string ToString() => $"ActionExecutor(State={State}, Action={CurrentAction?.ActionName})";
     }

@@ -13,5 +13,10 @@ namespace Interaction.Dialogue
             interactable.TriggerInteraction(this.Owner);
             yield break;
         }
+
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            
+        }
     }
 }

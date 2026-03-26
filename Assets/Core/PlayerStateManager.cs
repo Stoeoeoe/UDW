@@ -12,7 +12,7 @@ namespace Core
     /// Persists player state (stamina, one-time inventory init) across scene loads.
     /// Lives on SystemRoot. Add starting tools/items here instead of on GameCharacter.
     /// </summary>
-    public class PlayerStateManager : PersistentSingleton<PlayerStateManager>,
+    public class PlayerStateManager : Singleton<PlayerStateManager>,
         IEventListener<StaminaChangedEvent>
     {
         [SerializeField] int _startingStamina = 100;

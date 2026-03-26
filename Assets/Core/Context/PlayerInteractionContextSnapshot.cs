@@ -7,6 +7,7 @@ using Items;
 namespace Core.Context
 {
     public record PlayerInteractionContextSnapshot(
+        bool SceneReady,
         GameCharacter Character,
         AbstractInteractable CurrentInteractable,
         TileData CurrentTileDataUnderPointer,
@@ -23,12 +24,13 @@ namespace Core.Context
         public static PlayerInteractionContextSnapshot Empty()
         {
             return new PlayerInteractionContextSnapshot(
-                null, null, null, null, null, null, null,
+                false, null, null, null, null, null, null, null,
                 null, null, null, default
             );
         }
 
         public static PlayerInteractionContextSnapshot Create(
+            bool sceneReady,
             GameCharacter character,
             AbstractInteractable currentInteractable,
             TileData tileUnderPointer,
@@ -41,6 +43,7 @@ namespace Core.Context
             string conversation)
         {
             var baseSnapshot = new PlayerInteractionContextSnapshot(
+                sceneReady,
                 character,
                 currentInteractable,
                 tileUnderPointer,
@@ -59,5 +62,6 @@ namespace Core.Context
                 Mode = InteractionModeResolver.Resolve(baseSnapshot)
             };
         }
+
     }
 }

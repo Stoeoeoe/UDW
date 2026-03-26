@@ -85,7 +85,7 @@ namespace Core.Context
             return value switch
             {
                 null => "<null>",
-                Object unityObj => unityObj.name,
+                Object unityObj => unityObj ? unityObj.name : "<destroyed>",
                 _ => value.ToString()
             };
         }

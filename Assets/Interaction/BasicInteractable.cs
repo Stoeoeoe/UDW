@@ -21,7 +21,7 @@ namespace Interaction
 
         protected override void Awake()
         {
-            _maxActivations = UnlimitedActivations ? -1 : MaxNumberOfActivations;
+            maxActivations = UnlimitedActivations ? -1 : MaxNumberOfActivations;
             base.Awake();
         }
 

@@ -10,19 +10,19 @@ namespace Character.Abilities
     /// </summary>
     public class MovementAbility : CharacterAbility
     {
-        [SerializeField] float _walkSpeed = 4f;
-        [SerializeField] float _runSpeed  = 7f;
+        [SerializeField] float walkSpeed = 4f;
+        [SerializeField] float runSpeed  = 7f;
 
         [Header("Footsteps")]
-        [SerializeField] float _baseFootstepInterval = 0.4f;
-        [SerializeField] float _footstepVolume = 0.5f;
-        [SerializeField] float _pitchMin = 0.8f;
-        [SerializeField] float _pitchMax = 1.2f;
+        [SerializeField] float baseFootstepInterval = 0.4f;
+        [SerializeField] float footstepVolume = 0.5f;
+        [SerializeField] float pitchMin = 0.8f;
+        [SerializeField] float pitchMax = 1.2f;
 
         float _footstepTimer;
         float _nextFootstepTime;
 
-        void Update()
+        public override void Tick()
         {
             if (!AbilityAuthorized)
             {
@@ -32,7 +32,7 @@ namespace Character.Abilities
 
             var input   = InputManager.Instance.Move;
             bool run    = InputManager.Instance.RunHeld;
-            float speed = run ? _runSpeed : _walkSpeed;
+            float speed = run ? runSpeed : walkSpeed;
 
             Controller.SetMovementInput(input, speed);
             Orientation.UpdateFromVelocity(Controller.CurrentVelocity);
@@ -57,12 +57,12 @@ namespace Character.Abilities
                         ? terrain?.SurfaceSound.walkSound
                         : terrain?.SurfaceSound.runSound;
 
-                    float pitch = Random.Range(_pitchMin, _pitchMax);
+                    float pitch = Random.Range(pitchMin, pitchMax);
                     MMSoundManagerSoundPlayEvent.Trigger(sound, MMSoundManager.MMSoundManagerTracks.Sfx,
-                        transform.position, false, pitch: pitch, volume: _footstepVolume);
+                        transform.position, false, pitch: pitch, volume: footstepVolume);
 
                     _footstepTimer    = 0f;
-                    _nextFootstepTime = _baseFootstepInterval * (4f / Mathf.Max(1f, Controller.CurrentVelocity.magnitude));
+                    _nextFootstepTime = baseFootstepInterval * (4f / Mathf.Max(1f, Controller.CurrentVelocity.magnitude));
                 }
                 else
                 {

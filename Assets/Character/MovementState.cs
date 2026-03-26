@@ -5,6 +5,6 @@ namespace Character
         Idle,
         Walking,
         Running,
-        Dashing,
+        Invalid
     }
 }

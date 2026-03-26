@@ -8,7 +8,7 @@ using Interaction.Dialogue;
 using UI;
 using UnityEngine;
 
-public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<UrDialogueLifecycleEvent>
+public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<UrDialogueLifecycleEvent>, IEventListener<DialogueCancelledEvent>
 {
     // TODO: Dialogue Camera here, in AdvDialogue or in GUI?
 
@@ -22,16 +22,13 @@ public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<Ur
     void OnEnable()
     {
         this.Subscribe<UrDialogueLifecycleEvent>();
+        this.Subscribe<DialogueCancelledEvent>();
     }
 
     void OnDisable()
     {
         this.Unsubscribe<UrDialogueLifecycleEvent>();
-    }
-
-    protected override void Awake()
-    {
-        base.Awake();
+        this.Unsubscribe<DialogueCancelledEvent>();
     }
 
 
@@ -42,6 +39,12 @@ public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<Ur
         {
             StartCoroutine(StartDialogueCo(dialogueEvent));
         }
+    }
+
+    // TODO: Overlap with DialogueEndEvent?
+    public void OnEvent(DialogueCancelledEvent e)
+    {
+        _dialogueSystemEvents.OnConversationCancelled(null);
     }
 
     private IEnumerator StartDialogueCo(UrDialogueLifecycleEvent dialogueEvent)
@@ -66,6 +69,11 @@ public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<Ur
 
     private void OnDestroy()
     {
+        if (!_dialogueSystemEvents)
+        {
+            // TODO: Have to figure out why this is needed after scene change?
+            return;
+        }
         _dialogueSystemEvents.conversationEvents.onConversationStart.RemoveListener(OnDialogueStarted);
         _dialogueSystemEvents.conversationEvents.onConversationEnd.RemoveListener(OnDialogueFinished);
         _dialogueSystemEvents.pauseEvents.onDialogueSystemPause.RemoveListener(OnDialoguePaused);
@@ -112,14 +120,22 @@ public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<Ur
 
 
     //private void OnSubtitlesRequest(SubtitlesRequestInfo requestInfo)
+
     //{
+
     //    AdvDialogueSubtitleEvent.Trigger(DialogueTree.currentDialogue, requestInfo);
+
     //}
 
+
     //private void OnMultipleChoiceRequest(MultipleChoiceRequestInfo requestInfo)
+
     //{
+
     //    AdvDialogueChoiceEvent.Trigger(DialogueTree.currentDialogue, requestInfo);
+
     //}
+
     public void ContinueOrFastForwardDialogue()
     {
         // Can only do this after Dialogue UI has been instantiated

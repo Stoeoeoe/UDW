@@ -11,23 +11,23 @@ namespace Interaction
     {
         [Header("Interaction")]
         [Tooltip("If false, triggers on contact (walk-in portals). If true, player must press Interact.")]
-        [SerializeField] protected bool _requiresButtonPress = true;
+        [SerializeField] private bool requiresButtonPress = true;
         [Tooltip("-1 = unlimited")]
-        [SerializeField] protected int  _maxActivations = -1;
-        [SerializeField] protected float _cooldown = 0f;
+        [SerializeField] protected int  maxActivations = -1;
+        [SerializeField] protected float cooldown = 0f;
 
         /// <summary>Whether this interactable requires the player to press a button to trigger it.</summary>
-        public virtual bool RequiresButtonPress => _requiresButtonPress;
+        public virtual bool RequiresButtonPress => requiresButtonPress;
 
         int   _activationsLeft;
         float _nextInteractTime;
 
-        public bool CanInteract => (_maxActivations < 0 || _activationsLeft > 0)
+        public bool CanInteract => (maxActivations < 0 || _activationsLeft > 0)
                                 && Time.time >= _nextInteractTime;
 
         protected virtual void Awake()
         {
-            _activationsLeft = _maxActivations;
+            _activationsLeft = maxActivations;
         }
 
         /// <summary>
@@ -37,8 +37,8 @@ namespace Interaction
         public virtual void TriggerInteraction(GameCharacter instigator)
         {
             if (!CanInteract) return;
-            if (_maxActivations > 0) _activationsLeft--;
-            if (_cooldown > 0) _nextInteractTime = Time.time + _cooldown;
+            if (maxActivations > 0) _activationsLeft--;
+            if (cooldown > 0) _nextInteractTime = Time.time + cooldown;
             Interact(instigator);
         }
 
@@ -47,7 +47,7 @@ namespace Interaction
         /// <summary>Walk-in interactables trigger automatically on contact.</summary>
         protected virtual void OnTriggerEnter2D(Collider2D other)
         {
-            if (_requiresButtonPress) return;
+            if (RequiresButtonPress) return;
             if (other.TryGetComponent<GameCharacter>(out var character))
                 TriggerInteraction(character);
         }

@@ -19,5 +19,10 @@ namespace Interaction
             interactable?.TriggerInteraction(Owner);
             yield break;
         }
+
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            
+        }
     }
 }

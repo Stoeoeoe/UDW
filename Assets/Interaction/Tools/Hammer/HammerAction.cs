@@ -10,5 +10,10 @@ namespace Interaction.Tools.Hammer
             // TODO: Repair object in front
             yield break;
         }
+
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            
+        }
     }
 }

@@ -24,6 +24,11 @@ namespace Plants
             yield break;
         }
 
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            
+        }
+
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot)
         {
             // TODO: We're conflating overlay validity with sowing validity here. Consider separating these concerns.

@@ -17,6 +17,11 @@ namespace Interaction.Tools.Hoe
             });
         }
 
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            
+        }
+
         public override bool CanBeUsedOnTile(TileData tile)
         {
             return tile.TerrainData.IsFarmable;

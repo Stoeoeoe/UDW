@@ -15,7 +15,7 @@ namespace UI.Hotbar
     /// Lightweight hotbar component that displays the first N items from an inventory
     /// and provides quick-use functionality via input actions or mouse clicks
     /// </summary>
-    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, IEventListener<SceneReadyEvent>
+    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, ILocationLifecycle
     {
         [Header("Inventory Binding")] [Tooltip("The name of the inventory to display in the hotbar")]
         public string TargetInventoryName = "MainInventory";
@@ -308,7 +308,7 @@ namespace UI.Hotbar
             PreviousSlotAction.action?.Enable();
 
             this.Subscribe<InventoryChangedEvent>();
-            this.Subscribe<SceneReadyEvent>();
+            LevelManager.Instance?.RegisterLifecycle(this);
         }
 
         protected virtual void OnDisable()
@@ -321,12 +321,14 @@ namespace UI.Hotbar
             PreviousSlotAction.action?.Disable();
 
             this.Unsubscribe<InventoryChangedEvent>();
-            this.Unsubscribe<SceneReadyEvent>();
+            LevelManager.Instance?.UnregisterLifecycle(this);
         }
 
-        public void OnEvent(SceneReadyEvent e)
+        public void OnLocationEnter(LocationData location)
         {
             InitializeHotbar();
         }
+
+        public void OnLocationLeave(LocationData location) { }
     }
 }

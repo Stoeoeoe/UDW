@@ -70,6 +70,12 @@ namespace Interaction
         /// </summary>
         public abstract IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot);
 
+        /// <summary>
+        /// Override to specify what happens when the action is interrupted.
+        /// This will, for instance, be called when the scene is cleaned up.
+        /// Therefore, it should not lead to any side effects.
+        /// </summary>
+        public abstract void Interrupt(PlayerInteractionContextSnapshot snapshot);
 
         /// <summary>
         /// Override to specify what happens when the action finishes (before cooldown).

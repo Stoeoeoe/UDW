@@ -8,7 +8,7 @@ namespace Core.Items
     /// Global configuration for world items: magnet behaviour and default pickup sound.
     /// Lives on SystemRoot (persistent across scenes).
     /// </summary>
-    public class ItemManager : PersistentSingleton<ItemManager>
+    public class ItemManager : Singleton<ItemManager>
     {
         [Header("Magnet")]
         [SerializeField] private float magnetRadius = 2.5f;

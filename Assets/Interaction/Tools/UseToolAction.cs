@@ -72,6 +72,17 @@ namespace Interaction.Tools
             yield return toolAction.OnExecute(snapshot);
         }
 
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            var toolAction = _activeToolAction ?? ActiveToolAction;
+            if (!toolAction) return;
+            
+            if (CurrentTool.showTileHighlighterOnPrepare)
+            {
+                toolAction.HideTileHighlighter(snapshot);
+            }
+        }
+
         public override IEnumerator OnFinish(PlayerInteractionContextSnapshot snapshot)
         {
             var toolAction = _activeToolAction ?? ActiveToolAction;

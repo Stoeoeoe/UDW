@@ -5,7 +5,7 @@ namespace Character
 {
     public class MainCharacter : GameCharacter, IEventListener<ItemSelectedEvent>
     {
-        public static MainCharacter _currentMainCharacter;
+        private static MainCharacter _currentMainCharacter;
 
         public static MainCharacter CurrentMainCharacter
         {

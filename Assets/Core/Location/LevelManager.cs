@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Events;
+using Core.Tile;
 using Core.TimeAndWeather;
+using DG.Tweening;
+using Input;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -12,54 +15,61 @@ using UnityEngine.SceneManagement;
 namespace Core.Location
 {
     /// <summary>
-    /// Handles scene loading, fading, and player spawning. 
-    /// Persistent singleton — survives all scene loads. References to scene-specific objects (lights etc.)
+    /// Handles scene loading, fading, and player spawning.
+    /// Persistent singleton - survives all scene loads. References to scene-specific objects (lights etc.)
     /// are re-acquired each time a new scene loads.
     /// </summary>
-    public class LevelManager : PersistentSingleton<LevelManager>, IEventListener<DayLightUpdateEvent>
+    public class LevelManager : Singleton<LevelManager>, IEventListener<DayLightUpdateEvent>
     {
-        [Header("Transition")]
-        [SerializeField] TransitionContext _transitionContext;
-        [SerializeField] CanvasGroup _fadeCanvas;
-        [SerializeField] float _fadeDuration = 0.3f;
+        [Header("Transition")] [SerializeField]
+        private TransitionContext _transitionContext;
+
+        [SerializeField] ScreenFader _fader;
         [SerializeField] MainCharacter _mainCharacterPrefab;
 
-        [Header("Fallback spawn (editor / first run)")]
-        [SerializeField] string _defaultSpawnKey = "Default";
+        [Header("Fallback spawn (editor / first run)")] [SerializeField]
+        string _defaultSpawnKey = "Default";
 
-        // ── Public state ─────────────────────────────────────────────────────────────
+
+        // - Public state ------------------------------------------------------------
 
         public LocationData CurrentLocationData { get; private set; }
-        public Light2D      CurrentGlobalLight  { get; private set; }
+        public Light2D CurrentGlobalLight { get; private set; }
+        public bool SceneReady { get; private set; }
 
-        // ── Location lookup ───────────────────────────────────────────────────────────
+        // - Location lookup ---------------------------------------------------------
 
         List<LocationData> _allLocations = new();
         Dictionary<string, LocationData> _locationById = new();
 
+        // - Lifecycle callbacks ---------------------------------------------------
+
+        private readonly List<ILocationLifecycle> _lifecycleComponents = new();
+
         protected override void OnAwake()
         {
             base.OnAwake();
-            _allLocations  = Resources.LoadAll<LocationData>("Locations").ToList();
-            _locationById  = _allLocations.ToDictionary(l => l.id, l => l);
+            _allLocations = Resources.LoadAll<LocationData>("Locations").ToList();
+            _locationById = _allLocations.ToDictionary(l => l.id, l => l);
         }
 
-        void OnEnable()  => this.Subscribe<DayLightUpdateEvent>();
-        void OnDisable() => this.Unsubscribe<DayLightUpdateEvent>();
+        void OnEnable() => this.Subscribe();
+        void OnDisable() => this.Unsubscribe();
 
-        void Start()
+        IEnumerator Start()
         {
             var location = ResolveInitialLocation();
-    
-            if (location != null)
+            if (location == null)
             {
-                SetCurrentLocation(location);
+                Debug.LogError("[LevelManager] Could not resolve an initial location from loaded scenes.");
+                yield break;
             }
-            HandleInitialSpawn();
-            SceneReadyEvent.Trigger(location);
+
+            SetCurrentLocation(location);
+            yield return EnterLocationRoutine(location, isInitialLoad: true);
         }
 
-        private LocationData ResolveInitialLocation()
+        LocationData ResolveInitialLocation()
         {
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
@@ -78,16 +88,32 @@ namespace Core.Location
             return null;
         }
 
-        private void HandleInitialSpawn()
+        IEnumerator EnterLocationRoutine(LocationData locationData, bool isInitialLoad)
         {
-            // First-run spawn — no transition context
-            if (_transitionContext == null || !_transitionContext.HasTarget)
-            {
-                SpawnPlayer();
-            }
+            SceneReady = false;
+
+            // Phase 1: Initialize map data (direct call, must happen before character is placed)
+            MapManager.Instance.InitializeForLocation(locationData);
+
+            // Phase 2: Spawn and place character
+            var character = SpawnOrFindPlayer();
+            PlaceCharacterAtSpawn(character);
+
+            // Phase 3: Ensure character runtime initialization
+            character.EnsureRuntimeInitialized();
+
+            // Phase 4: Notify all registered lifecycle components
+            foreach (var component in _lifecycleComponents)
+                component.OnLocationEnter(locationData);
+
+            // Phase 5: Fade in
+            yield return Fade(0f);
+            
+            _transitionContext?.Clear();
+            SceneReady = true;
         }
 
-        // ── API ───────────────────────────────────────────────────────────────────────
+        // - API ---------------------------------------------------------------------
 
         public void LoadLocation(LocationData location, string entryKey, Vector2 facingDirection)
         {
@@ -98,55 +124,79 @@ namespace Core.Location
         public LocationData GetLocationDataById(string id) =>
             _locationById.GetValueOrDefault(id);
 
-        // ── Scene load routine ────────────────────────────────────────────────────────
+        public void RegisterLifecycle(ILocationLifecycle component)
+        {
+            if (!_lifecycleComponents.Contains(component))
+            {
+                _lifecycleComponents.Add(component);
+            }
+        }
+
+        public void UnregisterLifecycle(ILocationLifecycle component)
+        {
+            _lifecycleComponents.Remove(component);
+        }
+
+        // - Scene load routine ------------------------------------------------------
 
         IEnumerator LoadRoutine(string sceneName, LocationData locationData)
         {
+            SceneReady = false;
+            MainCharacter.CurrentMainCharacter.Freeze();
             yield return Fade(1f);
 
+            // Notify all lifecycle components before unloading the old scene
+            foreach (var component in _lifecycleComponents)
+            {
+                component.OnLocationLeave(CurrentLocationData);
+            }
+
             var previousScene = SceneManager.GetActiveScene();
+
             yield return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
             SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
-            SceneUnloadingEvent.Trigger(CurrentLocationData);
-            yield return SceneManager.UnloadSceneAsync(previousScene); // destroys old scene + player
-            yield return null; // let cleanup finish
+
+            yield return SceneManager.UnloadSceneAsync(previousScene);
+            yield return null; // Allow new scene's OnEnable to fire so components can register
 
             SetCurrentLocation(locationData);
-            SpawnPlayer();
-            SceneReadyEvent.Trigger(locationData);
-
-            yield return Fade(0f);
-            _transitionContext.Clear();
+            yield return EnterLocationRoutine(locationData, isInitialLoad: false);
         }
 
         void SetCurrentLocation(LocationData locationData)
         {
             CurrentLocationData = locationData;
-            CurrentGlobalLight  = FindObjectsByType<Light2D>(FindObjectsSortMode.None)
-                                      .FirstOrDefault(l => l.lightType == Light2D.LightType.Global);
+            CurrentGlobalLight = FindObjectsByType<Light2D>(FindObjectsSortMode.None)
+                .FirstOrDefault(l => l.lightType == Light2D.LightType.Global);
         }
 
-        // ── Spawn ─────────────────────────────────────────────────────────────────────
+        // - Spawn -------------------------------------------------------------------
 
-        void SpawnPlayer()
+        MainCharacter SpawnOrFindPlayer()
         {
             var character = CharacterManager.Instance.MainCharacter;
-            // If we haven't yet registered a main character (e.g. first scene's Start runs before the character's Start),
-            // we first try to find one in the scene, and if that fails, we instantiate a new one from the prefab.
             if (!character)
             {
                 character = FindFirstObjectByType<MainCharacter>();
                 if (!character)
-                {
                     character = Instantiate(_mainCharacterPrefab);
-                }
-            } 
+            }
 
-            // LocationLink transition: spawn at the matching link in the new scene
+            return character;
+        }
+
+        void PlaceCharacterAtSpawn(MainCharacter character)
+        {
+            if (!character)
+            {
+                Debug.LogError("[LevelManager] Could not find or spawn a MainCharacter.");
+                return;
+            }
+
             if (_transitionContext is { HasTarget: true })
             {
                 var links = FindObjectsByType<LocationLink>(FindObjectsSortMode.None);
-                var link  = Array.Find(links, l => l.Key == _transitionContext.TargetEntryKey);
+                var link = Array.Find(links, l => l.Key == _transitionContext.TargetEntryKey);
                 if (link != null)
                 {
                     character.transform.position = link.transform.position + link.ExitSpawnOffset;
@@ -158,7 +208,6 @@ namespace Core.Location
                 }
             }
 
-            // Fallback: SpawnPoint (editor testing / first boot / no matching link)
             var spawnPoints = FindObjectsByType<SpawnPoint>(FindObjectsSortMode.None);
             var target = _transitionContext is { HasTarget: true }
                 ? Array.Find(spawnPoints, sp => sp.Key == _transitionContext.TargetEntryKey)
@@ -176,24 +225,19 @@ namespace Core.Location
             target.SpawnCharacter(character, spawnFacing);
         }
 
-        // ── Fade ──────────────────────────────────────────────────────────────────────
+
+        // - Fade --------------------------------------------------------------------
 
         IEnumerator Fade(float targetAlpha)
         {
-            if (_fadeCanvas == null) yield break;
+            if (_fader == null)
+                yield break;
 
-            float start   = _fadeCanvas.alpha;
-            float elapsed = 0f;
-            while (elapsed < _fadeDuration)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                _fadeCanvas.alpha = Mathf.Lerp(start, targetAlpha, elapsed / _fadeDuration);
-                yield return null;
-            }
-            _fadeCanvas.alpha = targetAlpha;
+            Tween tween = targetAlpha >= 1f ? _fader.FadeOut() : _fader.FadeIn();
+            yield return tween.WaitForCompletion();
         }
 
-        // ── Day/night ─────────────────────────────────────────────────────────────────
+        // - Day/night ---------------------------------------------------------------
 
         public void OnEvent(DayLightUpdateEvent e)
         {

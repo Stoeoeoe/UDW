@@ -4,8 +4,8 @@ using UnityEngine;
 
 namespace Interaction.Dialogue
 {
-    public struct DialogueEndEvent
+    public struct DialogueCancelledEvent
     {
-        public static void Trigger() => EventBus<DialogueEndEvent>.Raise(new DialogueEndEvent());
+        public static void Trigger() => EventBus<DialogueCancelledEvent>.Raise(new DialogueCancelledEvent());
     }
 }

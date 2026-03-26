@@ -1,8 +1,7 @@
 using Character;
 using Core;
-using UnityEngine;
 
-public class CharacterManager : PersistentSingleton<CharacterManager>
+public class CharacterManager : Singleton<CharacterManager>
 {
     public MainCharacter MainCharacter { get; private set; }
 

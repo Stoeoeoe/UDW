@@ -1,11 +1,13 @@
 using Core.Context;
+using Core.Events;
+using Core.Location;
 using Input;
 using Interaction;
 using UnityEngine.EventSystems;
 
 namespace Character.Abilities
 {
-    public class CharacterPerformPrimaryActionAbility : UrCharacterAbility
+    public class CharacterPerformPrimaryActionAbility : CharacterAbility
     {
         public ActionExecutor ActionExecutor { get; private set; }
 
@@ -18,11 +20,11 @@ namespace Character.Abilities
             );
         }
 
-        void Update()
+        public override void Tick()
         {
             var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
-            var input    = InputManager.Instance;
-            var pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            var input = InputManager.Instance;
+            var pointerOverUI = EventSystem.current && EventSystem.current.IsPointerOverGameObject();
 
             // Always allow release to continue from prepare so the executor doesn't get stuck
             // if the player moves the cursor over UI while holding the button.
@@ -42,6 +44,12 @@ namespace Character.Abilities
                 var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
                 if (action) StartCoroutine(ActionExecutor.Run(action, !action.HasPreparationPhase));
             }
+        }
+
+        public override void OnLocationLeave(LocationData location)
+        {
+            base.OnLocationLeave(location);
+            ActionExecutor.InterruptCurrentAction();
         }
     }
 }

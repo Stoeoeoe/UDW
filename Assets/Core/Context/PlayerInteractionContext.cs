@@ -1,13 +1,12 @@
 using System;
 using Character;
-using Core.Events;
 using Core.Location;
 using Interaction.Pointer;
 
 namespace Core.Context
 {
     public class PlayerInteractionContext : Singleton<PlayerInteractionContext>,
-        IEventListener<SceneReadyEvent>
+        ILocationLifecycle
     {
         public PlayerInteractionContextSnapshot CurrentSnapshot { get; private set; } =
             PlayerInteractionContextSnapshot.Empty();
@@ -15,10 +14,11 @@ namespace Core.Context
         public event Action<PlayerInteractionContextSnapshot> OnContextChanged;
         public event Action<InteractionMode> OnModeChanged;
 
-        void OnEnable()  => this.Subscribe<SceneReadyEvent>();
-        void OnDisable() => this.Unsubscribe<SceneReadyEvent>();
+        void OnEnable() => LevelManager.Instance?.RegisterLifecycle(this);
+        void OnDisable() => LevelManager.Instance?.UnregisterLifecycle(this);
 
-        public void OnEvent(SceneReadyEvent e) => this.enabled = true;
+        public void OnLocationEnter(LocationData location) => this.enabled = true;
+        public void OnLocationLeave(LocationData location) { }
 
         private void Start()
         {
@@ -37,6 +37,7 @@ namespace Core.Context
 
 
             var snapshot = PlayerInteractionContextSnapshot.Create(
+                LevelManager.Instance.SceneReady,
                 character,
                 character?.CurrentInteractable,
                 PointerManager.Instance.CurrentTileDataUnderPointer,

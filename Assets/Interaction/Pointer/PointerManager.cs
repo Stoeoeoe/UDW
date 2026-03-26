@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 
 namespace Interaction.Pointer
 {
-    public class PointerManager : Singleton<PointerManager>, IEventListener<SceneReadyEvent>
+    public class PointerManager : Singleton<PointerManager>, ILocationLifecycle
     {
         public PointerMode CurrentPointerMode { get; private set; } = PointerMode.Default;
 
@@ -33,7 +33,7 @@ namespace Interaction.Pointer
         private void OnEnable()
         {
             PlayerInteractionContext.Instance.OnContextChanged += HandleContextChange;
-            this.Subscribe();
+            LevelManager.Instance?.RegisterLifecycle(this);
         }
 
         private void OnDisable()
@@ -41,13 +41,15 @@ namespace Interaction.Pointer
             PlayerInteractionContext.Instance.OnContextChanged -= HandleContextChange;
             Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
             Cursor.visible = true;
-            this.Unsubscribe();
+            LevelManager.Instance?.UnregisterLifecycle(this);
         }
 
-        public void OnEvent(SceneReadyEvent e)
+        public void OnLocationEnter(LocationData location)
         {
             this.enabled = true;
         }
+
+        public void OnLocationLeave(LocationData location) { }
 
         private void HandleContextChange(PlayerInteractionContextSnapshot snapshot)
         {

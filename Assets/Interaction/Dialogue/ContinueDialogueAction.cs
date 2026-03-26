@@ -12,5 +12,9 @@ namespace Interaction.Dialogue
             yield break;
         }
 
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
+        {
+            DialogueCancelledEvent.Trigger();
+        }
     }
 }
