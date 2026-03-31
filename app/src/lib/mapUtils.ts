@@ -1,28 +1,43 @@
 import { Map, Variation } from '../types/schema';
 import { decodeTileRef } from './tileRef';
 
+interface VariationMetadataOverrides {
+  mapNameOverride?: string;
+  baseTilesetIdOverride?: string;
+  descriptionOverride?: string;
+}
+
+export interface EffectiveMapContext {
+  name: string;
+  baseTilesetId: string;
+  description?: string;
+}
+
 /**
  * Resolves the inheritance chain for a variation.
  * Returns an array starting from root (base) to the target variation.
  */
-export function getVariationChain(map: Map, variationId: string | null): (Variation | 'base')[] {
-    if (!variationId) return ['base'];
+export function getVariationChain(
+  map: Map,
+  variationId: string | null,
+): (Variation | 'base')[] {
+  if (!variationId) return ['base'];
 
-    const chain: (Variation | 'base')[] = [];
-    let currentId: string | null | undefined = variationId;
+  const chain: (Variation | 'base')[] = [];
+  let currentId: string | null | undefined = variationId;
 
-    while (currentId) {
-        const v = map.variations?.find(v => v.id === currentId);
-        if (v) {
-            chain.unshift(v);
-            currentId = v.parentId;
-        } else {
-            break;
-        }
+  while (currentId) {
+    const v = map.variations?.find((v) => v.id === currentId);
+    if (v) {
+      chain.unshift(v);
+      currentId = v.parentId;
+    } else {
+      break;
     }
+  }
 
-    chain.unshift('base');
-    return chain;
+  chain.unshift('base');
+  return chain;
 }
 
 /**
@@ -30,30 +45,30 @@ export function getVariationChain(map: Map, variationId: string | null): (Variat
  * accounting for variation inheritance.
  */
 export function resolveTileAt(
-    map: Map,
-    layerId: string,
-    x: number,
-    y: number,
-    variationId: string | null
+  map: Map,
+  layerId: string,
+  x: number,
+  y: number,
+  variationId: string | null,
 ): string | null {
-    const chain = getVariationChain(map, variationId).reverse(); // Child to Parent to Base
+  const chain = getVariationChain(map, variationId).reverse(); // Child to Parent to Base
 
-    for (const context of chain) {
-        if (context === 'base') {
-            const layer = map.layers.find(l => l.id === layerId);
-            const cell = layer?.data[y]?.[x];
-            if (cell === null || cell === undefined) return null;
-            if (typeof cell === 'string') return cell;
-            return decodeTileRef(cell, map.tilesetRefs);
-        } else {
-            const override = context.layerOverrides?.[layerId];
-            if (override && override.data[y]?.[x] !== null) {
-                return override.data[y][x] as string; // Variations store as strings
-            }
-        }
+  for (const context of chain) {
+    if (context === 'base') {
+      const layer = map.layers.find((l) => l.id === layerId);
+      const cell = layer?.data[y]?.[x];
+      if (cell === null || cell === undefined) return null;
+      if (typeof cell === 'string') return cell;
+      return decodeTileRef(cell, map.tilesetRefs);
+    } else {
+      const override = context.layerOverrides?.[layerId];
+      if (override && override.data[y]?.[x] !== null) {
+        return override.data[y][x] as string; // Variations store as strings
+      }
     }
+  }
 
-    return null;
+  return null;
 }
 
 /**
@@ -61,25 +76,70 @@ export function resolveTileAt(
  * Variations can Add, Remove, or Modify entities.
  */
 export function resolveEntities(map: Map, variationId: string | null) {
-    const chain = getVariationChain(map, variationId); // Base to Child
-    let entities = [...map.entities];
+  const chain = getVariationChain(map, variationId); // Base to Child
+  let entities = [...map.entities];
 
-    for (const context of chain) {
-        if (context === 'base') continue;
+  for (const context of chain) {
+    if (context === 'base') continue;
 
-        context.entityOverrides?.forEach(override => {
-            if (override.action === 'add' && override.entity) {
-                entities.push(override.entity);
-            } else if (override.action === 'remove' && override.entityId) {
-                entities = entities.filter(e => e.id !== override.entityId);
-            } else if (override.action === 'modify' && override.entityId && override.entity) {
-                const idx = entities.findIndex(e => e.id === override.entityId);
-                if (idx !== -1) {
-                    entities[idx] = { ...entities[idx], ...override.entity };
-                }
-            }
-        });
+    context.entityOverrides?.forEach((override) => {
+      if (override.action === 'add' && override.entity) {
+        entities.push(override.entity);
+      } else if (override.action === 'remove' && override.entityId) {
+        entities = entities.filter((e) => e.id !== override.entityId);
+      } else if (
+        override.action === 'modify' &&
+        override.entityId &&
+        override.entity
+      ) {
+        const idx = entities.findIndex((e) => e.id === override.entityId);
+        if (idx !== -1) {
+          entities[idx] = { ...entities[idx], ...override.entity };
+        }
+      }
+    });
+  }
+
+  return entities;
+}
+
+/**
+ * Resolves map-level metadata after applying variation metadata overrides.
+ * Child variation metadata wins over parent variation metadata.
+ */
+export function resolveMapContext(
+  map: Map,
+  variationId: string | null,
+): EffectiveMapContext {
+  const context: EffectiveMapContext = {
+    name: map.name,
+    baseTilesetId: map.baseTilesetId,
+    description: map.metadata?.description,
+  };
+
+  if (!variationId) return context;
+
+  const chain = getVariationChain(map, variationId);
+  for (const node of chain) {
+    if (node === 'base') continue;
+    const metadata = (node.metadata || {}) as VariationMetadataOverrides;
+
+    if (metadata.mapNameOverride && metadata.mapNameOverride.trim()) {
+      context.name = metadata.mapNameOverride;
     }
+    if (
+      metadata.baseTilesetIdOverride &&
+      metadata.baseTilesetIdOverride.trim()
+    ) {
+      context.baseTilesetId = metadata.baseTilesetIdOverride;
+    }
+    if (
+      metadata.descriptionOverride !== undefined &&
+      metadata.descriptionOverride !== null
+    ) {
+      context.description = metadata.descriptionOverride || undefined;
+    }
+  }
 
-    return entities;
+  return context;
 }

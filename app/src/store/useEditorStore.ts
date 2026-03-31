@@ -180,6 +180,7 @@ interface EditorStore extends EditorState {
     height: number,
     tilesetId: string,
   ) => Promise<void>;
+  updateCurrentMap: (updates: Partial<Map>) => void;
   deleteMap: (mapId: string) => Promise<void>;
   addMap: (map: Map) => void;
 
@@ -644,6 +645,27 @@ export const useEditorStore = create<EditorStore>()(
         // This might be used for loading, but currentMap is the primary state
         set((state) => {
           state.currentMap = castDraft(map);
+        });
+      },
+
+      updateCurrentMap: (updates) => {
+        set((state) => {
+          if (!state.currentMap) return;
+
+          Object.assign(state.currentMap, updates);
+
+          // Keep base tileset accessible for encoding/decoding tile references.
+          if (
+            updates.baseTilesetId &&
+            !state.currentMap.tilesetRefs.includes(updates.baseTilesetId)
+          ) {
+            state.currentMap.tilesetRefs.unshift(updates.baseTilesetId);
+          }
+
+          // When editing base metadata, align palette with the map's base tileset.
+          if (updates.baseTilesetId && !state.activeVariationId) {
+            state.activeTilesetId = updates.baseTilesetId;
+          }
         });
       },
 

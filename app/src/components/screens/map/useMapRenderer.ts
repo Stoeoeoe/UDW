@@ -2,7 +2,11 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Container, Graphics, Sprite, Texture, Rectangle } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { resolveTileAt, resolveEntities } from '../../../lib/mapUtils';
+import {
+  resolveTileAt,
+  resolveEntities,
+  resolveMapContext,
+} from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
@@ -136,6 +140,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       useEditorStore.getState();
     if (!tileContainer || !currentMap) return;
 
+    const effectiveMap = resolveMapContext(currentMap, activeVariationId);
+
     tileContainer.removeChildren();
 
     [...currentMap.layers]
@@ -159,13 +165,21 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             const tileset = tilesets.get(tsId);
 
             if (tileset) {
-              let effectiveTileset = tileset;
+              const resolvedBaseTilesetId =
+                tsId === currentMap.baseTilesetId
+                  ? effectiveMap.baseTilesetId
+                  : tsId;
+
+              let effectiveTileset =
+                tilesets.get(resolvedBaseTilesetId) || tileset;
+
               const variation = currentMap.variations?.find(
                 (v) => v.id === activeVariationId,
               );
+
               if (variation?.tilesetSuffix) {
                 const suffixed = tilesets.get(
-                  `${tsId}${variation.tilesetSuffix}`,
+                  `${resolvedBaseTilesetId}${variation.tilesetSuffix}`,
                 );
                 if (suffixed) effectiveTileset = suffixed;
               }

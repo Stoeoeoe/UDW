@@ -8,20 +8,21 @@ import {
   IconButton,
   Tooltip,
   Badge,
+  Select,
   useDisclosure,
 } from '@chakra-ui/react';
-import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
+import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { Variation } from '../../../types/schema';
 import { CreateVariationDialog } from './CreateVariationDialog';
 
-/** Season definitions for the segmented toggle */
-const SEASONS = [
-  { id: 'spring', label: 'Spring', icon: '🌸', color: 'pink' },
-  { id: 'summer', label: 'Summer', icon: '☀️', color: 'yellow' },
-  { id: 'autumn', label: 'Autumn', icon: '🍂', color: 'orange' },
-  { id: 'winter', label: 'Winter', icon: '❄️', color: 'cyan' },
-] as const;
+/** Season emoji lookup for dropdown display */
+const SEASON_EMOJI: Record<string, string> = {
+  spring: '🌸',
+  summer: '☀️',
+  autumn: '🍂',
+  winter: '❄️',
+};
 
 /**
  * Builds a tree structure of variations, grouping children under parents.
@@ -75,26 +76,48 @@ export const VariationManager: React.FC = () => {
 
   const tree = useMemo(() => buildVariationTree(variations), [variations]);
 
-  // Check which seasons are defined
-  const definedSeasons = useMemo(() => {
-    const set = new Set<string>();
-    tree.seasons.forEach((s) => set.add(s.id));
-    return set;
-  }, [tree.seasons]);
+  // Season calculations removed; selection now handled by header dropdown
 
-  // Get the currently active seasonal ancestor (if any)
-  const activeSeasonId = useMemo(() => {
-    if (!activeVariationId) return null;
-    // Walk up the parent chain to find the season root
-    let current = variations.find((v) => v.id === activeVariationId);
-    while (current) {
-      if (current.kind === 'season') return current.id;
-      current = current.parentId
-        ? variations.find((v) => v.id === current!.parentId)
-        : undefined;
+  // Helper to render grouped select options
+  const renderGroupedOptions = () => {
+    const opts: React.ReactNode[] = [];
+
+    // Empty selection = base map
+    opts.push(
+      <option key="__base__" value="">
+        (Base map)
+      </option>,
+    );
+
+    // Seasons group (prepend emoji when known)
+    if (tree.seasons.length > 0) {
+      opts.push(
+        <optgroup key="seasons" label="Seasons">
+          {tree.seasons.map((s) => (
+            <option key={s.id} value={s.id}>
+              {SEASON_EMOJI[s.id] ? `${SEASON_EMOJI[s.id]} ` : ''}
+              {s.displayName}
+            </option>
+          ))}
+        </optgroup>,
+      );
     }
-    return null;
-  }, [activeVariationId, variations]);
+
+    // Events / generic group
+    if (tree.generic.length > 0) {
+      opts.push(
+        <optgroup key="generic" label="Generic">
+          {tree.generic.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.displayName}
+            </option>
+          ))}
+        </optgroup>,
+      );
+    }
+
+    return opts;
+  };
 
   const handleDeleteVariation = (id: string) => {
     if (confirmDeleteId === id) {
@@ -201,6 +224,25 @@ export const VariationManager: React.FC = () => {
                 : 'Delete variation'
             }
           />
+          <IconButton
+            aria-label="Edit Variation"
+            icon={<EditIcon fontSize="10px" />}
+            size="xs"
+            variant="ghost"
+            color="gray.400"
+            _groupHover={{ color: 'white', bg: 'whiteAlpha.50' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              // Activate this variation and request the metadata dialog open
+              setActiveVariation(v.id);
+              window.dispatchEvent(
+                new CustomEvent('openMetadataDialog', {
+                  detail: { focus: 'variation' },
+                }),
+              );
+            }}
+            title="Edit variation metadata"
+          />
         </HStack>
 
         {/* Render children recursively */}
@@ -223,152 +265,80 @@ export const VariationManager: React.FC = () => {
         justify="space-between"
         bg="editor.headerBg"
       >
-        <Text
-          fontSize="10px"
-          fontWeight="black"
-          textTransform="uppercase"
-          letterSpacing="widest"
-          color="gray.500"
-        >
-          Variations
-        </Text>
-        <Tooltip label="Create Variation" placement="right" hasArrow>
-          <IconButton
-            aria-label="Create Variation"
-            icon={<AddIcon fontSize="10px" />}
-            size="xs"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={onOpen}
-          />
-        </Tooltip>
+        <HStack spacing={2} align="center">
+          <Text
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            letterSpacing="widest"
+            color="gray.500"
+          >
+            Variations
+          </Text>
+
+          <Select
+            size="md"
+            value={activeVariationId || ''}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+              const val = e.target.value;
+              if (!val) setActiveVariation(null);
+              else setActiveVariation(val);
+            }}
+            bg="editor.headerBg"
+            borderColor="transparent"
+            color="gray.300"
+            width="220px"
+          >
+            {renderGroupedOptions()}
+          </Select>
+
+          <Tooltip label="Edit Selected" placement="right" hasArrow>
+            <IconButton
+              aria-label="Edit Selected Variation or Base"
+              icon={<EditIcon fontSize="10px" />}
+              size="md"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                // If nothing selected -> open base editor
+                if (!activeVariationId) {
+                  window.dispatchEvent(
+                    new CustomEvent('openMetadataDialog', {
+                      detail: { focus: 'base' },
+                    }),
+                  );
+                } else {
+                  setActiveVariation(activeVariationId);
+                  window.dispatchEvent(
+                    new CustomEvent('openMetadataDialog', {
+                      detail: { focus: 'variation' },
+                    }),
+                  );
+                }
+              }}
+              isDisabled={!currentMap}
+            />
+          </Tooltip>
+
+          <Tooltip label="Create Variation" placement="right" hasArrow>
+            <IconButton
+              aria-label="Create Variation"
+              icon={<AddIcon fontSize="10px" />}
+              size="md"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={onOpen}
+            />
+          </Tooltip>
+        </HStack>
       </Flex>
 
       <Box flex={1} overflowY="auto" p={1}>
         <VStack spacing={0} align="stretch">
-          {/* Base Map Row (always present) */}
-          <HStack
-            spacing={2}
-            px={2}
-            py={1.5}
-            cursor="pointer"
-            bg={activeVariationId === null ? 'whiteAlpha.100' : 'transparent'}
-            borderLeft="2px"
-            borderColor={
-              activeVariationId === null ? 'green.400' : 'transparent'
-            }
-            _hover={{
-              bg:
-                activeVariationId === null ? 'whiteAlpha.100' : 'whiteAlpha.50',
-            }}
-            transition="all 0.1s"
-            onClick={() => setActiveVariation(null)}
-          >
-            <Text fontSize="sm" opacity={0.5}>
-              🌍
-            </Text>
-            <Text
-              fontSize="xs"
-              fontWeight={activeVariationId === null ? 'bold' : 'medium'}
-              color={activeVariationId === null ? 'white' : 'gray.400'}
-            >
-              Base Map
-            </Text>
-          </HStack>
-
-          {/* Season Toggles Section */}
-          {(tree.seasons.length > 0 || variations.length > 0) && (
-            <Box px={2} pt={3} pb={1}>
-              <Text
-                fontSize="9px"
-                fontWeight="black"
-                textTransform="uppercase"
-                letterSpacing="widest"
-                color="gray.600"
-                mb={1.5}
-              >
-                Seasons
-              </Text>
-              <HStack spacing={1}>
-                {SEASONS.map((season) => {
-                  const isDefined = definedSeasons.has(season.id);
-                  const isActiveSeason = activeSeasonId === season.id;
-
-                  return (
-                    <Tooltip
-                      key={season.id}
-                      label={
-                        isDefined
-                          ? season.label
-                          : `${season.label} (not defined)`
-                      }
-                      hasArrow
-                      placement="top"
-                    >
-                      <Box
-                        flex={1}
-                        textAlign="center"
-                        py={1.5}
-                        px={1}
-                        borderRadius="md"
-                        cursor={isDefined ? 'pointer' : 'default'}
-                        bg={
-                          isActiveSeason ? `${season.color}.900` : 'transparent'
-                        }
-                        borderWidth="1px"
-                        borderColor={
-                          isActiveSeason
-                            ? `${season.color}.600`
-                            : isDefined
-                              ? 'gray.700'
-                              : 'transparent'
-                        }
-                        opacity={isDefined ? 1 : 0.3}
-                        _hover={
-                          isDefined
-                            ? {
-                                bg: isActiveSeason
-                                  ? `${season.color}.900`
-                                  : 'whiteAlpha.50',
-                                borderColor: `${season.color}.600`,
-                              }
-                            : {}
-                        }
-                        transition="all 0.15s"
-                        onClick={() => {
-                          if (!isDefined) return;
-                          // Toggle: click active season to deactivate (go to base)
-                          if (
-                            isActiveSeason &&
-                            activeVariationId === season.id
-                          ) {
-                            setActiveVariation(null);
-                          } else {
-                            setActiveVariation(season.id);
-                          }
-                        }}
-                      >
-                        <Text fontSize="sm" lineHeight={1}>
-                          {season.icon}
-                        </Text>
-                        <Text
-                          fontSize="8px"
-                          fontWeight="bold"
-                          color={
-                            isActiveSeason ? `${season.color}.200` : 'gray.500'
-                          }
-                          mt={0.5}
-                        >
-                          {season.label.slice(0, 3).toUpperCase()}
-                        </Text>
-                      </Box>
-                    </Tooltip>
-                  );
-                })}
-              </HStack>
-            </Box>
-          )}
+          {/* Base selection and seasons moved to header dropdown */}
 
           {/* Generic Variations Section */}
           {(rootGenerics.length > 0 ||
@@ -417,7 +387,7 @@ export const VariationManager: React.FC = () => {
           {/* Empty state */}
           {variations.length === 0 && (
             <Box px={3} py={4} textAlign="center">
-              <Text fontSize="xs" color="gray.600" fontStyle="italic">
+              <Text fontSize="md" color="gray.600" fontStyle="italic">
                 No variations defined
               </Text>
               <Text fontSize="10px" color="gray.700" mt={1}>

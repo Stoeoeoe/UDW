@@ -3427,7 +3427,7 @@
     {
       "id": "spring",
       "kind": "season",
-      "displayName": "Spring",
+      "displayName": "Spring Gugu",
       "tilesetSuffix": "_spring",
       "layerOverrides": {
         "ground": {
@@ -4524,6 +4524,14 @@
           ]
         }
       },
+      "entityOverrides": []
+    },
+    {
+      "id": "winter",
+      "kind": "season",
+      "displayName": "Winter",
+      "tilesetSuffix": "_winter",
+      "layerOverrides": {},
       "entityOverrides": []
     }
   ]

@@ -21,8 +21,7 @@ export const TilesetEditor: React.FC = () => {
     const setActiveTileset = useEditorStore(state => state.setActiveTileset);
     const resetSelectedTiles = useEditorStore(state => state.resetSelectedTiles);
 
-    // Use local tile selection state for independence from map editor
-    const { selectedTileIndex, handleTileSelect } = useTileSelection({ local: true });
+    const { selectedTileIndex, handleTileSelect } = useTileSelection();
 
     const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
 

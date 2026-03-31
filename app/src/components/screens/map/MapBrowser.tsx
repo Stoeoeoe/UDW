@@ -10,12 +10,13 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
+import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { EditorModal } from '../../common/EditorModal';
 import { VariationManager } from './VariationManager';
 import { LayersPanel } from './LayersPanel';
+import { MetadataDialog } from './MetadataDialog';
 
 /**
  * MapBrowser - A sidebar panel for browsing all maps in the project,
@@ -27,8 +28,37 @@ export const MapBrowser: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const loadMap = useEditorStore((state) => state.loadMap);
   const deleteMap = useEditorStore((state) => state.deleteMap);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isMapCreatorOpen,
+    onOpen: onMapCreatorOpen,
+    onClose: onMapCreatorClose,
+  } = useDisclosure();
+  const {
+    isOpen: isMetadataOpen,
+    onOpen: onMetadataOpen,
+    onClose: onMetadataClose,
+  } = useDisclosure();
   const toast = useToast();
+
+  const [metadataInitialTab, setMetadataInitialTab] = React.useState<
+    'base' | 'variation'
+  >('base');
+
+  // Open metadata dialog in response to external requests (e.g., edit buttons)
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent | undefined;
+      const focus = ce?.detail?.focus === 'variation' ? 'variation' : 'base';
+      setMetadataInitialTab(focus);
+      onMetadataOpen();
+    };
+    window.addEventListener('openMetadataDialog', handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        'openMetadataDialog',
+        handler as EventListener,
+      );
+  }, [onMetadataOpen]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [mapsCollapsed, setMapsCollapsed] = useState(false);
 
@@ -98,20 +128,22 @@ export const MapBrowser: React.FC = () => {
               ({maps.length})
             </Text>
           </HStack>
-          <Tooltip label="Create New Map" placement="right" hasArrow>
-            <IconButton
-              aria-label="Create New Map"
-              icon={<AddIcon fontSize="10px" />}
-              size="xs"
-              variant="ghost"
-              color="gray.400"
-              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen();
-              }}
-            />
-          </Tooltip>
+          <HStack spacing={1}>
+            <Tooltip label="Create New Map" placement="right" hasArrow>
+              <IconButton
+                aria-label="Create New Map"
+                icon={<AddIcon fontSize="10px" />}
+                size="xs"
+                variant="ghost"
+                color="gray.400"
+                _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMapCreatorOpen();
+                }}
+              />
+            </Tooltip>
+          </HStack>
         </Flex>
 
         {!mapsCollapsed && (
@@ -171,6 +203,30 @@ export const MapBrowser: React.FC = () => {
                       </Text>
                     </VStack>
 
+                    <Tooltip label="Edit Map" placement="right" hasArrow>
+                      <IconButton
+                        aria-label="Edit Map"
+                        icon={<EditIcon fontSize="10px" />}
+                        size="xs"
+                        variant="ghost"
+                        color="gray.400"
+                        opacity={0}
+                        _groupHover={{
+                          opacity: 1,
+                          color: 'white',
+                          bg: 'whiteAlpha.50',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // load the map if not active, then open metadata for base
+                          if (currentMap?.id !== map.id) loadMap(map.id);
+                          setMetadataInitialTab('base');
+                          onMetadataOpen();
+                        }}
+                        title="Edit map metadata"
+                      />
+                    </Tooltip>
+
                     <IconButton
                       aria-label="Delete Map"
                       icon={<DeleteIcon fontSize="10px" />}
@@ -219,9 +275,15 @@ export const MapBrowser: React.FC = () => {
       </Box>
 
       {/* Map Creator Modal */}
-      <EditorModal isOpen={isOpen} onClose={onClose}>
-        <MapCreator onCreate={onClose} onCancel={onClose} />
+      <EditorModal isOpen={isMapCreatorOpen} onClose={onMapCreatorClose}>
+        <MapCreator onCreate={onMapCreatorClose} onCancel={onMapCreatorClose} />
       </EditorModal>
+
+      <MetadataDialog
+        isOpen={isMetadataOpen}
+        onClose={onMetadataClose}
+        initialTab={metadataInitialTab}
+      />
     </Flex>
   );
 };

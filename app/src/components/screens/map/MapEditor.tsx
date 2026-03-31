@@ -12,6 +12,7 @@ import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
 import { EntityPalette } from '../entity/EntityPalette';
 import { EditorModal } from '../../common/EditorModal';
+import { resolveMapContext } from '../../../lib/mapUtils';
 
 /**
  * Combined right panel showing tool properties and entity inspector.
@@ -67,6 +68,7 @@ export const MapEditor: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const currentMapPath = useEditorStore((state) => state.currentMapPath);
   const maps = useEditorStore((state) => state.maps);
+  const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -119,11 +121,16 @@ export const MapEditor: React.FC = () => {
     );
   }
 
+  const effectiveMap = resolveMapContext(currentMap, activeVariationId);
+  const activeVariation = currentMap.variations?.find(
+    (variation) => variation.id === activeVariationId,
+  );
+
   return (
     <ResizableEditorLayout
       header={{
-        title: currentMap.name || 'Map',
-        subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers`,
+        title: effectiveMap.name || 'Map',
+        subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers${activeVariation ? ` • ${activeVariation.displayName}` : ''}`,
       }}
       content={<MapViewportPixi />}
       leftPanel={<MapLeftPanel />}
