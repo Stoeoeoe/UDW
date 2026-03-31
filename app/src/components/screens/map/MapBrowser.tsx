@@ -15,7 +15,6 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { EditorModal } from '../../common/EditorModal';
 import { VariationManager } from './VariationManager';
-import { TimePreviewPanel } from './TimePreviewPanel';
 import { LayersPanel } from './LayersPanel';
 
 /**
@@ -209,14 +208,6 @@ export const MapBrowser: React.FC = () => {
       {/* Variation Manager for active map */}
       <Box flex="0 0 auto" maxH="280px" overflow="hidden">
         <VariationManager />
-      </Box>
-
-      {/* Divider */}
-      <Box borderBottom="1px" borderColor="editor.border" />
-
-      {/* Time Preview */}
-      <Box flex="0 0 auto">
-        <TimePreviewPanel />
       </Box>
 
       {/* Divider */}
