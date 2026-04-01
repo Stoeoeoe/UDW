@@ -704,6 +704,14 @@ export const useEditorStore = create<EditorStore>()(
           if (tool === 'stamp' && !state.selectedLayerId && state.currentMap) {
             state.selectedLayerId = state.currentMap.layers[0]?.id || null;
           }
+          // If switching to terrain tool and no terrain selected, default to first terrain
+          if (
+            tool === 'terrain' &&
+            !state.selectedTerrainId &&
+            state.terrainTypes.length > 0
+          ) {
+            state.selectedTerrainId = state.terrainTypes[0].id;
+          }
         });
       },
 
