@@ -87,7 +87,7 @@ export interface WangColor {
 
 export interface PropertyInstance {
   key: string;
-  value: any;
+  value: PropertyValue;
 }
 
 export interface Map {
@@ -124,12 +124,23 @@ export type LayerKind =
   | 'navigation' // Pathfinding hints
   | 'metadata'; // Data-only, invisible
 
+export type PropertyValue =
+  | string
+  | number
+  | boolean
+  | null
+  | string[]
+  | number[]
+  | Record<string, string | number | boolean | null>;
+
+export type PropertyValues = Record<string, PropertyValue>;
+
 export interface EntityInstance {
   id: string; // Unique within map
   typeId: string; // Reference to entity type definition
   position: [number, number]; // Tile coordinates [x, y]
   rotation?: number; // Degrees, 0-360
-  properties: Record<string, any>;
+  properties: PropertyValues;
   tags?: string[];
   timeScope?: TimeScope;
 }
@@ -180,7 +191,7 @@ export interface Variation {
   tilesetSuffix?: string; // e.g., "_winter"
   layerOverrides?: Record<string, LayerOverride>;
   entityOverrides?: EntityOverride[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, PropertyValue>;
 }
 
 export interface LayerOverride {
@@ -191,7 +202,7 @@ export interface LayerOverride {
 export interface EntityOverride {
   action: 'add' | 'remove' | 'modify';
   entityId?: string; // For remove/modify
-  entity?: EntityInstance; // For add/modify
+  entity?: Partial<EntityInstance>;
 }
 
 export interface MapMetadata {
@@ -232,7 +243,7 @@ export interface PropertyDefinition {
   key: string;
   label: string;
   type: PropertyType;
-  defaultValue: any;
+  defaultValue: PropertyValue;
   required: boolean;
   description?: string;
   constraints?: PropertyConstraints;

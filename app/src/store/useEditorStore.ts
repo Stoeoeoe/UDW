@@ -18,6 +18,7 @@ import {
   TileDefinition,
   LayerDefinition,
   EntityType,
+  PropertyValues,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 import { resolveTileAt } from '../lib/mapUtils';
@@ -278,7 +279,7 @@ interface EditorStore extends EditorState {
   removeEntity: (entityId: string) => void;
   updateEntityProperties: (
     entityId: string,
-    properties: Record<string, any>,
+    properties: PropertyValues,
   ) => void;
 
   // Layer actions
@@ -1188,25 +1189,31 @@ export const useEditorStore = create<EditorStore>()(
                   existingOverride.entity
                 ) {
                   existingOverride.entity.properties = {
-                    ...existingOverride.entity.properties,
+                    ...((existingOverride.entity
+                      .properties as PropertyValues) || {}),
                     ...properties,
-                  };
+                  } as PropertyValues;
                 } else if (existingOverride.action === 'modify') {
                   if (!existingOverride.entity)
-                    existingOverride.entity = { properties: {} } as any;
+                    existingOverride.entity = { properties: {} } as Partial<
+                      import('../types/schema').EntityInstance
+                    >;
                   if (existingOverride.entity) {
                     existingOverride.entity.properties = {
-                      ...existingOverride.entity.properties,
+                      ...((existingOverride.entity
+                        .properties as PropertyValues) || {}),
                       ...properties,
-                    };
+                    } as PropertyValues;
                   }
                 }
               } else {
-                // Create a new "modify" override
+                // Create a new "modify" override with a sparse entity
                 variation.entityOverrides.push({
                   action: 'modify',
                   entityId,
-                  entity: { properties } as any, // Sparse entity for properties override
+                  entity: { properties } as Partial<
+                    import('../types/schema').EntityInstance
+                  >,
                 });
               }
               return;
@@ -1574,7 +1581,7 @@ useEditorStore.subscribe(
       useEditorStore.setState((state) => {
         const idx = state.maps.findIndex((m) => m.id === currentMap.id);
         if (idx !== -1) {
-          state.maps[idx] = currentMap as any;
+          state.maps[idx] = castDraft(currentMap);
         }
       });
     }
