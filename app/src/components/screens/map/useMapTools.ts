@@ -3,6 +3,10 @@ import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveEntities, resolveTileAt } from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
+import { screenToTile as screenToTileUtil } from '../../../lib/viewportUtils';
+import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
+import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
+import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
 import {
   buildTerrainGridFromLayer,
   applyTerrainToTile,
@@ -61,72 +65,33 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const isSamplingRef = useRef(false); // Track right-click eyedropper sampling mode
   const sampleStartRef = useRef<{ x: number; y: number } | null>(null); // Start position for sampling rectangle
 
-  // Convert screen coordinates to tile coordinates
+  // Convert screen coordinates to tile coordinates (delegates to shared util)
   const screenToTile = useCallback(
-    (clientX: number, clientY: number): { x: number; y: number } | null => {
-      if (!viewport || !viewport.worldTransform) return null;
-
-      try {
-        // Get canvas position and calculate relative coordinates
-        const canvas =
-          (viewport as any).options?.events?.domElement ||
-          document.querySelector('canvas');
-        if (!canvas) return null;
-
-        const rect = canvas.getBoundingClientRect();
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
-
-        const worldPos = viewport.toWorld(x, y);
-        const tx = Math.floor(worldPos.x / DEFAULT_TILE_SIZE);
-        const ty = Math.floor(worldPos.y / DEFAULT_TILE_SIZE);
-
-        return { x: tx, y: ty };
-      } catch (e) {
-        // Viewport not fully initialized
-        return null;
-      }
-    },
+    (clientX: number, clientY: number): { x: number; y: number } | null =>
+      screenToTileUtil(viewport, clientX, clientY),
     [viewport],
   );
 
-  // Build pattern from multi-tile selection or use sampled pattern from right-click copy
-  // Priority: sampledPattern > multi-tile selection > single tile (no pattern)
-  const getPattern = useCallback(() => {
-    if (activeTool === 'random') return null;
+  // Build pattern (delegates to shared util)
+  const getPattern = useCallback(
+    () =>
+      getPatternUtil({
+        activeTool,
+        sampledPattern,
+        selectedTileIndices,
+        activeTilesetId,
+        tilesets,
+      }),
+    [
+      activeTool,
+      sampledPattern,
+      selectedTileIndices,
+      activeTilesetId,
+      tilesets,
+    ],
+  );
 
-    // Priority 1: Use sampled pattern if available (from right-click copy)
-    if (sampledPattern && sampledPattern.tilesetId === activeTilesetId) {
-      return {
-        pattern: sampledPattern.pattern,
-        patternW: sampledPattern.width,
-        patternH: sampledPattern.height,
-        minCol: 0,
-        minRow: 0,
-      };
-    }
-
-    // Priority 2: Build pattern from multi-tile selection (2+ tiles)
-    if (
-      !selectedTileIndices ||
-      selectedTileIndices.length <= 1 ||
-      !activeTilesetId
-    )
-      return null;
-
-    const ts = tilesets.get(activeTilesetId);
-    if (!ts) return null;
-
-    return buildPatternFromSelection(selectedTileIndices, ts);
-  }, [
-    activeTool,
-    sampledPattern,
-    selectedTileIndices,
-    activeTilesetId,
-    tilesets,
-  ]);
-
-  // Apply a shape (point, rect, circle, line) - uses batch updates for performance
+  // Apply a shape (delegates to shared util)
   const applyShape = useCallback(
     (
       mode: 'point' | 'rect' | 'circle' | 'line',
@@ -134,217 +99,24 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       end: { x: number; y: number },
       action: 'paint' | 'erase',
     ) => {
-      if (!currentMap || !selectedLayerId) return;
-      if (
-        action === 'paint' &&
-        (!activeTilesetId ||
-          (selectedTileIndex === null &&
-            (!selectedTileIndices || selectedTileIndices.length === 0)))
-      )
-        return;
-
-      // Read brushSize directly from store to ensure we have the latest value
-      const currentBrushSize = useEditorStore.getState().brushSize;
-
-      const patternData = getPattern();
-      const pattern = patternData?.pattern;
-      const patternW = patternData?.patternW || 1;
-      const patternH = patternData?.patternH || 1;
-
-      // Get tileset for random sampling
-      const ts = activeTilesetId ? tilesets.get(activeTilesetId) : undefined;
-
-      // Collect tiles for batch update
-      const tilesToPaint: Array<{
-        x: number;
-        y: number;
-        tilesetId: string;
-        tileIndex: number;
-      }> = [];
-      const tilesToErase: Array<{ x: number; y: number }> = [];
-
-      const collectTile = (tx: number, ty: number) => {
-        if (
-          tx < 0 ||
-          tx >= currentMap.width ||
-          ty < 0 ||
-          ty >= currentMap.height
-        )
-          return;
-        if (action === 'paint') {
-          if (pattern && patternW > 0 && patternH > 0 && activeTilesetId) {
-            for (let py = 0; py < patternH; py++) {
-              for (let px = 0; px < patternW; px++) {
-                const tileIdx = pattern[py][px];
-                if (tileIdx !== null) {
-                  const nx = tx + px,
-                    ny = ty + py;
-                  if (
-                    nx >= 0 &&
-                    nx < currentMap.width &&
-                    ny >= 0 &&
-                    ny < currentMap.height
-                  ) {
-                    tilesToPaint.push({
-                      x: nx,
-                      y: ny,
-                      tilesetId: activeTilesetId,
-                      tileIndex: tileIdx,
-                    });
-                  }
-                }
-              }
-            }
-          } else if (activeTool === 'random' && activeTilesetId) {
-            // For random tile tool, sample from selected indices using probability weights
-            if (selectedTileIndices && selectedTileIndices.length > 0) {
-              const chosen = sampleRandomTile(selectedTileIndices, ts);
-              if (chosen !== null)
-                tilesToPaint.push({
-                  x: tx,
-                  y: ty,
-                  tilesetId: activeTilesetId,
-                  tileIndex: chosen,
-                });
-            } else if (selectedTileIndex !== null) {
-              tilesToPaint.push({
-                x: tx,
-                y: ty,
-                tilesetId: activeTilesetId,
-                tileIndex: selectedTileIndex,
-              });
-            }
-          } else if (activeTilesetId && selectedTileIndex !== null) {
-            tilesToPaint.push({
-              x: tx,
-              y: ty,
-              tilesetId: activeTilesetId,
-              tileIndex: selectedTileIndex,
-            });
-          }
-        } else {
-          if (pattern && patternW > 0 && patternH > 0) {
-            for (let py = 0; py < patternH; py++) {
-              for (let px = 0; px < patternW; px++) {
-                const nx = tx + px,
-                  ny = ty + py;
-                if (
-                  nx >= 0 &&
-                  nx < currentMap.width &&
-                  ny >= 0 &&
-                  ny < currentMap.height
-                ) {
-                  tilesToErase.push({ x: nx, y: ny });
-                }
-              }
-            }
-          } else {
-            tilesToErase.push({ x: tx, y: ty });
-          }
-        }
-      };
-
-      // Collect tiles in a circular brush around a center point
-      // Note: brush size only applies when NOT using a multi-tile pattern
-      const collectBrush = (cx: number, cy: number, radius: number) => {
-        // If we have a multi-tile pattern, don't apply brush - just place the stencil once
-        if (pattern && patternW > 0 && patternH > 0) {
-          collectTile(cx, cy);
-          return;
-        }
-
-        // Use shared circular brush utility
-        for (const { x, y } of circularBrush(cx, cy, radius)) {
-          collectTile(x, y);
-        }
-      };
-
-      // Get effective brush size (only for point/line modes) - use currentBrushSize from getState()
-      const effectiveBrushSize =
-        mode === 'point' || mode === 'line' ? currentBrushSize : 1;
-
-      if (mode === 'point') {
-        collectBrush(end.x, end.y, effectiveBrushSize);
-      } else if (mode === 'rect') {
-        const minX = Math.min(start.x, end.x);
-        const maxX = Math.max(start.x, end.x);
-        const minY = Math.min(start.y, end.y);
-        const maxY = Math.max(start.y, end.y);
-
-        for (let y = minY; y <= maxY; y++) {
-          for (let x = minX; x <= maxX; x++) {
-            if (pattern && patternW > 0 && patternH > 0) {
-              const dx = x - start.x;
-              const dy = y - start.y;
-              const px = ((dx % patternW) + patternW) % patternW;
-              const py = ((dy % patternH) + patternH) % patternH;
-              const tileIdx = pattern[py][px];
-              if (tileIdx !== null && action === 'paint' && activeTilesetId) {
-                tilesToPaint.push({
-                  x,
-                  y,
-                  tilesetId: activeTilesetId,
-                  tileIndex: tileIdx,
-                });
-              } else if (action === 'erase') {
-                tilesToErase.push({ x, y });
-              }
-            } else {
-              collectTile(x, y);
-            }
-          }
-        }
-      } else if (mode === 'circle') {
-        const radius = Math.sqrt(
-          Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2),
-        );
-        const minX = Math.floor(start.x - radius);
-        const maxX = Math.ceil(start.x + radius);
-        const minY = Math.floor(start.y - radius);
-        const maxY = Math.ceil(start.y + radius);
-
-        for (let y = minY; y <= maxY; y++) {
-          for (let x = minX; x <= maxX; x++) {
-            const dist = Math.sqrt(
-              Math.pow(x - start.x, 2) + Math.pow(y - start.y, 2),
-            );
-            if (dist <= radius) {
-              if (pattern && patternW > 0 && patternH > 0) {
-                const dx = x - start.x;
-                const dy = y - start.y;
-                const px = ((dx % patternW) + patternW) % patternW;
-                const py = ((dy % patternH) + patternH) % patternH;
-                const tileIdx = pattern[py][px];
-                if (tileIdx !== null && action === 'paint' && activeTilesetId) {
-                  tilesToPaint.push({
-                    x,
-                    y,
-                    tilesetId: activeTilesetId,
-                    tileIndex: tileIdx,
-                  });
-                } else if (action === 'erase') {
-                  tilesToErase.push({ x, y });
-                }
-              } else {
-                collectTile(x, y);
-              }
-            }
-          }
-        }
-      } else if (mode === 'line') {
-        // Use shared Bresenham algorithm with brush size
-        for (const { x, y } of bresenhamLine(start.x, start.y, end.x, end.y)) {
-          collectBrush(x, y, effectiveBrushSize);
-        }
-      }
-
-      // Execute batch updates (single store mutation each)
-      if (tilesToPaint.length > 0) {
-        paintTilesBatch(selectedLayerId, tilesToPaint);
-      }
-      if (tilesToErase.length > 0) {
-        eraseTilesBatch(selectedLayerId, tilesToErase);
-      }
+      const brushSize = useEditorStore.getState().brushSize;
+      return applyShapeUtil({
+        currentMap,
+        selectedLayerId,
+        activeTilesetId,
+        selectedTileIndex,
+        selectedTileIndices,
+        activeTool,
+        tilesets,
+        paintTilesBatch,
+        eraseTilesBatch,
+        getPattern,
+        brushSize,
+        mode,
+        start,
+        end,
+        action,
+      });
     },
     [
       currentMap,
@@ -354,13 +126,13 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       selectedTileIndices,
       activeTool,
       tilesets,
-      getPattern,
       paintTilesBatch,
       eraseTilesBatch,
+      getPattern,
     ],
   );
 
-  // Apply terrain brush over a shape (point, rect, circle, line)
+  // Apply terrain brush (delegates to shared util)
   const applyTerrainShape = useCallback(
     (
       mode: 'point' | 'rect' | 'circle' | 'line',
@@ -368,165 +140,21 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       end: { x: number; y: number },
       terrainId: string | null,
     ) => {
-      if (!currentMap || !selectedLayerId || !activeTilesetId) return;
-
-      const tileset = tilesets.get(activeTilesetId);
-      if (!tileset) return;
-
-      const layer = currentMap.layers.find((l) => l.id === selectedLayerId);
-      if (!layer) return;
-
-      // Get brush size for point and line modes
-      const currentBrushSize = useEditorStore.getState().brushSize;
-      const effectiveBrushSize =
-        mode === 'point' || mode === 'line' ? currentBrushSize : 1;
-
-      // Helper to collect tiles in a circular brush
-      const collectBrush = (
-        cx: number,
-        cy: number,
-        positions: Array<{ x: number; y: number }>,
-      ) => {
-        for (const { x, y } of circularBrush(cx, cy, effectiveBrushSize)) {
-          if (
-            x >= 0 &&
-            x < currentMap.width &&
-            y >= 0 &&
-            y < currentMap.height
-          ) {
-            positions.push({ x, y });
-          }
-        }
-      };
-
-      // Collect all tile positions to paint
-      const positions: Array<{ x: number; y: number }> = [];
-
-      if (mode === 'point') {
-        collectBrush(end.x, end.y, positions);
-      } else if (mode === 'rect') {
-        const minX = Math.min(start.x, end.x);
-        const maxX = Math.max(start.x, end.x);
-        const minY = Math.min(start.y, end.y);
-        const maxY = Math.max(start.y, end.y);
-        for (let y = minY; y <= maxY; y++) {
-          for (let x = minX; x <= maxX; x++) {
-            if (
-              x >= 0 &&
-              x < currentMap.width &&
-              y >= 0 &&
-              y < currentMap.height
-            ) {
-              positions.push({ x, y });
-            }
-          }
-        }
-      } else if (mode === 'circle') {
-        const radius = Math.sqrt(
-          Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2),
-        );
-        const minX = Math.floor(start.x - radius);
-        const maxX = Math.ceil(start.x + radius);
-        const minY = Math.floor(start.y - radius);
-        const maxY = Math.ceil(start.y + radius);
-        for (let y = minY; y <= maxY; y++) {
-          for (let x = minX; x <= maxX; x++) {
-            const dist = Math.sqrt(
-              Math.pow(x - start.x, 2) + Math.pow(y - start.y, 2),
-            );
-            if (
-              dist <= radius &&
-              x >= 0 &&
-              x < currentMap.width &&
-              y >= 0 &&
-              y < currentMap.height
-            ) {
-              positions.push({ x, y });
-            }
-          }
-        }
-      } else if (mode === 'line') {
-        for (const { x, y } of bresenhamLine(start.x, start.y, end.x, end.y)) {
-          collectBrush(x, y, positions);
-        }
-      }
-
-      if (positions.length === 0) return;
-
-      // Build terrain grid fresh for this operation
-      terrainGridRef.current = buildTerrainGridFromLayer(
-        layer.data,
+      const brushSize = useEditorStore.getState().brushSize;
+      return applyTerrainShapeUtil({
+        currentMap,
+        selectedLayerId,
+        activeTilesetId,
         tilesets,
-        currentMap.tilesetRefs,
-      );
-
-      // Apply terrain to all positions and collect all affected tiles
-      const allTilesToUpdate = new Map<
-        string,
-        { tileX: number; tileY: number }
-      >();
-
-      for (const pos of positions) {
-        const tilesToUpdate = applyTerrainToTile(
-          pos.x,
-          pos.y,
-          terrainId,
-          terrainGridRef.current,
-          currentMap.width,
-          currentMap.height,
-        );
-        for (const tile of tilesToUpdate) {
-          allTilesToUpdate.set(`${tile.tileX},${tile.tileY}`, tile);
-        }
-      }
-
-      // Resolve tiles and paint
-      const tilesToPaint: Array<{
-        x: number;
-        y: number;
-        tilesetId: string;
-        tileIndex: number;
-      }> = [];
-      const tilesToErase: Array<{ x: number; y: number }> = [];
-
-      for (const { tileX, tileY } of allTilesToUpdate.values()) {
-        if (
-          tileX < 0 ||
-          tileX >= currentMap.width ||
-          tileY < 0 ||
-          tileY >= currentMap.height
-        )
-          continue;
-
-        const corners = getCornerTerrainsForTile(
-          tileX,
-          tileY,
-          terrainGridRef.current,
-        );
-        const matchingTile = findBestMatchingTileWithFallback(
-          tileset,
-          corners,
-          true,
-        );
-
-        if (matchingTile !== null) {
-          tilesToPaint.push({
-            x: tileX,
-            y: tileY,
-            tilesetId: activeTilesetId,
-            tileIndex: matchingTile,
-          });
-        } else if (corners.every((c) => c === null)) {
-          tilesToErase.push({ x: tileX, y: tileY });
-        }
-      }
-
-      if (tilesToPaint.length > 0) {
-        paintTilesBatch(selectedLayerId, tilesToPaint);
-      }
-      if (tilesToErase.length > 0) {
-        eraseTilesBatch(selectedLayerId, tilesToErase);
-      }
+        paintTilesBatch,
+        eraseTilesBatch,
+        brushSize,
+        mode,
+        start,
+        end,
+        terrainId,
+        terrainGridRef: terrainGridRef.current,
+      });
     },
     [
       currentMap,
