@@ -131,13 +131,15 @@ export const PropertiesPanel: React.FC = () => {
                 <Text fontSize="xs" fontWeight="bold">
                   {selectedEntity.position[0]}
                 </Text>
-                <Box w={4} />
+                <Text fontSize="xs" color="gray.600">px</Text>
+                <Box w={2} />
                 <Text fontSize="xs" color="gray.400" w="8">
                   Y:
                 </Text>
                 <Text fontSize="xs" fontWeight="bold">
                   {selectedEntity.position[1]}
                 </Text>
+                <Text fontSize="xs" color="gray.600">px</Text>
               </HStack>
             </FormControl>
           </VStack>

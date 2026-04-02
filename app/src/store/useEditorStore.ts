@@ -62,12 +62,14 @@ function addMissingDefinitionLayers(
   const newLayers: Layer[] = missingDefs.map((def) => ({
     id: def.id,
     name: def.name,
-    kind: 'visual' as const,
+    kind: (def.type === 'entity' ? 'entity' : 'visual') as const,
     visible: true,
     locked: false,
     opacity: 1,
     zOrder: def.zIndex,
-    data: createEmptyGrid(map.width, map.height),
+    ...(def.type === 'entity'
+      ? { entities: [] as EntityInstance[] }
+      : { data: createEmptyGrid(map.width, map.height) }),
     definitionId: def.id,
   }));
 
@@ -89,12 +91,14 @@ function createLayersFromDefinitions(
     .map((def) => ({
       id: def.id,
       name: def.name,
-      kind: 'visual' as const,
+      kind: (def.type === 'entity' ? 'entity' : 'visual') as const,
       visible: true,
       locked: false,
       opacity: 1,
       zOrder: def.zIndex,
-      data: createEmptyGrid(width, height),
+      ...(def.type === 'entity'
+        ? { entities: [] as EntityInstance[] }
+        : { data: createEmptyGrid(width, height) }),
       definitionId: def.id,
     }));
 }
@@ -148,7 +152,7 @@ function setTileInState(
   }
   const encodedValue = value ? encodeTileRef(value, map.tilesetRefs) : null;
   const layer = map.layers.find((l) => l.id === layerId);
-  if (layer && layer.data[y] && !layer.locked) {
+  if (layer && layer.data && layer.data[y] && !layer.locked) {
     layer.data[y][x] = encodedValue;
   }
 }
@@ -187,6 +191,7 @@ interface EditorStore extends EditorState {
 
   // Tool actions
   setActiveTool: (tool: ToolType) => void;
+  setEntitySnapMode: (mode: 'grid' | 'pixel') => void;
   setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
   setBrushSize: (size: number) => void;
   setMode: (mode: EditorMode) => void;
@@ -277,6 +282,7 @@ interface EditorStore extends EditorState {
   // Entity actions
   placeEntity: (entity: EntityInstance) => void;
   removeEntity: (entityId: string) => void;
+  moveEntity: (entityId: string, position: [number, number]) => void;
   updateEntityProperties: (
     entityId: string,
     properties: PropertyValues,
@@ -379,6 +385,7 @@ export const useEditorStore = create<EditorStore>()(
       selectedEntityTypeId: null,
       selectedEntityId: null,
       selectedEntityIds: new Set(),
+      entitySnapMode: 'grid',
       camera: { x: 0, y: 0, zoom: 1.5 },
       mapCameras: {},
       tilesetToolMode: 'select',
@@ -714,6 +721,11 @@ export const useEditorStore = create<EditorStore>()(
           }
         });
       },
+
+      setEntitySnapMode: (mode) =>
+        set((state) => {
+          state.entitySnapMode = mode;
+        }),
 
       setDrawMode: (mode) =>
         set((state) => {
@@ -1120,7 +1132,36 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.currentMap) return;
 
-          // If variation active, add to overrides
+          // If a layer is selected and it's an entity layer, attach to that layer
+          const selectedLayer = state.currentMap.layers.find(
+            (l) => l.id === state.selectedLayerId,
+          );
+          if (selectedLayer && selectedLayer.kind === 'entity') {
+            const toAdd = { ...entity, layerId: selectedLayer.id } as any;
+
+            // If variation active, record as variation-level add override
+            if (state.activeVariationId) {
+              const variation = state.currentMap.variations?.find(
+                (v) => v.id === state.activeVariationId,
+              );
+              if (variation) {
+                if (!variation.entityOverrides) variation.entityOverrides = [];
+                variation.entityOverrides.push({
+                  action: 'add',
+                  entity: castDraft(toAdd),
+                });
+                return;
+              }
+            }
+
+            // Otherwise add to the layer's entities
+            if (!(selectedLayer as any).entities)
+              (selectedLayer as any).entities = [];
+            (selectedLayer as any).entities.push(castDraft(toAdd));
+            return;
+          }
+
+          // Fallback: add to top-level entities (legacy behavior)
           if (state.activeVariationId) {
             const variation = state.currentMap.variations?.find(
               (v) => v.id === state.activeVariationId,
@@ -1135,7 +1176,6 @@ export const useEditorStore = create<EditorStore>()(
             }
           }
 
-          // Otherwise add to base
           state.currentMap.entities.push(castDraft(entity));
         }),
 
@@ -1168,9 +1208,60 @@ export const useEditorStore = create<EditorStore>()(
             }
           }
 
+          // Remove from top-level entities
           state.currentMap.entities = state.currentMap.entities.filter(
             (e) => e.id !== entityId,
           );
+
+          // Also remove from any entity layers
+          for (const layer of state.currentMap.layers) {
+            if (layer.kind === 'entity' && (layer as any).entities) {
+              (layer as any).entities = (layer as any).entities.filter(
+                (e: any) => e.id !== entityId,
+              );
+            }
+          }
+        }),
+
+      moveEntity: (entityId, position) =>
+        set((state) => {
+          if (!state.currentMap) return;
+
+          if (state.activeVariationId) {
+            const variation = state.currentMap.variations?.find(
+              (v) => v.id === state.activeVariationId,
+            );
+            if (variation) {
+              if (!variation.entityOverrides) variation.entityOverrides = [];
+              const existing = variation.entityOverrides.find(
+                (o) => o.action === 'add' && o.entity?.id === entityId,
+              );
+              if (existing && existing.entity) {
+                existing.entity.position = position;
+                return;
+              }
+            }
+          }
+
+          // Update in top-level entities
+          const entity = state.currentMap.entities.find(
+            (e) => e.id === entityId,
+          );
+          if (entity) {
+            entity.position = position;
+            return;
+          }
+
+          // Update in entity layers
+          for (const layer of state.currentMap.layers) {
+            if (layer.kind === 'entity' && layer.entities) {
+              const layerEntity = layer.entities.find((e) => e.id === entityId);
+              if (layerEntity) {
+                layerEntity.position = position;
+                return;
+              }
+            }
+          }
         }),
 
       updateEntityProperties: (entityId, properties) =>
@@ -1228,9 +1319,23 @@ export const useEditorStore = create<EditorStore>()(
             }
           }
 
-          const entity = state.currentMap.entities.find(
-            (e) => e.id === entityId,
-          );
+          // Try to find entity in top-level entities
+          let entity = state.currentMap.entities.find((e) => e.id === entityId);
+          if (!entity) {
+            // Try to find in layers
+            for (const layer of state.currentMap.layers) {
+              if (layer.kind === 'entity' && (layer as any).entities) {
+                const found = (layer as any).entities.find(
+                  (en: any) => en.id === entityId,
+                );
+                if (found) {
+                  entity = found;
+                  break;
+                }
+              }
+            }
+          }
+
           if (entity) {
             entity.properties = { ...entity.properties, ...properties };
           }
@@ -1274,6 +1379,24 @@ export const useEditorStore = create<EditorStore>()(
       selectLayer: (layerId) =>
         set((state) => {
           state.selectedLayerId = layerId;
+          const layer = state.currentMap?.layers.find((l) => l.id === layerId);
+          if (layer) {
+            const VALID_TOOLS_BY_KIND: Record<string, string[]> = {
+              visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
+              collision: ['stamp', 'erase', 'fill', 'select'],
+              navigation: ['stamp', 'erase', 'fill', 'select'],
+              metadata: ['stamp', 'erase', 'fill', 'select'],
+              entity: ['entitySelect', 'entityPlace', 'entityDelete'],
+            };
+            const valid = VALID_TOOLS_BY_KIND[layer.kind] ?? ['select'];
+            if (!valid.includes(state.activeTool)) {
+              if (layer.kind === 'entity') {
+                state.activeTool = 'entitySelect';
+              } else {
+                state.activeTool = 'stamp';
+              }
+            }
+          }
         }),
 
       updateLayer: (layerId, updates) =>
@@ -1328,9 +1451,6 @@ export const useEditorStore = create<EditorStore>()(
       selectEntity: (id) =>
         set((state) => {
           state.selectedEntityId = id;
-          if (id) {
-            state.activeTool = 'select'; // Switch to selection tool when selecting
-          }
         }),
 
       setSelectedEntityType: (id) =>
@@ -1469,6 +1589,14 @@ export const useEditorStore = create<EditorStore>()(
           await persistProject(projectToSave);
           set((state) => {
             state.project = castDraft(projectToSave);
+            if (state.currentMap) {
+              state.currentMap = castDraft(
+                addMissingDefinitionLayers(
+                  state.currentMap,
+                  state.layerDefinitions,
+                ),
+              );
+            }
           });
         }
       },

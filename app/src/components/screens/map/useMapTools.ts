@@ -3,7 +3,10 @@ import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveEntities, resolveTileAt } from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
-import { screenToTile as screenToTileUtil } from '../../../lib/viewportUtils';
+import {
+  screenToTile as screenToTileUtil,
+  screenToWorld as screenToWorldUtil,
+} from '../../../lib/viewportUtils';
 import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
 import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
 import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
@@ -47,6 +50,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     (state) => state.bucketFillAdvanced,
   );
   const placeEntity = useEditorStore((state) => state.placeEntity);
+  const removeEntity = useEditorStore((state) => state.removeEntity);
+  const moveEntity = useEditorStore((state) => state.moveEntity);
   const selectEntity = useEditorStore((state) => state.selectEntity);
   const setHoveredTile = useEditorStore((state) => state.setHoveredTile);
   const setDrawPreview = useEditorStore((state) => state.setDrawPreview);
@@ -55,10 +60,13 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
   const setSampledPattern = useEditorStore((state) => state.setSampledPattern);
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
+  const entitySnapMode = useEditorStore((state) => state.entitySnapMode);
 
   const isDrawingRef = useRef(false);
   const drawStartRef = useRef<{ x: number; y: number } | null>(null);
   const lineAnchorRef = useRef<{ x: number; y: number } | null>(null); // For line tool: last clicked anchor
+  const draggingEntityRef = useRef<string | null>(null); // Entity id being dragged
+  const dragOffsetRef = useRef<{ x: number; y: number } | null>(null); // Click offset within entity bounds
   const isShiftHeldRef = useRef(false); // Track shift key state
   const terrainGridRef = useRef<Map<string, string | null>>(new Map()); // Terrain grid cache for terrain brush
   const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null); // Track last painted position to avoid duplicates
@@ -204,12 +212,13 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
       const { x: tx, y: ty } = tile;
 
-      if (activeTool === 'select') {
-        const worldPos = viewport.toWorld(e.clientX, e.clientY);
+      if (activeTool === 'entitySelect' || activeTool === 'entityDelete') {
+        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        if (!worldPos) return;
         const resolvedEntities = resolveEntities(currentMap, activeVariationId);
         const hit = [...resolvedEntities].reverse().find((entity) => {
-          const ex = entity.position[0] * DEFAULT_TILE_SIZE;
-          const ey = entity.position[1] * DEFAULT_TILE_SIZE;
+          const ex = entity.position[0];
+          const ey = entity.position[1];
           return (
             worldPos.x >= ex &&
             worldPos.x < ex + DEFAULT_TILE_SIZE &&
@@ -217,7 +226,23 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             worldPos.y < ey + DEFAULT_TILE_SIZE
           );
         });
-        selectEntity(hit?.id || null);
+        if (activeTool === 'entityDelete') {
+          if (hit) removeEntity(hit.id);
+        } else {
+          selectEntity(hit?.id || null);
+          if (hit) {
+            draggingEntityRef.current = hit.id;
+            dragOffsetRef.current = {
+              x: worldPos.x - hit.position[0],
+              y: worldPos.y - hit.position[1],
+            };
+          } else {
+            draggingEntityRef.current = null;
+            dragOffsetRef.current = null;
+          }
+        }
+      } else if (activeTool === 'select') {
+        selectEntity(null);
       } else if (
         activeTool === 'stamp' ||
         activeTool === 'random' ||
@@ -324,15 +349,41 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const entityTypes = useEditorStore.getState().entityTypes;
         const type = entityTypes.find((t) => t.id === selectedEntityTypeId);
         if (type) {
-          placeEntity({
-            id: `ent-${Date.now()}`,
-            typeId: selectedEntityTypeId,
-            position: [tx, ty],
-            properties: type.properties.reduce(
-              (acc, p) => ({ ...acc, [p.key]: p.defaultValue }),
-              {},
-            ),
-          });
+          // Only place entities when an entity layer is selected
+          const selLayer = currentMap?.layers.find(
+            (l) => l.id === selectedLayerId,
+          );
+          if (selLayer && selLayer.kind === 'entity') {
+            // Always store absolute pixel position (rounded to integer)
+            // Grid mode snaps to tile grid; pixel mode places freely
+            const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+            let position: [number, number];
+            if (worldPos) {
+              if (entitySnapMode === 'grid') {
+                // Snap to tile grid
+                position = [
+                  Math.floor(worldPos.x / DEFAULT_TILE_SIZE) *
+                    DEFAULT_TILE_SIZE,
+                  Math.floor(worldPos.y / DEFAULT_TILE_SIZE) *
+                    DEFAULT_TILE_SIZE,
+                ];
+              } else {
+                position = [Math.round(worldPos.x), Math.round(worldPos.y)];
+              }
+            } else {
+              // Fallback using tile coords
+              position = [tx * DEFAULT_TILE_SIZE, ty * DEFAULT_TILE_SIZE];
+            }
+            placeEntity({
+              id: `ent-${Date.now()}`,
+              typeId: selectedEntityTypeId,
+              position,
+              properties: type.properties.reduce(
+                (acc, p) => ({ ...acc, [p.key]: p.defaultValue }),
+                {},
+              ),
+            });
+          }
         }
       }
     },
@@ -348,10 +399,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       selectedEntityTypeId,
       activeVariationId,
       selectedTerrainId,
+      entitySnapMode,
       screenToTile,
       applyShape,
       applyTerrainShape,
       selectEntity,
+      removeEntity,
       bucketFillAdvanced,
       getPattern,
       placeEntity,
@@ -417,6 +470,31 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           end: { x: tile.x, y: tile.y },
           mode: 'draw',
         });
+      }
+
+      // Move entity while dragging with entitySelect
+      if (
+        e.buttons === 1 &&
+        activeTool === 'entitySelect' &&
+        draggingEntityRef.current
+      ) {
+        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        if (worldPos) {
+          const { entitySnapMode: snapMode } = useEditorStore.getState();
+          const offset = dragOffsetRef.current ?? { x: 0, y: 0 };
+          const rawX = worldPos.x - offset.x;
+          const rawY = worldPos.y - offset.y;
+          let position: [number, number];
+          if (snapMode === 'grid') {
+            position = [
+              Math.floor(rawX / DEFAULT_TILE_SIZE) * DEFAULT_TILE_SIZE,
+              Math.floor(rawY / DEFAULT_TILE_SIZE) * DEFAULT_TILE_SIZE,
+            ];
+          } else {
+            position = [Math.round(rawX), Math.round(rawY)];
+          }
+          moveEntity(draggingEntityRef.current, position);
+        }
       }
 
       // Paint/erase while dragging in point mode - use applyShape for proper brush/stencil support
@@ -505,6 +583,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       setDrawPreview,
       applyShape,
       applyTerrainShape,
+      moveEntity,
     ],
   );
 
@@ -717,6 +796,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       isDrawingRef.current = false;
       drawStartRef.current = null;
       lastTerrainPaintRef.current = null;
+      draggingEntityRef.current = null;
+      dragOffsetRef.current = null;
       setDrawPreview({ isDrawing: false, start: null, end: null });
     },
     [

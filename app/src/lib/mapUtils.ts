@@ -77,7 +77,15 @@ export function resolveTileAt(
  */
 export function resolveEntities(map: Map, variationId: string | null) {
   const chain = getVariationChain(map, variationId); // Base to Child
-  let entities = [...map.entities];
+  // Start with top-level entities (legacy) and entities declared on entity-type layers
+  let entities = [] as any[];
+  if (Array.isArray(map.entities)) entities.push(...map.entities);
+  // Collect entities from layers that have `entities` (entity layers)
+  for (const layer of map.layers) {
+    if (layer.kind === 'entity' && Array.isArray((layer as any).entities)) {
+      entities.push(...(layer as any).entities);
+    }
+  }
 
   for (const context of chain) {
     if (context === 'base') continue;

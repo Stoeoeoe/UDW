@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, useDisclosure, VStack } from '@chakra-ui/react';
-// icons
+import { useDisclosure, VStack } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
@@ -10,44 +9,23 @@ import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
-import { EntityPalette } from '../entity/EntityPalette';
+import { EntityBottomPalette } from '../entity/EntityBottomPalette';
 import { EditorModal } from '../../common/EditorModal';
 import { resolveMapContext } from '../../../lib/mapUtils';
 
-/**
- * Combined right panel showing tool properties and entity inspector.
- * When using entity tools, shows the entity palette at the top.
- */
-const MapRightPanel: React.FC = () => {
-  const activeTool = useEditorStore((state) => state.activeTool);
-  const isEntityMode =
-    activeTool === 'entityPlace' || activeTool === 'entitySelect';
-
-  return (
-    <VStack align="stretch" spacing={0} h="full" overflow="hidden">
-      {isEntityMode ? (
-        <>
-          <Box flex={1} overflow="hidden" minH="200px">
-            <EntityPalette />
-          </Box>
-          <Box
-            borderTop="1px"
-            borderColor="editor.border"
-            maxH="40%"
-            overflow="auto"
-          >
-            <PropertiesPanel />
-          </Box>
-        </>
-      ) : (
-        <VStack align="stretch" spacing={0} flex={1} overflow="auto">
-          <ToolPropertiesPanel />
-          <PropertiesPanel />
-        </VStack>
-      )}
-    </VStack>
-  );
-};
+/** Right panel: entity inspector when on entity layer, otherwise tool props + tile inspector */
+const MapRightPanel: React.FC<{ isEntityLayer: boolean }> = ({ isEntityLayer }) => (
+  <VStack align="stretch" spacing={0} h="full" overflow="auto">
+    {isEntityLayer ? (
+      <PropertiesPanel />
+    ) : (
+      <>
+        <ToolPropertiesPanel />
+        <PropertiesPanel />
+      </>
+    )}
+  </VStack>
+);
 
 /**
  * Combined left panel: Map browser (maps + variations) on top, layers on bottom
@@ -69,6 +47,7 @@ export const MapEditor: React.FC = () => {
   const currentMapPath = useEditorStore((state) => state.currentMapPath);
   const maps = useEditorStore((state) => state.maps);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
+  const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -125,6 +104,8 @@ export const MapEditor: React.FC = () => {
   const activeVariation = currentMap.variations?.find(
     (variation) => variation.id === activeVariationId,
   );
+  const isEntityLayer =
+    currentMap.layers.find((l) => l.id === selectedLayerId)?.kind === 'entity';
 
   return (
     <ResizableEditorLayout
@@ -134,8 +115,8 @@ export const MapEditor: React.FC = () => {
       }}
       content={<MapViewportPixi />}
       leftPanel={<MapLeftPanel />}
-      rightPanel={<MapRightPanel />}
-      bottomPanel={<TilesetPalette enableMultiSelect={true} />}
+      rightPanel={<MapRightPanel isEntityLayer={isEntityLayer} />}
+      bottomPanel={isEntityLayer ? <EntityBottomPalette /> : <TilesetPalette enableMultiSelect={true} />}
       leftPanelDefaultSize={20}
       rightPanelDefaultSize={20}
       bottomPanelDefaultSize={25}

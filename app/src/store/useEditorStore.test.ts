@@ -191,4 +191,159 @@ describe('useEditorStore', () => {
             expect(useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1]).toBeNull();
         });
     });
+
+    describe('selectLayer auto-tool switching', () => {
+        const mapWithLayers = {
+            version: 1,
+            id: 'test-map',
+            name: 'Test Map',
+            width: 10,
+            height: 10,
+            baseTilesetId: 'village',
+            tilesetRefs: ['village'],
+            layers: [
+                { id: 'visual-layer', name: 'Ground', kind: 'visual' as const, visible: true, locked: false, opacity: 1, zOrder: 0, data: [] },
+                { id: 'entity-layer', name: 'Entities', kind: 'entity' as const, visible: true, locked: false, opacity: 1, zOrder: 1, data: [] },
+                { id: 'collision-layer', name: 'Collision', kind: 'collision' as const, visible: true, locked: false, opacity: 1, zOrder: 2, data: [] },
+            ],
+            entities: [],
+        };
+
+        beforeEach(() => {
+            useEditorStore.getState().setCurrentMap(mapWithLayers as any);
+        });
+
+        it('should switch to entityPlace when selecting an entity layer while on a tile tool', () => {
+            useEditorStore.getState().setActiveTool('stamp');
+            useEditorStore.getState().selectLayer('entity-layer');
+            expect(useEditorStore.getState().activeTool).toBe('entityPlace');
+        });
+
+        it('should keep entityPlace when selecting another entity layer', () => {
+            useEditorStore.getState().setActiveTool('entityPlace');
+            useEditorStore.getState().selectLayer('entity-layer');
+            expect(useEditorStore.getState().activeTool).toBe('entityPlace');
+        });
+
+        it('should keep entitySelect when switching to entity layer while on entitySelect', () => {
+            useEditorStore.getState().setActiveTool('entitySelect');
+            useEditorStore.getState().selectLayer('entity-layer');
+            expect(useEditorStore.getState().activeTool).toBe('entitySelect');
+        });
+
+        it('should switch to stamp when selecting a visual layer while on entityPlace', () => {
+            useEditorStore.getState().setActiveTool('entityPlace');
+            useEditorStore.getState().selectLayer('visual-layer');
+            expect(useEditorStore.getState().activeTool).toBe('stamp');
+        });
+
+        it('should keep stamp when switching between tile layers', () => {
+            useEditorStore.getState().setActiveTool('stamp');
+            useEditorStore.getState().selectLayer('collision-layer');
+            expect(useEditorStore.getState().activeTool).toBe('stamp');
+        });
+
+        it('should switch to stamp when selecting a collision layer while on entityDelete', () => {
+            useEditorStore.getState().setActiveTool('entityDelete');
+            useEditorStore.getState().selectLayer('collision-layer');
+            expect(useEditorStore.getState().activeTool).toBe('stamp');
+        });
+    });
+
+    describe('setEntitySnapMode', () => {
+        it('should default to grid snap mode', () => {
+            expect(useEditorStore.getState().entitySnapMode).toBe('grid');
+        });
+
+        it('should switch to pixel snap mode', () => {
+            useEditorStore.getState().setEntitySnapMode('pixel');
+            expect(useEditorStore.getState().entitySnapMode).toBe('pixel');
+        });
+
+        it('should switch back to grid snap mode', () => {
+            useEditorStore.getState().setEntitySnapMode('pixel');
+            useEditorStore.getState().setEntitySnapMode('grid');
+            expect(useEditorStore.getState().entitySnapMode).toBe('grid');
+        });
+    });
+
+    describe('addLayerDefinition injects into currentMap', () => {
+        const mockProject = {
+            version: '1.0',
+            name: 'Test Project',
+            tileSize: 16,
+            defaultMapWidth: 10,
+            defaultMapHeight: 10,
+            metadata: { author: '', description: '' },
+            layerDefinitions: [],
+        };
+
+        const mapWithoutDefinitionLayer = {
+            version: 1,
+            id: 'test-map',
+            name: 'Test Map',
+            width: 10,
+            height: 10,
+            baseTilesetId: 'village',
+            tilesetRefs: ['village'],
+            layers: [],
+            entities: [],
+        };
+
+        it('should inject a new layer definition into the open map', async () => {
+            await useEditorStore.getState().loadProject('/test', mockProject as any);
+            useEditorStore.getState().setCurrentMap(mapWithoutDefinitionLayer as any);
+
+            const newDef = {
+                id: 'my-collision',
+                name: 'Collision',
+                kind: 'collision' as const,
+                required: true,
+                defaultVisible: true,
+                defaultLocked: false,
+                defaultOpacity: 1,
+            };
+
+            await useEditorStore.getState().addLayerDefinition(newDef as any);
+
+            const map = useEditorStore.getState().currentMap;
+            expect(map?.layers.some((l) => l.id === 'my-collision')).toBe(true);
+        });
+
+        it('should not duplicate an existing layer when definition is added again', async () => {
+            const mapWithLayer = {
+                ...mapWithoutDefinitionLayer,
+                layers: [{
+                    id: 'my-collision',
+                    name: 'Collision',
+                    kind: 'collision' as const,
+                    visible: true,
+                    locked: false,
+                    opacity: 1,
+                    zOrder: 0,
+                    data: [],
+                    definitionId: 'my-collision',
+                }],
+            };
+
+            await useEditorStore.getState().loadProject('/test', mockProject as any);
+            useEditorStore.getState().setCurrentMap(mapWithLayer as any);
+
+            const existingDef = {
+                id: 'my-collision',
+                name: 'Collision',
+                kind: 'collision' as const,
+                required: true,
+                defaultVisible: true,
+                defaultLocked: false,
+                defaultOpacity: 1,
+            };
+
+            await useEditorStore.getState().addLayerDefinition(existingDef as any);
+
+            const map = useEditorStore.getState().currentMap;
+            const count = map?.layers.filter((l) => l.id === 'my-collision').length;
+            expect(count).toBe(1);
+        });
+    });
 });

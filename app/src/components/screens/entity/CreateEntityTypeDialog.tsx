@@ -79,13 +79,14 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
   const addEntityType = useEditorStore((state) => state.addEntityType);
 
   const [name, setName] = useState('');
+  const [customId, setCustomId] = useState('');
   const [category, setCategory] = useState<EntityCategory>('object');
   const [icon, setIcon] = useState('📦');
   const [group, setGroup] = useState('');
   const [color, setColor] = useState(DEFAULT_COLORS[0]);
   const [description, setDescription] = useState('');
 
-  const id = useMemo(() => {
+  const derivedId = useMemo(() => {
     return name
       .toLowerCase()
       .replace(/[^a-z0-9\s_-]/g, '')
@@ -93,6 +94,8 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
       .replace(/_+/g, '_')
       .replace(/^_|_$/g, '');
   }, [name]);
+
+  const id = customId.trim() || derivedId;
 
   const isDuplicate = entityTypes.some((et) => et.id === id);
   const isValid = id.length > 0 && !isDuplicate;
@@ -126,44 +129,53 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
   };
 
   return (
-    <Box p={6} minW="420px">
+    <Box p={6} minW="420px" bg="gray.900" border="1px" borderColor="gray.700" borderRadius="md">
       <VStack spacing={5} align="stretch">
         <Text fontWeight="bold" fontSize="lg" color="white">
           New Entity Type
         </Text>
 
-        {/* Name & ID */}
+        {/* Name */}
         <FormControl isRequired>
           <FormLabel fontSize="xs" color="gray.400">
             Display Name
           </FormLabel>
           <Input
             size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
+            bg="gray.800"
             color="white"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Treasure Chest"
             autoFocus
           />
-          <HStack mt={1} spacing={1}>
-            <Text fontSize="10px" color="gray.600">
-              ID:
+        </FormControl>
+
+        {/* ID (editable, auto-derived from name) */}
+        <FormControl>
+          <FormLabel fontSize="xs" color="gray.400">
+            ID
+          </FormLabel>
+          <Input
+            size="sm"
+            bg="gray.800"
+            color="white"
+            fontFamily="mono"
+            value={customId}
+            onChange={(e) => setCustomId(e.target.value)}
+            placeholder={derivedId || 'auto-generated from name'}
+            isInvalid={isDuplicate}
+          />
+          {isDuplicate && (
+            <Text fontSize="10px" color="red.400" mt={1}>
+              ID already exists
             </Text>
-            <Text
-              fontSize="10px"
-              color={isDuplicate ? 'red.400' : 'gray.500'}
-              fontFamily="mono"
-            >
-              {id || '—'}
+          )}
+          {!customId && derivedId && (
+            <Text fontSize="10px" color="gray.600" mt={1}>
+              Will use: <Box as="span" fontFamily="mono">{derivedId}</Box>
             </Text>
-            {isDuplicate && (
-              <Text fontSize="10px" color="red.400">
-                (already exists)
-              </Text>
-            )}
-          </HStack>
+          )}
         </FormControl>
 
         {/* Category & Group */}
@@ -184,7 +196,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
                 <option
                   key={c.value}
                   value={c.value}
-                  style={{ background: '#0a0a0b' }}
+                  style={{ background: '#1a202c' }}
                 >
                   {c.icon} {c.label}
                 </option>
@@ -277,8 +289,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
           </FormLabel>
           <Input
             size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
+            bg="gray.800"
             color="white"
             value={description}
             onChange={(e) => setDescription(e.target.value)}

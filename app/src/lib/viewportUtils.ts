@@ -1,6 +1,31 @@
 import { Viewport } from 'pixi-viewport';
 import { DEFAULT_TILE_SIZE } from '../config/constants';
 
+// Converts screen (client) coordinates to world pixel coordinates using the provided viewport.
+export function screenToWorld(
+  viewport: Viewport | null,
+  clientX: number,
+  clientY: number,
+): { x: number; y: number } | null {
+  if (!viewport || !(viewport as any).worldTransform) return null;
+
+  try {
+    const canvas =
+      (viewport as any).options?.events?.domElement ||
+      document.querySelector('canvas');
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    const worldPos = viewport.toWorld(x, y);
+    return { x: worldPos.x, y: worldPos.y };
+  } catch (e) {
+    return null;
+  }
+}
+
 // Converts screen (client) coordinates to tile coordinates using the provided viewport.
 export function screenToTile(
   viewport: Viewport | null,

@@ -233,8 +233,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       g.rect(0, 0, DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE);
       g.fill({ color: color, alpha: 0.6 });
 
-      g.x = entity.position[0] * DEFAULT_TILE_SIZE;
-      g.y = entity.position[1] * DEFAULT_TILE_SIZE;
+      g.x = entity.position[0];
+      g.y = entity.position[1];
       entityContainer.addChild(g);
     });
   }, []);
@@ -279,10 +279,18 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render hover highlight
   const renderHover = useCallback(() => {
     const hoverGraphics = hoverGraphicsRef.current;
-    const { hoveredTile } = useEditorStore.getState();
+    const { hoveredTile, activeTool } = useEditorStore.getState();
     if (!hoverGraphics) return;
 
     hoverGraphics.clear();
+
+    if (
+      activeTool === 'entitySelect' ||
+      activeTool === 'entityPlace' ||
+      activeTool === 'entityDelete'
+    ) {
+      return;
+    }
 
     if (hoveredTile) {
       hoverGraphics.rect(
@@ -317,6 +325,14 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     if (!previewContainer) return;
 
     previewContainer.removeChildren();
+
+    if (
+      activeTool === 'entityPlace' ||
+      activeTool === 'entitySelect' ||
+      activeTool === 'entityDelete'
+    ) {
+      return;
+    }
 
     // Erase tool preview - draw background color to show tiles will be removed
     if (activeTool === 'erase') {

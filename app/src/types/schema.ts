@@ -114,7 +114,11 @@ export interface Layer {
   opacity: number; // 0.0 to 1.0
   zOrder: number; // Rendering order
   icon?: string; // Optional icon identifier
-  data: (number | null)[][]; // Encoded tile IDs, row-major [y][x] (tilesetIndex << 16 | tileIndex)
+  // For tile-like layers this holds encoded tile IDs, row-major [y][x]
+  data?: (number | null)[][]; // Encoded tile IDs (tiles only)
+
+  // For layers that represent entities (entity layers), store instances here
+  entities?: EntityInstance[];
   definitionId?: string; // Reference to LayerDefinition (if from project template)
 }
 
@@ -122,7 +126,8 @@ export type LayerKind =
   | 'visual' // Rendered tiles
   | 'collision' // Collision data
   | 'navigation' // Pathfinding hints
-  | 'metadata'; // Data-only, invisible
+  | 'metadata' // Data-only, invisible
+  | 'entity'; // Layer that contains entities (EntityInstance[])
 
 export type PropertyValue =
   | string
@@ -140,6 +145,7 @@ export interface EntityInstance {
   typeId: string; // Reference to entity type definition
   position: [number, number]; // Tile coordinates [x, y]
   rotation?: number; // Degrees, 0-360
+  layerId?: string; // Optional: id of the entity layer this instance belongs to
   properties: PropertyValues;
   tags?: string[];
   timeScope?: TimeScope;

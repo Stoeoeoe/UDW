@@ -44,6 +44,7 @@ export interface EditorState {
   selectedEntityTypeId: string | null; // For entity placement
   selectedEntityId: string | null; // Currently active entity for inspection
   selectedEntityIds: Set<string>; // Multiple selected entities
+  entitySnapMode: 'grid' | 'pixel'; // Snap mode for entity placement/movement
 
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood'; // Shape mode for tools
   brushSize: number; // Brush radius for point/line modes (1 = single tile)
@@ -111,8 +112,9 @@ export type ToolType =
   | 'erase'
   | 'terrain' // Terrain brush for autotiling
   | 'fill' // Phase 2
+  | 'entitySelect' // Select & move entities
   | 'entityPlace'
-  | 'entitySelect'
+  | 'entityDelete' // Delete entities
   | 'pathDraw' // Phase 2
   | 'areaDraw' // Phase 2
   | 'anchorPlace'; // Phase 2
