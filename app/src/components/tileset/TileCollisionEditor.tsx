@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   VStack,
   HStack,
@@ -245,7 +251,11 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     const nextMode = detectMode(collision);
     setMode(nextMode);
 
-    const incomingPoints = getPolygonFromCollision(collision, tileWidth, tileHeight);
+    const incomingPoints = getPolygonFromCollision(
+      collision,
+      tileWidth,
+      tileHeight,
+    );
     if (nextMode === 'polygon' && incomingPoints.length > 0) {
       setPoints(incomingPoints);
     }
@@ -289,21 +299,26 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     [emitPolygonCollision, onChange, points],
   );
 
-  const getPointerFromEvent = useCallback((e: MouseEvent | React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-  }, []);
+  const getPointerFromEvent = useCallback(
+    (e: MouseEvent | React.MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    },
+    [],
+  );
 
   const getNormalizedFromPointer = useCallback(
     (pointer: { x: number; y: number }) => {
       const drawRect = getDrawRect(tileWidth, tileHeight);
       const x = clamp01((pointer.x - drawRect.x) / Math.max(1, drawRect.width));
-      const y = clamp01((pointer.y - drawRect.y) / Math.max(1, drawRect.height));
+      const y = clamp01(
+        (pointer.y - drawRect.y) / Math.max(1, drawRect.height),
+      );
       return quantizeNormalizedPoint([x, y], tileWidth, tileHeight);
     },
     [tileHeight, tileWidth],
@@ -316,12 +331,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       if (!pointer) return;
       const normalized = getNormalizedFromPointer(pointer);
       const drawRect = getDrawRect(tileWidth, tileHeight);
-      const nearest = findNearestHandle(
-        points,
-        pointer.x,
-        pointer.y,
-        drawRect,
-      );
+      const nearest = findNearestHandle(points, pointer.x, pointer.y, drawRect);
 
       if (e.button === 2) {
         if (nearest >= 0 && points.length > 3) {
@@ -409,7 +419,9 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     try {
       const parsed = parseRawPoints(rawText, tileWidth, tileHeight);
       if (!isValidPolygon(parsed)) {
-        setRawError('Raw polygon must have at least 3 distinct points and non-zero area.');
+        setRawError(
+          'Raw polygon must have at least 3 distinct points and non-zero area.',
+        );
         return;
       }
       setRawError(null);
@@ -417,9 +429,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       emitPolygonCollision(parsed);
     } catch (error) {
       setRawError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to parse raw points.',
+        error instanceof Error ? error.message : 'Failed to parse raw points.',
       );
     }
   }, [emitPolygonCollision, rawText, tileHeight, tileWidth]);
@@ -466,12 +476,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       );
 
       context.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      context.fillRect(
-        drawRect.x,
-        drawRect.y,
-        drawRect.width,
-        drawRect.height,
-      );
+      context.fillRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height);
     }
 
     context.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -485,8 +490,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     }
 
     for (let i = 1; i < tileHeight; i++) {
-      const pos =
-        drawRect.y + (drawRect.height * i) / Math.max(1, tileHeight);
+      const pos = drawRect.y + (drawRect.height * i) / Math.max(1, tileHeight);
       context.beginPath();
       context.moveTo(drawRect.x, pos);
       context.lineTo(drawRect.x + drawRect.width, pos);
@@ -542,8 +546,22 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
   ]);
 
   return (
-    <VStack align="stretch" spacing={3} mt={2} p={3} borderWidth="1px" borderColor="gray.800" rounded="md" bg="#07090f">
-      <Text fontSize="10px" color="gray.500" textTransform="uppercase" letterSpacing="wide">
+    <VStack
+      align="stretch"
+      spacing={3}
+      mt={2}
+      p={3}
+      borderWidth="1px"
+      borderColor="gray.800"
+      rounded="md"
+      bg="#07090f"
+    >
+      <Text
+        fontSize="10px"
+        color="gray.500"
+        textTransform="uppercase"
+        letterSpacing="wide"
+      >
         Collision Shape
       </Text>
 
@@ -574,14 +592,26 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       {mode === 'polygon' && (
         <>
           <Text fontSize="11px" color="gray.400">
-            Click near an edge to insert a snapped vertex. Drag handles to move on pixel grid. Right-click a handle to remove it.
+            Click near an edge to insert a snapped vertex. Drag handles to move
+            on pixel grid. Right-click a handle to remove it.
           </Text>
-          <Box borderWidth="1px" borderColor="gray.800" rounded="sm" overflow="hidden" w={`${CANVAS_SIZE}px`}>
+          <Box
+            borderWidth="1px"
+            borderColor="gray.800"
+            rounded="sm"
+            overflow="hidden"
+            w={`${CANVAS_SIZE}px`}
+          >
             <canvas
               ref={canvasRef}
               onMouseDown={handleMouseDown}
               onContextMenu={(e) => e.preventDefault()}
-              style={{ display: 'block', width: `${CANVAS_SIZE}px`, height: `${CANVAS_SIZE}px`, cursor: 'crosshair' }}
+              style={{
+                display: 'block',
+                width: `${CANVAS_SIZE}px`,
+                height: `${CANVAS_SIZE}px`,
+                cursor: 'crosshair',
+              }}
             />
           </Box>
           <HStack spacing={2}>

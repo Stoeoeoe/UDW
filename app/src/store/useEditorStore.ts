@@ -187,7 +187,11 @@ function scheduleTilesetSave(tilesetId: string): void {
 
     const snapshot = JSON.parse(JSON.stringify(tileset)) as Tileset;
     useSaveStore.getState().setStatus('saving');
-    await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, snapshot);
+    await fileSystem.saveJson(
+      'tilesets',
+      `${tilesetId}.tileset.json`,
+      snapshot,
+    );
     useSaveStore.getState().setStatus('saved');
     setTimeout(() => {
       if (useSaveStore.getState().status === 'saved') {

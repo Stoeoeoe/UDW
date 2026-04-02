@@ -1,5 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Container, Graphics, Sprite, BitmapText, Texture, Rectangle } from 'pixi.js';
+import {
+  Container,
+  Graphics,
+  Sprite,
+  BitmapText,
+  Texture,
+  Rectangle,
+} from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import {
@@ -173,9 +180,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             if (!tileset) continue;
 
             const resolvedBaseTilesetId =
-              tsId === currentMap.baseTilesetId ? effectiveMap.baseTilesetId : tsId;
+              tsId === currentMap.baseTilesetId
+                ? effectiveMap.baseTilesetId
+                : tsId;
 
-            let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
+            let effectiveTileset =
+              tilesets.get(resolvedBaseTilesetId) || tileset;
             const variation = currentMap.variations?.find(
               (v) => v.id === activeVariationId,
             );
@@ -371,8 +381,13 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render entities
   const renderEntities = useCallback(() => {
     const entityContainer = entityContainerRef.current;
-    const { currentMap, activeVariationId, selectedEntityId, entityTypes, loadedSprites } =
-      useEditorStore.getState();
+    const {
+      currentMap,
+      activeVariationId,
+      selectedEntityId,
+      entityTypes,
+      loadedSprites,
+    } = useEditorStore.getState();
     if (!entityContainer || !currentMap) return;
 
     entityContainer.removeChildren();
@@ -380,7 +395,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const resolvedEntities = resolveEntities(currentMap, activeVariationId);
     resolvedEntities.forEach((entity) => {
       const type = entityTypes.find((t) => t.id === entity.typeId);
-      const [ew, eh] = type?.defaultSize ?? [DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE];
+      const [ew, eh] = type?.defaultSize ?? [
+        DEFAULT_TILE_SIZE,
+        DEFAULT_TILE_SIZE,
+      ];
       const colorHex = type?.placeholderColor || '#ffff00';
       const color = parseInt(colorHex.replace('#', ''), 16);
 
@@ -388,7 +406,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       const ey = entity.position[1];
 
       // Render body: sprite if loaded, else colored rect
-      const spriteImg = type?.sprite?.path ? loadedSprites.get(type.sprite.path) : null;
+      const spriteImg = type?.sprite?.path
+        ? loadedSprites.get(type.sprite.path)
+        : null;
       if (spriteImg) {
         const texture = Texture.from(spriteImg as unknown as HTMLImageElement);
         texture.source.scaleMode = 'nearest';
@@ -435,9 +455,15 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
           arrow.lineTo(tipX, tipY);
           arrow.stroke({ width: 2, color: 0xffffff });
           arrow.moveTo(tipX, tipY);
-          arrow.lineTo(tipX - nx / arrowLen * headLen * 1.5 + px, tipY - ny / arrowLen * headLen * 1.5 + py);
+          arrow.lineTo(
+            tipX - (nx / arrowLen) * headLen * 1.5 + px,
+            tipY - (ny / arrowLen) * headLen * 1.5 + py,
+          );
           arrow.moveTo(tipX, tipY);
-          arrow.lineTo(tipX - nx / arrowLen * headLen * 1.5 - px, tipY - ny / arrowLen * headLen * 1.5 - py);
+          arrow.lineTo(
+            tipX - (nx / arrowLen) * headLen * 1.5 - px,
+            tipY - (ny / arrowLen) * headLen * 1.5 - py,
+          );
           arrow.stroke({ width: 2, color: 0xffffff });
           entityContainer.addChild(arrow);
         }
