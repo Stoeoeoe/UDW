@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Box,
   Text,
   VStack,
   Divider,
@@ -8,6 +7,8 @@ import {
   FormControl,
   FormLabel,
   HStack,
+  NumberInput,
+  NumberInputField,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
@@ -56,6 +57,9 @@ export const PropertiesPanel: React.FC = () => {
   const entityType = selectedEntity
     ? entityTypes.find((t) => t.id === selectedEntity.typeId)
     : null;
+
+  const moveEntity = useEditorStore((state) => state.moveEntity);
+  const updateEntityLabel = useEditorStore((state) => state.updateEntityLabel);
 
   const handlePropertyChange = (key: string, value: any) => {
     if (selectedEntityId) {
@@ -124,23 +128,74 @@ export const PropertiesPanel: React.FC = () => {
               >
                 Position
               </FormLabel>
-              <HStack>
-                <Text fontSize="xs" color="gray.400" w="8">
-                  X:
-                </Text>
-                <Text fontSize="xs" fontWeight="bold">
-                  {selectedEntity.position[0]}
-                </Text>
-                <Text fontSize="xs" color="gray.600">px</Text>
-                <Box w={2} />
-                <Text fontSize="xs" color="gray.400" w="8">
-                  Y:
-                </Text>
-                <Text fontSize="xs" fontWeight="bold">
-                  {selectedEntity.position[1]}
-                </Text>
-                <Text fontSize="xs" color="gray.600">px</Text>
+              <HStack spacing={2}>
+                <Text fontSize="xs" color="gray.400" flexShrink={0}>X</Text>
+                <NumberInput
+                  size="xs"
+                  value={selectedEntity.position[0]}
+                  precision={0}
+                  onChange={(_, val) => {
+                    if (!isNaN(val) && selectedEntityId) {
+                      moveEntity(selectedEntityId, [Math.round(val), selectedEntity.position[1]]);
+                    }
+                  }}
+                  flex={1}
+                >
+                  <NumberInputField
+                    bg="#0a0a0b"
+                    borderColor="#1a1a2e"
+                    color="white"
+                    fontFamily="mono"
+                    _hover={{ bg: '#071018' }}
+                  />
+                </NumberInput>
+                <Text fontSize="xs" color="gray.400" flexShrink={0}>Y</Text>
+                <NumberInput
+                  size="xs"
+                  value={selectedEntity.position[1]}
+                  precision={0}
+                  onChange={(_, val) => {
+                    if (!isNaN(val) && selectedEntityId) {
+                      moveEntity(selectedEntityId, [selectedEntity.position[0], Math.round(val)]);
+                    }
+                  }}
+                  flex={1}
+                >
+                  <NumberInputField
+                    bg="#0a0a0b"
+                    borderColor="#1a1a2e"
+                    color="white"
+                    fontFamily="mono"
+                    _hover={{ bg: '#071018' }}
+                  />
+                </NumberInput>
               </HStack>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel
+                color="gray.500"
+                fontSize="10px"
+                fontWeight="black"
+                textTransform="uppercase"
+                mb={1}
+              >
+                Label
+              </FormLabel>
+              <Input
+                size="xs"
+                variant="filled"
+                bg="#0a0a0b"
+                color="white"
+                value={selectedEntity.label ?? ''}
+                placeholder="Optional display label"
+                onChange={(e) => {
+                  if (selectedEntityId) {
+                    updateEntityLabel(selectedEntityId, e.target.value || undefined);
+                  }
+                }}
+                _hover={{ bg: '#071018' }}
+              />
             </FormControl>
           </VStack>
 

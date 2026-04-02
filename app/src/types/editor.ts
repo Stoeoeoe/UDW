@@ -45,6 +45,8 @@ export interface EditorState {
   selectedEntityId: string | null; // Currently active entity for inspection
   selectedEntityIds: Set<string>; // Multiple selected entities
   entitySnapMode: 'grid' | 'pixel'; // Snap mode for entity placement/movement
+  showCollisionOverlay: boolean; // Visualize tile collision shapes in map viewport
+  showTilesetCollisionOverlay: boolean; // Visualize tile collision shapes in tileset editor
 
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood'; // Shape mode for tools
   brushSize: number; // Brush radius for point/line modes (1 = single tile)

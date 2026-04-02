@@ -143,9 +143,10 @@ export type PropertyValues = Record<string, PropertyValue>;
 export interface EntityInstance {
   id: string; // Unique within map
   typeId: string; // Reference to entity type definition
-  position: [number, number]; // Tile coordinates [x, y]
+  position: [number, number]; // Absolute pixel coordinates [x, y]
   rotation?: number; // Degrees, 0-360
   layerId?: string; // Optional: id of the entity layer this instance belongs to
+  label?: string; // Optional display label shown on map
   properties: PropertyValues;
   tags?: string[];
   timeScope?: TimeScope;
@@ -234,8 +235,8 @@ export interface EntityType {
   placeholderColor: string; // Hex color for editor rendering
   placeholderIcon?: string; // Optional icon identifier (deprecated, use icon)
   properties: PropertyDefinition[];
-  defaultSize?: [number, number]; // Tile dimensions [width, height]
-  pixelPerfect?: boolean; // If true, position is in pixels not tiles
+  defaultSize?: [number, number]; // Pixel dimensions [width, height]
+  sprite?: { path: string }; // Relative path to image asset; size locked to image dimensions
 }
 
 export type EntityCategory =
@@ -263,6 +264,7 @@ export type PropertyType =
   | 'boolean'
   | 'enum'
   | 'color'
+  | 'vector2' // [x, y] number pair
   | 'reference'; // Reference to another entity or asset
 
 export interface PropertyConstraints {

@@ -216,14 +216,17 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
         if (!worldPos) return;
         const resolvedEntities = resolveEntities(currentMap, activeVariationId);
+        const { entityTypes: allEntityTypes } = useEditorStore.getState();
         const hit = [...resolvedEntities].reverse().find((entity) => {
+          const type = allEntityTypes.find((t) => t.id === entity.typeId);
+          const [ew, eh] = type?.defaultSize ?? [DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE];
           const ex = entity.position[0];
           const ey = entity.position[1];
           return (
             worldPos.x >= ex &&
-            worldPos.x < ex + DEFAULT_TILE_SIZE &&
+            worldPos.x < ex + ew &&
             worldPos.y >= ey &&
-            worldPos.y < ey + DEFAULT_TILE_SIZE
+            worldPos.y < ey + eh
           );
         });
         if (activeTool === 'entityDelete') {

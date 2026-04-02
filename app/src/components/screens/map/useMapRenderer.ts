@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Container, Graphics, Sprite, Texture, Rectangle } from 'pixi.js';
+import { Container, Graphics, Sprite, BitmapText, Texture, Rectangle } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import {
@@ -11,9 +11,50 @@ import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
+import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 
 interface UseMapRendererProps {
   viewport: Viewport | null;
+}
+
+type OverlayPoint = { x: number; y: number };
+type OverlaySegment = { a: OverlayPoint; b: OverlayPoint };
+
+function quantizeOverlayPoint(x: number, y: number): OverlayPoint {
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
+function makeSegmentKey(a: OverlayPoint, b: OverlayPoint): string {
+  const aBeforeB = a.x < b.x || (a.x === b.x && a.y <= b.y);
+  const p1 = aBeforeB ? a : b;
+  const p2 = aBeforeB ? b : a;
+  return `${p1.x},${p1.y}|${p2.x},${p2.y}`;
+}
+
+function toggleSegment(
+  segmentMap: Map<string, OverlaySegment>,
+  a: OverlayPoint,
+  b: OverlayPoint,
+): void {
+  if (a.x === b.x && a.y === b.y) return;
+  const key = makeSegmentKey(a, b);
+  if (segmentMap.has(key)) {
+    segmentMap.delete(key);
+  } else {
+    segmentMap.set(key, { a, b });
+  }
+}
+
+function addPolygonSegments(
+  segmentMap: Map<string, OverlaySegment>,
+  points: OverlayPoint[],
+): void {
+  if (points.length < 2) return;
+  for (let i = 0; i < points.length; i++) {
+    const current = points[i];
+    const next = points[(i + 1) % points.length];
+    toggleSegment(segmentMap, current, next);
+  }
 }
 
 /**
@@ -25,6 +66,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const tileContainerRef = useRef<Container | null>(null);
   const entityContainerRef = useRef<Container | null>(null);
   const gridGraphicsRef = useRef<Graphics | null>(null);
+  const collisionGraphicsRef = useRef<Graphics | null>(null);
   const hoverGraphicsRef = useRef<Graphics | null>(null);
   const selectionGraphicsRef = useRef<Graphics | null>(null);
   const previewContainerRef = useRef<Container | null>(null);
@@ -58,6 +100,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     gridGraphicsRef.current = gridGraphics;
     container.addChild(gridGraphics);
 
+    // Collision overlay (z: 2.5)
+    const collisionGraphics = new Graphics();
+    collisionGraphics.zIndex = 2.5;
+    collisionGraphicsRef.current = collisionGraphics;
+    container.addChild(collisionGraphics);
+
     // Hover highlight (z: 3)
     const hoverGraphics = new Graphics();
     hoverGraphics.zIndex = 3;
@@ -88,6 +136,120 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       cache.clear();
     };
   }, [viewport]);
+
+  // Render collision overlay from visual layers
+  const renderCollisionOverlay = useCallback(() => {
+    const collisionGraphics = collisionGraphicsRef.current;
+    const { currentMap, activeVariationId, tilesets, showCollisionOverlay } =
+      useEditorStore.getState();
+    if (!collisionGraphics || !currentMap) return;
+
+    collisionGraphics.clear();
+    if (!showCollisionOverlay) return;
+
+    const effectiveMap = resolveMapContext(currentMap, activeVariationId);
+    const fillPolygons: OverlayPoint[][] = [];
+    const mergedSegments = new Map<string, OverlaySegment>();
+
+    [...currentMap.layers]
+      .sort((a, b) => a.zOrder - b.zOrder)
+      .forEach((layer) => {
+        if (!layer.visible || layer.kind !== 'visual') return;
+
+        for (let y = 0; y < currentMap.height; y++) {
+          for (let x = 0; x < currentMap.width; x++) {
+            const tileRef = resolveTileAt(
+              currentMap,
+              layer.id,
+              x,
+              y,
+              activeVariationId,
+            );
+            if (!tileRef) continue;
+
+            const [tsId, indexStr] = tileRef.split(':');
+            const index = parseInt(indexStr, 10);
+            const tileset = tilesets.get(tsId);
+            if (!tileset) continue;
+
+            const resolvedBaseTilesetId =
+              tsId === currentMap.baseTilesetId ? effectiveMap.baseTilesetId : tsId;
+
+            let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
+            const variation = currentMap.variations?.find(
+              (v) => v.id === activeVariationId,
+            );
+            if (variation?.tilesetSuffix) {
+              const suffixed = tilesets.get(
+                `${resolvedBaseTilesetId}${variation.tilesetSuffix}`,
+              );
+              if (suffixed) effectiveTileset = suffixed;
+            }
+
+            const collision = effectiveTileset.tiles[index]?.collision;
+            if (!collision || collision.type === 'none') continue;
+
+            const tileX = x * DEFAULT_TILE_SIZE;
+            const tileY = y * DEFAULT_TILE_SIZE;
+
+            if (collision.type === 'full') {
+              const polygon = [
+                quantizeOverlayPoint(tileX, tileY),
+                quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY),
+                quantizeOverlayPoint(
+                  tileX + DEFAULT_TILE_SIZE,
+                  tileY + DEFAULT_TILE_SIZE,
+                ),
+                quantizeOverlayPoint(tileX, tileY + DEFAULT_TILE_SIZE),
+              ];
+              fillPolygons.push(polygon);
+              addPolygonSegments(mergedSegments, polygon);
+              continue;
+            }
+
+            for (const shape of collision.shapes || []) {
+              const points = shapeToNormalizedPolygon(
+                shape,
+                effectiveTileset.tileWidth,
+                effectiveTileset.tileHeight,
+              );
+              if (points.length < 3) continue;
+
+              const polygon = points.map(([px, py]) =>
+                quantizeOverlayPoint(
+                  tileX + px * DEFAULT_TILE_SIZE,
+                  tileY + py * DEFAULT_TILE_SIZE,
+                ),
+              );
+
+              fillPolygons.push(polygon);
+              addPolygonSegments(mergedSegments, polygon);
+            }
+          }
+        }
+      });
+
+    for (const polygon of fillPolygons) {
+      if (polygon.length < 3) continue;
+      collisionGraphics.moveTo(polygon[0].x, polygon[0].y);
+      for (let i = 1; i < polygon.length; i++) {
+        collisionGraphics.lineTo(polygon[i].x, polygon[i].y);
+      }
+      collisionGraphics.closePath();
+      collisionGraphics.fill({ color: 0xff7f50, alpha: 0.3 });
+    }
+
+    collisionGraphics.setStrokeStyle({
+      width: 1,
+      color: 0xffb48a,
+      alpha: 0.9,
+    });
+    for (const segment of mergedSegments.values()) {
+      collisionGraphics.moveTo(segment.a.x, segment.a.y);
+      collisionGraphics.lineTo(segment.b.x, segment.b.y);
+    }
+    collisionGraphics.stroke();
+  }, []);
 
   // Get or create texture for a tile
   const getTileTexture = useCallback(
@@ -209,7 +371,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render entities
   const renderEntities = useCallback(() => {
     const entityContainer = entityContainerRef.current;
-    const { currentMap, activeVariationId, selectedEntityId, entityTypes } =
+    const { currentMap, activeVariationId, selectedEntityId, entityTypes, loadedSprites } =
       useEditorStore.getState();
     if (!entityContainer || !currentMap) return;
 
@@ -218,24 +380,87 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const resolvedEntities = resolveEntities(currentMap, activeVariationId);
     resolvedEntities.forEach((entity) => {
       const type = entityTypes.find((t) => t.id === entity.typeId);
+      const [ew, eh] = type?.defaultSize ?? [DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE];
       const colorHex = type?.placeholderColor || '#ffff00';
       const color = parseInt(colorHex.replace('#', ''), 16);
 
-      const g = new Graphics();
+      const ex = entity.position[0];
+      const ey = entity.position[1];
+
+      // Render body: sprite if loaded, else colored rect
+      const spriteImg = type?.sprite?.path ? loadedSprites.get(type.sprite.path) : null;
+      if (spriteImg) {
+        const texture = Texture.from(spriteImg as unknown as HTMLImageElement);
+        texture.source.scaleMode = 'nearest';
+        const sprite = new Sprite(texture);
+        sprite.x = ex;
+        sprite.y = ey;
+        sprite.width = ew;
+        sprite.height = eh;
+        sprite.alpha = 0.9;
+        entityContainer.addChild(sprite);
+      } else {
+        const g = new Graphics();
+        g.rect(ex, ey, ew, eh);
+        g.fill({ color, alpha: 0.6 });
+        entityContainer.addChild(g);
+      }
+
+      // Arrows: render one arrow per vector2 property on the instance
+      if (type?.properties) {
+        for (const propDef of type.properties) {
+          if (propDef.type !== 'vector2') continue;
+          const val = entity.properties?.[propDef.key];
+          if (!Array.isArray(val) || val.length < 2) continue;
+          const dx = val[0] as number;
+          const dy = val[1] as number;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len === 0) continue;
+
+          const cx = ex + ew / 2;
+          const cy = ey + eh / 2;
+          const arrowLen = Math.max(ew, eh) * 0.8;
+          const nx = (dx / len) * arrowLen;
+          const ny = (dy / len) * arrowLen;
+          const tipX = cx + nx;
+          const tipY = cy + ny;
+
+          // Perpendicular for arrowhead wings
+          const headLen = 6;
+          const px = (-ny / arrowLen) * headLen;
+          const py = (nx / arrowLen) * headLen;
+
+          const arrow = new Graphics();
+          arrow.moveTo(cx, cy);
+          arrow.lineTo(tipX, tipY);
+          arrow.stroke({ width: 2, color: 0xffffff });
+          arrow.moveTo(tipX, tipY);
+          arrow.lineTo(tipX - nx / arrowLen * headLen * 1.5 + px, tipY - ny / arrowLen * headLen * 1.5 + py);
+          arrow.moveTo(tipX, tipY);
+          arrow.lineTo(tipX - nx / arrowLen * headLen * 1.5 - px, tipY - ny / arrowLen * headLen * 1.5 - py);
+          arrow.stroke({ width: 2, color: 0xffffff });
+          entityContainer.addChild(arrow);
+        }
+      }
 
       // Selection outline
       if (entity.id === selectedEntityId) {
-        g.rect(-1, -1, DEFAULT_TILE_SIZE + 2, DEFAULT_TILE_SIZE + 2);
-        g.stroke({ width: 2, color: 0xffffff });
+        const outline = new Graphics();
+        outline.rect(ex - 1, ey - 1, ew + 2, eh + 2);
+        outline.stroke({ width: 2, color: 0xffffff });
+        entityContainer.addChild(outline);
       }
 
-      // Entity fill
-      g.rect(0, 0, DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE);
-      g.fill({ color: color, alpha: 0.6 });
-
-      g.x = entity.position[0];
-      g.y = entity.position[1];
-      entityContainer.addChild(g);
+      // Label (BitmapText for crisp pixel rendering at any zoom)
+      if (entity.label) {
+        const label = new BitmapText({
+          text: entity.label,
+          style: { fontFamily: 'EntityLabel', fontSize: 10, fill: 0xffffff },
+        });
+        label.x = ex + ew / 2 - label.width / 2;
+        label.y = ey - 14;
+        entityContainer.addChild(label);
+      }
     });
   }, []);
 
@@ -918,15 +1143,24 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderTiles();
     renderEntities();
     renderGrid();
+    renderCollisionOverlay();
     renderHover();
     renderPreview();
-  }, [renderTiles, renderEntities, renderGrid, renderHover, renderPreview]);
+  }, [
+    renderTiles,
+    renderEntities,
+    renderGrid,
+    renderCollisionOverlay,
+    renderHover,
+    renderPreview,
+  ]);
 
   return {
     render,
     renderTiles,
     renderEntities,
     renderGrid,
+    renderCollisionOverlay,
     renderHover,
     renderPreview,
   };

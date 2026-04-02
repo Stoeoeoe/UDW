@@ -4,6 +4,7 @@ import { usePanZoom } from '../../hooks/usePanZoom';
 import { ZoomControls } from '../common/ZoomControls';
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
+import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
 
 interface TilesetCanvasProps {
   tileset: Tileset;
@@ -38,6 +39,9 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
   const setTileCornerTerrain = useEditorStore(
     (state) => state.setTileCornerTerrain,
+  );
+  const showTilesetCollisionOverlay = useEditorStore(
+    (state) => state.showTilesetCollisionOverlay,
   );
 
   const [isSelecting, setIsSelecting] = useState(false);
@@ -718,6 +722,56 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       }
     }
 
+    // Draw collision overlays in tileset editor for quick visual QA.
+    if (showTilesetCollisionOverlay && mode === 'interactive') {
+      for (let idx = 0; idx < tileset.tileCount; idx++) {
+        const tileDef = tileset.tiles?.[idx];
+        const collision = tileDef?.collision;
+        if (!collision || collision.type === 'none') continue;
+
+        const col = idx % tileset.columns;
+        const row = Math.floor(idx / tileset.columns);
+        const x = sheetX + col * tileset.tileWidth;
+        const y = sheetY + row * tileset.tileHeight;
+
+        if (collision.type === 'full') {
+          ctx.fillStyle = 'rgba(255, 127, 80, 0.25)';
+          ctx.fillRect(x, y, tileset.tileWidth, tileset.tileHeight);
+          ctx.strokeStyle = 'rgba(255, 180, 138, 0.95)';
+          ctx.lineWidth = 1 / effectiveZoom;
+          ctx.strokeRect(x, y, tileset.tileWidth, tileset.tileHeight);
+          continue;
+        }
+
+        for (const shape of collision.shapes || []) {
+          const points = shapeToNormalizedPolygon(
+            shape,
+            tileset.tileWidth,
+            tileset.tileHeight,
+          );
+          if (points.length < 3) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(
+            x + points[0][0] * tileset.tileWidth,
+            y + points[0][1] * tileset.tileHeight,
+          );
+          for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(
+              x + points[i][0] * tileset.tileWidth,
+              y + points[i][1] * tileset.tileHeight,
+            );
+          }
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(255, 127, 80, 0.25)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255, 180, 138, 0.95)';
+          ctx.lineWidth = 1 / effectiveZoom;
+          ctx.stroke();
+        }
+      }
+    }
+
     ctx.restore();
     // Draw selection rectangle if dragging
     if (isSelecting && selectionStart && selectionEnd) {
@@ -758,6 +812,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     isSelecting,
     selectionStart,
     selectionEnd,
+    showTilesetCollisionOverlay,
   ]);
 
   const handleClick = (e: React.MouseEvent) => {

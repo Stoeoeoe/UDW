@@ -267,6 +267,34 @@ describe('useEditorStore', () => {
         });
     });
 
+    describe('setShowCollisionOverlay', () => {
+        it('should default to hidden collision overlay', () => {
+            expect(useEditorStore.getState().showCollisionOverlay).toBe(false);
+        });
+
+        it('should toggle collision overlay visibility', () => {
+            useEditorStore.getState().setShowCollisionOverlay(true);
+            expect(useEditorStore.getState().showCollisionOverlay).toBe(true);
+
+            useEditorStore.getState().setShowCollisionOverlay(false);
+            expect(useEditorStore.getState().showCollisionOverlay).toBe(false);
+        });
+    });
+
+    describe('setShowTilesetCollisionOverlay', () => {
+        it('should default to hidden tileset collision overlay', () => {
+            expect(useEditorStore.getState().showTilesetCollisionOverlay).toBe(false);
+        });
+
+        it('should toggle tileset collision overlay visibility', () => {
+            useEditorStore.getState().setShowTilesetCollisionOverlay(true);
+            expect(useEditorStore.getState().showTilesetCollisionOverlay).toBe(true);
+
+            useEditorStore.getState().setShowTilesetCollisionOverlay(false);
+            expect(useEditorStore.getState().showTilesetCollisionOverlay).toBe(false);
+        });
+    });
+
     describe('addLayerDefinition injects into currentMap', () => {
         const mockProject = {
             version: '1.0',

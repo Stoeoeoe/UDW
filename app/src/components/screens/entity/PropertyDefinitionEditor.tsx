@@ -33,6 +33,7 @@ const PROPERTY_TYPES: { value: PropertyType; label: string; icon: string }[] = [
   { value: 'float', label: 'Float', icon: '#.' },
   { value: 'boolean', label: 'Boolean', icon: '⊘' },
   { value: 'enum', label: 'Enum', icon: '☰' },
+  { value: 'vector2', label: 'Vector2', icon: '↗' },
 ];
 
 interface PropertyDefinitionEditorProps {
@@ -92,7 +93,7 @@ export const PropertyDefinitionEditor: React.FC<
     [properties, onChange],
   );
 
-  const getDefaultValueForType = (type: PropertyType): any => {
+  const getDefaultValueForType = (type: PropertyType): import('../../../types/schema').PropertyValue => {
     switch (type) {
       case 'string':
         return '';
@@ -106,6 +107,8 @@ export const PropertyDefinitionEditor: React.FC<
         return false;
       case 'enum':
         return '';
+      case 'vector2':
+        return [0, 0];
       default:
         return '';
     }
@@ -194,7 +197,9 @@ export const PropertyDefinitionEditor: React.FC<
                         ? 'yellow'
                         : prop.type === 'enum'
                           ? 'purple'
-                          : 'gray'
+                          : prop.type === 'vector2'
+                            ? 'teal'
+                            : 'gray'
                 }
                 variant="subtle"
               >
@@ -358,7 +363,7 @@ export const PropertyDefinitionEditor: React.FC<
                         bg="#0a0a0b"
                         borderColor="#1a1a2e"
                         color="white"
-                        value={prop.defaultValue ?? ''}
+                        value={typeof prop.defaultValue === 'string' ? prop.defaultValue : ''}
                         onChange={(e) =>
                           updateProperty(prop.key, {
                             defaultValue: e.target.value,
@@ -369,7 +374,7 @@ export const PropertyDefinitionEditor: React.FC<
                     {prop.type === 'int' && (
                       <NumberInput
                         size="xs"
-                        value={prop.defaultValue ?? 0}
+                        value={typeof prop.defaultValue === 'number' ? prop.defaultValue : 0}
                         step={1}
                         precision={0}
                         onChange={(_, val) =>
@@ -392,7 +397,7 @@ export const PropertyDefinitionEditor: React.FC<
                     {(prop.type === 'float' || prop.type === 'number') && (
                       <NumberInput
                         size="xs"
-                        value={prop.defaultValue ?? 0}
+                        value={typeof prop.defaultValue === 'number' ? prop.defaultValue : 0}
                         step={0.1}
                         precision={2}
                         onChange={(_, val) =>
@@ -424,13 +429,45 @@ export const PropertyDefinitionEditor: React.FC<
                         }
                       />
                     )}
+                    {prop.type === 'vector2' && (
+                      <HStack spacing={2}>
+                        <Text fontSize="xs" color="gray.400" flexShrink={0}>X</Text>
+                        <NumberInput
+                          size="xs"
+                          value={Array.isArray(prop.defaultValue) ? (prop.defaultValue[0] as number) : 0}
+                          step={0.1}
+                          onChange={(_, val) =>
+                            updateProperty(prop.key, {
+                              defaultValue: [isNaN(val) ? 0 : val, Array.isArray(prop.defaultValue) ? (prop.defaultValue[1] as number) : 0],
+                            })
+                          }
+                          flex={1}
+                        >
+                          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                        </NumberInput>
+                        <Text fontSize="xs" color="gray.400" flexShrink={0}>Y</Text>
+                        <NumberInput
+                          size="xs"
+                          value={Array.isArray(prop.defaultValue) ? (prop.defaultValue[1] as number) : 0}
+                          step={0.1}
+                          onChange={(_, val) =>
+                            updateProperty(prop.key, {
+                              defaultValue: [Array.isArray(prop.defaultValue) ? (prop.defaultValue[0] as number) : 0, isNaN(val) ? 0 : val],
+                            })
+                          }
+                          flex={1}
+                        >
+                          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                        </NumberInput>
+                      </HStack>
+                    )}
                     {prop.type === 'enum' && (
                       <Select
                         size="xs"
                         bg="#0a0a0b"
                         borderColor="#1a1a2e"
                         color="white"
-                        value={prop.defaultValue ?? ''}
+                        value={typeof prop.defaultValue === 'string' ? prop.defaultValue : ''}
                         onChange={(e) =>
                           updateProperty(prop.key, {
                             defaultValue: e.target.value,

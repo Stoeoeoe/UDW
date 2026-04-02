@@ -9,6 +9,7 @@ import {
   FiGrid,
   FiMaximize,
   FiMousePointer,
+  FiShield,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -75,6 +76,12 @@ export const MapToolbar: React.FC = () => {
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const entitySnapMode = useEditorStore((state) => state.entitySnapMode);
   const setEntitySnapMode = useEditorStore((state) => state.setEntitySnapMode);
+  const showCollisionOverlay = useEditorStore(
+    (state) => state.showCollisionOverlay,
+  );
+  const setShowCollisionOverlay = useEditorStore(
+    (state) => state.setShowCollisionOverlay,
+  );
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const currentMap = useEditorStore((state) => state.currentMap);
 
@@ -96,6 +103,25 @@ export const MapToolbar: React.FC = () => {
         activeId={activeTool}
         onActivate={(id) => setActiveTool(id as ToolType)}
       />
+
+      <Tooltip
+        label={
+          showCollisionOverlay
+            ? 'Hide collision overlay'
+            : 'Show collision overlay'
+        }
+        fontSize="xs"
+      >
+        <Button
+          size="xs"
+          variant={showCollisionOverlay ? 'solid' : 'outline'}
+          colorScheme="orange"
+          onClick={() => setShowCollisionOverlay(!showCollisionOverlay)}
+          aria-label="Toggle collision overlay"
+        >
+          <FiShield />
+        </Button>
+      </Tooltip>
 
       {showSnapToggle && (
         <ButtonGroup size="xs" isAttached variant="outline">

@@ -62,7 +62,7 @@ function addMissingDefinitionLayers(
   const newLayers: Layer[] = missingDefs.map((def) => ({
     id: def.id,
     name: def.name,
-    kind: (def.type === 'entity' ? 'entity' : 'visual') as const,
+    kind: def.type === 'entity' ? 'entity' : 'visual',
     visible: true,
     locked: false,
     opacity: 1,
@@ -91,7 +91,7 @@ function createLayersFromDefinitions(
     .map((def) => ({
       id: def.id,
       name: def.name,
-      kind: (def.type === 'entity' ? 'entity' : 'visual') as const,
+      kind: def.type === 'entity' ? 'entity' : 'visual',
       visible: true,
       locked: false,
       opacity: 1,
@@ -168,6 +168,37 @@ async function persistProject(project: Project): Promise<void> {
   }, 2000);
 }
 
+const TILESET_SAVE_DEBOUNCE_MS = 300;
+const pendingTilesetSaves = new globalThis.Map<
+  string,
+  ReturnType<typeof setTimeout>
+>();
+
+function scheduleTilesetSave(tilesetId: string): void {
+  const existing = pendingTilesetSaves.get(tilesetId);
+  if (existing) {
+    clearTimeout(existing);
+  }
+
+  const timeoutId = setTimeout(async () => {
+    pendingTilesetSaves.delete(tilesetId);
+    const tileset = useEditorStore.getState().tilesets.get(tilesetId);
+    if (!tileset) return;
+
+    const snapshot = JSON.parse(JSON.stringify(tileset)) as Tileset;
+    useSaveStore.getState().setStatus('saving');
+    await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, snapshot);
+    useSaveStore.getState().setStatus('saved');
+    setTimeout(() => {
+      if (useSaveStore.getState().status === 'saved') {
+        useSaveStore.getState().setStatus('idle');
+      }
+    }, 2000);
+  }, TILESET_SAVE_DEBOUNCE_MS);
+
+  pendingTilesetSaves.set(tilesetId, timeoutId);
+}
+
 interface EditorStore extends EditorState {
   // Actions
   loadProject: (path: string, project: Project) => Promise<void>;
@@ -192,6 +223,8 @@ interface EditorStore extends EditorState {
   // Tool actions
   setActiveTool: (tool: ToolType) => void;
   setEntitySnapMode: (mode: 'grid' | 'pixel') => void;
+  setShowCollisionOverlay: (enabled: boolean) => void;
+  setShowTilesetCollisionOverlay: (enabled: boolean) => void;
   setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
   setBrushSize: (size: number) => void;
   setMode: (mode: EditorMode) => void;
@@ -283,6 +316,7 @@ interface EditorStore extends EditorState {
   placeEntity: (entity: EntityInstance) => void;
   removeEntity: (entityId: string) => void;
   moveEntity: (entityId: string, position: [number, number]) => void;
+  updateEntityLabel: (entityId: string, label: string | undefined) => void;
   updateEntityProperties: (
     entityId: string,
     properties: PropertyValues,
@@ -386,6 +420,8 @@ export const useEditorStore = create<EditorStore>()(
       selectedEntityId: null,
       selectedEntityIds: new Set(),
       entitySnapMode: 'grid',
+      showCollisionOverlay: false,
+      showTilesetCollisionOverlay: false,
       camera: { x: 0, y: 0, zoom: 1.5 },
       mapCameras: {},
       tilesetToolMode: 'select',
@@ -424,6 +460,11 @@ export const useEditorStore = create<EditorStore>()(
       },
 
       closeProject: () => {
+        for (const timeoutId of pendingTilesetSaves.values()) {
+          clearTimeout(timeoutId);
+        }
+        pendingTilesetSaves.clear();
+
         set((state) => {
           state.project = null;
           state.projectPath = null;
@@ -486,6 +527,18 @@ export const useEditorStore = create<EditorStore>()(
           set((state) => {
             state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
           });
+        }
+
+        // 1.8 Load entity type sprites
+        const entityTypes = useEditorStore.getState().entityTypes;
+        for (const et of entityTypes) {
+          if (!et.sprite?.path) continue;
+          try {
+            const blob = await fileSystem.readFileAsBlob(et.sprite.path);
+            await useEditorStore.getState().loadSprite(et.sprite.path, blob);
+          } catch (e) {
+            console.warn(`Failed to load sprite for entity type ${et.id}:`, e);
+          }
         }
 
         // 2. Load all maps
@@ -727,6 +780,16 @@ export const useEditorStore = create<EditorStore>()(
           state.entitySnapMode = mode;
         }),
 
+      setShowCollisionOverlay: (enabled) =>
+        set((state) => {
+          state.showCollisionOverlay = enabled;
+        }),
+
+      setShowTilesetCollisionOverlay: (enabled) =>
+        set((state) => {
+          state.showTilesetCollisionOverlay = enabled;
+        }),
+
       setDrawMode: (mode) =>
         set((state) => {
           state.drawMode = mode;
@@ -883,13 +946,15 @@ export const useEditorStore = create<EditorStore>()(
         }, 2000);
       },
 
-      updateTileDefinition: (tilesetId, index, definition) =>
+      updateTileDefinition: (tilesetId, index, definition) => {
         set((state) => {
           const ts = state.tilesets.get(tilesetId);
           if (ts) {
             ts.tiles[index] = castDraft(definition);
           }
-        }),
+        });
+        scheduleTilesetSave(tilesetId);
+      },
 
       setTileCornerTerrain: async (tilesetId, index, corner, terrainId) => {
         let updatedTileset: Tileset | undefined;
@@ -1264,6 +1329,29 @@ export const useEditorStore = create<EditorStore>()(
           }
         }),
 
+      updateEntityLabel: (entityId, label) =>
+        set((state) => {
+          if (!state.currentMap) return;
+
+          const entity = state.currentMap.entities.find(
+            (e) => e.id === entityId,
+          );
+          if (entity) {
+            entity.label = label;
+            return;
+          }
+
+          for (const layer of state.currentMap.layers) {
+            if (layer.kind === 'entity' && layer.entities) {
+              const layerEntity = layer.entities.find((e) => e.id === entityId);
+              if (layerEntity) {
+                layerEntity.label = label;
+                return;
+              }
+            }
+          }
+        }),
+
       updateEntityProperties: (entityId, properties) =>
         set((state) => {
           if (!state.currentMap) return;
@@ -1391,7 +1479,7 @@ export const useEditorStore = create<EditorStore>()(
             const valid = VALID_TOOLS_BY_KIND[layer.kind] ?? ['select'];
             if (!valid.includes(state.activeTool)) {
               if (layer.kind === 'entity') {
-                state.activeTool = 'entitySelect';
+                state.activeTool = 'entityPlace';
               } else {
                 state.activeTool = 'stamp';
               }

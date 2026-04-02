@@ -62,7 +62,7 @@ const sampleType = {
   icon: '📦',
   placeholderColor: '#3182ce',
   properties: [],
-  defaultSize: [1, 1],
+  defaultSize: [1, 1] as [number, number],
 };
 
 describe('EntityEditor', () => {

@@ -8,7 +8,8 @@ import {
 } from '@chakra-ui/react';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { useEditorStore } from '../../store/useEditorStore';
-import { Tileset } from '../../types/schema';
+import { Tileset, TileDefinition } from '../../types/schema';
+import { TileCollisionEditor } from './TileCollisionEditor';
 
 interface TilesetInspectorProps {
     tileset: Tileset;
@@ -19,9 +20,11 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset, sel
     const storeSelectedIndex = useEditorStore(state => state.selectedTileIndex);
     const selectedIndex = typeof propSelectedIndex !== 'undefined' ? propSelectedIndex : storeSelectedIndex;
     const updateTileDef = useEditorStore(state => state.updateTileDefinition);
+    const loadedSprites = useEditorStore(state => state.loadedSprites);
+    const sprite = loadedSprites.get(tileset.spriteSheet);
 
     // Selection & terrain helpers
-    const selectedTileDef = selectedIndex !== null ? (tileset.tiles[selectedIndex] || {}) : {};
+    const selectedTileDef: TileDefinition = selectedIndex !== null ? (tileset.tiles[selectedIndex] || {}) : {};
 
     return (
         <VStack align="stretch" spacing={6} p={6}>
@@ -47,7 +50,6 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset, sel
                         schema={[
                             { key: 'id', label: 'Semantic ID', type: 'string', description: 'Human-friendly semantic identifier' },
                             { key: 'probability', label: 'Probability', type: 'number', description: 'Weight for random tile selection (higher = more likely)' },
-                            { key: 'collision.type', label: 'Collision', type: 'enum', constraints: { options: ['none', 'full'] } },
                             {
                                 key: 'terrain',
                                 label: 'Terrain (Main)',
@@ -79,15 +81,29 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({ tileset, sel
                         values={{
                             id: selectedTileDef.id || '',
                             probability: selectedTileDef.probability ?? 1,
-                            'collision.type': selectedTileDef.collision?.type || 'none',
                             terrain: selectedTileDef.terrain || ''
                         }}
                         onChange={(k, v) => {
                             if (!tileset || selectedIndex === null) return;
                             if (k === 'id') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, id: v });
                             if (k === 'probability') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, probability: parseFloat(v) || 1 });
-                            if (k === 'collision.type') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, collision: { type: v } });
                             if (k === 'terrain') updateTileDef(tileset.id, selectedIndex, { ...selectedTileDef, terrain: v });
+                        }}
+                    />
+
+                    <TileCollisionEditor
+                        tileWidth={tileset.tileWidth}
+                        tileHeight={tileset.tileHeight}
+                        tileIndex={selectedIndex}
+                        tilesetColumns={tileset.columns}
+                        sprite={sprite}
+                        collision={selectedTileDef.collision}
+                        onChange={(collision) => {
+                            if (!tileset || selectedIndex === null) return;
+                            updateTileDef(tileset.id, selectedIndex, {
+                                ...selectedTileDef,
+                                collision,
+                            });
                         }}
                     />
                 </VStack>

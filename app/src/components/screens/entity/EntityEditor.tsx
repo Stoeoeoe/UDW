@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   VStack,
   HStack,
@@ -10,11 +10,16 @@ import {
   FormLabel,
   Circle,
   Button,
+  IconButton,
   useDisclosure,
   Divider,
   Badge,
+  NumberInput,
+  NumberInputField,
+  Tooltip,
 } from '@chakra-ui/react';
-import { DeleteIcon } from '@chakra-ui/icons';
+import { DeleteIcon, RepeatIcon } from '@chakra-ui/icons';
+import { fileSystem } from '../../../lib/fileSystem';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import {
@@ -308,6 +313,63 @@ export const EntityEditor: React.FC = () => {
 
           <Divider borderColor="#071018" />
 
+          {/* Size */}
+          <VStack align="stretch" spacing={3}>
+            <Text
+              color="gray.500"
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+            >
+              Size (px)
+            </Text>
+            <HStack spacing={2}>
+              <Text fontSize="xs" color="gray.400" flexShrink={0}>W</Text>
+              <NumberInput
+                size="xs"
+                min={1}
+                value={selectedType.defaultSize?.[0] ?? 16}
+                precision={0}
+                onChange={(_, val) => {
+                  if (!isNaN(val)) {
+                    handlePropertyChange('defaultSize', [Math.round(val), selectedType.defaultSize?.[1] ?? 16]);
+                  }
+                }}
+                flex={1}
+              >
+                <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+              </NumberInput>
+              <Text fontSize="xs" color="gray.400" flexShrink={0}>H</Text>
+              <NumberInput
+                size="xs"
+                min={1}
+                value={selectedType.defaultSize?.[1] ?? 16}
+                precision={0}
+                onChange={(_, val) => {
+                  if (!isNaN(val)) {
+                    handlePropertyChange('defaultSize', [selectedType.defaultSize?.[0] ?? 16, Math.round(val)]);
+                  }
+                }}
+                flex={1}
+              >
+                <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+              </NumberInput>
+            </HStack>
+          </VStack>
+
+          <Divider borderColor="#071018" />
+
+          {/* Sprite */}
+          <EntitySpriteEditor
+            spritePath={selectedType.sprite?.path}
+            onPathChange={(path) =>
+              handlePropertyChange('sprite', path ? { path } : undefined)
+            }
+            onSizeChange={(size) => handlePropertyChange('defaultSize', size)}
+          />
+
+          <Divider borderColor="#071018" />
+
           {/* Property Definitions */}
           <PropertyDefinitionEditor
             properties={selectedType.properties}
@@ -486,6 +548,132 @@ const EntityTypeGrid: React.FC<{
         ))}
       </VStack>
     </Box>
+  );
+};
+
+interface EntitySpriteEditorProps {
+  spritePath: string | undefined;
+  onPathChange: (path: string | undefined) => void;
+  onSizeChange: (size: [number, number]) => void;
+}
+
+const EntitySpriteEditor: React.FC<EntitySpriteEditorProps> = ({
+  spritePath,
+  onPathChange,
+  onSizeChange,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const loadSprite = useEditorStore((state) => state.loadSprite);
+  const loadedSprites = useEditorStore((state) => state.loadedSprites);
+  const isLoaded = spritePath ? loadedSprites.has(spritePath) : false;
+
+  const handlePick = async () => {
+    try {
+      const path = await fileSystem.selectAsset();
+      if (!path) return;
+      onPathChange(path);
+      await loadImageFromPath(path);
+    } catch (e) {
+      console.error('Failed to pick sprite:', e);
+    }
+  };
+
+  const loadImageFromPath = async (path: string) => {
+    setLoading(true);
+    try {
+      const blob = await fileSystem.readFileAsBlob(path);
+      await loadSprite(path, blob);
+      const img = useEditorStore.getState().loadedSprites.get(path);
+      if (img) {
+        onSizeChange([img.naturalWidth, img.naturalHeight]);
+      }
+    } catch (e) {
+      console.error('Failed to load sprite:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReload = async () => {
+    if (!spritePath) return;
+    await loadImageFromPath(spritePath);
+  };
+
+  const handleClear = () => {
+    onPathChange(undefined);
+  };
+
+  return (
+    <VStack align="stretch" spacing={3}>
+      <Text
+        color="gray.500"
+        fontSize="10px"
+        fontWeight="black"
+        textTransform="uppercase"
+      >
+        Sprite
+      </Text>
+      {spritePath ? (
+        <VStack align="stretch" spacing={2}>
+          {isLoaded && (
+            <Box
+              bg="#0a0a0b"
+              border="1px"
+              borderColor="#1a1a2e"
+              borderRadius="md"
+              p={2}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              minH="60px"
+            >
+              <img
+                src={loadedSprites.get(spritePath)?.src}
+                alt="Sprite preview"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '120px',
+                  objectFit: 'contain',
+                  imageRendering: 'pixelated',
+                }}
+              />
+            </Box>
+          )}
+          <Text fontSize="xs" color="gray.500" fontFamily="mono" noOfLines={2} wordBreak="break-all">
+            {spritePath}
+          </Text>
+          <HStack spacing={2}>
+            <Tooltip label="Reload from disk" hasArrow>
+              <IconButton
+                aria-label="Reload sprite"
+                icon={<RepeatIcon />}
+                size="xs"
+                variant="outline"
+                colorScheme="blue"
+                isLoading={loading}
+                onClick={handleReload}
+              />
+            </Tooltip>
+            <Button size="xs" variant="ghost" color="gray.400" onClick={handlePick}>
+              Change
+            </Button>
+            <Button size="xs" variant="ghost" color="red.400" onClick={handleClear}>
+              Remove
+            </Button>
+          </HStack>
+        </VStack>
+      ) : (
+        <Button
+          size="xs"
+          variant="outline"
+          colorScheme="gray"
+          onClick={handlePick}
+          isLoading={loading}
+        >
+          Pick Image…
+        </Button>
+      )}
+    </VStack>
   );
 };
 

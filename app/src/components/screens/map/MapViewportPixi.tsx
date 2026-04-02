@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Box, Text } from '@chakra-ui/react';
-import { Application } from 'pixi.js';
+import { Application, BitmapFont } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useMapRenderer } from './useMapRenderer';
@@ -24,6 +24,7 @@ export const MapViewportPixi: React.FC = () => {
     const mapHeight = useEditorStore(state => state.currentMap?.height);
     const activeVariationId = useEditorStore(state => state.activeVariationId);
     const activeTool = useEditorStore(state => state.activeTool);
+    const showCollisionOverlay = useEditorStore(state => state.showCollisionOverlay);
 
     // Initialize Pixi Application
     useEffect(() => {
@@ -51,6 +52,23 @@ export const MapViewportPixi: React.FC = () => {
 
                 container.appendChild(app.canvas);
                 appRef.current = app;
+
+                // Pre-install crisp pixel font for entity labels
+                try {
+                    await document.fonts.load('16px "Pixelify Sans"');
+                } catch {
+                    // Font load failure is non-fatal; fall back to whatever is available
+                }
+                BitmapFont.install({
+                    name: 'EntityLabel',
+                    style: {
+                        fontFamily: '"Pixelify Sans", monospace',
+                        fontSize: 32,
+                        fill: 0xffffff,
+                    },
+                    resolution: 2,
+                });
+
                 setAppInitialized(true);
             } catch (e) {
                 console.error('Failed to initialize Pixi:', e);
@@ -154,7 +172,14 @@ export const MapViewportPixi: React.FC = () => {
     }, [mapId, mapWidth, mapHeight, appInitialized]);
 
     // Use rendering and tools hooks
-    const { renderTiles, renderEntities, renderGrid, renderHover, renderPreview } = useMapRenderer({ viewport });
+    const {
+        renderTiles,
+        renderEntities,
+        renderGrid,
+        renderCollisionOverlay,
+        renderHover,
+        renderPreview,
+    } = useMapRenderer({ viewport });
     useMapTools({ viewport });
 
     // Subscribe to store changes for rendering
@@ -165,6 +190,7 @@ export const MapViewportPixi: React.FC = () => {
         renderTiles();
         renderEntities();
         renderGrid();
+        renderCollisionOverlay();
         renderHover();
         renderPreview();
 
@@ -175,10 +201,19 @@ export const MapViewportPixi: React.FC = () => {
                 renderTiles();
                 renderEntities();
                 renderGrid();
+                renderCollisionOverlay();
             }
             // Re-render entities when selection changes
             if (state.selectedEntityId !== prevState.selectedEntityId) {
                 renderEntities();
+            }
+            // Re-render collision overlay when tileset metadata changes
+            if (state.tilesets !== prevState.tilesets) {
+                renderCollisionOverlay();
+            }
+            // Re-render collision overlay when toggled
+            if (state.showCollisionOverlay !== prevState.showCollisionOverlay) {
+                renderCollisionOverlay();
             }
             // Re-render hover on hover change
             if (state.hoveredTile !== prevState.hoveredTile) {
@@ -197,19 +232,41 @@ export const MapViewportPixi: React.FC = () => {
         });
 
         return unsubscribe;
-    }, [isReady, renderTiles, renderEntities, renderGrid, renderHover, renderPreview]);
+    }, [
+        isReady,
+        renderTiles,
+        renderEntities,
+        renderGrid,
+        renderCollisionOverlay,
+        renderHover,
+        renderPreview,
+    ]);
 
     // Re-render grid when viewport zoom changes
     useEffect(() => {
         if (!isReady) return;
         renderGrid();
-    }, [isReady, zoomLevel, renderGrid]);
+        if (showCollisionOverlay) {
+            renderCollisionOverlay();
+        }
+    }, [isReady, zoomLevel, showCollisionOverlay, renderGrid, renderCollisionOverlay]);
 
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).isContentEditable)) return;
+
+            // Delete selected entity with Backspace or Delete
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                const { selectedEntityId, removeEntity, selectEntity } = useEditorStore.getState();
+                if (selectedEntityId) {
+                    e.preventDefault();
+                    removeEntity(selectedEntityId);
+                    selectEntity(null);
+                    return;
+                }
+            }
 
             // Tool shortcuts
             if (e.key === 'v' || e.key === 'V') useEditorStore.getState().setActiveTool('select');
