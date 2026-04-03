@@ -843,6 +843,16 @@ export const useEditorStore = create<EditorStore>()(
             if (useSaveStore.getState().status === 'saved')
               useSaveStore.getState().setStatus('idle');
           }, 2000);
+
+          // Reload sprite if spriteSheet changed
+          if ('spriteSheet' in updates && updatedTileset.spriteSheet) {
+            try {
+              const blob = await fileSystem.loadAsset(updatedTileset.spriteSheet);
+              await useEditorStore.getState().loadSprite(updatedTileset.spriteSheet, blob);
+            } catch (e) {
+              console.warn('Failed to reload sprite after update:', e);
+            }
+          }
         }
       },
 

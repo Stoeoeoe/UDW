@@ -5,7 +5,7 @@ import {
   Box,
   Text,
   IconButton,
-  Button,
+  Tooltip,
   useDisclosure,
   Modal,
   ModalOverlay,
@@ -16,6 +16,7 @@ import {
 import { useEditorStore } from '../../store/useEditorStore';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { TilesetImporter } from '../tileset/TilesetImporter';
+import TilesetCreator from '../dialogs/TilesetCreator';
 import { WangEditor } from '../tileset/WangEditor';
 
 export const TilesetPanel: React.FC = () => {
@@ -25,6 +26,7 @@ export const TilesetPanel: React.FC = () => {
   const deleteTileset = useEditorStore((state) => state.deleteTileset);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [creatorOpen, setCreatorOpen] = React.useState(false);
   const toast = useToast();
 
   const activeTileset = activeId ? useEditorStore.getState().tilesets.get(activeId) : null;
@@ -68,17 +70,30 @@ export const TilesetPanel: React.FC = () => {
             >
               Tilesets
             </Text>
-            <Button
-              leftIcon={<AddIcon fontSize="10px" />}
-              size="xs"
-              colorScheme="blue"
-              variant="solid"
-              onClick={onOpen}
-              px={3}
-              fontWeight="bold"
-            >
-              IMPORT
-            </Button>
+            <HStack spacing={1}>
+              <Tooltip label="Import Tileset" placement="right" hasArrow>
+                <IconButton
+                  aria-label="Import Tileset"
+                  icon={<AddIcon />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.400"
+                  _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                  onClick={onOpen}
+                />
+              </Tooltip>
+              <Tooltip label="Create New Tileset" placement="right" hasArrow>
+                <IconButton
+                  aria-label="Create New Tileset"
+                  icon={<AddIcon />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.400"
+                  _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                  onClick={() => setCreatorOpen(true)}
+                />
+              </Tooltip>
+            </HStack>
           </HStack>
         </Box>
 
@@ -170,6 +185,17 @@ export const TilesetPanel: React.FC = () => {
         <ModalOverlay backdropFilter="blur(4px)" />
         <ModalContent bg="transparent" border="none" boxShadow="none">
           <TilesetImporter onImport={onClose} onCancel={onClose} />
+        </ModalContent>
+      </Modal>
+
+      {/* Creator Modal */}
+      <Modal isOpen={creatorOpen} onClose={() => setCreatorOpen(false)} size="lg" isCentered>
+        <ModalOverlay backdropFilter="blur(4px)" />
+        <ModalContent bg="transparent" border="none" boxShadow="none">
+          <TilesetCreator
+            onCreate={() => setCreatorOpen(false)}
+            onCancel={() => setCreatorOpen(false)}
+          />
         </ModalContent>
       </Modal>
     </Flex>

@@ -807,6 +807,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         onClick={handleClick}
         style={{
           display: 'block',
+          width: '100%',
+          height: '100%',
           touchAction: 'none',
           cursor: isPanning ? 'grabbing' : 'crosshair',
         }}

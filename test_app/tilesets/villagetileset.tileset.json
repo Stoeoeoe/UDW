@@ -2,11 +2,11 @@
   "version": 1,
   "id": "villagetileset",
   "name": "VillageTileset",
-  "spriteSheet": "assets/VillageTileset.png",
+  "spriteSheet": "assets/VillageTileset.aseprite",
   "tileWidth": 16,
   "tileHeight": 16,
-  "columns": 32,
-  "tileCount": 1024,
+  "columns": 19,
+  "tileCount": 19,
   "tiles": {
     "0": {
       "id": "tile_0_0",
