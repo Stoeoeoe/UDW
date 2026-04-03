@@ -27,18 +27,18 @@ interface UseMapRendererProps {
 type OverlayPoint = { x: number; y: number };
 type OverlaySegment = { a: OverlayPoint; b: OverlayPoint };
 
-function quantizeOverlayPoint(x: number, y: number): OverlayPoint {
+export function quantizeOverlayPoint(x: number, y: number): OverlayPoint {
   return { x: Math.round(x), y: Math.round(y) };
 }
 
-function makeSegmentKey(a: OverlayPoint, b: OverlayPoint): string {
+export function makeSegmentKey(a: OverlayPoint, b: OverlayPoint): string {
   const aBeforeB = a.x < b.x || (a.x === b.x && a.y <= b.y);
   const p1 = aBeforeB ? a : b;
   const p2 = aBeforeB ? b : a;
   return `${p1.x},${p1.y}|${p2.x},${p2.y}`;
 }
 
-function toggleSegment(
+export function toggleSegment(
   segmentMap: Map<string, OverlaySegment>,
   a: OverlayPoint,
   b: OverlayPoint,
@@ -52,7 +52,7 @@ function toggleSegment(
   }
 }
 
-function addPolygonSegments(
+export function addPolygonSegments(
   segmentMap: Map<string, OverlaySegment>,
   points: OverlayPoint[],
 ): void {
@@ -62,6 +62,134 @@ function addPolygonSegments(
     const next = points[(i + 1) % points.length];
     toggleSegment(segmentMap, current, next);
   }
+}
+
+// Computes fill polygons and merged segments for collision overlay given map state
+export function computeCollisionOverlay(
+  currentMap: any,
+  activeVariationId: string | null,
+  tilesets: Map<string, any>,
+): {
+  fillPolygons: OverlayPoint[][];
+  mergedSegments: Map<string, OverlaySegment>;
+} {
+  const fillPolygons: OverlayPoint[][] = [];
+  const mergedSegments = new Map<string, OverlaySegment>();
+
+  if (!currentMap) return { fillPolygons, mergedSegments };
+
+  const effectiveMap = resolveMapContext(currentMap, activeVariationId);
+
+  [...currentMap.layers]
+    .sort((a, b) => a.zOrder - b.zOrder)
+    .forEach((layer) => {
+      if (!layer.visible || layer.kind !== 'visual') return;
+
+      for (let y = 0; y < currentMap.height; y++) {
+        for (let x = 0; x < currentMap.width; x++) {
+          const tileRef = resolveTileAt(
+            currentMap,
+            layer.id,
+            x,
+            y,
+            activeVariationId,
+          );
+          if (!tileRef) continue;
+
+          const [tsId, indexStr] = tileRef.split(':');
+          const index = parseInt(indexStr, 10);
+          const tileset = tilesets.get(tsId);
+          if (!tileset) continue;
+
+          const resolvedBaseTilesetId =
+            tsId === currentMap.baseTilesetId
+              ? effectiveMap.baseTilesetId
+              : tsId;
+
+          let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
+          const variation = currentMap.variations?.find(
+            (v: any) => v.id === activeVariationId,
+          );
+          if (variation?.tilesetSuffix) {
+            const suffixed = tilesets.get(
+              `${resolvedBaseTilesetId}${variation.tilesetSuffix}`,
+            );
+            if (suffixed) effectiveTileset = suffixed;
+          }
+
+          const collision = effectiveTileset.tiles[index]?.collision;
+          if (!collision || collision.type === 'none') continue;
+
+          const tileX = x * DEFAULT_TILE_SIZE;
+          const tileY = y * DEFAULT_TILE_SIZE;
+
+          if (collision.type === 'full') {
+            const polygon = [
+              quantizeOverlayPoint(tileX, tileY),
+              quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY),
+              quantizeOverlayPoint(
+                tileX + DEFAULT_TILE_SIZE,
+                tileY + DEFAULT_TILE_SIZE,
+              ),
+              quantizeOverlayPoint(tileX, tileY + DEFAULT_TILE_SIZE),
+            ];
+            fillPolygons.push(polygon);
+            addPolygonSegments(mergedSegments, polygon);
+            continue;
+          }
+
+          for (const shape of collision.shapes || []) {
+            const points = shapeToNormalizedPolygon(
+              shape,
+              effectiveTileset.tileWidth,
+              effectiveTileset.tileHeight,
+            );
+            if (points.length < 3) continue;
+
+            const polygon = points.map(([px, py]) =>
+              quantizeOverlayPoint(
+                tileX + px * DEFAULT_TILE_SIZE,
+                tileY + py * DEFAULT_TILE_SIZE,
+              ),
+            );
+
+            fillPolygons.push(polygon);
+            addPolygonSegments(mergedSegments, polygon);
+          }
+        }
+      }
+    });
+
+  return { fillPolygons, mergedSegments };
+}
+
+export function renderCollisionGraphics(
+  collisionGraphics: any,
+  fillPolygons: OverlayPoint[][],
+  mergedSegments: Map<string, OverlaySegment>,
+) {
+  if (!collisionGraphics) return;
+
+  for (const polygon of fillPolygons) {
+    if (polygon.length < 3) continue;
+    collisionGraphics.moveTo(polygon[0].x, polygon[0].y);
+    for (let i = 1; i < polygon.length; i++) {
+      collisionGraphics.lineTo(polygon[i].x, polygon[i].y);
+    }
+    collisionGraphics.closePath?.();
+    collisionGraphics.fill({ color: 0xff7f50, alpha: 0.3 });
+  }
+
+  collisionGraphics.setStrokeStyle?.({
+    width: 1,
+    color: 0xffb48a,
+    alpha: 0.9,
+  });
+  for (const segment of mergedSegments.values()) {
+    collisionGraphics.moveTo(segment.a.x, segment.a.y);
+    collisionGraphics.lineTo(segment.b.x, segment.b.y);
+  }
+  collisionGraphics.stroke?.();
 }
 
 /**
@@ -239,26 +367,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         }
       });
 
-    for (const polygon of fillPolygons) {
-      if (polygon.length < 3) continue;
-      collisionGraphics.moveTo(polygon[0].x, polygon[0].y);
-      for (let i = 1; i < polygon.length; i++) {
-        collisionGraphics.lineTo(polygon[i].x, polygon[i].y);
-      }
-      collisionGraphics.closePath();
-      collisionGraphics.fill({ color: 0xff7f50, alpha: 0.3 });
-    }
-
-    collisionGraphics.setStrokeStyle({
-      width: 1,
-      color: 0xffb48a,
-      alpha: 0.9,
-    });
-    for (const segment of mergedSegments.values()) {
-      collisionGraphics.moveTo(segment.a.x, segment.a.y);
-      collisionGraphics.lineTo(segment.b.x, segment.b.y);
-    }
-    collisionGraphics.stroke();
+    renderCollisionGraphics(collisionGraphics, fillPolygons, mergedSegments);
   }, []);
 
   // Get or create texture for a tile
