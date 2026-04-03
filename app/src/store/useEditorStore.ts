@@ -1317,7 +1317,8 @@ export const useEditorStore = create<EditorStore>()(
             const valid = VALID_TOOLS_BY_KIND[layer.kind] ?? ['select'];
             if (!valid.includes(state.activeTool)) {
               if (layer.kind === 'entity') {
-                state.activeTool = 'entityPlace';
+                // Default to Select/Move when switching into entity layers
+                state.activeTool = 'entitySelect';
               } else {
                 state.activeTool = 'stamp';
               }

@@ -246,10 +246,10 @@ describe('useEditorStore', () => {
       useEditorStore.getState().setCurrentMap(mapWithLayers as any);
     });
 
-    it('should switch to entityPlace when selecting an entity layer while on a tile tool', () => {
+    it('should switch to entitySelect when selecting an entity layer while on a tile tool', () => {
       useEditorStore.getState().setActiveTool('stamp');
       useEditorStore.getState().selectLayer('entity-layer');
-      expect(useEditorStore.getState().activeTool).toBe('entityPlace');
+      expect(useEditorStore.getState().activeTool).toBe('entitySelect');
     });
 
     it('should keep entityPlace when selecting another entity layer', () => {
