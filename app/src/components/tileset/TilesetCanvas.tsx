@@ -157,12 +157,16 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
       const col = Math.floor(tileX / tileset.tileWidth);
       const row = Math.floor(tileY / tileset.tileHeight);
+      const index = row * tileset.columns + col;
 
-      if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
-        const index = row * tileset.columns + col;
-        if (index >= 0 && index < tileset.tileCount) {
-          return { tileX, tileY, col, row, index };
-        }
+      if (
+        col >= 0 &&
+        col < tileset.columns &&
+        row >= 0 &&
+        index >= 0 &&
+        index < tileset.tileCount
+      ) {
+        return { tileX, tileY, col, row, index };
       }
       return null;
     },
@@ -212,16 +216,20 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         const col = Math.floor(tileX / tileset.tileWidth);
         const row = Math.floor(tileY / tileset.tileHeight);
-        if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
+        const index = row * tileset.columns + col;
+        if (
+          col >= 0 &&
+          col < tileset.columns &&
+          row >= 0 &&
+          index >= 0 &&
+          index < tileset.tileCount
+        ) {
           // If multi-select is disabled, perform single-tile select immediately on mouse down
           if (!enableMultiSelect) {
-            const index = row * tileset.columns + col;
-            if (index >= 0 && index < tileset.tileCount) {
-              onSelect(index, {
-                ctrlKey: e.ctrlKey || e.metaKey,
-                shiftKey: e.shiftKey,
-              });
-            }
+            onSelect(index, {
+              ctrlKey: e.ctrlKey || e.metaKey,
+              shiftKey: e.shiftKey,
+            });
             return;
           }
           setIsSelecting(true);
@@ -297,7 +305,14 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         const col = Math.floor(tileX / tileset.tileWidth);
         const row = Math.floor(tileY / tileset.tileHeight);
-        if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
+        const index = row * tileset.columns + col;
+        if (
+          col >= 0 &&
+          col < tileset.columns &&
+          row >= 0 &&
+          index >= 0 &&
+          index < tileset.tileCount
+        ) {
           setSelectionEnd({ col, row });
           mouseMovedDuringDown.current = true;
         }
@@ -775,14 +790,12 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const col = Math.floor(tileX / tileset.tileWidth);
     const row = Math.floor(tileY / tileset.tileHeight);
 
-    if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
-      const index = row * tileset.columns + col;
-      if (index >= 0 && index < tileset.tileCount) {
-        onSelect(index, {
-          ctrlKey: e.ctrlKey || e.metaKey,
-          shiftKey: e.shiftKey,
-        });
-      }
+    const index = row * tileset.columns + col;
+    if (col >= 0 && col < tileset.columns && row >= 0 && index >= 0 && index < tileset.tileCount) {
+      onSelect(index, {
+        ctrlKey: e.ctrlKey || e.metaKey,
+        shiftKey: e.shiftKey,
+      });
     }
   };
 

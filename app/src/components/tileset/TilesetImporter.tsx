@@ -72,6 +72,19 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
     }
   };
 
+  // Revoke object URL when file changes or component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (fileData && fileData.url) {
+        try {
+          URL.revokeObjectURL(fileData.url);
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+  }, [fileData]);
+
   const handleImport = async () => {
     if (!fileData) return;
 

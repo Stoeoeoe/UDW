@@ -220,6 +220,8 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     getPolygonFromCollision(collision, tileWidth, tileHeight),
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const pendingEmitRef = useRef<number | null>(null);
+  const lastPointsRef = useRef<NormalizedPoint[]>(points);
   const [showRawView, setShowRawView] = useState(false);
   const [rawText, setRawText] = useState('');
   const [rawError, setRawError] = useState<string | null>(null);
@@ -348,7 +350,15 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       });
 
       setPoints(next);
-      emitPolygonCollision(next);
+      lastPointsRef.current = next;
+
+      // Throttle emits via requestAnimationFrame to avoid spamming store on fast mousemove
+      if (pendingEmitRef.current == null) {
+        pendingEmitRef.current = requestAnimationFrame(() => {
+          pendingEmitRef.current = null;
+          emitPolygonCollision(lastPointsRef.current);
+        });
+      }
     },
     [dragIndex, emitPolygonCollision, getNormalizedFromPointer, getPointerFromEvent, mode, points],
   );
@@ -356,13 +366,27 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
   useEffect(() => {
     if (dragIndex === null) return;
 
-    const onMouseUp = () => setDragIndex(null);
+    const onMouseUp = () => {
+      // flush any pending emit
+      if (pendingEmitRef.current != null) {
+        cancelAnimationFrame(pendingEmitRef.current);
+        pendingEmitRef.current = null;
+      }
+      // ensure final state is emitted
+      emitPolygonCollision(lastPointsRef.current);
+      setDragIndex(null);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', onMouseUp);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      if (pendingEmitRef.current != null) {
+        cancelAnimationFrame(pendingEmitRef.current);
+        pendingEmitRef.current = null;
+      }
     };
   }, [dragIndex, handleMouseMove]);
 

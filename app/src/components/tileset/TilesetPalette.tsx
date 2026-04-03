@@ -31,9 +31,10 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
     );
   }
 
-  const currentTileset = activeTilesetId
-    ? useEditorStore.getState().tilesets.get(activeTilesetId)
-    : null;
+  const currentTileset = useEditorStore((state) => {
+    const id = state.activeTilesetId;
+    return id ? state.tilesets.get(id) || null : null;
+  });
 
   return (
     <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
