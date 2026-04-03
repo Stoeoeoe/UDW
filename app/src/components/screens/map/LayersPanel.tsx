@@ -9,6 +9,7 @@ import {
   useToast,
   useDisclosure,
 } from '@chakra-ui/react';
+import PanelHeader from '../../../components/common/PanelHeader';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { AddIcon, ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { Layer } from '../../../types/schema';
@@ -283,33 +284,20 @@ export const LayersPanel: React.FC = () => {
     <>
       <Flex direction="column" h="full" bg="editor.panelBg" color="gray.200">
         {/* Panel header */}
-        <Flex
-          p="3"
-          borderBottom="1px"
-          borderColor="editor.border"
-          align="center"
-          justify="space-between"
-          bg="editor.headerBg"
-        >
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Layers
-          </Text>
-          <IconButton
-            aria-label="Add Layer"
-            icon={<AddIcon fontSize="10px" />}
-            size="md"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={() => handleOpenAddModal()}
-          />
-        </Flex>
+        <PanelHeader
+          title="Layers"
+          actions={
+            <IconButton
+              aria-label="Add Layer"
+              icon={<AddIcon fontSize="10px" />}
+              size="md"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={() => handleOpenAddModal()}
+            />
+          }
+        />
 
         {/* Categorized layer list */}
         <Box flex={1} overflowY="auto">

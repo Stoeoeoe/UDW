@@ -8,6 +8,7 @@ import {
   VStack,
   Tooltip,
 } from '@chakra-ui/react';
+import PanelHeader from '../../../components/common/PanelHeader';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType } from '../../../types/schema';
 
@@ -76,39 +77,35 @@ export const EntityBottomPalette: React.FC = () => {
   return (
     <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
       {/* Header row with group dropdown */}
-      <HStack
-        px={3}
-        py={2}
-        bg="editor.headerBg"
-        borderBottom="1px"
-        borderColor="editor.border"
-        flexShrink={0}
-        spacing={3}
-      >
-        <Select
-          size="xs"
-          variant="filled"
-          bg="editor.viewportBg"
-          borderColor="editor.inputBorder"
-          _hover={{ bg: 'editor.border' }}
-          value={effectiveGroup}
-          onChange={(e) => handleGroupChange(e.target.value)}
-          color="blue.300"
-          fontSize="10px"
-          fontWeight="bold"
-          h="6"
-          maxW="180px"
-        >
-          {groups.map((g) => (
-            <option key={g} value={g} style={{ background: '#171923' }}>
-              {g.toUpperCase()}
-            </option>
-          ))}
-        </Select>
-        <Text fontSize="9px" color="gray.600">
-          {items.length} type{items.length !== 1 ? 's' : ''}
-        </Text>
-      </HStack>
+      <PanelHeader
+        left={(
+          <HStack spacing={3}>
+            <Select
+              size="xs"
+              variant="filled"
+              bg="editor.viewportBg"
+              borderColor="editor.inputBorder"
+              _hover={{ bg: 'editor.border' }}
+              value={effectiveGroup}
+              onChange={(e) => handleGroupChange(e.target.value)}
+              color="blue.300"
+              fontSize="10px"
+              fontWeight="bold"
+              h="6"
+              maxW="180px"
+            >
+              {groups.map((g) => (
+                <option key={g} value={g} style={{ background: '#171923' }}>
+                  {g.toUpperCase()}
+                </option>
+              ))}
+            </Select>
+            <Text fontSize="9px" color="gray.600">
+              {items.length} type{items.length !== 1 ? 's' : ''}
+            </Text>
+          </HStack>
+        )}
+      />
 
       {/* Entity type grid */}
       <Box flex={1} overflowX="auto" overflowY="hidden">

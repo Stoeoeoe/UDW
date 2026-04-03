@@ -12,6 +12,7 @@ import {
   Tooltip,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
+import PanelHeader from '../../../components/common/PanelHeader';
 
 /** Discrete time phases with their normalized time ranges and display info */
 const TIME_PHASES = [
@@ -139,51 +140,32 @@ export const TimePreviewPanel: React.FC = () => {
   return (
     <Flex direction="column">
       {/* Header with toggle */}
-      <Flex
-        p="3"
-        borderBottom="1px"
-        borderColor="editor.border"
-        align="center"
-        justify="space-between"
-        bg="editor.headerBg"
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Time Preview
-          </Text>
-        </HStack>
-        <HStack spacing={2}>
-          {timePreviewEnabled && (
-            <Text fontSize="xs" color="gray.400" fontFamily="mono">
-              {timeString}
-            </Text>
-          )}
-          <Tooltip
-            label={
-              timePreviewEnabled
-                ? 'Disable time preview'
-                : 'Enable time preview'
-            }
-            placement="left"
-            hasArrow
-          >
-            <Box>
-              <Switch
-                size="sm"
-                colorScheme="blue"
-                isChecked={timePreviewEnabled}
-                onChange={(e) => setTimePreviewEnabled(e.target.checked)}
-              />
-            </Box>
-          </Tooltip>
-        </HStack>
-      </Flex>
+      <PanelHeader
+        title="Time Preview"
+        actions={(
+          <HStack spacing={2}>
+            {timePreviewEnabled && (
+              <Text fontSize="xs" color="gray.400" fontFamily="mono">
+                {timeString}
+              </Text>
+            )}
+            <Tooltip
+              label={timePreviewEnabled ? 'Disable time preview' : 'Enable time preview'}
+              placement="left"
+              hasArrow
+            >
+              <Box>
+                <Switch
+                  size="sm"
+                  colorScheme="blue"
+                  isChecked={timePreviewEnabled}
+                  onChange={(e) => setTimePreviewEnabled(e.target.checked)}
+                />
+              </Box>
+            </Tooltip>
+          </HStack>
+        )}
+      />
 
       {/* Controls body */}
       <Box px={3} py={2}>

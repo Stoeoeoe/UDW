@@ -11,6 +11,7 @@ import {
   InputLeftElement,
   Tooltip,
 } from '@chakra-ui/react';
+import PanelHeader from '../../../components/common/PanelHeader';
 import { SearchIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType } from '../../../types/schema';
@@ -75,22 +76,7 @@ export const EntityPalette: React.FC = () => {
   if (entityTypes.length === 0) {
     return (
       <Flex direction="column" h="full" bg="editor.panelBg">
-        <Flex
-          p="3"
-          borderBottom="1px"
-          borderColor="editor.border"
-          bg="editor.headerBg"
-        >
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Entities
-          </Text>
-        </Flex>
+        <PanelHeader title="Entities" />
         <VStack flex={1} justify="center" spacing={2} p={4}>
           <Text fontSize="2xl">🎯</Text>
           <Text
@@ -112,30 +98,16 @@ export const EntityPalette: React.FC = () => {
   return (
     <Flex direction="column" h="full" bg="editor.panelBg" overflow="hidden">
       {/* Header */}
-      <Flex
-        p="3"
-        borderBottom="1px"
-        borderColor="editor.border"
-        align="center"
-        justify="space-between"
-        bg="editor.headerBg"
-        flexShrink={0}
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Entities
-          </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {entityTypes.length}
-          </Badge>
-        </HStack>
-      </Flex>
+      <PanelHeader
+        title="Entities"
+        actions={(
+          <HStack spacing={2}>
+            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+              {entityTypes.length}
+            </Badge>
+          </HStack>
+        )}
+      />
 
       {/* Search */}
       {entityTypes.length > 5 && (
