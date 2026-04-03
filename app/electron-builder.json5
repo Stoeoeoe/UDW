@@ -4,6 +4,7 @@
   "appId": "YourAppID",
   "asar": true,
   "productName": "YourAppName",
+  "icon": "build/icon",
   "directories": {
     "output": "release/${version}"
   },

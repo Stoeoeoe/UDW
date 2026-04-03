@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { setupIpcHandlers } from './ipcHandlers';
@@ -28,8 +28,23 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 let win: BrowserWindow | null;
 
 function createWindow() {
+  const getAppIconPath = () => {
+    if (VITE_DEV_SERVER_URL) {
+      return path.join(process.env.VITE_PUBLIC, 'electron-vite.svg');
+    }
+    if (process.platform === 'darwin') {
+      return path.join(process.env.APP_ROOT, 'build', 'icon.icns');
+    }
+    if (process.platform === 'win32') {
+      return path.join(process.env.APP_ROOT, 'build', 'icon.ico');
+    }
+    return path.join(process.env.APP_ROOT, 'build', 'icon.png');
+  };
+
+  const iconPath = getAppIconPath();
+
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
@@ -50,6 +65,16 @@ function createWindow() {
   } else {
     // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, 'index.html'));
+  }
+
+  // On macOS, set the dock icon explicitly (use nativeImage for consistent results)
+  if (process.platform === 'darwin') {
+    try {
+      const ic = nativeImage.createFromPath(path.join(process.env.APP_ROOT, 'build', 'icon.icns'));
+      if (!ic.isEmpty && app.dock) app.dock.setIcon(ic);
+    } catch (e) {
+      // fail silently if icon not present
+    }
   }
 }
 
