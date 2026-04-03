@@ -19,9 +19,7 @@ import { InspectorPanel, InspectorEmptyState } from '../screens/common';
 export const PropertiesPanel: React.FC = () => {
   const editorMode = useEditorStore((state) => state.mode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
-  const updateEntityProperties = useEditorStore(
-    (state) => state.updateEntityProperties,
-  );
+  const updateEntityProperties = useEditorStore((state) => state.updateEntityProperties);
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const currentMap = useEditorStore((state) => state.currentMap);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
@@ -30,9 +28,7 @@ export const PropertiesPanel: React.FC = () => {
 
   // Contextual rendering for Tileset mode
   if (editorMode === 'tilesets') {
-    const activeTileset = activeTilesetId
-      ? tilesets.get(activeTilesetId)
-      : null;
+    const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
     if (activeTileset) {
       return <TilesetInspector tileset={activeTileset} />;
     }
@@ -48,12 +44,8 @@ export const PropertiesPanel: React.FC = () => {
   }
 
   // Resolve entities for the current variation
-  const resolvedEntities = currentMap
-    ? resolveEntities(currentMap, activeVariationId)
-    : [];
-  const selectedEntity = resolvedEntities.find(
-    (e) => e.id === selectedEntityId,
-  );
+  const resolvedEntities = currentMap ? resolveEntities(currentMap, activeVariationId) : [];
+  const selectedEntity = resolvedEntities.find((e) => e.id === selectedEntityId);
   const entityType = selectedEntity
     ? entityTypes.find((t) => t.id === selectedEntity.typeId)
     : null;
@@ -129,7 +121,9 @@ export const PropertiesPanel: React.FC = () => {
                 Position
               </FormLabel>
               <HStack spacing={2}>
-                <Text fontSize="xs" color="gray.400" flexShrink={0}>X</Text>
+                <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                  X
+                </Text>
                 <NumberInput
                   size="xs"
                   value={selectedEntity.position[0]}
@@ -149,7 +143,9 @@ export const PropertiesPanel: React.FC = () => {
                     _hover={{ bg: '#071018' }}
                   />
                 </NumberInput>
-                <Text fontSize="xs" color="gray.400" flexShrink={0}>Y</Text>
+                <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                  Y
+                </Text>
                 <NumberInput
                   size="xs"
                   value={selectedEntity.position[1]}
@@ -203,12 +199,7 @@ export const PropertiesPanel: React.FC = () => {
 
           {/* Dynamic Properties Section */}
           <VStack align="stretch" spacing={4}>
-            <Text
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-            >
+            <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
               Behavior Properties
             </Text>
 

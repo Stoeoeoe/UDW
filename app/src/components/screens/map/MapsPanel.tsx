@@ -12,12 +12,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import {
-  AddIcon,
-  DeleteIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from '@chakra-ui/icons';
+import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { LayersPanel } from './LayersPanel';
 import { EditorModal } from '../../common/EditorModal';
@@ -26,9 +21,7 @@ import PanelHeader from '../../../components/common/PanelHeader';
 export const MapsPanel: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
-  const setActiveVariation = useEditorStore(
-    (state) => state.setActiveVariation,
-  );
+  const setActiveVariation = useEditorStore((state) => state.setActiveVariation);
   const addVariation = useEditorStore((state) => state.addVariation);
   const removeVariation = useEditorStore((state) => state.removeVariation);
 
@@ -115,13 +108,7 @@ export const MapsPanel: React.FC = () => {
           </Box>
 
           <Collapse in={variationsOpen}>
-            <VStack
-              align="stretch"
-              spacing={1}
-              p={2}
-              maxH="200px"
-              overflowY="auto"
-            >
+            <VStack align="stretch" spacing={1} p={2} maxH="200px" overflowY="auto">
               <Button
                 size="xs"
                 variant={activeVariationId === null ? 'solid' : 'ghost'}

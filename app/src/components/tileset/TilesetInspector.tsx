@@ -16,9 +16,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
 }) => {
   const storeSelectedIndex = useEditorStore((state) => state.selectedTileIndex);
   const selectedIndex =
-    typeof propSelectedIndex !== 'undefined'
-      ? propSelectedIndex
-      : storeSelectedIndex;
+    typeof propSelectedIndex !== 'undefined' ? propSelectedIndex : storeSelectedIndex;
   const updateTileDef = useEditorStore((state) => state.updateTileDefinition);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
   const sprite = loadedSprites.get(tileset.spriteSheet);
@@ -74,8 +72,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                   key: 'probability',
                   label: 'Probability',
                   type: 'number',
-                  description:
-                    'Weight for random tile selection (higher = more likely)',
+                  description: 'Weight for random tile selection (higher = more likely)',
                 },
                 {
                   key: 'terrain',
@@ -105,10 +102,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                           w={3}
                           h={3}
                           rounded="full"
-                          bg={
-                            options.find((o) => o.id === value)?.color ||
-                            'transparent'
-                          }
+                          bg={options.find((o) => o.id === value)?.color || 'transparent'}
                           borderWidth={1}
                           borderColor="gray.700"
                         />

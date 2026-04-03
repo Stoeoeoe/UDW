@@ -2,14 +2,21 @@ import { Box, Flex } from '@chakra-ui/react';
 import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/navigation/Sidebar';
 import { ProjectPanel } from './components/panels/ProjectPanel';
-import { MapEditor, TilesetEditor, EntityEditor, SettingsEditor, TerrainEditor, LayerEditor } from './components/screens';
+import {
+  MapEditor,
+  TilesetEditor,
+  EntityEditor,
+  SettingsEditor,
+  TerrainEditor,
+  LayerEditor,
+} from './components/screens';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 
 function App() {
-  const project = useEditorStore(state => state.project);
-  const editorMode = useEditorStore(state => state.mode);
-  const setEditorMode = useEditorStore(state => state.setMode);
+  const project = useEditorStore((state) => state.project);
+  const editorMode = useEditorStore((state) => state.mode);
+  const setEditorMode = useEditorStore((state) => state.setMode);
 
   if (!project) {
     return <LandingScreen />;
@@ -37,9 +44,24 @@ function App() {
   };
 
   return (
-    <Flex direction="column" h="100vh" w="100vw" overflow="hidden" bg="gray.900" color="gray.200" userSelect="none">
+    <Flex
+      direction="column"
+      h="100vh"
+      w="100vw"
+      overflow="hidden"
+      bg="gray.900"
+      color="gray.200"
+      userSelect="none"
+    >
       {/* Top Bar */}
-      <Box h="12" borderBottom="1px" borderColor="gray.800" bg="gray.950" zIndex="20" flexShrink={0}>
+      <Box
+        h="12"
+        borderBottom="1px"
+        borderColor="gray.800"
+        bg="gray.950"
+        zIndex="20"
+        flexShrink={0}
+      >
         <TopBar />
       </Box>
 
@@ -55,7 +77,18 @@ function App() {
       </Flex>
 
       {/* Status Bar */}
-      <Flex h="6" bg="gray.900" borderTop="1px" borderColor="gray.800" alignItems="center" px="2" fontSize="xs" color="gray.500" zIndex="20" flexShrink={0}>
+      <Flex
+        h="6"
+        bg="gray.900"
+        borderTop="1px"
+        borderColor="gray.800"
+        alignItems="center"
+        px="2"
+        fontSize="xs"
+        color="gray.500"
+        zIndex="20"
+        flexShrink={0}
+      >
         Ready
       </Flex>
     </Flex>

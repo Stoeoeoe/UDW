@@ -1,19 +1,5 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import {
-  VStack,
-  HStack,
-  Text,
-  Button,
-  ButtonGroup,
-  Box,
-  Textarea,
-} from '@chakra-ui/react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { VStack, HStack, Text, Button, ButtonGroup, Box, Textarea } from '@chakra-ui/react';
 import { CollisionDefinition } from '../../types/schema';
 import {
   FULL_TILE_POLYGON,
@@ -172,11 +158,7 @@ function findInsertionIndex(
   return bestIndex;
 }
 
-function parseRawPoints(
-  raw: string,
-  tileWidth: number,
-  tileHeight: number,
-): NormalizedPoint[] {
+function parseRawPoints(raw: string, tileWidth: number, tileHeight: number): NormalizedPoint[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
 
@@ -213,9 +195,7 @@ function parseRawPoints(
     const x = Number(xRaw);
     const y = Number(yRaw);
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      throw new Error(
-        `Line ${index + 1} must use "x,y" with numeric values between 0 and 1.`,
-      );
+      throw new Error(`Line ${index + 1} must use "x,y" with numeric values between 0 and 1.`);
     }
     return quantizeNormalizedPoint(
       [clamp01(x), clamp01(y)] as NormalizedPoint,
@@ -251,11 +231,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     const nextMode = detectMode(collision);
     setMode(nextMode);
 
-    const incomingPoints = getPolygonFromCollision(
-      collision,
-      tileWidth,
-      tileHeight,
-    );
+    const incomingPoints = getPolygonFromCollision(collision, tileWidth, tileHeight);
     if (nextMode === 'polygon' && incomingPoints.length > 0) {
       setPoints(incomingPoints);
     }
@@ -299,26 +275,21 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     [emitPolygonCollision, onChange, points],
   );
 
-  const getPointerFromEvent = useCallback(
-    (e: MouseEvent | React.MouseEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-    },
-    [],
-  );
+  const getPointerFromEvent = useCallback((e: MouseEvent | React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+  }, []);
 
   const getNormalizedFromPointer = useCallback(
     (pointer: { x: number; y: number }) => {
       const drawRect = getDrawRect(tileWidth, tileHeight);
       const x = clamp01((pointer.x - drawRect.x) / Math.max(1, drawRect.width));
-      const y = clamp01(
-        (pointer.y - drawRect.y) / Math.max(1, drawRect.height),
-      );
+      const y = clamp01((pointer.y - drawRect.y) / Math.max(1, drawRect.height));
       return quantizeNormalizedPoint([x, y], tileWidth, tileHeight);
     },
     [tileHeight, tileWidth],
@@ -379,14 +350,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       setPoints(next);
       emitPolygonCollision(next);
     },
-    [
-      dragIndex,
-      emitPolygonCollision,
-      getNormalizedFromPointer,
-      getPointerFromEvent,
-      mode,
-      points,
-    ],
+    [dragIndex, emitPolygonCollision, getNormalizedFromPointer, getPointerFromEvent, mode, points],
   );
 
   useEffect(() => {
@@ -419,18 +383,14 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     try {
       const parsed = parseRawPoints(rawText, tileWidth, tileHeight);
       if (!isValidPolygon(parsed)) {
-        setRawError(
-          'Raw polygon must have at least 3 distinct points and non-zero area.',
-        );
+        setRawError('Raw polygon must have at least 3 distinct points and non-zero area.');
         return;
       }
       setRawError(null);
       setPoints(parsed);
       emitPolygonCollision(parsed);
     } catch (error) {
-      setRawError(
-        error instanceof Error ? error.message : 'Failed to parse raw points.',
-      );
+      setRawError(error instanceof Error ? error.message : 'Failed to parse raw points.');
     }
   }, [emitPolygonCollision, rawText, tileHeight, tileWidth]);
 
@@ -499,12 +459,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
 
     context.strokeStyle = 'rgba(255, 255, 255, 0.4)';
     context.lineWidth = 1;
-    context.strokeRect(
-      drawRect.x + 0.5,
-      drawRect.y + 0.5,
-      drawRect.width - 1,
-      drawRect.height - 1,
-    );
+    context.strokeRect(drawRect.x + 0.5, drawRect.y + 0.5, drawRect.width - 1, drawRect.height - 1);
 
     if (mode !== 'polygon') return;
 
@@ -534,16 +489,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       context.lineWidth = 1;
       context.stroke();
     }
-  }, [
-    dragIndex,
-    mode,
-    points,
-    sprite,
-    tileIndex,
-    tileWidth,
-    tileHeight,
-    tilesetColumns,
-  ]);
+  }, [dragIndex, mode, points, sprite, tileIndex, tileWidth, tileHeight, tilesetColumns]);
 
   return (
     <VStack
@@ -556,12 +502,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       rounded="md"
       bg="#07090f"
     >
-      <Text
-        fontSize="10px"
-        color="gray.500"
-        textTransform="uppercase"
-        letterSpacing="wide"
-      >
+      <Text fontSize="10px" color="gray.500" textTransform="uppercase" letterSpacing="wide">
         Collision Shape
       </Text>
 
@@ -592,8 +533,8 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       {mode === 'polygon' && (
         <>
           <Text fontSize="11px" color="gray.400">
-            Click near an edge to insert a snapped vertex. Drag handles to move
-            on pixel grid. Right-click a handle to remove it.
+            Click near an edge to insert a snapped vertex. Drag handles to move on pixel grid.
+            Right-click a handle to remove it.
           </Text>
           <Box
             borderWidth="1px"
@@ -626,11 +567,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
             >
               Remove Last Vertex
             </Button>
-            <Button
-              size="xs"
-              onClick={() => setShowRawView((prev) => !prev)}
-              variant="outline"
-            >
+            <Button size="xs" onClick={() => setShowRawView((prev) => !prev)} variant="outline">
               {showRawView ? 'Hide Raw' : 'Raw View'}
             </Button>
           </HStack>

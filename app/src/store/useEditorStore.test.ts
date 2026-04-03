@@ -152,8 +152,7 @@ describe('useEditorStore', () => {
     });
 
     it('should paint a tile in a variation override', () => {
-      const { addVariation, setActiveVariation, paintTile } =
-        useEditorStore.getState();
+      const { addVariation, setActiveVariation, paintTile } = useEditorStore.getState();
 
       addVariation({
         id: 'winter',
@@ -171,17 +170,12 @@ describe('useEditorStore', () => {
       expect(state.currentMap?.layers[0].data[5][5]).toBeNull();
 
       // Variation override should have the tile
-      const winterVar = state.currentMap?.variations?.find(
-        (v) => v.id === 'winter',
-      );
-      expect(winterVar?.layerOverrides?.['ground'].data[5][5]).toBe(
-        'village:10',
-      );
+      const winterVar = state.currentMap?.variations?.find((v) => v.id === 'winter');
+      expect(winterVar?.layerOverrides?.['ground'].data[5][5]).toBe('village:10');
     });
 
     it('should erase a tile in a variation override', () => {
-      const { addVariation, setActiveVariation, paintTile, eraseTile } =
-        useEditorStore.getState();
+      const { addVariation, setActiveVariation, paintTile, eraseTile } = useEditorStore.getState();
 
       addVariation({
         id: 'winter',
@@ -194,16 +188,12 @@ describe('useEditorStore', () => {
 
       paintTile('ground', 1, 1, 'village', 20);
       expect(
-        useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.[
-          'ground'
-        ].data[1][1],
+        useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1],
       ).toBe('village:20');
 
       eraseTile('ground', 1, 1);
       expect(
-        useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.[
-          'ground'
-        ].data[1][1],
+        useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1],
       ).toBeNull();
     });
   });

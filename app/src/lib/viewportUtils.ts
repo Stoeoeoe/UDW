@@ -11,8 +11,7 @@ export function screenToWorld(
 
   try {
     const canvas =
-      (viewport as any).options?.events?.domElement ||
-      document.querySelector('canvas');
+      (viewport as any).options?.events?.domElement || document.querySelector('canvas');
     if (!canvas) return null;
 
     const rect = canvas.getBoundingClientRect();
@@ -36,8 +35,7 @@ export function screenToTile(
 
   try {
     const canvas =
-      (viewport as any).options?.events?.domElement ||
-      document.querySelector('canvas');
+      (viewport as any).options?.events?.domElement || document.querySelector('canvas');
     if (!canvas) return null;
 
     const rect = canvas.getBoundingClientRect();

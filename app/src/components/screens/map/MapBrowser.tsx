@@ -40,9 +40,7 @@ export const MapBrowser: React.FC = () => {
   } = useDisclosure();
   const toast = useToast();
 
-  const [metadataInitialTab, setMetadataInitialTab] = React.useState<
-    'base' | 'variation'
-  >('base');
+  const [metadataInitialTab, setMetadataInitialTab] = React.useState<'base' | 'variation'>('base');
 
   // Open metadata dialog in response to external requests (e.g., edit buttons)
   React.useEffect(() => {
@@ -53,11 +51,7 @@ export const MapBrowser: React.FC = () => {
       onMetadataOpen();
     };
     window.addEventListener('openMetadataDialog', handler as EventListener);
-    return () =>
-      window.removeEventListener(
-        'openMetadataDialog',
-        handler as EventListener,
-      );
+    return () => window.removeEventListener('openMetadataDialog', handler as EventListener);
   }, [onMetadataOpen]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [mapsCollapsed, setMapsCollapsed] = useState(false);
@@ -91,13 +85,7 @@ export const MapBrowser: React.FC = () => {
   };
 
   return (
-    <Flex
-      direction="column"
-      h="full"
-      bg="editor.panelBg"
-      color="gray.200"
-      overflow="hidden"
-    >
+    <Flex direction="column" h="full" bg="editor.panelBg" color="gray.200" overflow="hidden">
       {/* Maps List Section */}
       <Box flex="0 0 auto">
         <Flex
@@ -150,13 +138,7 @@ export const MapBrowser: React.FC = () => {
           <Box maxH="200px" overflowY="auto" p={1}>
             <VStack spacing={0} align="stretch">
               {maps.length === 0 && (
-                <Text
-                  fontSize="xs"
-                  color="gray.600"
-                  textAlign="center"
-                  py={4}
-                  fontStyle="italic"
-                >
+                <Text fontSize="xs" color="gray.600" textAlign="center" py={4} fontStyle="italic">
                   No maps yet
                 </Text>
               )}
@@ -244,11 +226,7 @@ export const MapBrowser: React.FC = () => {
                         e.stopPropagation();
                         handleDeleteMap(map.id, map.name);
                       }}
-                      title={
-                        isConfirmingDelete
-                          ? 'Click again to confirm'
-                          : 'Delete map'
-                      }
+                      title={isConfirmingDelete ? 'Click again to confirm' : 'Delete map'}
                     />
                   </HStack>
                 );

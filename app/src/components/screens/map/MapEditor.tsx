@@ -104,8 +104,7 @@ export const MapEditor: React.FC = () => {
   const activeVariation = currentMap.variations?.find(
     (variation) => variation.id === activeVariationId,
   );
-  const isEntityLayer =
-    currentMap.layers.find((l) => l.id === selectedLayerId)?.kind === 'entity';
+  const isEntityLayer = currentMap.layers.find((l) => l.id === selectedLayerId)?.kind === 'entity';
 
   return (
     <ResizableEditorLayout
@@ -116,7 +115,9 @@ export const MapEditor: React.FC = () => {
       content={<MapViewportPixi />}
       leftPanel={<MapLeftPanel />}
       rightPanel={<MapRightPanel isEntityLayer={isEntityLayer} />}
-      bottomPanel={isEntityLayer ? <EntityBottomPalette /> : <TilesetPalette enableMultiSelect={true} />}
+      bottomPanel={
+        isEntityLayer ? <EntityBottomPalette /> : <TilesetPalette enableMultiSelect={true} />
+      }
       leftPanelDefaultSize={20}
       rightPanelDefaultSize={20}
       bottomPanelDefaultSize={25}

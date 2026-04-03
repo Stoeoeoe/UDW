@@ -13,13 +13,7 @@ export function getPattern(params: {
   minCol: number;
   minRow: number;
 } | null {
-  const {
-    activeTool,
-    sampledPattern,
-    selectedTileIndices,
-    activeTilesetId,
-    tilesets,
-  } = params;
+  const { activeTool, sampledPattern, selectedTileIndices, activeTilesetId, tilesets } = params;
 
   if (activeTool === 'random') return null;
 
@@ -33,12 +27,7 @@ export function getPattern(params: {
     };
   }
 
-  if (
-    !selectedTileIndices ||
-    selectedTileIndices.length <= 1 ||
-    !activeTilesetId
-  )
-    return null;
+  if (!selectedTileIndices || selectedTileIndices.length <= 1 || !activeTilesetId) return null;
 
   const ts = tilesets.get(activeTilesetId);
   if (!ts) return null;

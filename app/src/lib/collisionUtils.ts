@@ -42,10 +42,7 @@ export function normalizeTilePoint(
   const [x, y] = point;
   const hasPixelLikeValue = Math.abs(x) > 1 || Math.abs(y) > 1;
   if (hasPixelLikeValue) {
-    return [
-      clamp01(x / Math.max(1, tileWidth)),
-      clamp01(y / Math.max(1, tileHeight)),
-    ];
+    return [clamp01(x / Math.max(1, tileWidth)), clamp01(y / Math.max(1, tileHeight))];
   }
   return [clamp01(x), clamp01(y)];
 }
@@ -55,9 +52,7 @@ export function normalizePolygonPoints(
   tileWidth: number,
   tileHeight: number,
 ): NormalizedPoint[] {
-  const normalized = points.map((pt) =>
-    normalizeTilePoint(pt, tileWidth, tileHeight),
-  );
+  const normalized = points.map((pt) => normalizeTilePoint(pt, tileWidth, tileHeight));
   const deduped: NormalizedPoint[] = [];
 
   for (const point of normalized) {
@@ -67,10 +62,7 @@ export function normalizePolygonPoints(
     }
   }
 
-  if (
-    deduped.length > 1 &&
-    pointsEqual(deduped[0], deduped[deduped.length - 1])
-  ) {
+  if (deduped.length > 1 && pointsEqual(deduped[0], deduped[deduped.length - 1])) {
     deduped.pop();
   }
 
@@ -79,9 +71,7 @@ export function normalizePolygonPoints(
 
 export function isValidPolygon(points: NormalizedPoint[]): boolean {
   if (points.length < 3) return false;
-  const unique = new Set(
-    points.map((p) => `${p[0].toFixed(4)}:${p[1].toFixed(4)}`),
-  );
+  const unique = new Set(points.map((p) => `${p[0].toFixed(4)}:${p[1].toFixed(4)}`));
   if (unique.size < 3) return false;
   return Math.abs(polygonSignedArea(points)) > EPSILON;
 }
@@ -101,19 +91,14 @@ export function getPolygonFromCollision(
   tileHeight: number,
 ): NormalizedPoint[] {
   if (!collision || collision.type === 'none') return [];
-  if (collision.type === 'full')
-    return FULL_TILE_POLYGON.map(([x, y]) => [x, y]);
+  if (collision.type === 'full') return FULL_TILE_POLYGON.map(([x, y]) => [x, y]);
 
-  const polygonShape = collision.shapes?.find(
-    (shape) => shape.type === 'polygon',
-  );
+  const polygonShape = collision.shapes?.find((shape) => shape.type === 'polygon');
   if (!polygonShape) return [];
   return shapeToNormalizedPolygon(polygonShape, tileWidth, tileHeight);
 }
 
-export function buildPolygonCollision(
-  points: NormalizedPoint[],
-): CollisionDefinition {
+export function buildPolygonCollision(points: NormalizedPoint[]): CollisionDefinition {
   return {
     type: 'complex',
     shapes: [

@@ -19,22 +19,18 @@ export const TilesetEditor: React.FC = () => {
   const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
   const tilesets = useEditorStore((state) => state.tilesets);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
-  const resetSelectedTiles = useEditorStore(
-    (state) => state.resetSelectedTiles,
-  );
+  const resetSelectedTiles = useEditorStore((state) => state.resetSelectedTiles);
 
   const { selectedTileIndex, handleTileSelect } = useTileSelection();
 
   const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
 
   // Build tileset list items
-  const tilesetItems: ListPanelItem[] = Array.from(tilesets.values()).map(
-    (ts) => ({
-      id: ts.id,
-      label: ts.name,
-      sublabel: `${ts.tileWidth}×${ts.tileHeight} • ${ts.tileCount} tiles`,
-    }),
-  );
+  const tilesetItems: ListPanelItem[] = Array.from(tilesets.values()).map((ts) => ({
+    id: ts.id,
+    label: ts.name,
+    sublabel: `${ts.tileWidth}×${ts.tileHeight} • ${ts.tileCount} tiles`,
+  }));
 
   // Left panel: tileset list
   const leftPanel = (
@@ -55,10 +51,7 @@ export const TilesetEditor: React.FC = () => {
     tilesetMode === 'terrain' ? (
       <TilesetTerrainPanel tileset={activeTileset} />
     ) : (
-      <TilesetInspector
-        tileset={activeTileset}
-        selectedIndex={selectedTileIndex}
-      />
+      <TilesetInspector tileset={activeTileset} selectedIndex={selectedTileIndex} />
     )
   ) : null;
 

@@ -147,9 +147,7 @@ describe('collisionUtils', () => {
   });
 
   it('returns full polygon for full collision mode', () => {
-    expect(getPolygonFromCollision({ type: 'full' }, 16, 16)).toEqual(
-      FULL_TILE_POLYGON,
-    );
+    expect(getPolygonFromCollision({ type: 'full' }, 16, 16)).toEqual(FULL_TILE_POLYGON);
   });
 
   it('extracts polygon collision shapes', () => {

@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  computeCollisionOverlay,
-  renderCollisionGraphics,
-} from './useMapRenderer';
+import { computeCollisionOverlay, renderCollisionGraphics } from './useMapRenderer';
 
 describe('renderCollisionGraphics (mocked Graphics)', () => {
   it('invokes Graphics fill and stroke for computed overlay', () => {
@@ -33,11 +30,7 @@ describe('renderCollisionGraphics (mocked Graphics)', () => {
       tiles: [{ collision: { type: 'full' } }, { collision: { type: 'full' } }],
     });
 
-    const { fillPolygons, mergedSegments } = computeCollisionOverlay(
-      currentMap,
-      null,
-      tilesets,
-    );
+    const { fillPolygons, mergedSegments } = computeCollisionOverlay(currentMap, null, tilesets);
 
     // Mock Graphics-like object
     const mockG: any = {

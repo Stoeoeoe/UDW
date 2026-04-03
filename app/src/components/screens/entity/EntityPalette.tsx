@@ -23,16 +23,10 @@ import { EntityType } from '../../../types/schema';
  */
 export const EntityPalette: React.FC = () => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
-  const selectedEntityTypeId = useEditorStore(
-    (state) => state.selectedEntityTypeId,
-  );
-  const setSelectedEntityType = useEditorStore(
-    (state) => state.setSelectedEntityType,
-  );
+  const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
+  const setSelectedEntityType = useEditorStore((state) => state.setSelectedEntityType);
   const [search, setSearch] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    new Set(),
-  );
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Filter by search
   const filtered = useMemo(() => {
@@ -79,12 +73,7 @@ export const EntityPalette: React.FC = () => {
         <PanelHeader title="Entities" />
         <VStack flex={1} justify="center" spacing={2} p={4}>
           <Text fontSize="2xl">🎯</Text>
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="center"
-            fontStyle="italic"
-          >
+          <Text fontSize="xs" color="gray.600" textAlign="center" fontStyle="italic">
             No entity types defined
           </Text>
           <Text fontSize="10px" color="gray.700" textAlign="center">
@@ -100,13 +89,13 @@ export const EntityPalette: React.FC = () => {
       {/* Header */}
       <PanelHeader
         title="Entities"
-        actions={(
+        actions={
           <HStack spacing={2}>
             <Badge fontSize="9px" colorScheme="gray" variant="subtle">
               {entityTypes.length}
             </Badge>
           </HStack>
-        )}
+        }
       />
 
       {/* Search */}
@@ -132,13 +121,7 @@ export const EntityPalette: React.FC = () => {
       {/* Grouped entity list */}
       <Box flex={1} overflowY="auto">
         {filtered.length === 0 && search && (
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="center"
-            py={6}
-            fontStyle="italic"
-          >
+          <Text fontSize="xs" color="gray.600" textAlign="center" py={6} fontStyle="italic">
             No matching entities
           </Text>
         )}
@@ -229,8 +212,7 @@ export const EntityPalette: React.FC = () => {
                             </Text>
                             <Text fontSize="9px" color="gray.600" noOfLines={1}>
                               {et.category}
-                              {et.properties.length > 0 &&
-                                ` • ${et.properties.length} props`}
+                              {et.properties.length > 0 && ` • ${et.properties.length} props`}
                             </Text>
                           </VStack>
                         </HStack>
@@ -245,13 +227,7 @@ export const EntityPalette: React.FC = () => {
       </Box>
 
       {/* Help tip */}
-      <Box
-        px={3}
-        py={2}
-        borderTop="1px"
-        borderColor="editor.border"
-        flexShrink={0}
-      >
+      <Box px={3} py={2} borderTop="1px" borderColor="editor.border" flexShrink={0}>
         <Text fontSize="9px" color="gray.600" textAlign="center">
           Select an entity, then click on the map to place it
         </Text>

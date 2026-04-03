@@ -46,9 +46,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
   existingVariations,
 }) => {
   const addVariation = useEditorStore((state) => state.addVariation);
-  const setActiveVariation = useEditorStore(
-    (state) => state.setActiveVariation,
-  );
+  const setActiveVariation = useEditorStore((state) => state.setActiveVariation);
   const toast = useToast();
 
   // Form state
@@ -61,17 +59,12 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
 
   // Which seasons are already defined
   const existingSeasonIds = useMemo(
-    () =>
-      new Set(
-        existingVariations.filter((v) => v.kind === 'season').map((v) => v.id),
-      ),
+    () => new Set(existingVariations.filter((v) => v.kind === 'season').map((v) => v.id)),
     [existingVariations],
   );
 
   // Available seasons (not yet created)
-  const availableSeasons = SEASON_OPTIONS.filter(
-    (s) => !existingSeasonIds.has(s.id),
-  );
+  const availableSeasons = SEASON_OPTIONS.filter((s) => !existingSeasonIds.has(s.id));
 
   // Available parent variations (for generic variations)
   const availableParents = useMemo(() => {
@@ -97,9 +90,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
   // Validation
   const idConflict = existingVariations.some((v) => v.id === derivedId);
   const isValid =
-    kind === 'season'
-      ? !existingSeasonIds.has(seasonId)
-      : name.trim().length > 0 && !idConflict;
+    kind === 'season' ? !existingSeasonIds.has(seasonId) : name.trim().length > 0 && !idConflict;
 
   const handleCreate = () => {
     if (!isValid) return;
@@ -236,16 +227,9 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
                 _focus={{ borderColor: 'blue.500' }}
               />
               {derivedId && (
-                <FormHelperText
-                  fontSize="xs"
-                  color={idConflict ? 'red.400' : 'gray.600'}
-                >
+                <FormHelperText fontSize="xs" color={idConflict ? 'red.400' : 'gray.600'}>
                   ID:{' '}
-                  <Badge
-                    fontSize="10px"
-                    variant="subtle"
-                    colorScheme={idConflict ? 'red' : 'gray'}
-                  >
+                  <Badge fontSize="10px" variant="subtle" colorScheme={idConflict ? 'red' : 'gray'}>
                     {derivedId}
                   </Badge>
                   {idConflict && ' — already exists'}
@@ -277,8 +261,8 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
                 ))}
               </Select>
               <FormHelperText fontSize="xs" color="gray.600">
-                Child variations inherit all overrides from their parent.
-                Non-overridden content falls through.
+                Child variations inherit all overrides from their parent. Non-overridden content
+                falls through.
               </FormHelperText>
             </FormControl>
           )}
@@ -300,14 +284,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
               </HStack>
             </HStack>
             {autoSuffix ? (
-              <Box
-                bg="gray.950"
-                border="1px"
-                borderColor="gray.700"
-                rounded="md"
-                px={3}
-                py={2}
-              >
+              <Box bg="gray.950" border="1px" borderColor="gray.700" rounded="md" px={3} py={2}>
                 <Text fontSize="sm" color="gray.400" fontFamily="mono">
                   {derivedSuffix || '(none)'}
                 </Text>
@@ -333,13 +310,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
           </FormControl>
 
           {/* Preview */}
-          <Box
-            bg="gray.800"
-            rounded="lg"
-            p={4}
-            border="1px"
-            borderColor="gray.700"
-          >
+          <Box bg="gray.800" rounded="lg" p={4} border="1px" borderColor="gray.700">
             <Text
               fontSize="9px"
               fontWeight="black"
@@ -355,10 +326,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
                 <Text fontSize="xs" color="gray.500" w="60px">
                   Type:
                 </Text>
-                <Badge
-                  colorScheme={kind === 'season' ? 'green' : 'purple'}
-                  fontSize="10px"
-                >
+                <Badge colorScheme={kind === 'season' ? 'green' : 'purple'} fontSize="10px">
                   {kind === 'season' ? '🌿 Season' : '🏷️ Custom'}
                 </Badge>
               </HStack>
@@ -386,8 +354,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
                     Parent:
                   </Text>
                   <Text fontSize="xs" color="gray.300">
-                    {existingVariations.find((v) => v.id === parentId)
-                      ?.displayName || parentId}
+                    {existingVariations.find((v) => v.id === parentId)?.displayName || parentId}
                   </Text>
                 </HStack>
               )}
@@ -407,12 +374,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
             <Button size="sm" variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
-            <Button
-              size="sm"
-              colorScheme="blue"
-              onClick={handleCreate}
-              isDisabled={!isValid}
-            >
+            <Button size="sm" colorScheme="blue" onClick={handleCreate} isDisabled={!isValid}>
               Create Variation
             </Button>
           </HStack>
@@ -426,10 +388,7 @@ export const CreateVariationDialog: React.FC<CreateVariationDialogProps> = ({
  * Calculate the depth of a variation in its inheritance chain.
  * depth 0 = root (no parent), 1 = one level of nesting, etc.
  */
-function getVariationDepth(
-  variationId: string,
-  allVariations: Variation[],
-): number {
+function getVariationDepth(variationId: string, allVariations: Variation[]): number {
   let depth = 0;
   let current = allVariations.find((v) => v.id === variationId);
   while (current?.parentId) {

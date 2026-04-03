@@ -76,18 +76,12 @@ export const MapToolbar: React.FC = () => {
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const entitySnapMode = useEditorStore((state) => state.entitySnapMode);
   const setEntitySnapMode = useEditorStore((state) => state.setEntitySnapMode);
-  const showCollisionOverlay = useEditorStore(
-    (state) => state.showCollisionOverlay,
-  );
-  const setShowCollisionOverlay = useEditorStore(
-    (state) => state.setShowCollisionOverlay,
-  );
+  const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
+  const setShowCollisionOverlay = useEditorStore((state) => state.setShowCollisionOverlay);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const currentMap = useEditorStore((state) => state.currentMap);
 
-  const selectedLayer = currentMap?.layers.find(
-    (l) => l.id === selectedLayerId,
-  );
+  const selectedLayer = currentMap?.layers.find((l) => l.id === selectedLayerId);
   const tools = selectedLayer
     ? (TOOLS_BY_KIND[selectedLayer.kind] ?? FALLBACK_TOOLS)
     : FALLBACK_TOOLS;
@@ -105,11 +99,7 @@ export const MapToolbar: React.FC = () => {
       />
 
       <Tooltip
-        label={
-          showCollisionOverlay
-            ? 'Hide collision overlay'
-            : 'Show collision overlay'
-        }
+        label={showCollisionOverlay ? 'Hide collision overlay' : 'Show collision overlay'}
         fontSize="xs"
       >
         <Button

@@ -16,11 +16,7 @@ import { Layer } from '../../../types/schema';
 import { useLayerDragDrop } from '../../../hooks/useLayerDragDrop';
 import { LayerItem } from './LayerItem';
 import { LayerModal, LayerFormData } from './LayerModal';
-import {
-  LAYER_CATEGORIES,
-  LayerCategoryConfig,
-  kindToCategory,
-} from './layerConstants';
+import { LAYER_CATEGORIES, LayerCategoryConfig, kindToCategory } from './layerConstants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Category section header with collapse toggle + add button
@@ -53,20 +49,9 @@ const CategoryHeader: React.FC<CategoryHeaderProps> = ({
     userSelect="none"
   >
     <Box color="gray.500" mr="1" flexShrink={0}>
-      {isOpen ? (
-        <ChevronDownIcon boxSize={3} />
-      ) : (
-        <ChevronRightIcon boxSize={3} />
-      )}
+      {isOpen ? <ChevronDownIcon boxSize={3} /> : <ChevronRightIcon boxSize={3} />}
     </Box>
-    <Box
-      w="6px"
-      h="6px"
-      borderRadius="full"
-      bg={config.color}
-      mr="2"
-      flexShrink={0}
-    />
+    <Box w="6px" h="6px" borderRadius="full" bg={config.color} mr="2" flexShrink={0} />
     <Text
       flex={1}
       fontSize="9px"
@@ -104,17 +89,13 @@ export const LayersPanel: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const selectLayer = useEditorStore((state) => state.selectLayer);
-  const toggleVisibility = useEditorStore(
-    (state) => state.toggleLayerVisibility,
-  );
+  const toggleVisibility = useEditorStore((state) => state.toggleLayerVisibility);
   const addLayer = useEditorStore((state) => state.addLayer);
   const updateLayer = useEditorStore((state) => state.updateLayer);
   const removeLayer = useEditorStore((state) => state.removeLayer);
   const layerDefinitions = useEditorStore((state) => state.layerDefinitions);
   const setMode = useEditorStore((state) => state.setMode);
-  const setSelectedLayerDefinition = useEditorStore(
-    (state) => state.setSelectedLayerDefinition,
-  );
+  const setSelectedLayerDefinition = useEditorStore((state) => state.setSelectedLayerDefinition);
   const toast = useToast();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -127,13 +108,10 @@ export const LayersPanel: React.FC = () => {
   });
 
   // Which category add-button was clicked (pre-fills the modal kind)
-  const [addingToCategory, setAddingToCategory] =
-    useState<LayerCategoryConfig | null>(null);
+  const [addingToCategory, setAddingToCategory] = useState<LayerCategoryConfig | null>(null);
 
   // Collapse state per category (all open by default)
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
-    new Set(),
-  );
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   const toggleCategory = (id: string) =>
     setCollapsedCategories((prev) => {
@@ -155,14 +133,7 @@ export const LayersPanel: React.FC = () => {
 
   if (!currentMap) {
     return (
-      <Box
-        p="4"
-        fontSize="xs"
-        color="gray.500"
-        fontStyle="italic"
-        textAlign="center"
-        mt="10"
-      >
+      <Box p="4" fontSize="xs" color="gray.500" fontStyle="italic" textAlign="center" mt="10">
         No active map.
       </Box>
     );
@@ -188,9 +159,7 @@ export const LayersPanel: React.FC = () => {
     setAddingToCategory(categoryConfig ?? null);
     // Pre-select the first kind that belongs to this category, if any
     const defaultKind =
-      categoryConfig && categoryConfig.kinds.length > 0
-        ? categoryConfig.kinds[0]
-        : 'visual';
+      categoryConfig && categoryConfig.kinds.length > 0 ? categoryConfig.kinds[0] : 'visual';
     setFormData({
       name: '',
       kind: defaultKind,
@@ -267,11 +236,7 @@ export const LayersPanel: React.FC = () => {
   };
 
   // Guard: only allow drops within the same category
-  const handleDropGuarded = (
-    e: React.DragEvent,
-    targetLayerId: string,
-    targetCategory: string,
-  ) => {
+  const handleDropGuarded = (e: React.DragEvent, targetLayerId: string, targetCategory: string) => {
     if (!draggedLayerId) return;
     const draggedLayer = currentMap.layers.find((l) => l.id === draggedLayerId);
     if (!draggedLayer) return;
@@ -302,9 +267,7 @@ export const LayersPanel: React.FC = () => {
         {/* Categorized layer list */}
         <Box flex={1} overflowY="auto">
           {LAYER_CATEGORIES.map((catConfig) => {
-            const catLayers = layers.filter(
-              (l) => kindToCategory(l.kind) === catConfig.id,
-            );
+            const catLayers = layers.filter((l) => kindToCategory(l.kind) === catConfig.id);
             const isCollapsed = collapsedCategories.has(catConfig.id);
 
             return (
@@ -345,14 +308,10 @@ export const LayersPanel: React.FC = () => {
                             onEdit={handleOpenEditModal}
                             onDelete={handleDeleteLayer}
                             onGoToDefinition={handleGoToDefinition}
-                            onDragStart={
-                              !isFromDefinition ? handleDragStart : undefined
-                            }
+                            onDragStart={!isFromDefinition ? handleDragStart : undefined}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
-                            onDrop={(e, targetId) =>
-                              handleDropGuarded(e, targetId, catConfig.id)
-                            }
+                            onDrop={(e, targetId) => handleDropGuarded(e, targetId, catConfig.id)}
                             onDragEnd={handleDragEnd}
                             dragNodeRef={dragNodeRef}
                           />
@@ -376,9 +335,7 @@ export const LayersPanel: React.FC = () => {
         setFormData={setFormData}
         isEditing={!!editingLayer}
         lockedKinds={
-          addingToCategory && addingToCategory.kinds.length > 0
-            ? addingToCategory.kinds
-            : undefined
+          addingToCategory && addingToCategory.kinds.length > 0 ? addingToCategory.kinds : undefined
         }
       />
     </>

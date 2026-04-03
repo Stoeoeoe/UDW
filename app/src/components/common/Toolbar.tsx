@@ -32,10 +32,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({ items, activeId, onActivate, s
   const groupKeys = Object.keys(groups);
 
   return (
-    <HStack bg="gray.900" p="1" rounded="xl" border="1px" borderColor="gray.800" spacing="1" boxShadow="lg">
+    <HStack
+      bg="gray.900"
+      p="1"
+      rounded="xl"
+      border="1px"
+      borderColor="gray.800"
+      spacing="1"
+      boxShadow="lg"
+    >
       {groupKeys.map((groupKey, groupIndex) => (
         <React.Fragment key={groupKey}>
-          {groups[groupKey].map(tool => {
+          {groups[groupKey].map((tool) => {
             const Icon = tool.icon;
             const isActive = activeId === tool.id;
             return (

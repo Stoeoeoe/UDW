@@ -62,17 +62,12 @@ function buildVariationTree(variations: Variation[]): {
 export const VariationManager: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
-  const setActiveVariation = useEditorStore(
-    (state) => state.setActiveVariation,
-  );
+  const setActiveVariation = useEditorStore((state) => state.setActiveVariation);
   const removeVariation = useEditorStore((state) => state.removeVariation);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const variations = useMemo(
-    () => currentMap?.variations || [],
-    [currentMap?.variations],
-  );
+  const variations = useMemo(() => currentMap?.variations || [], [currentMap?.variations]);
 
   const tree = useMemo(() => buildVariationTree(variations), [variations]);
 
@@ -219,9 +214,7 @@ export const VariationManager: React.FC = () => {
               handleDeleteVariation(v.id);
             }}
             title={
-              isConfirming
-                ? 'Click again to confirm (deletes children too)'
-                : 'Delete variation'
+              isConfirming ? 'Click again to confirm (deletes children too)' : 'Delete variation'
             }
           />
           <IconButton
@@ -342,9 +335,7 @@ export const VariationManager: React.FC = () => {
 
           {/* Generic Variations Section */}
           {(rootGenerics.length > 0 ||
-            tree.seasons.some(
-              (s) => (tree.childrenOf[s.id] || []).length > 0,
-            )) && (
+            tree.seasons.some((s) => (tree.childrenOf[s.id] || []).length > 0)) && (
             <Box pt={3}>
               <Text
                 fontSize="9px"
@@ -365,13 +356,7 @@ export const VariationManager: React.FC = () => {
 
                 return (
                   <Box key={season.id}>
-                    <Text
-                      fontSize="9px"
-                      color="gray.600"
-                      px={2}
-                      py={0.5}
-                      fontStyle="italic"
-                    >
+                    <Text fontSize="9px" color="gray.600" px={2} py={0.5} fontStyle="italic">
                       Under {season.displayName}:
                     </Text>
                     {children.map((child) => renderVariationItem(child, 1))}
@@ -399,20 +384,13 @@ export const VariationManager: React.FC = () => {
       </Box>
 
       {/* Create Variation Dialog */}
-      <CreateVariationDialog
-        isOpen={isOpen}
-        onClose={onClose}
-        existingVariations={variations}
-      />
+      <CreateVariationDialog isOpen={isOpen} onClose={onClose} existingVariations={variations} />
     </Flex>
   );
 };
 
 /** Collect all descendant variation IDs recursively */
-function collectDescendants(
-  parentId: string,
-  variations: Variation[],
-): string[] {
+function collectDescendants(parentId: string, variations: Variation[]): string[] {
   const result: string[] = [];
   const children = variations.filter((v) => v.parentId === parentId);
   for (const child of children) {

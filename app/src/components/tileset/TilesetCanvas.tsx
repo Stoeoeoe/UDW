@@ -9,10 +9,7 @@ import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
 interface TilesetCanvasProps {
   tileset: Tileset;
   selectedIndex: number | null;
-  onSelect: (
-    index: number,
-    meta?: { ctrlKey?: boolean; shiftKey?: boolean },
-  ) => void;
+  onSelect: (index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => void;
   mode?: 'interactive' | 'static';
   zoom?: number;
   tool?: 'select' | 'terrain';
@@ -32,17 +29,11 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
   const sprite = loadedSprites.get(tileset.spriteSheet);
   const setSelectedTiles = useEditorStore((state) => state.setSelectedTiles);
-  const selectedTileIndices = useEditorStore(
-    (state) => state.selectedTileIndices,
-  );
+  const selectedTileIndices = useEditorStore((state) => state.selectedTileIndices);
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
-  const setTileCornerTerrain = useEditorStore(
-    (state) => state.setTileCornerTerrain,
-  );
-  const showTilesetCollisionOverlay = useEditorStore(
-    (state) => state.showTilesetCollisionOverlay,
-  );
+  const setTileCornerTerrain = useEditorStore((state) => state.setTileCornerTerrain);
+  const showTilesetCollisionOverlay = useEditorStore((state) => state.showTilesetCollisionOverlay);
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{
@@ -58,9 +49,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
   // Terrain painting state (drag-to-paint)
   const [isTerrainPainting, setIsTerrainPainting] = useState(false);
-  const lastPaintedCorner = useRef<{ tileIdx: number; corner: number } | null>(
-    null,
-  );
+  const lastPaintedCorner = useRef<{ tileIdx: number; corner: number } | null>(null);
 
   // Zoom and Camera State
   const [internalZoom, setInternalZoom] = useState(1.5);
@@ -116,11 +105,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       const rawNextCamX = worldX - (focusX - canvas.width / 2) / finalZoom;
       const rawNextCamY = worldY - (focusY - canvas.height / 2) / finalZoom;
 
-      const constrained = getConstrainedPos(
-        rawNextCamX,
-        rawNextCamY,
-        finalZoom,
-      );
+      const constrained = getConstrainedPos(rawNextCamX, rawNextCamY, finalZoom);
 
       setInternalZoom(finalZoom);
       setCamera(constrained);
@@ -173,12 +158,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       const col = Math.floor(tileX / tileset.tileWidth);
       const row = Math.floor(tileY / tileset.tileHeight);
 
-      if (
-        col >= 0 &&
-        col < tileset.columns &&
-        row >= 0 &&
-        tileY < sprite.height
-      ) {
+      if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
         const index = row * tileset.columns + col;
         if (index >= 0 && index < tileset.tileCount) {
           return { tileX, tileY, col, row, index };
@@ -204,20 +184,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         const mouseY = e.clientY - rect.top;
         const coords = getTileCoords(mouseX, mouseY);
         if (coords) {
-          const corner = computeCorner(
-            coords.tileX,
-            coords.tileY,
-            coords.col,
-            coords.row,
-          );
+          const corner = computeCorner(coords.tileX, coords.tileY, coords.col, coords.row);
           setIsTerrainPainting(true);
           lastPaintedCorner.current = { tileIdx: coords.index, corner };
-          setTileCornerTerrain(
-            tileset.id,
-            coords.index,
-            corner,
-            selectedTerrainId,
-          );
+          setTileCornerTerrain(tileset.id, coords.index, corner, selectedTerrainId);
         }
       } else if (e.button === 0) {
         // start selection drag (only in select mode)
@@ -232,8 +202,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           const sheetX = -sprite.width / 2;
           const sheetY = -sprite.height / 2;
           const worldX = (mouseX - canvas.width / 2) / effectiveZoom + camera.x;
-          const worldY =
-            (mouseY - canvas.height / 2) / effectiveZoom + camera.y;
+          const worldY = (mouseY - canvas.height / 2) / effectiveZoom + camera.y;
           tileX = worldX - sheetX;
           tileY = worldY - sheetY;
         } else {
@@ -243,12 +212,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         const col = Math.floor(tileX / tileset.tileWidth);
         const row = Math.floor(tileY / tileset.tileHeight);
-        if (
-          col >= 0 &&
-          col < tileset.columns &&
-          row >= 0 &&
-          tileY < sprite.height
-        ) {
+        if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
           // If multi-select is disabled, perform single-tile select immediately on mouse down
           if (!enableMultiSelect) {
             const index = row * tileset.columns + col;
@@ -299,26 +263,12 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         const mouseY = e.clientY - rect.top;
         const coords = getTileCoords(mouseX, mouseY);
         if (coords) {
-          const corner = computeCorner(
-            coords.tileX,
-            coords.tileY,
-            coords.col,
-            coords.row,
-          );
+          const corner = computeCorner(coords.tileX, coords.tileY, coords.col, coords.row);
           // Only paint if different from last painted corner
           const last = lastPaintedCorner.current;
-          if (
-            !last ||
-            last.tileIdx !== coords.index ||
-            last.corner !== corner
-          ) {
+          if (!last || last.tileIdx !== coords.index || last.corner !== corner) {
             lastPaintedCorner.current = { tileIdx: coords.index, corner };
-            setTileCornerTerrain(
-              tileset.id,
-              coords.index,
-              corner,
-              selectedTerrainId,
-            );
+            setTileCornerTerrain(tileset.id, coords.index, corner, selectedTerrainId);
           }
         }
         return;
@@ -337,8 +287,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           const sheetX = -sprite.width / 2;
           const sheetY = -sprite.height / 2;
           const worldX = (mouseX - canvas.width / 2) / effectiveZoom + camera.x;
-          const worldY =
-            (mouseY - canvas.height / 2) / effectiveZoom + camera.y;
+          const worldY = (mouseY - canvas.height / 2) / effectiveZoom + camera.y;
           tileX = worldX - sheetX;
           tileY = worldY - sheetY;
         } else {
@@ -348,12 +297,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         const col = Math.floor(tileX / tileset.tileWidth);
         const row = Math.floor(tileY / tileset.tileHeight);
-        if (
-          col >= 0 &&
-          col < tileset.columns &&
-          row >= 0 &&
-          tileY < sprite.height
-        ) {
+        if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
           setSelectionEnd({ col, row });
           mouseMovedDuringDown.current = true;
         }
@@ -405,9 +349,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         }
         if (range.length > 0) {
           // Respect enableMultiSelect prop: only bulk-select when allowed
-          if (
-            typeof enableMultiSelect !== 'undefined' ? enableMultiSelect : true
-          ) {
+          if (typeof enableMultiSelect !== 'undefined' ? enableMultiSelect : true) {
             setSelectedTiles(range);
             // Prevent the subsequent click event from turning this into a single select
             ignoreClickRef.current = true;
@@ -604,8 +546,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         tileRow: number,
         cornerIdx: number,
       ): string | null => {
-        if (tileCol < 0 || tileRow < 0 || tileCol >= tileset.columns)
-          return null;
+        if (tileCol < 0 || tileRow < 0 || tileCol >= tileset.columns) return null;
         const tileIdx = tileRow * tileset.columns + tileCol;
         if (tileIdx < 0 || tileIdx >= tileset.tileCount) return null;
         const td = tileset.tiles?.[tileIdx];
@@ -701,14 +642,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           if (rTR > 0) ctx.arcTo(qx + halfW, qy, qx + halfW, qy + rTR, rTR);
           else ctx.lineTo(qx + halfW, qy);
           ctx.lineTo(qx + halfW, qy + halfH - rBR);
-          if (rBR > 0)
-            ctx.arcTo(
-              qx + halfW,
-              qy + halfH,
-              qx + halfW - rBR,
-              qy + halfH,
-              rBR,
-            );
+          if (rBR > 0) ctx.arcTo(qx + halfW, qy + halfH, qx + halfW - rBR, qy + halfH, rBR);
           else ctx.lineTo(qx + halfW, qy + halfH);
           ctx.lineTo(qx + rBL, qy + halfH);
           if (rBL > 0) ctx.arcTo(qx, qy + halfH, qx, qy + halfH - rBL, rBL);
@@ -744,23 +678,13 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         }
 
         for (const shape of collision.shapes || []) {
-          const points = shapeToNormalizedPolygon(
-            shape,
-            tileset.tileWidth,
-            tileset.tileHeight,
-          );
+          const points = shapeToNormalizedPolygon(shape, tileset.tileWidth, tileset.tileHeight);
           if (points.length < 3) continue;
 
           ctx.beginPath();
-          ctx.moveTo(
-            x + points[0][0] * tileset.tileWidth,
-            y + points[0][1] * tileset.tileHeight,
-          );
+          ctx.moveTo(x + points[0][0] * tileset.tileWidth, y + points[0][1] * tileset.tileHeight);
           for (let i = 1; i < points.length; i++) {
-            ctx.lineTo(
-              x + points[i][0] * tileset.tileWidth,
-              y + points[i][1] * tileset.tileHeight,
-            );
+            ctx.lineTo(x + points[i][0] * tileset.tileWidth, y + points[i][1] * tileset.tileHeight);
           }
           ctx.closePath();
           ctx.fillStyle = 'rgba(255, 127, 80, 0.25)';
@@ -851,12 +775,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const col = Math.floor(tileX / tileset.tileWidth);
     const row = Math.floor(tileY / tileset.tileHeight);
 
-    if (
-      col >= 0 &&
-      col < tileset.columns &&
-      row >= 0 &&
-      tileY < sprite.height
-    ) {
+    if (col >= 0 && col < tileset.columns && row >= 0 && tileY < sprite.height) {
       const index = row * tileset.columns + col;
       if (index >= 0 && index < tileset.tileCount) {
         onSelect(index, {

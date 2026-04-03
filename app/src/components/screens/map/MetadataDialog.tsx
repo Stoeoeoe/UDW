@@ -20,31 +20,20 @@ interface MetadataDialogProps {
   initialTab?: 'base' | 'variation';
 }
 
-type VariationOverrideKey =
-  | 'mapNameOverride'
-  | 'baseTilesetIdOverride'
-  | 'descriptionOverride';
+type VariationOverrideKey = 'mapNameOverride' | 'baseTilesetIdOverride' | 'descriptionOverride';
 
 type VariationMetadataValues = Record<string, string | undefined>;
 
-export const MetadataDialog: React.FC<MetadataDialogProps> = ({
-  isOpen,
-  onClose,
-  initialTab,
-}) => {
+export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose, initialTab }) => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const updateCurrentMap = useEditorStore((state) => state.updateCurrentMap);
   const updateVariation = useEditorStore((state) => state.updateVariation);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
-  const tilesets = Array.from(
-    useEditorStore((state) => state.tilesets).values(),
-  );
+  const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
 
   const activeVariation =
-    currentMap?.variations?.find(
-      (variation) => variation.id === activeVariationId,
-    ) || null;
+    currentMap?.variations?.find((variation) => variation.id === activeVariationId) || null;
 
   if (!currentMap) {
     return (
@@ -74,10 +63,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
     );
   }
 
-  const updateMapMetadata = (
-    key: 'description' | 'music' | 'ambience',
-    value: string,
-  ) => {
+  const updateMapMetadata = (key: 'description' | 'music' | 'ambience', value: string) => {
     const nextMetadata = {
       ...(currentMap.metadata || {}),
       [key]: value || undefined,
@@ -85,39 +71,30 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
     updateCurrentMap({ metadata: nextMetadata });
   };
 
-  const updateVariationMetadata = (
-    key: VariationOverrideKey,
-    value: string,
-  ) => {
+  const updateVariationMetadata = (key: VariationOverrideKey, value: string) => {
     if (!activeVariation) return;
 
-    const currentMetadata = (activeVariation.metadata ||
-      {}) as VariationMetadataValues;
+    const currentMetadata = (activeVariation.metadata || {}) as VariationMetadataValues;
     const nextMetadata: VariationMetadataValues = {
       ...currentMetadata,
       [key]: value || undefined,
     };
 
-    (
-      [
-        'mapNameOverride',
-        'baseTilesetIdOverride',
-        'descriptionOverride',
-      ] as const
-    ).forEach((overrideKey) => {
-      const raw = nextMetadata[overrideKey];
-      if (!raw || !String(raw).trim()) {
-        delete nextMetadata[overrideKey];
-      }
-    });
+    (['mapNameOverride', 'baseTilesetIdOverride', 'descriptionOverride'] as const).forEach(
+      (overrideKey) => {
+        const raw = nextMetadata[overrideKey];
+        if (!raw || !String(raw).trim()) {
+          delete nextMetadata[overrideKey];
+        }
+      },
+    );
 
     updateVariation(activeVariation.id, {
       metadata: Object.keys(nextMetadata).length > 0 ? nextMetadata : undefined,
     });
   };
 
-  const variationMetadata =
-    ((activeVariation?.metadata || {}) as VariationMetadataValues) || {};
+  const variationMetadata = ((activeVariation?.metadata || {}) as VariationMetadataValues) || {};
 
   return (
     <EditorModal isOpen={isOpen} onClose={onClose}>
@@ -139,8 +116,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               Map Metadata
             </Text>
             <Text color="gray.500" fontSize="sm">
-              Edit base map metadata and active variation overrides in one
-              place.
+              Edit base map metadata and active variation overrides in one place.
             </Text>
           </VStack>
 
@@ -148,11 +124,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
           {initialTab === 'variation' && activeVariation ? (
             <VStack spacing={3} align="stretch" flex={1} overflowY="auto">
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Variation Name
                 </FormLabel>
                 {activeVariation.kind === 'season' ? (
@@ -175,11 +147,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Tileset Suffix
                 </FormLabel>
                 <Input
@@ -197,11 +165,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Override Map Name
                 </FormLabel>
                 <Input
@@ -209,10 +173,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
                   value={variationMetadata.mapNameOverride || ''}
                   placeholder={currentMap.name}
                   onChange={(event) =>
-                    updateVariationMetadata(
-                      'mapNameOverride',
-                      event.target.value,
-                    )
+                    updateVariationMetadata('mapNameOverride', event.target.value)
                   }
                   bg="gray.950"
                   borderColor="gray.700"
@@ -220,23 +181,15 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Override Base Tileset
                 </FormLabel>
                 <Select
                   size="sm"
                   value={variationMetadata.baseTilesetIdOverride || ''}
                   onChange={(event) => {
-                    updateVariationMetadata(
-                      'baseTilesetIdOverride',
-                      event.target.value,
-                    );
-                    if (event.target.value)
-                      setActiveTileset(event.target.value);
+                    updateVariationMetadata('baseTilesetIdOverride', event.target.value);
+                    if (event.target.value) setActiveTileset(event.target.value);
                   }}
                   bg="gray.950"
                   borderColor="gray.700"
@@ -245,11 +198,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
                     Use map base ({currentMap.baseTilesetId})
                   </option>
                   {tilesets.map((tileset) => (
-                    <option
-                      key={tileset.id}
-                      value={tileset.id}
-                      style={{ background: '#171923' }}
-                    >
+                    <option key={tileset.id} value={tileset.id} style={{ background: '#171923' }}>
                       {tileset.name}
                     </option>
                   ))}
@@ -257,24 +206,15 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Override Description
                 </FormLabel>
                 <Textarea
                   size="sm"
                   value={variationMetadata.descriptionOverride || ''}
-                  placeholder={
-                    currentMap.metadata?.description || 'No base description'
-                  }
+                  placeholder={currentMap.metadata?.description || 'No base description'}
                   onChange={(event) =>
-                    updateVariationMetadata(
-                      'descriptionOverride',
-                      event.target.value,
-                    )
+                    updateVariationMetadata('descriptionOverride', event.target.value)
                   }
                   bg="gray.950"
                   borderColor="gray.700"
@@ -285,30 +225,20 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
           ) : (
             <VStack spacing={3} align="stretch" flex={1} overflowY="auto">
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Map Name
                 </FormLabel>
                 <Input
                   size="sm"
                   value={currentMap.name}
-                  onChange={(event) =>
-                    updateCurrentMap({ name: event.target.value })
-                  }
+                  onChange={(event) => updateCurrentMap({ name: event.target.value })}
                   bg="gray.950"
                   borderColor="gray.700"
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Base Tileset
                 </FormLabel>
                 <Select
@@ -322,11 +252,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
                   borderColor="gray.700"
                 >
                   {tilesets.map((tileset) => (
-                    <option
-                      key={tileset.id}
-                      value={tileset.id}
-                      style={{ background: '#171923' }}
-                    >
+                    <option key={tileset.id} value={tileset.id} style={{ background: '#171923' }}>
                       {tileset.name}
                     </option>
                   ))}
@@ -334,19 +260,13 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Description
                 </FormLabel>
                 <Textarea
                   size="sm"
                   value={currentMap.metadata?.description || ''}
-                  onChange={(event) =>
-                    updateMapMetadata('description', event.target.value)
-                  }
+                  onChange={(event) => updateMapMetadata('description', event.target.value)}
                   bg="gray.950"
                   borderColor="gray.700"
                   minH="90px"
@@ -354,38 +274,26 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Music Cue
                 </FormLabel>
                 <Input
                   size="sm"
                   value={currentMap.metadata?.music || ''}
-                  onChange={(event) =>
-                    updateMapMetadata('music', event.target.value)
-                  }
+                  onChange={(event) => updateMapMetadata('music', event.target.value)}
                   bg="gray.950"
                   borderColor="gray.700"
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel
-                  fontSize="xs"
-                  color="gray.400"
-                  textTransform="uppercase"
-                >
+                <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
                   Ambience Cue
                 </FormLabel>
                 <Input
                   size="sm"
                   value={currentMap.metadata?.ambience || ''}
-                  onChange={(event) =>
-                    updateMapMetadata('ambience', event.target.value)
-                  }
+                  onChange={(event) => updateMapMetadata('ambience', event.target.value)}
                   bg="gray.950"
                   borderColor="gray.700"
                 />

@@ -47,10 +47,7 @@ const layerIconComponents: Record<string, React.FC<{ size?: number }>> = {
   overlay: BsStack,
 };
 
-export const LayerIcon: React.FC<{ icon?: string; color?: string }> = ({
-  icon,
-  color,
-}) => {
+export const LayerIcon: React.FC<{ icon?: string; color?: string }> = ({ icon, color }) => {
   if (!icon) return null;
   const IconComponent = layerIconComponents[icon];
   if (!IconComponent) return null;
@@ -108,11 +105,7 @@ export const LayerItem: React.FC<LayerItemProps> = ({
     <Box
       ref={isDragging ? dragNodeRef : undefined}
       draggable={!isFromDefinition}
-      onDragStart={
-        !isFromDefinition && onDragStart
-          ? (e) => onDragStart(e, layer.id)
-          : undefined
-      }
+      onDragStart={!isFromDefinition && onDragStart ? (e) => onDragStart(e, layer.id) : undefined}
       onDragOver={onDragOver ? (e) => onDragOver(e, layer.id) : undefined}
       onDragLeave={onDragLeave}
       onDrop={onDrop ? (e) => onDrop(e, layer.id) : undefined}
@@ -124,9 +117,7 @@ export const LayerItem: React.FC<LayerItemProps> = ({
       cursor={isFromDefinition ? 'pointer' : 'grab'}
       bg={isSelected ? 'blue.900' : 'transparent'}
       border="2px"
-      borderColor={
-        isDropTarget ? 'blue.400' : isSelected ? 'blue.500' : 'transparent'
-      }
+      borderColor={isDropTarget ? 'blue.400' : isSelected ? 'blue.500' : 'transparent'}
       borderStyle={isDropTarget ? 'dashed' : 'solid'}
       _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.50' }}
       transition="all 0.1s"

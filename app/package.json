@@ -11,7 +11,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,html}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md,html}\""
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx,json,css,md,html}": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
@@ -66,7 +74,11 @@
     "vite": "^5.1.6",
     "vite-plugin-electron": "^0.28.6",
     "vite-plugin-electron-renderer": "^0.14.5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "prettier": "^3.8.1",
+    "husky": "^8.0.0",
+    "lint-staged": "^14.0.0"
   },
+  "prepare": "husky install",
   "main": "dist-electron/main.js"
 }

@@ -5,7 +5,7 @@ import { useSaveStore } from '../../lib/saveManager';
 
 /**
  * SaveIndicator - Shows current save status in the UI
- * 
+ *
  * States:
  * - idle: Nothing shown (or subtle "All changes saved")
  * - saving: Spinner with "Saving..."
@@ -13,75 +13,68 @@ import { useSaveStore } from '../../lib/saveManager';
  * - error: Warning icon with error message
  */
 export const SaveIndicator: React.FC = () => {
-    const status = useSaveStore(state => state.status);
-    const error = useSaveStore(state => state.error);
+  const status = useSaveStore((state) => state.status);
+  const error = useSaveStore((state) => state.error);
 
-    // Don't show anything when idle
-    if (status === 'idle') {
-        return null;
+  // Don't show anything when idle
+  if (status === 'idle') {
+    return null;
+  }
+
+  const getStatusDisplay = (): { icon: React.ReactNode; text: string; color: string } => {
+    switch (status) {
+      case 'saving':
+        return {
+          icon: <Spinner size="xs" color="blue.400" />,
+          text: 'Saving...',
+          color: 'blue.400',
+        };
+      case 'saved':
+        return {
+          icon: <CheckIcon boxSize={3} color="green.400" />,
+          text: 'Saved',
+          color: 'green.400',
+        };
+      case 'error':
+        return {
+          icon: <WarningIcon boxSize={3} color="red.400" />,
+          text: error || 'Save failed',
+          color: 'red.400',
+        };
+      default:
+        return { icon: null, text: '', color: 'gray.500' };
     }
+  };
 
-    const getStatusDisplay = (): { icon: React.ReactNode; text: string; color: string } => {
-        switch (status) {
-            case 'saving':
-                return {
-                    icon: <Spinner size="xs" color="blue.400" />,
-                    text: 'Saving...',
-                    color: 'blue.400'
-                };
-            case 'saved':
-                return {
-                    icon: <CheckIcon boxSize={3} color="green.400" />,
-                    text: 'Saved',
-                    color: 'green.400'
-                };
-            case 'error':
-                return {
-                    icon: <WarningIcon boxSize={3} color="red.400" />,
-                    text: error || 'Save failed',
-                    color: 'red.400'
-                };
-            default:
-                return { icon: null, text: '', color: 'gray.500' };
-        }
-    };
+  const { icon, text, color } = getStatusDisplay();
 
-    const { icon, text, color } = getStatusDisplay();
-
-    return (
-        <HStack
-            spacing={2}
-            px={2}
-            py={1}
-            rounded="md"
-            bg="blackAlpha.300"
-            transition="opacity 0.2s"
-        >
-            {icon}
-            <Text fontSize="xs" color={color} fontWeight="medium">
-                {text}
-            </Text>
-        </HStack>
-    );
+  return (
+    <HStack spacing={2} px={2} py={1} rounded="md" bg="blackAlpha.300" transition="opacity 0.2s">
+      {icon}
+      <Text fontSize="xs" color={color} fontWeight="medium">
+        {text}
+      </Text>
+    </HStack>
+  );
 };
 
 /**
  * Compact save indicator for tight spaces (just icon, no text)
  */
 export const SaveIndicatorCompact: React.FC = () => {
-    const status = useSaveStore(state => state.status);
+  const status = useSaveStore((state) => state.status);
 
-    if (status === 'idle') {
-        return null;
-    }
+  if (status === 'idle') {
+    return null;
+  }
 
-    return (
-        <Box>
-            {status === 'saving' && <Spinner size="xs" color="blue.400" />}
-            {status === 'saved' && <CheckIcon boxSize={3} color="green.400" />}
-            {status === 'error' && <WarningIcon boxSize={3} color="red.400" />}
-        </Box>
-    );
+  return (
+    <Box>
+      {status === 'saving' && <Spinner size="xs" color="blue.400" />}
+      {status === 'saved' && <CheckIcon boxSize={3} color="green.400" />}
+      {status === 'error' && <WarningIcon boxSize={3} color="red.400" />}
+    </Box>
+  );
 };
 
 export default SaveIndicator;

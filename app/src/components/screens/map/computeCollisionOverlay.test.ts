@@ -35,11 +35,7 @@ describe('computeCollisionOverlay integration', () => {
       tiles: [{ collision: { type: 'full' } }, { collision: { type: 'full' } }],
     });
 
-    const { fillPolygons, mergedSegments } = computeCollisionOverlay(
-      currentMap,
-      null,
-      tilesets,
-    );
+    const { fillPolygons, mergedSegments } = computeCollisionOverlay(currentMap, null, tilesets);
 
     // Two fill polygons expected (one per tile)
     expect(fillPolygons.length).toBe(2);

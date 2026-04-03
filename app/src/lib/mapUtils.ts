@@ -17,10 +17,7 @@ export interface EffectiveMapContext {
  * Resolves the inheritance chain for a variation.
  * Returns an array starting from root (base) to the target variation.
  */
-export function getVariationChain(
-  map: Map,
-  variationId: string | null,
-): (Variation | 'base')[] {
+export function getVariationChain(map: Map, variationId: string | null): (Variation | 'base')[] {
   if (!variationId) return ['base'];
 
   const chain: (Variation | 'base')[] = [];
@@ -95,11 +92,7 @@ export function resolveEntities(map: Map, variationId: string | null) {
         entities.push(override.entity);
       } else if (override.action === 'remove' && override.entityId) {
         entities = entities.filter((e) => e.id !== override.entityId);
-      } else if (
-        override.action === 'modify' &&
-        override.entityId &&
-        override.entity
-      ) {
+      } else if (override.action === 'modify' && override.entityId && override.entity) {
         const idx = entities.findIndex((e) => e.id === override.entityId);
         if (idx !== -1) {
           entities[idx] = { ...entities[idx], ...override.entity };
@@ -115,10 +108,7 @@ export function resolveEntities(map: Map, variationId: string | null) {
  * Resolves map-level metadata after applying variation metadata overrides.
  * Child variation metadata wins over parent variation metadata.
  */
-export function resolveMapContext(
-  map: Map,
-  variationId: string | null,
-): EffectiveMapContext {
+export function resolveMapContext(map: Map, variationId: string | null): EffectiveMapContext {
   const context: EffectiveMapContext = {
     name: map.name,
     baseTilesetId: map.baseTilesetId,
@@ -135,16 +125,10 @@ export function resolveMapContext(
     if (metadata.mapNameOverride && metadata.mapNameOverride.trim()) {
       context.name = metadata.mapNameOverride;
     }
-    if (
-      metadata.baseTilesetIdOverride &&
-      metadata.baseTilesetIdOverride.trim()
-    ) {
+    if (metadata.baseTilesetIdOverride && metadata.baseTilesetIdOverride.trim()) {
       context.baseTilesetId = metadata.baseTilesetIdOverride;
     }
-    if (
-      metadata.descriptionOverride !== undefined &&
-      metadata.descriptionOverride !== null
-    ) {
+    if (metadata.descriptionOverride !== undefined && metadata.descriptionOverride !== null) {
       context.description = metadata.descriptionOverride || undefined;
     }
   }

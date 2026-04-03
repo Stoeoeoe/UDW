@@ -40,8 +40,7 @@ export async function applyShape(params: {
   if (
     action === 'paint' &&
     (!activeTilesetId ||
-      (selectedTileIndex === null &&
-        (!selectedTileIndices || selectedTileIndices.length === 0)))
+      (selectedTileIndex === null && (!selectedTileIndices || selectedTileIndices.length === 0)))
   )
     return;
 
@@ -56,8 +55,7 @@ export async function applyShape(params: {
   const tilesToErase: Array<any> = [];
 
   const collectTile = (tx: number, ty: number) => {
-    if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height)
-      return;
+    if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
     if (action === 'paint') {
       if (pattern && patternW > 0 && patternH > 0 && activeTilesetId) {
         for (let py = 0; py < patternH; py++) {
@@ -66,12 +64,7 @@ export async function applyShape(params: {
             if (tileIdx !== null) {
               const nx = tx + px,
                 ny = ty + py;
-              if (
-                nx >= 0 &&
-                nx < currentMap.width &&
-                ny >= 0 &&
-                ny < currentMap.height
-              ) {
+              if (nx >= 0 && nx < currentMap.width && ny >= 0 && ny < currentMap.height) {
                 tilesToPaint.push({
                   x: nx,
                   y: ny,
@@ -114,12 +107,7 @@ export async function applyShape(params: {
           for (let px = 0; px < patternW; px++) {
             const nx = tx + px,
               ny = ty + py;
-            if (
-              nx >= 0 &&
-              nx < currentMap.width &&
-              ny >= 0 &&
-              ny < currentMap.height
-            ) {
+            if (nx >= 0 && nx < currentMap.width && ny >= 0 && ny < currentMap.height) {
               tilesToErase.push({ x: nx, y: ny });
             }
           }
@@ -141,8 +129,7 @@ export async function applyShape(params: {
     }
   };
 
-  const effectiveBrushSize =
-    mode === 'point' || mode === 'line' ? brushSize : 1;
+  const effectiveBrushSize = mode === 'point' || mode === 'line' ? brushSize : 1;
 
   if (mode === 'point') {
     collectBrush(end.x, end.y, effectiveBrushSize);
@@ -176,9 +163,7 @@ export async function applyShape(params: {
       }
     }
   } else if (mode === 'circle') {
-    const radius = Math.sqrt(
-      Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2),
-    );
+    const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
     const minX = Math.floor(start.x - radius);
     const maxX = Math.ceil(start.x + radius);
     const minY = Math.floor(start.y - radius);
@@ -186,9 +171,7 @@ export async function applyShape(params: {
 
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
-        const dist = Math.sqrt(
-          Math.pow(x - start.x, 2) + Math.pow(y - start.y, 2),
-        );
+        const dist = Math.sqrt(Math.pow(x - start.x, 2) + Math.pow(y - start.y, 2));
         if (dist <= radius) {
           if (pattern && patternW > 0 && patternH > 0) {
             const dx = x - start.x;

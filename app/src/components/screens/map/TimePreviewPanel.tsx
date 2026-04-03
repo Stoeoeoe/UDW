@@ -98,13 +98,9 @@ function getCurrentPhase(t: number): string {
  * - Phase buttons: jump to predefined time phases
  */
 export const TimePreviewPanel: React.FC = () => {
-  const timePreviewEnabled = useEditorStore(
-    (state) => state.timePreviewEnabled,
-  );
+  const timePreviewEnabled = useEditorStore((state) => state.timePreviewEnabled);
   const timeOfDay = useEditorStore((state) => state.timeOfDay);
-  const setTimePreviewEnabled = useEditorStore(
-    (state) => state.setTimePreviewEnabled,
-  );
+  const setTimePreviewEnabled = useEditorStore((state) => state.setTimePreviewEnabled);
   const setTimeOfDay = useEditorStore((state) => state.setTimeOfDay);
 
   const currentPhase = useMemo(() => getCurrentPhase(timeOfDay), [timeOfDay]);
@@ -142,7 +138,7 @@ export const TimePreviewPanel: React.FC = () => {
       {/* Header with toggle */}
       <PanelHeader
         title="Time Preview"
-        actions={(
+        actions={
           <HStack spacing={2}>
             {timePreviewEnabled && (
               <Text fontSize="xs" color="gray.400" fontFamily="mono">
@@ -164,7 +160,7 @@ export const TimePreviewPanel: React.FC = () => {
               </Box>
             </Tooltip>
           </HStack>
-        )}
+        }
       />
 
       {/* Controls body */}
@@ -184,12 +180,7 @@ export const TimePreviewPanel: React.FC = () => {
               value={timeOfDay}
               onChange={setTimeOfDay}
             >
-              <SliderTrack
-                h="8px"
-                borderRadius="full"
-                bg="gray.800"
-                overflow="hidden"
-              >
+              <SliderTrack h="8px" borderRadius="full" bg="gray.800" overflow="hidden">
                 <Box
                   position="absolute"
                   inset={0}
@@ -243,9 +234,7 @@ export const TimePreviewPanel: React.FC = () => {
                     cursor="pointer"
                     bg={isActive ? `${phase.color}.900` : 'transparent'}
                     borderWidth="1px"
-                    borderColor={
-                      isActive ? `${phase.color}.600` : 'transparent'
-                    }
+                    borderColor={isActive ? `${phase.color}.600` : 'transparent'}
                     _hover={{
                       bg: isActive ? `${phase.color}.900` : 'whiteAlpha.50',
                       borderColor: `${phase.color}.600`,
@@ -274,13 +263,7 @@ export const TimePreviewPanel: React.FC = () => {
 
         {/* Info when disabled */}
         {!timePreviewEnabled && (
-          <Text
-            fontSize="9px"
-            color="gray.600"
-            textAlign="center"
-            mt={1}
-            fontStyle="italic"
-          >
+          <Text fontSize="9px" color="gray.600" textAlign="center" mt={1} fontStyle="italic">
             Enable to preview time-scoped entities
           </Text>
         )}

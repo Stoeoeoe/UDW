@@ -80,9 +80,7 @@ export const MapToolbar: React.FC = () => {
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const currentMap = useEditorStore((state) => state.currentMap);
 
-  const selectedLayer = currentMap?.layers.find(
-    (l) => l.id === selectedLayerId,
-  );
+  const selectedLayer = currentMap?.layers.find((l) => l.id === selectedLayerId);
   const tools = selectedLayer
     ? (TOOLS_BY_KIND[selectedLayer.kind] ?? GENERIC_TOOLS)
     : GENERIC_TOOLS;
@@ -93,11 +91,9 @@ export const MapToolbar: React.FC = () => {
   };
 
   const showDrawModes =
-    ['stamp', 'random', 'erase'].includes(activeTool) &&
-    selectedLayer?.kind !== 'entity';
+    ['stamp', 'random', 'erase'].includes(activeTool) && selectedLayer?.kind !== 'entity';
   const showSnapToggle =
-    selectedLayer?.kind === 'entity' &&
-    ['entityPlace', 'entitySelect'].includes(activeTool);
+    selectedLayer?.kind === 'entity' && ['entityPlace', 'entitySelect'].includes(activeTool);
 
   return (
     <HStack spacing={4}>
@@ -144,12 +140,7 @@ export const MapToolbar: React.FC = () => {
       )}
 
       {showSnapToggle && (
-        <ButtonGroup
-          size="xs"
-          isAttached
-          variant="outline"
-          colorScheme="purple"
-        >
+        <ButtonGroup size="xs" isAttached variant="outline" colorScheme="purple">
           <Tooltip label="Snap to grid" fontSize="xs">
             <Button
               bg={entitySnapMode === 'grid' ? 'purple.600' : 'transparent'}

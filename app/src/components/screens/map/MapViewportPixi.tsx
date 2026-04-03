@@ -24,9 +24,7 @@ export const MapViewportPixi: React.FC = () => {
   const mapHeight = useEditorStore((state) => state.currentMap?.height);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const activeTool = useEditorStore((state) => state.activeTool);
-  const showCollisionOverlay = useEditorStore(
-    (state) => state.showCollisionOverlay,
-  );
+  const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
 
   // Initialize Pixi Application
   useEffect(() => {
@@ -256,13 +254,7 @@ export const MapViewportPixi: React.FC = () => {
     if (showCollisionOverlay) {
       renderCollisionOverlay();
     }
-  }, [
-    isReady,
-    zoomLevel,
-    showCollisionOverlay,
-    renderGrid,
-    renderCollisionOverlay,
-  ]);
+  }, [isReady, zoomLevel, showCollisionOverlay, renderGrid, renderCollisionOverlay]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -278,8 +270,7 @@ export const MapViewportPixi: React.FC = () => {
 
       // Delete selected entity with Backspace or Delete
       if (e.key === 'Backspace' || e.key === 'Delete') {
-        const { selectedEntityId, removeEntity, selectEntity } =
-          useEditorStore.getState();
+        const { selectedEntityId, removeEntity, selectEntity } = useEditorStore.getState();
         if (selectedEntityId) {
           e.preventDefault();
           removeEntity(selectedEntityId);
@@ -289,20 +280,13 @@ export const MapViewportPixi: React.FC = () => {
       }
 
       // Tool shortcuts
-      if (e.key === 'v' || e.key === 'V')
-        useEditorStore.getState().setActiveTool('select');
-      if (e.key === 'b' || e.key === 'B')
-        useEditorStore.getState().setActiveTool('stamp');
-      if (e.key === 'r' || e.key === 'R')
-        useEditorStore.getState().setActiveTool('random');
-      if (e.key === 'e' || e.key === 'E')
-        useEditorStore.getState().setActiveTool('erase');
-      if (e.key === 't' || e.key === 'T')
-        useEditorStore.getState().setActiveTool('terrain');
-      if (e.key === 'g' || e.key === 'G')
-        useEditorStore.getState().setDrawMode('flood'); // G for flood fill shape
-      if (e.key === 'n' || e.key === 'N')
-        useEditorStore.getState().setActiveTool('entityPlace');
+      if (e.key === 'v' || e.key === 'V') useEditorStore.getState().setActiveTool('select');
+      if (e.key === 'b' || e.key === 'B') useEditorStore.getState().setActiveTool('stamp');
+      if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('random');
+      if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('erase');
+      if (e.key === 't' || e.key === 'T') useEditorStore.getState().setActiveTool('terrain');
+      if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setDrawMode('flood'); // G for flood fill shape
+      if (e.key === 'n' || e.key === 'N') useEditorStore.getState().setActiveTool('entityPlace');
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -327,21 +311,14 @@ export const MapViewportPixi: React.FC = () => {
   const handleZoomReset = useCallback(() => {
     if (viewport && mapWidth && mapHeight) {
       viewport.setZoom(1.5, true);
-      viewport.moveCenter(
-        (mapWidth * DEFAULT_TILE_SIZE) / 2,
-        (mapHeight * DEFAULT_TILE_SIZE) / 2,
-      );
+      viewport.moveCenter((mapWidth * DEFAULT_TILE_SIZE) / 2, (mapHeight * DEFAULT_TILE_SIZE) / 2);
       setZoomLevel(1.5);
     }
   }, [viewport, mapWidth, mapHeight]);
 
   // Cursor based on tool
   const getCursor = () => {
-    if (
-      activeTool === 'stamp' ||
-      activeTool === 'random' ||
-      activeTool === 'erase'
-    ) {
+    if (activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') {
       return 'crosshair';
     }
     return 'default';

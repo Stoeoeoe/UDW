@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  quantizeOverlayPoint,
-  addPolygonSegments,
-  makeSegmentKey,
-} from './useMapRenderer';
+import { quantizeOverlayPoint, addPolygonSegments, makeSegmentKey } from './useMapRenderer';
 
 describe('useMapRenderer segment merging', () => {
   it('cancels shared edges between adjacent polygons', () => {

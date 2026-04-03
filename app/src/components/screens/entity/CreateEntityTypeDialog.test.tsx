@@ -25,9 +25,7 @@ describe('CreateEntityTypeDialog', () => {
     fireEvent.change(input, { target: { value: 'Treasure Chest' } });
 
     // id should be rendered
-    await waitFor(() =>
-      expect(screen.getByText('treasure_chest')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText('treasure_chest')).toBeTruthy());
 
     const createBtn = screen.getByRole('button', {
       name: /Create Entity Type/i,

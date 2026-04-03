@@ -1,13 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import {
-  Box,
-  Flex,
-  HStack,
-  Text,
-  Select,
-  VStack,
-  Tooltip,
-} from '@chakra-ui/react';
+import { Box, Flex, HStack, Text, Select, VStack, Tooltip } from '@chakra-ui/react';
 import PanelHeader from '../../../components/common/PanelHeader';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType } from '../../../types/schema';
@@ -27,7 +19,10 @@ export const EntityBottomPalette: React.FC = () => {
     const result: string[] = [];
     for (const et of entityTypes) {
       const g = et.group || 'Ungrouped';
-      if (!seen.has(g)) { seen.add(g); result.push(g); }
+      if (!seen.has(g)) {
+        seen.add(g);
+        result.push(g);
+      }
     }
     return result.sort((a, b) => {
       if (a === 'Ungrouped') return 1;
@@ -78,7 +73,7 @@ export const EntityBottomPalette: React.FC = () => {
     <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
       {/* Header row with group dropdown */}
       <PanelHeader
-        left={(
+        left={
           <HStack spacing={3}>
             <Select
               size="xs"
@@ -104,7 +99,7 @@ export const EntityBottomPalette: React.FC = () => {
               {items.length} type{items.length !== 1 ? 's' : ''}
             </Text>
           </HStack>
-        )}
+        }
       />
 
       {/* Entity type grid */}

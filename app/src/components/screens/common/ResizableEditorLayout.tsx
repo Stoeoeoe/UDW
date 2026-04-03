@@ -102,12 +102,7 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
         >
           <VStack align="start" spacing={0}>
             {header?.title && (
-              <Heading
-                size="xs"
-                color="white"
-                textTransform="uppercase"
-                letterSpacing="widest"
-              >
+              <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
                 {header.title}
               </Heading>
             )}
@@ -127,11 +122,7 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
           {/* Left Panel */}
           {leftPanel && (
             <>
-              <Panel
-                defaultSize={leftPanelDefaultSize}
-                minSize={leftPanelMinSize}
-                order={1}
-              >
+              <Panel defaultSize={leftPanelDefaultSize} minSize={leftPanelMinSize} order={1}>
                 <Box
                   h="full"
                   bg="editor.panelBg"
@@ -154,20 +145,14 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
                   <Box
                     h="full"
                     position="relative"
-                    bg={
-                      viewportBackground ? 'editor.viewportBg' : 'transparent'
-                    }
+                    bg={viewportBackground ? 'editor.viewportBg' : 'transparent'}
                     overflow="hidden"
                   >
                     {content}
                   </Box>
                 </Panel>
                 <VerticalResizeHandle />
-                <Panel
-                  defaultSize={bottomPanelDefaultSize}
-                  minSize={bottomPanelMinSize}
-                  order={2}
-                >
+                <Panel defaultSize={bottomPanelDefaultSize} minSize={bottomPanelMinSize} order={2}>
                   <Box
                     h="full"
                     bg="editor.panelBg"
@@ -195,11 +180,7 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
           {rightPanel && (
             <>
               <HorizontalResizeHandle />
-              <Panel
-                defaultSize={rightPanelDefaultSize}
-                minSize={rightPanelMinSize}
-                order={3}
-              >
+              <Panel defaultSize={rightPanelDefaultSize} minSize={rightPanelMinSize} order={3}>
                 <Box
                   h="full"
                   bg="editor.panelBg"

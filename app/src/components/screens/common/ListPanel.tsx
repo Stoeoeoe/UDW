@@ -44,8 +44,7 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   React.useEffect(() => {
     if (!onSelect || !autoSelectFirst) return;
     if (!items || items.length === 0) return;
-    const hasSelected =
-      selectedId != null && items.some((i) => i.id === selectedId);
+    const hasSelected = selectedId != null && items.some((i) => i.id === selectedId);
     if (!hasSelected) {
       onSelect(items[0].id);
     }
@@ -77,13 +76,7 @@ export const ListPanel: React.FC<ListPanelProps> = ({
       {/* Items */}
       <Box flex={1} overflowY="auto" p={1}>
         {items.length === 0 ? (
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="center"
-            mt={4}
-            fontStyle="italic"
-          >
+          <Text fontSize="xs" color="gray.600" textAlign="center" mt={4} fontStyle="italic">
             {emptyMessage}
           </Text>
         ) : (
@@ -93,11 +86,7 @@ export const ListPanel: React.FC<ListPanelProps> = ({
 
               if (renderItem) {
                 return (
-                  <Box
-                    key={item.id}
-                    onClick={() => onSelect?.(item.id)}
-                    cursor="pointer"
-                  >
+                  <Box key={item.id} onClick={() => onSelect?.(item.id)} cursor="pointer">
                     {renderItem(item, isSelected)}
                   </Box>
                 );

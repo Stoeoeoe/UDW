@@ -22,17 +22,8 @@ import { DeleteIcon, RepeatIcon } from '@chakra-ui/icons';
 import { fileSystem } from '../../../lib/fileSystem';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import {
-  ListPanel,
-  ListPanelItem,
-  InspectorPanel,
-  InspectorEmptyState,
-} from '../common';
-import {
-  EntityType,
-  PropertyDefinition,
-  EntityCategory,
-} from '../../../types/schema';
+import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from '../common';
+import { EntityType, PropertyDefinition, EntityCategory } from '../../../types/schema';
 import { EditorModal } from '../../common/EditorModal';
 import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
@@ -52,12 +43,8 @@ const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
  */
 export const EntityEditor: React.FC = () => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
-  const selectedEntityTypeId = useEditorStore(
-    (state) => state.selectedEntityTypeId,
-  );
-  const setSelectedEntityType = useEditorStore(
-    (state) => state.setSelectedEntityType,
-  );
+  const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
+  const setSelectedEntityType = useEditorStore((state) => state.setSelectedEntityType);
   const updateEntityType = useEditorStore((state) => state.updateEntityType);
   const deleteEntityType = useEditorStore((state) => state.deleteEntityType);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -70,9 +57,7 @@ export const EntityEditor: React.FC = () => {
       entityTypes.map((type) => ({
         id: type.id,
         label: type.displayName,
-        sublabel: type.group
-          ? `${type.group} • ${type.category}`
-          : type.category.toUpperCase(),
+        sublabel: type.group ? `${type.group} • ${type.category}` : type.category.toUpperCase(),
         icon: (
           <Box
             w="20px"
@@ -183,9 +168,7 @@ export const EntityEditor: React.FC = () => {
                 bg="#0a0a0b"
                 color="white"
                 value={selectedType.displayName}
-                onChange={(e) =>
-                  handlePropertyChange('displayName', e.target.value)
-                }
+                onChange={(e) => handlePropertyChange('displayName', e.target.value)}
                 _hover={{ bg: '#071018' }}
               />
             </FormControl>
@@ -207,16 +190,10 @@ export const EntityEditor: React.FC = () => {
                   borderColor="#1a1a2e"
                   color="white"
                   value={selectedType.category}
-                  onChange={(e) =>
-                    handlePropertyChange('category', e.target.value)
-                  }
+                  onChange={(e) => handlePropertyChange('category', e.target.value)}
                 >
                   {CATEGORIES.map((c) => (
-                    <option
-                      key={c.value}
-                      value={c.value}
-                      style={{ background: '#0a0a0b' }}
-                    >
+                    <option key={c.value} value={c.value} style={{ background: '#0a0a0b' }}>
                       {c.icon} {c.label}
                     </option>
                   ))}
@@ -239,9 +216,7 @@ export const EntityEditor: React.FC = () => {
                   bg="#0a0a0b"
                   color="white"
                   value={selectedType.group ?? ''}
-                  onChange={(e) =>
-                    handlePropertyChange('group', e.target.value || undefined)
-                  }
+                  onChange={(e) => handlePropertyChange('group', e.target.value || undefined)}
                   placeholder="Ungrouped"
                   list="inspector-entity-groups"
                   _hover={{ bg: '#071018' }}
@@ -272,12 +247,7 @@ export const EntityEditor: React.FC = () => {
                 bg="#0a0a0b"
                 color="white"
                 value={selectedType.description ?? ''}
-                onChange={(e) =>
-                  handlePropertyChange(
-                    'description',
-                    e.target.value || undefined,
-                  )
-                }
+                onChange={(e) => handlePropertyChange('description', e.target.value || undefined)}
                 placeholder="Optional"
                 _hover={{ bg: '#071018' }}
               />
@@ -315,16 +285,13 @@ export const EntityEditor: React.FC = () => {
 
           {/* Size */}
           <VStack align="stretch" spacing={3}>
-            <Text
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-            >
+            <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
               Size (px)
             </Text>
             <HStack spacing={2}>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>W</Text>
+              <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                W
+              </Text>
               <NumberInput
                 size="xs"
                 min={1}
@@ -332,14 +299,19 @@ export const EntityEditor: React.FC = () => {
                 precision={0}
                 onChange={(_, val) => {
                   if (!isNaN(val)) {
-                    handlePropertyChange('defaultSize', [Math.round(val), selectedType.defaultSize?.[1] ?? 16]);
+                    handlePropertyChange('defaultSize', [
+                      Math.round(val),
+                      selectedType.defaultSize?.[1] ?? 16,
+                    ]);
                   }
                 }}
                 flex={1}
               >
                 <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
               </NumberInput>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>H</Text>
+              <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                H
+              </Text>
               <NumberInput
                 size="xs"
                 min={1}
@@ -347,7 +319,10 @@ export const EntityEditor: React.FC = () => {
                 precision={0}
                 onChange={(_, val) => {
                   if (!isNaN(val)) {
-                    handlePropertyChange('defaultSize', [selectedType.defaultSize?.[0] ?? 16, Math.round(val)]);
+                    handlePropertyChange('defaultSize', [
+                      selectedType.defaultSize?.[0] ?? 16,
+                      Math.round(val),
+                    ]);
                   }
                 }}
                 flex={1}
@@ -362,9 +337,7 @@ export const EntityEditor: React.FC = () => {
           {/* Sprite */}
           <EntitySpriteEditor
             spritePath={selectedType.sprite?.path}
-            onPathChange={(path) =>
-              handlePropertyChange('sprite', path ? { path } : undefined)
-            }
+            onPathChange={(path) => handlePropertyChange('sprite', path ? { path } : undefined)}
             onSizeChange={(size) => handlePropertyChange('defaultSize', size)}
           />
 
@@ -486,11 +459,7 @@ const EntityTypeGrid: React.FC<{
                 {grouped[groupName].length}
               </Badge>
             </HStack>
-            <Box
-              display="grid"
-              gridTemplateColumns="repeat(auto-fill, minmax(160px, 1fr))"
-              gap={3}
-            >
+            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(160px, 1fr))" gap={3}>
               {grouped[groupName].map((et) => (
                 <Box
                   key={et.id}
@@ -605,12 +574,7 @@ const EntitySpriteEditor: React.FC<EntitySpriteEditorProps> = ({
 
   return (
     <VStack align="stretch" spacing={3}>
-      <Text
-        color="gray.500"
-        fontSize="10px"
-        fontWeight="black"
-        textTransform="uppercase"
-      >
+      <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
         Sprite
       </Text>
       {spritePath ? (
@@ -639,7 +603,13 @@ const EntitySpriteEditor: React.FC<EntitySpriteEditorProps> = ({
               />
             </Box>
           )}
-          <Text fontSize="xs" color="gray.500" fontFamily="mono" noOfLines={2} wordBreak="break-all">
+          <Text
+            fontSize="xs"
+            color="gray.500"
+            fontFamily="mono"
+            noOfLines={2}
+            wordBreak="break-all"
+          >
             {spritePath}
           </Text>
           <HStack spacing={2}>

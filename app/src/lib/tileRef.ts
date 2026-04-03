@@ -13,10 +13,7 @@ import { Map as GameMap } from '../types/schema';
 /**
  * Encode a tile reference string to a number
  */
-export function encodeTileRef(
-  tileRef: string | null,
-  tilesetRefs: string[],
-): number | null {
+export function encodeTileRef(tileRef: string | null, tilesetRefs: string[]): number | null {
   if (tileRef === null) return null;
 
   const [tilesetId, tileIndexStr] = tileRef.split(':');
@@ -33,10 +30,7 @@ export function encodeTileRef(
 /**
  * Decode a tile reference number to a string
  */
-export function decodeTileRef(
-  encoded: number | null,
-  tilesetRefs: string[],
-): string | null {
+export function decodeTileRef(encoded: number | null, tilesetRefs: string[]): string | null {
   if (encoded === null) return null;
 
   const tilesetIndex = encoded >>> 16;
@@ -72,9 +66,7 @@ export function convertLayerDataToStrings(
 /**
  * Build tilesetRefs from existing string-based layer data
  */
-export function buildTilesetRefsFromData(
-  layers: { data?: (string | null)[][] }[],
-): string[] {
+export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[]): string[] {
   const tilesetSet = new Set<string>();
 
   for (const layer of layers) {
@@ -104,10 +96,7 @@ export function migrateMapToEncodedData(map: any): GameMap {
   // Convert layer data
   for (const layer of map.layers) {
     if (layer.data && typeof layer.data[0]?.[0] === 'string') {
-      layer.data = convertLayerDataToEncoded(
-        layer.data as (string | null)[][],
-        map.tilesetRefs,
-      );
+      layer.data = convertLayerDataToEncoded(layer.data as (string | null)[][], map.tilesetRefs);
     }
   }
 

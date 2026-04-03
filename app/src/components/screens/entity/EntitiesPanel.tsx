@@ -3,12 +3,8 @@ import { VStack, Box, Text, Heading, HStack, Circle } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 
 export const EntitiesPanel: React.FC = () => {
-  const selectedEntityTypeId = useEditorStore(
-    (state) => state.selectedEntityTypeId,
-  );
-  const setSelectedEntityType = useEditorStore(
-    (state) => state.setSelectedEntityType,
-  );
+  const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
+  const setSelectedEntityType = useEditorStore((state) => state.setSelectedEntityType);
   const entityTypes = useEditorStore((state) => state.entityTypes);
 
   return (
@@ -21,13 +17,7 @@ export const EntitiesPanel: React.FC = () => {
       borderColor="gray.800"
     >
       {/* Header */}
-      <Box
-        bg="gray.900"
-        borderBottom="1px"
-        borderColor="gray.800"
-        px={4}
-        py={3}
-      >
+      <Box bg="gray.900" borderBottom="1px" borderColor="gray.800" px={4} py={3}>
         <VStack align="start" spacing={0}>
           <Text
             fontSize="xs"
@@ -56,9 +46,7 @@ export const EntitiesPanel: React.FC = () => {
               cursor="pointer"
               bg={selectedEntityTypeId === type.id ? 'blue.900' : 'gray.900'}
               border="1px"
-              borderColor={
-                selectedEntityTypeId === type.id ? 'blue.500' : 'gray.800'
-              }
+              borderColor={selectedEntityTypeId === type.id ? 'blue.500' : 'gray.800'}
               _hover={{
                 bg: selectedEntityTypeId === type.id ? 'blue.900' : 'gray.800',
               }}
@@ -80,26 +68,14 @@ export const EntitiesPanel: React.FC = () => {
           ))}
         </VStack>
 
-        <Box
-          mt={6}
-          p={4}
-          bg="blue.900"
-          rounded="md"
-          border="1px"
-          borderColor="blue.800"
-        >
+        <Box mt={6} p={4} bg="blue.900" rounded="md" border="1px" borderColor="blue.800">
           <VStack spacing={1} align="start">
-            <Text
-              fontSize="9px"
-              fontWeight="black"
-              color="blue.200"
-              textTransform="uppercase"
-            >
+            <Text fontSize="9px" fontWeight="black" color="blue.200" textTransform="uppercase">
               Placement Help
             </Text>
             <Text fontSize="9px" color="blue.100" lineHeight="tight">
-              Select an entity above, then click on the map to place it.
-              Entities can be moved and edited using the Select tool.
+              Select an entity above, then click on the map to place it. Entities can be moved and
+              edited using the Select tool.
             </Text>
           </VStack>
         </Box>

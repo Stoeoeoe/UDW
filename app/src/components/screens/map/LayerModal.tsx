@@ -67,19 +67,12 @@ export const LayerModal: React.FC<LayerModalProps> = ({
         <ModalBody>
           <VStack spacing={4} align="stretch">
             <FormControl>
-              <FormLabel
-                fontSize="xs"
-                fontWeight="bold"
-                textTransform="uppercase"
-                color="gray.500"
-              >
+              <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
                 Name
               </FormLabel>
               <Input
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Layer name"
                 size="sm"
                 bg="gray.800"
@@ -88,12 +81,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
             </FormControl>
 
             <FormControl>
-              <FormLabel
-                fontSize="xs"
-                fontWeight="bold"
-                textTransform="uppercase"
-                color="gray.500"
-              >
+              <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
                 Type
               </FormLabel>
               <Select
@@ -117,12 +105,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
             </FormControl>
 
             <FormControl>
-              <FormLabel
-                fontSize="xs"
-                fontWeight="bold"
-                textTransform="uppercase"
-                color="gray.500"
-              >
+              <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
                 Z-Order
               </FormLabel>
               <Input
@@ -143,19 +126,12 @@ export const LayerModal: React.FC<LayerModalProps> = ({
             </FormControl>
 
             <FormControl>
-              <FormLabel
-                fontSize="xs"
-                fontWeight="bold"
-                textTransform="uppercase"
-                color="gray.500"
-              >
+              <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
                 Icon
               </FormLabel>
               <Select
                 value={formData.icon}
-                onChange={(e) =>
-                  setFormData({ ...formData, icon: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                 size="sm"
                 bg="gray.800"
               >

@@ -30,10 +30,7 @@ export interface PropertySchema {
     options?: string[];
   };
   // Optional custom renderer for complex fields. Receives current value and an onChange callback.
-  customRenderer?: (
-    value: PropertyValue,
-    onChange: (v: PropertyValue) => void,
-  ) => React.ReactNode;
+  customRenderer?: (value: PropertyValue, onChange: (v: PropertyValue) => void) => React.ReactNode;
 }
 
 interface PropertyFormProps {
@@ -42,14 +39,8 @@ interface PropertyFormProps {
   onChange: (key: string, value: PropertyValue) => void;
 }
 
-export const PropertyForm: React.FC<PropertyFormProps> = ({
-  schema,
-  values,
-  onChange,
-}) => {
-  const [localValues, setLocalValues] = React.useState<Record<string, string>>(
-    {},
-  );
+export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onChange }) => {
+  const [localValues, setLocalValues] = React.useState<Record<string, string>>({});
   const focusedRef = React.useRef<Record<string, boolean>>({});
 
   // Sync incoming values into localValues when not focused
@@ -161,11 +152,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({
                     commitValue(prop.key);
                   }}
                 >
-                  <NumberInputField
-                    bg="#05060a"
-                    borderColor="#0b1116"
-                    color="white"
-                  />
+                  <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
@@ -197,11 +184,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({
                   }}
                 >
                   {(prop.constraints?.options || []).map((opt) => (
-                    <option
-                      key={opt}
-                      value={opt}
-                      style={{ background: '#05060a', color: '#fff' }}
-                    >
+                    <option key={opt} value={opt} style={{ background: '#05060a', color: '#fff' }}>
                       {opt}
                     </option>
                   ))}

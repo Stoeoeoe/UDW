@@ -1,19 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
-import {
-  Container,
-  Graphics,
-  Sprite,
-  BitmapText,
-  Texture,
-  Rectangle,
-} from 'pixi.js';
+import { Container, Graphics, Sprite, BitmapText, Texture, Rectangle } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
-import {
-  resolveTileAt,
-  resolveEntities,
-  resolveMapContext,
-} from '../../../lib/mapUtils';
+import { resolveTileAt, resolveEntities, resolveMapContext } from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
@@ -87,13 +76,7 @@ export function computeCollisionOverlay(
 
       for (let y = 0; y < currentMap.height; y++) {
         for (let x = 0; x < currentMap.width; x++) {
-          const tileRef = resolveTileAt(
-            currentMap,
-            layer.id,
-            x,
-            y,
-            activeVariationId,
-          );
+          const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
           if (!tileRef) continue;
 
           const [tsId, indexStr] = tileRef.split(':');
@@ -102,18 +85,12 @@ export function computeCollisionOverlay(
           if (!tileset) continue;
 
           const resolvedBaseTilesetId =
-            tsId === currentMap.baseTilesetId
-              ? effectiveMap.baseTilesetId
-              : tsId;
+            tsId === currentMap.baseTilesetId ? effectiveMap.baseTilesetId : tsId;
 
           let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
-          const variation = currentMap.variations?.find(
-            (v: any) => v.id === activeVariationId,
-          );
+          const variation = currentMap.variations?.find((v: any) => v.id === activeVariationId);
           if (variation?.tilesetSuffix) {
-            const suffixed = tilesets.get(
-              `${resolvedBaseTilesetId}${variation.tilesetSuffix}`,
-            );
+            const suffixed = tilesets.get(`${resolvedBaseTilesetId}${variation.tilesetSuffix}`);
             if (suffixed) effectiveTileset = suffixed;
           }
 
@@ -127,10 +104,7 @@ export function computeCollisionOverlay(
             const polygon = [
               quantizeOverlayPoint(tileX, tileY),
               quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY),
-              quantizeOverlayPoint(
-                tileX + DEFAULT_TILE_SIZE,
-                tileY + DEFAULT_TILE_SIZE,
-              ),
+              quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY + DEFAULT_TILE_SIZE),
               quantizeOverlayPoint(tileX, tileY + DEFAULT_TILE_SIZE),
             ];
             fillPolygons.push(polygon);
@@ -147,10 +121,7 @@ export function computeCollisionOverlay(
             if (points.length < 3) continue;
 
             const polygon = points.map(([px, py]) =>
-              quantizeOverlayPoint(
-                tileX + px * DEFAULT_TILE_SIZE,
-                tileY + py * DEFAULT_TILE_SIZE,
-              ),
+              quantizeOverlayPoint(tileX + px * DEFAULT_TILE_SIZE, tileY + py * DEFAULT_TILE_SIZE),
             );
 
             fillPolygons.push(polygon);
@@ -293,13 +264,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
-            const tileRef = resolveTileAt(
-              currentMap,
-              layer.id,
-              x,
-              y,
-              activeVariationId,
-            );
+            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
             if (!tileRef) continue;
 
             const [tsId, indexStr] = tileRef.split(':');
@@ -308,19 +273,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             if (!tileset) continue;
 
             const resolvedBaseTilesetId =
-              tsId === currentMap.baseTilesetId
-                ? effectiveMap.baseTilesetId
-                : tsId;
+              tsId === currentMap.baseTilesetId ? effectiveMap.baseTilesetId : tsId;
 
-            let effectiveTileset =
-              tilesets.get(resolvedBaseTilesetId) || tileset;
-            const variation = currentMap.variations?.find(
-              (v) => v.id === activeVariationId,
-            );
+            let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
+            const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
             if (variation?.tilesetSuffix) {
-              const suffixed = tilesets.get(
-                `${resolvedBaseTilesetId}${variation.tilesetSuffix}`,
-              );
+              const suffixed = tilesets.get(`${resolvedBaseTilesetId}${variation.tilesetSuffix}`);
               if (suffixed) effectiveTileset = suffixed;
             }
 
@@ -334,10 +292,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               const polygon = [
                 quantizeOverlayPoint(tileX, tileY),
                 quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY),
-                quantizeOverlayPoint(
-                  tileX + DEFAULT_TILE_SIZE,
-                  tileY + DEFAULT_TILE_SIZE,
-                ),
+                quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY + DEFAULT_TILE_SIZE),
                 quantizeOverlayPoint(tileX, tileY + DEFAULT_TILE_SIZE),
               ];
               fillPolygons.push(polygon);
@@ -417,8 +372,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render tiles
   const renderTiles = useCallback(() => {
     const tileContainer = tileContainerRef.current;
-    const { currentMap, activeVariationId, tilesets } =
-      useEditorStore.getState();
+    const { currentMap, activeVariationId, tilesets } = useEditorStore.getState();
     if (!tileContainer || !currentMap) return;
 
     const effectiveMap = resolveMapContext(currentMap, activeVariationId);
@@ -432,13 +386,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
-            const tileRef = resolveTileAt(
-              currentMap,
-              layer.id,
-              x,
-              y,
-              activeVariationId,
-            );
+            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
             if (!tileRef) continue;
 
             const [tsId, indexStr] = tileRef.split(':');
@@ -447,21 +395,14 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
             if (tileset) {
               const resolvedBaseTilesetId =
-                tsId === currentMap.baseTilesetId
-                  ? effectiveMap.baseTilesetId
-                  : tsId;
+                tsId === currentMap.baseTilesetId ? effectiveMap.baseTilesetId : tsId;
 
-              let effectiveTileset =
-                tilesets.get(resolvedBaseTilesetId) || tileset;
+              let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
 
-              const variation = currentMap.variations?.find(
-                (v) => v.id === activeVariationId,
-              );
+              const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
 
               if (variation?.tilesetSuffix) {
-                const suffixed = tilesets.get(
-                  `${resolvedBaseTilesetId}${variation.tilesetSuffix}`,
-                );
+                const suffixed = tilesets.get(`${resolvedBaseTilesetId}${variation.tilesetSuffix}`);
                 if (suffixed) effectiveTileset = suffixed;
               }
 
@@ -490,13 +431,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render entities
   const renderEntities = useCallback(() => {
     const entityContainer = entityContainerRef.current;
-    const {
-      currentMap,
-      activeVariationId,
-      selectedEntityId,
-      entityTypes,
-      loadedSprites,
-    } = useEditorStore.getState();
+    const { currentMap, activeVariationId, selectedEntityId, entityTypes, loadedSprites } =
+      useEditorStore.getState();
     if (!entityContainer || !currentMap) return;
 
     entityContainer.removeChildren();
@@ -504,10 +440,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const resolvedEntities = resolveEntities(currentMap, activeVariationId);
     resolvedEntities.forEach((entity) => {
       const type = entityTypes.find((t) => t.id === entity.typeId);
-      const [ew, eh] = type?.defaultSize ?? [
-        DEFAULT_TILE_SIZE,
-        DEFAULT_TILE_SIZE,
-      ];
+      const [ew, eh] = type?.defaultSize ?? [DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE];
       const colorHex = type?.placeholderColor || '#ffff00';
       const color = parseInt(colorHex.replace('#', ''), 16);
 
@@ -515,9 +448,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       const ey = entity.position[1];
 
       // Render body: sprite if loaded, else colored rect
-      const spriteImg = type?.sprite?.path
-        ? loadedSprites.get(type.sprite.path)
-        : null;
+      const spriteImg = type?.sprite?.path ? loadedSprites.get(type.sprite.path) : null;
       if (spriteImg) {
         const texture = Texture.from(spriteImg as unknown as HTMLImageElement);
         texture.source.scaleMode = 'nearest';
@@ -734,8 +665,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       };
 
       // If the user is actively drawing a shape with erase tool, show shape erase preview
-      const isShiftLinePreviewErase =
-        drawMode === 'point' && drawPreview?.isDrawing;
+      const isShiftLinePreviewErase = drawMode === 'point' && drawPreview?.isDrawing;
       const showShapePreviewErase =
         drawPreview &&
         drawPreview.isDrawing &&
@@ -793,12 +723,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
       // Get terrain color from terrainTypes
       const terrain = terrainTypes.find((t) => t.id === selectedTerrainId);
-      const terrainColor = terrain
-        ? parseInt(terrain.color.replace('#', '0x'), 16)
-        : 0x00ff00;
+      const terrainColor = terrain ? parseInt(terrain.color.replace('#', '0x'), 16) : 0x00ff00;
 
-      const effectiveBrushSize =
-        drawMode === 'point' || drawMode === 'line' ? brushSize || 1 : 1;
+      const effectiveBrushSize = drawMode === 'point' || drawMode === 'line' ? brushSize || 1 : 1;
 
       // Helper to render terrain indicator at a position
       const renderTerrainAt = (tx: number, ty: number) => {
@@ -832,8 +759,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       };
 
       // Check if drawing a shape
-      const isShiftLinePreviewTerrain =
-        drawMode === 'point' && drawPreview?.isDrawing;
+      const isShiftLinePreviewTerrain = drawMode === 'point' && drawPreview?.isDrawing;
       const showShapePreviewTerrain =
         drawPreview &&
         drawPreview.isDrawing &&
@@ -842,8 +768,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         (drawMode !== 'point' || isShiftLinePreviewTerrain);
 
       if (showShapePreviewTerrain && drawPreview.start && drawPreview.end) {
-        const effectiveTerrainDrawMode =
-          drawMode === 'point' ? 'line' : drawMode;
+        const effectiveTerrainDrawMode = drawMode === 'point' ? 'line' : drawMode;
         const sx = drawPreview.start.x;
         const sy = drawPreview.start.y;
         const ex = drawPreview.end.x;
@@ -886,20 +811,15 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       return;
     }
 
-    if ((activeTool !== 'stamp' && activeTool !== 'random') || !activeTilesetId)
-      return;
+    if ((activeTool !== 'stamp' && activeTool !== 'random') || !activeTilesetId) return;
 
     const ts = tilesets.get(activeTilesetId);
     if (!ts) return;
 
     let effectiveTileset = ts;
-    const variation = currentMap?.variations?.find(
-      (v) => v.id === activeVariationId,
-    );
+    const variation = currentMap?.variations?.find((v) => v.id === activeVariationId);
     if (variation?.tilesetSuffix) {
-      const suffixed = tilesets.get(
-        `${activeTilesetId}${variation.tilesetSuffix}`,
-      );
+      const suffixed = tilesets.get(`${activeTilesetId}${variation.tilesetSuffix}`);
       if (suffixed) effectiveTileset = suffixed;
     }
 
@@ -937,9 +857,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // If the user is actively drawing a shape, render the shape preview
     // For point mode with shift held, we show a line preview
     const isShiftLinePreview =
-      drawMode === 'point' &&
-      drawPreview?.isDrawing &&
-      drawPreview?.mode !== 'select';
+      drawMode === 'point' && drawPreview?.isDrawing && drawPreview?.mode !== 'select';
     const showShapePreview =
       drawPreview &&
       drawPreview.isDrawing &&
@@ -967,13 +885,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         if (!selectedTileIndices || selectedTileIndices.length === 0) {
           return selectedTileIndex;
         }
-        return sampleSeededTile(
-          x,
-          y,
-          selectedTileIndices,
-          effectiveTileset,
-          cursorSeed,
-        );
+        return sampleSeededTile(x, y, selectedTileIndices, effectiveTileset, cursorSeed);
       };
 
       const sx = drawPreview.start.x;
@@ -997,11 +909,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               const dx = x - sx;
               const dy = y - sy;
               const px =
-                ((dx % patternData.patternW) + patternData.patternW) %
-                patternData.patternW;
+                ((dx % patternData.patternW) + patternData.patternW) % patternData.patternW;
               const py =
-                ((dy % patternData.patternH) + patternData.patternH) %
-                patternData.patternH;
+                ((dy % patternData.patternH) + patternData.patternH) % patternData.patternH;
               tileIdx = patternData.pattern[py][px];
             } else if (selectedTileIndex !== null) {
               tileIdx = selectedTileIndex;
@@ -1045,11 +955,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 const dx = x - sx;
                 const dy = y - sy;
                 const px =
-                  ((dx % patternData.patternW) + patternData.patternW) %
-                  patternData.patternW;
+                  ((dx % patternData.patternW) + patternData.patternW) % patternData.patternW;
                 const py =
-                  ((dy % patternData.patternH) + patternData.patternH) %
-                  patternData.patternH;
+                  ((dy % patternData.patternH) + patternData.patternH) % patternData.patternH;
                 tileIdx = patternData.pattern[py][px];
               } else if (selectedTileIndex !== null) {
                 tileIdx = selectedTileIndex;
@@ -1078,8 +986,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       } else if (effectiveDrawMode === 'line') {
         // Get effective brush size for line preview
         // NOTE: brush size only applies when NOT using a multi-tile pattern (to match drawing behavior)
-        const hasPattern =
-          patternData && patternData.patternW > 0 && patternData.patternH > 0;
+        const hasPattern = patternData && patternData.patternW > 0 && patternData.patternH > 0;
         const effectiveBrushSize = hasPattern ? 1 : brushSize || 1;
 
         // Helper to render tiles at a line position (either brush circle or stencil pattern)
@@ -1138,11 +1045,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             }
           } else {
             // Circular brush of single/random tiles using shared utility
-            for (const { x: bx, y: by } of circularBrush(
-              cx,
-              cy,
-              effectiveBrushSize,
-            )) {
+            for (const { x: bx, y: by } of circularBrush(cx, cy, effectiveBrushSize)) {
               let tileIdx: number | null = null;
               if (activeTool === 'random') {
                 tileIdx = sampleTileForPreview(bx, by);
@@ -1206,9 +1109,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     };
 
     // Helper to render brush at hover position using shared utility
-    const renderBrushPreview = (
-      getTileIdxForPos: (x: number, y: number) => number | null,
-    ) => {
+    const renderBrushPreview = (getTileIdxForPos: (x: number, y: number) => number | null) => {
       for (const { x: bx, y: by } of circularBrush(
         hoveredTile.x,
         hoveredTile.y,
@@ -1253,10 +1154,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // Priority 2: Multi-tile stencil from tileset selection (2+ tiles)
     if (selectedTileIndices && selectedTileIndices.length > 1) {
       // Multi-tile stencil preview (no brush size for multi-tile)
-      const patternData = buildPatternFromSelection(
-        selectedTileIndices,
-        effectiveTileset,
-      );
+      const patternData = buildPatternFromSelection(selectedTileIndices, effectiveTileset);
       if (patternData) {
         for (let py = 0; py < patternData.patternH; py++) {
           for (let px = 0; px < patternData.patternW; px++) {
@@ -1281,14 +1179,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderCollisionOverlay();
     renderHover();
     renderPreview();
-  }, [
-    renderTiles,
-    renderEntities,
-    renderGrid,
-    renderCollisionOverlay,
-    renderHover,
-    renderPreview,
-  ]);
+  }, [renderTiles, renderEntities, renderGrid, renderCollisionOverlay, renderHover, renderPreview]);
 
   return {
     render,

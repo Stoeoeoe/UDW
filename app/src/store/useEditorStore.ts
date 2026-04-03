@@ -2,12 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { castDraft } from 'immer';
-import {
-  EditorState,
-  ToolType,
-  ValidationError,
-  EditorMode,
-} from '../types/editor';
+import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
 import {
   Project,
   Map,
@@ -39,18 +34,12 @@ function createEmptyGrid(width: number, height: number): (number | null)[][] {
 }
 
 /** Creates an empty 2D grid filled with null values for variations */
-function createEmptyStringGrid(
-  width: number,
-  height: number,
-): (string | null)[][] {
+function createEmptyStringGrid(width: number, height: number): (string | null)[][] {
   return Array.from({ length: height }, () => Array(width).fill(null));
 }
 
 /** Adds missing layers from layer definitions to a map */
-function addMissingDefinitionLayers(
-  map: Map,
-  layerDefs: LayerDefinition[],
-): Map {
+function addMissingDefinitionLayers(map: Map, layerDefs: LayerDefinition[]): Map {
   if (layerDefs.length === 0) return map;
 
   const existingDefIds = new Set(
@@ -73,9 +62,7 @@ function addMissingDefinitionLayers(
     definitionId: def.id,
   }));
 
-  const allLayers = [...map.layers, ...newLayers].sort(
-    (a, b) => a.zOrder - b.zOrder,
-  );
+  const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
   return { ...map, layers: allLayers };
 }
 
@@ -163,16 +150,12 @@ async function persistProject(project: Project): Promise<void> {
   await fileSystem.saveJson('', 'project.json', project);
   useSaveStore.getState().setStatus('saved');
   setTimeout(() => {
-    if (useSaveStore.getState().status === 'saved')
-      useSaveStore.getState().setStatus('idle');
+    if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
   }, 2000);
 }
 
 const TILESET_SAVE_DEBOUNCE_MS = 300;
-const pendingTilesetSaves = new globalThis.Map<
-  string,
-  ReturnType<typeof setTimeout>
->();
+const pendingTilesetSaves = new globalThis.Map<string, ReturnType<typeof setTimeout>>();
 
 function scheduleTilesetSave(tilesetId: string): void {
   const existing = pendingTilesetSaves.get(tilesetId);
@@ -187,11 +170,7 @@ function scheduleTilesetSave(tilesetId: string): void {
 
     const snapshot = JSON.parse(JSON.stringify(tileset)) as Tileset;
     useSaveStore.getState().setStatus('saving');
-    await fileSystem.saveJson(
-      'tilesets',
-      `${tilesetId}.tileset.json`,
-      snapshot,
-    );
+    await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, snapshot);
     useSaveStore.getState().setStatus('saved');
     setTimeout(() => {
       if (useSaveStore.getState().status === 'saved') {
@@ -214,12 +193,7 @@ interface EditorStore extends EditorState {
   // Map Actions
   setCurrentMap: (map: Map | null) => void;
   loadMap: (mapId: string) => void;
-  createNewMap: (
-    name: string,
-    width: number,
-    height: number,
-    tilesetId: string,
-  ) => Promise<void>;
+  createNewMap: (name: string, width: number, height: number, tilesetId: string) => Promise<void>;
   updateCurrentMap: (updates: Partial<Map>) => void;
   deleteMap: (mapId: string) => Promise<void>;
   addMap: (map: Map) => void;
@@ -257,20 +231,10 @@ interface EditorStore extends EditorState {
   addTileset: (tileset: Tileset) => Promise<void>;
   updateTileset: (id: string, updates: Partial<Tileset>) => Promise<void>;
   deleteTileset: (id: string) => Promise<void>;
-  updateTileDefinition: (
-    tilesetId: string,
-    index: number,
-    definition: TileDefinition,
-  ) => void;
+  updateTileDefinition: (tilesetId: string, index: number, definition: TileDefinition) => void;
 
   // Tile actions
-  paintTile: (
-    layerId: string,
-    x: number,
-    y: number,
-    tilesetId: string,
-    tileIndex: number,
-  ) => void;
+  paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
   paintTilesBatch: (
     layerId: string,
     tiles: Array<{
@@ -281,10 +245,7 @@ interface EditorStore extends EditorState {
     }>,
   ) => void;
   eraseTile: (layerId: string, x: number, y: number) => void;
-  eraseTilesBatch: (
-    layerId: string,
-    positions: Array<{ x: number; y: number }>,
-  ) => void;
+  eraseTilesBatch: (layerId: string, positions: Array<{ x: number; y: number }>) => void;
   bucketFill: (
     layerId: string,
     startX: number,
@@ -321,10 +282,7 @@ interface EditorStore extends EditorState {
   removeEntity: (entityId: string) => void;
   moveEntity: (entityId: string, position: [number, number]) => void;
   updateEntityLabel: (entityId: string, label: string | undefined) => void;
-  updateEntityProperties: (
-    entityId: string,
-    properties: PropertyValues,
-  ) => void;
+  updateEntityProperties: (entityId: string, properties: PropertyValues) => void;
 
   // Layer actions
   addLayer: (layer: Layer) => void;
@@ -350,11 +308,7 @@ interface EditorStore extends EditorState {
   deleteEntityType: (id: string) => Promise<void>;
 
   // Terrain actions
-  addTerrainType: (terrain: {
-    id: string;
-    displayName: string;
-    color: string;
-  }) => Promise<void>;
+  addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
   updateTerrainType: (
     id: string,
     updates: Partial<{ displayName: string; color: string }>,
@@ -366,10 +320,7 @@ interface EditorStore extends EditorState {
   selectedLayerDefinitionId: string | null;
   setSelectedLayerDefinition: (id: string | null) => void;
   addLayerDefinition: (definition: LayerDefinition) => Promise<void>;
-  updateLayerDefinition: (
-    id: string,
-    updates: Partial<LayerDefinition>,
-  ) => Promise<void>;
+  updateLayerDefinition: (id: string, updates: Partial<LayerDefinition>) => Promise<void>;
   deleteLayerDefinition: (id: string) => Promise<void>;
 
   // Camera actions
@@ -493,9 +444,7 @@ export const useEditorStore = create<EditorStore>()(
           // Load sprite for each tileset
           try {
             const blob = await fileSystem.loadAsset(tileset.spriteSheet);
-            await useEditorStore
-              .getState()
-              .loadSprite(tileset.spriteSheet, blob);
+            await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
           } catch (e) {
             console.warn(`Failed to load sprite for tileset ${tileset.id}:`, e);
           }
@@ -520,9 +469,7 @@ export const useEditorStore = create<EditorStore>()(
         // 1.6 Load layer definitions from project.json (if present)
         if (proj?.layerDefinitions && Array.isArray(proj.layerDefinitions)) {
           set((state) => {
-            state.layerDefinitions = proj.layerDefinitions!.map((d) =>
-              castDraft(d),
-            );
+            state.layerDefinitions = proj.layerDefinitions!.map((d) => castDraft(d));
           });
         }
 
@@ -552,9 +499,7 @@ export const useEditorStore = create<EditorStore>()(
         const layerDefs = useEditorStore.getState().layerDefinitions;
 
         // Enrich all maps with missing layers and store the full list
-        const enrichedMaps = maps.map((m) =>
-          addMissingDefinitionLayers(m, layerDefs),
-        );
+        const enrichedMaps = maps.map((m) => addMissingDefinitionLayers(m, layerDefs));
 
         set((state) => {
           state.maps = castDraft(enrichedMaps);
@@ -603,19 +548,12 @@ export const useEditorStore = create<EditorStore>()(
           }
 
           // Add missing layers from layer definitions
-          const enrichedMap = addMissingDefinitionLayers(
-            map,
-            state.layerDefinitions,
-          );
+          const enrichedMap = addMissingDefinitionLayers(map, state.layerDefinitions);
 
           state.currentMap = castDraft(enrichedMap);
           // When a map is loaded, switch to tile paint tool by default
           state.activeTool = 'stamp';
-          if (
-            enrichedMap &&
-            state.mapCameras &&
-            state.mapCameras[enrichedMap.id]
-          ) {
+          if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
             state.camera = { ...state.mapCameras[enrichedMap.id] };
           }
         });
@@ -658,11 +596,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           state.tilesetToolMode = mode;
           // Auto-select first terrain when entering terrain mode
-          if (
-            mode === 'terrain' &&
-            !state.selectedTerrainId &&
-            state.terrainTypes.length > 0
-          ) {
+          if (mode === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
             state.selectedTerrainId = state.terrainTypes[0].id;
           }
         }),
@@ -674,15 +608,9 @@ export const useEditorStore = create<EditorStore>()(
         const layerDefs = useEditorStore.getState().layerDefinitions;
 
         // Create layers from definitions, or use a default ground layer
-        const definedLayers = createLayersFromDefinitions(
-          layerDefs,
-          width,
-          height,
-        );
+        const definedLayers = createLayersFromDefinitions(layerDefs, width, height);
         const layers =
-          definedLayers.length > 0
-            ? definedLayers
-            : [createDefaultLayer(width, height)];
+          definedLayers.length > 0 ? definedLayers : [createDefaultLayer(width, height)];
 
         const newMap: Map = {
           version: 1,
@@ -769,11 +697,7 @@ export const useEditorStore = create<EditorStore>()(
             state.selectedLayerId = state.currentMap.layers[0]?.id || null;
           }
           // If switching to terrain tool and no terrain selected, default to first terrain
-          if (
-            tool === 'terrain' &&
-            !state.selectedTerrainId &&
-            state.terrainTypes.length > 0
-          ) {
+          if (tool === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
             state.selectedTerrainId = state.terrainTypes[0].id;
           }
         });
@@ -846,8 +770,7 @@ export const useEditorStore = create<EditorStore>()(
       setSelectedTiles: (indexes) =>
         set((state) => {
           state.selectedTileIndices = indexes.slice();
-          state.selectedTileIndex =
-            indexes.length > 0 ? indexes[indexes.length - 1] : null;
+          state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
           if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
           state.sampledPattern = null; // Clear sampled pattern when selecting tiles normally
         }),
@@ -881,15 +804,10 @@ export const useEditorStore = create<EditorStore>()(
 
       addTileset: async (tileset) => {
         useSaveStore.getState().setStatus('saving');
-        await fileSystem.saveJson(
-          'tilesets',
-          `${tileset.id}.tileset.json`,
-          tileset,
-        );
+        await fileSystem.saveJson('tilesets', `${tileset.id}.tileset.json`, tileset);
         useSaveStore.getState().setStatus('saved');
         setTimeout(() => {
-          if (useSaveStore.getState().status === 'saved')
-            useSaveStore.getState().setStatus('idle');
+          if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
         }, 2000);
 
         set((state) => {
@@ -919,11 +837,7 @@ export const useEditorStore = create<EditorStore>()(
 
         if (updatedTileset) {
           useSaveStore.getState().setStatus('saving');
-          await fileSystem.saveJson(
-            'tilesets',
-            `${id}.tileset.json`,
-            updatedTileset,
-          );
+          await fileSystem.saveJson('tilesets', `${id}.tileset.json`, updatedTileset);
           useSaveStore.getState().setStatus('saved');
           setTimeout(() => {
             if (useSaveStore.getState().status === 'saved')
@@ -945,8 +859,7 @@ export const useEditorStore = create<EditorStore>()(
         await fileSystem.deleteJson('tilesets', `${id}.tileset.json`);
         useSaveStore.getState().setStatus('saved');
         setTimeout(() => {
-          if (useSaveStore.getState().status === 'saved')
-            useSaveStore.getState().setStatus('idle');
+          if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
         }, 2000);
       },
 
@@ -967,8 +880,7 @@ export const useEditorStore = create<EditorStore>()(
           const ts = state.tilesets.get(tilesetId);
           if (!ts) return;
           const tile = ts.tiles[index] || ({} as TileDefinition);
-          if (!tile.terrainCorners)
-            tile.terrainCorners = [null, null, null, null];
+          if (!tile.terrainCorners) tile.terrainCorners = [null, null, null, null];
           tile.terrainCorners[corner] = terrainId;
 
           // If terrainId is null, clear the terrain information for the corner
@@ -989,11 +901,7 @@ export const useEditorStore = create<EditorStore>()(
 
         if (updatedTileset) {
           useSaveStore.getState().setStatus('saving');
-          await fileSystem.saveJson(
-            'tilesets',
-            `${tilesetId}.tileset.json`,
-            updatedTileset,
-          );
+          await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, updatedTileset);
           useSaveStore.getState().setStatus('saved');
           setTimeout(() => {
             if (useSaveStore.getState().status === 'saved')
@@ -1006,26 +914,14 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.currentMap) return;
           const tileRef = createTileRef(tilesetId, tileIndex);
-          setTileInState(
-            state.currentMap,
-            state.activeVariationId,
-            layerId,
-            x,
-            y,
-            tileRef,
-          );
+          setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, tileRef);
         }),
 
       paintTilesBatch: (layerId, tiles) =>
         set((state) => {
           if (!state.currentMap) return;
           for (const { x, y, tilesetId, tileIndex } of tiles) {
-            if (
-              x < 0 ||
-              y < 0 ||
-              x >= state.currentMap.width ||
-              y >= state.currentMap.height
-            )
+            if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height)
               continue;
             setTileInState(
               state.currentMap,
@@ -1041,35 +937,16 @@ export const useEditorStore = create<EditorStore>()(
       eraseTile: (layerId, x, y) =>
         set((state) => {
           if (!state.currentMap) return;
-          setTileInState(
-            state.currentMap,
-            state.activeVariationId,
-            layerId,
-            x,
-            y,
-            null,
-          );
+          setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, null);
         }),
 
       eraseTilesBatch: (layerId, positions) =>
         set((state) => {
           if (!state.currentMap) return;
           for (const { x, y } of positions) {
-            if (
-              x < 0 ||
-              y < 0 ||
-              x >= state.currentMap.width ||
-              y >= state.currentMap.height
-            )
+            if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height)
               continue;
-            setTileInState(
-              state.currentMap,
-              state.activeVariationId,
-              layerId,
-              x,
-              y,
-              null,
-            );
+            setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, null);
           }
         }),
 
@@ -1084,13 +961,7 @@ export const useEditorStore = create<EditorStore>()(
           if (!state.currentMap) return;
           const map = state.currentMap;
           const targetTileRef = createTileRef(tilesetId, tileIndex);
-          const startTile = resolveTileAt(
-            map,
-            layerId,
-            startX,
-            startY,
-            state.activeVariationId,
-          );
+          const startTile = resolveTileAt(map, layerId, startX, startY, state.activeVariationId);
 
           if (startTile === targetTileRef) return;
 
@@ -1099,20 +970,11 @@ export const useEditorStore = create<EditorStore>()(
             startY,
             map.width,
             map.height,
-            (x, y) =>
-              resolveTileAt(map, layerId, x, y, state.activeVariationId) ===
-              startTile,
+            (x, y) => resolveTileAt(map, layerId, x, y, state.activeVariationId) === startTile,
           );
 
           for (const { x, y } of tilesToFill) {
-            setTileInState(
-              map,
-              state.activeVariationId,
-              layerId,
-              x,
-              y,
-              targetTileRef,
-            );
+            setTileInState(map, state.activeVariationId, layerId, x, y, targetTileRef);
           }
         }),
 
@@ -1122,22 +984,14 @@ export const useEditorStore = create<EditorStore>()(
           const map = state.currentMap;
           const { mode, tilesetId, tileIndex, tileIndices, pattern } = options;
           const tileset = tilesetId ? state.tilesets.get(tilesetId) : undefined;
-          const startTile = resolveTileAt(
-            map,
-            layerId,
-            startX,
-            startY,
-            state.activeVariationId,
-          );
+          const startTile = resolveTileAt(map, layerId, startX, startY, state.activeVariationId);
 
           const tilesToFill = floodFillCollect(
             startX,
             startY,
             map.width,
             map.height,
-            (x, y) =>
-              resolveTileAt(map, layerId, x, y, state.activeVariationId) ===
-              startTile,
+            (x, y) => resolveTileAt(map, layerId, x, y, state.activeVariationId) === startTile,
           );
 
           for (const { x, y } of tilesToFill) {
@@ -1202,9 +1056,7 @@ export const useEditorStore = create<EditorStore>()(
           if (!state.currentMap) return;
 
           // If a layer is selected and it's an entity layer, attach to that layer
-          const selectedLayer = state.currentMap.layers.find(
-            (l) => l.id === state.selectedLayerId,
-          );
+          const selectedLayer = state.currentMap.layers.find((l) => l.id === state.selectedLayerId);
           if (selectedLayer && selectedLayer.kind === 'entity') {
             const toAdd = { ...entity, layerId: selectedLayer.id } as any;
 
@@ -1224,8 +1076,7 @@ export const useEditorStore = create<EditorStore>()(
             }
 
             // Otherwise add to the layer's entities
-            if (!(selectedLayer as any).entities)
-              (selectedLayer as any).entities = [];
+            if (!(selectedLayer as any).entities) (selectedLayer as any).entities = [];
             (selectedLayer as any).entities.push(castDraft(toAdd));
             return;
           }
@@ -1278,9 +1129,7 @@ export const useEditorStore = create<EditorStore>()(
           }
 
           // Remove from top-level entities
-          state.currentMap.entities = state.currentMap.entities.filter(
-            (e) => e.id !== entityId,
-          );
+          state.currentMap.entities = state.currentMap.entities.filter((e) => e.id !== entityId);
 
           // Also remove from any entity layers
           for (const layer of state.currentMap.layers) {
@@ -1313,9 +1162,7 @@ export const useEditorStore = create<EditorStore>()(
           }
 
           // Update in top-level entities
-          const entity = state.currentMap.entities.find(
-            (e) => e.id === entityId,
-          );
+          const entity = state.currentMap.entities.find((e) => e.id === entityId);
           if (entity) {
             entity.position = position;
             return;
@@ -1337,9 +1184,7 @@ export const useEditorStore = create<EditorStore>()(
         set((state) => {
           if (!state.currentMap) return;
 
-          const entity = state.currentMap.entities.find(
-            (e) => e.id === entityId,
-          );
+          const entity = state.currentMap.entities.find((e) => e.id === entityId);
           if (entity) {
             entity.label = label;
             return;
@@ -1375,13 +1220,9 @@ export const useEditorStore = create<EditorStore>()(
               );
 
               if (existingOverride) {
-                if (
-                  existingOverride.action === 'add' &&
-                  existingOverride.entity
-                ) {
+                if (existingOverride.action === 'add' && existingOverride.entity) {
                   existingOverride.entity.properties = {
-                    ...((existingOverride.entity
-                      .properties as PropertyValues) || {}),
+                    ...((existingOverride.entity.properties as PropertyValues) || {}),
                     ...properties,
                   } as PropertyValues;
                 } else if (existingOverride.action === 'modify') {
@@ -1391,8 +1232,7 @@ export const useEditorStore = create<EditorStore>()(
                     >;
                   if (existingOverride.entity) {
                     existingOverride.entity.properties = {
-                      ...((existingOverride.entity
-                        .properties as PropertyValues) || {}),
+                      ...((existingOverride.entity.properties as PropertyValues) || {}),
                       ...properties,
                     } as PropertyValues;
                   }
@@ -1402,9 +1242,7 @@ export const useEditorStore = create<EditorStore>()(
                 variation.entityOverrides.push({
                   action: 'modify',
                   entityId,
-                  entity: { properties } as Partial<
-                    import('../types/schema').EntityInstance
-                  >,
+                  entity: { properties } as Partial<import('../types/schema').EntityInstance>,
                 });
               }
               return;
@@ -1417,9 +1255,7 @@ export const useEditorStore = create<EditorStore>()(
             // Try to find in layers
             for (const layer of state.currentMap.layers) {
               if (layer.kind === 'entity' && (layer as any).entities) {
-                const found = (layer as any).entities.find(
-                  (en: any) => en.id === entityId,
-                );
+                const found = (layer as any).entities.find((en: any) => en.id === entityId);
                 if (found) {
                   entity = found;
                   break;
@@ -1443,9 +1279,7 @@ export const useEditorStore = create<EditorStore>()(
       removeLayer: (layerId) =>
         set((state) => {
           if (state.currentMap) {
-            state.currentMap.layers = state.currentMap.layers.filter(
-              (l) => l.id !== layerId,
-            );
+            state.currentMap.layers = state.currentMap.layers.filter((l) => l.id !== layerId);
           }
         }),
 
@@ -1520,9 +1354,7 @@ export const useEditorStore = create<EditorStore>()(
 
       updateVariation: (id, updates) => {
         set((state) => {
-          const variation = state.currentMap?.variations?.find(
-            (v) => v.id === id,
-          );
+          const variation = state.currentMap?.variations?.find((v) => v.id === id);
           if (variation) {
             Object.assign(variation, updates);
           }
@@ -1532,9 +1364,7 @@ export const useEditorStore = create<EditorStore>()(
       removeVariation: (id) => {
         set((state) => {
           if (state.currentMap) {
-            state.currentMap.variations = state.currentMap.variations?.filter(
-              (v) => v.id !== id,
-            );
+            state.currentMap.variations = state.currentMap.variations?.filter((v) => v.id !== id);
             if (state.activeVariationId === id) state.activeVariationId = null;
           }
         });
@@ -1646,8 +1476,7 @@ export const useEditorStore = create<EditorStore>()(
       deleteEntityType: async (id) => {
         set((state) => {
           state.entityTypes = state.entityTypes.filter((e) => e.id !== id);
-          if (state.selectedEntityTypeId === id)
-            state.selectedEntityTypeId = null;
+          if (state.selectedEntityTypeId === id) state.selectedEntityTypeId = null;
         });
         const proj = useEditorStore.getState().project;
         if (proj) {
@@ -1683,10 +1512,7 @@ export const useEditorStore = create<EditorStore>()(
             state.project = castDraft(projectToSave);
             if (state.currentMap) {
               state.currentMap = castDraft(
-                addMissingDefinitionLayers(
-                  state.currentMap,
-                  state.layerDefinitions,
-                ),
+                addMissingDefinitionLayers(state.currentMap, state.layerDefinitions),
               );
             }
           });
@@ -1713,11 +1539,8 @@ export const useEditorStore = create<EditorStore>()(
 
       deleteLayerDefinition: async (id) => {
         set((state) => {
-          state.layerDefinitions = state.layerDefinitions.filter(
-            (d) => d.id !== id,
-          );
-          if (state.selectedLayerDefinitionId === id)
-            state.selectedLayerDefinitionId = null;
+          state.layerDefinitions = state.layerDefinitions.filter((d) => d.id !== id);
+          if (state.selectedLayerDefinitionId === id) state.selectedLayerDefinitionId = null;
         });
         const proj = useEditorStore.getState().project;
         if (proj) {

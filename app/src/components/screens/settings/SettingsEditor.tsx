@@ -65,14 +65,10 @@ const defaultSettings: AppSettings = {
  * SettingsEditor - Global application settings.
  */
 export const SettingsEditor: React.FC = () => {
-  const [activeCategory, setActiveCategory] =
-    useState<SettingsCategory>('general');
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('general');
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
 
-  const updateSetting = <K extends keyof AppSettings>(
-    key: K,
-    value: AppSettings[K],
-  ) => {
+  const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
     // TODO: Persist to localStorage or electron store
   };
@@ -94,11 +90,7 @@ export const SettingsEditor: React.FC = () => {
     />
   );
 
-  const renderSettingRow = (
-    label: string,
-    description: string,
-    control: React.ReactNode,
-  ) => (
+  const renderSettingRow = (label: string, description: string, control: React.ReactNode) => (
     <HStack justify="space-between" align="start" py={3}>
       <VStack align="start" spacing={0} flex={1}>
         <Text fontSize="sm" fontWeight="medium" color="gray.200">
@@ -113,11 +105,7 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderGeneralSettings = () => (
-    <VStack
-      align="stretch"
-      spacing={0}
-      divider={<Divider borderColor="#071018" />}
-    >
+    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
       {renderSettingRow(
         'Theme',
         'Application color theme',
@@ -178,11 +166,7 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderEditorSettings = () => (
-    <VStack
-      align="stretch"
-      spacing={0}
-      divider={<Divider borderColor="#071018" />}
-    >
+    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
       {renderSettingRow(
         'Show Tile Indices',
         'Display tile index numbers on the tileset',
@@ -206,9 +190,7 @@ export const SettingsEditor: React.FC = () => {
         'Show indicator on tile under cursor',
         <Switch
           isChecked={settings.highlightHoveredTile}
-          onChange={(e) =>
-            updateSetting('highlightHoveredTile', e.target.checked)
-          }
+          onChange={(e) => updateSetting('highlightHoveredTile', e.target.checked)}
           colorScheme="blue"
         />,
       )}
@@ -220,10 +202,7 @@ export const SettingsEditor: React.FC = () => {
           w="130px"
           value={settings.defaultTool}
           onChange={(e) =>
-            updateSetting(
-              'defaultTool',
-              e.target.value as AppSettings['defaultTool'],
-            )
+            updateSetting('defaultTool', e.target.value as AppSettings['defaultTool'])
           }
           bg="#0a0a0b"
           borderColor="#071018"
@@ -243,11 +222,7 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderGridSettings = () => (
-    <VStack
-      align="stretch"
-      spacing={0}
-      divider={<Divider borderColor="#071018" />}
-    >
+    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
       {renderSettingRow(
         'Show Grid',
         'Display grid overlay on map viewport',
@@ -281,11 +256,7 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderExportSettings = () => (
-    <VStack
-      align="stretch"
-      spacing={0}
-      divider={<Divider borderColor="#071018" />}
-    >
+    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
       {renderSettingRow(
         'Export Format',
         'Default format for map exports',
@@ -294,10 +265,7 @@ export const SettingsEditor: React.FC = () => {
           w="100px"
           value={settings.exportFormat}
           onChange={(e) =>
-            updateSetting(
-              'exportFormat',
-              e.target.value as AppSettings['exportFormat'],
-            )
+            updateSetting('exportFormat', e.target.value as AppSettings['exportFormat'])
           }
           bg="#0a0a0b"
           borderColor="#071018"
@@ -338,14 +306,9 @@ export const SettingsEditor: React.FC = () => {
   const renderShortcutsSettings = () => (
     <VStack align="stretch" spacing={4}>
       <Text fontSize="xs" color="gray.500">
-        Keyboard shortcuts cannot be customized yet. Here are the current
-        bindings:
+        Keyboard shortcuts cannot be customized yet. Here are the current bindings:
       </Text>
-      <VStack
-        align="stretch"
-        spacing={0}
-        divider={<Divider borderColor="#071018" />}
-      >
+      <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
         {[
           ['B', 'Brush / Paint tool'],
           ['E', 'Eraser tool'],
@@ -362,13 +325,7 @@ export const SettingsEditor: React.FC = () => {
             <Text fontSize="sm" color="gray.300">
               {action}
             </Text>
-            <Badge
-              bg="#071018"
-              color="gray.300"
-              fontFamily="mono"
-              fontSize="xs"
-              px={2}
-            >
+            <Badge bg="#071018" color="gray.300" fontFamily="mono" fontSize="xs" px={2}>
               {key}
             </Badge>
           </HStack>

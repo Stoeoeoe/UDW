@@ -72,9 +72,7 @@ interface CreateEntityTypeDialogProps {
   onClose: () => void;
 }
 
-export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
-  onClose,
-}) => {
+export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ onClose }) => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const addEntityType = useEditorStore((state) => state.addEntityType);
 
@@ -173,7 +171,10 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
           )}
           {!customId && derivedId && (
             <Text fontSize="10px" color="gray.600" mt={1}>
-              Will use: <Box as="span" fontFamily="mono">{derivedId}</Box>
+              Will use:{' '}
+              <Box as="span" fontFamily="mono">
+                {derivedId}
+              </Box>
             </Text>
           )}
         </FormControl>
@@ -193,11 +194,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
               onChange={(e) => setCategory(e.target.value as EntityCategory)}
             >
               {CATEGORIES.map((c) => (
-                <option
-                  key={c.value}
-                  value={c.value}
-                  style={{ background: '#1a202c' }}
-                >
+                <option key={c.value} value={c.value} style={{ background: '#1a202c' }}>
                   {c.icon} {c.label}
                 </option>
               ))}
@@ -302,12 +299,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
           <Button size="sm" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            colorScheme="blue"
-            isDisabled={!isValid}
-            onClick={handleCreate}
-          >
+          <Button size="sm" colorScheme="blue" isDisabled={!isValid} onClick={handleCreate}>
             Create Entity Type
           </Button>
         </HStack>

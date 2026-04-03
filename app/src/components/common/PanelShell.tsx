@@ -8,11 +8,7 @@ interface PanelShellProps {
   children?: React.ReactNode;
 }
 
-export const PanelShell: React.FC<PanelShellProps> = ({
-  title,
-  subtitle,
-  children,
-}) => {
+export const PanelShell: React.FC<PanelShellProps> = ({ title, subtitle, children }) => {
   return (
     <VStack h="full" w="full" align="stretch" spacing={0} bg="editor.panelBg">
       <PanelHeader title={title} subtitle={subtitle} />
