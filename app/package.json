@@ -1,11 +1,16 @@
 {
   "name": "map-editor",
+  "author": {
+    "email": "matthias.stoe@gmail.com",
+    "name": "Matthias Stöckli"
+  },
+  "description": "Map editor application built with Electron, React, and TypeScript",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc -p tsconfig.build.json && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest run",

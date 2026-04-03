@@ -137,17 +137,17 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
               if (k === 'id')
                 updateTileDef(tileset.id, selectedIndex, {
                   ...selectedTileDef,
-                  id: v,
+                  id: v == null ? undefined : String(v),
                 });
               if (k === 'probability')
                 updateTileDef(tileset.id, selectedIndex, {
                   ...selectedTileDef,
-                  probability: parseFloat(v) || 1,
+                  probability: parseFloat(String(v)) || 1,
                 });
               if (k === 'terrain')
                 updateTileDef(tileset.id, selectedIndex, {
                   ...selectedTileDef,
-                  terrain: v,
+                  terrain: v == null ? undefined : String(v),
                 });
             }}
           />
