@@ -170,15 +170,26 @@ export const LayerItem: React.FC<LayerItemProps> = ({
           }}
         />
 
-        {/* Name */}
-        <Text
-          flex={1}
-          fontSize="xs"
-          fontWeight={isSelected ? 'bold' : 'normal'}
-          color={!layer.visible ? 'gray.600' : 'inherit'}
-        >
-          {layer.name}
-        </Text>
+        {/* Name + z-index */}
+        <HStack flex={1} spacing={2} alignItems="center">
+          <Text
+            flex={1}
+            fontSize="xs"
+            fontWeight={isSelected ? 'bold' : 'normal'}
+            color={!layer.visible ? 'gray.600' : 'inherit'}
+          >
+            {layer.name}
+          </Text>
+          <Text
+            fontSize="10px"
+            color="gray.400"
+            opacity={0.9}
+            userSelect="none"
+            title={`z-order: ${layer.zOrder}`}
+          >
+            {`${layer.zOrder}`}
+          </Text>
+        </HStack>
 
         {/* Action Icons */}
         <HStack spacing="1">

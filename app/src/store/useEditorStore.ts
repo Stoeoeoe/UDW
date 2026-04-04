@@ -1752,6 +1752,72 @@ export const useEditorStore = create<EditorStore>()(
             await persistProject(projectToSave);
             set((state) => {
               state.project = castDraft(projectToSave);
+
+              // Propagate updated definition to existing maps' layers
+              const updatedDef = state.layerDefinitions.find((d) => d.id === id);
+              if (updatedDef) {
+                const applyDefToLayer = (layer: Layer, mapWidth: number, mapHeight: number) => {
+                  layer.name = updatedDef.name;
+                  layer.zOrder = updatedDef.zIndex;
+                  layer.kind =
+                    updatedDef.type === 'entity'
+                      ? 'entity'
+                      : updatedDef.type === 'terrain'
+                        ? 'terrain'
+                        : 'visual';
+                  if (updatedDef.icon) layer.icon = updatedDef.icon;
+
+                  // Ensure fields match layer type
+                  if (updatedDef.type === 'entity') {
+                    if (!layer.entities) {
+                      delete layer.data;
+                      delete layer.terrainData;
+                      layer.entities = [] as EntityInstance[];
+                    }
+                  } else if (updatedDef.type === 'terrain') {
+                    if (!layer.data) layer.data = createEmptyGrid(mapWidth, mapHeight);
+                    if (!layer.terrainData)
+                      layer.terrainData = createEmptyStringGrid(mapWidth, mapHeight);
+                    if (layer.entities) delete layer.entities;
+                  } else {
+                    // tile/visual
+                    if (!layer.data) layer.data = createEmptyGrid(mapWidth, mapHeight);
+                    if (layer.terrainData) delete layer.terrainData;
+                    if (layer.entities) delete layer.entities;
+                  }
+                };
+
+                // Track which maps were modified so we can trigger saves
+                const modifiedMapIds = new Set<string>();
+
+                for (const map of state.maps) {
+                  let changed = false;
+                  for (const layer of map.layers) {
+                    if (layer.definitionId === id) {
+                      applyDefToLayer(layer as Layer, map.width, map.height);
+                      changed = true;
+                    }
+                  }
+                  if (changed) {
+                    // resort layers by zOrder
+                    map.layers = map.layers.slice().sort((a, b) => a.zOrder - b.zOrder);
+                    modifiedMapIds.add(map.id);
+                  }
+                }
+
+                // Also update currentMap if it's loaded separately
+                if (state.currentMap && modifiedMapIds.has(state.currentMap.id)) {
+                  // find the updated map from maps array and set currentMap to that snapshot
+                  const updated = state.maps.find((m) => m.id === state.currentMap!.id);
+                  if (updated) state.currentMap = castDraft(updated);
+                }
+
+                // Trigger saves for modified maps (debounced)
+                for (const mid of modifiedMapIds) {
+                  const m = state.maps.find((x) => x.id === mid);
+                  if (m) saveMapDebounced(m as GameMap);
+                }
+              }
             });
           }
         },
