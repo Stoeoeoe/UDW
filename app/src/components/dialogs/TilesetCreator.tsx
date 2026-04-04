@@ -18,6 +18,7 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
+import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 
 interface Props {
   onCreate?: () => void;
@@ -34,17 +35,32 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ w: number; h: number } | null>(null);
   const [isProcessing, setProcessing] = useState(false);
+
+  React.useEffect(() => {
+    return () => {
+      if (!previewUrl) return;
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const handleSelectFile = async () => {
     try {
       const path = await fileSystem.selectAsset();
       if (!path) return;
       const b = await fileSystem.readFileAsBlob(path);
-      const url = URL.createObjectURL(b);
+      const resolved = await resolveSpriteAsset(path, b);
+      const url = URL.createObjectURL(resolved.imageBlob);
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
       setFilePath(path);
       setBlob(b);
       setPreviewUrl(url);
+      setImageDimensions({ w: resolved.width, h: resolved.height });
       setName((n) =>
         n === 'New Tileset'
           ? path
@@ -69,15 +85,14 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
       const filename = filePath?.split(/[\\/]/).pop() || name.replace(/\s+/g, '-');
       const internalPath = await fileSystem.saveAsset(filename, blob);
 
-      // Load image to determine dimensions
-      const img = new globalThis.Image();
-      const url = URL.createObjectURL(blob);
-      img.src = url;
-      await new Promise((r) => (img.onload = r));
-      URL.revokeObjectURL(url);
+      const dimensions =
+        imageDimensions ??
+        (() => {
+          throw new Error('Image dimensions are unavailable. Re-select the sprite image.');
+        })();
 
-      const columns = Math.floor(img.width / tileWidth) || 1;
-      const rows = Math.floor(img.height / tileHeight) || 1;
+      const columns = Math.floor(dimensions.w / tileWidth) || 1;
+      const rows = Math.floor(dimensions.h / tileHeight) || 1;
       const tileCount = columns * rows;
 
       // Build default tiles record

@@ -5,7 +5,7 @@ import { castDraft } from 'immer';
 import { EditorState, ToolType, ValidationError, EditorMode } from '../types/editor';
 import {
   Project,
-  Map,
+  Map as GameMap,
   Layer,
   Variation,
   EntityInstance,
@@ -23,6 +23,7 @@ import { fileSystem } from '../lib/fileSystem';
 import { floodFillCollect } from '../lib/algorithms';
 import { saveMapDebounced, useSaveStore } from '../lib/saveManager';
 import { encodeTileRef } from '../lib/tileRef';
+import { resolveSpriteAsset } from '../lib/asepriteUtils';
 
 // ============================================================================
 // Helper functions for layer management
@@ -39,7 +40,7 @@ function createEmptyStringGrid(width: number, height: number): (string | null)[]
 }
 
 /** Adds missing layers from layer definitions to a map */
-function addMissingDefinitionLayers(map: Map, layerDefs: LayerDefinition[]): Map {
+function addMissingDefinitionLayers(map: GameMap, layerDefs: LayerDefinition[]): GameMap {
   if (layerDefs.length === 0) return map;
 
   const existingDefIds = new Set(
@@ -122,7 +123,7 @@ function ensureVariationLayerOverride(
 
 /** Sets a tile value, handling variation overrides */
 function setTileInState(
-  map: Map,
+  map: GameMap,
   activeVariationId: string | null,
   layerId: string,
   x: number,
@@ -191,12 +192,12 @@ interface EditorStore extends EditorState {
   updateProject: (project: Project) => Promise<void>;
 
   // Map Actions
-  setCurrentMap: (map: Map | null) => void;
+  setCurrentMap: (map: GameMap | null) => void;
   loadMap: (mapId: string) => void;
   createNewMap: (name: string, width: number, height: number, tilesetId: string) => Promise<void>;
-  updateCurrentMap: (updates: Partial<Map>) => void;
+  updateCurrentMap: (updates: Partial<GameMap>) => void;
   deleteMap: (mapId: string) => Promise<void>;
-  addMap: (map: Map) => void;
+  addMap: (map: GameMap) => void;
 
   // Tool actions
   setActiveTool: (tool: ToolType) => void;
@@ -518,7 +519,8 @@ export const useEditorStore = create<EditorStore>()(
       },
 
       loadSprite: async (path, blob) => {
-        const url = URL.createObjectURL(blob);
+        const resolved = await resolveSpriteAsset(path, blob);
+        const url = URL.createObjectURL(resolved.imageBlob);
         const img = new Image();
         img.src = url;
         await new Promise((resolve, reject) => {
@@ -526,7 +528,9 @@ export const useEditorStore = create<EditorStore>()(
           img.onerror = reject;
         });
 
+        // Replace the Map instance so selectors depending on the Map identity update
         set((state) => {
+          state.loadedSprites = new Map(state.loadedSprites);
           state.loadedSprites.set(path, castDraft(img));
         });
 
@@ -612,7 +616,7 @@ export const useEditorStore = create<EditorStore>()(
         const layers =
           definedLayers.length > 0 ? definedLayers : [createDefaultLayer(width, height)];
 
-        const newMap: Map = {
+        const newMap: GameMap = {
           version: 1,
           id,
           name,
@@ -634,7 +638,7 @@ export const useEditorStore = create<EditorStore>()(
         });
       },
 
-      addMap: (map: Map) => {
+      addMap: (map: GameMap) => {
         // This might be used for loading, but currentMap is the primary state
         set((state) => {
           state.currentMap = castDraft(map);
@@ -1609,6 +1613,87 @@ export const useEditorStore = create<EditorStore>()(
     })),
   ),
 );
+
+// Listen for native asset changes (Electron) and reload affected sprites/tilesets
+if ((window as any).ipcRenderer) {
+  (window as any).ipcRenderer.on(
+    'app:asset-changed',
+    async (_event: any, payload: { eventType: string; relativePath: string }) => {
+      const { relativePath } = payload;
+      try {
+        const state = useEditorStore.getState();
+
+        // If we already have this asset loaded, reload it
+        if (state.loadedSprites.has(relativePath)) {
+          try {
+            const blob = await fileSystem.loadAsset(relativePath);
+            await state.loadSprite(relativePath, blob);
+            console.info('Reloaded sprite asset:', relativePath);
+          } catch (e) {
+            console.warn('Failed to reload sprite asset', relativePath, e);
+          }
+        }
+
+        // Also, if any tileset references this spriteSheet path, reload its image
+        for (const [id, ts] of state.tilesets.entries()) {
+          try {
+            if ((ts as any).spriteSheet === relativePath) {
+              if (state.loadedSprites.has(relativePath)) {
+                const blob = await fileSystem.loadAsset(relativePath);
+                await state.loadSprite(relativePath, blob);
+              }
+              // Optionally, reload tileset metadata if needed (not implemented here)
+              console.info('Tileset sprite changed for tileset:', id, relativePath);
+            }
+          } catch (e) {
+            // ignore per-tileset errors
+          }
+        }
+      } catch (e) {
+        // swallow errors
+      }
+    },
+  );
+
+  (window as any).ipcRenderer.on(
+    'app:tileset-changed',
+    async (
+      _event: any,
+      payload: { eventType: string; relativePath: string; tileset: any | null },
+    ) => {
+      const { relativePath, tileset } = payload;
+      try {
+        if (!tileset) {
+          console.warn('Tileset changed but could not parse JSON:', relativePath);
+          return;
+        }
+
+        // Replace tilesets Map reference so selectors react
+        useEditorStore.setState((state) => {
+          const newMap = new Map(state.tilesets);
+          try {
+            newMap.set(tileset.id, tileset);
+          } catch (e) {
+            newMap.set(relativePath, tileset);
+          }
+          return { tilesets: newMap } as any;
+        });
+
+        // If tileset references a spriteSheet, reload the image blob
+        if (tileset.spriteSheet) {
+          try {
+            const blob = await fileSystem.loadAsset(tileset.spriteSheet);
+            await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
+          } catch (e) {
+            console.warn('Failed to reload tileset sprite:', tileset.spriteSheet, e);
+          }
+        }
+      } catch (e) {
+        // swallow
+      }
+    },
+  );
+}
 
 // =============================================================================
 // Auto-save subscription: Save currentMap whenever it changes

@@ -1,8 +1,87 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import chokidar from 'chokidar';
 
 export function setupIpcHandlers(win: BrowserWindow | null) {
+  // Map of active chokidar watchers per projectPath so we can stop them when switching projects
+  const activeWatchers: Map<string, any[]> = new Map();
+
+  function stopWatchers(projectPath: string) {
+    const arr = activeWatchers.get(projectPath) || [];
+    for (const w of arr) {
+      try {
+        // chokidar watcher.close() returns a Promise
+        const res = w.close();
+        if (res && typeof res.then === 'function') res.catch(() => {});
+      } catch (e) {
+        // ignore
+      }
+    }
+    activeWatchers.delete(projectPath);
+  }
+
+  function startWatchingProject(projectPath: string) {
+    stopWatchers(projectPath);
+
+    const watchers: any[] = [];
+
+    // Watch image/asset changes
+    try {
+      const assetsGlob =
+        path.join(projectPath, 'assets').replace(/\\/g, '/') + '/**/*.{png,jpg,jpeg,ase,aseprite}';
+      const wAssets = chokidar.watch(assetsGlob, {
+        ignoreInitial: true,
+        awaitWriteFinish: { stabilityThreshold: 200 },
+        usePolling: true,
+        interval: 100,
+      });
+      wAssets.on('all', (event: string, filePathChanged: string) => {
+        const rel = path.relative(projectPath, filePathChanged).replace(/\\/g, '/');
+        win?.webContents.send('app:asset-changed', { eventType: event, relativePath: rel });
+      });
+      watchers.push(wAssets);
+    } catch (e) {
+      // ignore
+    }
+
+    // Watch tileset JSON changes
+    try {
+      const tilesGlob =
+        path.join(projectPath, 'tilesets').replace(/\\/g, '/') + '/**/*.tileset.json';
+      const wTiles = chokidar.watch(tilesGlob, {
+        ignoreInitial: true,
+        awaitWriteFinish: { stabilityThreshold: 200 },
+        usePolling: true,
+        interval: 100,
+      });
+      wTiles.on('all', async (event: string, filePathChanged: string) => {
+        const rel = path.relative(projectPath, filePathChanged).replace(/\\/g, '/');
+        // Try to read and parse tileset JSON and send it to renderer
+        try {
+          const content = await fs.readFile(filePathChanged, 'utf-8');
+          const parsed = JSON.parse(content);
+          win?.webContents.send('app:tileset-changed', {
+            eventType: event,
+            relativePath: rel,
+            tileset: parsed,
+          });
+        } catch (e) {
+          // On parse/read error, still notify that file changed
+          win?.webContents.send('app:tileset-changed', {
+            eventType: event,
+            relativePath: rel,
+            tileset: null,
+          });
+        }
+      });
+      watchers.push(wTiles);
+    } catch (e) {
+      // ignore
+    }
+
+    if (watchers.length > 0) activeWatchers.set(projectPath, watchers);
+  }
   // IPC Handlers for Native File System
   ipcMain.handle('app:open-project', async () => {
     if (!win) return null;
@@ -22,6 +101,8 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     const content = await fs.readFile(filePath, 'utf-8');
     const project = JSON.parse(content);
     const projectPath = path.dirname(filePath);
+    // Start filesystem watchers for assets/tilesets in this project
+    startWatchingProject(projectPath);
 
     return { project, projectPath };
   });
@@ -31,6 +112,8 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       const project = JSON.parse(content);
+      // Start filesystem watchers for assets/tilesets in this project
+      startWatchingProject(projectPath);
       return { project, projectPath };
     } catch (e) {
       throw new Error(`Failed to load project at ${projectPath}: ${(e as Error).message}`);
@@ -58,6 +141,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
       path.join(projectPath, 'project.json'),
       JSON.stringify(projectConfig, null, 2),
     );
+
+    // Start watchers for the newly created project
+    startWatchingProject(projectPath);
 
     return { projectPath };
   });
@@ -117,8 +203,8 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
   ipcMain.handle('app:select-asset', async () => {
     if (!win) return null;
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'Select Image Asset',
-      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+      title: 'Select Sprite Asset',
+      filters: [{ name: 'Sprites', extensions: ['png', 'jpg', 'jpeg', 'ase', 'aseprite'] }],
       properties: ['openFile'],
     });
 
@@ -128,5 +214,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
 
   ipcMain.handle('app:read-file-buffer', async (_event, filePath) => {
     return await fs.readFile(filePath);
+  });
+
+  ipcMain.handle('app:stop-watching', async (_event, projectPath) => {
+    stopWatchers(projectPath);
   });
 }

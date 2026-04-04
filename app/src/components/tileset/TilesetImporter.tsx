@@ -16,6 +16,7 @@ import {
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
+import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 
 interface TilesetImporterProps {
   onImport: () => void;
@@ -44,16 +45,13 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
 
       setIsProcessing(true);
       const blob = await fileSystem.readFileAsBlob(rawPath);
-      const url = URL.createObjectURL(blob);
 
       // Extract filename from path
       const name = rawPath.split(/[\\/]/).pop() || 'tileset';
+      const resolved = await resolveSpriteAsset(rawPath, blob);
+      const url = URL.createObjectURL(resolved.imageBlob);
 
-      const img = new globalThis.Image();
-      img.src = url;
-      await new Promise((resolve) => (img.onload = resolve));
-
-      setImageDimensions({ w: img.width, h: img.height });
+      setImageDimensions({ w: resolved.width, h: resolved.height });
       setFileData({
         name,
         path: rawPath,
@@ -201,7 +199,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
                   Select Tileset Image
                 </Text>
                 <Text color="gray.600" fontSize="xs">
-                  PNG format recommended
+                  PNG/JPG/Aseprite supported
                 </Text>
               </VStack>
             </VStack>

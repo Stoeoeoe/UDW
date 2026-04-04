@@ -14,6 +14,7 @@ import { EditorModal } from '../common/EditorModal';
 import { Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { useEditorStore } from '../../store/useEditorStore';
+import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 
 interface Props {
   isOpen: boolean;
@@ -61,15 +62,10 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
       }
 
       setSpritePath(finalPath);
-      // try to load and read dimensions to compute columns
-      const img = new globalThis.Image();
-      const url = URL.createObjectURL(blob);
-      img.src = url;
-      await new Promise((r) => (img.onload = r));
+      const resolved = await resolveSpriteAsset(finalPath, blob);
       if (tileWidth > 0) {
-        setColumns(Math.floor(img.width / tileWidth));
+        setColumns(Math.floor(resolved.width / tileWidth));
       }
-      URL.revokeObjectURL(url);
     } catch (e: any) {
       toast({ title: 'Failed', description: e.message, status: 'error' });
     }
