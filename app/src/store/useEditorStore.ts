@@ -52,14 +52,19 @@ function addMissingDefinitionLayers(map: GameMap, layerDefs: LayerDefinition[]):
   const newLayers: Layer[] = missingDefs.map((def) => ({
     id: def.id,
     name: def.name,
-    kind: def.type === 'entity' ? 'entity' : 'visual',
+    kind: def.type === 'entity' ? 'entity' : def.type === 'terrain' ? 'terrain' : 'visual',
     visible: true,
     locked: false,
     opacity: 1,
     zOrder: def.zIndex,
     ...(def.type === 'entity'
       ? { entities: [] as EntityInstance[] }
-      : { data: createEmptyGrid(map.width, map.height) }),
+      : {
+          data: createEmptyGrid(map.width, map.height),
+          ...(def.type === 'terrain'
+            ? { terrainData: createEmptyStringGrid(map.width, map.height) }
+            : {}),
+        }),
     definitionId: def.id,
   }));
 
@@ -79,14 +84,19 @@ function createLayersFromDefinitions(
     .map((def) => ({
       id: def.id,
       name: def.name,
-      kind: def.type === 'entity' ? 'entity' : 'visual',
+      kind: def.type === 'entity' ? 'entity' : def.type === 'terrain' ? 'terrain' : 'visual',
       visible: true,
       locked: false,
       opacity: 1,
       zOrder: def.zIndex,
       ...(def.type === 'entity'
         ? { entities: [] as EntityInstance[] }
-        : { data: createEmptyGrid(width, height) }),
+        : {
+            data: createEmptyGrid(width, height),
+            ...(def.type === 'terrain'
+              ? { terrainData: createEmptyStringGrid(width, height) }
+              : {}),
+          }),
       definitionId: def.id,
     }));
 }
@@ -204,6 +214,8 @@ interface EditorStore extends EditorState {
   setEntitySnapMode: (mode: 'grid' | 'pixel') => void;
   setShowCollisionOverlay: (enabled: boolean) => void;
   setShowTilesetCollisionOverlay: (enabled: boolean) => void;
+  setShowTerrainOverlay: (enabled: boolean) => void;
+  reloadTerrainLayers: () => void;
   setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
   setBrushSize: (size: number) => void;
   setMode: (mode: EditorMode) => void;
@@ -247,6 +259,10 @@ interface EditorStore extends EditorState {
   ) => void;
   eraseTile: (layerId: string, x: number, y: number) => void;
   eraseTilesBatch: (layerId: string, positions: Array<{ x: number; y: number }>) => void;
+  paintTerrainDataBatch: (
+    layerId: string,
+    cells: Array<{ x: number; y: number; terrainId: string | null }>,
+  ) => void;
   bucketFill: (
     layerId: string,
     startX: number,
@@ -379,6 +395,7 @@ export const useEditorStore = create<EditorStore>()(
         entitySnapMode: 'grid',
         showCollisionOverlay: false,
         showTilesetCollisionOverlay: false,
+        showTerrainOverlay: false,
         camera: { x: 0, y: 0, zoom: 1.5 },
         mapCameras: {},
         tilesetToolMode: 'select',
@@ -729,6 +746,157 @@ export const useEditorStore = create<EditorStore>()(
             state.showCollisionOverlay = enabled;
           }),
 
+        setShowTerrainOverlay: (enabled) =>
+          set((state) => {
+            state.showTerrainOverlay = enabled;
+          }),
+
+        reloadTerrainLayers: () =>
+          set((state) => {
+            const map = state.currentMap;
+            const activeTilesetId = state.activeTilesetId;
+            if (!map || !activeTilesetId) return;
+
+            const tileset = state.tilesets.get(activeTilesetId);
+            if (!tileset) return;
+
+            // Pre-compute the encoded base for this tileset (avoids indexOf per cell)
+            const tilesetIndex = map.tilesetRefs.indexOf(activeTilesetId);
+            if (tilesetIndex === -1) return;
+            const tilesetBase = tilesetIndex << 16;
+
+            // Pre-index tileset: cornersKey -> tileIndex for O(1) lookup per cell.
+            // Key = "TL|TR|BL|BR" where each part is the terrain id or "" for null.
+            // Collect all tiles that have terrainCorners defined.
+            type TileEntry = { index: number; probability: number };
+            const exactIndex = new Map<string, TileEntry[]>();
+            for (const [idxStr, def] of Object.entries(tileset.tiles)) {
+              if (!def.terrainCorners) continue;
+              const c = def.terrainCorners;
+              const key = `${c[0] ?? ''}|${c[1] ?? ''}|${c[2] ?? ''}|${c[3] ?? ''}`;
+              const prob =
+                typeof def.probability === 'number' && def.probability > 0 ? def.probability : 1;
+              const entry = { index: parseInt(idxStr, 10), probability: prob };
+              const arr = exactIndex.get(key);
+              if (arr) arr.push(entry);
+              else exactIndex.set(key, [entry]);
+            }
+
+            const pickWeighted = (entries: TileEntry[]): number => {
+              if (entries.length === 1) return entries[0].index;
+              let total = 0;
+              for (const e of entries) total += e.probability;
+              let r = Math.random() * total;
+              for (const e of entries) {
+                r -= e.probability;
+                if (r <= 0) return e.index;
+              }
+              return entries[entries.length - 1].index;
+            };
+
+            // Cache corner-key -> the winning TileEntry[] bucket (not the picked index).
+            // We cache the bucket so the fuzzy search only runs once per unique corner config,
+            // but pickWeighted() is called fresh each time so probability variation is preserved.
+            const bucketCache = new Map<string, TileEntry[] | null>();
+
+            const resolveCorners = (
+              tl: string | null,
+              tr: string | null,
+              bl: string | null,
+              br: string | null,
+            ): number | null => {
+              const key = `${tl ?? ''}|${tr ?? ''}|${bl ?? ''}|${br ?? ''}`;
+              let bucket: TileEntry[] | null | undefined = bucketCache.get(key);
+              if (bucket === undefined) {
+                // Exact match
+                const exact = exactIndex.get(key);
+                if (exact) {
+                  bucket = exact;
+                } else {
+                  // Fuzzy: find best scoring entries
+                  const corners = [tl, tr, bl, br];
+                  let bestScore = -1;
+                  let bestEntries: TileEntry[] = [];
+                  for (const [k, entries] of exactIndex) {
+                    const parts = k.split('|');
+                    let score = 0;
+                    for (let i = 0; i < 4; i++) {
+                      if ((parts[i] || null) === corners[i]) score++;
+                    }
+                    if (score > bestScore) {
+                      bestScore = score;
+                      bestEntries = entries;
+                    } else if (score === bestScore) bestEntries = bestEntries.concat(entries);
+                  }
+                  bucket = bestScore > 0 ? bestEntries : null;
+                }
+                bucketCache.set(key, bucket);
+              }
+              return bucket ? pickWeighted(bucket) : null;
+            };
+
+            for (const layer of map.layers) {
+              if (layer.kind !== 'terrain' || !layer.terrainData || !layer.data) continue;
+
+              const td = layer.terrainData;
+              const W = map.width;
+              const H = map.height;
+
+              // Build corner grid directly from terrainData using flat typed array for speed.
+              // corners[y*W*4 + x*4 + corner] = terrain id index (0 = null).
+              // Use a flat string[] instead: corners are sparse so use Map with int key.
+              // Actually: derive corners on the fly per cell from its 4 neighbors in terrainData.
+              // For cell (x,y):
+              //   TL corner = last non-null among: (x-1,y-1), (x,y-1), (x-1,y), (x,y)  — reading raster order means (x,y) wins
+              //   But the exact rule from applyTerrainToTile: each cell sets all 4 corners to its terrainId,
+              //   overwriting neighbors' shared corners. Processing left-to-right, top-to-bottom,
+              //   the last writer wins. So:
+              //   TL of (x,y) = terrainData[y][x] if set, else terrainData[y][x-1] if set (its TR), else terrainData[y-1][x] if set (its BL), else terrainData[y-1][x-1] if set (its BR)
+              //   But actually we just need: use a flat Uint8 corner grid.
+              // Simplest fast approach: fill corner grid with one pass, then read 4 corners per cell.
+
+              // Use a flat array: cornerGrid[y * (W+1) + x] = terrain id at corner-point (x,y)
+              // corner-points go from (0,0) to (W,H), size (W+1)*(H+1)
+              // Each cell (cx,cy) has corners: TL=(cx,cy) TR=(cx+1,cy) BL=(cx,cy+1) BR=(cx+1,cy+1)
+              const cpW = W + 1;
+              const cpH = H + 1;
+              const cornerPt: (string | null)[] = new Array(cpW * cpH).fill(null);
+
+              for (let y = 0; y < H; y++) {
+                const row = td[y];
+                if (!row) continue;
+                for (let x = 0; x < W; x++) {
+                  const t = row[x];
+                  if (!t) continue;
+                  // This cell owns 4 corner points
+                  cornerPt[y * cpW + x] = t; // TL
+                  cornerPt[y * cpW + (x + 1)] = t; // TR
+                  cornerPt[(y + 1) * cpW + x] = t; // BL
+                  cornerPt[(y + 1) * cpW + (x + 1)] = t; // BR
+                }
+              }
+
+              // Now resolve each cell
+              for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                  const tl = cornerPt[y * cpW + x];
+                  const tr = cornerPt[y * cpW + (x + 1)];
+                  const bl = cornerPt[(y + 1) * cpW + x];
+                  const br = cornerPt[(y + 1) * cpW + (x + 1)];
+
+                  if (!tl && !tr && !bl && !br) {
+                    layer.data[y][x] = null;
+                    continue;
+                  }
+
+                  const tileIdx = resolveCorners(tl, tr, bl, br);
+                  layer.data[y][x] =
+                    tileIdx !== null ? ((tilesetBase | tileIdx) as unknown as number) : null;
+                }
+              }
+            }
+          }),
+
         setShowTilesetCollisionOverlay: (enabled) =>
           set((state) => {
             state.showTilesetCollisionOverlay = enabled;
@@ -975,6 +1143,23 @@ export const useEditorStore = create<EditorStore>()(
               if (x < 0 || y < 0 || x >= state.currentMap.width || y >= state.currentMap.height)
                 continue;
               setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, null);
+            }
+          }),
+
+        paintTerrainDataBatch: (layerId, cells) =>
+          set((state) => {
+            const map = state.currentMap;
+            if (!map) return;
+            const layer = map.layers.find((l) => l.id === layerId);
+            if (!layer) return;
+            if (!layer.terrainData) {
+              layer.terrainData = Array(map.height)
+                .fill(null)
+                .map(() => Array(map.width).fill(null));
+            }
+            for (const { x, y, terrainId } of cells) {
+              if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
+              layer.terrainData[y][x] = terrainId;
             }
           }),
 
@@ -1338,6 +1523,7 @@ export const useEditorStore = create<EditorStore>()(
             const layer = state.currentMap?.layers.find((l) => l.id === layerId);
             if (layer) {
               const VALID_TOOLS_BY_KIND: Record<string, string[]> = {
+                terrain: ['terrain', 'erase'],
                 visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
                 collision: ['stamp', 'erase', 'fill', 'select'],
                 navigation: ['stamp', 'erase', 'fill', 'select'],
@@ -1349,6 +1535,8 @@ export const useEditorStore = create<EditorStore>()(
                 if (layer.kind === 'entity') {
                   // Default to Select/Move when switching into entity layers
                   state.activeTool = 'entitySelect';
+                } else if (layer.kind === 'terrain') {
+                  state.activeTool = 'terrain';
                 } else {
                   state.activeTool = 'stamp';
                 }

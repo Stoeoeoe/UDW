@@ -13,6 +13,11 @@ export async function applyTerrainShape(params: {
   tilesets: Map<string, any>;
   paintTilesBatch: (layerId: string, tiles: any[]) => void;
   eraseTilesBatch: (layerId: string, tiles: any[]) => void;
+  /** For terrain layers: persist the painted terrain ID per cell so it can be re-resolved later */
+  paintTerrainDataBatch?: (
+    layerId: string,
+    cells: Array<{ x: number; y: number; terrainId: string | null }>,
+  ) => void;
   brushSize: number;
   mode: 'point' | 'rect' | 'circle' | 'line';
   start: { x: number; y: number };
@@ -28,6 +33,7 @@ export async function applyTerrainShape(params: {
     tilesets,
     paintTilesBatch,
     eraseTilesBatch,
+    paintTerrainDataBatch,
     brushSize,
     mode,
     start,
@@ -144,4 +150,10 @@ export async function applyTerrainShape(params: {
 
   if (tilesToPaint.length > 0) paintTilesBatch(selectedLayerId!, tilesToPaint);
   if (tilesToErase.length > 0) eraseTilesBatch(selectedLayerId!, tilesToErase);
+
+  // For terrain layers: persist the painted terrain ID so the layer can be re-resolved
+  if (paintTerrainDataBatch && positions.length > 0) {
+    const terrainCells = positions.map(({ x, y }) => ({ x, y, terrainId }));
+    paintTerrainDataBatch(selectedLayerId!, terrainCells);
+  }
 }

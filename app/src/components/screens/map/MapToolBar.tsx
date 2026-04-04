@@ -22,6 +22,10 @@ import { LayerKind } from '../../../types/schema';
 
 /** Tools visible per layer kind */
 const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
+  terrain: [
+    { id: 'terrain', icon: FiEdit2, label: 'Paint Terrain (B)', group: 'terrain' },
+    { id: 'erase', icon: FiSlash, label: 'Erase (E)', group: 'terrain' },
+  ],
   visual: [
     { id: 'select', icon: FiMousePointer, label: 'Select (V)', group: 'tiles' },
     { id: 'stamp', icon: FiEdit2, label: 'Stamp (B)', group: 'tiles' },
@@ -91,7 +95,8 @@ export const MapToolbar: React.FC = () => {
   };
 
   const showDrawModes =
-    ['stamp', 'random', 'erase'].includes(activeTool) && selectedLayer?.kind !== 'entity';
+    (['stamp', 'random', 'erase'].includes(activeTool) && selectedLayer?.kind !== 'entity') ||
+    (activeTool === 'terrain' && selectedLayer?.kind === 'terrain');
   const showSnapToggle =
     selectedLayer?.kind === 'entity' && ['entityPlace', 'entitySelect'].includes(activeTool);
 

@@ -47,6 +47,7 @@ export interface EditorState {
   entitySnapMode: 'grid' | 'pixel'; // Snap mode for entity placement/movement
   showCollisionOverlay: boolean; // Visualize tile collision shapes in map viewport
   showTilesetCollisionOverlay: boolean; // Visualize tile collision shapes in tileset editor
+  showTerrainOverlay: boolean; // Visualize painted terrain IDs on terrain layers
 
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood'; // Shape mode for tools
   brushSize: number; // Brush radius for point/line modes (1 = single tile)

@@ -7,17 +7,19 @@ import {
   Input,
   Button,
   Circle,
-  Spacer,
+  Flex,
+  IconButton,
+  Tooltip,
   Select,
   useToast,
 } from '@chakra-ui/react';
+import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import { ListPanel, ListPanelItem, InspectorPanel, EmptyScreen } from '../common';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { LayerType } from '../../../types/schema';
 import { BsTree, BsBuilding, BsWater, BsLayersHalf, BsStack } from 'react-icons/bs';
 
-// Icon components for layer definitions
 const layerIconComponents: Record<string, React.FC<{ size?: number }>> = {
   tree: BsTree,
   building: BsBuilding,
@@ -26,17 +28,36 @@ const layerIconComponents: Record<string, React.FC<{ size?: number }>> = {
   overlay: BsStack,
 };
 
-const LayerDefIcon: React.FC<{ icon?: string; color: string }> = ({ icon, color }) => {
+const LayerDefIcon: React.FC<{ icon?: string; color: string; size?: number }> = ({
+  icon,
+  color,
+  size = 10,
+}) => {
   if (!icon || !layerIconComponents[icon]) {
-    return <Circle size="10px" bg={color} />;
+    return <Circle size={`${size}px`} bg={color} />;
   }
   const IconComponent = layerIconComponents[icon];
   return (
     <Box color={color}>
-      <IconComponent size={14} />
+      <IconComponent size={size} />
     </Box>
   );
 };
+
+const LAYER_TYPE_OPTIONS: { value: LayerType; label: string }[] = [
+  { value: 'terrain', label: 'Terrain' },
+  { value: 'tile', label: 'Tile' },
+  { value: 'entity', label: 'Entity' },
+];
+
+const AVAILABLE_ICONS = [
+  { value: '', label: 'None' },
+  { value: 'tree', label: '🌳 Tree' },
+  { value: 'building', label: '🏢 Building' },
+  { value: 'water', label: '🌊 Water' },
+  { value: 'ground', label: '📊 Ground' },
+  { value: 'overlay', label: '📐 Overlay' },
+];
 
 export const LayerEditor: React.FC = () => {
   const layerDefinitions = useEditorStore((state) => state.layerDefinitions);
@@ -48,45 +69,25 @@ export const LayerEditor: React.FC = () => {
 
   const toast = useToast();
 
-  const items: ListPanelItem[] = layerDefinitions
-    .slice()
-    .sort((a, b) => a.zIndex - b.zIndex)
-    .map((def) => ({
-      id: def.id,
-      label: def.name,
-      sublabel: `Z: ${def.zIndex} • ${def.type}`,
-      icon: <LayerDefIcon icon={def.icon} color={def.color} />,
-    }));
+  const sorted = [...layerDefinitions].sort((a, b) => a.zIndex - b.zIndex);
+  const selected = layerDefinitions.find((d) => d.id === selectedLayerDefinitionId) ?? null;
 
-  const selected = layerDefinitions.find((d) => d.id === selectedLayerDefinitionId) || null;
-
-  const [editName, setEditName] = useState(selected?.name || '');
-  const [editId, setEditId] = useState(selected?.id || '');
-  const [editColor, setEditColor] = useState(selected?.color || '#3182ce');
-  const [editType, setEditType] = useState<LayerType>(selected?.type || 'tile');
+  const [editName, setEditName] = useState(selected?.name ?? '');
+  const [editId, setEditId] = useState(selected?.id ?? '');
+  const [editColor, setEditColor] = useState(selected?.color ?? '#3182ce');
+  const [editType, setEditType] = useState<LayerType>(selected?.type ?? 'tile');
   const [editZIndex, setEditZIndex] = useState(selected?.zIndex ?? 0);
-  const [editDescription, setEditDescription] = useState(selected?.description || '');
-  const [editIcon, setEditIcon] = useState(selected?.icon || '');
+  const [editDescription, setEditDescription] = useState(selected?.description ?? '');
+  const [editIcon, setEditIcon] = useState(selected?.icon ?? '');
 
-  // Available icons
-  const availableIcons = [
-    { value: '', label: 'None' },
-    { value: 'tree', label: '🌳 Tree' },
-    { value: 'building', label: '🏢 Building' },
-    { value: 'water', label: '🌊 Water' },
-    { value: 'ground', label: '📊 Ground' },
-    { value: 'overlay', label: '📐 Overlay' },
-  ];
-
-  // Sync local edit fields when selection changes
   React.useEffect(() => {
-    setEditName(selected?.name || '');
-    setEditId(selected?.id || '');
-    setEditColor(selected?.color || '#3182ce');
-    setEditType(selected?.type || 'tile');
+    setEditName(selected?.name ?? '');
+    setEditId(selected?.id ?? '');
+    setEditColor(selected?.color ?? '#3182ce');
+    setEditType(selected?.type ?? 'tile');
     setEditZIndex(selected?.zIndex ?? 0);
-    setEditDescription(selected?.description || '');
-    setEditIcon(selected?.icon || '');
+    setEditDescription(selected?.description ?? '');
+    setEditIcon(selected?.icon ?? '');
   }, [selected]);
 
   const handleAdd = () => {
@@ -99,7 +100,6 @@ export const LayerEditor: React.FC = () => {
       type: 'tile',
       color: '#3182ce',
       zIndex: nextZIndex,
-      icon: undefined,
     });
     setSelectedLayerDefinition(id);
     toast({ title: 'Layer definition created', status: 'success', duration: 1500 });
@@ -107,7 +107,6 @@ export const LayerEditor: React.FC = () => {
 
   const handleSave = () => {
     if (!selected) return;
-    // If ID changed, delete+recreate (simple approach)
     if (editId !== selected.id) {
       deleteLayerDefinition(selected.id);
       addLayerDefinition({
@@ -130,38 +129,109 @@ export const LayerEditor: React.FC = () => {
         description: editDescription || undefined,
       });
     }
-    toast({ title: 'Layer definition updated', status: 'success', duration: 1200 });
+    toast({ title: 'Layer definition saved', status: 'success', duration: 1200 });
   };
 
-  const handleDelete = () => {
-    if (!selected) return;
-    if (!confirm(`Delete layer definition "${selected.name}"?`)) return;
-    deleteLayerDefinition(selected.id);
+  const handleDelete = (id: string, name: string) => {
+    if (!confirm(`Delete layer definition "${name}"?`)) return;
+    deleteLayerDefinition(id);
     setSelectedLayerDefinition(null);
     toast({ title: 'Layer definition deleted', status: 'info', duration: 1200 });
   };
+
+  const items: ListPanelItem[] = sorted.map((def) => ({
+    id: def.id,
+    label: def.name,
+    sublabel: `Z: ${def.zIndex} • ${def.type}`,
+    icon: <LayerDefIcon icon={def.icon} color={def.color} />,
+  }));
 
   const leftPanel = (
     <ListPanel
       title="Layer Definitions"
       items={items}
       selectedId={selectedLayerDefinitionId}
-      onSelect={(id) => setSelectedLayerDefinition(id)}
+      onSelect={setSelectedLayerDefinition}
       onAdd={handleAdd}
       autoSelectFirst
       emptyMessage="No layer definitions"
+      renderItem={(item, isSelected) => {
+        const def = layerDefinitions.find((d) => d.id === item.id)!;
+        return (
+          <Box
+            px={3}
+            py={2}
+            rounded="md"
+            cursor="pointer"
+            bg={isSelected ? 'blue.900' : 'transparent'}
+            border="1px"
+            borderColor={isSelected ? 'blue.500' : 'transparent'}
+            _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.50' }}
+            transition="all 0.1s"
+            role="group"
+            onClick={() => setSelectedLayerDefinition(item.id)}
+          >
+            <Flex align="center" justify="space-between">
+              <HStack spacing={2} flex={1} minW={0}>
+                <LayerDefIcon icon={def.icon} color={def.color} />
+                <VStack align="start" spacing={0} flex={1} minW={0}>
+                  <Text
+                    fontSize="xs"
+                    fontWeight={isSelected ? 'bold' : 'normal'}
+                    color={isSelected ? 'white' : 'gray.200'}
+                    noOfLines={1}
+                  >
+                    {item.label}
+                  </Text>
+                  {item.sublabel && (
+                    <Text fontSize="10px" color="gray.500">
+                      {item.sublabel}
+                    </Text>
+                  )}
+                </VStack>
+              </HStack>
+              <Flex align="center" gap={1} opacity={0} _groupHover={{ opacity: 1 }}>
+                <Tooltip label="Edit" placement="right" hasArrow>
+                  <IconButton
+                    aria-label="Edit layer definition"
+                    icon={<EditIcon fontSize="10px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.400"
+                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedLayerDefinition(item.id);
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip label="Delete" placement="right" hasArrow>
+                  <IconButton
+                    aria-label="Delete layer definition"
+                    icon={<DeleteIcon fontSize="10px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.400"
+                    _hover={{ color: 'red.300', bg: 'whiteAlpha.100' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(def.id, def.name);
+                    }}
+                  />
+                </Tooltip>
+              </Flex>
+            </Flex>
+          </Box>
+        );
+      }}
     />
   );
 
   const rightPanel = (
     <InspectorPanel
-      title={selected?.name || 'Layer'}
+      title={selected?.name ?? 'Layer'}
       subtitle={selected?.id}
-      emptyState={
-        <Box>
-          <Text color="gray.500">No layer selected</Text>
-        </Box>
-      }
+      emptyState={<Text color="gray.500">No layer selected</Text>}
     >
       {selected && (
         <VStack align="stretch" spacing={3}>
@@ -217,8 +287,11 @@ export const LayerEditor: React.FC = () => {
               bg="gray.950"
               size="sm"
             >
-              <option value="tile">Tile</option>
-              <option value="entity">Entity</option>
+              {LAYER_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </Select>
           </Box>
 
@@ -256,7 +329,7 @@ export const LayerEditor: React.FC = () => {
               onChange={(e) => setEditDescription(e.target.value)}
               bg="gray.950"
               size="sm"
-              placeholder="Optional description"
+              placeholder="Optional"
             />
           </Box>
 
@@ -276,7 +349,7 @@ export const LayerEditor: React.FC = () => {
               bg="gray.950"
               size="sm"
             >
-              {availableIcons.map((icon) => (
+              {AVAILABLE_ICONS.map((icon) => (
                 <option key={icon.value} value={icon.value}>
                   {icon.label}
                 </option>
@@ -294,24 +367,21 @@ export const LayerEditor: React.FC = () => {
             >
               Color
             </Text>
-            <HStack>
-              <Input
-                type="color"
-                value={editColor}
-                onChange={(e) => setEditColor(e.target.value)}
-                w="16"
-                h="10"
-                p={0}
-              />
-              <Spacer />
-              <Button colorScheme="red" size="sm" onClick={handleDelete}>
-                Delete
-              </Button>
-              <Button colorScheme="blue" size="sm" onClick={handleSave}>
-                Save
-              </Button>
-            </HStack>
+            <Input
+              type="color"
+              value={editColor}
+              onChange={(e) => setEditColor(e.target.value)}
+              w="full"
+              h="8"
+              p={0}
+              border="none"
+              cursor="pointer"
+            />
           </Box>
+
+          <Button colorScheme="blue" size="sm" onClick={handleSave} mt={1}>
+            Save Changes
+          </Button>
         </VStack>
       )}
     </InspectorPanel>
@@ -319,7 +389,9 @@ export const LayerEditor: React.FC = () => {
 
   const content = selected ? (
     <VStack spacing={6} align="center" justify="center" h="full">
-      <Circle size="120px" bg={selected.color} boxShadow="0 6px 18px rgba(0,0,0,0.6)" />
+      <Circle size="120px" bg={selected.color} boxShadow="0 6px 18px rgba(0,0,0,0.6)">
+        <LayerDefIcon icon={selected.icon} color="white" size={40} />
+      </Circle>
       <VStack spacing={1}>
         <Text fontSize="lg" fontWeight="bold" color="white">
           {selected.name}
@@ -339,10 +411,14 @@ export const LayerEditor: React.FC = () => {
             </Text>
           </Box>
         </HStack>
+        {selected.description && (
+          <Text fontSize="xs" color="gray.500" mt={2} maxW="400px" textAlign="center">
+            {selected.description}
+          </Text>
+        )}
       </VStack>
-      <Text color="gray.500" maxW="480px" textAlign="center">
-        This layer definition will be automatically created in all new maps. Existing maps will show
-        this layer if it matches by ID.
+      <Text color="gray.600" fontSize="xs" maxW="480px" textAlign="center">
+        This layer definition is automatically created in all new maps.
       </Text>
     </VStack>
   ) : (
@@ -357,7 +433,14 @@ export const LayerEditor: React.FC = () => {
 
   return (
     <ResizableEditorLayout
-      header={{ title: 'Layers', subtitle: `${layerDefinitions.length} definitions` }}
+      header={
+        selected
+          ? {
+              title: selected.name,
+              subtitle: `${selected.type} • Z-Index: ${selected.zIndex}`,
+            }
+          : undefined
+      }
       content={content}
       leftPanel={leftPanel}
       rightPanel={rightPanel}

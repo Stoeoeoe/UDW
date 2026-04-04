@@ -12,11 +12,11 @@ export const LAYER_ICONS = [
 
 export type LayerCategory = 'terrain' | 'tiles' | 'collision' | 'entities' | 'other';
 
-/** Maps a LayerKind to its display category.
- *  'terrain' is reserved for future: currently all visual layers group under 'tiles'.
- *  When a separate terrain kind is added to the schema, update here. */
+/** Maps a LayerKind to its display category. */
 export function kindToCategory(kind: LayerKind): LayerCategory {
   switch (kind) {
+    case 'terrain':
+      return 'terrain';
     case 'visual':
       return 'tiles';
     case 'collision':
@@ -44,7 +44,7 @@ export interface LayerCategoryConfig {
 /** Ordered display config for all layer categories.
  *  To add a new category (e.g. Terrain), add an entry here and update kindToCategory. */
 export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
-  { id: 'terrain', label: 'Terrain', kinds: [], color: 'green.700' },
+  { id: 'terrain', label: 'Terrain', kinds: ['terrain'], color: 'green.700' },
   { id: 'tiles', label: 'Tiles', kinds: ['visual'], color: 'blue.700' },
   { id: 'collision', label: 'Collision', kinds: ['collision'], color: 'orange.700' },
   { id: 'entities', label: 'Entities', kinds: ['entity'], color: 'purple.700' },

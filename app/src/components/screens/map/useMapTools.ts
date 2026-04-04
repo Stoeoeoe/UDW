@@ -42,6 +42,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
   const paintTilesBatch = useEditorStore((state) => state.paintTilesBatch);
   const eraseTilesBatch = useEditorStore((state) => state.eraseTilesBatch);
+  const paintTerrainDataBatch = useEditorStore((state) => state.paintTerrainDataBatch);
   const bucketFillAdvanced = useEditorStore((state) => state.bucketFillAdvanced);
   const placeEntity = useEditorStore((state) => state.placeEntity);
   const removeEntity = useEditorStore((state) => state.removeEntity);
@@ -144,6 +145,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         tilesets,
         paintTilesBatch,
         eraseTilesBatch,
+        paintTerrainDataBatch,
         brushSize,
         mode,
         start,
@@ -152,7 +154,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         terrainGridRef: terrainGridRef.current,
       });
     },
-    [currentMap, selectedLayerId, activeTilesetId, tilesets, paintTilesBatch, eraseTilesBatch],
+    [
+      currentMap,
+      selectedLayerId,
+      activeTilesetId,
+      tilesets,
+      paintTilesBatch,
+      eraseTilesBatch,
+      paintTerrainDataBatch,
+    ],
   );
 
   // Handle pointer down

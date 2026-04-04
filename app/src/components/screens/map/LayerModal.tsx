@@ -36,6 +36,7 @@ export interface LayerModalProps {
 }
 
 const ALL_KIND_OPTIONS: { value: LayerKind; label: string }[] = [
+  { value: 'terrain', label: 'Terrain (Autotiled)' },
   { value: 'visual', label: 'Visual (Tiles)' },
   { value: 'entity', label: 'Entity (Objects)' },
   { value: 'collision', label: 'Collision' },

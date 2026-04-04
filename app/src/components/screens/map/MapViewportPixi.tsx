@@ -25,6 +25,7 @@ export const MapViewportPixi: React.FC = () => {
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const activeTool = useEditorStore((state) => state.activeTool);
   const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
+  const showTerrainOverlay = useEditorStore((state) => state.showTerrainOverlay);
 
   // Initialize Pixi Application
   useEffect(() => {
@@ -177,6 +178,7 @@ export const MapViewportPixi: React.FC = () => {
     renderEntities,
     renderGrid,
     renderCollisionOverlay,
+    renderTerrainOverlay,
     renderHover,
     renderPreview,
   } = useMapRenderer({ viewport });
@@ -191,6 +193,7 @@ export const MapViewportPixi: React.FC = () => {
     renderEntities();
     renderGrid();
     renderCollisionOverlay();
+    renderTerrainOverlay();
     renderHover();
     renderPreview();
 
@@ -205,6 +208,7 @@ export const MapViewportPixi: React.FC = () => {
         renderEntities();
         renderGrid();
         renderCollisionOverlay();
+        renderTerrainOverlay();
       }
       // Re-render entities when selection changes
       if (state.selectedEntityId !== prevState.selectedEntityId) {
@@ -217,6 +221,10 @@ export const MapViewportPixi: React.FC = () => {
       // Re-render collision overlay when toggled
       if (state.showCollisionOverlay !== prevState.showCollisionOverlay) {
         renderCollisionOverlay();
+      }
+      // Re-render terrain overlay when toggled
+      if (state.showTerrainOverlay !== prevState.showTerrainOverlay) {
+        renderTerrainOverlay();
       }
       // Re-render hover on hover change
       if (state.hoveredTile !== prevState.hoveredTile) {
@@ -243,6 +251,7 @@ export const MapViewportPixi: React.FC = () => {
     renderEntities,
     renderGrid,
     renderCollisionOverlay,
+    renderTerrainOverlay,
     renderHover,
     renderPreview,
   ]);
@@ -251,10 +260,17 @@ export const MapViewportPixi: React.FC = () => {
   useEffect(() => {
     if (!isReady) return;
     renderGrid();
-    if (showCollisionOverlay) {
-      renderCollisionOverlay();
-    }
-  }, [isReady, zoomLevel, showCollisionOverlay, renderGrid, renderCollisionOverlay]);
+    if (showCollisionOverlay) renderCollisionOverlay();
+    if (showTerrainOverlay) renderTerrainOverlay();
+  }, [
+    isReady,
+    zoomLevel,
+    showCollisionOverlay,
+    showTerrainOverlay,
+    renderGrid,
+    renderCollisionOverlay,
+    renderTerrainOverlay,
+  ]);
 
   // Keyboard shortcuts
   useEffect(() => {

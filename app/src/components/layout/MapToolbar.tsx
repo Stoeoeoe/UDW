@@ -10,6 +10,8 @@ import {
   FiMaximize,
   FiMousePointer,
   FiShield,
+  FiLayers,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -19,14 +21,12 @@ import { Toolbar, ToolItem } from '../common/Toolbar';
 
 /** Tools shown per layer kind */
 const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
+  terrain: [
+    { id: 'terrain', icon: FaMountain, label: 'Paint Terrain (B)', group: 'terrain' },
+    { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'terrain' },
+  ],
   visual: [
     { id: 'stamp', icon: FiEdit2, label: 'Stamp (B)', group: 'tiles' },
-    {
-      id: 'terrain',
-      icon: FaMountain,
-      label: 'Terrain Brush (T)',
-      group: 'tiles',
-    },
     { id: 'random', icon: FiShuffle, label: 'Random (R)', group: 'tiles' },
     { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'tiles' },
     { id: 'fill', icon: FiDroplet, label: 'Bucket Fill (G)', group: 'tiles' },
@@ -76,8 +76,6 @@ export const MapToolbar: React.FC = () => {
   const setActiveTool = useEditorStore((state) => state.setActiveTool);
   const entitySnapMode = useEditorStore((state) => state.entitySnapMode);
   const setEntitySnapMode = useEditorStore((state) => state.setEntitySnapMode);
-  const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
-  const setShowCollisionOverlay = useEditorStore((state) => state.setShowCollisionOverlay);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const currentMap = useEditorStore((state) => state.currentMap);
 
@@ -98,6 +96,45 @@ export const MapToolbar: React.FC = () => {
         onActivate={(id) => setActiveTool(id as ToolType)}
       />
 
+      {showSnapToggle && (
+        <ButtonGroup size="xs" isAttached variant="outline">
+          <Tooltip label="Snap to grid" fontSize="xs">
+            <Button
+              bg={entitySnapMode === 'grid' ? 'purple.600' : 'transparent'}
+              color={entitySnapMode === 'grid' ? 'white' : 'gray.400'}
+              borderColor="gray.700"
+              _hover={{ bg: entitySnapMode === 'grid' ? 'purple.500' : 'gray.800' }}
+              onClick={() => setEntitySnapMode('grid')}
+            >
+              <FiGrid />
+            </Button>
+          </Tooltip>
+          <Tooltip label="Pixel perfect" fontSize="xs">
+            <Button
+              bg={entitySnapMode === 'pixel' ? 'purple.600' : 'transparent'}
+              color={entitySnapMode === 'pixel' ? 'white' : 'gray.400'}
+              borderColor="gray.700"
+              _hover={{ bg: entitySnapMode === 'pixel' ? 'purple.500' : 'gray.800' }}
+              onClick={() => setEntitySnapMode('pixel')}
+            >
+              <FiMaximize />
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
+      )}
+    </HStack>
+  );
+};
+
+export const MapToolbarActions: React.FC = () => {
+  const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
+  const setShowCollisionOverlay = useEditorStore((state) => state.setShowCollisionOverlay);
+  const showTerrainOverlay = useEditorStore((state) => state.showTerrainOverlay);
+  const setShowTerrainOverlay = useEditorStore((state) => state.setShowTerrainOverlay);
+  const reloadTerrainLayers = useEditorStore((state) => state.reloadTerrainLayers);
+
+  return (
+    <HStack spacing={2}>
       <Tooltip
         label={showCollisionOverlay ? 'Hide collision overlay' : 'Show collision overlay'}
         fontSize="xs"
@@ -113,36 +150,32 @@ export const MapToolbar: React.FC = () => {
         </Button>
       </Tooltip>
 
-      {showSnapToggle && (
-        <ButtonGroup size="xs" isAttached variant="outline">
-          <Tooltip label="Snap to grid" fontSize="xs">
-            <Button
-              bg={entitySnapMode === 'grid' ? 'purple.600' : 'transparent'}
-              color={entitySnapMode === 'grid' ? 'white' : 'gray.400'}
-              borderColor="gray.700"
-              _hover={{
-                bg: entitySnapMode === 'grid' ? 'purple.500' : 'gray.800',
-              }}
-              onClick={() => setEntitySnapMode('grid')}
-            >
-              <FiGrid />
-            </Button>
-          </Tooltip>
-          <Tooltip label="Pixel perfect" fontSize="xs">
-            <Button
-              bg={entitySnapMode === 'pixel' ? 'purple.600' : 'transparent'}
-              color={entitySnapMode === 'pixel' ? 'white' : 'gray.400'}
-              borderColor="gray.700"
-              _hover={{
-                bg: entitySnapMode === 'pixel' ? 'purple.500' : 'gray.800',
-              }}
-              onClick={() => setEntitySnapMode('pixel')}
-            >
-              <FiMaximize />
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
-      )}
+      <Tooltip label="Reload terrain layers" fontSize="xs">
+        <Button
+          size="xs"
+          variant="outline"
+          colorScheme="green"
+          onClick={reloadTerrainLayers}
+          aria-label="Reload terrain layers"
+        >
+          <FiRefreshCw />
+        </Button>
+      </Tooltip>
+
+      <Tooltip
+        label={showTerrainOverlay ? 'Hide terrain overlay' : 'Show terrain overlay'}
+        fontSize="xs"
+      >
+        <Button
+          size="xs"
+          variant={showTerrainOverlay ? 'solid' : 'outline'}
+          colorScheme="green"
+          onClick={() => setShowTerrainOverlay(!showTerrainOverlay)}
+          aria-label="Toggle terrain overlay"
+        >
+          <FiLayers />
+        </Button>
+      </Tooltip>
     </HStack>
   );
 };

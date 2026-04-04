@@ -173,6 +173,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const entityContainerRef = useRef<Container | null>(null);
   const gridGraphicsRef = useRef<Graphics | null>(null);
   const collisionGraphicsRef = useRef<Graphics | null>(null);
+  const terrainOverlayGraphicsRef = useRef<Graphics | null>(null);
   const hoverGraphicsRef = useRef<Graphics | null>(null);
   const selectionGraphicsRef = useRef<Graphics | null>(null);
   const previewContainerRef = useRef<Container | null>(null);
@@ -211,6 +212,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     collisionGraphics.zIndex = 2.5;
     collisionGraphicsRef.current = collisionGraphics;
     container.addChild(collisionGraphics);
+
+    // Terrain overlay (z: 2.7)
+    const terrainOverlayGraphics = new Graphics();
+    terrainOverlayGraphics.zIndex = 2.7;
+    terrainOverlayGraphicsRef.current = terrainOverlayGraphics;
+    container.addChild(terrainOverlayGraphics);
 
     // Hover highlight (z: 3)
     const hoverGraphics = new Graphics();
@@ -260,7 +267,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     [...currentMap.layers]
       .sort((a, b) => a.zOrder - b.zOrder)
       .forEach((layer) => {
-        if (!layer.visible || layer.kind !== 'visual') return;
+        if (!layer.visible || (layer.kind !== 'visual' && layer.kind !== 'terrain')) return;
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
@@ -325,6 +332,43 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderCollisionGraphics(collisionGraphics, fillPolygons, mergedSegments);
   }, []);
 
+  // Render terrain overlay — colored fill per cell based on terrainData + terrainTypes
+  const renderTerrainOverlay = useCallback(() => {
+    const g = terrainOverlayGraphicsRef.current;
+    const { currentMap, terrainTypes, showTerrainOverlay } = useEditorStore.getState();
+    if (!g || !currentMap) return;
+
+    g.clear();
+    if (!showTerrainOverlay) return;
+
+    const colorCache = new Map<string, number>();
+    const getColor = (terrainId: string): number => {
+      if (colorCache.has(terrainId)) return colorCache.get(terrainId)!;
+      const t = terrainTypes.find((tt) => tt.id === terrainId);
+      const hex = t ? parseInt(t.color.replace('#', ''), 16) : 0x888888;
+      colorCache.set(terrainId, hex);
+      return hex;
+    };
+
+    for (const layer of currentMap.layers) {
+      if (!layer.visible || layer.kind !== 'terrain' || !layer.terrainData) continue;
+      for (let y = 0; y < currentMap.height; y++) {
+        for (let x = 0; x < currentMap.width; x++) {
+          const terrainId = layer.terrainData[y]?.[x];
+          if (!terrainId) continue;
+          const color = getColor(terrainId);
+          g.rect(
+            x * DEFAULT_TILE_SIZE,
+            y * DEFAULT_TILE_SIZE,
+            DEFAULT_TILE_SIZE,
+            DEFAULT_TILE_SIZE,
+          );
+          g.fill({ color, alpha: 0.45 });
+        }
+      }
+    }
+  }, []);
+
   // Get or create texture for a tile
   const getTileTexture = useCallback(
     (
@@ -382,7 +426,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     [...currentMap.layers]
       .sort((a, b) => a.zOrder - b.zOrder)
       .forEach((layer) => {
-        if (!layer.visible || layer.kind !== 'visual') return;
+        if (!layer.visible || (layer.kind !== 'visual' && layer.kind !== 'terrain')) return;
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
@@ -1177,9 +1221,18 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderEntities();
     renderGrid();
     renderCollisionOverlay();
+    renderTerrainOverlay();
     renderHover();
     renderPreview();
-  }, [renderTiles, renderEntities, renderGrid, renderCollisionOverlay, renderHover, renderPreview]);
+  }, [
+    renderTiles,
+    renderEntities,
+    renderGrid,
+    renderCollisionOverlay,
+    renderTerrainOverlay,
+    renderHover,
+    renderPreview,
+  ]);
 
   return {
     render,
@@ -1187,6 +1240,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderEntities,
     renderGrid,
     renderCollisionOverlay,
+    renderTerrainOverlay,
     renderHover,
     renderPreview,
   };

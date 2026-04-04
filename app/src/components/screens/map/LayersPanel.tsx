@@ -218,6 +218,11 @@ export const LayersPanel: React.FC = () => {
         base.data = Array(currentMap.height)
           .fill(null)
           .map(() => Array(currentMap.width).fill(null));
+        if (formData.kind === 'terrain') {
+          base.terrainData = Array(currentMap.height)
+            .fill(null)
+            .map(() => Array(currentMap.width).fill(null));
+        }
       }
 
       addLayer(base);

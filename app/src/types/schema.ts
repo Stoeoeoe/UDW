@@ -18,7 +18,7 @@ export interface Project {
   entityTypes?: EntityType[];
 }
 
-export type LayerType = 'tile' | 'entity';
+export type LayerType = 'tile' | 'entity' | 'terrain';
 
 export interface LayerDefinition {
   id: string; // Unique identifier
@@ -117,6 +117,10 @@ export interface Layer {
   // For tile-like layers this holds encoded tile IDs, row-major [y][x]
   data?: (number | null)[][]; // Encoded tile IDs (tiles only)
 
+  // For terrain layers: parallel grid storing the terrain ID painted at each cell.
+  // Used to re-resolve tile graphics when terrain rules change.
+  terrainData?: (string | null)[][];
+
   // For layers that represent entities (entity layers), store instances here
   entities?: EntityInstance[];
   definitionId?: string; // Reference to LayerDefinition (if from project template)
@@ -127,7 +131,8 @@ export type LayerKind =
   | 'collision' // Collision data
   | 'navigation' // Pathfinding hints
   | 'metadata' // Data-only, invisible
-  | 'entity'; // Layer that contains entities (EntityInstance[])
+  | 'entity' // Layer that contains entities (EntityInstance[])
+  | 'terrain'; // Terrain-painted layer (autotiled)
 
 export type PropertyValue =
   | string
