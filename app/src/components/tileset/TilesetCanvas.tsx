@@ -46,6 +46,9 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   } | null>(null);
   const mouseMovedDuringDown = useRef(false);
   const ignoreClickRef = useRef(false);
+  const initializedRef = useRef(false);
+
+  const STORAGE_KEY = `tilesetCamera:${tileset.id}`;
 
   // Terrain painting state (drag-to-paint)
   const [isTerrainPainting, setIsTerrainPainting] = useState(false);
@@ -413,11 +416,45 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   // Initialize camera when sprite loads to center the tileset
   useEffect(() => {
     if (!sprite || mode !== 'interactive') return;
+    // Only initialize camera/zoom the first time the sprite loads for this tileset.
+    if (initializedRef.current) return;
+
+    // Try to restore persisted camera/zoom for this tileset (survives saves/reloads)
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { x: number; y: number; zoom: number } | null;
+        if (parsed && typeof parsed.zoom === 'number') {
+          setCamera({ x: parsed.x ?? 0, y: parsed.y ?? 0 });
+          setInternalZoom(parsed.zoom);
+          initializedRef.current = true;
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore sessionStorage errors
+    }
+
     // Center the sprite on the canvas by keeping camera at (0, 0)
-    // The rendering logic already handles centering with sheetX/sheetY = -sprite.width/2, -sprite.height/2
     setCamera({ x: 0, y: 0 });
     setInternalZoom(1.5);
+    initializedRef.current = true;
   }, [sprite, mode]);
+
+  // Reset init flag when switching to a different tileset so the new tileset recenters once
+  useEffect(() => {
+    initializedRef.current = false;
+  }, [tileset.id]);
+
+  // Persist camera/zoom to sessionStorage so reloads/saves don't reset user's view
+  useEffect(() => {
+    try {
+      const payload = JSON.stringify({ x: camera.x, y: camera.y, zoom: internalZoom });
+      sessionStorage.setItem(STORAGE_KEY, payload);
+    } catch (e) {
+      // ignore storage failures
+    }
+  }, [camera.x, camera.y, internalZoom, STORAGE_KEY]);
 
   // Redraw loop
   useEffect(() => {
