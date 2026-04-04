@@ -1,8 +1,7 @@
-import { app, BrowserWindow, nativeImage } from 'electron';
+import { app, BrowserWindow, nativeImage, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { setupIpcHandlers } from './ipcHandlers';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
@@ -13,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // │ ├─┬ dist-electron
 // │ │ ├── main.js
 // │ │ └── preload.mjs
-// │
+//
 process.env.APP_ROOT = path.join(__dirname, '..');
 
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
@@ -47,6 +46,8 @@ function createWindow() {
     icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
@@ -78,6 +79,17 @@ function createWindow() {
   }
 }
 
+function setCsp() {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        //'Content-Security-Policy': ["default-src 'none'"], TODO: set a proper CSP!
+      },
+    });
+  });
+}
+
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
@@ -96,4 +108,4 @@ app.on('activate', () => {
   }
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(setCsp).then(createWindow);

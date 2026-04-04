@@ -8,12 +8,31 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
+import type { Plugin } from 'vite';
 const dirname =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+// Injects the react-devtools standalone connection script in dev mode only.
+function reactDevToolsPlugin(): Plugin {
+  return {
+    name: 'react-devtools',
+    apply: 'serve',
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'script',
+          attrs: { src: 'http://localhost:8097' },
+          injectTo: 'head-prepend',
+        },
+      ];
+    },
+  };
+}
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [
+    reactDevToolsPlugin(),
     react(),
     electron({
       main: {
