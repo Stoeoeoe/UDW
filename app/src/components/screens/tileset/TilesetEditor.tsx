@@ -1,5 +1,15 @@
 import React, { useEffect } from 'react';
-import { Flex, Box, useDisclosure, IconButton, Tooltip, useToast, Text } from '@chakra-ui/react';
+import {
+  Flex,
+  Box,
+  useDisclosure,
+  IconButton,
+  Tooltip,
+  useToast,
+  Text,
+  VStack,
+  Button,
+} from '@chakra-ui/react';
 import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -144,6 +154,75 @@ export const TilesetEditor: React.FC = () => {
       resetSelectedTiles?.();
     }
   }, [activeTilesetId, resetSelectedTiles]);
+
+  // Extra store helpers for handling missing sprite replacement
+  const loadedSprites = useEditorStore((s) => s.loadedSprites);
+  const loadSprite = useEditorStore((s) => s.loadSprite);
+  const updateTileset = useEditorStore((s) => s.updateTileset);
+
+  const sprite = activeTileset ? loadedSprites.get(activeTileset.spriteSheet) : null;
+
+  const handleSetImage = async () => {
+    try {
+      const { fileSystem } = await import('../../../lib/fileSystem');
+      const rawPath = await fileSystem.selectAsset();
+      if (!rawPath) return;
+      const blob = await fileSystem.readFileAsBlob(rawPath);
+      const name = rawPath.split(/[\\/]/).pop() || 'tileset.png';
+      const internalPath = await fileSystem.saveAsset(name, blob);
+
+      await updateTileset(activeTileset!.id, { spriteSheet: internalPath });
+      try {
+        await loadSprite(internalPath, blob);
+      } catch (e) {
+        console.warn('Failed to load sprite after setting image:', e);
+      }
+      toast({ title: 'Tileset image set', status: 'success' });
+    } catch (e: any) {
+      toast({
+        title: 'Failed to set image',
+        description: e?.message || String(e),
+        status: 'error',
+      });
+    }
+  };
+
+  // If tileset metadata exists but sprite failed to load, show repair UI
+  if (activeTileset && !sprite) {
+    return (
+      <ResizableEditorLayout
+        header={{
+          title: activeTileset.name,
+          subtitle: `${activeTileset.tileWidth}×${activeTileset.tileHeight} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
+        }}
+        content={
+          <Flex h="full" alignItems="center" justifyContent="center">
+            <VStack spacing={4} align="center">
+              <Text fontSize="lg" fontWeight="black">
+                Tileset image missing
+              </Text>
+              <Text color="gray.400" maxW="xl" textAlign="center">
+                The image for this tileset could not be loaded (it may have been moved or deleted).
+                Choose a replacement image or re-import the tileset metadata.
+              </Text>
+              <VStack spacing={3} pt={4}>
+                <Button colorScheme="blue" onClick={handleSetImage}>
+                  Choose Image
+                </Button>
+                <Button variant="ghost" onClick={onCreatorOpen}>
+                  Import New Tileset
+                </Button>
+              </VStack>
+            </VStack>
+          </Flex>
+        }
+        leftPanel={leftPanel}
+        rightPanel={rightPanel}
+        leftPanelDefaultSize={18}
+        rightPanelDefaultSize={22}
+      />
+    );
+  }
 
   if (!activeTileset) {
     return (

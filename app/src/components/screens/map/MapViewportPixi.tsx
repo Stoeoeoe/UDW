@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Box, Text } from '@chakra-ui/react';
+import { Box, Text, useToast } from '@chakra-ui/react';
 import { Application, BitmapFont } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -339,6 +339,42 @@ export const MapViewportPixi: React.FC = () => {
     }
     return 'default';
   };
+
+  // Detect missing tileset images referenced by the current map and navigate to tileset editor
+  const tilesets = useEditorStore((s) => s.tilesets);
+  const loadedSprites = useEditorStore((s) => s.loadedSprites);
+  const setMode = useEditorStore((s) => s.setMode);
+  const setActiveTileset = useEditorStore((s) => s.setActiveTileset);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (!isReady) return;
+    const currentMap = useEditorStore.getState().currentMap;
+    if (!currentMap) return;
+
+    const refs = new Set<string>();
+    if (Array.isArray(currentMap.tilesetRefs)) {
+      for (const r of currentMap.tilesetRefs) refs.add(r);
+    }
+    if (currentMap.baseTilesetId) refs.add(currentMap.baseTilesetId);
+
+    for (const tsId of refs) {
+      const ts = tilesets.get(tsId);
+      if (!ts) continue;
+      const sprite = loadedSprites.get(ts.spriteSheet);
+      if (!sprite) {
+        toast({
+          title: 'Missing tileset image',
+          description: `Tileset ${ts.name} is missing; opening tileset editor.`,
+          status: 'warning',
+          duration: 4000,
+        });
+        setMode('tilesets');
+        setActiveTileset(tsId);
+        return;
+      }
+    }
+  }, [isReady, tilesets, loadedSprites, setMode, setActiveTileset, toast]);
 
   return (
     <Box w="full" h="full" position="relative" overflow="hidden">
