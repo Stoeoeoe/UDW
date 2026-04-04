@@ -30,7 +30,7 @@ let win: BrowserWindow | null;
 function createWindow() {
   const getAppIconPath = () => {
     if (VITE_DEV_SERVER_URL) {
-      return path.join(process.env.VITE_PUBLIC, 'electron-vite.svg');
+      return path.join(process.env.VITE_PUBLIC, 'icon.png');
     }
     if (process.platform === 'darwin') {
       return path.join(process.env.APP_ROOT, 'build', 'icon.icns');
