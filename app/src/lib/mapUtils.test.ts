@@ -61,6 +61,20 @@ describe('mapUtils', () => {
         },
         entityOverrides: [{ action: 'remove', entityId: 'e1' }],
       },
+      {
+        id: 'v3',
+        displayName: 'Variation 3 Replace',
+        kind: 'generic',
+        layerOverrides: {
+          l1: {
+            mode: 'replace',
+            data: [
+              [null, 'v3:1'],
+              ['v3:2', null],
+            ],
+          },
+        },
+      },
     ],
   };
 
@@ -100,6 +114,13 @@ describe('mapUtils', () => {
       expect(resolveTileAt(mockMap, 'l1', 0, 0, 'v2')).toBe('v1:0');
       expect(resolveTileAt(mockMap, 'l1', 1, 0, 'v2')).toBe('v2:1');
       expect(resolveTileAt(mockMap, 'l1', 1, 1, 'v2')).toBe('ts1:3');
+    });
+
+    it('should treat replace override null as explicit clear (no fallback)', () => {
+      expect(resolveTileAt(mockMap, 'l1', 0, 0, 'v3')).toBeNull();
+      expect(resolveTileAt(mockMap, 'l1', 1, 0, 'v3')).toBe('v3:1');
+      expect(resolveTileAt(mockMap, 'l1', 0, 1, 'v3')).toBe('v3:2');
+      expect(resolveTileAt(mockMap, 'l1', 1, 1, 'v3')).toBeNull();
     });
   });
 

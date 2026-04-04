@@ -54,10 +54,10 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
         duration: 2000,
       });
       onCreate?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: 'Error creating map',
-        description: err.message,
+        description: err instanceof Error ? err.message : 'Unknown error',
         status: 'error',
       });
     } finally {

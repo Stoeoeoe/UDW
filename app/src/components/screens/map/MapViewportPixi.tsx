@@ -22,6 +22,7 @@ export const MapViewportPixi: React.FC = () => {
   const mapId = useEditorStore((state) => state.currentMap?.id);
   const mapWidth = useEditorStore((state) => state.currentMap?.width);
   const mapHeight = useEditorStore((state) => state.currentMap?.height);
+  const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const activeTool = useEditorStore((state) => state.activeTool);
   const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
@@ -118,8 +119,8 @@ export const MapViewportPixi: React.FC = () => {
       setViewport(null);
     }
 
-    const worldWidth = mapWidth * DEFAULT_TILE_SIZE;
-    const worldHeight = mapHeight * DEFAULT_TILE_SIZE;
+    const worldWidth = mapWidth * projectTileSize;
+    const worldHeight = mapHeight * projectTileSize;
 
     try {
       const newViewport = new Viewport({
@@ -170,7 +171,7 @@ export const MapViewportPixi: React.FC = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [mapId, mapWidth, mapHeight, appInitialized]);
+  }, [mapId, mapWidth, mapHeight, appInitialized, projectTileSize]);
 
   // Use rendering and tools hooks
   const {
@@ -327,14 +328,19 @@ export const MapViewportPixi: React.FC = () => {
   const handleZoomReset = useCallback(() => {
     if (viewport && mapWidth && mapHeight) {
       viewport.setZoom(1.5, true);
-      viewport.moveCenter((mapWidth * DEFAULT_TILE_SIZE) / 2, (mapHeight * DEFAULT_TILE_SIZE) / 2);
+      viewport.moveCenter((mapWidth * projectTileSize) / 2, (mapHeight * projectTileSize) / 2);
       setZoomLevel(1.5);
     }
-  }, [viewport, mapWidth, mapHeight]);
+  }, [viewport, mapWidth, mapHeight, projectTileSize]);
 
   // Cursor based on tool
   const getCursor = () => {
-    if (activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') {
+    if (
+      activeTool === 'stamp' ||
+      activeTool === 'random' ||
+      activeTool === 'erase' ||
+      activeTool === 'fill'
+    ) {
       return 'crosshair';
     }
     return 'default';

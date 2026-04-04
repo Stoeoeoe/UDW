@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
+import { convertLayerDataToStrings } from '../../lib/tileRef';
 import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
 import { MapToolbar, MapToolbarActions } from './MapToolbar';
 import { SaveIndicator } from '../common/SaveIndicator';
@@ -23,6 +24,9 @@ export const TopBar: React.FC = () => {
   const closeProject = useEditorStore((state) => state.closeProject);
   const loadProject = useEditorStore((state) => state.loadProject);
   const loadProjectResources = useEditorStore((state) => state.loadProjectResources);
+  const updateProject = useEditorStore((state) => state.updateProject);
+  const maps = useEditorStore((state) => state.maps);
+  const tilesets = useEditorStore((state) => state.tilesets);
   const project = useEditorStore((state) => state.project);
   const toast = useToast();
 
@@ -54,6 +58,71 @@ export const TopBar: React.FC = () => {
           duration: 5000,
         });
       }
+    }
+  };
+
+  const handleSaveProject = async () => {
+    if (!project) return;
+    try {
+      await updateProject(project);
+      toast({
+        title: 'Project saved',
+        status: 'success',
+        duration: 2000,
+      });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      toast({
+        title: 'Failed to save project',
+        description: message,
+        status: 'error',
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleExport = async () => {
+    if (!project) return;
+
+    try {
+      const exportedMaps = maps.map((map) => ({
+        ...map,
+        layers: map.layers.map((layer) => {
+          if (!layer.data || typeof layer.data[0]?.[0] !== 'number') {
+            return layer;
+          }
+
+          return {
+            ...layer,
+            data: convertLayerDataToStrings(layer.data as (number | null)[][], map.tilesetRefs),
+          };
+        }),
+      }));
+
+      const bundle = {
+        version: 1,
+        format: 'unity-export-bundle',
+        exportedAt: new Date().toISOString(),
+        project,
+        maps: exportedMaps,
+        tilesets: Array.from(tilesets.values()),
+      };
+
+      await fileSystem.saveJson('', 'unity-export.bundle.json', bundle);
+      toast({
+        title: 'Export complete',
+        description: 'Wrote unity-export.bundle.json to the project root.',
+        status: 'success',
+        duration: 4000,
+      });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      toast({
+        title: 'Export failed',
+        description: message,
+        status: 'error',
+        duration: 5000,
+      });
     }
   };
 
@@ -107,7 +176,7 @@ export const TopBar: React.FC = () => {
               <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleOpenProject}>
                 Open Project...
               </MenuItem>
-              <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }}>
+              <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleSaveProject}>
                 Save Project
               </MenuItem>
               <MenuDivider borderColor="gray.700" />
@@ -162,7 +231,13 @@ export const TopBar: React.FC = () => {
       <HStack spacing="3">
         {mode === 'maps' && <MapToolbarActions />}
         <SaveIndicator />
-        <Button colorScheme="blue" size="xs" fontWeight="medium" boxShadow="sm">
+        <Button
+          colorScheme="blue"
+          size="xs"
+          fontWeight="medium"
+          boxShadow="sm"
+          onClick={handleExport}
+        >
           Export
         </Button>
       </HStack>

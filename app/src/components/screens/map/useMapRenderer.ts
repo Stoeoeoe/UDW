@@ -180,6 +180,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
   // Create texture cache for tiles
   const textureCache = useRef<Map<string, Texture>>(new Map());
+  const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
 
   // Initialize containers
   useEffect(() => {
@@ -255,6 +256,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const collisionGraphics = collisionGraphicsRef.current;
     const { currentMap, activeVariationId, tilesets, showCollisionOverlay } =
       useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!collisionGraphics || !currentMap) return;
 
     collisionGraphics.clear();
@@ -292,15 +294,15 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             const collision = effectiveTileset.tiles[index]?.collision;
             if (!collision || collision.type === 'none') continue;
 
-            const tileX = x * DEFAULT_TILE_SIZE;
-            const tileY = y * DEFAULT_TILE_SIZE;
+            const tileX = x * tileSize;
+            const tileY = y * tileSize;
 
             if (collision.type === 'full') {
               const polygon = [
                 quantizeOverlayPoint(tileX, tileY),
-                quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY),
-                quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY + DEFAULT_TILE_SIZE),
-                quantizeOverlayPoint(tileX, tileY + DEFAULT_TILE_SIZE),
+                quantizeOverlayPoint(tileX + tileSize, tileY),
+                quantizeOverlayPoint(tileX + tileSize, tileY + tileSize),
+                quantizeOverlayPoint(tileX, tileY + tileSize),
               ];
               fillPolygons.push(polygon);
               addPolygonSegments(mergedSegments, polygon);
@@ -316,10 +318,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               if (points.length < 3) continue;
 
               const polygon = points.map(([px, py]) =>
-                quantizeOverlayPoint(
-                  tileX + px * DEFAULT_TILE_SIZE,
-                  tileY + py * DEFAULT_TILE_SIZE,
-                ),
+                quantizeOverlayPoint(tileX + px * tileSize, tileY + py * tileSize),
               );
 
               fillPolygons.push(polygon);
@@ -330,12 +329,13 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       });
 
     renderCollisionGraphics(collisionGraphics, fillPolygons, mergedSegments);
-  }, []);
+  }, [projectTileSize]);
 
   // Render terrain overlay — colored fill per cell based on terrainData + terrainTypes
   const renderTerrainOverlay = useCallback(() => {
     const g = terrainOverlayGraphicsRef.current;
     const { currentMap, terrainTypes, showTerrainOverlay } = useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!g || !currentMap) return;
 
     g.clear();
@@ -357,17 +357,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
           const terrainId = layer.terrainData[y]?.[x];
           if (!terrainId) continue;
           const color = getColor(terrainId);
-          g.rect(
-            x * DEFAULT_TILE_SIZE,
-            y * DEFAULT_TILE_SIZE,
-            DEFAULT_TILE_SIZE,
-            DEFAULT_TILE_SIZE,
-          );
+          g.rect(x * tileSize, y * tileSize, tileSize, tileSize);
           g.fill({ color, alpha: 0.45 });
         }
       }
     }
-  }, []);
+  }, [projectTileSize]);
 
   // Get or create texture for a tile
   const getTileTexture = useCallback(
@@ -417,6 +412,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const renderTiles = useCallback(() => {
     const tileContainer = tileContainerRef.current;
     const { currentMap, activeVariationId, tilesets } = useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!tileContainer || !currentMap) return;
 
     const effectiveMap = resolveMapContext(currentMap, activeVariationId);
@@ -460,23 +456,24 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
               if (texture) {
                 const sprite = new Sprite(texture);
-                sprite.x = x * DEFAULT_TILE_SIZE;
-                sprite.y = y * DEFAULT_TILE_SIZE;
-                sprite.width = DEFAULT_TILE_SIZE;
-                sprite.height = DEFAULT_TILE_SIZE;
+                sprite.x = x * tileSize;
+                sprite.y = y * tileSize;
+                sprite.width = tileSize;
+                sprite.height = tileSize;
                 tileContainer.addChild(sprite);
               }
             }
           }
         }
       });
-  }, [getTileTexture]);
+  }, [getTileTexture, projectTileSize]);
 
   // Render entities
   const renderEntities = useCallback(() => {
     const entityContainer = entityContainerRef.current;
     const { currentMap, activeVariationId, selectedEntityId, entityTypes, loadedSprites } =
       useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!entityContainer || !currentMap) return;
 
     entityContainer.removeChildren();
@@ -484,7 +481,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const resolvedEntities = resolveEntities(currentMap, activeVariationId);
     resolvedEntities.forEach((entity) => {
       const type = entityTypes.find((t) => t.id === entity.typeId);
-      const [ew, eh] = type?.defaultSize ?? [DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE];
+      const [ew, eh] = type?.defaultSize ?? [tileSize, tileSize];
       const colorHex = type?.placeholderColor || '#ffff00';
       const color = parseInt(colorHex.replace('#', ''), 16);
 
@@ -572,18 +569,19 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         entityContainer.addChild(label);
       }
     });
-  }, []);
+  }, [projectTileSize]);
 
   // Render grid
   const renderGrid = useCallback(() => {
     const gridGraphics = gridGraphicsRef.current;
     const { currentMap } = useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!gridGraphics || !currentMap) return;
 
     gridGraphics.clear();
 
-    const pixelWidth = currentMap.width * DEFAULT_TILE_SIZE;
-    const pixelHeight = currentMap.height * DEFAULT_TILE_SIZE;
+    const pixelWidth = currentMap.width * tileSize;
+    const pixelHeight = currentMap.height * tileSize;
     // Grid lines - draw each line individually with stroke
     // Make stroke thinner when zoomed in by adjusting width inversely to viewport scale
     const vp = viewport;
@@ -594,11 +592,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       color: 0x2d3748,
       alpha: 0.5,
     });
-    for (let x = 0; x <= pixelWidth; x += DEFAULT_TILE_SIZE) {
+    for (let x = 0; x <= pixelWidth; x += tileSize) {
       gridGraphics.moveTo(x, 0);
       gridGraphics.lineTo(x, pixelHeight);
     }
-    for (let y = 0; y <= pixelHeight; y += DEFAULT_TILE_SIZE) {
+    for (let y = 0; y <= pixelHeight; y += tileSize) {
       gridGraphics.moveTo(0, y);
       gridGraphics.lineTo(pixelWidth, y);
     }
@@ -609,12 +607,13 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     gridGraphics.setStrokeStyle({ width: borderLineWidth, color: 0x4a5568 });
     gridGraphics.rect(0, 0, pixelWidth, pixelHeight);
     gridGraphics.stroke();
-  }, [viewport]);
+  }, [viewport, projectTileSize]);
 
   // Render hover highlight
   const renderHover = useCallback(() => {
     const hoverGraphics = hoverGraphicsRef.current;
     const { hoveredTile, activeTool } = useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!hoverGraphics) return;
 
     hoverGraphics.clear();
@@ -628,15 +627,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     }
 
     if (hoveredTile) {
-      hoverGraphics.rect(
-        hoveredTile.x * DEFAULT_TILE_SIZE,
-        hoveredTile.y * DEFAULT_TILE_SIZE,
-        DEFAULT_TILE_SIZE,
-        DEFAULT_TILE_SIZE,
-      );
+      hoverGraphics.rect(hoveredTile.x * tileSize, hoveredTile.y * tileSize, tileSize, tileSize);
       hoverGraphics.fill({ color: 0xffffff, alpha: 0.15 });
     }
-  }, []);
+  }, [projectTileSize]);
 
   // Render tile preview
   const renderPreview = useCallback(() => {
@@ -657,6 +651,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       selectedTerrainId,
       terrainTypes,
     } = useEditorStore.getState();
+    const tileSize = projectTileSize;
     if (!previewContainer) return;
 
     previewContainer.removeChildren();
@@ -681,12 +676,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       // Helper to render erase indicator at a position (just background color)
       const renderEraseAt = (tx: number, ty: number) => {
         const g = new Graphics();
-        g.rect(
-          tx * DEFAULT_TILE_SIZE,
-          ty * DEFAULT_TILE_SIZE,
-          DEFAULT_TILE_SIZE,
-          DEFAULT_TILE_SIZE,
-        );
+        g.rect(tx * tileSize, ty * tileSize, tileSize, tileSize);
         g.fill({ color: bgColorNum, alpha: 1 });
         previewContainer.addChild(g);
       };
@@ -774,12 +764,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       // Helper to render terrain indicator at a position
       const renderTerrainAt = (tx: number, ty: number) => {
         const g = new Graphics();
-        g.rect(
-          tx * DEFAULT_TILE_SIZE,
-          ty * DEFAULT_TILE_SIZE,
-          DEFAULT_TILE_SIZE,
-          DEFAULT_TILE_SIZE,
-        );
+        g.rect(tx * tileSize, ty * tileSize, tileSize, tileSize);
         g.fill({ color: terrainColor, alpha: 0.4 });
         g.stroke({ width: 1, color: terrainColor, alpha: 0.8 });
         previewContainer.addChild(g);
@@ -887,10 +872,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       // Draw selection rectangle outline
       const g = new Graphics();
       g.rect(
-        minX * DEFAULT_TILE_SIZE,
-        minY * DEFAULT_TILE_SIZE,
-        (maxX - minX + 1) * DEFAULT_TILE_SIZE,
-        (maxY - minY + 1) * DEFAULT_TILE_SIZE,
+        minX * tileSize,
+        minY * tileSize,
+        (maxX - minX + 1) * tileSize,
+        (maxY - minY + 1) * tileSize,
       );
       g.fill({ color: 0x4488ff, alpha: 0.2 });
       g.stroke({ width: 2, color: 0x4488ff, alpha: 0.8 });
@@ -971,10 +956,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               );
               if (texture) {
                 const sprite = new Sprite(texture);
-                sprite.x = x * DEFAULT_TILE_SIZE;
-                sprite.y = y * DEFAULT_TILE_SIZE;
-                sprite.width = DEFAULT_TILE_SIZE;
-                sprite.height = DEFAULT_TILE_SIZE;
+                sprite.x = x * tileSize;
+                sprite.y = y * tileSize;
+                sprite.width = tileSize;
+                sprite.height = tileSize;
                 previewContainer.addChild(sprite);
               }
             }
@@ -1017,10 +1002,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 );
                 if (texture) {
                   const sprite = new Sprite(texture);
-                  sprite.x = x * DEFAULT_TILE_SIZE;
-                  sprite.y = y * DEFAULT_TILE_SIZE;
-                  sprite.width = DEFAULT_TILE_SIZE;
-                  sprite.height = DEFAULT_TILE_SIZE;
+                  sprite.x = x * tileSize;
+                  sprite.y = y * tileSize;
+                  sprite.width = tileSize;
+                  sprite.height = tileSize;
                   previewContainer.addChild(sprite);
                 }
               }
@@ -1052,10 +1037,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                   );
                   if (texture) {
                     const sprite = new Sprite(texture);
-                    sprite.x = tx * DEFAULT_TILE_SIZE;
-                    sprite.y = ty * DEFAULT_TILE_SIZE;
-                    sprite.width = DEFAULT_TILE_SIZE;
-                    sprite.height = DEFAULT_TILE_SIZE;
+                    sprite.x = tx * tileSize;
+                    sprite.y = ty * tileSize;
+                    sprite.width = tileSize;
+                    sprite.height = tileSize;
                     previewContainer.addChild(sprite);
                   }
                 }
@@ -1080,10 +1065,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               );
               if (texture) {
                 const sprite = new Sprite(texture);
-                sprite.x = cx * DEFAULT_TILE_SIZE;
-                sprite.y = cy * DEFAULT_TILE_SIZE;
-                sprite.width = DEFAULT_TILE_SIZE;
-                sprite.height = DEFAULT_TILE_SIZE;
+                sprite.x = cx * tileSize;
+                sprite.y = cy * tileSize;
+                sprite.width = tileSize;
+                sprite.height = tileSize;
                 previewContainer.addChild(sprite);
               }
             }
@@ -1107,10 +1092,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 );
                 if (texture) {
                   const sprite = new Sprite(texture);
-                  sprite.x = bx * DEFAULT_TILE_SIZE;
-                  sprite.y = by * DEFAULT_TILE_SIZE;
-                  sprite.width = DEFAULT_TILE_SIZE;
-                  sprite.height = DEFAULT_TILE_SIZE;
+                  sprite.x = bx * tileSize;
+                  sprite.y = by * tileSize;
+                  sprite.width = tileSize;
+                  sprite.height = tileSize;
                   previewContainer.addChild(sprite);
                 }
               }
@@ -1144,10 +1129,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       );
       if (texture) {
         const sprite = new Sprite(texture);
-        sprite.x = tx * DEFAULT_TILE_SIZE;
-        sprite.y = ty * DEFAULT_TILE_SIZE;
-        sprite.width = DEFAULT_TILE_SIZE;
-        sprite.height = DEFAULT_TILE_SIZE;
+        sprite.x = tx * tileSize;
+        sprite.y = ty * tileSize;
+        sprite.width = tileSize;
+        sprite.height = tileSize;
         previewContainer.addChild(sprite);
       }
     };
@@ -1213,7 +1198,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       // Single tile preview with brush size
       renderBrushPreview(() => selectedTileIndex);
     }
-  }, [getTileTexture]);
+  }, [getTileTexture, projectTileSize]);
 
   // Main render function
   const render = useCallback(() => {

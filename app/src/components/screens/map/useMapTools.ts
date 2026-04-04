@@ -10,15 +10,6 @@ import {
 import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
 import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
 import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
-import {
-  buildTerrainGridFromLayer,
-  applyTerrainToTile,
-  getCornerTerrainsForTile,
-  findBestMatchingTileWithFallback,
-} from '../../../lib/terrainUtils';
-import { buildPatternFromSelection } from '../../../lib/tileUtils';
-import { sampleRandomTile } from '../../../lib/randomUtils';
-import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 
 interface UseMapToolsProps {
   viewport: Viewport | null;
@@ -38,6 +29,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const drawMode = useEditorStore((state) => state.drawMode);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
+  const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
   const tilesets = useEditorStore((state) => state.tilesets);
 
   const paintTilesBatch = useEditorStore((state) => state.paintTilesBatch);
@@ -180,7 +172,10 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       // Works in stamp/random/erase modes
       if (
         e.button === 2 &&
-        (activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase')
+        (activeTool === 'stamp' ||
+          activeTool === 'random' ||
+          activeTool === 'erase' ||
+          activeTool === 'fill')
       ) {
         if (!selectedLayerId) return;
         const { x: tx, y: ty } = tile;
@@ -202,7 +197,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const { entityTypes: allEntityTypes } = useEditorStore.getState();
         const hit = [...resolvedEntities].reverse().find((entity) => {
           const type = allEntityTypes.find((t) => t.id === entity.typeId);
-          const [ew, eh] = type?.defaultSize ?? [DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE];
+          const [ew, eh] = type?.defaultSize ?? [projectTileSize, projectTileSize];
           const ex = entity.position[0];
           const ey = entity.position[1];
           return (
@@ -226,8 +221,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
       } else if (activeTool === 'select') {
         selectEntity(null);
-      } else if (activeTool === 'stamp' || activeTool === 'random' || activeTool === 'erase') {
-        if (drawMode === 'flood') {
+      } else if (
+        activeTool === 'stamp' ||
+        activeTool === 'random' ||
+        activeTool === 'erase' ||
+        activeTool === 'fill'
+      ) {
+        const shouldFlood = activeTool === 'fill' || drawMode === 'flood';
+
+        if (shouldFlood) {
           // Flood fill mode: uses bucketFillAdvanced with stencil/random/erase support
           if (
             selectedLayerId &&
@@ -252,8 +254,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                     ? selectedTileIndices
                     : undefined,
               });
-            } else if (activeTool === 'stamp' && activeTilesetId) {
-              // Stamp flood fill - supports stencil patterns
+            } else if ((activeTool === 'stamp' || activeTool === 'fill') && activeTilesetId) {
+              // Stamp/fill flood fill - supports stencil patterns
               bucketFillAdvanced(selectedLayerId, tx, ty, {
                 mode: 'stamp',
                 tilesetId: activeTilesetId,
@@ -262,7 +264,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               });
             }
           }
-        } else if (drawMode === 'point') {
+        } else if (activeTool !== 'fill' && drawMode === 'point') {
           // Point mode: click to paint single tile, or shift+click to draw line from anchor
           if (e.shiftKey && lineAnchorRef.current) {
             // Draw line from anchor to current position
@@ -284,7 +286,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               activeTool === 'stamp' || activeTool === 'random' ? 'paint' : 'erase',
             );
           }
-        } else {
+        } else if (activeTool !== 'fill') {
           // Rect, circle, line modes: click-drag-release
           drawStartRef.current = { x: tx, y: ty };
           isDrawingRef.current = true;
@@ -330,15 +332,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               if (entitySnapMode === 'grid') {
                 // Snap to tile grid
                 position = [
-                  Math.floor(worldPos.x / DEFAULT_TILE_SIZE) * DEFAULT_TILE_SIZE,
-                  Math.floor(worldPos.y / DEFAULT_TILE_SIZE) * DEFAULT_TILE_SIZE,
+                  Math.floor(worldPos.x / projectTileSize) * projectTileSize,
+                  Math.floor(worldPos.y / projectTileSize) * projectTileSize,
                 ];
               } else {
                 position = [Math.round(worldPos.x), Math.round(worldPos.y)];
               }
             } else {
               // Fallback using tile coords
-              position = [tx * DEFAULT_TILE_SIZE, ty * DEFAULT_TILE_SIZE];
+              position = [tx * projectTileSize, ty * projectTileSize];
             }
             placeEntity({
               id: `ent-${Date.now()}`,
@@ -366,6 +368,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       activeVariationId,
       selectedTerrainId,
       entitySnapMode,
+      projectTileSize,
       screenToTile,
       applyShape,
       applyTerrainShape,
@@ -444,8 +447,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           let position: [number, number];
           if (snapMode === 'grid') {
             position = [
-              Math.floor(rawX / DEFAULT_TILE_SIZE) * DEFAULT_TILE_SIZE,
-              Math.floor(rawY / DEFAULT_TILE_SIZE) * DEFAULT_TILE_SIZE,
+              Math.floor(rawX / projectTileSize) * projectTileSize,
+              Math.floor(rawY / projectTileSize) * projectTileSize,
             ];
           } else {
             position = [Math.round(rawX), Math.round(rawY)];
@@ -509,6 +512,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       activeTool,
       activeTilesetId,
       selectedTerrainId,
+      projectTileSize,
       screenToTile,
       setHoveredTile,
       setDrawPreview,

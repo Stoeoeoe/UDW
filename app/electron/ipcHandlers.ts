@@ -2,10 +2,17 @@ import { ipcMain, dialog, BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import chokidar from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 
 export function setupIpcHandlers(win: BrowserWindow | null) {
   // Map of active chokidar watchers per projectPath so we can stop them when switching projects
-  const activeWatchers: Map<string, any[]> = new Map();
+  const activeWatchers: Map<string, FSWatcher[]> = new Map();
+
+  function stopAllWatchers() {
+    for (const projectPath of activeWatchers.keys()) {
+      stopWatchers(projectPath);
+    }
+  }
 
   function stopWatchers(projectPath: string) {
     const arr = activeWatchers.get(projectPath) || [];
@@ -22,9 +29,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
   }
 
   function startWatchingProject(projectPath: string) {
-    stopWatchers(projectPath);
+    stopAllWatchers();
 
-    const watchers: any[] = [];
+    const watchers: FSWatcher[] = [];
 
     // Watch image/asset changes
     try {

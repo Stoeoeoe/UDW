@@ -1,4 +1,4 @@
-import { Map, Variation } from '../types/schema';
+import { EntityInstance, Map, Variation } from '../types/schema';
 import { decodeTileRef } from './tileRef';
 
 interface VariationMetadataOverrides {
@@ -59,8 +59,19 @@ export function resolveTileAt(
       return decodeTileRef(cell, map.tilesetRefs);
     } else {
       const override = context.layerOverrides?.[layerId];
-      if (override && override.data[y]?.[x] !== null) {
-        return override.data[y][x] as string; // Variations store as strings
+      if (!override) continue;
+
+      const value = override.data?.[y]?.[x];
+
+      // Replace mode is authoritative for this layer in this variation context.
+      // Null is a deliberate clear, not a fallback signal.
+      if (override.mode === 'replace') {
+        return value ?? null;
+      }
+
+      // Merge mode only overrides non-null cells and falls back otherwise.
+      if (value !== null && value !== undefined) {
+        return value as string; // Variations store string tile refs
       }
     }
   }
@@ -75,12 +86,12 @@ export function resolveTileAt(
 export function resolveEntities(map: Map, variationId: string | null) {
   const chain = getVariationChain(map, variationId); // Base to Child
   // Start with top-level entities (legacy) and entities declared on entity-type layers
-  let entities = [] as any[];
+  let entities: EntityInstance[] = [];
   if (Array.isArray(map.entities)) entities.push(...map.entities);
   // Collect entities from layers that have `entities` (entity layers)
   for (const layer of map.layers) {
-    if (layer.kind === 'entity' && Array.isArray((layer as any).entities)) {
-      entities.push(...(layer as any).entities);
+    if (layer.kind === 'entity' && Array.isArray(layer.entities)) {
+      entities.push(...layer.entities);
     }
   }
 
@@ -89,7 +100,15 @@ export function resolveEntities(map: Map, variationId: string | null) {
 
     context.entityOverrides?.forEach((override) => {
       if (override.action === 'add' && override.entity) {
-        entities.push(override.entity);
+        const candidate = override.entity;
+        if (
+          candidate.id &&
+          candidate.typeId &&
+          Array.isArray(candidate.position) &&
+          candidate.properties
+        ) {
+          entities.push(candidate as EntityInstance);
+        }
       } else if (override.action === 'remove' && override.entityId) {
         entities = entities.filter((e) => e.id !== override.entityId);
       } else if (override.action === 'modify' && override.entityId && override.entity) {

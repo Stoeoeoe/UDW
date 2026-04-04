@@ -18,6 +18,10 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
   // Use the shared tile selection hook
   const { selectedTileIndex, handleTileSelect } = useTileSelection();
   const selectedTileIndices = useEditorStore((state) => state.selectedTileIndices);
+  const currentTileset = useEditorStore((state) => {
+    const id = state.activeTilesetId;
+    return id ? state.tilesets.get(id) || null : null;
+  });
 
   const [zoom, setZoom] = useState(2.0); // Default to 200% for pixel art
 
@@ -30,11 +34,6 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
       </Flex>
     );
   }
-
-  const currentTileset = useEditorStore((state) => {
-    const id = state.activeTilesetId;
-    return id ? state.tilesets.get(id) || null : null;
-  });
 
   return (
     <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">

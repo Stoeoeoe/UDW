@@ -439,6 +439,13 @@ export const useEditorStore = create<EditorStore>()(
           }
           pendingTilesetSaves.clear();
 
+          const currentProjectPath = useEditorStore.getState().projectPath;
+          if ((window as any).ipcRenderer && currentProjectPath) {
+            (window as any).ipcRenderer
+              .invoke('app:stop-watching', currentProjectPath)
+              .catch(() => undefined);
+          }
+
           set((state) => {
             state.project = null;
             state.projectPath = null;
@@ -539,6 +546,7 @@ export const useEditorStore = create<EditorStore>()(
           if (enrichedMaps.length > 0) {
             set((state) => {
               state.currentMap = castDraft(enrichedMaps[0]);
+              state.currentMapPath = `maps/${enrichedMaps[0].id}.map.json`;
               // Auto-select first layer
               if (enrichedMaps[0].layers.length > 0) {
                 state.selectedLayerId = enrichedMaps[0].layers[0].id;
@@ -577,6 +585,7 @@ export const useEditorStore = create<EditorStore>()(
           set((state) => {
             if (!map) {
               state.currentMap = null;
+              state.currentMapPath = null;
               return;
             }
 
@@ -584,6 +593,7 @@ export const useEditorStore = create<EditorStore>()(
             const enrichedMap = addMissingDefinitionLayers(map, state.layerDefinitions);
 
             state.currentMap = castDraft(enrichedMap);
+            state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
             // When a map is loaded, switch to tile paint tool by default
             state.activeTool = 'stamp';
             if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
@@ -604,6 +614,7 @@ export const useEditorStore = create<EditorStore>()(
             }
 
             state.currentMap = castDraft(map);
+            state.currentMapPath = `maps/${map.id}.map.json`;
             state.activeVariationId = null;
             state.activeTool = 'stamp';
             state.selectedEntityId = null;
@@ -662,6 +673,7 @@ export const useEditorStore = create<EditorStore>()(
           set((state) => {
             state.maps.push(castDraft(newMap));
             state.currentMap = castDraft(newMap);
+            state.currentMapPath = `maps/${newMap.id}.map.json`;
             state.activeVariationId = null;
             state.selectedLayerId = layers[0]?.id || null;
           });
@@ -711,10 +723,12 @@ export const useEditorStore = create<EditorStore>()(
             if (state.currentMap?.id === mapId) {
               if (state.maps.length > 0) {
                 state.currentMap = castDraft(state.maps[0]);
+                state.currentMapPath = `maps/${state.maps[0].id}.map.json`;
                 state.activeVariationId = null;
                 state.selectedLayerId = state.maps[0].layers[0]?.id || null;
               } else {
                 state.currentMap = null;
+                state.currentMapPath = null;
                 state.activeVariationId = null;
                 state.selectedLayerId = null;
               }
@@ -1366,13 +1380,31 @@ export const useEditorStore = create<EditorStore>()(
               );
               if (variation) {
                 if (!variation.entityOverrides) variation.entityOverrides = [];
-                const existing = variation.entityOverrides.find(
+
+                const existingAdd = variation.entityOverrides.find(
                   (o) => o.action === 'add' && o.entity?.id === entityId,
                 );
-                if (existing && existing.entity) {
-                  existing.entity.position = position;
+                if (existingAdd && existingAdd.entity) {
+                  existingAdd.entity.position = position;
                   return;
                 }
+
+                const existingModify = variation.entityOverrides.find(
+                  (o) => o.action === 'modify' && o.entityId === entityId,
+                );
+                if (existingModify) {
+                  if (!existingModify.entity) {
+                    existingModify.entity = {} as Partial<import('../types/schema').EntityInstance>;
+                  }
+                  existingModify.entity.position = position;
+                } else {
+                  variation.entityOverrides.push({
+                    action: 'modify',
+                    entityId,
+                    entity: { position } as Partial<import('../types/schema').EntityInstance>,
+                  });
+                }
+                return;
               }
             }
 
@@ -1398,6 +1430,40 @@ export const useEditorStore = create<EditorStore>()(
         updateEntityLabel: (entityId, label) =>
           set((state) => {
             if (!state.currentMap) return;
+
+            if (state.activeVariationId) {
+              const variation = state.currentMap.variations?.find(
+                (v) => v.id === state.activeVariationId,
+              );
+              if (variation) {
+                if (!variation.entityOverrides) variation.entityOverrides = [];
+
+                const existingAdd = variation.entityOverrides.find(
+                  (o) => o.action === 'add' && o.entity?.id === entityId,
+                );
+                if (existingAdd && existingAdd.entity) {
+                  existingAdd.entity.label = label;
+                  return;
+                }
+
+                const existingModify = variation.entityOverrides.find(
+                  (o) => o.action === 'modify' && o.entityId === entityId,
+                );
+                if (existingModify) {
+                  if (!existingModify.entity) {
+                    existingModify.entity = {} as Partial<import('../types/schema').EntityInstance>;
+                  }
+                  existingModify.entity.label = label;
+                } else {
+                  variation.entityOverrides.push({
+                    action: 'modify',
+                    entityId,
+                    entity: { label } as Partial<import('../types/schema').EntityInstance>,
+                  });
+                }
+                return;
+              }
+            }
 
             const entity = state.currentMap.entities.find((e) => e.id === entityId);
             if (entity) {

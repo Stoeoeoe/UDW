@@ -15,6 +15,7 @@ import { TilesetInspector } from '../tileset/TilesetInspector';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { resolveEntities } from '../../lib/mapUtils';
 import { InspectorPanel, InspectorEmptyState } from '../screens/common';
+import type { PropertyValue } from '../../types/schema';
 
 export const PropertiesPanel: React.FC = () => {
   const editorMode = useEditorStore((state) => state.mode);
@@ -25,6 +26,8 @@ export const PropertiesPanel: React.FC = () => {
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
   const tilesets = useEditorStore((state) => state.tilesets);
+  const moveEntity = useEditorStore((state) => state.moveEntity);
+  const updateEntityLabel = useEditorStore((state) => state.updateEntityLabel);
 
   // Contextual rendering for Tileset mode
   if (editorMode === 'tilesets') {
@@ -50,12 +53,9 @@ export const PropertiesPanel: React.FC = () => {
     ? entityTypes.find((t) => t.id === selectedEntity.typeId)
     : null;
 
-  const moveEntity = useEditorStore((state) => state.moveEntity);
-  const updateEntityLabel = useEditorStore((state) => state.updateEntityLabel);
-
-  const handlePropertyChange = (key: string, value: any) => {
+  const handlePropertyChange = (key: string, value: unknown) => {
     if (selectedEntityId) {
-      updateEntityProperties(selectedEntityId, { [key]: value });
+      updateEntityProperties(selectedEntityId, { [key]: value as PropertyValue });
     }
   };
 
@@ -205,7 +205,7 @@ export const PropertiesPanel: React.FC = () => {
 
             {entityType?.properties && (
               <PropertyForm
-                schema={entityType.properties as any as PropertySchema[]}
+                schema={entityType.properties as unknown as PropertySchema[]}
                 values={selectedEntity?.properties || {}}
                 onChange={(k, v) => handlePropertyChange(k, v)}
               />

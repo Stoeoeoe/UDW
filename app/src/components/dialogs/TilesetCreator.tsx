@@ -69,8 +69,12 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
               ?.replace(/\.[^/.]+$/, '') || n
           : n,
       );
-    } catch (e: any) {
-      toast({ title: 'File error', description: e.message, status: 'error' });
+    } catch (e: unknown) {
+      toast({
+        title: 'File error',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        status: 'error',
+      });
     }
   };
 
@@ -105,7 +109,7 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
 
       const newTileset = {
         version: 1,
-        id: name.toLowerCase().replace(/[^a-z0-9\-]/g, '-'),
+        id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
         name,
         spriteSheet: internalPath,
         tileWidth,
@@ -114,13 +118,17 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
         tileCount,
         tiles,
         wangSets: [],
-      } as any;
+      };
 
       await addTileset(newTileset);
       toast({ title: 'Tileset created', status: 'success' });
       onCreate?.();
-    } catch (e: any) {
-      toast({ title: 'Create failed', description: e.message, status: 'error' });
+    } catch (e: unknown) {
+      toast({
+        title: 'Create failed',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        status: 'error',
+      });
     } finally {
       setProcessing(false);
     }
