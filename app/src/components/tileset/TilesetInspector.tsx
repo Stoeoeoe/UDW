@@ -78,7 +78,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                   key: 'terrain',
                   label: 'Terrain (Main)',
                   type: 'custom',
-                  customRenderer: (value: any, onChange: (v: any) => void) => {
+                  customRenderer: (value: unknown, onChange: (v: unknown) => void) => {
                     const options: {
                       id: string;
                       name: string;

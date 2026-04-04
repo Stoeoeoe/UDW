@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { computeCollisionOverlay } from './useMapRenderer';
+import type { Map as GameMap, Tileset } from '../../../types/schema';
 
 describe('computeCollisionOverlay integration', () => {
   it('computes merged segments for a map with adjacent full-tile collisions', () => {
     // Create a minimal 2x1 map with two visual tiles, both full collision
-    const currentMap: any = {
+    const currentMap: GameMap = {
       width: 2,
       height: 1,
       baseTilesetId: 'ts1',
@@ -23,16 +24,19 @@ describe('computeCollisionOverlay integration', () => {
     };
 
     // We will stub resolveTileAt behavior by placing encoded refs in a data grid
-    currentMap.layers[0].data = [['ts1:0', 'ts1:1']];
+    currentMap.layers[0].data = [[0, 1]];
 
-    const tilesets = new Map<string, any>();
+    const tilesets = new Map<string, Tileset>();
     tilesets.set('ts1', {
       id: 'ts1',
       tileWidth: 16,
       tileHeight: 16,
       columns: 2,
       spriteSheet: 's.png',
-      tiles: [{ collision: { type: 'full' } }, { collision: { type: 'full' } }],
+      tiles: {
+        0: { collision: { type: 'full' } },
+        1: { collision: { type: 'full' } },
+      },
     });
 
     const { fillPolygons, mergedSegments } = computeCollisionOverlay(currentMap, null, tilesets);

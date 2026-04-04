@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ProjectSettingsEditor } from './ProjectSettingsEditor';
 
 const meta: Meta<typeof ProjectSettingsEditor> = {

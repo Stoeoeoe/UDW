@@ -8,6 +8,7 @@ import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
+import type { Map as GameMap, Tileset } from '../../../types/schema';
 
 interface UseMapRendererProps {
   viewport: Viewport | null;
@@ -55,9 +56,9 @@ export function addPolygonSegments(
 
 // Computes fill polygons and merged segments for collision overlay given map state
 export function computeCollisionOverlay(
-  currentMap: any,
+  currentMap: GameMap | null,
   activeVariationId: string | null,
-  tilesets: Map<string, any>,
+  tilesets: Map<string, Tileset>,
 ): {
   fillPolygons: OverlayPoint[][];
   mergedSegments: Map<string, OverlaySegment>;
@@ -88,7 +89,7 @@ export function computeCollisionOverlay(
             tsId === currentMap.baseTilesetId ? effectiveMap.baseTilesetId : tsId;
 
           let effectiveTileset = tilesets.get(resolvedBaseTilesetId) || tileset;
-          const variation = currentMap.variations?.find((v: any) => v.id === activeVariationId);
+          const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
           if (variation?.tilesetSuffix) {
             const suffixed = tilesets.get(`${resolvedBaseTilesetId}${variation.tilesetSuffix}`);
             if (suffixed) effectiveTileset = suffixed;
@@ -135,7 +136,7 @@ export function computeCollisionOverlay(
 }
 
 export function renderCollisionGraphics(
-  collisionGraphics: any,
+  collisionGraphics: Graphics | null,
   fillPolygons: OverlayPoint[][],
   mergedSegments: Map<string, OverlaySegment>,
 ) {

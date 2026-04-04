@@ -1,4 +1,5 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react';
+import type { StyleFunctionProps } from '@chakra-ui/styled-system';
 
 const config: ThemeConfig = {
   initialColorMode: 'dark',
@@ -98,7 +99,7 @@ export const theme = extendTheme({
             bg: 'gray.800',
           },
         },
-        solid: (props: any) => ({
+        solid: (props: StyleFunctionProps) => ({
           bg: props.colorScheme === 'blue' ? 'blue.600' : undefined,
           _hover: {
             bg: props.colorScheme === 'blue' ? 'blue.500' : undefined,

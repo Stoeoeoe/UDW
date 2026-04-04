@@ -388,7 +388,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
         pendingEmitRef.current = null;
       }
     };
-  }, [dragIndex, handleMouseMove]);
+  }, [dragIndex, emitPolygonCollision, handleMouseMove]);
 
   const applyFullPolygon = useCallback(() => {
     const next = FULL_TILE_POLYGON.map(([x, y]) => [x, y] as NormalizedPoint);

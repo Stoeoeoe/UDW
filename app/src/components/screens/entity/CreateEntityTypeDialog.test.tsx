@@ -7,7 +7,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 describe('CreateEntityTypeDialog', () => {
   beforeEach(() => {
     // reset minimal store state for tests
-    useEditorStore.setState({ entityTypes: [] as any[] });
+    useEditorStore.setState({ entityTypes: [] });
   });
 
   it('computes id from name and calls addEntityType', async () => {

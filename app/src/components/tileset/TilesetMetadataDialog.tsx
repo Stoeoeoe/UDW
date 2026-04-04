@@ -66,8 +66,12 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
       if (tileWidth > 0) {
         setColumns(Math.floor(resolved.width / tileWidth));
       }
-    } catch (e: any) {
-      toast({ title: 'Failed', description: e.message, status: 'error' });
+    } catch (e: unknown) {
+      toast({
+        title: 'Failed',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        status: 'error',
+      });
     }
   };
 
@@ -113,8 +117,12 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
 
       toast({ title: 'Tileset saved', status: 'success' });
       onClose();
-    } catch (e: any) {
-      toast({ title: 'Failed to save', description: e.message, status: 'error' });
+    } catch (e: unknown) {
+      toast({
+        title: 'Failed to save',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        status: 'error',
+      });
     } finally {
       setProcessing(false);
     }

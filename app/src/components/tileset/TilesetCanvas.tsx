@@ -337,6 +337,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       tileset.id,
       panZoom,
       tileset.columns,
+      tileset.tileCount,
       tileset.tileWidth,
       tileset.tileHeight,
     ],
@@ -439,7 +440,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     setCamera({ x: 0, y: 0 });
     setInternalZoom(1.5);
     initializedRef.current = true;
-  }, [sprite, mode]);
+  }, [sprite, mode, STORAGE_KEY]);
 
   // Reset init flag when switching to a different tileset so the new tileset recenters once
   useEffect(() => {

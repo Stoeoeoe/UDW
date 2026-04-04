@@ -440,8 +440,8 @@ export const useEditorStore = create<EditorStore>()(
           pendingTilesetSaves.clear();
 
           const currentProjectPath = useEditorStore.getState().projectPath;
-          if ((window as any).ipcRenderer && currentProjectPath) {
-            (window as any).ipcRenderer
+          if ('ipcRenderer' in window && currentProjectPath) {
+            window.ipcRenderer
               .invoke('app:stop-watching', currentProjectPath)
               .catch(() => undefined);
           }
@@ -1287,7 +1287,7 @@ export const useEditorStore = create<EditorStore>()(
               (l) => l.id === state.selectedLayerId,
             );
             if (selectedLayer && selectedLayer.kind === 'entity') {
-              const toAdd = { ...entity, layerId: selectedLayer.id } as any;
+              const toAdd: EntityInstance = { ...entity, layerId: selectedLayer.id };
 
               // If variation active, record as variation-level add override
               if (state.activeVariationId) {
@@ -1305,8 +1305,8 @@ export const useEditorStore = create<EditorStore>()(
               }
 
               // Otherwise add to the layer's entities
-              if (!(selectedLayer as any).entities) (selectedLayer as any).entities = [];
-              (selectedLayer as any).entities.push(castDraft(toAdd));
+              if (!selectedLayer.entities) selectedLayer.entities = [];
+              selectedLayer.entities.push(castDraft(toAdd));
               return;
             }
 
@@ -1362,10 +1362,8 @@ export const useEditorStore = create<EditorStore>()(
 
             // Also remove from any entity layers
             for (const layer of state.currentMap.layers) {
-              if (layer.kind === 'entity' && (layer as any).entities) {
-                (layer as any).entities = (layer as any).entities.filter(
-                  (e: any) => e.id !== entityId,
-                );
+              if (layer.kind === 'entity' && layer.entities) {
+                layer.entities = layer.entities.filter((e) => e.id !== entityId);
               }
             }
           }),
@@ -1535,8 +1533,8 @@ export const useEditorStore = create<EditorStore>()(
             if (!entity) {
               // Try to find in layers
               for (const layer of state.currentMap.layers) {
-                if (layer.kind === 'entity' && (layer as any).entities) {
-                  const found = (layer as any).entities.find((en: any) => en.id === entityId);
+                if (layer.kind === 'entity' && layer.entities) {
+                  const found = layer.entities.find((en) => en.id === entityId);
                   if (found) {
                     entity = found;
                     break;
@@ -1952,10 +1950,10 @@ export const useEditorStore = create<EditorStore>()(
 );
 
 // Listen for native asset changes (Electron) and reload affected sprites/tilesets
-if ((window as any).ipcRenderer) {
-  (window as any).ipcRenderer.on(
+if ('ipcRenderer' in window) {
+  window.ipcRenderer.on(
     'app:asset-changed',
-    async (_event: any, payload: { eventType: string; relativePath: string }) => {
+    async (_event, payload: { eventType: string; relativePath: string }) => {
       const { relativePath } = payload;
       try {
         const state = useEditorStore.getState();
@@ -1974,7 +1972,7 @@ if ((window as any).ipcRenderer) {
         // Also, if any tileset references this spriteSheet path, reload its image
         for (const [id, ts] of state.tilesets.entries()) {
           try {
-            if ((ts as any).spriteSheet === relativePath) {
+            if (ts.spriteSheet === relativePath) {
               if (state.loadedSprites.has(relativePath)) {
                 const blob = await fileSystem.loadAsset(relativePath);
                 await state.loadSprite(relativePath, blob);
@@ -1992,11 +1990,11 @@ if ((window as any).ipcRenderer) {
     },
   );
 
-  (window as any).ipcRenderer.on(
+  window.ipcRenderer.on(
     'app:tileset-changed',
     async (
-      _event: any,
-      payload: { eventType: string; relativePath: string; tileset: any | null },
+      _event,
+      payload: { eventType: string; relativePath: string; tileset: Tileset | null },
     ) => {
       const { relativePath, tileset } = payload;
       try {
@@ -2013,7 +2011,7 @@ if ((window as any).ipcRenderer) {
           } catch (e) {
             newMap.set(relativePath, tileset);
           }
-          return { tilesets: newMap } as any;
+          return { tilesets: newMap };
         });
 
         // If tileset references a spriteSheet, reload the image blob

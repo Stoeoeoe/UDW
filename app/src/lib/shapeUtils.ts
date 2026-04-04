@@ -1,17 +1,31 @@
 import { circularBrush, bresenhamLine } from './algorithms';
 import { sampleRandomTile } from './randomUtils';
+import type { Map as GameMap, Tileset } from '../types/schema';
+import type { TilePattern } from './tileUtils';
+
+interface TilePaintOp {
+  x: number;
+  y: number;
+  tilesetId: string;
+  tileIndex: number;
+}
+
+interface TileEraseOp {
+  x: number;
+  y: number;
+}
 
 export async function applyShape(params: {
-  currentMap: any;
+  currentMap: GameMap | null;
   selectedLayerId: string | null;
   activeTilesetId: string | null;
   selectedTileIndex: number | null;
   selectedTileIndices: number[] | null;
   activeTool: string | null;
-  tilesets: Map<string, any>;
-  paintTilesBatch: (layerId: string, tiles: any[]) => void;
-  eraseTilesBatch: (layerId: string, tiles: any[]) => void;
-  getPattern: () => any;
+  tilesets: Map<string, Tileset>;
+  paintTilesBatch: (layerId: string, tiles: TilePaintOp[]) => void;
+  eraseTilesBatch: (layerId: string, tiles: TileEraseOp[]) => void;
+  getPattern: () => TilePattern | null;
   brushSize: number;
   mode: 'point' | 'rect' | 'circle' | 'line';
   start: { x: number; y: number };
@@ -51,8 +65,8 @@ export async function applyShape(params: {
 
   const ts = activeTilesetId ? tilesets.get(activeTilesetId) : undefined;
 
-  const tilesToPaint: Array<any> = [];
-  const tilesToErase: Array<any> = [];
+  const tilesToPaint: TilePaintOp[] = [];
+  const tilesToErase: TileEraseOp[] = [];
 
   const collectTile = (tx: number, ty: number) => {
     if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;

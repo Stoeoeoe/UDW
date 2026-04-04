@@ -6,6 +6,15 @@ import React from 'react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { fileSystem } from '../../../lib/fileSystem';
 
+type LandingStoreSlice = {
+  loadProject: (path: string, project: unknown) => unknown;
+  loadProjectResources: () => unknown;
+};
+
+type MockedStoreHook = {
+  mockImplementation: (impl: (selector: (state: LandingStoreSlice) => unknown) => unknown) => void;
+};
+
 // Mock the store
 vi.mock('../../../store/useEditorStore', () => ({
   useEditorStore: vi.fn(),
@@ -33,10 +42,11 @@ const renderWithChakra = (ui: React.ReactElement) => {
 describe('LandingScreen', () => {
   const mockLoadProject = vi.fn();
   const mockLoadProjectResources = vi.fn();
+  const mockedUseEditorStore = useEditorStore as unknown as MockedStoreHook;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useEditorStore as any).mockImplementation((selector: any) => {
+    mockedUseEditorStore.mockImplementation((selector) => {
       const state = {
         loadProject: mockLoadProject,
         loadProjectResources: mockLoadProjectResources,
@@ -56,7 +66,7 @@ describe('LandingScreen', () => {
   it('should call fileSystem.openProject when Open Project is clicked', async () => {
     const mockProject = { name: 'Test Project' };
     const mockPath = '/test/path';
-    (fileSystem.openProject as any).mockResolvedValue({ project: mockProject, path: mockPath });
+    vi.mocked(fileSystem.openProject).mockResolvedValue({ project: mockProject, path: mockPath });
 
     renderWithChakra(<LandingScreen />);
 

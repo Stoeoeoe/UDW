@@ -5,14 +5,27 @@ import {
   getCornerTerrainsForTile,
   findBestMatchingTileWithFallback,
 } from './terrainUtils';
+import type { Map as GameMap, Tileset } from '../types/schema';
+
+interface TilePaintOp {
+  x: number;
+  y: number;
+  tilesetId: string;
+  tileIndex: number;
+}
+
+interface TileEraseOp {
+  x: number;
+  y: number;
+}
 
 export async function applyTerrainShape(params: {
-  currentMap: any;
+  currentMap: GameMap | null;
   selectedLayerId: string | null;
   activeTilesetId: string | null;
-  tilesets: Map<string, any>;
-  paintTilesBatch: (layerId: string, tiles: any[]) => void;
-  eraseTilesBatch: (layerId: string, tiles: any[]) => void;
+  tilesets: Map<string, Tileset>;
+  paintTilesBatch: (layerId: string, tiles: TilePaintOp[]) => void;
+  eraseTilesBatch: (layerId: string, tiles: TileEraseOp[]) => void;
   /** For terrain layers: persist the painted terrain ID per cell so it can be re-resolved later */
   paintTerrainDataBatch?: (
     layerId: string,
@@ -24,7 +37,6 @@ export async function applyTerrainShape(params: {
   end: { x: number; y: number };
   terrainId: string | null;
   terrainGridRef: Map<string, string | null>;
-  currentTilesetRefs?: any;
 }) {
   const {
     currentMap,
@@ -47,7 +59,7 @@ export async function applyTerrainShape(params: {
   const tileset = tilesets.get(activeTilesetId);
   if (!tileset) return;
 
-  const layer = currentMap.layers.find((l: any) => l.id === selectedLayerId);
+  const layer = currentMap.layers.find((l) => l.id === selectedLayerId);
   if (!layer) return;
 
   const effectiveBrushSize = mode === 'point' || mode === 'line' ? brushSize : 1;
@@ -98,17 +110,11 @@ export async function applyTerrainShape(params: {
 
   if (positions.length === 0) return;
 
-  terrainGridRef.clear?.();
+  terrainGridRef.clear();
   // Build terrain grid fresh for this operation
-  const built = buildTerrainGridFromLayer(layer.data, tilesets, currentMap.tilesetRefs);
-  if (built) {
-    // mutate provided ref if available
-    if (terrainGridRef && typeof (terrainGridRef as any).set === 'function') {
-      // replace contents
-      (terrainGridRef as Map<string, string | null>).clear();
-      for (const [k, v] of built.entries())
-        (terrainGridRef as Map<string, string | null>).set(k, v);
-    }
+  const built = buildTerrainGridFromLayer(layer.data ?? [], tilesets, currentMap.tilesetRefs);
+  for (const [k, v] of built.entries()) {
+    terrainGridRef.set(k, v);
   }
 
   const allTilesToUpdate = new Map<string, { tileX: number; tileY: number }>();
@@ -127,8 +133,8 @@ export async function applyTerrainShape(params: {
     }
   }
 
-  const tilesToPaint: Array<any> = [];
-  const tilesToErase: Array<any> = [];
+  const tilesToPaint: TilePaintOp[] = [];
+  const tilesToErase: TileEraseOp[] = [];
 
   for (const { tileX, tileY } of allTilesToUpdate.values()) {
     if (tileX < 0 || tileX >= currentMap.width || tileY < 0 || tileY >= currentMap.height) continue;
@@ -143,7 +149,7 @@ export async function applyTerrainShape(params: {
         tilesetId: activeTilesetId,
         tileIndex: matchingTile,
       });
-    } else if (corners.every((c: any) => c === null)) {
+    } else if (corners.every((c) => c === null)) {
       tilesToErase.push({ x: tileX, y: tileY });
     }
   }

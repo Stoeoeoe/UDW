@@ -2,26 +2,28 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect } from 'vitest';
 import { useEditorStore } from '../../../store/useEditorStore';
 
+type MockProps = { children?: React.ReactNode } & Record<string, unknown>;
+
 // Mock Chakra primitives to avoid jsdom CSS parsing issues in tests
 vi.mock('@chakra-ui/react', async () => {
   const React = await vi.importActual('react');
   return {
     // layout primitives
-    Flex: (props: any) => React.createElement('div', props, props.children),
-    VStack: (props: any) => React.createElement('div', props, props.children),
-    HStack: (props: any) => React.createElement('div', props, props.children),
-    Box: (props: any) => React.createElement('div', props, props.children),
-    Text: (props: any) => React.createElement('div', props, props.children),
-    Heading: (props: any) => React.createElement('div', props, props.children),
-    Input: (props: any) => React.createElement('input', props),
-    Select: (props: any) => React.createElement('select', props, props.children),
-    FormControl: (props: any) => React.createElement('div', props, props.children),
-    FormLabel: (props: any) => React.createElement('label', props, props.children),
-    Circle: (props: any) => React.createElement('div', props, props.children),
-    Button: (props: any) => React.createElement('button', props, props.children),
-    IconButton: (props: any) => React.createElement('button', props, props.children),
-    Divider: (props: any) => React.createElement('hr', props),
-    Badge: (props: any) => React.createElement('span', props, props.children),
+    Flex: (props: MockProps) => React.createElement('div', props, props.children),
+    VStack: (props: MockProps) => React.createElement('div', props, props.children),
+    HStack: (props: MockProps) => React.createElement('div', props, props.children),
+    Box: (props: MockProps) => React.createElement('div', props, props.children),
+    Text: (props: MockProps) => React.createElement('div', props, props.children),
+    Heading: (props: MockProps) => React.createElement('div', props, props.children),
+    Input: (props: MockProps) => React.createElement('input', props),
+    Select: (props: MockProps) => React.createElement('select', props, props.children),
+    FormControl: (props: MockProps) => React.createElement('div', props, props.children),
+    FormLabel: (props: MockProps) => React.createElement('label', props, props.children),
+    Circle: (props: MockProps) => React.createElement('div', props, props.children),
+    Button: (props: MockProps) => React.createElement('button', props, props.children),
+    IconButton: (props: MockProps) => React.createElement('button', props, props.children),
+    Divider: (props: MockProps) => React.createElement('hr', props),
+    Badge: (props: MockProps) => React.createElement('span', props, props.children),
     useDisclosure: () => ({
       isOpen: false,
       onOpen: () => {},
@@ -34,15 +36,15 @@ vi.mock('@chakra-ui/react', async () => {
 vi.mock('../../common/EditorModal', async () => {
   const React = await vi.importActual('react');
   return {
-    EditorModal: (props: any) => React.createElement('div', props, props.children),
-    default: (props: any) => React.createElement('div', props, props.children),
+    EditorModal: (props: MockProps) => React.createElement('div', props, props.children),
+    default: (props: MockProps) => React.createElement('div', props, props.children),
   };
 });
 
 vi.mock('./PropertyDefinitionEditor', async () => {
   const React = await vi.importActual('react');
   return {
-    PropertyDefinitionEditor: (props: any) => React.createElement('div', props, null),
+    PropertyDefinitionEditor: (props: MockProps) => React.createElement('div', props, null),
   };
 });
 
@@ -59,8 +61,12 @@ const sampleType = {
 };
 
 describe('EntityEditor', () => {
+  const mockedStore = useEditorStore as unknown as {
+    setState: (state: Record<string, unknown>) => void;
+  };
+
   beforeEach(() => {
-    useEditorStore.setState({
+    mockedStore.setState({
       entityTypes: [sampleType],
       selectedEntityTypeId: null,
     });
@@ -68,7 +74,7 @@ describe('EntityEditor', () => {
 
   it('selects an entity from the grid', async () => {
     const setSelectedEntityType = vi.fn();
-    useEditorStore.setState({ setSelectedEntityType });
+    mockedStore.setState({ setSelectedEntityType });
 
     render(<EntityEditor />);
 
@@ -81,7 +87,7 @@ describe('EntityEditor', () => {
 
   it('edits display name and calls updateEntityType', async () => {
     const updateEntityType = vi.fn().mockResolvedValue(undefined);
-    useEditorStore.setState({
+    mockedStore.setState({
       updateEntityType,
       selectedEntityTypeId: 'chest',
     });

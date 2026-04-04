@@ -1,18 +1,21 @@
 import { buildPatternFromSelection } from './tileUtils';
+import type { TilePattern } from './tileUtils';
+import type { Tileset } from '../types/schema';
+
+interface SampledPattern {
+  tilesetId: string;
+  pattern: (number | null)[][];
+  width: number;
+  height: number;
+}
 
 export function getPattern(params: {
   activeTool: string | null;
-  sampledPattern: any;
+  sampledPattern: SampledPattern | null;
   selectedTileIndices: number[] | null;
   activeTilesetId: string | null;
-  tilesets: Map<string, any>;
-}): {
-  pattern: (number | null)[][];
-  patternW: number;
-  patternH: number;
-  minCol: number;
-  minRow: number;
-} | null {
+  tilesets: Map<string, Tileset>;
+}): TilePattern | null {
   const { activeTool, sampledPattern, selectedTileIndices, activeTilesetId, tilesets } = params;
 
   if (activeTool === 'random') return null;

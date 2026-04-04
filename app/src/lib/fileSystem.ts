@@ -31,7 +31,7 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
 }
 
 interface FileSystemWritableFileStream extends WritableStream {
-  write(data: any): Promise<void>;
+  write(data: Blob | BufferSource | string): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -40,7 +40,7 @@ declare global {
     showDirectoryPicker(options?: {
       mode?: 'read' | 'readwrite';
     }): Promise<FileSystemDirectoryHandle>;
-    showOpenFilePicker(options?: any): Promise<FileSystemFileHandle[]>;
+    showOpenFilePicker(options?: unknown): Promise<FileSystemFileHandle[]>;
   }
 }
 
@@ -49,7 +49,7 @@ export class FileSystemManager {
   private projectRoot: FileSystemDirectoryHandle | null = null; // Used for Web
 
   isElectron(): boolean {
-    return !!(window as any).ipcRenderer;
+    return 'ipcRenderer' in window;
   }
 
   /**
@@ -57,7 +57,7 @@ export class FileSystemManager {
    */
   async openProject(): Promise<{ project: Project; path: string }> {
     if (this.isElectron()) {
-      const result = await (window as any).ipcRenderer.invoke('app:open-project');
+      const result = await window.ipcRenderer.invoke('app:open-project');
       if (!result) throw new Error('Open project cancelled.');
 
       this.projectPath = result.projectPath;
@@ -83,7 +83,7 @@ export class FileSystemManager {
    */
   async loadProjectByPath(path: string): Promise<{ project: Project; path: string }> {
     if (this.isElectron()) {
-      const result = await (window as any).ipcRenderer.invoke('app:load-project-by-path', path);
+      const result = await window.ipcRenderer.invoke('app:load-project-by-path', path);
       this.projectPath = result.projectPath;
       return { project: result.project, path: result.projectPath };
     } else {
@@ -96,7 +96,7 @@ export class FileSystemManager {
    */
   async createProject(projectConfig: Project): Promise<{ path: string }> {
     if (this.isElectron()) {
-      const result = await (window as any).ipcRenderer.invoke('app:create-project', projectConfig);
+      const result = await window.ipcRenderer.invoke('app:create-project', projectConfig);
       if (!result) throw new Error('Create project cancelled.');
 
       this.projectPath = result.projectPath;
@@ -119,10 +119,10 @@ export class FileSystemManager {
    */
   async loadAllMaps(): Promise<GameMap[]> {
     if (this.isElectron()) {
-      const maps = await (window as any).ipcRenderer.invoke('app:fs-read-dir', {
+      const maps = (await window.ipcRenderer.invoke('app:fs-read-dir', {
         projectPath: this.projectPath,
         subDir: 'maps',
-      });
+      })) as GameMap[];
       return maps.map(migrateMapToEncodedData);
     } else {
       if (!this.projectRoot) throw new Error('No project open.');
@@ -144,10 +144,10 @@ export class FileSystemManager {
    */
   async loadAllTilesets(): Promise<Tileset[]> {
     if (this.isElectron()) {
-      return await (window as any).ipcRenderer.invoke('app:fs-read-dir', {
+      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
         projectPath: this.projectPath,
         subDir: 'tilesets',
-      });
+      })) as Tileset[];
     } else {
       if (!this.projectRoot) throw new Error('No project open.');
       const tilesets: Tileset[] = [];
@@ -165,9 +165,9 @@ export class FileSystemManager {
   /**
    * Save a JSON file (Map, Tileset, or Project)
    */
-  async saveJson(subDir: 'maps' | 'tilesets' | '', filename: string, data: any): Promise<void> {
+  async saveJson(subDir: 'maps' | 'tilesets' | '', filename: string, data: unknown): Promise<void> {
     if (this.isElectron()) {
-      await (window as any).ipcRenderer.invoke('app:fs-write-json', {
+      await window.ipcRenderer.invoke('app:fs-write-json', {
         projectPath: this.projectPath,
         subDir,
         filename,
@@ -185,7 +185,7 @@ export class FileSystemManager {
    */
   async deleteJson(subDir: 'maps' | 'tilesets' | '', filename: string): Promise<void> {
     if (this.isElectron()) {
-      await (window as any).ipcRenderer.invoke('app:fs-delete-json', {
+      await window.ipcRenderer.invoke('app:fs-delete-json', {
         projectPath: this.projectPath,
         subDir,
         filename,
@@ -203,7 +203,7 @@ export class FileSystemManager {
   async saveAsset(filename: string, blob: Blob): Promise<string> {
     if (this.isElectron()) {
       const buffer = await blob.arrayBuffer();
-      return await (window as any).ipcRenderer.invoke('app:fs-write-asset', {
+      return await window.ipcRenderer.invoke('app:fs-write-asset', {
         projectPath: this.projectPath,
         filename,
         buffer: new Uint8Array(buffer),
@@ -224,7 +224,7 @@ export class FileSystemManager {
    */
   async loadAsset(relativePath: string): Promise<Blob> {
     if (this.isElectron()) {
-      const data = await (window as any).ipcRenderer.invoke('app:fs-read-asset', {
+      const data = await window.ipcRenderer.invoke('app:fs-read-asset', {
         projectPath: this.projectPath,
         relativePath,
       });
@@ -243,7 +243,7 @@ export class FileSystemManager {
 
   async selectAsset(): Promise<string | null> {
     if (this.isElectron()) {
-      return await (window as any).ipcRenderer.invoke('app:select-asset');
+      return await window.ipcRenderer.invoke('app:select-asset');
     }
     return null; // Browser should use standard <input type="file">
   }
@@ -251,9 +251,9 @@ export class FileSystemManager {
   /**
    * Read an arbitrary JSON file from the project (root or subdir)
    */
-  async readJson(subDir: string, filename: string): Promise<any | null> {
+  async readJson(subDir: string, filename: string): Promise<unknown | null> {
     if (this.isElectron()) {
-      return await (window as any).ipcRenderer.invoke('app:fs-read-json', {
+      return await window.ipcRenderer.invoke('app:fs-read-json', {
         projectPath: this.projectPath,
         subDir,
         filename,
@@ -276,7 +276,7 @@ export class FileSystemManager {
 
   async readFileAsBlob(filePath: string): Promise<Blob> {
     if (this.isElectron()) {
-      const data = await (window as any).ipcRenderer.invoke('app:read-file-buffer', filePath);
+      const data = await window.ipcRenderer.invoke('app:read-file-buffer', filePath);
       return new Blob([data]);
     }
     throw new Error('Direct file reading from path is only supported in Electron.');
@@ -285,7 +285,7 @@ export class FileSystemManager {
   private async writeJSONWeb(
     dirHandle: FileSystemDirectoryHandle,
     filename: string,
-    data: any,
+    data: unknown,
   ): Promise<void> {
     const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
     const writable = await fileHandle.createWritable();

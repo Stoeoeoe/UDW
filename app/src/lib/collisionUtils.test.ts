@@ -34,7 +34,7 @@ describe('collisionUtils', () => {
       [0.5, 0.5],
       [0, 0],
     ];
-    const norm = normalizePolygonPoints(pts as any, 16, 16);
+    const norm = normalizePolygonPoints(pts, 16, 16);
     expect(norm.length).toBe(2);
     expect(norm[0][0]).toBeCloseTo(0);
   });
@@ -68,7 +68,7 @@ describe('collisionUtils', () => {
   });
 
   it('converts polygon shape points to normalized polygon', () => {
-    const shape: any = {
+    const shape = {
       type: 'polygon',
       points: [
         [0, 0],
@@ -82,7 +82,7 @@ describe('collisionUtils', () => {
   });
 
   it('returns full tile polygon for full collision', () => {
-    const poly = getPolygonFromCollision({ type: 'full' } as any, 16, 16);
+    const poly = getPolygonFromCollision({ type: 'full' }, 16, 16);
     expect(poly).toEqual(FULL_TILE_POLYGON.map((p) => [p[0], p[1]]));
   });
 
@@ -91,7 +91,7 @@ describe('collisionUtils', () => {
       [0, 0],
       [1, 0],
       [1, 1],
-    ] as any;
+    ];
     const col = buildPolygonCollision(pts);
     expect(col.type).toBe('complex');
     expect(col.shapes?.[0]?.type).toBe('polygon');

@@ -8,7 +8,16 @@
  * This reduces JSON size significantly compared to "tilesetId:index" strings.
  */
 
-import { Map as GameMap } from '../types/schema';
+import { Layer, Map as GameMap } from '../types/schema';
+
+type MigratableLayer = Omit<Layer, 'data'> & {
+  data?: (string | number | null)[][];
+};
+
+type MigratableMap = Omit<GameMap, 'layers' | 'tilesetRefs'> & {
+  layers: MigratableLayer[];
+  tilesetRefs?: string[];
+};
 
 /**
  * Encode a tile reference string to a number
@@ -87,7 +96,7 @@ export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[
 /**
  * Migrate a map from string-based data to encoded data
  */
-export function migrateMapToEncodedData(map: any): GameMap {
+export function migrateMapToEncodedData(map: MigratableMap): GameMap {
   if (!map.tilesetRefs) {
     // Build tilesetRefs from data
     map.tilesetRefs = buildTilesetRefsFromData(map.layers);
@@ -100,5 +109,5 @@ export function migrateMapToEncodedData(map: any): GameMap {
     }
   }
 
-  return map as GameMap;
+  return map as unknown as GameMap;
 }

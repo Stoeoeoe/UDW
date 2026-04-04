@@ -45,10 +45,10 @@ export const TilesetPanel: React.FC = () => {
           status: 'info',
           duration: 2000,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast({
           title: 'Error deleting tileset',
-          description: err.message,
+          description: err instanceof Error ? err.message : 'Unknown error',
           status: 'error',
         });
       }

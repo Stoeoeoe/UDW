@@ -44,7 +44,7 @@ describe('useEditorStore', () => {
     const mockPath = '/test/path';
 
     const { loadProject } = useEditorStore.getState();
-    await loadProject(mockPath, mockProject as any);
+    await loadProject(mockPath, mockProject);
 
     const state = useEditorStore.getState();
     expect(state.project).toEqual(mockProject);
@@ -79,10 +79,10 @@ describe('useEditorStore', () => {
       metadata: { author: '', description: '' },
     };
 
-    await loadProject('/path', initialProject as any);
+    await loadProject('/path', initialProject);
 
     const updatedProject = { ...initialProject, name: 'Updated Name' };
-    await updateProject(updatedProject as any);
+    await updateProject(updatedProject);
 
     expect(useEditorStore.getState().project?.name).toBe('Updated Name');
   });
@@ -125,7 +125,7 @@ describe('useEditorStore', () => {
 
     beforeEach(() => {
       const { setCurrentMap } = useEditorStore.getState();
-      setCurrentMap(mockMap as any);
+      setCurrentMap(mockMap);
     });
 
     it('should paint a tile in the base layer', () => {
@@ -243,7 +243,7 @@ describe('useEditorStore', () => {
     };
 
     beforeEach(() => {
-      useEditorStore.getState().setCurrentMap(mapWithLayers as any);
+      useEditorStore.getState().setCurrentMap(mapWithLayers);
     });
 
     it('should switch to entitySelect when selecting an entity layer while on a tile tool', () => {
@@ -352,20 +352,18 @@ describe('useEditorStore', () => {
     };
 
     it('should inject a new layer definition into the open map', async () => {
-      await useEditorStore.getState().loadProject('/test', mockProject as any);
-      useEditorStore.getState().setCurrentMap(mapWithoutDefinitionLayer as any);
+      await useEditorStore.getState().loadProject('/test', mockProject);
+      useEditorStore.getState().setCurrentMap(mapWithoutDefinitionLayer);
 
       const newDef = {
         id: 'my-collision',
         name: 'Collision',
-        kind: 'collision' as const,
-        required: true,
-        defaultVisible: true,
-        defaultLocked: false,
-        defaultOpacity: 1,
+        type: 'tile' as const,
+        color: '#ff00ff',
+        zIndex: 10,
       };
 
-      await useEditorStore.getState().addLayerDefinition(newDef as any);
+      await useEditorStore.getState().addLayerDefinition(newDef);
 
       const map = useEditorStore.getState().currentMap;
       expect(map?.layers.some((l) => l.id === 'my-collision')).toBe(true);
@@ -389,20 +387,18 @@ describe('useEditorStore', () => {
         ],
       };
 
-      await useEditorStore.getState().loadProject('/test', mockProject as any);
-      useEditorStore.getState().setCurrentMap(mapWithLayer as any);
+      await useEditorStore.getState().loadProject('/test', mockProject);
+      useEditorStore.getState().setCurrentMap(mapWithLayer);
 
       const existingDef = {
         id: 'my-collision',
         name: 'Collision',
-        kind: 'collision' as const,
-        required: true,
-        defaultVisible: true,
-        defaultLocked: false,
-        defaultOpacity: 1,
+        type: 'tile' as const,
+        color: '#ff00ff',
+        zIndex: 10,
       };
 
-      await useEditorStore.getState().addLayerDefinition(existingDef as any);
+      await useEditorStore.getState().addLayerDefinition(existingDef);
 
       const map = useEditorStore.getState().currentMap;
       const count = map?.layers.filter((l) => l.id === 'my-collision').length;

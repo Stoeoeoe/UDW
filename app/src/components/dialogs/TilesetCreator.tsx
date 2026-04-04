@@ -19,6 +19,7 @@ import {
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
+import type { TileDefinition } from '../../types/schema';
 
 interface Props {
   onCreate?: () => void;
@@ -100,7 +101,7 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
       const tileCount = columns * rows;
 
       // Build default tiles record
-      const tiles: Record<number, any> = {};
+      const tiles: Record<number, TileDefinition> = {};
       for (let i = 0; i < tileCount; i++) {
         const col = i % columns;
         const row = Math.floor(i / columns);

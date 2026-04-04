@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { AppLayout } from './AppLayout';
 
 const meta: Meta<typeof AppLayout> = {
@@ -25,7 +25,7 @@ const MockPanel = ({ title, color = 'bg-slate-800' }: { title: string; color?: s
 );
 
 const MockViewport = () => (
-  <div className="w-full h-full bg-[radial-gradient(#333_1px,transparent_1px)] [background-size:16px_16px] flex items-center justify-center text-slate-600">
+  <div className="w-full h-full bg-[radial-gradient(#333_1px,transparent_1px)] bg-size-[16px_16px] flex items-center justify-center text-slate-600">
     Grid Canvas Area
   </div>
 );

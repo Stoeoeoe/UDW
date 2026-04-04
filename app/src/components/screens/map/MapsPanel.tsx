@@ -8,7 +8,6 @@ import {
   Button,
   Spacer,
   Collapse,
-  Heading,
   useDisclosure,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';

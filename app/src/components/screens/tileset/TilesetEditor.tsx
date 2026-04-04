@@ -122,10 +122,10 @@ export const TilesetEditor: React.FC = () => {
                         try {
                           await useEditorStore.getState().deleteTileset(ts.id);
                           toast({ title: 'Tileset deleted', status: 'info' });
-                        } catch (err: any) {
+                        } catch (err: unknown) {
                           toast({
                             title: 'Failed to delete',
-                            description: err.message,
+                            description: err instanceof Error ? err.message : 'Unknown error',
                             status: 'error',
                           });
                         }
@@ -178,10 +178,10 @@ export const TilesetEditor: React.FC = () => {
         console.warn('Failed to load sprite after setting image:', e);
       }
       toast({ title: 'Tileset image set', status: 'success' });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: 'Failed to set image',
-        description: e?.message || String(e),
+        description: e instanceof Error ? e.message : String(e),
         status: 'error',
       });
     }

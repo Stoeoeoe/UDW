@@ -14,7 +14,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
-import { Tileset } from '../../types/schema';
+import { TileDefinition, Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 
@@ -59,10 +59,10 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
         blob,
       });
       setTilesetName(name.replace(/\.[^/.]+$/, ''));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: 'File error',
-        description: e.message,
+        description: e instanceof Error ? e.message : 'Unknown error',
         status: 'error',
       });
     } finally {
@@ -97,7 +97,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
       const tileCount = columns * rows;
 
       // Generate default tile definitions for every tile
-      const tiles: Record<number, any> = {};
+      const tiles: Record<number, TileDefinition> = {};
       for (let i = 0; i < tileCount; i++) {
         const col = i % columns;
         const row = Math.floor(i / columns);
@@ -131,10 +131,10 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
         duration: 3000,
       });
       onImport();
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({
         title: 'Import Failed',
-        description: e.message,
+        description: e instanceof Error ? e.message : 'Unknown error',
         status: 'error',
       });
     } finally {

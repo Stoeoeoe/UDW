@@ -1,20 +1,23 @@
-import { resolveEntities, resolveTileAt } from './mapUtils';
-import { DEFAULT_TILE_SIZE } from '../config/constants';
+interface PointerHelperArgs {
+  e: PointerEvent;
+  viewport: unknown;
+  refs: Record<string, unknown>;
+  getState: () => unknown;
+  actions: unknown;
+}
+
+interface PointerHelpers {
+  onPointerDown: (args: PointerHelperArgs) => void;
+  onPointerMove: (args: PointerHelperArgs) => void;
+  onPointerUp: (args: PointerHelperArgs) => void;
+}
 
 export function createPointerHandlers(params: {
-  viewport: any;
-  refs: {
-    isDrawingRef: any;
-    drawStartRef: any;
-    lineAnchorRef: any;
-    isSamplingRef: any;
-    sampleStartRef: any;
-    lastTerrainPaintRef: any;
-    terrainGridRef: any;
-  };
-  getState: () => any;
-  actions: any;
-  helpers: any;
+  viewport: unknown;
+  refs: Record<string, unknown>;
+  getState: () => unknown;
+  actions: unknown;
+  helpers: PointerHelpers;
 }) {
   const { viewport, refs, getState, actions, helpers } = params;
 

@@ -5,6 +5,7 @@ import { enableMapSet } from 'immer';
 enableMapSet();
 
 import { useEditorStore } from './useEditorStore';
+import type { TileDefinition, Tileset } from '../types/schema';
 
 // Mock fileSystem and saveManager used by the store
 vi.mock('../lib/fileSystem', () => ({
@@ -38,21 +39,25 @@ describe('tileset save scheduling', () => {
     const fs = await import('../lib/fileSystem');
 
     // Add a tileset into the store
-    const ts = {
+    const ts: Tileset = {
+      version: 1,
+      name: 'TS1',
       id: 'ts1',
       spriteSheet: 's.png',
       tileWidth: 16,
       tileHeight: 16,
       columns: 4,
-      tiles: [{ collision: { type: 'none' } }],
-    } as any;
+      tileCount: 1,
+      tiles: { 0: { collision: { type: 'none' } } },
+      wangSets: [],
+    };
     // Add the tileset via store action (this will trigger initial save)
-    await useEditorStore.getState().addTileset(ts as any);
+    await useEditorStore.getState().addTileset(ts);
 
     // Update a tile definition which should schedule another save
     useEditorStore.getState().updateTileDefinition('ts1', 0, {
       collision: { type: 'full' },
-    } as any);
+    } as Partial<TileDefinition>);
 
     // Advance timers past debounce threshold (300ms)
     await vi.advanceTimersByTimeAsync(350);
@@ -61,7 +66,7 @@ describe('tileset save scheduling', () => {
     await Promise.resolve();
 
     expect(fs.fileSystem.saveJson).toHaveBeenCalled();
-    const calls = (fs.fileSystem.saveJson as any).mock.calls;
+    const calls = vi.mocked(fs.fileSystem.saveJson).mock.calls;
     const last = calls[calls.length - 1];
     expect(last[0]).toBe('tilesets');
     expect(last[1]).toBe('ts1.tileset.json');

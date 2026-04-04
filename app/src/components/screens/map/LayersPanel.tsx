@@ -201,7 +201,7 @@ export const LayersPanel: React.FC = () => {
       toast({ title: 'Layer updated', status: 'success', duration: 1500 });
     } else {
       const id = `layer-${Date.now()}`;
-      const base: any = {
+      const base: Layer = {
         id,
         name: formData.name,
         kind: formData.kind,

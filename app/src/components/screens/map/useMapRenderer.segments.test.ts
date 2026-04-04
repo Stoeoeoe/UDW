@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { quantizeOverlayPoint, addPolygonSegments, makeSegmentKey } from './useMapRenderer';
 
+type Segment = { a: { x: number; y: number }; b: { x: number; y: number } };
+
 describe('useMapRenderer segment merging', () => {
   it('cancels shared edges between adjacent polygons', () => {
     // Two adjacent 16px tiles: left tile at (0,0)-(16,16), right tile at (16,0)-(32,16)
@@ -18,7 +20,7 @@ describe('useMapRenderer segment merging', () => {
       quantizeOverlayPoint(16, 16),
     ];
 
-    const map = new Map<string, any>();
+    const map = new Map<string, Segment>();
     addPolygonSegments(map, left);
     addPolygonSegments(map, right);
 

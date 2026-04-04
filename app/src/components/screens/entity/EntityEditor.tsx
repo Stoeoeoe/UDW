@@ -37,6 +37,11 @@ const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'decoration', label: 'Decoration', icon: '🌿' },
 ];
 
+type EditableEntityTypeKey = keyof Pick<
+  EntityType,
+  'displayName' | 'category' | 'group' | 'icon' | 'placeholderColor'
+>;
+
 /**
  * EntityEditor - Browse, create, edit, and delete entity type definitions.
  * Entity types are stored per-project and persisted to project.json.
@@ -76,9 +81,9 @@ export const EntityEditor: React.FC = () => {
     [entityTypes],
   );
 
-  const handlePropertyChange = (key: string, value: any) => {
+  const handlePropertyChange = (key: EditableEntityTypeKey, value: unknown) => {
     if (selectedEntityTypeId && selectedType) {
-      updateEntityType(selectedEntityTypeId, { [key]: value });
+      updateEntityType(selectedEntityTypeId, { [key]: value } as Partial<EntityType>);
     }
   };
 
