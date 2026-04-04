@@ -1,18 +1,18 @@
 import React from 'react';
-import { VStack, HStack, Text, Box, Divider } from '@chakra-ui/react';
+import { VStack, HStack, Text, Box, Divider, Button, useDisclosure } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
+import { AutotileGeneratorDialog } from './AutotileGeneratorDialog';
 
 interface TilesetTerrainPanelProps {
   tileset: Tileset;
 }
 
 export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tileset }) => {
-  // tileset prop available for future terrain-tileset integration
-  void tileset;
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
   const setSelectedTerrain = useEditorStore((state) => state.setSelectedTerrain);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
     <VStack align="stretch" spacing={4} p={6}>
@@ -93,6 +93,22 @@ export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tilese
           ))}
         </VStack>
       )}
+
+      <Divider borderColor="gray.800" />
+
+      <VStack align="stretch" spacing={2}>
+        <Text fontSize="xs" color="gray.500" textTransform="uppercase" fontWeight="black">
+          Auto Tile Utility
+        </Text>
+        <Text fontSize="sm" color="gray.400">
+          Generate transition tiles from two terrain sample groups in this tileset.
+        </Text>
+        <Button size="sm" colorScheme="blue" onClick={onOpen} isDisabled={terrainTypes.length < 2}>
+          Generate Auto Tiles
+        </Button>
+      </VStack>
+
+      <AutotileGeneratorDialog isOpen={isOpen} onClose={onClose} tileset={tileset} />
     </VStack>
   );
 };
