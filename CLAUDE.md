@@ -1,8 +1,6 @@
-# CLAUDE.md
+This is the codebase for a stardew-valley like 2D Unity game set in ancient rome.
 
-This file provides guidance to Claude Code when working with this repository.
-
-## Architecture
+# Architecture
 
 ### Singleton Managers
 

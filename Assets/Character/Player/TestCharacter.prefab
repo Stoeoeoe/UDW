@@ -45,7 +45,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce352a4ee41450409cea262601501e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.MovementAbility
-  sceneReadyDelay: 0.5
   walkSpeed: 4
   runSpeed: 7
   baseFootstepInterval: 0.4
@@ -64,7 +63,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce94515ad334573ab4f4b9f3ea9725b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.CharacterPerformPrimaryActionAbility
-  sceneReadyDelay: 0.5
 --- !u!1 &2203920392029053715
 GameObject:
   m_ObjectHideFlags: 0
@@ -618,15 +616,15 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   DetectionMode: 0
-  RequiresLineOfSight: 1
+  RequiresLineOfSight: 0
   BlocksLineOfSight:
     serializedVersion: 2
     m_Bits: 2305
   TestLOSTargetsOnly: 0
   NumberOfRays: 1
-  MinimumVisibility: 0.5
+  MinimumVisibility: 1
   LineOfSightUpdateMode: 0
-  CheckLineOfSightInterval: 1
+  CheckLineOfSightInterval: 0.1
 --- !u!50 &1731744507990894264
 Rigidbody2D:
   serializedVersion: 5

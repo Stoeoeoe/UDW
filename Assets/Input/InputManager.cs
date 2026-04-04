@@ -26,7 +26,7 @@ namespace Input
         public bool PreviousSlotPressed => _actions.PlayerControls.PreviousSlot.WasPerformedThisFrame();
         public float ChangeSlotAxis => _actions.PlayerControls.ChangeSlotAxis.ReadValue<float>();
 
-        public bool PerformPrimaryActionDown => _actions.PlayerControls.PerformPrimaryAction.WasPerformedThisFrame();
+        public bool PerformPrimaryActionDown => _actions.PlayerControls.PerformPrimaryAction.WasPressedThisFrame();
         public bool PerformPrimaryActionHeld => _actions.PlayerControls.PerformPrimaryAction.IsPressed();
         public bool PerformPrimaryActionReleased => _actions.PlayerControls.PerformPrimaryAction.WasReleasedThisFrame();
 

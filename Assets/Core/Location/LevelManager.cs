@@ -92,21 +92,21 @@ namespace Core.Location
         {
             SceneReady = false;
 
-            // Phase 1: Initialize map data (direct call, must happen before character is placed)
+            // Initialize map data (direct call, must happen before character is placed)
             MapManager.Instance.InitializeForLocation(locationData);
 
-            // Phase 2: Spawn and place character
+            // Spawn and place character
             var character = SpawnOrFindPlayer();
             PlaceCharacterAtSpawn(character);
 
-            // Phase 3: Ensure character runtime initialization
+            // Ensure character runtime initialization
             character.EnsureRuntimeInitialized();
 
-            // Phase 4: Notify all registered lifecycle components
+            // Notify all registered lifecycle components
             foreach (var component in _lifecycleComponents)
                 component.OnLocationEnter(locationData);
 
-            // Phase 5: Fade in
+            // Fade in
             yield return Fade(0f);
             
             _transitionContext?.Clear();

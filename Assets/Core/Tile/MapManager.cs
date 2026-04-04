@@ -38,8 +38,54 @@ namespace Core.Tile
 
         // Farmland state persisted across scene loads, keyed by locationId → tile coords
         [Flags]
-        private enum FarmlandFlags { None = 0, Plowed = 1, Irrigated = 2 }
+        private enum FarmlandFlags
+        {
+            None = 0,
+            Plowed = 1,
+            Irrigated = 2
+        }
+
         private readonly Dictionary<string, Dictionary<Vector2Int, FarmlandFlags>> _farmlandState = new();
+
+        // TODO: Fix calculation
+        public Bounds CurrentBounds
+        {
+            get
+            {
+                // If we have a terrain tilemap, compute bounds using its cellBounds and cellSize
+                if (_terrainTilemap != null)
+                {
+                    var cellBounds = _terrainTilemap.cellBounds;
+                    var cellSize = _terrainTilemap.cellSize;
+
+                    // World position of the minimum cell corner
+                    var worldMin = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMin, cellBounds.yMin, 0));
+                    // World position at the exclusive max indices; add cellSize to include the last cell area
+                    var worldMax = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMax, cellBounds.yMax, 0)) + (Vector3)cellSize;
+
+                    var center = (worldMin + worldMax) * 0.5f;
+                    var size = worldMax - worldMin;
+                    return new Bounds(center, size);
+                }
+
+                // Fallback to an approximation using SuperMap if available
+                if (_currentMap != null)
+                {
+                    try
+                    {
+                        var width = (_currentMap.m_Width / (float)_currentMap.m_TileWidth);
+                        var height = (_currentMap.m_Height / (float)_currentMap.m_TileHeight);
+                        return new Bounds(_currentMap.transform.position, new Vector3(width, height, 0f));
+                    }
+                    catch
+                    {
+                        // ignore and return empty bounds
+                    }
+                }
+
+                return new Bounds(Vector3.zero, Vector3.zero);
+            }
+        }
 
         // TODO: Rework
         public Dictionary<Vector2Int, PlaceableItem> Items = new();
@@ -163,7 +209,7 @@ namespace Core.Tile
         public Vector2Int GetCurrentTileCoordinates(GameCharacter character)
         {
             var worldPosition = character.ToolInteractionAnchor.position;
-                var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
+            var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
             return new Vector2Int(cellPosition.x, cellPosition.y);
         }
 
@@ -248,9 +294,9 @@ namespace Core.Tile
                 _farmlandState[locationId] = tileStates = new Dictionary<Vector2Int, FarmlandFlags>();
 
             var current = tileStates.GetValueOrDefault(coords);
-            if (plowed == true)   current |= FarmlandFlags.Plowed;
-            if (plowed == false)  current &= ~FarmlandFlags.Plowed;
-            if (irrigated == true)  current |= FarmlandFlags.Irrigated;
+            if (plowed == true) current |= FarmlandFlags.Plowed;
+            if (plowed == false) current &= ~FarmlandFlags.Plowed;
+            if (irrigated == true) current |= FarmlandFlags.Irrigated;
             if (irrigated == false) current &= ~FarmlandFlags.Irrigated;
             tileStates[coords] = current;
         }
@@ -265,7 +311,7 @@ namespace Core.Tile
                 return new List<TileData>();
 
             var originCoordinates = character.CurrentTileCoordinates;
-            var facing            = character.Orientation.FacingDirection;
+            var facing = character.Orientation.FacingDirection;
 
             return config.AffectedTileOffsets
                 .Select(offset => RotateOffset(offset, facing))
@@ -277,10 +323,10 @@ namespace Core.Tile
         /// <summary>Rotates a tile offset based on cardinal facing direction (Vector2).</summary>
         private static Vector2Int RotateOffset(Vector2Int offset, Vector2 facing)
         {
-            if (facing.x > 0.5f)  return new Vector2Int(offset.y, -offset.x);  // East
+            if (facing.x > 0.5f) return new Vector2Int(offset.y, -offset.x); // East
             if (facing.y < -0.5f) return new Vector2Int(-offset.x, -offset.y); // South
-            if (facing.x < -0.5f) return new Vector2Int(-offset.y, offset.x);  // West
-            return offset;                                                        // North (default)
+            if (facing.x < -0.5f) return new Vector2Int(-offset.y, offset.x); // West
+            return offset; // North (default)
         }
 
         #endregion
@@ -314,19 +360,20 @@ namespace Core.Tile
 
         private bool LoadTilemapReferences()
         {
-            var superMap = FindFirstObjectByType<SuperMap>();
-            if (!superMap)
+            _currentMap = FindFirstObjectByType<SuperMap>();
+
+            if (!_currentMap)
             {
                 Debug.LogWarning("[MapManager] No SuperMap found in scene.");
                 return false;
             }
 
-            var superMapTransform = superMap.transform;
-            _terrainTilemap   = FindTilemap(superMapTransform, "Terrain");
-            _farmlandTilemap  = FindTilemap(superMapTransform, "FarmLand");
-            _plowedTilemap    = FindTilemap(superMapTransform, "FarmLand_Plowed");
+            var superMapTransform = _currentMap.transform;
+            _terrainTilemap = FindTilemap(superMapTransform, "Terrain");
+            _farmlandTilemap = FindTilemap(superMapTransform, "FarmLand");
+            _plowedTilemap = FindTilemap(superMapTransform, "FarmLand_Plowed");
             _irrigatedTilemap = FindTilemap(superMapTransform, "FarmLand_Irrigated");
-            OverlayTilemap    = FindTilemap(superMapTransform, "Overlay");
+            OverlayTilemap = FindTilemap(superMapTransform, "Overlay");
             return true;
         }
 
@@ -410,10 +457,13 @@ namespace Core.Tile
         private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData, int stageIndex = 0)
         {
             if (!PlantManager.Current.PlantData.TryGetValue(plantId, out var plantData)) return;
-            if (stageIndex >= plantData.growthStages.Count) return;
-            var instance = plantData.growthStages[stageIndex].representation
-                .CreateInstance(_plantParentGameObject.transform);
-            instance.transform.position = tileData.WorldPosition;
+
+            var go = new GameObject(plantData.label + "_" + plantId);
+            go.transform.SetParent(_plantParentGameObject.transform);
+            go.transform.position = tileData.WorldPosition;
+
+            var locationId = LevelManager.Instance.CurrentLocationData?.id;
+            go.AddComponent<FarmablePlant>().Initialize(locationId, pos, plantData, stageIndex);
         }
 
         #endregion
@@ -435,6 +485,7 @@ namespace Core.Tile
                     tile.FarmlandData?.Plow();
                     SetTileAt(_plowedTilemap, coords, plowedFarmlandTile);
                 }
+
                 if (flags.HasFlag(FarmlandFlags.Irrigated))
                 {
                     tile.FarmlandData?.Irrigate();

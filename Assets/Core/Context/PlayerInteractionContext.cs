@@ -1,6 +1,7 @@
 using System;
 using Character;
 using Core.Location;
+using Core.TimeAndWeather;
 using Interaction.Pointer;
 
 namespace Core.Context
@@ -47,7 +48,8 @@ namespace Core.Context
                 character?.CurrentlyHeldItem,
                 character?.ConditionState,
                 character?.MovementState,
-                UrDialogueManager.Instance.CurrentConversation
+                UrDialogueManager.Instance.CurrentConversation,
+                (UrTimeManager.Current as UrTimeManager)?.CurrentTime
             );
 
             if (CurrentSnapshot != null && CurrentSnapshot == snapshot)

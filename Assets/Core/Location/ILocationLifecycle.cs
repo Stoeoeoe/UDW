@@ -2,6 +2,7 @@ namespace Core.Location
 {
     /// <summary>
     /// Explicit location lifecycle hooks called by LevelManager in deterministic order.
+    /// IMPORTANT: Must be registered and unregistered in OnEnable/OnDisable
     /// </summary>
     public interface ILocationLifecycle
     {

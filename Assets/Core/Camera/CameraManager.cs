@@ -1,5 +1,8 @@
+using System;
 using Character;
 using Core.Events;
+using Core.Location;
+using Core.Tile;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -13,15 +16,15 @@ namespace Core.Camera
     /// Cutscene pattern: call ActivateVCam(cutsceneCam) to push it over the player cam via
     /// priority, then DeactivateVCam when done to hand control back.
     /// </summary>
-    public class CameraManager : Singleton<CameraManager>, IEventListener<MainCharacterChangedEvent>
+    public class CameraManager : Singleton<CameraManager>, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
     {
-        [Tooltip("The virtual camera used to follow the player. Auto-discovered if left empty.")]
-        [SerializeField]
+        [Tooltip("The virtual camera used to follow the player. Auto-discovered if left empty.")] [SerializeField]
         private CinemachineCamera playerFollowVCam;
 
-        [Tooltip("Base priority of the player follow cam. Cutscene cams should use a higher value.")]
-        [SerializeField]
+        [Tooltip("Base priority of the player follow cam. Cutscene cams should use a higher value.")] [SerializeField]
         private int playerFollowPriority = 10;
+
+        [SerializeField] CinemachineConfiner2D confiner;
 
         protected override void OnAwake()
         {
@@ -37,8 +40,17 @@ namespace Core.Camera
                 FollowTarget(existing.transform);
         }
 
-        void OnEnable()  => this.Subscribe<MainCharacterChangedEvent>();
-        void OnDisable() => this.Unsubscribe<MainCharacterChangedEvent>();
+        private void OnEnable()
+        {
+            this.Subscribe();
+            LevelManager.Instance.RegisterLifecycle(this);
+        }
+
+        private void OnDisable()
+        {
+            this.Unsubscribe();
+            LevelManager.Instance.UnregisterLifecycle(this);
+        }
 
         public void OnEvent(MainCharacterChangedEvent e)
         {
@@ -77,6 +89,53 @@ namespace Core.Camera
         {
             if (vcam != null)
                 vcam.Priority = 0;
+        }
+
+        public void OnLocationEnter(LocationData location)
+        {
+            if (confiner == null) return;
+
+            var bounds = MapManager.Instance.CurrentBounds;
+            var mapCollider = confiner.BoundingShape2D as BoxCollider2D;
+            if (!mapCollider)
+            {
+                throw new InvalidOperationException("Map collider is not a box collider.");
+            }
+            // Ignore empty bounds
+            if (bounds.size == Vector3.zero) return;
+
+            // Convert world-space center/size into the collider's local space (account for lossy scale)
+            var colliderTransform = mapCollider.transform;
+            var localCenter = colliderTransform.InverseTransformPoint(bounds.center);
+
+            // BoxCollider2D.size is expressed in local space units. To convert from world size, divide by lossyScale.
+            var lossy = colliderTransform.lossyScale;
+            var localSize = new Vector2(
+                (lossy.x != 0f) ? bounds.size.x / lossy.x : bounds.size.x,
+                (lossy.y != 0f) ? bounds.size.y / lossy.y : bounds.size.y
+            );
+
+            mapCollider.size = localSize;
+            mapCollider.offset = localCenter; 
+            // TODO: Check if we really always need to call this? Expensive operation, apparently!
+            confiner.InvalidateBoundingShapeCache();
+            if (!confiner.BoundingShapeIsBaked)
+            {
+                // Ensure we have a valid vcam to bake with; try to auto-find if not assigned
+                var bakeCam = playerFollowVCam ?? FindFirstObjectByType<CinemachineCamera>();
+                confiner.BakeBoundingShape(bakeCam, 5);
+            }
+            
+            // Also follow character
+            var character = MainCharacter.CurrentMainCharacter;
+            if (character)
+            {
+                FollowTarget(character.transform);
+            }
+        }
+
+        public void OnLocationLeave(LocationData location)
+        {
         }
     }
 }

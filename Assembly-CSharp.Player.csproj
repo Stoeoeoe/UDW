@@ -119,6 +119,7 @@
     <Compile Include="Assets\Interaction\Tools\Hammer\HammerAction.cs" />
     <Compile Include="Assets\SensorToolkit\src\Sensor.cs" />
     <Compile Include="Assets\Pixel Crushers\Common\Third Party Support\TopDown Engine Support\Scripts\SaveSystemTopDownEventListener.cs" />
+    <Compile Include="Assets\Core\TimeAndWeather\NewDayEvent.cs" />
     <Compile Include="Assets\SensorToolkit\SteeringRig.cs" />
     <Compile Include="Assets\Interaction\Tools\ToolActionRegistry.cs" />
     <Compile Include="Assets\Interaction\ActionRegistry.cs" />
@@ -146,7 +147,9 @@
     <Compile Include="Assets\Core\Tile\TileDebugger.cs" />
     <Compile Include="Assets\Util\IsExternalInit.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\Seasons\SeasonStartEvent.cs" />
+    <Compile Include="Assets\Plants\PlantGrowthEvent.cs" />
     <Compile Include="Assets\Character\Controller2D.cs" />
+    <Compile Include="Assets\Core\TimeAndWeather\UrTime.cs" />
     <Compile Include="Assets\SensorToolkit\FOVCollider.cs" />
     <Compile Include="Assets\Interaction\Tools\Stamina\Stamina.cs" />
     <Compile Include="Assets\InputSystem_Actions.cs" />
@@ -188,6 +191,7 @@
     <Compile Include="Assets\SensorToolkit\PlayMaker\SetSteeringDestination.cs" />
     <Compile Include="Assets\Core\Tile\TilemapLayer.cs" />
     <Compile Include="Assets\Interaction\Dialogue\UrDialogueSystemTrigger.cs" />
+    <Compile Include="Assets\Interaction\AdvanceDayInteractable.cs" />
     <Compile Include="Assets\SensorToolkit\PlayMaker\GetSteeredDirection2D.cs" />
     <Compile Include="Assets\Interaction\Tools\WateringJar\WateringJarAction.cs" />
     <Compile Include="Assets\Interaction\Pointer\PointerInteractableChangedEvent.cs" />

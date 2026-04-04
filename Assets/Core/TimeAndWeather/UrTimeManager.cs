@@ -14,6 +14,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Core.TimeAndWeather
 {
+    // TODO: Remove MMTimeManager
     public class UrTimeManager : MMTimeManager
     {
         [Header("Time Settings")] [SerializeField]
@@ -40,6 +41,7 @@ namespace Core.TimeAndWeather
         [SerializeField] protected Volume postProcessingVolume;
 
         [Header("Weather")] [SerializeField] protected Material noWeatherMaterial;
+
         // [SerializeField] protected Material _globalWeatherMaterial;
         protected WeatherRendererFeature weatherRendererFeature;
 
@@ -48,15 +50,20 @@ namespace Core.TimeAndWeather
         private Dictionary<Season, SeasonData> _seasonDataDict = new();
         private GameObject _weatherParentGo;
 
+        public UrTime CurrentTime => new(currentSeasonData.season, currentDaysInSeason, currentHoursInDay,
+                currentMinutesInHour);
 
         protected override void Awake()
         {
             base.Awake();
 
             var renderer = (GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset).GetRenderer(0);
-            var property = typeof(ScriptableRenderer).GetProperty("rendererFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
+            var property =
+                typeof(ScriptableRenderer).GetProperty("rendererFeatures",
+                    BindingFlags.NonPublic | BindingFlags.Instance);
             List<ScriptableRendererFeature> features = property.GetValue(renderer) as List<ScriptableRendererFeature>;
-            weatherRendererFeature = features.FirstOrDefault(f => f is WeatherRendererFeature) as WeatherRendererFeature;
+            weatherRendererFeature =
+                features.FirstOrDefault(f => f is WeatherRendererFeature) as WeatherRendererFeature;
 
             // weatherRendererFeature.Initialize(_globalWeatherMaterial);
 
@@ -67,7 +74,7 @@ namespace Core.TimeAndWeather
 
             // TODO: Load current time from save data
         }
-        
+
 
         public override void Initialization()
         {
@@ -128,7 +135,6 @@ namespace Core.TimeAndWeather
 
         public void StartNewDay()
         {
-            // TODO: Throw event
             currentDaysSinceStart++;
             currentHoursInDay = startOfDay;
             if (!currentSeasonData)
@@ -147,6 +153,8 @@ namespace Core.TimeAndWeather
             var newWeather = currentSeasonData.weatherData.GetRandomItem();
             StartCoroutine(UpdateWeather(newWeather));
             UpdateDayLight();
+            NewDayEvent.Trigger(currentDaysSinceStart);
+            Debug.Log("Starting day " + currentDaysSinceStart + " of season " + currentSeasonData.season);
         }
 
         public IEnumerator UpdateWeather(WeatherData weather)

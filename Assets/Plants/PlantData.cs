@@ -22,6 +22,16 @@ namespace Plants
         {
             return growthStages.Max(g => g.daysToReachStage <= daysPassedSincePlanting ? g : null);
         }
-       
+
+        public int GetGrowthStageIndexByDays(int daysPassedSincePlanting)
+        {
+            int best = 0;
+            for (int i = 0; i < growthStages.Count; i++)
+            {
+                if (growthStages[i].daysToReachStage <= daysPassedSincePlanting)
+                    best = i;
+            }
+            return best;
+        }
     }
 }

@@ -2,6 +2,7 @@ using System.Linq;
 using MoreMountains.Tools;
 using SuperTiled2Unity;
 using SuperTiled2Unity.Editor;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 

@@ -1,17 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using Core.Events;
 using Core.Location;
+using Core.TimeAndWeather;
 using MoreMountains.Tools;
 using UnityEngine;
 
 namespace Plants
 {
-    public class PlantManager : MMSingleton<PlantManager>
+    public class PlantManager : MMSingleton<PlantManager>,
+        IEventListener<NewDayEvent>
     {
         /// <summary>
         /// List of all plant states (seeds, saplings, grown plants) by Location ID and position.
         /// </summary>
-        /// <returns></returns>
         protected Dictionary<string, Dictionary<Vector2Int, PlantState>> gamePlantStates = new();
 
         protected Dictionary<string, PlantData> plantData = new();
@@ -22,6 +24,28 @@ namespace Plants
         {
             base.Awake();
             plantData = Resources.LoadAll<PlantData>("Plants").ToDictionary(d => d.plantId);
+        }
+
+        protected void OnEnable() => this.Subscribe<NewDayEvent>();
+        protected void OnDisable() => this.Unsubscribe<NewDayEvent>();
+
+        public void OnEvent(NewDayEvent e)
+        {
+            foreach (var (locationId, plants) in gamePlantStates)
+            {
+                foreach (var (pos, state) in plants)
+                {
+                    if (!plantData.TryGetValue(state.plantID, out var data)) continue;
+
+                    state.daysPassedSincePlanting++;
+                    var newStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
+                    if (newStageIndex != state.growthStageIndex)
+                    {
+                        state.growthStageIndex = newStageIndex;
+                        PlantGrowthEvent.Trigger(locationId, pos, newStageIndex);
+                    }
+                }
+            }
         }
 
         public Dictionary<Vector2Int, PlantState> GetPlantStatesInLocation(string locationId)
