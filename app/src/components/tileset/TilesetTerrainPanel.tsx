@@ -31,6 +31,43 @@ export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tilese
         <Text color="gray.500">No terrain types defined in project.</Text>
       ) : (
         <VStack align="stretch" spacing={1}>
+          {/* Allow clearing the current terrain selection (delete mode) */}
+          <HStack
+            key="__none__"
+            spacing={3}
+            align="center"
+            px={3}
+            py={2}
+            rounded="md"
+            cursor="pointer"
+            bg={selectedTerrainId === null ? 'blue.700' : 'transparent'}
+            _hover={{ bg: selectedTerrainId === null ? 'blue.600' : 'gray.800' }}
+            onClick={() => setSelectedTerrain(null)}
+          >
+            <Box
+              w={4}
+              h={4}
+              rounded="sm"
+              bg={selectedTerrainId === null ? 'white' : 'transparent'}
+              borderWidth={1}
+              borderColor="gray.600"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              color="gray.400"
+              fontSize="xs"
+            >
+              ×
+            </Box>
+            <Text
+              flex={1}
+              fontWeight={selectedTerrainId === null ? 'semibold' : 'normal'}
+              color={selectedTerrainId === null ? 'white' : 'gray.300'}
+            >
+              None
+            </Text>
+          </HStack>
+
           {terrainTypes.map((t) => (
             <HStack
               key={t.id}
