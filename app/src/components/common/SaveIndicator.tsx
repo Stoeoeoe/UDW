@@ -16,10 +16,9 @@ export const SaveIndicator: React.FC = () => {
   const status = useSaveStore((state) => state.status);
   const error = useSaveStore((state) => state.error);
 
-  // Don't show anything when idle
-  if (status === 'idle') {
-    return null;
-  }
+  // Keep the indicator rendered at a constant size to avoid layout shifts.
+  // When idle we hide it visually but still reserve the same space.
+  const visible = status !== 'idle';
 
   const getStatusDisplay = (): { icon: React.ReactNode; text: string; color: string } => {
     switch (status) {
@@ -49,7 +48,17 @@ export const SaveIndicator: React.FC = () => {
   const { icon, text, color } = getStatusDisplay();
 
   return (
-    <HStack spacing={2} px={2} py={1} rounded="md" bg="blackAlpha.300" transition="opacity 0.2s">
+    <HStack
+      spacing={2}
+      px={2}
+      py={1}
+      rounded="md"
+      bg="blackAlpha.300"
+      transition="opacity 0.15s"
+      minW="86px"
+      opacity={visible ? 1 : 0}
+      pointerEvents={visible ? 'auto' : 'none'}
+    >
       {icon}
       <Text fontSize="xs" color={color} fontWeight="medium">
         {text}
@@ -63,13 +72,18 @@ export const SaveIndicator: React.FC = () => {
  */
 export const SaveIndicatorCompact: React.FC = () => {
   const status = useSaveStore((state) => state.status);
-
-  if (status === 'idle') {
-    return null;
-  }
+  const visible = status !== 'idle';
 
   return (
-    <Box>
+    <Box
+      w="6"
+      h="6"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      opacity={visible ? 1 : 0}
+      pointerEvents={visible ? 'auto' : 'none'}
+    >
       {status === 'saving' && <Spinner size="xs" color="blue.400" />}
       {status === 'saved' && <CheckIcon boxSize={3} color="green.400" />}
       {status === 'error' && <WarningIcon boxSize={3} color="red.400" />}

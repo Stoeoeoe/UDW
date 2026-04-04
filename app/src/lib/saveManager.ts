@@ -46,8 +46,8 @@ export const useSaveStore = create<SaveStore>((set) => ({
 let mapSaveTimer: ReturnType<typeof setTimeout> | null = null;
 let projectSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-// Debounce delay in ms (300ms for responsive feel, not too aggressive)
-const DEBOUNCE_DELAY = 300;
+// Debounce delay in ms (1000ms for responsive feel, not too aggressive)
+const DEBOUNCE_DELAY = 1000;
 
 // Show "Saved" status duration
 const SAVED_DISPLAY_DURATION = 2000;
