@@ -429,12 +429,23 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     if (mode === 'interactive') {
       const parent = canvas.parentElement;
       if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
+        const displayW = parent.clientWidth;
+        const displayH = parent.clientHeight;
+        // Make canvas internal pixel size match displayed size to avoid browser scaling
+        canvas.width = displayW;
+        canvas.height = displayH;
+        canvas.style.width = `${displayW}px`;
+        canvas.style.height = `${displayH}px`;
       }
     } else {
-      canvas.width = sprite.width * effectiveZoom;
-      canvas.height = sprite.height * effectiveZoom;
+      const displayW = Math.round(sprite.width * effectiveZoom);
+      const displayH = Math.round(sprite.height * effectiveZoom);
+      canvas.width = displayW;
+      canvas.height = displayH;
+      canvas.style.width = `${displayW}px`;
+      canvas.style.height = `${displayH}px`;
+      // Ensure pixel-art rendering without browser smoothing/filtering
+      canvas.style.imageRendering = 'pixelated';
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);

@@ -439,8 +439,19 @@ export const useEditorStore = create<EditorStore>()(
           // 1. Load all tilesets
           const tilesets = await fileSystem.loadAllTilesets();
           for (const tileset of tilesets) {
+            // Ensure tileCount is sensible — some saved tilesets may have
+            // incorrect tileCount (e.g. equal to columns). Prefer the
+            // explicit tiles object length when available.
+            const tilesObjCount = tileset.tiles ? Object.keys(tileset.tiles).length : 0;
+            const normalizedTileCount = Math.max(
+              tileset.tileCount || 0,
+              tilesObjCount,
+              tileset.columns || 1,
+            );
+            const normalized = { ...tileset, tileCount: normalizedTileCount } as typeof tileset;
+
             set((state) => {
-              state.tilesets.set(tileset.id, castDraft(tileset));
+              state.tilesets.set(tileset.id, castDraft(normalized));
             });
 
             // Load sprite for each tileset

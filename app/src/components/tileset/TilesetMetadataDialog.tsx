@@ -74,13 +74,28 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
   const handleSave = async () => {
     setProcessing(true);
     try {
+      const finalTileWidth = Math.max(1, Math.floor(tileWidth));
+      const finalTileHeight = Math.max(1, Math.floor(tileHeight));
+      const finalColumns = Math.max(1, Math.floor(columns));
+
+      // Compute rows based on sprite height when possible, otherwise
+      // fall back to previous tileset data (preserving existing counts).
+      let rows = Math.max(1, Math.floor(tileset.tileCount / Math.max(1, tileset.columns)));
+      try {
+        const blob = await fileSystem.loadAsset(spritePath);
+        const resolved = await resolveSpriteAsset(spritePath, blob);
+        rows = Math.max(1, Math.floor(resolved.height / finalTileHeight));
+      } catch (err) {
+        // ignore and use fallback rows
+      }
+
       const updated: Partial<Tileset> = {
         name: name || tileset.name,
         spriteSheet: spritePath,
-        tileWidth: Math.max(1, Math.floor(tileWidth)),
-        tileHeight: Math.max(1, Math.floor(tileHeight)),
-        columns: Math.max(1, Math.floor(columns)),
-        tileCount: Math.max(1, Math.floor(columns) * Math.max(1, Math.floor(tileHeight ? 1 : 1))),
+        tileWidth: finalTileWidth,
+        tileHeight: finalTileHeight,
+        columns: finalColumns,
+        tileCount: Math.max(1, finalColumns * rows),
       };
 
       await updateTileset(tileset.id, updated);
