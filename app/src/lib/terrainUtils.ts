@@ -235,6 +235,77 @@ export function getCornerTerrainsForTile(
   ];
 }
 
+function getTerrainDataValue(
+  terrainData: (string | null)[][],
+  x: number,
+  y: number,
+): string | null {
+  if (y < 0 || y >= terrainData.length) {
+    return null;
+  }
+
+  const row = terrainData[y];
+  if (!row || x < 0 || x >= row.length) {
+    return null;
+  }
+
+  return row[x] ?? null;
+}
+
+function pickTerrainDataCorner(
+  terrainData: (string | null)[][],
+  candidates: Array<[number, number]>,
+): string | null {
+  for (const [x, y] of candidates) {
+    const terrainId = getTerrainDataValue(terrainData, x, y);
+    if (terrainId !== null) {
+      return terrainId;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Derive a tile's corner terrains from the persisted terrainData cell grid.
+ *
+ * The current cell wins for all four corners so reloading does not "shrink"
+ * painted terrain into later-scanned neighbors. Empty cells fall back to the
+ * adjacent cells that touch the requested corner.
+ */
+export function getTerrainCornersFromTerrainData(
+  terrainData: (string | null)[][],
+  tileX: number,
+  tileY: number,
+): TerrainCorners {
+  return [
+    pickTerrainDataCorner(terrainData, [
+      [tileX, tileY],
+      [tileX - 1, tileY],
+      [tileX, tileY - 1],
+      [tileX - 1, tileY - 1],
+    ]),
+    pickTerrainDataCorner(terrainData, [
+      [tileX, tileY],
+      [tileX + 1, tileY],
+      [tileX, tileY - 1],
+      [tileX + 1, tileY - 1],
+    ]),
+    pickTerrainDataCorner(terrainData, [
+      [tileX, tileY],
+      [tileX - 1, tileY],
+      [tileX, tileY + 1],
+      [tileX - 1, tileY + 1],
+    ]),
+    pickTerrainDataCorner(terrainData, [
+      [tileX, tileY],
+      [tileX + 1, tileY],
+      [tileX, tileY + 1],
+      [tileX + 1, tileY + 1],
+    ]),
+  ];
+}
+
 /**
  * Build a terrain grid from existing tiles in a layer.
  * This extracts the terrainCorners from each tile and builds a lookup map.

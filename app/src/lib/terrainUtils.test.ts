@@ -13,6 +13,7 @@ import {
   getAffectedCorners,
   getTilesToUpdate,
   getCornerTerrainsForTile,
+  getTerrainCornersFromTerrainData,
   buildTerrainGridFromLayer,
   applyTerrainAtCorner,
   applyTerrainToTile,
@@ -390,6 +391,36 @@ describe('applyTerrainAtCorner', () => {
     applyTerrainAtCorner(2, 2, null, grid, 5, 5);
 
     expect(grid.get('1,1,3')).toBe(null);
+  });
+});
+
+describe('getTerrainCornersFromTerrainData', () => {
+  it('keeps the current painted cell dominant for all four corners', () => {
+    const terrainData = [
+      ['grass', 'water'],
+      ['sand', 'lava'],
+    ];
+
+    expect(getTerrainCornersFromTerrainData(terrainData, 0, 0)).toEqual([
+      'grass',
+      'grass',
+      'grass',
+      'grass',
+    ]);
+  });
+
+  it('falls back to neighboring painted cells for empty tiles', () => {
+    const terrainData = [
+      ['grass', null],
+      [null, 'water'],
+    ];
+
+    expect(getTerrainCornersFromTerrainData(terrainData, 1, 0)).toEqual([
+      'grass',
+      null,
+      'grass',
+      'water',
+    ]);
   });
 });
 
