@@ -90,6 +90,11 @@ export interface EditorState {
   layerDefinitions: LayerDefinition[];
   selectedLayerDefinitionId: string | null;
 
+  // Location link selection/editing state
+  selectedLinkId: string | null; // Currently selected link (shown in inspector)
+  pickingLinkTargetForLinkId: string | null; // One-shot mode: pick target tile on any map
+  pendingNewLinkId: string | null; // Set immediately after link placement to trigger setup dialog
+
   // Validation
   validationErrors: ValidationError[];
 }
@@ -109,15 +114,18 @@ export type ToolIcon = {
 };
 
 export type ToolType =
-  | 'select'
+  | 'select' // Global select — works across all layers
   | 'stamp'
   | 'random'
   | 'erase'
   | 'terrain' // Terrain brush for autotiling
-  | 'fill' // Phase 2
+  | 'fill'
   | 'entitySelect' // Select & move entities
   | 'entityPlace'
   | 'entityDelete' // Delete entities
+  | 'linkPlace' // Place a new location link (click source tile)
+  | 'linkSelect' // Select / move location links
+  | 'linkDelete' // Delete location links
   | 'pathDraw' // Phase 2
   | 'areaDraw' // Phase 2
   | 'anchorPlace'; // Phase 2

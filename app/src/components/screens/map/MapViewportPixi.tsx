@@ -180,6 +180,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderLocationLinks,
     renderHover,
     renderPreview,
   } = useMapRenderer({ viewport });
@@ -195,6 +196,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderLocationLinks();
     renderHover();
     renderPreview();
 
@@ -210,6 +212,15 @@ export const MapViewportPixi: React.FC = () => {
         renderGrid();
         renderCollisionOverlay();
         renderTerrainOverlay();
+        renderLocationLinks();
+      }
+      // Re-render location links when links, selection, or other-map links change
+      if (
+        state.currentMap?.locationLinks !== prevState.currentMap?.locationLinks ||
+        state.selectedLinkId !== prevState.selectedLinkId ||
+        state.maps !== prevState.maps
+      ) {
+        renderLocationLinks();
       }
       // Re-render entities when selection changes
       if (state.selectedEntityId !== prevState.selectedEntityId) {
@@ -231,6 +242,24 @@ export const MapViewportPixi: React.FC = () => {
       if (state.hoveredTile !== prevState.hoveredTile) {
         renderHover();
         renderPreview();
+        // Only re-render links when the hover enters or leaves a link trigger area
+        // (avoids a full Pixi draw pass on every mouse move pixel)
+        const links = state.currentMap?.locationLinks ?? [];
+        const prevLinks = prevState.currentMap?.locationLinks ?? [];
+        const isOverLink = (tile: { x: number; y: number } | null) =>
+          tile !== null &&
+          links.some(
+            (l) =>
+              tile.x >= l.sourcePosition[0] &&
+              tile.x < l.sourcePosition[0] + l.triggerSize[0] &&
+              tile.y >= l.sourcePosition[1] &&
+              tile.y < l.sourcePosition[1] + l.triggerSize[1],
+          );
+        const wasOver = isOverLink(prevState.hoveredTile);
+        const nowOver = isOverLink(state.hoveredTile);
+        if (wasOver !== nowOver || (nowOver && links !== prevLinks)) {
+          renderLocationLinks();
+        }
       }
       // Re-render preview on tool/tile selection/brush size/draw mode change
       if (
@@ -253,6 +282,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderLocationLinks,
     renderHover,
     renderPreview,
   ]);
@@ -285,9 +315,22 @@ export const MapViewportPixi: React.FC = () => {
       )
         return;
 
-      // Delete selected entity with Backspace or Delete
+      // Delete selected entity or link with Backspace or Delete
       if (e.key === 'Backspace' || e.key === 'Delete') {
-        const { selectedEntityId, removeEntity, selectEntity } = useEditorStore.getState();
+        const {
+          selectedEntityId,
+          removeEntity,
+          selectEntity,
+          selectedLinkId,
+          removeLocationLink,
+          selectLink,
+        } = useEditorStore.getState();
+        if (selectedLinkId) {
+          e.preventDefault();
+          removeLocationLink(selectedLinkId);
+          selectLink(null);
+          return;
+        }
         if (selectedEntityId) {
           e.preventDefault();
           removeEntity(selectedEntityId);
@@ -302,8 +345,32 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('random');
       if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('erase');
       if (e.key === 't' || e.key === 'T') useEditorStore.getState().setActiveTool('terrain');
-      if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setDrawMode('flood'); // G for flood fill shape
-      if (e.key === 'n' || e.key === 'N') useEditorStore.getState().setActiveTool('entityPlace');
+      if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setDrawMode('flood');
+      if (e.key === 'n' || e.key === 'N') {
+        const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
+        const layer = cm?.layers.find((l) => l.id === selectedLayerId);
+        if (layer?.kind !== 'locationlink') {
+          useEditorStore.getState().setActiveTool('entityPlace');
+        }
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
+        const layer = cm?.layers.find((l) => l.id === selectedLayerId);
+        if (layer?.kind === 'locationlink') {
+          useEditorStore.getState().setActiveTool('linkSelect');
+        } else {
+          useEditorStore.getState().setActiveTool('entitySelect');
+        }
+      }
+      if (e.key === 'x' || e.key === 'X') {
+        const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
+        const layer = cm?.layers.find((l) => l.id === selectedLayerId);
+        if (layer?.kind === 'locationlink') {
+          useEditorStore.getState().setActiveTool('linkDelete');
+        } else {
+          useEditorStore.getState().setActiveTool('entityDelete');
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);

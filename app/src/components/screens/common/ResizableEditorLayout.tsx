@@ -139,41 +139,38 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
 
           {/* Center: Content + Optional Bottom Panel */}
           <Panel order={2}>
-            {bottomPanel ? (
-              <PanelGroup direction="vertical" style={{ height: '100%' }}>
-                <Panel order={1}>
-                  <Box
-                    h="full"
-                    position="relative"
-                    bg={viewportBackground ? 'editor.viewportBg' : 'transparent'}
-                    overflow="hidden"
+            <PanelGroup direction="vertical" style={{ height: '100%' }}>
+              <Panel order={1}>
+                <Box
+                  h="full"
+                  position="relative"
+                  bg={viewportBackground ? 'editor.viewportBg' : 'transparent'}
+                  overflow="hidden"
+                >
+                  {content}
+                </Box>
+              </Panel>
+              {bottomPanel && (
+                <>
+                  <VerticalResizeHandle />
+                  <Panel
+                    defaultSize={bottomPanelDefaultSize}
+                    minSize={bottomPanelMinSize}
+                    order={2}
                   >
-                    {content}
-                  </Box>
-                </Panel>
-                <VerticalResizeHandle />
-                <Panel defaultSize={bottomPanelDefaultSize} minSize={bottomPanelMinSize} order={2}>
-                  <Box
-                    h="full"
-                    bg="editor.panelBg"
-                    borderTop="1px"
-                    borderColor="editor.border"
-                    overflow="hidden"
-                  >
-                    {bottomPanel}
-                  </Box>
-                </Panel>
-              </PanelGroup>
-            ) : (
-              <Box
-                h="full"
-                position="relative"
-                bg={viewportBackground ? 'editor.viewportBg' : 'transparent'}
-                overflow="hidden"
-              >
-                {content}
-              </Box>
-            )}
+                    <Box
+                      h="full"
+                      bg="editor.panelBg"
+                      borderTop="1px"
+                      borderColor="editor.border"
+                      overflow="hidden"
+                    >
+                      {bottomPanel}
+                    </Box>
+                  </Panel>
+                </>
+              )}
+            </PanelGroup>
           </Panel>
 
           {/* Right Panel */}

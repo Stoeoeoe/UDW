@@ -21,12 +21,11 @@ export function kindToCategory(kind: LayerKind): LayerCategory {
       return 'tiles';
     case 'collision':
       return 'collision';
-    case 'navigation':
-      return 'other';
-    case 'metadata':
-      return 'other';
     case 'entity':
       return 'entities';
+    case 'locationlink':
+    case 'navigation':
+    case 'metadata':
     default:
       return 'other';
   }
@@ -39,14 +38,24 @@ export interface LayerCategoryConfig {
   kinds: LayerKind[];
   /** Accent color for the section header */
   color: string;
+  /**
+   * Kinds within this category that are system-managed (auto-created, not user-addable).
+   * The + button is hidden when ALL kinds are system kinds.
+   */
+  systemKinds?: LayerKind[];
 }
 
-/** Ordered display config for all layer categories.
- *  To add a new category (e.g. Terrain), add an entry here and update kindToCategory. */
+/** Ordered display config for all layer categories. */
 export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
   { id: 'terrain', label: 'Terrain', kinds: ['terrain'], color: 'green.700' },
   { id: 'tiles', label: 'Tiles', kinds: ['visual'], color: 'blue.700' },
   { id: 'collision', label: 'Collision', kinds: ['collision'], color: 'orange.700' },
   { id: 'entities', label: 'Entities', kinds: ['entity'], color: 'purple.700' },
-  { id: 'other', label: 'Other', kinds: ['navigation', 'metadata'], color: 'gray.700' },
+  {
+    id: 'other',
+    label: 'Other',
+    kinds: ['navigation', 'metadata', 'locationlink'],
+    systemKinds: ['locationlink'],
+    color: 'gray.700',
+  },
 ];

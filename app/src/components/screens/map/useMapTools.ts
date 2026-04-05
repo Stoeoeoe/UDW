@@ -51,14 +51,17 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
   const isDrawingRef = useRef(false);
   const drawStartRef = useRef<{ x: number; y: number } | null>(null);
-  const lineAnchorRef = useRef<{ x: number; y: number } | null>(null); // For line tool: last clicked anchor
-  const draggingEntityRef = useRef<string | null>(null); // Entity id being dragged
-  const dragOffsetRef = useRef<{ x: number; y: number } | null>(null); // Click offset within entity bounds
-  const isShiftHeldRef = useRef(false); // Track shift key state
-  const terrainGridRef = useRef<Map<string, string | null>>(new Map()); // Terrain grid cache for terrain brush
-  const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null); // Track last painted position to avoid duplicates
-  const isSamplingRef = useRef(false); // Track right-click eyedropper sampling mode
-  const sampleStartRef = useRef<{ x: number; y: number } | null>(null); // Start position for sampling rectangle
+  const lineAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingEntityRef = useRef<string | null>(null);
+  const dragOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingLinkRef = useRef<string | null>(null); // Link id being dragged
+  const dragLinkOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const dragLinkEndRef = useRef<'source' | 'target'>('source'); // Which end is being dragged
+  const isShiftHeldRef = useRef(false);
+  const terrainGridRef = useRef<Map<string, string | null>>(new Map());
+  const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null);
+  const isSamplingRef = useRef(false);
+  const sampleStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Convert screen coordinates to tile coordinates (delegates to shared util)
   const screenToTile = useCallback(
@@ -157,16 +160,158 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     ],
   );
 
+  // Helper: hit-test all entities across all layers
+  const hitTestEntity = useCallback(
+    (worldX: number, worldY: number) => {
+      const { entityTypes: allEntityTypes } = useEditorStore.getState();
+      const resolvedEntities = resolveEntities(currentMap!, activeVariationId);
+      return [...resolvedEntities].reverse().find((entity) => {
+        const type = allEntityTypes.find((t) => t.id === entity.typeId);
+        const [ew, eh] = type?.defaultSize ?? [projectTileSize, projectTileSize];
+        return (
+          worldX >= entity.position[0] &&
+          worldX < entity.position[0] + ew &&
+          worldY >= entity.position[1] &&
+          worldY < entity.position[1] + eh
+        );
+      });
+    },
+    [currentMap, activeVariationId, projectTileSize],
+  );
+
+  // Helper: hit-test location links by tile position — returns link + which end was hit
+  const hitTestLink = useCallback(
+    (
+      tileX: number,
+      tileY: number,
+    ):
+      | { link: import('../../../types/schema').LocationLink; end: 'source' | 'target' }
+      | undefined => {
+      const links = currentMap?.locationLinks ?? [];
+      // Check source trigger areas first (in reverse so top link wins)
+      const sourceHit = [...links].reverse().find((link) => {
+        const [sx, sy] = link.sourcePosition;
+        const [tw, th] = link.triggerSize;
+        return tileX >= sx && tileX < sx + tw && tileY >= sy && tileY < sy + th;
+      });
+      if (sourceHit) return { link: sourceHit, end: 'source' };
+
+      // Then check target position tiles (same-map links only — cross-map targets are on another map)
+      const targetHit = [...links].reverse().find((link) => {
+        const isSameMap = !link.targetMapId || link.targetMapId === currentMap?.id;
+        if (!isSameMap) return false;
+        const [tx, ty] = link.targetPosition;
+        return tileX === tx && tileY === ty;
+      });
+      if (targetHit) return { link: targetHit, end: 'target' };
+
+      return undefined;
+    },
+    [currentMap],
+  );
+
   // Handle pointer down
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
       if (!viewport || !currentMap) return;
-
-      // Let viewport handle middle mouse for panning
-      if (e.button === 1) return;
+      if (e.button === 1) return; // middle mouse → viewport pan
 
       const tile = screenToTile(e.clientX, e.clientY);
       if (!tile) return;
+      const { x: tx, y: ty } = tile;
+      const inBounds = tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height;
+
+      // ── Target-picking mode (🎯 pick entry tile for a link) ────────────────
+      const { pickingLinkTargetForLinkId, commitLinkTarget } = useEditorStore.getState();
+      if (e.button === 0 && pickingLinkTargetForLinkId) {
+        if (inBounds) commitLinkTarget(pickingLinkTargetForLinkId, currentMap.id, [tx, ty]);
+        e.stopPropagation();
+        return;
+      }
+
+      // ── Global Select (V) — works across ALL layers ─────────────────────────
+      if (activeTool === 'select' && e.button === 0) {
+        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        if (!worldPos) return;
+
+        // 1. Hit-test links first (they're on top visually)
+        const hitLinkResult = inBounds ? hitTestLink(tx, ty) : undefined;
+        if (hitLinkResult) {
+          const { link: hitLink, end: hitEnd } = hitLinkResult;
+          const linkLayer = currentMap.layers.find((l) => l.kind === 'locationlink');
+          if (linkLayer) useEditorStore.getState().selectLayer(linkLayer.id);
+          useEditorStore.getState().selectLink(hitLink.id);
+          useEditorStore.getState().selectEntity(null);
+          draggingLinkRef.current = hitLink.id;
+          dragLinkEndRef.current = hitEnd;
+          dragLinkOffsetRef.current = { x: 0, y: 0 };
+          return;
+        }
+
+        // 2. Hit-test entities
+        const hitEntity = hitTestEntity(worldPos.x, worldPos.y);
+        if (hitEntity) {
+          // Find which layer owns this entity and switch to it
+          const ownerLayer = currentMap.layers.find(
+            (l) => l.kind === 'entity' && l.entities?.some((en) => en.id === hitEntity.id),
+          );
+          if (ownerLayer) useEditorStore.getState().selectLayer(ownerLayer.id);
+          selectEntity(hitEntity.id);
+          useEditorStore.getState().selectLink(null);
+          draggingEntityRef.current = hitEntity.id;
+          dragOffsetRef.current = {
+            x: worldPos.x - hitEntity.position[0],
+            y: worldPos.y - hitEntity.position[1],
+          };
+          return;
+        }
+
+        // 3. Clicked empty space — deselect everything
+        selectEntity(null);
+        useEditorStore.getState().selectLink(null);
+        draggingEntityRef.current = null;
+        draggingLinkRef.current = null;
+        return;
+      }
+
+      // ── Link tools ─────────────────────────────────────────────────────────
+      if (activeTool === 'linkPlace' && e.button === 0 && inBounds) {
+        const { addLocationLink, selectLink } = useEditorStore.getState();
+        const newLink = {
+          id: `link-${Date.now()}`,
+          sourcePosition: [tx, ty] as [number, number],
+          triggerSize: [1, 1] as [number, number],
+          targetMapId: '',
+          targetPosition: [0, 0] as [number, number],
+          direction: 'one-way' as const,
+        };
+        addLocationLink(newLink);
+        selectLink(newLink.id);
+        // Switch to select mode so the user can immediately drag/edit
+        useEditorStore.getState().setActiveTool('linkSelect');
+        return;
+      }
+
+      if (activeTool === 'linkSelect' && e.button === 0) {
+        const hitLinkResult = inBounds ? hitTestLink(tx, ty) : undefined;
+        if (hitLinkResult) {
+          const { link: hitLink, end: hitEnd } = hitLinkResult;
+          useEditorStore.getState().selectLink(hitLink.id);
+          draggingLinkRef.current = hitLink.id;
+          dragLinkEndRef.current = hitEnd;
+          dragLinkOffsetRef.current = { x: 0, y: 0 };
+        } else {
+          useEditorStore.getState().selectLink(null);
+          draggingLinkRef.current = null;
+        }
+        return;
+      }
+
+      if (activeTool === 'linkDelete' && e.button === 0) {
+        const hitLinkResult = inBounds ? hitTestLink(tx, ty) : undefined;
+        if (hitLinkResult) useEditorStore.getState().removeLocationLink(hitLinkResult.link.id);
+        return;
+      }
 
       // Right Click = Eyedropper: sample tiles from map (supports drag for multi-tile patterns)
       // Works in stamp/random/erase modes
@@ -178,8 +323,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           activeTool === 'fill')
       ) {
         if (!selectedLayerId) return;
-        const { x: tx, y: ty } = tile;
-        if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
+        if (!inBounds) return;
 
         // Start sampling mode - will complete on pointer up
         isSamplingRef.current = true;
@@ -187,8 +331,6 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         e.preventDefault();
         return;
       }
-
-      const { x: tx, y: ty } = tile;
 
       if (activeTool === 'entitySelect' || activeTool === 'entityDelete') {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
@@ -264,6 +406,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               });
             }
           }
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore -- activeTool is narrowed by outer condition but 'fill' is valid at runtime
         } else if (activeTool !== 'fill' && drawMode === 'point') {
           // Point mode: click to paint single tile, or shift+click to draw line from anchor
           if (e.shiftKey && lineAnchorRef.current) {
@@ -286,6 +430,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               activeTool === 'stamp' || activeTool === 'random' ? 'paint' : 'erase',
             );
           }
+          // @ts-ignore
         } else if (activeTool !== 'fill') {
           // Rect, circle, line modes: click-drag-release
           drawStartRef.current = { x: tx, y: ty };
@@ -378,6 +523,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       getPattern,
       placeEntity,
       setDrawPreview,
+      hitTestEntity,
+      hitTestLink,
     ],
   );
 
@@ -436,8 +583,33 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         });
       }
 
-      // Move entity while dragging with entitySelect
-      if (e.buttons === 1 && activeTool === 'entitySelect' && draggingEntityRef.current) {
+      // Drag link source or target in global select or linkSelect
+      if (
+        e.buttons === 1 &&
+        (activeTool === 'select' || activeTool === 'linkSelect') &&
+        draggingLinkRef.current &&
+        tile
+      ) {
+        const { x: ltx, y: lty } = tile;
+        if (ltx >= 0 && ltx < currentMap.width && lty >= 0 && lty < currentMap.height) {
+          if (dragLinkEndRef.current === 'target') {
+            useEditorStore.getState().updateLocationLink(draggingLinkRef.current, {
+              targetPosition: [ltx, lty],
+            });
+          } else {
+            useEditorStore.getState().updateLocationLink(draggingLinkRef.current, {
+              sourcePosition: [ltx, lty],
+            });
+          }
+        }
+      }
+
+      // Move entity while dragging with entitySelect or global select
+      if (
+        e.buttons === 1 &&
+        (activeTool === 'entitySelect' || activeTool === 'select') &&
+        draggingEntityRef.current
+      ) {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
         if (worldPos) {
           const { entitySnapMode: snapMode } = useEditorStore.getState();
@@ -716,6 +888,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       lastTerrainPaintRef.current = null;
       draggingEntityRef.current = null;
       dragOffsetRef.current = null;
+      draggingLinkRef.current = null;
+      dragLinkOffsetRef.current = null;
       setDrawPreview({ isDrawing: false, start: null, end: null });
     },
     [

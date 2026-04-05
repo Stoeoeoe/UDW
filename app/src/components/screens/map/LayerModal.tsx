@@ -35,6 +35,7 @@ export interface LayerModalProps {
   lockedKinds?: LayerKind[];
 }
 
+// locationlink is system-managed — never user-addable
 const ALL_KIND_OPTIONS: { value: LayerKind; label: string }[] = [
   { value: 'terrain', label: 'Terrain (Autotiled)' },
   { value: 'visual', label: 'Visual (Tiles)' },

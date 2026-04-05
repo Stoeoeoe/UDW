@@ -100,9 +100,30 @@ export interface Map {
   tilesetRefs: string[]; // Ordered list of tileset IDs used in this map
   layers: Layer[];
   entities: EntityInstance[];
+  locationLinks?: LocationLink[]; // Map transition links (doors, exits, etc.)
   spatialPrimitives?: SpatialPrimitives; // Optional paths/areas/anchors
   variations?: Variation[]; // Optional seasonal/contextual variants
   metadata?: MapMetadata;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Location Links — first-class map transition data
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LocationLink {
+  id: string;
+  label?: string;
+  // Source: tile position on this map where the link is triggered
+  sourcePosition: [number, number]; // Tile coordinates [x, y]
+  // Trigger area around the source tile
+  triggerSize: [number, number]; // Width/height in tiles (default [1, 1])
+  // Target: where this link leads
+  targetMapId: string; // Empty string = same map
+  targetPosition: [number, number]; // Tile coordinates [x, y] on target map
+  // Optionally reference a named entry on the target map by link id for bidirectional sync
+  targetLinkId?: string;
+  direction: 'one-way' | 'bidirectional';
+  tags?: string[];
 }
 
 export interface Layer {
@@ -132,7 +153,8 @@ export type LayerKind =
   | 'navigation' // Pathfinding hints
   | 'metadata' // Data-only, invisible
   | 'entity' // Layer that contains entities (EntityInstance[])
-  | 'terrain'; // Terrain-painted layer (autotiled)
+  | 'terrain' // Terrain-painted layer (autotiled)
+  | 'locationlink'; // Map transition links (doors, exits, portals)
 
 export type PropertyValue =
   | string

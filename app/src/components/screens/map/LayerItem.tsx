@@ -33,6 +33,8 @@ export const LayerTypeIcon: React.FC<{ kind: LayerKind }> = ({ kind }) => {
       return <BsInfoCircle {...iconProps} />;
     case 'entity':
       return <BsPeople {...iconProps} />;
+    case 'locationlink':
+      return <BsLink45Deg {...iconProps} />;
     default:
       return <BsImage {...iconProps} />;
   }
@@ -98,14 +100,19 @@ export const LayerItem: React.FC<LayerItemProps> = ({
   onDragEnd,
   dragNodeRef,
 }) => {
+  const isSystemLayer = layer.kind === 'locationlink';
   const layerIcon = layer.icon || definition?.icon;
   const iconColor = definition?.color;
 
   return (
     <Box
       ref={isDragging ? dragNodeRef : undefined}
-      draggable={!isFromDefinition}
-      onDragStart={!isFromDefinition && onDragStart ? (e) => onDragStart(e, layer.id) : undefined}
+      draggable={!isFromDefinition && !isSystemLayer}
+      onDragStart={
+        !isFromDefinition && !isSystemLayer && onDragStart
+          ? (e) => onDragStart(e, layer.id)
+          : undefined
+      }
       onDragOver={onDragOver ? (e) => onDragOver(e, layer.id) : undefined}
       onDragLeave={onDragLeave}
       onDrop={onDrop ? (e) => onDrop(e, layer.id) : undefined}
@@ -114,7 +121,7 @@ export const LayerItem: React.FC<LayerItemProps> = ({
       px="2"
       py="2"
       rounded="md"
-      cursor={isFromDefinition ? 'pointer' : 'grab'}
+      cursor={isFromDefinition || isSystemLayer ? 'pointer' : 'grab'}
       bg={isSelected ? 'blue.900' : 'transparent'}
       border="2px"
       borderColor={isDropTarget ? 'blue.400' : isSelected ? 'blue.500' : 'transparent'}
@@ -126,12 +133,12 @@ export const LayerItem: React.FC<LayerItemProps> = ({
       <HStack spacing={2}>
         {/* Drag Handle */}
         <Box
-          color={isFromDefinition ? 'gray.800' : 'gray.600'}
-          cursor={isFromDefinition ? 'default' : 'grab'}
-          _hover={isFromDefinition ? {} : { color: 'gray.400' }}
+          color={isFromDefinition || isSystemLayer ? 'gray.800' : 'gray.600'}
+          cursor={isFromDefinition || isSystemLayer ? 'default' : 'grab'}
+          _hover={isFromDefinition || isSystemLayer ? {} : { color: 'gray.400' }}
           w="14px"
         >
-          {!isFromDefinition && <DragHandleIcon fontSize="10px" />}
+          {!isFromDefinition && !isSystemLayer && <DragHandleIcon fontSize="10px" />}
         </Box>
 
         {/* Layer Icon */}
@@ -195,8 +202,8 @@ export const LayerItem: React.FC<LayerItemProps> = ({
         <HStack spacing="1">
           {layer.locked && <BsLock size={12} />}
 
-          {/* Link button for definition layers, edit button for custom layers */}
-          {isFromDefinition ? (
+          {/* Link button for definition layers, edit button for custom layers, nothing for system layers */}
+          {isSystemLayer ? null : isFromDefinition ? (
             <Tooltip label="Go to layer definition" fontSize="xs">
               <IconButton
                 aria-label="Go to definition"
@@ -228,8 +235,8 @@ export const LayerItem: React.FC<LayerItemProps> = ({
             </Tooltip>
           )}
 
-          {/* Only allow deleting custom layers */}
-          {!isFromDefinition && (
+          {/* Only allow deleting non-system, non-definition layers */}
+          {!isFromDefinition && !isSystemLayer && (
             <IconButton
               aria-label="Delete"
               icon={<DeleteIcon fontSize="10px" />}

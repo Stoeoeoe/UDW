@@ -1,5 +1,5 @@
 import React from 'react';
-import { HStack, Button, ButtonGroup, Tooltip } from '@chakra-ui/react';
+import { HStack, Button, ButtonGroup, Tooltip, Box } from '@chakra-ui/react';
 import {
   FiMousePointer,
   FiEdit2,
@@ -14,20 +14,20 @@ import {
   FiTrash2,
   FiGrid,
   FiMaximize,
+  FiLink,
 } from 'react-icons/fi';
 import Toolbar, { ToolItem } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ToolType } from '../../../types/editor';
 import { LayerKind } from '../../../types/schema';
 
-/** Tools visible per layer kind */
-const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
+/** Tools visible per layer kind — excludes the global select which is always shown separately */
+const TOOLS_BY_KIND: Partial<Record<LayerKind, ToolItem[]>> = {
   terrain: [
     { id: 'terrain', icon: FiEdit2, label: 'Paint Terrain (B)', group: 'terrain' },
     { id: 'erase', icon: FiSlash, label: 'Erase (E)', group: 'terrain' },
   ],
   visual: [
-    { id: 'select', icon: FiMousePointer, label: 'Select (V)', group: 'tiles' },
     { id: 'stamp', icon: FiEdit2, label: 'Stamp (B)', group: 'tiles' },
     { id: 'random', icon: FiShuffle, label: 'Random (R)', group: 'tiles' },
     { id: 'erase', icon: FiSlash, label: 'Erase (E)', group: 'tiles' },
@@ -48,31 +48,24 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     { id: 'erase', icon: FiSlash, label: 'Erase (E)', group: 'metadata' },
   ],
   entity: [
-    {
-      id: 'entityPlace',
-      icon: FiUser,
-      label: 'Place Entity (N)',
-      group: 'entities',
-    },
-    {
-      id: 'entitySelect',
-      icon: FiMove,
-      label: 'Move Entity (M)',
-      group: 'entities',
-    },
-    {
-      id: 'entityDelete',
-      icon: FiTrash2,
-      label: 'Delete Entity (X)',
-      group: 'entities',
-    },
+    { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
+    { id: 'entitySelect', icon: FiMove, label: 'Move Entity (M)', group: 'entities' },
+    { id: 'entityDelete', icon: FiTrash2, label: 'Delete Entity (X)', group: 'entities' },
+  ],
+  locationlink: [
+    { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
+    { id: 'linkSelect', icon: FiMove, label: 'Select / Move (M)', group: 'links' },
+    { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
   ],
 };
 
-/** Fallback when no layer / unknown kind */
-const GENERIC_TOOLS: ToolItem[] = [
-  { id: 'select', icon: FiMousePointer, label: 'Select (V)', group: 'generic' },
-];
+/** The global select tool — always visible, leftmost */
+const GLOBAL_SELECT_TOOL: ToolItem = {
+  id: 'select',
+  icon: FiMousePointer,
+  label: 'Select Anything (V)',
+  group: 'global',
+};
 
 export const MapToolbar: React.FC = () => {
   const activeTool = useEditorStore((state) => state.activeTool);
@@ -85,9 +78,7 @@ export const MapToolbar: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
 
   const selectedLayer = currentMap?.layers.find((l) => l.id === selectedLayerId);
-  const tools = selectedLayer
-    ? (TOOLS_BY_KIND[selectedLayer.kind] ?? GENERIC_TOOLS)
-    : GENERIC_TOOLS;
+  const layerTools = selectedLayer ? (TOOLS_BY_KIND[selectedLayer.kind] ?? []) : [];
 
   const onActivate = (id?: string) => {
     if (!id) return;
@@ -97,13 +88,31 @@ export const MapToolbar: React.FC = () => {
   const showDrawModes =
     (['stamp', 'random', 'erase'].includes(activeTool) && selectedLayer?.kind !== 'entity') ||
     (activeTool === 'terrain' && selectedLayer?.kind === 'terrain');
+
   const showSnapToggle =
-    selectedLayer?.kind === 'entity' && ['entityPlace', 'entitySelect'].includes(activeTool);
+    (selectedLayer?.kind === 'entity' && ['entitySelect', 'entityPlace'].includes(activeTool)) ||
+    (selectedLayer?.kind === 'locationlink' && ['linkSelect', 'linkPlace'].includes(activeTool));
 
   return (
-    <HStack spacing={4}>
-      <Toolbar items={tools} activeId={activeTool} onActivate={onActivate} />
+    <HStack spacing={2}>
+      {/* Global select — always leftmost, visually separated */}
+      <Box
+        bg="gray.900"
+        p="1"
+        rounded="xl"
+        border="1px"
+        borderColor={activeTool === 'select' ? 'blue.600' : 'gray.800'}
+        boxShadow="lg"
+      >
+        <Toolbar items={[GLOBAL_SELECT_TOOL]} activeId={activeTool} onActivate={onActivate} />
+      </Box>
 
+      {/* Layer-specific tools */}
+      {layerTools.length > 0 && (
+        <Toolbar items={layerTools} activeId={activeTool} onActivate={onActivate} />
+      )}
+
+      {/* Draw mode selector */}
       {showDrawModes && (
         <HStack
           bg="gray.900"
@@ -144,6 +153,7 @@ export const MapToolbar: React.FC = () => {
         </HStack>
       )}
 
+      {/* Snap toggle */}
       {showSnapToggle && (
         <ButtonGroup size="xs" isAttached variant="outline" colorScheme="purple">
           <Tooltip label="Snap to grid" fontSize="xs">
@@ -151,9 +161,7 @@ export const MapToolbar: React.FC = () => {
               bg={entitySnapMode === 'grid' ? 'purple.600' : 'transparent'}
               color={entitySnapMode === 'grid' ? 'white' : 'gray.400'}
               borderColor="gray.700"
-              _hover={{
-                bg: entitySnapMode === 'grid' ? 'purple.500' : 'gray.800',
-              }}
+              _hover={{ bg: entitySnapMode === 'grid' ? 'purple.500' : 'gray.800' }}
               onClick={() => setEntitySnapMode('grid')}
             >
               <FiGrid />
@@ -164,9 +172,7 @@ export const MapToolbar: React.FC = () => {
               bg={entitySnapMode === 'pixel' ? 'purple.600' : 'transparent'}
               color={entitySnapMode === 'pixel' ? 'white' : 'gray.400'}
               borderColor="gray.700"
-              _hover={{
-                bg: entitySnapMode === 'pixel' ? 'purple.500' : 'gray.800',
-              }}
+              _hover={{ bg: entitySnapMode === 'pixel' ? 'purple.500' : 'gray.800' }}
               onClick={() => setEntitySnapMode('pixel')}
             >
               <FiMaximize />

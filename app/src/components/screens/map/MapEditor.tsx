@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useDisclosure, VStack } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -7,25 +7,41 @@ import { MapViewportPixi } from './MapViewportPixi';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
+import { LinkInspector } from './LinkInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
+import { LinkBottomPanel } from './LinkBottomPanel';
+import { NewLinkDialog } from './NewLinkDialog';
 import { EditorModal } from '../../common/EditorModal';
 import { resolveMapContext } from '../../../lib/mapUtils';
 
-/** Right panel: entity inspector when on entity layer, otherwise tool props + tile inspector */
-const MapRightPanel: React.FC<{ isEntityLayer: boolean }> = ({ isEntityLayer }) => (
-  <VStack align="stretch" spacing={0} h="full" overflow="auto">
-    {isEntityLayer ? (
-      <PropertiesPanel />
-    ) : (
-      <>
-        <ToolPropertiesPanel />
+/**
+ * Right panel — always shows the inspector for whatever is *selected*.
+ * Selection takes priority over layer context:
+ *   selectedLink    → LinkInspector
+ *   selectedEntity  → PropertiesPanel
+ *   nothing         → ToolPropertiesPanel (tile/terrain tools)
+ */
+const MapRightPanel: React.FC = () => {
+  const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
+  const selectedEntityId = useEditorStore((s) => s.selectedEntityId);
+
+  return (
+    <VStack align="stretch" spacing={0} h="full" overflow="auto">
+      {selectedLinkId ? (
+        <LinkInspector />
+      ) : selectedEntityId ? (
         <PropertiesPanel />
-      </>
-    )}
-  </VStack>
-);
+      ) : (
+        <>
+          <ToolPropertiesPanel />
+          <PropertiesPanel />
+        </>
+      )}
+    </VStack>
+  );
+};
 
 /**
  * Combined left panel: Map browser (maps + variations) on top, layers on bottom
@@ -44,20 +60,12 @@ const MapLeftPanel: React.FC = () => {
  */
 export const MapEditor: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
-  const currentMapPath = useEditorStore((state) => state.currentMapPath);
   const maps = useEditorStore((state) => state.maps);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
-  const setActiveTool = useEditorStore((state) => state.setActiveTool);
+  const pendingNewLinkId = useEditorStore((state) => state.pendingNewLinkId);
+  const clearPendingNewLink = useEditorStore((state) => state.clearPendingNewLink);
   const { isOpen, onOpen, onClose } = useDisclosure();
-
-  // When a map becomes active (different map), switch to tile paint tool by default
-  // Use mapPath instead of map object to avoid triggering on every tile edit
-  useEffect(() => {
-    if (currentMapPath) {
-      setActiveTool('stamp');
-    }
-  }, [currentMapPath, setActiveTool]);
 
   // No map loaded state — show map browser on left with empty content on right
   if (!currentMap) {
@@ -104,24 +112,35 @@ export const MapEditor: React.FC = () => {
   const activeVariation = currentMap.variations?.find(
     (variation) => variation.id === activeVariationId,
   );
-  const isEntityLayer = currentMap.layers.find((l) => l.id === selectedLayerId)?.kind === 'entity';
+  const selectedLayerKind = currentMap.layers.find((l) => l.id === selectedLayerId)?.kind;
 
   return (
-    <ResizableEditorLayout
-      header={{
-        title: effectiveMap.name || 'Map',
-        subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers${activeVariation ? ` • ${activeVariation.displayName}` : ''}`,
-      }}
-      content={<MapViewportPixi />}
-      leftPanel={<MapLeftPanel />}
-      rightPanel={<MapRightPanel isEntityLayer={isEntityLayer} />}
-      bottomPanel={
-        isEntityLayer ? <EntityBottomPalette /> : <TilesetPalette enableMultiSelect={true} />
-      }
-      leftPanelDefaultSize={20}
-      rightPanelDefaultSize={20}
-      bottomPanelDefaultSize={25}
-    />
+    <>
+      <ResizableEditorLayout
+        header={{
+          title: effectiveMap.name || 'Map',
+          subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers${activeVariation ? ` • ${activeVariation.displayName}` : ''}`,
+        }}
+        content={<MapViewportPixi />}
+        leftPanel={<MapLeftPanel />}
+        rightPanel={<MapRightPanel />}
+        bottomPanel={
+          selectedLayerKind === 'entity' ? (
+            <EntityBottomPalette />
+          ) : selectedLayerKind === 'locationlink' ? (
+            <LinkBottomPanel />
+          ) : selectedLayerKind === 'terrain' ? null : (
+            <TilesetPalette enableMultiSelect={true} />
+          )
+        }
+        leftPanelDefaultSize={20}
+        rightPanelDefaultSize={20}
+        bottomPanelDefaultSize={25}
+      />
+
+      {/* New link setup dialog — appears immediately after placing a link */}
+      <NewLinkDialog linkId={pendingNewLinkId} onClose={clearPendingNewLink} />
+    </>
   );
 };
 

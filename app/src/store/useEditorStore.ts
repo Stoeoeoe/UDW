@@ -101,6 +101,22 @@ function createLayersFromDefinitions(
     }));
 }
 
+/** Ensures a map has exactly one locationlink layer (creates one if missing) */
+function ensureLocationLinkLayer(map: GameMap): GameMap {
+  const hasLinkLayer = map.layers.some((l) => l.kind === 'locationlink');
+  if (hasLinkLayer) return map;
+  const linkLayer: Layer = {
+    id: 'location-links',
+    name: 'Location Links',
+    kind: 'locationlink',
+    visible: true,
+    locked: false,
+    opacity: 1,
+    zOrder: 9999, // Always on top in the list
+  };
+  return { ...map, layers: [...map.layers, linkLayer] };
+}
+
 /** Creates a default ground layer */
 function createDefaultLayer(width: number, height: number): Layer {
   return {
@@ -354,6 +370,21 @@ interface EditorStore extends EditorState {
   // Reset selected tiles in global editor state
   resetSelectedTiles: () => void;
 
+  // Location link actions
+  addLocationLink: (link: import('../types/schema').LocationLink) => void;
+  updateLocationLink: (
+    id: string,
+    updates: Partial<import('../types/schema').LocationLink>,
+  ) => void;
+  removeLocationLink: (id: string) => void;
+  selectLink: (id: string | null) => void;
+  startPickingLinkTarget: (linkId: string) => void;
+  cancelPickingLinkTarget: () => void;
+  commitLinkTarget: (linkId: string, mapId: string, position: [number, number]) => void;
+  clearPendingNewLink: () => void;
+  /** Create counterpart link on target map and wire targetLinkId on both ends. */
+  createBidirectionalCounterpart: (sourceLinkId: string) => Promise<void>;
+
   // Validation
   validate: () => ValidationError[];
 }
@@ -411,6 +442,9 @@ export const useEditorStore = create<EditorStore>()(
         layerDefinitions: [],
         selectedLayerDefinitionId: null,
         validationErrors: [],
+        selectedLinkId: null,
+        pickingLinkTargetForLinkId: null,
+        pendingNewLinkId: null,
 
         // Actions implementation
         loadProject: async (path, project) => {
@@ -589,15 +623,24 @@ export const useEditorStore = create<EditorStore>()(
               return;
             }
 
-            // Add missing layers from layer definitions
-            const enrichedMap = addMissingDefinitionLayers(map, state.layerDefinitions);
+            // Add missing layers from layer definitions + ensure link layer
+            const withDefs = addMissingDefinitionLayers(map, state.layerDefinitions);
+            const enrichedMap = ensureLocationLinkLayer(withDefs);
 
             state.currentMap = castDraft(enrichedMap);
             state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
-            // When a map is loaded, switch to tile paint tool by default
-            state.activeTool = 'stamp';
+            state.activeTool = 'select';
+            state.selectedLinkId = null;
             if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
               state.camera = { ...state.mapCameras[enrichedMap.id] };
+            }
+            // Auto-select first non-link layer, or any layer if all are system layers
+            if (
+              !state.selectedLayerId ||
+              !enrichedMap.layers.find((l) => l.id === state.selectedLayerId)
+            ) {
+              const firstNonLink = enrichedMap.layers.find((l) => l.kind !== 'locationlink');
+              state.selectedLayerId = firstNonLink?.id ?? enrichedMap.layers[0]?.id ?? null;
             }
           });
         },
@@ -613,12 +656,14 @@ export const useEditorStore = create<EditorStore>()(
               state.mapCameras[state.currentMap.id] = { ...state.camera };
             }
 
-            state.currentMap = castDraft(map);
-            state.currentMapPath = `maps/${map.id}.map.json`;
+            const enrichedMap = ensureLocationLinkLayer(map);
+            state.currentMap = castDraft(enrichedMap);
+            state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
             state.activeVariationId = null;
-            state.activeTool = 'stamp';
+            state.activeTool = 'select';
             state.selectedEntityId = null;
             state.selectedEntityIds = new Set();
+            state.selectedLinkId = null;
 
             // Restore camera for the loaded map
             if (state.mapCameras && state.mapCameras[mapId]) {
@@ -627,12 +672,9 @@ export const useEditorStore = create<EditorStore>()(
               state.camera = { x: 0, y: 0, zoom: 1.5 };
             }
 
-            // Auto-select first layer
-            if (map.layers.length > 0) {
-              state.selectedLayerId = map.layers[0].id;
-            } else {
-              state.selectedLayerId = null;
-            }
+            // Auto-select first non-link layer
+            const firstNonLink = enrichedMap.layers.find((l) => l.kind !== 'locationlink');
+            state.selectedLayerId = firstNonLink?.id ?? enrichedMap.layers[0]?.id ?? null;
           });
         },
 
@@ -651,22 +693,23 @@ export const useEditorStore = create<EditorStore>()(
           // Get layer definitions from store to create default layers
           const layerDefs = useEditorStore.getState().layerDefinitions;
 
-          // Create layers from definitions, or use a default ground layer
+          // Create layers from definitions, or use a default ground layer, plus always a link layer
           const definedLayers = createLayersFromDefinitions(layerDefs, width, height);
-          const layers =
+          const baseLayers =
             definedLayers.length > 0 ? definedLayers : [createDefaultLayer(width, height)];
 
-          const newMap: GameMap = {
+          const rawMap: GameMap = {
             version: 1,
             id,
             name,
             width,
             height,
             baseTilesetId: tilesetId,
-            tilesetRefs: [tilesetId], // Start with base tileset
-            layers,
+            tilesetRefs: [tilesetId],
+            layers: baseLayers,
             entities: [],
           };
+          const newMap = ensureLocationLinkLayer(rawMap);
 
           await fileSystem.saveJson('maps', `${id}.map.json`, newMap);
 
@@ -675,7 +718,10 @@ export const useEditorStore = create<EditorStore>()(
             state.currentMap = castDraft(newMap);
             state.currentMapPath = `maps/${newMap.id}.map.json`;
             state.activeVariationId = null;
-            state.selectedLayerId = layers[0]?.id || null;
+            state.activeTool = 'select';
+            state.selectedLinkId = null;
+            const firstNonLink = newMap.layers.find((l) => l.kind !== 'locationlink');
+            state.selectedLayerId = firstNonLink?.id ?? newMap.layers[0]?.id ?? null;
           });
         },
 
@@ -1583,9 +1629,20 @@ export const useEditorStore = create<EditorStore>()(
 
         selectLayer: (layerId) =>
           set((state) => {
+            const prevLayer = state.currentMap?.layers.find((l) => l.id === state.selectedLayerId);
             state.selectedLayerId = layerId;
             const layer = state.currentMap?.layers.find((l) => l.id === layerId);
             if (layer) {
+              // First tool per kind is the default; always switch when kind changes
+              const DEFAULT_TOOL_BY_KIND: Record<string, string> = {
+                terrain: 'terrain',
+                visual: 'stamp',
+                collision: 'stamp',
+                navigation: 'stamp',
+                metadata: 'stamp',
+                entity: 'entitySelect',
+                locationlink: 'linkSelect',
+              };
               const VALID_TOOLS_BY_KIND: Record<string, string[]> = {
                 terrain: ['terrain', 'erase'],
                 visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
@@ -1593,17 +1650,29 @@ export const useEditorStore = create<EditorStore>()(
                 navigation: ['stamp', 'erase', 'fill', 'select'],
                 metadata: ['stamp', 'erase', 'fill', 'select'],
                 entity: ['entitySelect', 'entityPlace', 'entityDelete'],
+                locationlink: ['linkSelect', 'linkDelete'],
               };
-              const valid = VALID_TOOLS_BY_KIND[layer.kind] ?? ['select'];
-              if (!valid.includes(state.activeTool)) {
-                if (layer.kind === 'entity') {
-                  // Default to Select/Move when switching into entity layers
-                  state.activeTool = 'entitySelect';
-                } else if (layer.kind === 'terrain') {
-                  state.activeTool = 'terrain';
-                } else {
-                  state.activeTool = 'stamp';
-                }
+              const valid = VALID_TOOLS_BY_KIND[layer.kind] ?? ['stamp'];
+              // Switch to default tool whenever the layer kind changes or current tool is invalid
+              if (prevLayer?.kind !== layer.kind || !valid.includes(state.activeTool)) {
+                state.activeTool = (DEFAULT_TOOL_BY_KIND[layer.kind] ??
+                  'stamp') as import('../types/editor').ToolType;
+              }
+              // Ensure a terrain is always selected when switching to a terrain layer
+              if (
+                layer.kind === 'terrain' &&
+                !state.selectedTerrainId &&
+                state.terrainTypes.length > 0
+              ) {
+                state.selectedTerrainId = state.terrainTypes[0].id;
+              }
+              // Clear link/entity selection when switching layer kind
+              if (layer.kind !== 'locationlink') {
+                state.selectedLinkId = null;
+              }
+              if (layer.kind !== 'entity') {
+                state.selectedEntityId = null;
+                state.selectedEntityIds = new Set();
               }
             }
           }),
@@ -1656,6 +1725,7 @@ export const useEditorStore = create<EditorStore>()(
         selectEntity: (id) =>
           set((state) => {
             state.selectedEntityId = id;
+            if (id !== null) state.selectedLinkId = null; // mutual exclusion
           }),
 
         setSelectedEntityType: (id) =>
@@ -1940,6 +2010,144 @@ export const useEditorStore = create<EditorStore>()(
             state.selectedTerrainId = null;
             state.sampledPattern = null;
           }),
+
+        // ── Location link actions ──────────────────────────────────────────
+        addLocationLink: (link) => {
+          set((state) => {
+            if (!state.currentMap) return;
+            if (!state.currentMap.locationLinks) state.currentMap.locationLinks = [];
+            state.currentMap.locationLinks.push(castDraft(link));
+            state.selectedLinkId = link.id;
+            state.pendingNewLinkId = link.id; // trigger setup dialog
+          });
+          const { currentMap } = useEditorStore.getState();
+          if (currentMap) saveMapDebounced(currentMap);
+        },
+
+        updateLocationLink: (id, updates) => {
+          set((state) => {
+            if (!state.currentMap?.locationLinks) return;
+            const link = state.currentMap.locationLinks.find((l) => l.id === id);
+            if (link) Object.assign(link, updates);
+          });
+          const { currentMap } = useEditorStore.getState();
+          if (currentMap) saveMapDebounced(currentMap);
+        },
+
+        removeLocationLink: (id) => {
+          set((state) => {
+            if (!state.currentMap?.locationLinks) return;
+            state.currentMap.locationLinks = state.currentMap.locationLinks.filter(
+              (l) => l.id !== id,
+            );
+            if (state.selectedLinkId === id) {
+              state.selectedLinkId = null;
+            }
+          });
+          const { currentMap } = useEditorStore.getState();
+          if (currentMap) saveMapDebounced(currentMap);
+        },
+
+        selectLink: (id) => {
+          set((state) => {
+            state.selectedLinkId = id;
+            if (id !== null) state.selectedEntityId = null; // mutual exclusion
+          });
+        },
+
+        startPickingLinkTarget: (linkId) => {
+          set((state) => {
+            state.pickingLinkTargetForLinkId = linkId;
+          });
+        },
+
+        cancelPickingLinkTarget: () => {
+          set((state) => {
+            state.pickingLinkTargetForLinkId = null;
+          });
+        },
+
+        commitLinkTarget: (linkId, mapId, position) => {
+          set((state) => {
+            if (!state.currentMap?.locationLinks) return;
+            const link = state.currentMap.locationLinks.find((l) => l.id === linkId);
+            if (link) {
+              link.targetMapId = mapId;
+              link.targetPosition = position;
+            }
+            state.pickingLinkTargetForLinkId = null;
+          });
+          const { currentMap } = useEditorStore.getState();
+          if (currentMap) saveMapDebounced(currentMap);
+        },
+
+        clearPendingNewLink: () => {
+          set((state) => {
+            state.pendingNewLinkId = null;
+          });
+        },
+
+        createBidirectionalCounterpart: async (sourceLinkId) => {
+          const state = useEditorStore.getState();
+          const sourceMap = state.currentMap;
+          if (!sourceMap) return;
+
+          const sourceLink = sourceMap.locationLinks?.find((l) => l.id === sourceLinkId);
+          if (!sourceLink || !sourceLink.targetMapId) return;
+
+          const targetMap = state.maps.find((m) => m.id === sourceLink.targetMapId);
+          if (!targetMap) return;
+
+          const counterpartId = `link-${Date.now()}`;
+
+          // Build counterpart: source ↔ target swapped
+          const counterpart: import('../types/schema').LocationLink = {
+            id: counterpartId,
+            label: sourceLink.label ? `↩ ${sourceLink.label}` : undefined,
+            sourcePosition: sourceLink.targetPosition,
+            triggerSize: sourceLink.triggerSize,
+            targetMapId: sourceMap.id,
+            targetPosition: sourceLink.sourcePosition,
+            targetLinkId: sourceLinkId,
+            direction: 'bidirectional',
+          };
+
+          // Add counterpart to target map
+          const updatedTargetMap: import('../types/schema').Map = {
+            ...targetMap,
+            locationLinks: [...(targetMap.locationLinks ?? []), counterpart],
+          };
+
+          // Wire targetLinkId back on the source link
+          const updatedSourceMap: import('../types/schema').Map = {
+            ...sourceMap,
+            locationLinks: sourceMap.locationLinks!.map((l) =>
+              l.id === sourceLinkId
+                ? { ...l, direction: 'bidirectional' as const, targetLinkId: counterpartId }
+                : l,
+            ),
+          };
+
+          // Persist both maps
+          await fileSystem.saveJson('maps', `${targetMap.id}.map.json`, updatedTargetMap);
+          await fileSystem.saveJson('maps', `${sourceMap.id}.map.json`, updatedSourceMap);
+
+          // Update store
+          set((s) => {
+            // Update maps list for target map
+            const targetIdx = s.maps.findIndex((m) => m.id === targetMap.id);
+            if (targetIdx !== -1) s.maps[targetIdx] = castDraft(updatedTargetMap);
+
+            // Update maps list for source map
+            const sourceIdx = s.maps.findIndex((m) => m.id === sourceMap.id);
+            if (sourceIdx !== -1) s.maps[sourceIdx] = castDraft(updatedSourceMap);
+
+            // Update current map if it is the source
+            if (s.currentMap?.id === sourceMap.id) {
+              s.currentMap = castDraft(updatedSourceMap);
+            }
+          });
+        },
 
         validate: () => {
           return []; // Placeholder

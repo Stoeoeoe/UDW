@@ -65,6 +65,10 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
       group: 'entities',
     },
   ],
+  locationlink: [
+    { id: 'linkSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'links' },
+    { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
+  ],
 };
 
 const FALLBACK_TOOLS: ToolItem[] = [

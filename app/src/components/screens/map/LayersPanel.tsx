@@ -27,6 +27,8 @@ interface CategoryHeaderProps {
   isOpen: boolean;
   onToggle: () => void;
   onAdd: () => void;
+  /** When true, the + add button is hidden (all kinds in this category are system-managed) */
+  hideAdd?: boolean;
 }
 
 const CategoryHeader: React.FC<CategoryHeaderProps> = ({
@@ -35,6 +37,7 @@ const CategoryHeader: React.FC<CategoryHeaderProps> = ({
   isOpen,
   onToggle,
   onAdd,
+  hideAdd,
 }) => (
   <Flex
     align="center"
@@ -67,18 +70,20 @@ const CategoryHeader: React.FC<CategoryHeaderProps> = ({
         {count}
       </Text>
     )}
-    <IconButton
-      aria-label={`Add ${config.label} layer`}
-      icon={<AddIcon fontSize="8px" />}
-      size="xs"
-      variant="ghost"
-      color="gray.600"
-      _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-      onClick={(e) => {
-        e.stopPropagation();
-        onAdd();
-      }}
-    />
+    {!hideAdd && (
+      <IconButton
+        aria-label={`Add ${config.label} layer`}
+        icon={<AddIcon fontSize="8px" />}
+        size="xs"
+        variant="ghost"
+        color="gray.600"
+        _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAdd();
+        }}
+      />
+    )}
   </Flex>
 );
 
@@ -157,9 +162,11 @@ export const LayersPanel: React.FC = () => {
   const handleOpenAddModal = (categoryConfig?: LayerCategoryConfig) => {
     setEditingLayer(null);
     setAddingToCategory(categoryConfig ?? null);
-    // Pre-select the first kind that belongs to this category, if any
-    const defaultKind =
-      categoryConfig && categoryConfig.kinds.length > 0 ? categoryConfig.kinds[0] : 'visual';
+    // Pre-select the first *addable* (non-system) kind in this category
+    const addableKinds = categoryConfig
+      ? categoryConfig.kinds.filter((k) => !categoryConfig.systemKinds?.includes(k))
+      : [];
+    const defaultKind = addableKinds.length > 0 ? addableKinds[0] : 'visual';
     setFormData({
       name: '',
       kind: defaultKind,
@@ -274,6 +281,9 @@ export const LayersPanel: React.FC = () => {
           {LAYER_CATEGORIES.map((catConfig) => {
             const catLayers = layers.filter((l) => kindToCategory(l.kind) === catConfig.id);
             const isCollapsed = collapsedCategories.has(catConfig.id);
+            // Hide + if all user-facing kinds in this category are system-managed
+            const addableKinds = catConfig.kinds.filter((k) => !catConfig.systemKinds?.includes(k));
+            const hideAdd = addableKinds.length === 0;
 
             return (
               <Box key={catConfig.id}>
@@ -283,6 +293,7 @@ export const LayersPanel: React.FC = () => {
                   isOpen={!isCollapsed}
                   onToggle={() => toggleCategory(catConfig.id)}
                   onAdd={() => handleOpenAddModal(catConfig)}
+                  hideAdd={hideAdd}
                 />
                 <Collapse in={!isCollapsed} animateOpacity>
                   {catLayers.length === 0 ? (
@@ -340,7 +351,9 @@ export const LayersPanel: React.FC = () => {
         setFormData={setFormData}
         isEditing={!!editingLayer}
         lockedKinds={
-          addingToCategory && addingToCategory.kinds.length > 0 ? addingToCategory.kinds : undefined
+          addingToCategory
+            ? addingToCategory.kinds.filter((k) => !addingToCategory.systemKinds?.includes(k))
+            : undefined
         }
       />
     </>
