@@ -104,41 +104,6 @@ export const ProjectPanel: React.FC = () => {
               <ProjectSettingsEditor initialProject={project} onSave={handleSave} />
             </Box>
           </Box>
-
-          {/* Stats/Quick Info Grid */}
-          <HStack spacing={6} w="full" maxW="800px">
-            {[
-              { label: 'Compiler', value: 'v1.0.0-alpha', color: 'blue.400' },
-              { label: 'Data Format', value: 'Standard JSON', color: 'purple.400' },
-              { label: 'Rendering', value: 'Tile-Grid', color: 'green.400' },
-            ].map((stat, i) => (
-              <Box
-                key={i}
-                flex={1}
-                bg="gray.900"
-                p={8}
-                rounded="2xl"
-                border="2px"
-                borderColor="gray.800"
-                _hover={{ borderColor: stat.color }}
-                transition="all 0.2s"
-              >
-                <Text
-                  color="gray.500"
-                  fontSize="xs"
-                  fontWeight="black"
-                  mb={2}
-                  textTransform="uppercase"
-                  letterSpacing="widest"
-                >
-                  {stat.label}
-                </Text>
-                <Text color="white" fontSize="xl" fontWeight="bold">
-                  {stat.value}
-                </Text>
-              </Box>
-            ))}
-          </HStack>
         </VStack>
       </Box>
     </Box>
