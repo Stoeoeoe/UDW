@@ -278,31 +278,51 @@ export function getTerrainCornersFromTerrainData(
   tileX: number,
   tileY: number,
 ): TerrainCorners {
+  // Majority-based corner reconstruction: compute corner-point value from
+  // adjacent cell terrains (up to 4 cells per corner). Choose the most
+  // frequent non-null terrain; on ties, pick the lexicographically smallest id
+  // to keep behavior deterministic.
+  const H = terrainData.length;
+  const W = H > 0 ? (terrainData[0]?.length ?? 0) : 0;
+
+  const cpW = W + 1;
+
+  const computeCorner = (cx: number, cy: number): string | null => {
+    const counts = new Map<string, number>();
+    const cells: Array<[number, number]> = [
+      [cx - 1, cy - 1],
+      [cx, cy - 1],
+      [cx - 1, cy],
+      [cx, cy],
+    ];
+    for (const [x, y] of cells) {
+      if (y < 0 || y >= H) continue;
+      const row = terrainData[y];
+      if (!row) continue;
+      if (x < 0 || x >= row.length) continue;
+      const t = row[x];
+      if (t !== null && t !== undefined) {
+        counts.set(t, (counts.get(t) || 0) + 1);
+      }
+    }
+    if (counts.size === 0) return null;
+    // Choose winner by highest count, tie-breaker by string order
+    let best: string | null = null;
+    let bestCount = -1;
+    for (const [k, v] of counts) {
+      if (v > bestCount || (v === bestCount && (best === null || k < best))) {
+        best = k;
+        bestCount = v;
+      }
+    }
+    return best;
+  };
+
   return [
-    pickTerrainDataCorner(terrainData, [
-      [tileX, tileY],
-      [tileX - 1, tileY],
-      [tileX, tileY - 1],
-      [tileX - 1, tileY - 1],
-    ]),
-    pickTerrainDataCorner(terrainData, [
-      [tileX, tileY],
-      [tileX + 1, tileY],
-      [tileX, tileY - 1],
-      [tileX + 1, tileY - 1],
-    ]),
-    pickTerrainDataCorner(terrainData, [
-      [tileX, tileY],
-      [tileX - 1, tileY],
-      [tileX, tileY + 1],
-      [tileX - 1, tileY + 1],
-    ]),
-    pickTerrainDataCorner(terrainData, [
-      [tileX, tileY],
-      [tileX + 1, tileY],
-      [tileX, tileY + 1],
-      [tileX + 1, tileY + 1],
-    ]),
+    computeCorner(tileX, tileY), // TL point at (x,y)
+    computeCorner(tileX + 1, tileY), // TR point at (x+1,y)
+    computeCorner(tileX, tileY + 1), // BL point at (x,y+1)
+    computeCorner(tileX + 1, tileY + 1), // BR point at (x+1,y+1)
   ];
 }
 
