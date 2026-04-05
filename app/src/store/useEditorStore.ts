@@ -119,6 +119,71 @@ function ensureLocationLinkLayer(map: GameMap): GameMap {
   return { ...map, layers: [...map.layers, linkLayer] };
 }
 
+const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
+  terrain: 'terrain',
+  visual: 'stamp',
+  collision: 'stamp',
+  navigation: 'stamp',
+  metadata: 'stamp',
+  entity: 'entitySelect',
+  locationlink: 'linkSelect',
+};
+
+const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
+  terrain: ['terrain', 'erase'],
+  visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
+  collision: ['stamp', 'erase', 'fill', 'select'],
+  navigation: ['stamp', 'erase', 'fill', 'select'],
+  metadata: ['stamp', 'erase', 'fill', 'select'],
+  entity: ['entitySelect', 'entityPlace', 'entityDelete'],
+  locationlink: ['linkSelect', 'linkDelete'],
+};
+
+function getPreferredSelectedLayerId(map: GameMap | null): string | null {
+  if (!map) return null;
+  const firstNonLink = map.layers.find((layer) => layer.kind !== 'locationlink');
+  return firstNonLink?.id ?? map.layers[0]?.id ?? null;
+}
+
+function syncToolStateForSelectedLayer(
+  state: {
+    currentMap: GameMap | null;
+    selectedLayerId: string | null;
+    activeTool: ToolType;
+    selectedTerrainId: string | null;
+    terrainTypes: Array<{ id: string }>;
+    selectedLinkId: string | null;
+    selectedEntityId: string | null;
+    selectedEntityIds: Set<string>;
+  },
+  options: { forceDefault?: boolean } = {},
+): void {
+  const layer = state.currentMap?.layers.find(
+    (candidate) => candidate.id === state.selectedLayerId,
+  );
+  if (!layer) {
+    return;
+  }
+
+  const validTools = VALID_TOOLS_BY_KIND[layer.kind] ?? ['stamp'];
+  if (options.forceDefault || !validTools.includes(state.activeTool)) {
+    state.activeTool = DEFAULT_TOOL_BY_KIND[layer.kind] ?? 'stamp';
+  }
+
+  if (layer.kind === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
+    state.selectedTerrainId = state.terrainTypes[0].id;
+  }
+
+  if (layer.kind !== 'locationlink') {
+    state.selectedLinkId = null;
+  }
+
+  if (layer.kind !== 'entity') {
+    state.selectedEntityId = null;
+    state.selectedEntityIds = new Set();
+  }
+}
+
 /** Creates a default ground layer */
 function createDefaultLayer(width: number, height: number): Layer {
   return {
@@ -455,9 +520,14 @@ function syncEditorSelectionsWithMap(): void {
       state.selectedLayerId &&
       !currentMap.layers.some((layer) => layer.id === state.selectedLayerId)
     ) {
-      const firstNonLink = currentMap.layers.find((layer) => layer.kind !== 'locationlink');
-      state.selectedLayerId = firstNonLink?.id ?? currentMap.layers[0]?.id ?? null;
+      state.selectedLayerId = getPreferredSelectedLayerId(currentMap);
     }
+
+    if (!state.selectedLayerId) {
+      state.selectedLayerId = getPreferredSelectedLayerId(currentMap);
+    }
+
+    syncToolStateForSelectedLayer(state);
 
     if (state.selectedLinkId) {
       const hasLink =
@@ -775,10 +845,8 @@ export const useEditorStore = create<EditorStore>()(
                   set((state) => {
                     state.currentMap = castDraft(enrichedMaps[0]);
                     state.currentMapPath = `maps/${enrichedMaps[0].id}.map.json`;
-                    // Auto-select first layer
-                    if (enrichedMaps[0].layers.length > 0) {
-                      state.selectedLayerId = enrichedMaps[0].layers[0].id;
-                    }
+                    state.selectedLayerId = getPreferredSelectedLayerId(enrichedMaps[0]);
+                    syncToolStateForSelectedLayer(state, { forceDefault: true });
                   }),
                 { clearHistory: true },
               );
@@ -827,7 +895,6 @@ export const useEditorStore = create<EditorStore>()(
 
                   state.currentMap = castDraft(enrichedMap);
                   state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
-                  state.activeTool = 'select';
                   state.selectedLinkId = null;
                   if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
                     state.camera = { ...state.mapCameras[enrichedMap.id] };
@@ -837,9 +904,9 @@ export const useEditorStore = create<EditorStore>()(
                     !state.selectedLayerId ||
                     !enrichedMap.layers.find((l) => l.id === state.selectedLayerId)
                   ) {
-                    const firstNonLink = enrichedMap.layers.find((l) => l.kind !== 'locationlink');
-                    state.selectedLayerId = firstNonLink?.id ?? enrichedMap.layers[0]?.id ?? null;
+                    state.selectedLayerId = getPreferredSelectedLayerId(enrichedMap);
                   }
+                  syncToolStateForSelectedLayer(state, { forceDefault: true });
                 }),
               { clearHistory: true },
             );
@@ -862,7 +929,6 @@ export const useEditorStore = create<EditorStore>()(
                   state.currentMap = castDraft(enrichedMap);
                   state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
                   state.activeVariationId = null;
-                  state.activeTool = 'select';
                   state.selectedEntityId = null;
                   state.selectedEntityIds = new Set();
                   state.selectedLinkId = null;
@@ -875,8 +941,8 @@ export const useEditorStore = create<EditorStore>()(
                   }
 
                   // Auto-select first non-link layer
-                  const firstNonLink = enrichedMap.layers.find((l) => l.kind !== 'locationlink');
-                  state.selectedLayerId = firstNonLink?.id ?? enrichedMap.layers[0]?.id ?? null;
+                  state.selectedLayerId = getPreferredSelectedLayerId(enrichedMap);
+                  syncToolStateForSelectedLayer(state, { forceDefault: true });
                 }),
               { clearHistory: true },
             );
@@ -924,10 +990,9 @@ export const useEditorStore = create<EditorStore>()(
                   state.currentMap = castDraft(newMap);
                   state.currentMapPath = `maps/${newMap.id}.map.json`;
                   state.activeVariationId = null;
-                  state.activeTool = 'select';
                   state.selectedLinkId = null;
-                  const firstNonLink = newMap.layers.find((l) => l.kind !== 'locationlink');
-                  state.selectedLayerId = firstNonLink?.id ?? newMap.layers[0]?.id ?? null;
+                  state.selectedLayerId = getPreferredSelectedLayerId(newMap);
+                  syncToolStateForSelectedLayer(state, { forceDefault: true });
                 }),
               { clearHistory: true },
             );
@@ -981,7 +1046,8 @@ export const useEditorStore = create<EditorStore>()(
                       state.currentMap = castDraft(state.maps[0]);
                       state.currentMapPath = `maps/${state.maps[0].id}.map.json`;
                       state.activeVariationId = null;
-                      state.selectedLayerId = state.maps[0].layers[0]?.id || null;
+                      state.selectedLayerId = getPreferredSelectedLayerId(state.maps[0]);
+                      syncToolStateForSelectedLayer(state, { forceDefault: true });
                     } else {
                       state.currentMap = null;
                       state.currentMapPath = null;
@@ -1863,50 +1929,10 @@ export const useEditorStore = create<EditorStore>()(
                 (l) => l.id === state.selectedLayerId,
               );
               state.selectedLayerId = layerId;
-              const layer = state.currentMap?.layers.find((l) => l.id === layerId);
-              if (layer) {
-                // First tool per kind is the default; always switch when kind changes
-                const DEFAULT_TOOL_BY_KIND: Record<string, string> = {
-                  terrain: 'terrain',
-                  visual: 'stamp',
-                  collision: 'stamp',
-                  navigation: 'stamp',
-                  metadata: 'stamp',
-                  entity: 'entitySelect',
-                  locationlink: 'linkSelect',
-                };
-                const VALID_TOOLS_BY_KIND: Record<string, string[]> = {
-                  terrain: ['terrain', 'erase'],
-                  visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
-                  collision: ['stamp', 'erase', 'fill', 'select'],
-                  navigation: ['stamp', 'erase', 'fill', 'select'],
-                  metadata: ['stamp', 'erase', 'fill', 'select'],
-                  entity: ['entitySelect', 'entityPlace', 'entityDelete'],
-                  locationlink: ['linkSelect', 'linkDelete'],
-                };
-                const valid = VALID_TOOLS_BY_KIND[layer.kind] ?? ['stamp'];
-                // Switch to default tool whenever the layer kind changes or current tool is invalid
-                if (prevLayer?.kind !== layer.kind || !valid.includes(state.activeTool)) {
-                  state.activeTool = (DEFAULT_TOOL_BY_KIND[layer.kind] ??
-                    'stamp') as import('../types/editor').ToolType;
-                }
-                // Ensure a terrain is always selected when switching to a terrain layer
-                if (
-                  layer.kind === 'terrain' &&
-                  !state.selectedTerrainId &&
-                  state.terrainTypes.length > 0
-                ) {
-                  state.selectedTerrainId = state.terrainTypes[0].id;
-                }
-                // Clear link/entity selection when switching layer kind
-                if (layer.kind !== 'locationlink') {
-                  state.selectedLinkId = null;
-                }
-                if (layer.kind !== 'entity') {
-                  state.selectedEntityId = null;
-                  state.selectedEntityIds = new Set();
-                }
-              }
+              syncToolStateForSelectedLayer(state, {
+                forceDefault:
+                  prevLayer?.kind !== state.currentMap?.layers.find((l) => l.id === layerId)?.kind,
+              });
             }),
 
           updateLayer: (layerId, updates) =>

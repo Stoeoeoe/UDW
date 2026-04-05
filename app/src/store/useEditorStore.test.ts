@@ -196,6 +196,55 @@ describe('useEditorStore', () => {
         useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1],
       ).toBeNull();
     });
+
+    it('should select the terrain tool when a terrain layer is auto-selected', () => {
+      const terrainFirstMap = {
+        version: 1,
+        id: 'terrain-first-map',
+        name: 'Terrain First',
+        width: 10,
+        height: 10,
+        baseTilesetId: 'village',
+        tilesetRefs: ['village'],
+        layers: [
+          {
+            id: 'terrain-layer',
+            name: 'Terrain',
+            kind: 'terrain' as const,
+            visible: true,
+            locked: false,
+            opacity: 1,
+            zOrder: 0,
+            data: Array(10)
+              .fill(null)
+              .map(() => Array(10).fill(null)),
+            terrainData: Array(10)
+              .fill(null)
+              .map(() => Array(10).fill(null)),
+          },
+          {
+            id: 'visual-layer',
+            name: 'Ground',
+            kind: 'visual' as const,
+            visible: true,
+            locked: false,
+            opacity: 1,
+            zOrder: 1,
+            data: Array(10)
+              .fill(null)
+              .map(() => Array(10).fill(null)),
+          },
+        ],
+        entities: [],
+      };
+
+      useEditorStore.getState().setActiveTool('stamp');
+      useEditorStore.getState().setCurrentMap(terrainFirstMap);
+
+      const state = useEditorStore.getState();
+      expect(state.selectedLayerId).toBe('terrain-layer');
+      expect(state.activeTool).toBe('terrain');
+    });
   });
 
   describe('selectLayer auto-tool switching', () => {
