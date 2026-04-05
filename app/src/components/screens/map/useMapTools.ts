@@ -1,6 +1,10 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { Viewport } from 'pixi-viewport';
-import { useEditorStore } from '../../../store/useEditorStore';
+import {
+  beginEditorHistoryBatch,
+  endEditorHistoryBatch,
+  useEditorStore,
+} from '../../../store/useEditorStore';
 import { resolveEntities, resolveTileAt } from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import {
@@ -62,6 +66,21 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null);
   const isSamplingRef = useRef(false);
   const sampleStartRef = useRef<{ x: number; y: number } | null>(null);
+  const historyBatchActiveRef = useRef(false);
+
+  const startHistoryBatch = useCallback(() => {
+    if (!historyBatchActiveRef.current) {
+      beginEditorHistoryBatch();
+      historyBatchActiveRef.current = true;
+    }
+  }, []);
+
+  const finishHistoryBatch = useCallback(() => {
+    if (historyBatchActiveRef.current) {
+      endEditorHistoryBatch();
+      historyBatchActiveRef.current = false;
+    }
+  }, []);
 
   // Convert screen coordinates to tile coordinates (delegates to shared util)
   const screenToTile = useCallback(
@@ -242,6 +261,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           if (linkLayer) useEditorStore.getState().selectLayer(linkLayer.id);
           useEditorStore.getState().selectLink(hitLink.id);
           useEditorStore.getState().selectEntity(null);
+          startHistoryBatch();
           draggingLinkRef.current = hitLink.id;
           dragLinkEndRef.current = hitEnd;
           dragLinkOffsetRef.current = { x: 0, y: 0 };
@@ -258,6 +278,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           if (ownerLayer) useEditorStore.getState().selectLayer(ownerLayer.id);
           selectEntity(hitEntity.id);
           useEditorStore.getState().selectLink(null);
+          startHistoryBatch();
           draggingEntityRef.current = hitEntity.id;
           dragOffsetRef.current = {
             x: worldPos.x - hitEntity.position[0],
@@ -297,6 +318,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         if (hitLinkResult) {
           const { link: hitLink, end: hitEnd } = hitLinkResult;
           useEditorStore.getState().selectLink(hitLink.id);
+          startHistoryBatch();
           draggingLinkRef.current = hitLink.id;
           dragLinkEndRef.current = hitEnd;
           dragLinkOffsetRef.current = { x: 0, y: 0 };
@@ -351,6 +373,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         } else {
           selectEntity(hit?.id || null);
           if (hit) {
+            startHistoryBatch();
             draggingEntityRef.current = hit.id;
             dragOffsetRef.current = {
               x: worldPos.x - hit.position[0],
@@ -409,6 +432,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore -- activeTool is narrowed by outer condition but 'fill' is valid at runtime
         } else if (activeTool !== 'fill' && drawMode === 'point') {
+          startHistoryBatch();
           // Point mode: click to paint single tile, or shift+click to draw line from anchor
           if (e.shiftKey && lineAnchorRef.current) {
             // Draw line from anchor to current position
@@ -451,6 +475,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         drawStartRef.current = { x: tx, y: ty };
 
         if (drawMode === 'point') {
+          startHistoryBatch();
           // Point mode: paint immediately on click with brush size support
           applyTerrainShape('point', { x: tx, y: ty }, { x: tx, y: ty }, selectedTerrainId);
         } else {
@@ -525,6 +550,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       setDrawPreview,
       hitTestEntity,
       hitTestLink,
+      startHistoryBatch,
     ],
   );
 
@@ -732,6 +758,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             isSamplingRef.current = false;
             sampleStartRef.current = null;
             setDrawPreview({ isDrawing: false, start: null, end: null });
+            finishHistoryBatch();
             return;
           }
 
@@ -841,6 +868,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         isSamplingRef.current = false;
         sampleStartRef.current = null;
         setDrawPreview({ isDrawing: false, start: null, end: null });
+        finishHistoryBatch();
         return;
       }
 
@@ -891,6 +919,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       draggingLinkRef.current = null;
       dragLinkOffsetRef.current = null;
       setDrawPreview({ isDrawing: false, start: null, end: null });
+      finishHistoryBatch();
     },
     [
       currentMap,
@@ -908,6 +937,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       setSelectedTile,
       setSelectedTiles,
       setSampledPattern,
+      finishHistoryBatch,
     ],
   );
 
@@ -942,7 +972,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     drawStartRef.current = null;
     lineAnchorRef.current = null;
     setDrawPreview({ isDrawing: false, start: null, end: null });
-  }, [activeTool, drawMode, setDrawPreview]);
+    finishHistoryBatch();
+  }, [activeTool, drawMode, setDrawPreview, finishHistoryBatch]);
+
+  useEffect(
+    () => () => {
+      finishHistoryBatch();
+    },
+    [finishHistoryBatch],
+  );
 
   // Keyboard listeners for shift key (for point mode line preview)
   useEffect(() => {

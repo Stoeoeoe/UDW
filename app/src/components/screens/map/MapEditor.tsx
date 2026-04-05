@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDisclosure, VStack } from '@chakra-ui/react';
-import { useEditorStore } from '../../../store/useEditorStore';
+import { runEditorHistoryCommand, useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewportPixi } from './MapViewportPixi';
@@ -66,6 +66,30 @@ export const MapEditor: React.FC = () => {
   const pendingNewLinkId = useEditorStore((state) => state.pendingNewLinkId);
   const clearPendingNewLink = useEditorStore((state) => state.clearPendingNewLink);
   const { isOpen, onOpen, onClose } = useDisclosure();
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isPrimaryModifier = event.ctrlKey || event.metaKey;
+      if (!isPrimaryModifier || event.altKey) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const command =
+        key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
+
+      if (!command) {
+        return;
+      }
+
+      if (runEditorHistoryCommand(command, event.target)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // No map loaded state — show map browser on left with empty content on right
   if (!currentMap) {

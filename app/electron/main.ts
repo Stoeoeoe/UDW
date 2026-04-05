@@ -1,4 +1,11 @@
-import { app, BrowserWindow, nativeImage, session } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  nativeImage,
+  session,
+  type MenuItemConstructorOptions,
+} from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { setupIpcHandlers } from './ipcHandlers';
@@ -25,6 +32,58 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST;
 
 let win: BrowserWindow | null;
+
+function sendHistoryCommand(command: 'undo' | 'redo') {
+  win?.webContents.send('app:history-command', command);
+}
+
+function setupApplicationMenu() {
+  const template: MenuItemConstructorOptions[] = [];
+
+  if (process.platform === 'darwin') {
+    template.push({
+      label: app.name,
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    });
+  }
+
+  template.push({
+    label: 'Edit',
+    submenu: [
+      {
+        label: 'Undo',
+        accelerator: 'CommandOrControl+Z',
+        click: () => sendHistoryCommand('undo'),
+      },
+      {
+        label: 'Redo',
+        accelerator: 'CommandOrControl+Y',
+        click: () => sendHistoryCommand('redo'),
+      },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'selectAll' },
+    ],
+  });
+
+  if (process.platform === 'darwin') {
+    template.push({ role: 'windowMenu' });
+  }
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
 
 function createWindow() {
   const getAppIconPath = () => {
@@ -55,6 +114,7 @@ function createWindow() {
 
   // Initialize IPC Handlers
   setupIpcHandlers(win);
+  setupApplicationMenu();
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
