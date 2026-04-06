@@ -79,7 +79,10 @@ export async function saveMapImmediate(map: GameMap): Promise<void> {
   store.setPendingMapSave(false);
 
   try {
-    await fileSystem.saveJson('maps', `${map.id}.map.json`, serializeMap(map));
+    await fileSystem.saveJson('maps', `${map.id}.map.json`, {
+      $schema: '../../schemas/map.schema.json',
+      ...serializeMap(map),
+    });
     store.setLastSaved(new Date());
 
     // Auto-reset to idle after showing "Saved"
@@ -119,7 +122,10 @@ export async function saveProjectImmediate(project: Project): Promise<void> {
   store.setPendingProjectSave(false);
 
   try {
-    await fileSystem.saveJson('', 'project.json', project);
+    await fileSystem.saveJson('', 'project.json', {
+      $schema: '../schemas/project.schema.json',
+      ...project,
+    });
     store.setLastSaved(new Date());
 
     // Auto-reset to idle after showing "Saved"

@@ -248,7 +248,10 @@ function setTileInState(
 /** Persists project data to project.json with save status feedback */
 async function persistProject(project: Project): Promise<void> {
   useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('', 'project.json', project);
+  await fileSystem.saveJson('', 'project.json', {
+    $schema: '../schemas/project.schema.json',
+    ...project,
+  });
   useSaveStore.getState().setStatus('saved');
   setTimeout(() => {
     if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
@@ -885,7 +888,10 @@ export const useEditorStore = create<EditorStore>()(
           },
 
           updateProject: async (project) => {
-            await fileSystem.saveJson('', 'project.json', project);
+            await fileSystem.saveJson('', 'project.json', {
+              $schema: '../schemas/project.schema.json',
+              ...project,
+            });
             set((state) => {
               state.project = project;
             });
@@ -993,7 +999,10 @@ export const useEditorStore = create<EditorStore>()(
             };
             const newMap = ensureLocationLinkLayer(rawMap);
 
-            await fileSystem.saveJson('maps', `${id}.map.json`, serializeMap(newMap));
+            await fileSystem.saveJson('maps', `${id}.map.json`, {
+              $schema: '../../schemas/map.schema.json',
+              ...serializeMap(newMap),
+            });
 
             withHistorySuppressed(
               () =>
@@ -2313,16 +2322,14 @@ export const useEditorStore = create<EditorStore>()(
             };
 
             // Persist both maps
-            await fileSystem.saveJson(
-              'maps',
-              `${targetMap.id}.map.json`,
-              serializeMap(updatedTargetMap),
-            );
-            await fileSystem.saveJson(
-              'maps',
-              `${sourceMap.id}.map.json`,
-              serializeMap(updatedSourceMap),
-            );
+            await fileSystem.saveJson('maps', `${targetMap.id}.map.json`, {
+              $schema: '../../schemas/map.schema.json',
+              ...serializeMap(updatedTargetMap),
+            });
+            await fileSystem.saveJson('maps', `${sourceMap.id}.map.json`, {
+              $schema: '../../schemas/map.schema.json',
+              ...serializeMap(updatedSourceMap),
+            });
 
             // Update store
             set((s) => {

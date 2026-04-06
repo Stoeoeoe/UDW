@@ -51,7 +51,7 @@ function stripTileDefaults(index: number, def: TileDefinition): TileDefinition |
 }
 
 /** Prepare a tileset for serialization — strips redundant defaults from tile entries. */
-export function serializeTileset(tileset: Tileset): Tileset {
+export function serializeTileset(tileset: Tileset): Tileset & { $schema: string } {
   const tiles: Record<number, TileDefinition> = {};
 
   for (const [keyStr, def] of Object.entries(tileset.tiles ?? {})) {
@@ -62,7 +62,7 @@ export function serializeTileset(tileset: Tileset): Tileset {
     }
   }
 
-  return { ...tileset, tiles };
+  return { $schema: '../../schemas/tileset.schema.json', ...tileset, tiles };
 }
 
 /** Restore defaults for tile definitions loaded from disk.
