@@ -18,8 +18,10 @@ import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { TilesetImporter } from '../tileset/TilesetImporter';
 import TilesetCreator from '../dialogs/TilesetCreator';
 import { WangEditor } from '../tileset/WangEditor';
+import { useProject } from '../../hooks/useProject';
 
 export const TilesetPanel: React.FC = () => {
+  const { tileSize } = useProject();
   const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
   const activeId = useEditorStore((state) => state.activeTilesetId);
   const setActive = useEditorStore((state) => state.setActiveTileset);
@@ -131,7 +133,7 @@ export const TilesetPanel: React.FC = () => {
                         {ts.name}
                       </Text>
                       <Text fontSize="9px" color="gray.500" fontWeight="mono">
-                        {ts.tileWidth}x{ts.tileHeight} • {ts.tileCount} tiles
+                        {tileSize}x{tileSize} • {ts.tileCount} tiles
                       </Text>
                     </VStack>
 

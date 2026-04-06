@@ -17,8 +17,7 @@ interface TilePixels {
 export interface GenerateAutotileTilesetAtlasParams {
   sprite: HTMLImageElement | HTMLCanvasElement | ImageBitmap;
   sourceColumns: number;
-  tileWidth: number;
-  tileHeight: number;
+  tileSize: number;
   sourceAIndices: number[];
   sourceBIndices: number[];
   terrainAId: string;
@@ -146,14 +145,13 @@ function extractTilePixels(
   sourceCtx: CanvasRenderingContext2D,
   tileIndex: number,
   columns: number,
-  tileWidth: number,
-  tileHeight: number,
+  tileSize: number,
 ): TilePixels {
   const col = tileIndex % columns;
   const row = Math.floor(tileIndex / columns);
-  const x = col * tileWidth;
-  const y = row * tileHeight;
-  const data = sourceCtx.getImageData(x, y, tileWidth, tileHeight).data;
+  const x = col * tileSize;
+  const y = row * tileSize;
+  const data = sourceCtx.getImageData(x, y, tileSize, tileSize).data;
   return { data };
 }
 
@@ -165,15 +163,14 @@ export function composeTilePixels(
   corners: AutoTileCorners,
   aPixels: Uint8ClampedArray,
   bPixels: Uint8ClampedArray,
-  tileWidth: number,
-  tileHeight: number,
+  tileSize: number,
 ): Uint8ClampedArray {
-  const out = new Uint8ClampedArray(tileWidth * tileHeight * 4);
+  const out = new Uint8ClampedArray(tileSize * tileSize * 4);
 
-  for (let y = 0; y < tileHeight; y++) {
-    const v = (y + 0.5) / tileHeight;
-    for (let x = 0; x < tileWidth; x++) {
-      const u = (x + 0.5) / tileWidth;
+  for (let y = 0; y < tileSize; y++) {
+    const v = (y + 0.5) / tileSize;
+    for (let x = 0; x < tileSize; x++) {
+      const u = (x + 0.5) / tileSize;
 
       const wTL = (1 - u) * (1 - v);
       const wTR = u * (1 - v);
@@ -187,7 +184,7 @@ export function composeTilePixels(
         (corners[3] === 'A' ? wBR : 0);
 
       const src = aScore >= 0.5 ? aPixels : bPixels;
-      const i = (y * tileWidth + x) * 4;
+      const i = (y * tileSize + x) * 4;
 
       out[i] = src[i];
       out[i + 1] = src[i + 1];
@@ -237,8 +234,7 @@ export async function generateAutotileTilesetAtlas(
   const {
     sprite,
     sourceColumns,
-    tileWidth,
-    tileHeight,
+    tileSize,
     sourceAIndices,
     sourceBIndices,
     terrainAId,
@@ -249,7 +245,7 @@ export async function generateAutotileTilesetAtlas(
     idPrefix,
   } = params;
 
-  if (tileWidth <= 0 || tileHeight <= 0) {
+  if (tileSize <= 0) {
     throw new Error('Tile size must be greater than zero.');
   }
   if (!sourceAIndices.length || !sourceBIndices.length) {
@@ -257,7 +253,7 @@ export async function generateAutotileTilesetAtlas(
   }
 
   const { width: spriteW, height: spriteH } = sourceDimensions(sprite);
-  const sourceRows = Math.floor(spriteH / tileHeight);
+  const sourceRows = Math.floor(spriteH / tileSize);
   const maxTileCount = sourceColumns * sourceRows;
 
   const validateTileIndex = (idx: number, groupName: string) => {
@@ -284,13 +280,13 @@ export async function generateAutotileTilesetAtlas(
   sourceCtx.drawImage(sprite, 0, 0);
 
   const aSourceTiles = sourceAIndices.map((idx) =>
-    extractTilePixels(sourceCtx, idx, sourceColumns, tileWidth, tileHeight),
+    extractTilePixels(sourceCtx, idx, sourceColumns, tileSize),
   );
   const bSourceTiles = sourceBIndices.map((idx) =>
-    extractTilePixels(sourceCtx, idx, sourceColumns, tileWidth, tileHeight),
+    extractTilePixels(sourceCtx, idx, sourceColumns, tileSize),
   );
 
-  const outCanvas = createCanvas(columns * tileWidth, rows * tileHeight);
+  const outCanvas = createCanvas(columns * tileSize, rows * tileSize);
   const outCtx = outCanvas.getContext('2d');
   if (!outCtx) {
     throw new Error('Unable to initialize output canvas context.');
@@ -306,11 +302,11 @@ export async function generateAutotileTilesetAtlas(
     for (let variant = 0; variant < safeVariants; variant++) {
       const aTile = pickByIndex(aSourceTiles, p + variant);
       const bTile = pickByIndex(bSourceTiles, p * 3 + variant);
-      const out = composeTilePixels(pattern.corners, aTile.data, bTile.data, tileWidth, tileHeight);
+      const out = composeTilePixels(pattern.corners, aTile.data, bTile.data, tileSize);
 
-      const outX = (tileIndex % columns) * tileWidth;
-      const outY = Math.floor(tileIndex / columns) * tileHeight;
-      outCtx.putImageData(new ImageData(out, tileWidth, tileHeight), outX, outY);
+      const outX = (tileIndex % columns) * tileSize;
+      const outY = Math.floor(tileIndex / columns) * tileSize;
+      outCtx.putImageData(new ImageData(out, tileSize, tileSize), outX, outY);
 
       tiles[tileIndex] = {
         id: buildOutputTileId(prefix, pattern, variant, safeVariants),

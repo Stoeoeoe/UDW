@@ -12,8 +12,6 @@ const mockTileset: Tileset = {
   name: 'Test',
   version: 1,
   spriteSheet: 'test.png',
-  tileWidth: 16,
-  tileHeight: 16,
   columns: 4, // 4 tiles per row
   tileCount: 0,
   tiles: [],

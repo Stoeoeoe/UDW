@@ -9,6 +9,7 @@ import {
   getPolygonFromCollision,
   isValidPolygon,
 } from '../../lib/collisionUtils';
+import { useProject } from '../../hooks/useProject';
 
 type CollisionMode = 'none' | 'full' | 'polygon';
 
@@ -24,8 +25,6 @@ interface DrawRect {
 }
 
 interface TileCollisionEditorProps {
-  tileWidth: number;
-  tileHeight: number;
   tileIndex?: number | null;
   tilesetColumns?: number;
   sprite?: HTMLImageElement;
@@ -72,35 +71,20 @@ function roundToStep(value: number, step: number): number {
   return Math.round(value / step) * step;
 }
 
-function quantizeNormalizedPoint(
-  point: NormalizedPoint,
-  tileWidth: number,
-  tileHeight: number,
-): NormalizedPoint {
-  const stepX = 1 / Math.max(1, tileWidth);
-  const stepY = 1 / Math.max(1, tileHeight);
-  const x = clamp01(roundToStep(point[0], stepX));
-  const y = clamp01(roundToStep(point[1], stepY));
+function quantizeNormalizedPoint(point: NormalizedPoint, tileSize: number): NormalizedPoint {
+  const step = 1 / Math.max(1, tileSize);
+  const x = clamp01(roundToStep(point[0], step));
+  const y = clamp01(roundToStep(point[1], step));
   return [Number(x.toFixed(6)), Number(y.toFixed(6))];
 }
 
-function getDrawRect(tileWidth: number, tileHeight: number): DrawRect {
-  const maxW = CANVAS_SIZE - DRAW_PADDING * 2;
-  const maxH = CANVAS_SIZE - DRAW_PADDING * 2;
-  const aspect = tileWidth / Math.max(1, tileHeight);
-
-  let width = maxW;
-  let height = width / aspect;
-  if (height > maxH) {
-    height = maxH;
-    width = height * aspect;
-  }
-
+function getDrawRect(): DrawRect {
+  const size = CANVAS_SIZE - DRAW_PADDING * 2;
   return {
-    x: (CANVAS_SIZE - width) / 2,
-    y: (CANVAS_SIZE - height) / 2,
-    width,
-    height,
+    x: DRAW_PADDING,
+    y: DRAW_PADDING,
+    width: size,
+    height: size,
   };
 }
 
@@ -158,7 +142,7 @@ function findInsertionIndex(
   return bestIndex;
 }
 
-function parseRawPoints(raw: string, tileWidth: number, tileHeight: number): NormalizedPoint[] {
+function parseRawPoints(raw: string, tileSize: number): NormalizedPoint[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
 
@@ -177,11 +161,7 @@ function parseRawPoints(raw: string, tileWidth: number, tileHeight: number): Nor
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
         throw new Error(`Point at index ${index} has invalid numeric values.`);
       }
-      return quantizeNormalizedPoint(
-        [clamp01(x), clamp01(y)] as NormalizedPoint,
-        tileWidth,
-        tileHeight,
-      );
+      return quantizeNormalizedPoint([clamp01(x), clamp01(y)] as NormalizedPoint, tileSize);
     });
   }
 
@@ -197,27 +177,22 @@ function parseRawPoints(raw: string, tileWidth: number, tileHeight: number): Nor
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       throw new Error(`Line ${index + 1} must use "x,y" with numeric values between 0 and 1.`);
     }
-    return quantizeNormalizedPoint(
-      [clamp01(x), clamp01(y)] as NormalizedPoint,
-      tileWidth,
-      tileHeight,
-    );
+    return quantizeNormalizedPoint([clamp01(x), clamp01(y)] as NormalizedPoint, tileSize);
   });
 }
 
 export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
-  tileWidth,
-  tileHeight,
   tileIndex,
   tilesetColumns,
   sprite,
   collision,
   onChange,
 }) => {
+  const { tileSize } = useProject();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mode, setMode] = useState<CollisionMode>(() => detectMode(collision));
   const [points, setPoints] = useState<NormalizedPoint[]>(() =>
-    getPolygonFromCollision(collision, tileWidth, tileHeight),
+    getPolygonFromCollision(collision, tileSize),
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const pendingEmitRef = useRef<number | null>(null);
@@ -233,14 +208,14 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     const nextMode = detectMode(collision);
     setMode(nextMode);
 
-    const incomingPoints = getPolygonFromCollision(collision, tileWidth, tileHeight);
+    const incomingPoints = getPolygonFromCollision(collision, tileSize);
     if (nextMode === 'polygon' && incomingPoints.length > 0) {
       setPoints(incomingPoints);
     }
     if (nextMode !== 'polygon') {
       setPoints(incomingPoints);
     }
-  }, [collision, tileHeight, tileWidth]);
+  }, [collision, tileSize]);
 
   useEffect(() => {
     if (!isEditingRaw) {
@@ -289,12 +264,12 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
 
   const getNormalizedFromPointer = useCallback(
     (pointer: { x: number; y: number }) => {
-      const drawRect = getDrawRect(tileWidth, tileHeight);
+      const drawRect = getDrawRect();
       const x = clamp01((pointer.x - drawRect.x) / Math.max(1, drawRect.width));
       const y = clamp01((pointer.y - drawRect.y) / Math.max(1, drawRect.height));
-      return quantizeNormalizedPoint([x, y], tileWidth, tileHeight);
+      return quantizeNormalizedPoint([x, y], tileSize);
     },
-    [tileHeight, tileWidth],
+    [tileSize],
   );
 
   const handleMouseDown = useCallback(
@@ -303,7 +278,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       const pointer = getPointerFromEvent(e);
       if (!pointer) return;
       const normalized = getNormalizedFromPointer(pointer);
-      const drawRect = getDrawRect(tileWidth, tileHeight);
+      const drawRect = getDrawRect();
       const nearest = findNearestHandle(points, pointer.x, pointer.y, drawRect);
 
       if (e.button === 2) {
@@ -326,15 +301,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       setPoints(next);
       emitPolygonCollision(next);
     },
-    [
-      emitPolygonCollision,
-      getNormalizedFromPointer,
-      getPointerFromEvent,
-      mode,
-      points,
-      tileHeight,
-      tileWidth,
-    ],
+    [emitPolygonCollision, getNormalizedFromPointer, getPointerFromEvent, mode, points],
   );
 
   const handleMouseMove = useCallback(
@@ -405,7 +372,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
 
   const applyRawPoints = useCallback(() => {
     try {
-      const parsed = parseRawPoints(rawText, tileWidth, tileHeight);
+      const parsed = parseRawPoints(rawText, tileSize);
       if (!isValidPolygon(parsed)) {
         setRawError('Raw polygon must have at least 3 distinct points and non-zero area.');
         return;
@@ -416,7 +383,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     } catch (error) {
       setRawError(error instanceof Error ? error.message : 'Failed to parse raw points.');
     }
-  }, [emitPolygonCollision, rawText, tileHeight, tileWidth]);
+  }, [emitPolygonCollision, rawText, tileSize]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -432,7 +399,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     context.fillStyle = '#090b10';
     context.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-    const drawRect = getDrawRect(tileWidth, tileHeight);
+    const drawRect = getDrawRect();
 
     if (
       mode === 'polygon' &&
@@ -443,16 +410,16 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       tilesetColumns &&
       tilesetColumns > 0
     ) {
-      const sourceX = (tileIndex % tilesetColumns) * tileWidth;
-      const sourceY = Math.floor(tileIndex / tilesetColumns) * tileHeight;
+      const sourceX = (tileIndex % tilesetColumns) * tileSize;
+      const sourceY = Math.floor(tileIndex / tilesetColumns) * tileSize;
 
       context.imageSmoothingEnabled = false;
       context.drawImage(
         sprite,
         sourceX,
         sourceY,
-        tileWidth,
-        tileHeight,
+        tileSize,
+        tileSize,
         drawRect.x,
         drawRect.y,
         drawRect.width,
@@ -465,16 +432,16 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
 
     context.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     context.lineWidth = 1;
-    for (let i = 1; i < tileWidth; i++) {
-      const pos = drawRect.x + (drawRect.width * i) / Math.max(1, tileWidth);
+    for (let i = 1; i < tileSize; i++) {
+      const pos = drawRect.x + (drawRect.width * i) / Math.max(1, tileSize);
       context.beginPath();
       context.moveTo(pos, drawRect.y);
       context.lineTo(pos, drawRect.y + drawRect.height);
       context.stroke();
     }
 
-    for (let i = 1; i < tileHeight; i++) {
-      const pos = drawRect.y + (drawRect.height * i) / Math.max(1, tileHeight);
+    for (let i = 1; i < tileSize; i++) {
+      const pos = drawRect.y + (drawRect.height * i) / Math.max(1, tileSize);
       context.beginPath();
       context.moveTo(drawRect.x, pos);
       context.lineTo(drawRect.x + drawRect.width, pos);
@@ -513,7 +480,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
       context.lineWidth = 1;
       context.stroke();
     }
-  }, [dragIndex, mode, points, sprite, tileIndex, tileWidth, tileHeight, tilesetColumns]);
+  }, [dragIndex, mode, points, sprite, tileIndex, tileSize, tilesetColumns]);
 
   return (
     <VStack

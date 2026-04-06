@@ -28,8 +28,6 @@ function createMockTileset(): Tileset {
     id: 'test-tileset',
     name: 'Test Tileset',
     spriteSheet: 'test.png',
-    tileWidth: 16,
-    tileHeight: 16,
     columns: 8,
     tileCount: 64,
     tiles: {
@@ -545,8 +543,6 @@ function createExtendedTileset(): Tileset {
     id: 'extended-tileset',
     name: 'Extended Tileset',
     spriteSheet: 'test.png',
-    tileWidth: 16,
-    tileHeight: 16,
     columns: 8,
     tileCount: 64,
     tiles: {
@@ -623,8 +619,6 @@ describe('findBestMatchingTileWithFallback - Edge Cases', () => {
       id: 'mixed',
       name: 'Mixed',
       spriteSheet: 'test.png',
-      tileWidth: 16,
-      tileHeight: 16,
       columns: 8,
       tileCount: 64,
       tiles: {

@@ -12,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useProject } from '../../../hooks/useProject';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { TilesetCanvas } from '../../tileset/TilesetCanvas';
 import { TilesetInspector } from '../../tileset/TilesetInspector';
@@ -34,13 +35,14 @@ export const TilesetEditor: React.FC = () => {
   const resetSelectedTiles = useEditorStore((state) => state.resetSelectedTiles);
 
   const { selectedTileIndex, handleTileSelect } = useTileSelection();
+  const { tileSize } = useProject();
 
   const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
 
   const tilesetItems: ListPanelItem[] = Array.from(tilesets.values()).map((ts) => ({
     id: ts.id,
     label: ts.name,
-    sublabel: `${ts.tileWidth}×${ts.tileHeight} • ${ts.tileCount} tiles`,
+    sublabel: `${tileSize}×${tileSize} • ${ts.tileCount} tiles`,
   }));
 
   const toast = useToast();
@@ -193,7 +195,7 @@ export const TilesetEditor: React.FC = () => {
       <ResizableEditorLayout
         header={{
           title: activeTileset.name,
-          subtitle: `${activeTileset.tileWidth}×${activeTileset.tileHeight} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
+          subtitle: `${tileSize}×${tileSize} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
         }}
         content={
           <Flex h="full" alignItems="center" justifyContent="center">
@@ -251,7 +253,7 @@ export const TilesetEditor: React.FC = () => {
       <ResizableEditorLayout
         header={{
           title: activeTileset.name,
-          subtitle: `${activeTileset.tileWidth}×${activeTileset.tileHeight} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
+          subtitle: `${tileSize}×${tileSize} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
         }}
         content={
           <Flex h="full" overflow="hidden" position="relative">

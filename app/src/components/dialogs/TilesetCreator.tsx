@@ -7,11 +7,6 @@ import {
   Input,
   FormControl,
   FormLabel,
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
   HStack,
   useToast,
   Image,
@@ -20,6 +15,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 import type { TileDefinition } from '../../types/schema';
+import { useProject } from '../../hooks/useProject';
 
 interface Props {
   onCreate?: () => void;
@@ -28,11 +24,10 @@ interface Props {
 
 export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
   const addTileset = useEditorStore((s) => s.addTileset);
+  const { tileSize } = useProject();
   const toast = useToast();
 
   const [name, setName] = useState('New Tileset');
-  const [tileWidth, setTileWidth] = useState(16);
-  const [tileHeight, setTileHeight] = useState(16);
   const [filePath, setFilePath] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -96,8 +91,8 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
           throw new Error('Image dimensions are unavailable. Re-select the sprite image.');
         })();
 
-      const columns = Math.floor(dimensions.w / tileWidth) || 1;
-      const rows = Math.floor(dimensions.h / tileHeight) || 1;
+      const columns = Math.floor(dimensions.w / tileSize) || 1;
+      const rows = Math.floor(dimensions.h / tileSize) || 1;
       const tileCount = columns * rows;
 
       // Build default tiles record
@@ -113,8 +108,6 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
         id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
         name,
         spriteSheet: internalPath,
-        tileWidth,
-        tileHeight,
         columns,
         tileCount,
         tiles,
@@ -181,34 +174,6 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
             />
           </Box>
         )}
-
-        <HStack spacing={4}>
-          <FormControl>
-            <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-              Tile Width
-            </FormLabel>
-            <NumberInput value={tileWidth} min={1} onChange={(_, v) => setTileWidth(v)}>
-              <NumberInputField bg="gray.950" borderColor="gray.700" />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-          </FormControl>
-
-          <FormControl>
-            <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-              Tile Height
-            </FormLabel>
-            <NumberInput value={tileHeight} min={1} onChange={(_, v) => setTileHeight(v)}>
-              <NumberInputField bg="gray.950" borderColor="gray.700" />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-          </FormControl>
-        </HStack>
 
         <HStack justify="flex-end">
           <Button variant="ghost" onClick={onCancel}>

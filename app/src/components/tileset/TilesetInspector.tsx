@@ -153,8 +153,6 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
           />
 
           <TileCollisionEditor
-            tileWidth={tileset.tileWidth}
-            tileHeight={tileset.tileHeight}
             tileIndex={selectedIndex}
             tilesetColumns={tileset.columns}
             sprite={sprite}

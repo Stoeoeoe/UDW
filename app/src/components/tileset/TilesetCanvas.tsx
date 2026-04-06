@@ -5,6 +5,7 @@ import { ZoomControls } from '../common/ZoomControls';
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
 import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
+import { useProject } from '../../hooks/useProject';
 
 interface TilesetCanvasProps {
   tileset: Tileset;
@@ -25,6 +26,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   tool = 'select',
   enableMultiSelect = false,
 }) => {
+  const { tileSize } = useProject();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
   const sprite = loadedSprites.get(tileset.spriteSheet);
@@ -127,16 +129,16 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   // Helper to compute corner index from tile-local coordinates
   const computeCorner = useCallback(
     (tileX: number, tileY: number, col: number, row: number) => {
-      const localX = tileX - col * tileset.tileWidth;
-      const localY = tileY - row * tileset.tileHeight;
-      const isLeft = localX < tileset.tileWidth / 2;
-      const isTop = localY < tileset.tileHeight / 2;
+      const localX = tileX - col * tileSize;
+      const localY = tileY - row * tileSize;
+      const isLeft = localX < tileSize / 2;
+      const isTop = localY < tileSize / 2;
       if (isTop && isLeft) return 0; // TL
       if (isTop && !isLeft) return 1; // TR
       if (!isTop && isLeft) return 2; // BL
       return 3; // BR
     },
-    [tileset.tileWidth, tileset.tileHeight],
+    [tileSize, tileSize],
   );
 
   // Helper to get tile coords from mouse position
@@ -158,8 +160,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         tileY = mouseY / effectiveZoom;
       }
 
-      const col = Math.floor(tileX / tileset.tileWidth);
-      const row = Math.floor(tileY / tileset.tileHeight);
+      const col = Math.floor(tileX / tileSize);
+      const row = Math.floor(tileY / tileSize);
       const index = row * tileset.columns + col;
 
       if (
@@ -217,8 +219,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           tileY = mouseY / effectiveZoom;
         }
 
-        const col = Math.floor(tileX / tileset.tileWidth);
-        const row = Math.floor(tileY / tileset.tileHeight);
+        const col = Math.floor(tileX / tileSize);
+        const row = Math.floor(tileY / tileSize);
         const index = row * tileset.columns + col;
         if (
           col >= 0 &&
@@ -306,8 +308,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           tileY = mouseY / effectiveZoom;
         }
 
-        const col = Math.floor(tileX / tileset.tileWidth);
-        const row = Math.floor(tileY / tileset.tileHeight);
+        const col = Math.floor(tileX / tileSize);
+        const row = Math.floor(tileY / tileSize);
         const index = row * tileset.columns + col;
         if (
           col >= 0 &&
@@ -338,8 +340,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       panZoom,
       tileset.columns,
       tileset.tileCount,
-      tileset.tileWidth,
-      tileset.tileHeight,
+      tileSize,
+      tileSize,
     ],
   );
 
@@ -518,11 +520,11 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 0.5 / effectiveZoom;
     ctx.beginPath();
-    for (let x = 0; x <= sprite.width; x += tileset.tileWidth) {
+    for (let x = 0; x <= sprite.width; x += tileSize) {
       ctx.moveTo(sheetX + x, sheetY);
       ctx.lineTo(sheetX + x, sheetY + sprite.height);
     }
-    for (let y = 0; y <= sprite.height; y += tileset.tileHeight) {
+    for (let y = 0; y <= sprite.height; y += tileSize) {
       ctx.moveTo(sheetX, sheetY + y);
       ctx.lineTo(sheetX + sprite.width, sheetY + y);
     }
@@ -537,18 +539,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         const si = selectedTileIndices[0];
         const col = si % tileset.columns;
         const row = Math.floor(si / tileset.columns);
-        ctx.strokeRect(
-          sheetX + col * tileset.tileWidth,
-          sheetY + row * tileset.tileHeight,
-          tileset.tileWidth,
-          tileset.tileHeight,
-        );
-        ctx.fillRect(
-          sheetX + col * tileset.tileWidth,
-          sheetY + row * tileset.tileHeight,
-          tileset.tileWidth,
-          tileset.tileHeight,
-        );
+        ctx.strokeRect(sheetX + col * tileSize, sheetY + row * tileSize, tileSize, tileSize);
+        ctx.fillRect(sheetX + col * tileSize, sheetY + row * tileSize, tileSize, tileSize);
       } else {
         // Draw a single bounding rect covering the selection
         let minC = Infinity,
@@ -564,10 +556,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           if (r > maxR) maxR = r;
         }
         if (minC !== Infinity) {
-          const x = sheetX + minC * tileset.tileWidth;
-          const y = sheetY + minR * tileset.tileHeight;
-          const w = (maxC - minC + 1) * tileset.tileWidth;
-          const h = (maxR - minR + 1) * tileset.tileHeight;
+          const x = sheetX + minC * tileSize;
+          const y = sheetY + minR * tileSize;
+          const w = (maxC - minC + 1) * tileSize;
+          const h = (maxR - minR + 1) * tileSize;
           ctx.strokeRect(x, y, w, h);
           ctx.fillRect(x, y, w, h);
         }
@@ -578,20 +570,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
       ctx.strokeStyle = '#3182ce';
       ctx.lineWidth = 2 / effectiveZoom;
-      ctx.strokeRect(
-        sheetX + col * tileset.tileWidth,
-        sheetY + row * tileset.tileHeight,
-        tileset.tileWidth,
-        tileset.tileHeight,
-      );
+      ctx.strokeRect(sheetX + col * tileSize, sheetY + row * tileSize, tileSize, tileSize);
 
       ctx.fillStyle = 'rgba(49, 130, 206, 0.2)';
-      ctx.fillRect(
-        sheetX + col * tileset.tileWidth,
-        sheetY + row * tileset.tileHeight,
-        tileset.tileWidth,
-        tileset.tileHeight,
-      );
+      ctx.fillRect(sheetX + col * tileSize, sheetY + row * tileSize, tileSize, tileSize);
     }
 
     // Draw terrain corner overlays when in terrain tool (50% opacity quadrants with rounded outer corners)
@@ -617,8 +599,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         return td?.terrainCorners?.[cornerIdx] || null;
       };
 
-      const halfW = tileset.tileWidth / 2;
-      const halfH = tileset.tileHeight / 2;
+      const halfW = tileSize / 2;
+      const halfH = tileSize / 2;
       const radius = Math.min(halfW, halfH) * 0.35;
 
       // For each tile, draw quadrant fills for assigned corners
@@ -629,8 +611,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         const corners = tileDef?.terrainCorners || null;
         if (!corners) continue;
 
-        const x = sheetX + col * tileset.tileWidth;
-        const y = sheetY + row * tileset.tileHeight;
+        const x = sheetX + col * tileSize;
+        const y = sheetY + row * tileSize;
 
         // corner positions: 0=TL, 1=TR, 2=BL, 3=BR
         for (let ci = 0; ci < 4; ci++) {
@@ -729,26 +711,26 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
         const col = idx % tileset.columns;
         const row = Math.floor(idx / tileset.columns);
-        const x = sheetX + col * tileset.tileWidth;
-        const y = sheetY + row * tileset.tileHeight;
+        const x = sheetX + col * tileSize;
+        const y = sheetY + row * tileSize;
 
         if (collision.type === 'full') {
           ctx.fillStyle = 'rgba(255, 127, 80, 0.25)';
-          ctx.fillRect(x, y, tileset.tileWidth, tileset.tileHeight);
+          ctx.fillRect(x, y, tileSize, tileSize);
           ctx.strokeStyle = 'rgba(255, 180, 138, 0.95)';
           ctx.lineWidth = 1 / effectiveZoom;
-          ctx.strokeRect(x, y, tileset.tileWidth, tileset.tileHeight);
+          ctx.strokeRect(x, y, tileSize, tileSize);
           continue;
         }
 
         for (const shape of collision.shapes || []) {
-          const points = shapeToNormalizedPolygon(shape, tileset.tileWidth, tileset.tileHeight);
+          const points = shapeToNormalizedPolygon(shape, tileSize, tileSize);
           if (points.length < 3) continue;
 
           ctx.beginPath();
-          ctx.moveTo(x + points[0][0] * tileset.tileWidth, y + points[0][1] * tileset.tileHeight);
+          ctx.moveTo(x + points[0][0] * tileSize, y + points[0][1] * tileSize);
           for (let i = 1; i < points.length; i++) {
-            ctx.lineTo(x + points[i][0] * tileset.tileWidth, y + points[i][1] * tileset.tileHeight);
+            ctx.lineTo(x + points[i][0] * tileSize, y + points[i][1] * tileSize);
           }
           ctx.closePath();
           ctx.fillStyle = 'rgba(255, 127, 80, 0.25)';
@@ -779,10 +761,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       ctx.strokeStyle = 'rgba(66, 153, 225, 0.9)';
       ctx.lineWidth = 2 / effectiveZoom;
       ctx.fillStyle = 'rgba(66,153,225,0.15)';
-      const x = sheetX + startCol * tileset.tileWidth;
-      const y = sheetY + startRow * tileset.tileHeight;
-      const w = (endCol - startCol + 1) * tileset.tileWidth;
-      const h = (endRow - startRow + 1) * tileset.tileHeight;
+      const x = sheetX + startCol * tileSize;
+      const y = sheetY + startRow * tileSize;
+      const w = (endCol - startCol + 1) * tileSize;
+      const h = (endRow - startRow + 1) * tileSize;
       ctx.strokeRect(x, y, w, h);
       ctx.fillRect(x, y, w, h);
       ctx.restore();
@@ -836,8 +818,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       tileY = mouseY / effectiveZoom;
     }
 
-    const col = Math.floor(tileX / tileset.tileWidth);
-    const row = Math.floor(tileY / tileset.tileHeight);
+    const col = Math.floor(tileX / tileSize);
+    const row = Math.floor(tileY / tileSize);
 
     const index = row * tileset.columns + col;
     if (col >= 0 && col < tileset.columns && row >= 0 && index >= 0 && index < tileset.tileCount) {

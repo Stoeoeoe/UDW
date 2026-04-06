@@ -31,8 +31,6 @@ describe('renderCollisionGraphics (mocked Graphics)', () => {
       version: 1,
       id: 'ts1',
       name: 'Tileset 1',
-      tileWidth: 16,
-      tileHeight: 16,
       columns: 2,
       tileCount: 2,
       spriteSheet: 's.png',

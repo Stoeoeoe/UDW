@@ -44,8 +44,6 @@ describe('tileset save scheduling', () => {
       name: 'TS1',
       id: 'ts1',
       spriteSheet: 's.png',
-      tileWidth: 16,
-      tileHeight: 16,
       columns: 4,
       tileCount: 1,
       tiles: { 0: { collision: { type: 'none' } } },

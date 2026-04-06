@@ -29,8 +29,6 @@ describe('computeCollisionOverlay integration', () => {
     const tilesets = new Map<string, Tileset>();
     tilesets.set('ts1', {
       id: 'ts1',
-      tileWidth: 16,
-      tileHeight: 16,
       columns: 2,
       spriteSheet: 's.png',
       tiles: {

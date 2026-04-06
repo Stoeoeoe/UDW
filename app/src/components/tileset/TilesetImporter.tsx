@@ -17,6 +17,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { TileDefinition, Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
+import { useProject } from '../../hooks/useProject';
 
 interface TilesetImporterProps {
   onImport: () => void;
@@ -25,6 +26,7 @@ interface TilesetImporterProps {
 
 export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCancel }) => {
   const addTileset = useEditorStore((state) => state.addTileset);
+  const { tileSize } = useProject();
   const toast = useToast();
 
   const [fileData, setFileData] = useState<{
@@ -34,7 +36,6 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
     blob: Blob;
   } | null>(null);
   const [tilesetName, setTilesetName] = useState('');
-  const [tileSize, setTileSize] = useState(16);
   const [imageDimensions, setImageDimensions] = useState({ w: 0, h: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -113,8 +114,6 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
         id: tilesetName.toLowerCase().replace(/\s+/g, '-'),
         name: tilesetName,
         spriteSheet: internalPath,
-        tileWidth: tileSize,
-        tileHeight: tileSize,
         columns: columns,
         tileCount: tileCount,
         tiles: tiles,
@@ -126,7 +125,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
 
       toast({
         title: 'Tileset Imported',
-        description: `Created ${tileCount} tiles using ${tileSize}px grid.`,
+        description: `Created ${tileCount} tiles using ${tileSize}px tiles.`,
         status: 'success',
         duration: 3000,
       });
@@ -239,24 +238,6 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
                   borderColor="gray.700"
                   value={tilesetName}
                   onChange={(e) => setTilesetName(e.target.value)}
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="xs"
-                  fontWeight="bold"
-                  textTransform="uppercase"
-                >
-                  Tile Size (px)
-                </FormLabel>
-                <Input
-                  type="number"
-                  bg="gray.950"
-                  borderColor="gray.700"
-                  value={tileSize}
-                  onChange={(e) => setTileSize(Number(e.target.value))}
                 />
               </FormControl>
 

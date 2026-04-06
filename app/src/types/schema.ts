@@ -35,8 +35,6 @@ export interface Tileset {
   id: string; // Unique identifier (kebab-case)
   name: string; // Display name
   spriteSheet: string; // Relative path to PNG file (from project root or assets)
-  tileWidth: number; // Width in pixels
-  tileHeight: number; // Height in pixels
   columns: number; // Number of columns in sprite sheet
   tileCount: number; // Total number of tiles
   tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)

@@ -4,6 +4,7 @@ import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveTileAt } from '../../lib/mapUtils';
 import { Map as GameMap, Tileset } from '../../types/schema';
+import { useProject } from '../../hooks/useProject';
 
 interface MapPreviewPickerProps {
   /** The map to render and pick from */
@@ -31,6 +32,7 @@ function renderToCanvas(
   sprites: Map<string, HTMLImageElement>,
   hovered: [number, number] | null,
   selectedPosition: [number, number] | null | undefined,
+  tileSize: number,
 ) {
   const ts = NATIVE_TILE_PX;
   const W = map.width * ts;
@@ -69,10 +71,10 @@ function renderToCanvas(
 
         ctx.drawImage(
           img,
-          col * tileset.tileWidth,
-          row * tileset.tileHeight,
-          tileset.tileWidth,
-          tileset.tileHeight,
+          col * tileSize,
+          row * tileSize,
+          tileSize,
+          tileSize,
           x * ts,
           y * ts,
           ts,
@@ -134,6 +136,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   height = 320,
   interactive = true,
 }) => {
+  const { tileSize } = useProject();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const maps = useEditorStore((s) => s.maps);
@@ -188,9 +191,9 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
     if (!canvasRef.current || !map) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-    renderToCanvas(ctx, map, tilesets, loadedSprites, hovered, selectedPosition);
+    renderToCanvas(ctx, map, tilesets, loadedSprites, hovered, selectedPosition, tileSize);
     setIsLoading(false);
-  }, [map, tilesets, loadedSprites, hovered, selectedPosition]);
+  }, [map, tilesets, loadedSprites, hovered, selectedPosition, tileSize]);
 
   useEffect(() => {
     draw();

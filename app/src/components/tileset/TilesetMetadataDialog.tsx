@@ -15,6 +15,7 @@ import { Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
+import { useProject } from '../../hooks/useProject';
 
 interface Props {
   isOpen: boolean;
@@ -23,12 +24,11 @@ interface Props {
 }
 
 export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tileset }) => {
+  const { tileSize } = useProject();
   const updateTileset = useEditorStore((s) => s.updateTileset);
   const loadSprite = useEditorStore.getState().loadSprite;
   const [name, setName] = useState(tileset.name);
   const [spritePath, setSpritePath] = useState(tileset.spriteSheet);
-  const [tileWidth, setTileWidth] = useState(tileset.tileWidth);
-  const [tileHeight, setTileHeight] = useState(tileset.tileHeight);
   const [columns, setColumns] = useState(tileset.columns);
   const [isProcessing, setProcessing] = useState(false);
   const toast = useToast();
@@ -63,8 +63,8 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
 
       setSpritePath(finalPath);
       const resolved = await resolveSpriteAsset(finalPath, blob);
-      if (tileWidth > 0) {
-        setColumns(Math.floor(resolved.width / tileWidth));
+      if (tileSize > 0) {
+        setColumns(Math.floor(resolved.width / tileSize));
       }
     } catch (e: unknown) {
       toast({
@@ -78,8 +78,6 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
   const handleSave = async () => {
     setProcessing(true);
     try {
-      const finalTileWidth = Math.max(1, Math.floor(tileWidth));
-      const finalTileHeight = Math.max(1, Math.floor(tileHeight));
       const finalColumns = Math.max(1, Math.floor(columns));
 
       // Compute rows based on sprite height when possible, otherwise
@@ -88,7 +86,7 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
       try {
         const blob = await fileSystem.loadAsset(spritePath);
         const resolved = await resolveSpriteAsset(spritePath, blob);
-        rows = Math.max(1, Math.floor(resolved.height / finalTileHeight));
+        rows = Math.max(1, Math.floor(resolved.height / tileSize));
       } catch (err) {
         // ignore and use fallback rows
       }
@@ -96,8 +94,6 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
       const updated: Partial<Tileset> = {
         name: name || tileset.name,
         spriteSheet: spritePath,
-        tileWidth: finalTileWidth,
-        tileHeight: finalTileHeight,
         columns: finalColumns,
         tileCount: Math.max(1, finalColumns * rows),
       };
@@ -173,46 +169,18 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
             </HStack>
           </FormControl>
 
-          <HStack spacing={3}>
-            <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Tile Width
-              </FormLabel>
-              <Input
-                type="number"
-                value={tileWidth}
-                onChange={(e) => setTileWidth(Number(e.target.value))}
-                bg="gray.950"
-                borderColor="gray.700"
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Tile Height
-              </FormLabel>
-              <Input
-                type="number"
-                value={tileHeight}
-                onChange={(e) => setTileHeight(Number(e.target.value))}
-                bg="gray.950"
-                borderColor="gray.700"
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Columns
-              </FormLabel>
-              <Input
-                type="number"
-                value={columns}
-                onChange={(e) => setColumns(Number(e.target.value))}
-                bg="gray.950"
-                borderColor="gray.700"
-              />
-            </FormControl>
-          </HStack>
+          <FormControl>
+            <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
+              Columns
+            </FormLabel>
+            <Input
+              type="number"
+              value={columns}
+              onChange={(e) => setColumns(Number(e.target.value))}
+              bg="gray.950"
+              borderColor="gray.700"
+            />
+          </FormControl>
 
           <HStack justify="flex-end">
             <Button variant="ghost" onClick={onClose}>

@@ -19,6 +19,7 @@ import {
 import { EditorModal } from '../common/EditorModal';
 import { Tileset } from '../../types/schema';
 import { useEditorStore } from '../../store/useEditorStore';
+import { useProject } from '../../hooks/useProject';
 import { fileSystem } from '../../lib/fileSystem';
 import {
   AutoTilePreset,
@@ -97,6 +98,7 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
   onClose,
   tileset,
 }) => {
+  const { tileSize } = useProject();
   const toast = useToast();
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const selectedTileIndices = useEditorStore((state) => state.selectedTileIndices);
@@ -223,8 +225,7 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
       const generated = await generateAutotileTilesetAtlas({
         sprite,
         sourceColumns: tileset.columns,
-        tileWidth: tileset.tileWidth,
-        tileHeight: tileset.tileHeight,
+        tileSize,
         sourceAIndices: sourceA,
         sourceBIndices: sourceB,
         terrainAId,
@@ -252,8 +253,6 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
           outputName ||
           `${terrainA?.displayName || terrainAId} / ${terrainB?.displayName || terrainBId}`,
         spriteSheet,
-        tileWidth: tileset.tileWidth,
-        tileHeight: tileset.tileHeight,
         columns: generated.columns,
         tileCount: generated.tileCount,
         tiles: generated.tiles,

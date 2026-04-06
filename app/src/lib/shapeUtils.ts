@@ -51,14 +51,15 @@ export async function applyShape(params: {
   } = params;
 
   if (!currentMap || !selectedLayerId) return;
+  const patternData = getPattern();
+  // Only block paint when there's no pattern AND no active tileset/selection
   if (
     action === 'paint' &&
+    !patternData &&
     (!activeTilesetId ||
       (selectedTileIndex === null && (!selectedTileIndices || selectedTileIndices.length === 0)))
   )
     return;
-
-  const patternData = getPattern();
   const pattern = patternData?.pattern;
   const patternW = patternData?.patternW || 1;
   const patternH = patternData?.patternH || 1;
@@ -71,7 +72,7 @@ export async function applyShape(params: {
   const collectTile = (tx: number, ty: number) => {
     if (tx < 0 || tx >= currentMap.width || ty < 0 || ty >= currentMap.height) return;
     if (action === 'paint') {
-      if (pattern && patternW > 0 && patternH > 0 && activeTilesetId) {
+      if (pattern && patternW > 0 && patternH > 0) {
         for (let py = 0; py < patternH; py++) {
           for (let px = 0; px < patternW; px++) {
             const tileIdx = pattern[py][px];
@@ -85,6 +86,13 @@ export async function applyShape(params: {
                   tilesetId: activeTilesetId,
                   tileIndex: tileIdx,
                 });
+              }
+            } else {
+              // Null in sampled pattern = explicit erase when stamping
+              const nx = tx + px,
+                ny = ty + py;
+              if (nx >= 0 && nx < currentMap.width && ny >= 0 && ny < currentMap.height) {
+                tilesToErase.push({ x: nx, y: ny });
               }
             }
           }
@@ -161,13 +169,17 @@ export async function applyShape(params: {
           const px = ((dx % patternW) + patternW) % patternW;
           const py = ((dy % patternH) + patternH) % patternH;
           const tileIdx = pattern[py][px];
-          if (tileIdx !== null && action === 'paint' && activeTilesetId) {
-            tilesToPaint.push({
-              x,
-              y,
-              tilesetId: activeTilesetId,
-              tileIndex: tileIdx,
-            });
+          if (action === 'paint') {
+            if (tileIdx !== null && activeTilesetId) {
+              tilesToPaint.push({
+                x,
+                y,
+                tilesetId: activeTilesetId,
+                tileIndex: tileIdx,
+              });
+            } else if (tileIdx === null) {
+              tilesToErase.push({ x, y });
+            }
           } else if (action === 'erase') {
             tilesToErase.push({ x, y });
           }
@@ -193,13 +205,17 @@ export async function applyShape(params: {
             const px = ((dx % patternW) + patternW) % patternW;
             const py = ((dy % patternH) + patternH) % patternH;
             const tileIdx = pattern[py][px];
-            if (tileIdx !== null && action === 'paint' && activeTilesetId) {
-              tilesToPaint.push({
-                x,
-                y,
-                tilesetId: activeTilesetId,
-                tileIndex: tileIdx,
-              });
+            if (action === 'paint') {
+              if (tileIdx !== null && activeTilesetId) {
+                tilesToPaint.push({
+                  x,
+                  y,
+                  tilesetId: activeTilesetId,
+                  tileIndex: tileIdx,
+                });
+              } else if (tileIdx === null) {
+                tilesToErase.push({ x, y });
+              }
             } else if (action === 'erase') {
               tilesToErase.push({ x, y });
             }

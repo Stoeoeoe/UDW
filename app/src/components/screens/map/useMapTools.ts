@@ -753,6 +753,18 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                   setSelectedTile(tileIndex);
                 }
               }
+            } else {
+              // Right-clicked an empty tile — sample an "empty" pattern (null)
+              // Keep the active tool the same; stamping this pattern will erase
+              const pattern = [[null]] as (number | null)[][];
+              setSampledPattern({
+                tilesetId: activeTilesetId ?? '',
+                pattern,
+                width: 1,
+                height: 1,
+              });
+              setSelectedTile(null);
+              setSelectedTiles([]);
             }
 
             isSamplingRef.current = false;
@@ -862,6 +874,16 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 // the sampledPattern will still be used for stamping
               }
             }
+          } else {
+            // Sampled region contained no tiles — store an all-null sampled pattern
+            setSampledPattern({
+              tilesetId: activeTilesetId ?? '',
+              pattern,
+              width,
+              height,
+            });
+            setSelectedTile(null);
+            setSelectedTiles([]);
           }
         }
 

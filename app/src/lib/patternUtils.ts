@@ -20,7 +20,10 @@ export function getPattern(params: {
 
   if (activeTool === 'random') return null;
 
-  if (sampledPattern && sampledPattern.tilesetId === activeTilesetId) {
+  // Prefer a sampled pattern if present (including "empty" null patterns).
+  // We return the raw sampled pattern irrespective of tileset match —
+  // shapeUtils will only paint non-null entries when an active tileset is set.
+  if (sampledPattern) {
     return {
       pattern: sampledPattern.pattern,
       patternW: sampledPattern.width,

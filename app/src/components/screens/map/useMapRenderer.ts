@@ -59,6 +59,7 @@ export function computeCollisionOverlay(
   currentMap: GameMap | null,
   activeVariationId: string | null,
   tilesets: Map<string, Tileset>,
+  tileSize: number = DEFAULT_TILE_SIZE,
 ): {
   fillPolygons: OverlayPoint[][];
   mergedSegments: Map<string, OverlaySegment>;
@@ -98,15 +99,15 @@ export function computeCollisionOverlay(
           const collision = effectiveTileset.tiles[index]?.collision;
           if (!collision || collision.type === 'none') continue;
 
-          const tileX = x * DEFAULT_TILE_SIZE;
-          const tileY = y * DEFAULT_TILE_SIZE;
+          const tileX = x * tileSize;
+          const tileY = y * tileSize;
 
           if (collision.type === 'full') {
             const polygon = [
               quantizeOverlayPoint(tileX, tileY),
-              quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY),
-              quantizeOverlayPoint(tileX + DEFAULT_TILE_SIZE, tileY + DEFAULT_TILE_SIZE),
-              quantizeOverlayPoint(tileX, tileY + DEFAULT_TILE_SIZE),
+              quantizeOverlayPoint(tileX + tileSize, tileY),
+              quantizeOverlayPoint(tileX + tileSize, tileY + tileSize),
+              quantizeOverlayPoint(tileX, tileY + tileSize),
             ];
             fillPolygons.push(polygon);
             addPolygonSegments(mergedSegments, polygon);
@@ -114,15 +115,11 @@ export function computeCollisionOverlay(
           }
 
           for (const shape of collision.shapes || []) {
-            const points = shapeToNormalizedPolygon(
-              shape,
-              effectiveTileset.tileWidth,
-              effectiveTileset.tileHeight,
-            );
+            const points = shapeToNormalizedPolygon(shape, tileSize);
             if (points.length < 3) continue;
 
             const polygon = points.map(([px, py]) =>
-              quantizeOverlayPoint(tileX + px * DEFAULT_TILE_SIZE, tileY + py * DEFAULT_TILE_SIZE),
+              quantizeOverlayPoint(tileX + px * tileSize, tileY + py * tileSize),
             );
 
             fillPolygons.push(polygon);
@@ -318,11 +315,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             }
 
             for (const shape of collision.shapes || []) {
-              const points = shapeToNormalizedPolygon(
-                shape,
-                effectiveTileset.tileWidth,
-                effectiveTileset.tileHeight,
-              );
+              const points = shapeToNormalizedPolygon(shape, tileSize);
               if (points.length < 3) continue;
 
               const polygon = points.map(([px, py]) =>
@@ -374,13 +367,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
   // Get or create texture for a tile
   const getTileTexture = useCallback(
-    (
-      spriteSheet: string,
-      tileIndex: number,
-      tileWidth: number,
-      tileHeight: number,
-      columns: number,
-    ): Texture | null => {
+    (spriteSheet: string, tileIndex: number, columns: number): Texture | null => {
       const cacheKey = `${spriteSheet}:${tileIndex}`;
       if (textureCache.current.has(cacheKey)) {
         return textureCache.current.get(cacheKey)!;
@@ -401,19 +388,19 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         textureCache.current.set(baseKey, baseTexture);
       }
 
-      const sx = (tileIndex % columns) * tileWidth;
-      const sy = Math.floor(tileIndex / columns) * tileHeight;
+      const sx = (tileIndex % columns) * projectTileSize;
+      const sy = Math.floor(tileIndex / columns) * projectTileSize;
 
       // Create a sub-texture using the frame
       const texture = new Texture({
         source: baseTexture.source,
-        frame: new Rectangle(sx, sy, tileWidth, tileHeight),
+        frame: new Rectangle(sx, sy, projectTileSize, projectTileSize),
       });
 
       textureCache.current.set(cacheKey, texture);
       return texture;
     },
-    [],
+    [projectTileSize],
   );
 
   // Render tiles
@@ -457,8 +444,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               const texture = getTileTexture(
                 effectiveTileset.spriteSheet,
                 index,
-                effectiveTileset.tileWidth,
-                effectiveTileset.tileHeight,
                 effectiveTileset.columns,
               );
 
@@ -1145,8 +1130,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               const texture = getTileTexture(
                 effectiveTileset.spriteSheet,
                 tileIdx,
-                effectiveTileset.tileWidth,
-                effectiveTileset.tileHeight,
                 effectiveTileset.columns,
               );
               if (texture) {
@@ -1191,8 +1174,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 const texture = getTileTexture(
                   effectiveTileset.spriteSheet,
                   tileIdx,
-                  effectiveTileset.tileWidth,
-                  effectiveTileset.tileHeight,
                   effectiveTileset.columns,
                 );
                 if (texture) {
@@ -1226,8 +1207,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                   const texture = getTileTexture(
                     effectiveTileset.spriteSheet,
                     tileIdx,
-                    effectiveTileset.tileWidth,
-                    effectiveTileset.tileHeight,
                     effectiveTileset.columns,
                   );
                   if (texture) {
@@ -1254,8 +1233,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               const texture = getTileTexture(
                 effectiveTileset.spriteSheet,
                 tileIdx,
-                effectiveTileset.tileWidth,
-                effectiveTileset.tileHeight,
                 effectiveTileset.columns,
               );
               if (texture) {
@@ -1281,8 +1258,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
                 const texture = getTileTexture(
                   effectiveTileset.spriteSheet,
                   tileIdx,
-                  effectiveTileset.tileWidth,
-                  effectiveTileset.tileHeight,
                   effectiveTileset.columns,
                 );
                 if (texture) {
@@ -1318,8 +1293,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       const texture = getTileTexture(
         effectiveTileset.spriteSheet,
         tileIdx,
-        effectiveTileset.tileWidth,
-        effectiveTileset.tileHeight,
         effectiveTileset.columns,
       );
       if (texture) {
