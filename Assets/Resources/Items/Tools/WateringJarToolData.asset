@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
+  m_Name: WateringJarToolData
+  m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
+  <ItemId>k__BackingField: WateringJarToolData
+  <ItemName>k__BackingField: 
+  <Icon>k__BackingField: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715,
+    type: 3}
+  <Description>k__BackingField: 
+  <MaxStackSize>k__BackingField: 99
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
+  toolName: Hoe
+  maxCharge: 0
+  chargePerUsage: 0
+  staminaCost: 5
+  consumeStaminaOnFailure: 1
+  isInInventory: 1
+  showTileHighlighterOnPrepare: 1
+  actionDuration: 0.2
+  cooldownDuration: 0.2
+  toolEffectConfiguration:
+    AffectedTileOffsets:
+    - {x: 0, y: 1}
+    IsGlobalEffect: 0
+  prepareUseUpAnimationClip: {fileID: 0}
+  prepareUseRightAnimationClip: {fileID: 0}
+  prepareUseDownAnimationClip: {fileID: 0}
+  prepareUseLeftAnimationClip: {fileID: 0}
+  useUpAnimationClip: {fileID: 0}
+  useRightAnimationClip: {fileID: 0}
+  useDownAnimationClip: {fileID: 0}
+  useLeftAnimationClip: {fileID: 0}

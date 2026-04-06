@@ -1,0 +1,204 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "tileset.schema.json",
+  "title": "Tileset",
+  "description": "A tileset file (.tileset.json) defining a sprite sheet and per-tile metadata.",
+  "type": "object",
+  "required": ["version", "id", "name", "spriteSheet", "columns", "tileCount", "tiles"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "File format version.",
+      "minimum": 1
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this tileset (kebab-case).",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name."
+    },
+    "spriteSheet": {
+      "type": "string",
+      "description": "Relative path to the PNG sprite sheet (e.g. 'assets/village.png')."
+    },
+    "columns": {
+      "type": "integer",
+      "description": "Number of tile columns in the sprite sheet.",
+      "minimum": 1
+    },
+    "tileCount": {
+      "type": "integer",
+      "description": "Total number of tiles in the sprite sheet.",
+      "minimum": 0
+    },
+    "tiles": {
+      "type": "object",
+      "description": "Sparse map of tile index (integer key) to tile metadata. Only tiles with non-default metadata are stored.",
+      "additionalProperties": {
+        "$ref": "#/$defs/TileDefinition"
+      }
+    },
+    "wangSets": {
+      "type": "array",
+      "description": "Wang sets for autotiling (Tiled-compatible).",
+      "items": { "$ref": "#/$defs/WangSet" }
+    }
+  },
+  "$defs": {
+    "TileDefinition": {
+      "type": "object",
+      "description": "Per-tile metadata. Only non-default fields are stored.",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Optional semantic string ID (e.g. 'player_spawn')."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Semantic tags (e.g. ['walkable', 'water']).",
+          "items": { "type": "string" }
+        },
+        "collision": { "$ref": "#/$defs/CollisionDefinition" },
+        "properties": {
+          "type": "array",
+          "description": "Custom key-value properties.",
+          "items": { "$ref": "#/$defs/PropertyInstance" }
+        },
+        "terrain": {
+          "type": "string",
+          "description": "Terrain type ID referencing a WangColor or terrain set."
+        },
+        "probability": {
+          "type": "number",
+          "description": "Relative weight for random tile selection. Default is 1.",
+          "exclusiveMinimum": 0
+        },
+        "terrainCorners": {
+          "type": "array",
+          "description": "Per-corner terrain IDs for corner-based Wang tiles: [top-left, top-right, bottom-left, bottom-right].",
+          "items": { "type": ["string", "null"] },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "CollisionDefinition": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["none", "full", "complex"]
+        },
+        "shapes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CollisionShape" }
+        }
+      }
+    },
+    "CollisionShape": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["rectangle", "polygon", "circle"]
+        },
+        "points": {
+          "type": "array",
+          "description": "Polygon/shape vertices as normalized [x, y] pairs (0.0–1.0).",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      }
+    },
+    "WangSet": {
+      "type": "object",
+      "required": ["id", "name", "type", "colors", "tileMappings"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["corner", "edge", "mixed"]
+        },
+        "colors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/WangColor" }
+        },
+        "tileMappings": {
+          "type": "object",
+          "description": "Maps tile index to an 8-element array of Wang color IDs: [T, TR, R, BR, B, BL, L, TL].",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0 },
+            "minItems": 8,
+            "maxItems": 8
+          }
+        }
+      }
+    },
+    "WangColor": {
+      "type": "object",
+      "required": ["id", "name", "color"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "1-indexed Wang color ID (0 is none/neutral).",
+          "minimum": 0
+        },
+        "name": { "type": "string" },
+        "color": {
+          "type": "string",
+          "description": "Hex color for editor visualization (e.g. '#ff0000').",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "labelIcon": { "type": "string" }
+      }
+    },
+    "PropertyInstance": {
+      "type": "object",
+      "required": ["key", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "$ref": "#/$defs/PropertyValue" }
+      }
+    },
+    "PropertyValue": {
+      "description": "A scalar, array, or object property value.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        { "type": "array", "items": { "type": "string" } },
+        { "type": "array", "items": { "type": "number" } },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean", "null"]
+          }
+        }
+      ]
+    }
+  }
+}

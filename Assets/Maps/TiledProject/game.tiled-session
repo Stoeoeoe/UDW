@@ -1,0 +1,48 @@
+{
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "": {
+            "scaleInDock": 2
+        },
+        "OutdoorsTilemap.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 3,
+            "scaleInEditor": 8
+        },
+        "SmallMap..tmx": {
+            "scale": 2,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 426.25,
+                "y": 208
+            }
+        },
+        "SmallMap.tmx": {
+            "scale": 1.5,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 554.3333333333333,
+                "y": 299.33333333333326
+            }
+        },
+        "TestMap.tmx": {
+            "scale": 3,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 337.33333333333337,
+                "y": 200
+            }
+        }
+    },
+    "openFiles": [
+        "SmallMap.tmx",
+        "OutdoorsTilemap.tsx"
+    ],
+    "recentFiles": [
+        "OutdoorsTilemap.tsx",
+        "SmallMap.tmx",
+        "SmallMap..tmx"
+    ]
+}

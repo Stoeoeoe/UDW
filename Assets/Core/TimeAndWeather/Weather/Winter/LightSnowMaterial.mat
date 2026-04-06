@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: LightSnowMaterial
+  m_Shader: {fileID: 4800000, guid: ee22af0154c94014097e4c03a58b7d1a, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _SNOWENABLED_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _NoiseTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Density: 0.993
+    - _DustDensity: 1.5
+    - _DustDirection: 0.7
+    - _DustEnabled: 0
+    - _DustLayerCount: 3
+    - _DustSpeed: 2
+    - _DustWaveAmount: 0.5
+    - _DustWaveSpeed: 1.2
+    - _InternalResX: 360
+    - _InternalResY: 240
+    - _PixelSnap: 1
+    - _RainDropletDensity: 100
+    - _RainDropletFade: 0
+    - _RainDropletSize: 0.004
+    - _RainDropletSpeed: 5
+    - _RainEnabled: 0
+    - _RainStreakDensity: 50
+    - _RainStreakFade: 0
+    - _RainStreakLength: 0.08
+    - _RainStreakSpeed: 3
+    - _RainStreakWidth: 0.001
+    - _RainWindDirection: 0.2
+    - _RainWindVariation: 0.1
+    - _SnowEnabled: 1
+    - _SnowHeavyDensity: 211
+    - _SnowHeavySize: 0.01228
+    - _SnowHeavySpeed: 1.29
+    - _SnowLightDensity: 643
+    - _SnowLightSize: 0.003
+    - _SnowLightSpeed: 0.5
+    - _SnowSwayAmount: 0.3
+    - _SnowSwaySpeed: 1.5
+    - _SnowWindDirection: 0.1
+    - _SnowWindVariation: 0.2
+    - _Speed: 0.06
+    - _VerticalStretch: 2
+    - _Wind: 0.2
+    m_Colors:
+    - _DustColor: {r: 0.8, g: 0.7, b: 0.5, a: 0.3}
+    - _PixelResolution: {r: 320, g: 180, b: 0, a: 0}
+    - _RainColor: {r: 0.6, g: 0.7, b: 0.8, a: 0.22745098}
+    - _RainDropletColor: {r: 0.8, g: 0.85, b: 0.95, a: 0.4}
+    - _RainStreakColor: {r: 0.7, g: 0.8, b: 0.9, a: 0.6}
+    - _SnowHeavyColor: {r: 1, g: 1, b: 1, a: 0.9}
+    - _SnowLightColor: {r: 1, g: 1, b: 1, a: 0.6}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

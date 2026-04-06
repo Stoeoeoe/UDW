@@ -1,0 +1,88 @@
+{
+    "automappingRulesFile": "",
+    "commands": [
+    ],
+    "compatibilityVersion": 1100,
+    "extensionsPath": "extensions",
+    "folders": [
+        "."
+    ],
+    "properties": [
+    ],
+    "propertyTypes": [
+        {
+            "id": 4,
+            "name": "FacingDirections",
+            "storageType": "string",
+            "type": "enum",
+            "values": [
+                "West",
+                "East",
+                "North",
+                "South"
+            ],
+            "valuesAsFlags": false
+        },
+        {
+            "color": "#ff08a482",
+            "drawFill": true,
+            "id": 2,
+            "members": [
+                {
+                    "name": "ExitFacingDirection",
+                    "propertyType": "FacingDirections",
+                    "type": "string",
+                    "value": "South"
+                },
+                {
+                    "name": "Key",
+                    "type": "string",
+                    "value": ""
+                },
+                {
+                    "name": "LinkType",
+                    "propertyType": "LocationLinkType",
+                    "type": "string",
+                    "value": "Door"
+                },
+                {
+                    "name": "TargetLocation",
+                    "type": "string",
+                    "value": ""
+                }
+            ],
+            "name": "LocationLink",
+            "type": "class",
+            "useAs": [
+                "object",
+                "project"
+            ]
+        },
+        {
+            "id": 3,
+            "name": "LocationLinkType",
+            "storageType": "string",
+            "type": "enum",
+            "values": [
+                "Door",
+                "Open"
+            ],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 1,
+            "name": "TerrainType",
+            "storageType": "string",
+            "type": "enum",
+            "values": [
+                "Sand",
+                "Marshland",
+                "Water",
+                "FarmLand",
+                "Grass",
+                "Dirt"
+            ],
+            "valuesAsFlags": false
+        }
+    ]
+}

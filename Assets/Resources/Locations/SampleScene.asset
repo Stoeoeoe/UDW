@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8504c6c9aab64da6a9f15cde1799e928, type: 3}
+  m_Name: SampleScene
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Common.LocationData
+  id: SampleScene
+  sceneName:
+    asset: {fileID: 102900000, guid: 8c9cfa26abfee488c85f1582747f6a02, type: 3}
+    guid: 8c9cfa26abfee488c85f1582747f6a02
+  tiledMapPrefab: {fileID: -3935543356007079779, guid: 92fa360f6db2cc444abd0418520c5ee9,
+    type: 3}
+  label: Sample Scene
+  locationType: 1

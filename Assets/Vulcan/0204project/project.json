@@ -1,0 +1,85 @@
+{
+  "version": "1.0",
+  "name": "0204 Project",
+  "tileSize": 16,
+  "defaultMapWidth": 32,
+  "defaultMapHeight": 32,
+  "metadata": {
+    "author": "",
+    "description": ""
+  },
+  "layerDefinitions": [
+    {
+      "id": "layer-1775108700668",
+      "name": "Decorations",
+      "type": "tile",
+      "color": "#145235",
+      "zIndex": 100
+    },
+    {
+      "id": "layer-1775109743658",
+      "name": "Entities",
+      "type": "entity",
+      "color": "#941e1e",
+      "zIndex": 60,
+      "icon": "building"
+    },
+    {
+      "id": "layer-1775298334132",
+      "name": "Terrain",
+      "type": "terrain",
+      "color": "#3182ce",
+      "zIndex": 0,
+      "icon": "tree"
+    }
+  ],
+  "terrainTypes": [
+    {
+      "id": "grass",
+      "displayName": "Grass",
+      "color": "#16c022"
+    },
+    {
+      "id": "dirt",
+      "displayName": "Dirt",
+      "color": "#523333"
+    }
+  ],
+  "entityTypes": [
+    {
+      "id": "test_entity",
+      "displayName": "Test Entity",
+      "category": "object",
+      "icon": "📦",
+      "group": "Test",
+      "placeholderColor": "#3182ce",
+      "properties": [
+        {
+          "key": "prop_1775120173853",
+          "label": "Direction",
+          "type": "vector2",
+          "defaultValue": [
+            0,
+            1
+          ],
+          "required": false
+        }
+      ],
+      "defaultSize": [
+        24,
+        24
+      ],
+      "sprite": {
+        "path": "C:\\Users\\Stoeoeoe\\Documents2\\Documents\\0204project\\maps\\yellow_buetschgi.png"
+      },
+      "arrows": [
+        {
+          "direction": [
+            0,
+            1
+          ]
+        }
+      ]
+    }
+  ]
+}

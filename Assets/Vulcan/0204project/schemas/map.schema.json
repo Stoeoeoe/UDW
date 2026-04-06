@@ -1,0 +1,415 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "map.schema.json",
+  "title": "Map",
+  "description": "A map file (.map.json). Layer tile data may be dense (2D array) or sparse (object with 'sparse: true'). Terrain data uses a palette index when 'terrainPalette' is present.",
+  "type": "object",
+  "required": ["version", "id", "name", "width", "height", "baseTilesetId", "tilesetRefs", "layers", "entities"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "File format version.",
+      "minimum": 1
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this map."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name."
+    },
+    "width": {
+      "type": "integer",
+      "description": "Map width in tiles.",
+      "minimum": 1
+    },
+    "height": {
+      "type": "integer",
+      "description": "Map height in tiles.",
+      "minimum": 1
+    },
+    "baseTilesetId": {
+      "type": "string",
+      "description": "ID of the primary tileset for this map."
+    },
+    "tilesetRefs": {
+      "type": "array",
+      "description": "Ordered list of tileset IDs referenced by encoded tile data. A tile ref encodes as (tilesetIndex << 16) | tileIndex.",
+      "items": { "type": "string" }
+    },
+    "layers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Layer" }
+    },
+    "entities": {
+      "type": "array",
+      "description": "Top-level entity instances (not bound to an entity layer).",
+      "items": { "$ref": "#/$defs/EntityInstance" }
+    },
+    "locationLinks": {
+      "type": "array",
+      "description": "Map transition links (doors, exits, portals).",
+      "items": { "$ref": "#/$defs/LocationLink" }
+    },
+    "spatialPrimitives": { "$ref": "#/$defs/SpatialPrimitives" },
+    "variations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Variation" }
+    },
+    "metadata": { "$ref": "#/$defs/MapMetadata" }
+  },
+  "$defs": {
+    "Layer": {
+      "type": "object",
+      "required": ["id", "name", "kind", "visible", "locked", "opacity", "zOrder"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["visual", "collision", "navigation", "metadata", "entity", "terrain", "locationlink"]
+        },
+        "visible": { "type": "boolean" },
+        "locked": { "type": "boolean" },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "zOrder": { "type": "integer" },
+        "icon": { "type": "string" },
+        "definitionId": {
+          "type": "string",
+          "description": "Reference to a LayerDefinition in project.json."
+        },
+        "data": {
+          "description": "Encoded tile IDs, row-major [y][x]. Either a dense 2D array of integers/nulls or a sparse encoding object.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": { "type": ["integer", "null"] }
+              }
+            },
+            { "$ref": "#/$defs/SparseLayerData" }
+          ]
+        },
+        "terrainPalette": {
+          "type": "array",
+          "description": "Unique terrain IDs used in this layer (sorted). Present only when terrain data uses palette encoding.",
+          "items": { "type": "string" }
+        },
+        "terrainData": {
+          "description": "Parallel grid of terrain IDs per cell. When 'terrainPalette' is present, values are integer indices into the palette; otherwise values are terrain ID strings (legacy format).",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": { "type": ["integer", "null"] }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": { "type": ["string", "null"] }
+              }
+            }
+          ]
+        },
+        "entities": {
+          "type": "array",
+          "description": "Entity instances on this layer (entity layers only).",
+          "items": { "$ref": "#/$defs/EntityInstance" }
+        }
+      }
+    },
+    "SparseLayerData": {
+      "type": "object",
+      "description": "Compact encoding for layers where >50% of cells are null.",
+      "required": ["sparse", "width", "height", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "sparse": { "type": "boolean", "const": true },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "entries": {
+          "type": "array",
+          "description": "Non-null cell values. Cells not listed are implicitly null.",
+          "items": {
+            "type": "object",
+            "required": ["x", "y", "v"],
+            "additionalProperties": false,
+            "properties": {
+              "x": { "type": "integer", "minimum": 0 },
+              "y": { "type": "integer", "minimum": 0 },
+              "v": { "type": "integer", "description": "Encoded tile ref: (tilesetIndex << 16) | tileIndex." }
+            }
+          }
+        }
+      }
+    },
+    "EntityInstance": {
+      "type": "object",
+      "required": ["id", "typeId", "position", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "typeId": { "type": "string" },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y].",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": {
+          "type": "number",
+          "description": "Degrees, 0–360.",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "layerId": { "type": "string" },
+        "label": { "type": "string" },
+        "properties": {
+          "type": "object",
+          "description": "Key-value property bag.",
+          "additionalProperties": { "$ref": "#/$defs/PropertyValue" }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "timeScope": { "$ref": "#/$defs/TimeScope" }
+      }
+    },
+    "TimeScope": {
+      "type": "object",
+      "required": ["startTime", "endTime"],
+      "additionalProperties": false,
+      "properties": {
+        "startTime": { "type": "number", "minimum": 0, "maximum": 1 },
+        "endTime": { "type": "number", "minimum": 0, "maximum": 1 },
+        "seasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "LocationLink": {
+      "type": "object",
+      "required": ["id", "sourcePosition", "triggerSize", "targetMapId", "targetPosition", "direction"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "sourcePosition": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "triggerSize": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "targetMapId": { "type": "string" },
+        "targetPosition": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "targetLinkId": { "type": "string" },
+        "direction": {
+          "type": "string",
+          "enum": ["one-way", "bidirectional"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "SpatialPrimitives": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paths": { "type": "array", "items": { "$ref": "#/$defs/Path" } },
+        "areas": { "type": "array", "items": { "$ref": "#/$defs/Area" } },
+        "anchors": { "type": "array", "items": { "$ref": "#/$defs/Anchor" } }
+      }
+    },
+    "Path": {
+      "type": "object",
+      "required": ["id", "name", "points", "closed", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "closed": { "type": "boolean" },
+        "width": { "type": "number", "minimum": 0 },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Area": {
+      "type": "object",
+      "required": ["id", "name", "shape", "points", "priority", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shape": { "type": "string", "enum": ["rectangle", "polygon"] },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "priority": { "type": "integer" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Anchor": {
+      "type": "object",
+      "required": ["id", "name", "position", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "position": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Variation": {
+      "type": "object",
+      "required": ["id", "kind", "displayName"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["season", "generic"] },
+        "displayName": { "type": "string" },
+        "parentId": { "type": "string" },
+        "tilesetSuffix": { "type": "string" },
+        "layerOverrides": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/LayerOverride" }
+        },
+        "entityOverrides": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EntityOverride" }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/PropertyValue" }
+        }
+      }
+    },
+    "LayerOverride": {
+      "type": "object",
+      "required": ["data", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": ["string", "null"] }
+          }
+        },
+        "mode": { "type": "string", "enum": ["replace", "merge"] }
+      }
+    },
+    "EntityOverride": {
+      "type": "object",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": { "type": "string", "enum": ["add", "remove", "modify"] },
+        "entityId": { "type": "string" },
+        "entity": { "type": "object" }
+      }
+    },
+    "MapMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "music": { "type": "string" },
+        "ambience": { "type": "string" },
+        "entryPoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "position"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "position": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        },
+        "exitPoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "targetMap", "targetPosition"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "targetMap": { "type": "string" },
+              "targetPosition": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    "PropertyValue": {
+      "description": "A scalar, array, or object property value.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        { "type": "array", "items": { "type": "string" } },
+        { "type": "array", "items": { "type": "number" } },
+        {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+        }
+      ]
+    }
+  }
+}
