@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import { fileSystem } from './fileSystem';
 import { Map as GameMap, Project } from '../types/schema';
+import { serializeMap } from './mapMigration';
 
 // Save status types
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -78,7 +79,7 @@ export async function saveMapImmediate(map: GameMap): Promise<void> {
   store.setPendingMapSave(false);
 
   try {
-    await fileSystem.saveJson('maps', `${map.id}.map.json`, map);
+    await fileSystem.saveJson('maps', `${map.id}.map.json`, serializeMap(map));
     store.setLastSaved(new Date());
 
     // Auto-reset to idle after showing "Saved"

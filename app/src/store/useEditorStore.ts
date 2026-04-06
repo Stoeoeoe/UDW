@@ -25,6 +25,8 @@ import { fileSystem } from '../lib/fileSystem';
 import { floodFillCollect } from '../lib/algorithms';
 import { saveMapDebounced, useSaveStore } from '../lib/saveManager';
 import { encodeTileRef } from '../lib/tileRef';
+import { serializeTileset } from '../lib/tilesetMigration';
+import { serializeMap } from '../lib/mapMigration';
 import { resolveSpriteAsset } from '../lib/asepriteUtils';
 import {
   buildTerrainGridFromLayer,
@@ -267,7 +269,7 @@ function scheduleTilesetSave(tilesetId: string): void {
     const tileset = useEditorStore.getState().tilesets.get(tilesetId);
     if (!tileset) return;
 
-    const snapshot = JSON.parse(JSON.stringify(tileset)) as Tileset;
+    const snapshot = serializeTileset(JSON.parse(JSON.stringify(tileset)) as Tileset);
     useSaveStore.getState().setStatus('saving');
     await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, snapshot);
     useSaveStore.getState().setStatus('saved');
@@ -821,8 +823,13 @@ export const useEditorStore = create<EditorStore>()(
             for (const et of entityTypes) {
               if (!et.sprite?.path) continue;
               try {
-                const blob = await fileSystem.readFileAsBlob(et.sprite.path);
-                await useEditorStore.getState().loadSprite(et.sprite.path, blob);
+                const path = et.sprite.path;
+                // Try relative path first (new format), fall back to absolute (legacy)
+                const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
+                const blob = looksRelative
+                  ? await fileSystem.loadAsset(path)
+                  : await fileSystem.readFileAsBlob(path);
+                await useEditorStore.getState().loadSprite(path, blob);
               } catch (e) {
                 console.warn(`Failed to load sprite for entity type ${et.id}:`, e);
               }
@@ -986,7 +993,7 @@ export const useEditorStore = create<EditorStore>()(
             };
             const newMap = ensureLocationLinkLayer(rawMap);
 
-            await fileSystem.saveJson('maps', `${id}.map.json`, newMap);
+            await fileSystem.saveJson('maps', `${id}.map.json`, serializeMap(newMap));
 
             withHistorySuppressed(
               () =>
@@ -1227,7 +1234,11 @@ export const useEditorStore = create<EditorStore>()(
 
           addTileset: async (tileset) => {
             useSaveStore.getState().setStatus('saving');
-            await fileSystem.saveJson('tilesets', `${tileset.id}.tileset.json`, tileset);
+            await fileSystem.saveJson(
+              'tilesets',
+              `${tileset.id}.tileset.json`,
+              serializeTileset(tileset),
+            );
             useSaveStore.getState().setStatus('saved');
             setTimeout(() => {
               if (useSaveStore.getState().status === 'saved')
@@ -1261,7 +1272,11 @@ export const useEditorStore = create<EditorStore>()(
 
             if (updatedTileset) {
               useSaveStore.getState().setStatus('saving');
-              await fileSystem.saveJson('tilesets', `${id}.tileset.json`, updatedTileset);
+              await fileSystem.saveJson(
+                'tilesets',
+                `${id}.tileset.json`,
+                serializeTileset(updatedTileset),
+              );
               useSaveStore.getState().setStatus('saved');
               setTimeout(() => {
                 if (useSaveStore.getState().status === 'saved')
@@ -1336,7 +1351,11 @@ export const useEditorStore = create<EditorStore>()(
 
             if (updatedTileset) {
               useSaveStore.getState().setStatus('saving');
-              await fileSystem.saveJson('tilesets', `${tilesetId}.tileset.json`, updatedTileset);
+              await fileSystem.saveJson(
+                'tilesets',
+                `${tilesetId}.tileset.json`,
+                serializeTileset(updatedTileset),
+              );
               useSaveStore.getState().setStatus('saved');
               setTimeout(() => {
                 if (useSaveStore.getState().status === 'saved')
@@ -2294,8 +2313,16 @@ export const useEditorStore = create<EditorStore>()(
             };
 
             // Persist both maps
-            await fileSystem.saveJson('maps', `${targetMap.id}.map.json`, updatedTargetMap);
-            await fileSystem.saveJson('maps', `${sourceMap.id}.map.json`, updatedSourceMap);
+            await fileSystem.saveJson(
+              'maps',
+              `${targetMap.id}.map.json`,
+              serializeMap(updatedTargetMap),
+            );
+            await fileSystem.saveJson(
+              'maps',
+              `${sourceMap.id}.map.json`,
+              serializeMap(updatedSourceMap),
+            );
 
             // Update store
             set((s) => {

@@ -20,6 +20,17 @@ import {
 } from '@chakra-ui/react';
 import { DeleteIcon, RepeatIcon } from '@chakra-ui/icons';
 import { fileSystem } from '../../../lib/fileSystem';
+
+/** Load a sprite blob — try relative path first, fall back to absolute for old files. */
+async function loadSpriteBlob(path: string): Promise<Blob> {
+  // Relative paths start with "assets/" or similar (no drive letter / leading slash)
+  const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
+  if (looksRelative) {
+    return fileSystem.loadAsset(path);
+  }
+  // Absolute path (legacy) — read directly
+  return fileSystem.readFileAsBlob(path);
+}
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from '../common';
@@ -543,19 +554,23 @@ const EntitySpriteEditor: React.FC<EntitySpriteEditorProps> = ({
 
   const handlePick = async () => {
     try {
-      const path = await fileSystem.selectAsset();
-      if (!path) return;
-      onPathChange(path);
-      await loadImageFromPath(path);
+      const absolutePath = await fileSystem.selectAsset();
+      if (!absolutePath) return;
+      // Copy asset into project assets folder and store relative path
+      const blob = await fileSystem.readFileAsBlob(absolutePath);
+      const filename = absolutePath.replace(/\\/g, '/').split('/').pop() || 'sprite.png';
+      const relativePath = await fileSystem.saveAsset(filename, blob);
+      onPathChange(relativePath);
+      await loadImageFromPath(relativePath, blob);
     } catch (e) {
       console.error('Failed to pick sprite:', e);
     }
   };
 
-  const loadImageFromPath = async (path: string) => {
+  const loadImageFromPath = async (path: string, blobHint?: Blob) => {
     setLoading(true);
     try {
-      const blob = await fileSystem.readFileAsBlob(path);
+      const blob = blobHint ?? (await loadSpriteBlob(path));
       await loadSprite(path, blob);
       const img = useEditorStore.getState().loadedSprites.get(path);
       if (img) {

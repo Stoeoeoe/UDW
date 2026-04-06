@@ -6,6 +6,7 @@
 
 import { Project, Map as GameMap, Tileset } from '../types/schema';
 import { migrateMapToEncodedData } from './tileRef';
+import { deserializeMap } from './mapMigration';
 
 // Types for Web API fallback
 interface FileSystemHandle {
@@ -123,7 +124,7 @@ export class FileSystemManager {
         projectPath: this.projectPath,
         subDir: 'maps',
       })) as GameMap[];
-      return maps.map(migrateMapToEncodedData);
+      return maps.map((m) => deserializeMap(migrateMapToEncodedData(m)));
     } else {
       if (!this.projectRoot) throw new Error('No project open.');
       const maps: GameMap[] = [];
@@ -132,7 +133,7 @@ export class FileSystemManager {
         if (entry.kind === 'file' && entry.name.endsWith('.map.json')) {
           const file = await (entry as FileSystemFileHandle).getFile();
           const mapData = JSON.parse(await file.text());
-          maps.push(migrateMapToEncodedData(mapData));
+          maps.push(deserializeMap(migrateMapToEncodedData(mapData)));
         }
       }
       return maps;
