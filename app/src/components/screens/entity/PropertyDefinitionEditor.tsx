@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -45,6 +45,25 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
   onChange,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Maintain a stable internal id for each property so that
+  // editing the editable `key` field doesn't change the React
+  // element identity and cause inputs to lose focus.
+  const idMapRef = useRef<Record<string, string>>({});
+
+  const genId = () => `pid_${Math.random().toString(36).slice(2, 9)}`;
+
+  // Ensure all incoming properties have an id assigned
+  for (const p of properties) {
+    if (!idMapRef.current[p.key]) idMapRef.current[p.key] = genId();
+  }
+
+  // assign ids for newly added properties proactively
+  const ensureIds = () => {
+    for (const p of properties) {
+      if (!idMapRef.current[p.key]) idMapRef.current[p.key] = genId();
+    }
+  };
+  ensureIds();
 
   const addProperty = useCallback(() => {
     const key = `prop_${Date.now()}`;
@@ -70,6 +89,8 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
     (key: string) => {
       onChange(properties.filter((p) => p.key !== key));
       if (expandedId === key) setExpandedId(null);
+      // cleanup id mapping
+      if (idMapRef.current[key]) delete idMapRef.current[key];
     },
     [properties, onChange, expandedId],
   );
@@ -155,9 +176,13 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
 
       {properties.map((prop, idx) => {
         const isExpanded = expandedId === prop.key;
+        const stableId = idMapRef.current[prop.key] || genId();
+
+        // ensure mapping exists
+        if (!idMapRef.current[prop.key]) idMapRef.current[prop.key] = stableId;
 
         return (
-          <Box key={prop.key} borderTop="1px" borderColor="whiteAlpha.50">
+          <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
             {/* Collapsed row */}
             <HStack
               px={3}
@@ -250,6 +275,12 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                           const updated = properties.map((p) =>
                             p.key === prop.key ? { ...p, key: newKey } : p,
                           );
+                          // Preserve internal id mapping so element identity doesn't change
+                          const oldId = idMapRef.current[prop.key];
+                          if (oldId) {
+                            idMapRef.current[newKey] = oldId;
+                            delete idMapRef.current[prop.key];
+                          }
                           onChange(updated);
                           // Keep expanded on the new key
                           setExpandedId(newKey);
