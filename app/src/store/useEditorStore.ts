@@ -248,7 +248,7 @@ function setTileInState(
 /** Persists project data to project.json with save status feedback */
 async function persistProject(project: Project): Promise<void> {
   useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('', 'project.json', {
+  await fileSystem.saveJson('', `${project.id}.project.json`, {
     $schema: '../schemas/project.schema.json',
     ...project,
   });
@@ -888,7 +888,7 @@ export const useEditorStore = create<EditorStore>()(
           },
 
           updateProject: async (project) => {
-            await fileSystem.saveJson('', 'project.json', {
+            await fileSystem.saveJson('', `${project.id}.project.json`, {
               $schema: '../schemas/project.schema.json',
               ...project,
             });

@@ -1,4 +1,5 @@
 export interface Project {
+  id: string; // Unique identifier (kebab-case)
   version: string; // File format version (starts at 1.0)
   name: string; // Display name
   tileSize: number; // Tile dimensions in pixels (e.g., 16)

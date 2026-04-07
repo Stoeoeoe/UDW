@@ -106,7 +106,7 @@ export class FileSystemManager {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
       this.projectRoot = handle;
 
-      await this.writeJSONWeb(handle, 'project.json', projectConfig);
+      await this.writeJSONWeb(handle, `.${projectConfig.id}.project.json`, projectConfig);
       await handle.getDirectoryHandle('maps', { create: true });
       await handle.getDirectoryHandle('tilesets', { create: true });
       await handle.getDirectoryHandle('assets', { create: true });

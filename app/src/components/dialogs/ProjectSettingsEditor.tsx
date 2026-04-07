@@ -22,6 +22,7 @@ interface ProjectSettingsEditorProps {
 }
 
 const DEFAULT_PROJECT: Project = {
+  id: 'my-project',
   version: '1.0',
   name: 'New Project',
   tileSize: 16,
@@ -35,6 +36,10 @@ const DEFAULT_PROJECT: Project = {
 
 // Validation Schema
 const schema = z.object({
+  id: z
+    .string()
+    .min(2, 'ID must be at least 2 characters')
+    .regex(/^[a-z0-9-]+$/, 'ID must be lowercase and can include hyphens'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   tileSize: z
     .number()
@@ -64,6 +69,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
+      id: initialProject?.id || `project-${Date.now()}`,
       name: initialProject?.name || DEFAULT_PROJECT.name,
       tileSize: initialProject?.tileSize || DEFAULT_PROJECT.tileSize,
       defaultMapWidth: initialProject?.defaultMapWidth || DEFAULT_PROJECT.defaultMapWidth,
@@ -104,7 +110,20 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               />
               <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
             </FormControl>
-
+            <FormControl isInvalid={!!errors.id}>
+              <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
+                Project ID
+              </FormLabel>
+              <Input
+                bg="gray.950"
+                borderColor="gray.700"
+                _hover={{ borderColor: 'blue.500' }}
+                _focus={{ borderColor: 'blue.500', ring: 1, ringColor: 'blue.500' }}
+                placeholder="e.g. my-awesome-game"
+                {...register('id')}
+              />
+              <FormErrorMessage>{errors.id?.message}</FormErrorMessage>
+            </FormControl>
             <SimpleGrid columns={2} spacing={4}>
               <FormControl isInvalid={!!errors.tileSize}>
                 <FormLabel

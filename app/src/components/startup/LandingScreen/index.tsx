@@ -105,11 +105,8 @@ export const LandingScreen: React.FC = () => {
       <VStack spacing={12} maxW="container.md" textAlign="center" w="full" px={4}>
         <Box>
           <Heading size="2xl" color="white" mb={2}>
-            Map Editor
+            Vulcan Editor
           </Heading>
-          <Text color="gray.500" fontSize="lg">
-            Advanced Engine-Agnostic Map & World Design Tool
-          </Text>
         </Box>
 
         <VStack spacing={8} w="full">
@@ -158,7 +155,7 @@ export const LandingScreen: React.FC = () => {
         </VStack>
 
         <Text fontSize="xs" color="gray.700">
-          Map Editor v1.0.0-alpha • Powered by Raven Dung
+          Vulcan Editor v1.0.0
         </Text>
       </VStack>
 

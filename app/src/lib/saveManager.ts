@@ -122,7 +122,7 @@ export async function saveProjectImmediate(project: Project): Promise<void> {
   store.setPendingProjectSave(false);
 
   try {
-    await fileSystem.saveJson('', 'project.json', {
+    await fileSystem.saveJson('', `${project.id}.project.json`, {
       $schema: '../schemas/project.schema.json',
       ...project,
     });

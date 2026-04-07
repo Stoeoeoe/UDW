@@ -93,7 +93,7 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
   ipcMain.handle('app:open-project', async () => {
     if (!win) return null;
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'Select project.json',
+      title: 'Select .project.json',
       filters: [{ name: 'Project File', extensions: ['json'] }],
       properties: ['openFile'],
     });
@@ -101,8 +101,8 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     if (canceled || filePaths.length === 0) return null;
 
     const filePath = filePaths[0];
-    if (!filePath.endsWith('project.json')) {
-      throw new Error('Please select the project.json file.');
+    if (!filePath.endsWith('.project.json')) {
+      throw new Error('Please select the .project.json file.');
     }
 
     const content = await fs.readFile(filePath, 'utf-8');

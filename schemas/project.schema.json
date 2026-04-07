@@ -4,9 +4,19 @@
   "title": "Project",
   "description": "A project file (project.json) containing global settings, layer definitions, and entity type definitions.",
   "type": "object",
-  "required": ["version", "name", "tileSize", "defaultMapWidth", "defaultMapHeight"],
+  "required": [
+    "version",
+    "name",
+    "tileSize",
+    "defaultMapWidth",
+    "defaultMapHeight"
+  ],
   "additionalProperties": false,
   "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique project identifier (kebab-case, e.g. 'my-awesome-game')."
+    },
     "version": {
       "type": "string",
       "description": "File format version string (e.g. '1.0')."
@@ -97,7 +107,13 @@
     },
     "EntityType": {
       "type": "object",
-      "required": ["id", "category", "displayName", "placeholderColor", "properties"],
+      "required": [
+        "id",
+        "category",
+        "displayName",
+        "placeholderColor",
+        "properties"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
@@ -148,7 +164,17 @@
         "label": { "type": "string" },
         "type": {
           "type": "string",
-          "enum": ["string", "int", "float", "number", "boolean", "enum", "color", "vector2", "reference"]
+          "enum": [
+            "string",
+            "int",
+            "float",
+            "number",
+            "boolean",
+            "enum",
+            "color",
+            "vector2",
+            "reference"
+          ]
         },
         "defaultValue": { "$ref": "#/$defs/PropertyValue" },
         "required": { "type": "boolean" },
@@ -178,7 +204,9 @@
         { "type": "array", "items": { "type": "number" } },
         {
           "type": "object",
-          "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+          "additionalProperties": {
+            "type": ["string", "number", "boolean", "null"]
+          }
         }
       ]
     }
