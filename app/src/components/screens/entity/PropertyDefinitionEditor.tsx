@@ -29,6 +29,7 @@ const PROPERTY_TYPES: { value: PropertyType; label: string; icon: string }[] = [
   { value: 'boolean', label: 'Boolean', icon: '⊘' },
   { value: 'enum', label: 'Enum', icon: '☰' },
   { value: 'vector2', label: 'Vector2', icon: '↗' },
+  { value: 'color', label: 'Color', icon: '🎨' },
 ];
 
 interface PropertyDefinitionEditorProps {
@@ -126,6 +127,8 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
         return '';
       case 'vector2':
         return [0, 0];
+      case 'color':
+        return '#ffffff';
       default:
         return '';
     }

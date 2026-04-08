@@ -16,7 +16,7 @@ import {
 } from '@chakra-ui/react';
 import { PropertyValue } from '../../types/schema';
 
-export type PropertyType = 'string' | 'number' | 'boolean' | 'enum' | 'custom';
+export type PropertyType = 'string' | 'float' | 'boolean' | 'enum' | 'color' | 'custom';
 
 export interface PropertySchema {
   key: string;
@@ -52,7 +52,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
       const v =
         rawVal !== undefined
           ? rawVal
-          : prop.type === 'number'
+          : prop.type === 'float'
             ? 0
             : prop.type === 'boolean'
               ? false
@@ -82,7 +82,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
         const currentValue =
           rawVal !== undefined
             ? rawVal
-            : prop.type === 'number'
+            : prop.type === 'float'
               ? 0
               : prop.type === 'boolean'
                 ? false
@@ -130,7 +130,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                 />
               )}
 
-              {prop.type === 'number' && (
+              {prop.type === 'float' && (
                 <NumberInput
                   size="sm"
                   value={localVal}
@@ -201,6 +201,21 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     onChange(prop.key, v);
                   })}
                 </Box>
+              )}
+
+              {prop.type === 'color' && (
+                <Input
+                  type="color"
+                  size="sm"
+                  value={localVal}
+                  onChange={(e) => {
+                    setLocalValues((prev) => ({
+                      ...prev,
+                      [prop.key]: e.target.value,
+                    }));
+                    onChange(prop.key, e.target.value);
+                  }}
+                />
               )}
             </Box>
 
