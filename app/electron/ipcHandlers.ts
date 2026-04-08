@@ -115,8 +115,11 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
   });
 
   ipcMain.handle('app:load-project-by-path', async (_event, projectPath) => {
-    const filePath = path.join(projectPath, 'project.json');
     try {
+      // Prefer any file ending with '.project.json' inside the folder.
+      const files = await fs.readdir(projectPath);
+      const projFile = files.find((f) => f.endsWith('.project.json')) || 'project.json';
+      const filePath = path.join(projectPath, projFile);
       const content = await fs.readFile(filePath, 'utf-8');
       const project = JSON.parse(content);
       // Start filesystem watchers for assets/tilesets in this project
@@ -143,9 +146,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     await fs.mkdir(path.join(projectPath, 'tilesets'), { recursive: true });
     await fs.mkdir(path.join(projectPath, 'assets'), { recursive: true });
 
-    // 2. Write project.json
+    // 2. Write <id>.project.json
     await fs.writeFile(
-      path.join(projectPath, 'project.json'),
+      path.join(projectPath, `${projectConfig.id}.project.json`),
       JSON.stringify(projectConfig, null, 2),
     );
 
