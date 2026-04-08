@@ -250,6 +250,13 @@ export interface MapMetadata {
   }[];
 }
 
+// NPC Definitions
+export interface Npc {
+  id: string; // Unique identifier (kebab-case)
+  name: string; // Display name
+  icon: string; // Emoji icon for display
+}
+
 // Entity Type Definitions
 export interface EntityType {
   id: string; // Unique identifier

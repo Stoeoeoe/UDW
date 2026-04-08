@@ -198,6 +198,7 @@
       "oneOf": [
         { "type": "string" },
         { "type": "number" },
+        { "type": "string", "format": "color" },
         { "type": "boolean" },
         { "type": "null" },
         { "type": "array", "items": { "type": "string" } },

@@ -15,6 +15,7 @@ import {
   TileDefinition,
   LayerDefinition,
   EntityType,
+  Npc,
   PropertyValues,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
@@ -417,6 +418,12 @@ interface EditorStore extends EditorState {
   updateEntityType: (id: string, updates: Partial<EntityType>) => Promise<void>;
   deleteEntityType: (id: string) => Promise<void>;
 
+  // NPC CRUD
+  addNpc: (npc: Npc) => Promise<void>;
+  updateNpc: (id: string, updates: Partial<Npc>) => Promise<void>;
+  deleteNpc: (id: string) => Promise<void>;
+  setSelectedNpc: (id: string | null) => void;
+
   // Terrain actions
   addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
   updateTerrainType: (
@@ -701,6 +708,8 @@ export const useEditorStore = create<EditorStore>()(
           },
           terrainTypes: [],
           entityTypes: [],
+          npcs: [],
+          selectedNpcId: null,
           layerDefinitions: [],
           selectedLayerDefinitionId: null,
           validationErrors: [],
@@ -758,6 +767,8 @@ export const useEditorStore = create<EditorStore>()(
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
                   state.entityTypes = [];
+                  state.npcs = [];
+                  state.selectedNpcId = null;
                 }),
               { clearHistory: true },
             );
@@ -821,7 +832,13 @@ export const useEditorStore = create<EditorStore>()(
               });
             }
 
-            // 1.8 Load entity type sprites
+            // 1.8 Load NPCs from npcs/ directory
+            const npcs = await fileSystem.loadAllNpcs();
+            set((state) => {
+              state.npcs = castDraft(npcs);
+            });
+
+            // 1.9 Load entity type sprites
             const entityTypes = useEditorStore.getState().entityTypes;
             for (const et of entityTypes) {
               if (!et.sprite?.path) continue;
@@ -2035,6 +2052,44 @@ export const useEditorStore = create<EditorStore>()(
                 state.project = castDraft(projectToSave);
               });
             }
+          },
+
+          // NPC CRUD actions
+          setSelectedNpc: (id) =>
+            set((state) => {
+              state.selectedNpcId = id;
+            }),
+
+          addNpc: async (npc) => {
+            set((state) => {
+              state.npcs.push(castDraft(npc));
+            });
+            await fileSystem.saveJson('npcs', `${npc.id}.npc.json`, {
+              $schema: '../../schemas/npc.schema.json',
+              ...npc,
+            });
+          },
+
+          updateNpc: async (id, updates) => {
+            set((state) => {
+              const npc = state.npcs.find((n) => n.id === id);
+              if (npc) Object.assign(npc, updates);
+            });
+            const npc = useEditorStore.getState().npcs.find((n) => n.id === id);
+            if (npc) {
+              await fileSystem.saveJson('npcs', `${npc.id}.npc.json`, {
+                $schema: '../../schemas/npc.schema.json',
+                ...npc,
+              });
+            }
+          },
+
+          deleteNpc: async (id) => {
+            set((state) => {
+              state.npcs = state.npcs.filter((n) => n.id !== id);
+              if (state.selectedNpcId === id) state.selectedNpcId = null;
+            });
+            await fileSystem.deleteJson('npcs', `${id}.npc.json`);
           },
 
           // Layer definition actions

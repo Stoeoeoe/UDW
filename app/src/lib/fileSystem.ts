@@ -4,7 +4,7 @@
  * Electron IPC (Native) or Web File System Access API.
  */
 
-import { Project, Map as GameMap, Tileset } from '../types/schema';
+import { Project, Map as GameMap, Tileset, Npc } from '../types/schema';
 import { migrateMapToEncodedData } from './tileRef';
 import { deserializeMap } from './mapMigration';
 
@@ -177,9 +177,40 @@ export class FileSystemManager {
   }
 
   /**
+   * Load all NPCs from the npcs/ directory
+   */
+  async loadAllNpcs(): Promise<Npc[]> {
+    if (this.isElectron()) {
+      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
+        projectPath: this.projectPath,
+        subDir: 'npcs',
+      })) as Npc[];
+    } else {
+      if (!this.projectRoot) throw new Error('No project open.');
+      const npcs: Npc[] = [];
+      try {
+        const dir = await this.projectRoot.getDirectoryHandle('npcs', { create: false });
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.npc.json')) {
+            const file = await (entry as FileSystemFileHandle).getFile();
+            npcs.push(JSON.parse(await file.text()));
+          }
+        }
+      } catch {
+        // npcs/ directory may not exist yet
+      }
+      return npcs;
+    }
+  }
+
+  /**
    * Save a JSON file (Map, Tileset, or Project)
    */
-  async saveJson(subDir: 'maps' | 'tilesets' | '', filename: string, data: unknown): Promise<void> {
+  async saveJson(
+    subDir: 'maps' | 'tilesets' | 'npcs' | '',
+    filename: string,
+    data: unknown,
+  ): Promise<void> {
     if (this.isElectron()) {
       await window.ipcRenderer.invoke('app:fs-write-json', {
         projectPath: this.projectPath,
@@ -197,7 +228,7 @@ export class FileSystemManager {
   /**
    * Delete a JSON file
    */
-  async deleteJson(subDir: 'maps' | 'tilesets' | '', filename: string): Promise<void> {
+  async deleteJson(subDir: 'maps' | 'tilesets' | 'npcs' | '', filename: string): Promise<void> {
     if (this.isElectron()) {
       await window.ipcRenderer.invoke('app:fs-delete-json', {
         projectPath: this.projectPath,

@@ -1,4 +1,4 @@
-import { Project, Tileset, Map, LayerDefinition, EntityType } from './schema';
+import { Project, Tileset, Map, LayerDefinition, EntityType, Npc } from './schema';
 
 export interface EditorState {
   // Project data
@@ -86,6 +86,10 @@ export interface EditorState {
   // Project-level entity type definitions
   entityTypes: EntityType[];
 
+  // NPC definitions (persisted in npcs/ directory)
+  npcs: Npc[];
+  selectedNpcId: string | null;
+
   // Project-level layer definitions (template layers for maps)
   layerDefinitions: LayerDefinition[];
   selectedLayerDefinitionId: string | null;
@@ -146,6 +150,7 @@ export type EditorMode =
   | 'maps'
   | 'tilesets'
   | 'entities'
+  | 'npcs'
   | 'settings'
   | 'terrain'
   | 'layers';

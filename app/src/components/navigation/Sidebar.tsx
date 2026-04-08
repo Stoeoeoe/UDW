@@ -85,6 +85,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
         onClick={onModeChange}
       />
       <NavIcon
+        icon="👤"
+        label="NPCs"
+        mode="npcs"
+        active={activeMode === 'npcs'}
+        onClick={onModeChange}
+      />
+      <NavIcon
         icon="🧭"
         label="Terrain"
         mode="terrain"
