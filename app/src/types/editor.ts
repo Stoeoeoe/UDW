@@ -1,4 +1,4 @@
-import { Project, Tileset, Map, LayerDefinition, EntityType, Npc } from './schema';
+import { Project, Tileset, Map, LayerDefinition, EntityType, Npc, GameVariable } from './schema';
 
 export interface EditorState {
   // Project data
@@ -90,6 +90,9 @@ export interface EditorState {
   npcs: Npc[];
   selectedNpcId: string | null;
 
+  // Game variable registry (persisted in project.json)
+  gameVariables: GameVariable[];
+
   // Project-level layer definitions (template layers for maps)
   layerDefinitions: LayerDefinition[];
   selectedLayerDefinitionId: string | null;
@@ -151,6 +154,7 @@ export type EditorMode =
   | 'tilesets'
   | 'entities'
   | 'npcs'
+  | 'variables'
   | 'settings'
   | 'terrain'
   | 'layers';

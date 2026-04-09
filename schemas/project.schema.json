@@ -64,6 +64,11 @@
       "type": "array",
       "description": "Project-level entity type definitions.",
       "items": { "$ref": "#/$defs/EntityType" }
+    },
+    "gameVariables": {
+      "type": "array",
+      "description": "Named variables exposed to the Lua sandbox at runtime.",
+      "items": { "$ref": "#/$defs/GameVariable" }
     }
   },
   "$defs": {
@@ -210,6 +215,44 @@
           }
         }
       ]
+    },
+    "GameVariable": {
+      "type": "object",
+      "required": ["key", "type", "category", "defaultValue"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Dotted Lua path used to access this variable at runtime (e.g. 'weather.isRain').",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_.]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["boolean", "number", "string", "enum"],
+          "description": "Runtime value type."
+        },
+        "category": {
+          "type": "string",
+          "description": "Editor grouping label (e.g. 'Weather', 'Date', 'Game State')."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional human-readable description shown in the editor."
+        },
+        "defaultValue": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "number" },
+            { "type": "string" }
+          ],
+          "description": "Default value used for testing/preview in the editor."
+        },
+        "enumValues": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed values when type is 'enum'."
+        }
+      }
     }
   }
 }

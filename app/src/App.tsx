@@ -7,6 +7,7 @@ import {
   TilesetEditor,
   EntityEditor,
   NpcEditor,
+  VariableEditor,
   SettingsEditor,
   TerrainEditor,
   LayerEditor,
@@ -35,6 +36,8 @@ function App() {
         return <EntityEditor />;
       case 'npcs':
         return <NpcEditor />;
+      case 'variables':
+        return <VariableEditor />;
       case 'settings':
         return <SettingsEditor />;
       case 'terrain':

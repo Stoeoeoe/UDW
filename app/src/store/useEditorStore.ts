@@ -16,6 +16,7 @@ import {
   LayerDefinition,
   EntityType,
   Npc,
+  GameVariable,
   PropertyValues,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
@@ -424,6 +425,11 @@ interface EditorStore extends EditorState {
   deleteNpc: (id: string) => Promise<void>;
   setSelectedNpc: (id: string | null) => void;
 
+  // Game variable CRUD
+  addGameVariable: (variable: GameVariable) => Promise<void>;
+  updateGameVariable: (key: string, updates: Partial<GameVariable>) => Promise<void>;
+  deleteGameVariable: (key: string) => Promise<void>;
+
   // Terrain actions
   addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
   updateTerrainType: (
@@ -708,6 +714,7 @@ export const useEditorStore = create<EditorStore>()(
           },
           terrainTypes: [],
           entityTypes: [],
+          gameVariables: [],
           npcs: [],
           selectedNpcId: null,
           layerDefinitions: [],
@@ -767,6 +774,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
                   state.entityTypes = [];
+                  state.gameVariables = [];
                   state.npcs = [];
                   state.selectedNpcId = null;
                 }),
@@ -829,6 +837,13 @@ export const useEditorStore = create<EditorStore>()(
             if (proj?.entityTypes && Array.isArray(proj.entityTypes)) {
               set((state) => {
                 state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
+              });
+            }
+
+            // 1.75 Load game variables from project.json (if present)
+            if (proj?.gameVariables && Array.isArray(proj.gameVariables)) {
+              set((state) => {
+                state.gameVariables = castDraft(proj.gameVariables!);
               });
             }
 
@@ -2090,6 +2105,59 @@ export const useEditorStore = create<EditorStore>()(
               if (state.selectedNpcId === id) state.selectedNpcId = null;
             });
             await fileSystem.deleteJson('npcs', `${id}.npc.json`);
+          },
+
+          // Game variable CRUD actions
+          addGameVariable: async (variable) => {
+            set((state) => {
+              state.gameVariables.push(castDraft(variable));
+            });
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+              const projectToSave = {
+                ...proj,
+                gameVariables: useEditorStore.getState().gameVariables,
+              };
+              await persistProject(projectToSave);
+              set((state) => {
+                state.project = castDraft(projectToSave);
+              });
+            }
+          },
+
+          updateGameVariable: async (key, updates) => {
+            set((state) => {
+              const v = state.gameVariables.find((g) => g.key === key);
+              if (v) Object.assign(v, updates);
+            });
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+              const projectToSave = {
+                ...proj,
+                gameVariables: useEditorStore.getState().gameVariables,
+              };
+              await persistProject(projectToSave);
+              set((state) => {
+                state.project = castDraft(projectToSave);
+              });
+            }
+          },
+
+          deleteGameVariable: async (key) => {
+            set((state) => {
+              state.gameVariables = state.gameVariables.filter((g) => g.key !== key);
+            });
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+              const projectToSave = {
+                ...proj,
+                gameVariables: useEditorStore.getState().gameVariables,
+              };
+              await persistProject(projectToSave);
+              set((state) => {
+                state.project = castDraft(projectToSave);
+              });
+            }
           },
 
           // Layer definition actions

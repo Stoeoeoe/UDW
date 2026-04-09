@@ -17,6 +17,8 @@ export interface Project {
   layerDefinitions?: LayerDefinition[];
   // Project-level entity type definitions
   entityTypes?: EntityType[];
+  // Named variables exposed to the Lua sandbox at runtime
+  gameVariables?: GameVariable[];
 }
 
 export type LayerType = 'tile' | 'entity' | 'terrain';
@@ -248,6 +250,18 @@ export interface MapMetadata {
     targetMap: string;
     targetPosition: [number, number];
   }[];
+}
+
+// Game Variable Definitions — named runtime values exposed to the Lua sandbox
+export type GameVariableType = 'boolean' | 'number' | 'string' | 'enum';
+
+export interface GameVariable {
+  key: string; // Dotted Lua path, e.g. "weather.isRain" or "date.season"
+  type: GameVariableType;
+  category: string; // Grouping label, e.g. "Weather", "Date", "Game State"
+  description?: string;
+  defaultValue: boolean | number | string;
+  enumValues?: string[]; // Only used when type === 'enum'
 }
 
 // NPC Definitions
