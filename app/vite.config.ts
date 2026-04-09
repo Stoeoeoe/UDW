@@ -31,6 +31,12 @@ function reactDevToolsPlugin(): Plugin {
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Use the pre-bundled fengari-web bundle which has Node built-ins (os, etc.) already resolved.
+      fengari: path.resolve(dirname, 'node_modules/fengari-web/dist/fengari-web.bundle.js'),
+    },
+  },
   plugins: [
     reactDevToolsPlugin(),
     react(),

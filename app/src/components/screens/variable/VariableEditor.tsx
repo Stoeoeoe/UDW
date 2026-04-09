@@ -24,6 +24,7 @@ import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/
 import { useEditorStore } from '../../../store/useEditorStore';
 import { GameVariable, GameVariableType, ComplexField } from '../../../types/schema';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { ConditionEditor } from './ConditionEditor';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -785,6 +786,43 @@ const VariableGrid: React.FC<{ variables: GameVariable[] }> = ({ variables }) =>
   );
 };
 
+// ─── Condition Tester ────────────────────────────────────────────────────────
+
+const ConditionTester: React.FC<{ variables: GameVariable[] }> = ({ variables }) => {
+  const [expr, setExpr] = useState('');
+  const [open, setOpen] = useState(true);
+
+  return (
+    <Box borderTop="1px" borderColor="#071018" bg="#03040a" flexShrink={0}>
+      <HStack
+        px={3}
+        py={1.5}
+        cursor="pointer"
+        onClick={() => setOpen((o) => !o)}
+        _hover={{ bg: 'whiteAlpha.50' }}
+        spacing={2}
+      >
+        <Text
+          fontSize="9px"
+          fontWeight="bold"
+          textTransform="uppercase"
+          letterSpacing="wider"
+          color="gray.500"
+          flex={1}
+        >
+          Condition Tester
+        </Text>
+        {open ? <ChevronUpIcon color="gray.600" /> : <ChevronDownIcon color="gray.600" />}
+      </HStack>
+      <Collapse in={open} animateOpacity>
+        <Box px={3} pb={3} pt={1}>
+          <ConditionEditor value={expr} onChange={setExpr} variables={variables} />
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
+
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export const VariableEditor: React.FC = () => {
@@ -874,24 +912,35 @@ export const VariableEditor: React.FC = () => {
 
       {/* Body */}
       <Flex flex={1} overflow="hidden">
-        <Box flex={1} overflow="hidden">
-          {content}
-        </Box>
-        <Box w="320px" flexShrink={0} borderLeft="1px" borderColor="#071018" overflow="hidden">
-          <Box h="full" overflowY="auto" bg="#05060a">
-            <datalist id="variable-categories">
-              {categories.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-            <VariableListEditor
-              variables={gameVariables}
-              onAdd={addGameVariable}
-              onUpdate={updateGameVariable}
-              onDelete={deleteGameVariable}
-              onMove={handleMove}
-            />
+        {/* Main panel: variable grid + condition tester pinned at bottom */}
+        <Flex flex={1} direction="column" overflow="hidden">
+          <Box flex={1} overflow="hidden">
+            {content}
           </Box>
+          <ConditionTester variables={gameVariables} />
+        </Flex>
+
+        {/* Right sidebar: variable list editor */}
+        <Box
+          w="320px"
+          flexShrink={0}
+          borderLeft="1px"
+          borderColor="#071018"
+          overflowY="auto"
+          bg="#05060a"
+        >
+          <datalist id="variable-categories">
+            {categories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+          <VariableListEditor
+            variables={gameVariables}
+            onAdd={addGameVariable}
+            onUpdate={updateGameVariable}
+            onDelete={deleteGameVariable}
+            onMove={handleMove}
+          />
         </Box>
       </Flex>
     </Flex>

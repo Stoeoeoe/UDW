@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/Stoeoeoe/Downloads/**)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
     ]
   },
   "enabledPlugins": {
