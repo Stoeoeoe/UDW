@@ -18,20 +18,35 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
+  Divider,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { GameVariable, GameVariableType } from '../../../types/schema';
+import { GameVariable, GameVariableType, ComplexField } from '../../../types/schema';
 import { EmptyScreen } from '../common/EmptyScreen';
 
-const VARIABLE_TYPES: { value: GameVariableType; label: string; badge: string; color: string }[] = [
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const PRIMITIVE_TYPES: {
+  value: 'boolean' | 'number' | 'string' | 'enum';
+  label: string;
+  badge: string;
+  color: string;
+}[] = [
   { value: 'boolean', label: 'Boolean', badge: '⊘', color: 'yellow' },
   { value: 'number', label: 'Number', badge: '#', color: 'blue' },
   { value: 'string', label: 'String', badge: 'Aa', color: 'green' },
   { value: 'enum', label: 'Enum', badge: '☰', color: 'purple' },
 ];
 
-function defaultValueForType(type: GameVariableType): boolean | number | string {
+const VARIABLE_TYPES: { value: GameVariableType; label: string; badge: string; color: string }[] = [
+  ...PRIMITIVE_TYPES,
+  { value: 'complex', label: 'Complex', badge: '{}', color: 'orange' },
+];
+
+function defaultValueForPrimitive(
+  type: 'boolean' | 'number' | 'string' | 'enum',
+): boolean | number | string {
   switch (type) {
     case 'boolean':
       return false;
@@ -43,6 +58,241 @@ function defaultValueForType(type: GameVariableType): boolean | number | string 
       return '';
   }
 }
+
+// ─── Complex field sub-editor ─────────────────────────────────────────────────
+
+interface ComplexFieldEditorProps {
+  fields: ComplexField[];
+  onChange: (fields: ComplexField[]) => void;
+}
+
+const ComplexFieldEditor: React.FC<ComplexFieldEditorProps> = ({ fields, onChange }) => {
+  const addField = () => {
+    onChange([...fields, { key: `field_${fields.length + 1}`, type: 'string', defaultValue: '' }]);
+  };
+
+  const updateField = (idx: number, updates: Partial<ComplexField>) => {
+    const next = fields.map((f, i) => (i === idx ? { ...f, ...updates } : f));
+    onChange(next);
+  };
+
+  const removeField = (idx: number) => {
+    onChange(fields.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <Box>
+      <HStack mb={1} justify="space-between">
+        <Text fontSize="9px" color="gray.500" fontWeight="bold">
+          FIELDS
+        </Text>
+        <IconButton
+          aria-label="Add field"
+          icon={<AddIcon fontSize="8px" />}
+          size="xs"
+          variant="ghost"
+          color="gray.500"
+          _hover={{ color: 'white' }}
+          onClick={addField}
+        />
+      </HStack>
+
+      {fields.length === 0 && (
+        <Text fontSize="10px" color="gray.700" fontStyle="italic" mb={1}>
+          No fields — add one above
+        </Text>
+      )}
+
+      <VStack spacing={2} align="stretch">
+        {fields.map((field, idx) => (
+          <Box key={idx} bg="#0a0a0b" borderRadius="md" border="1px" borderColor="#1a1a2e" p={2}>
+            <VStack spacing={2} align="stretch">
+              {/* Key + type row */}
+              <HStack spacing={2}>
+                <Input
+                  size="xs"
+                  bg="#05060a"
+                  borderColor="#1a1a2e"
+                  color="white"
+                  fontFamily="mono"
+                  value={field.key}
+                  onChange={(e) =>
+                    updateField(idx, { key: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+                  }
+                  placeholder="fieldName"
+                  flex={1}
+                />
+                <Select
+                  size="xs"
+                  bg="#05060a"
+                  borderColor="#1a1a2e"
+                  color="white"
+                  value={field.type}
+                  w="100px"
+                  flexShrink={0}
+                  onChange={(e) => {
+                    const t = e.target.value as ComplexField['type'];
+                    updateField(idx, {
+                      type: t,
+                      defaultValue: defaultValueForPrimitive(t),
+                      enumValues:
+                        t === 'enum'
+                          ? field.enumValues?.length
+                            ? field.enumValues
+                            : ['value1']
+                          : undefined,
+                    });
+                  }}
+                >
+                  {PRIMITIVE_TYPES.map((t) => (
+                    <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+                      {t.badge} {t.label}
+                    </option>
+                  ))}
+                </Select>
+                <IconButton
+                  aria-label="Remove field"
+                  icon={<DeleteIcon fontSize="8px" />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.700"
+                  _hover={{ color: 'red.300' }}
+                  onClick={() => removeField(idx)}
+                />
+              </HStack>
+
+              {/* Default value */}
+              {field.type === 'boolean' && (
+                <HStack spacing={2}>
+                  <Text fontSize="9px" color="gray.600">
+                    default
+                  </Text>
+                  <Switch
+                    size="sm"
+                    colorScheme="green"
+                    isChecked={!!field.defaultValue}
+                    onChange={(e) => updateField(idx, { defaultValue: e.target.checked })}
+                  />
+                </HStack>
+              )}
+              {field.type === 'number' && (
+                <NumberInput
+                  size="xs"
+                  value={typeof field.defaultValue === 'number' ? field.defaultValue : 0}
+                  onChange={(_, val) => updateField(idx, { defaultValue: isNaN(val) ? 0 : val })}
+                >
+                  <NumberInputField
+                    bg="#05060a"
+                    borderColor="#1a1a2e"
+                    color="white"
+                    placeholder="default"
+                  />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+              )}
+              {field.type === 'string' && (
+                <Input
+                  size="xs"
+                  bg="#05060a"
+                  borderColor="#1a1a2e"
+                  color="white"
+                  value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
+                  onChange={(e) => updateField(idx, { defaultValue: e.target.value })}
+                  placeholder="default"
+                />
+              )}
+              {field.type === 'enum' && (
+                <VStack spacing={1} align="stretch">
+                  <HStack spacing={1} flexWrap="wrap">
+                    {(field.enumValues || []).map((opt, oi) => (
+                      <HStack key={oi} spacing={1}>
+                        <Input
+                          size="xs"
+                          bg="#05060a"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={opt}
+                          w="80px"
+                          onChange={(e) => {
+                            const vals = [...(field.enumValues || [])];
+                            vals[oi] = e.target.value;
+                            updateField(idx, { enumValues: vals });
+                          }}
+                        />
+                        <IconButton
+                          aria-label="Remove"
+                          icon={<DeleteIcon fontSize="7px" />}
+                          size="xs"
+                          variant="ghost"
+                          color="gray.700"
+                          _hover={{ color: 'red.300' }}
+                          onClick={() => {
+                            const vals = (field.enumValues || []).filter((_, i) => i !== oi);
+                            updateField(idx, {
+                              enumValues: vals,
+                              ...(field.defaultValue === opt
+                                ? { defaultValue: vals[0] ?? '' }
+                                : {}),
+                            });
+                          }}
+                        />
+                      </HStack>
+                    ))}
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      color="gray.600"
+                      _hover={{ color: 'white' }}
+                      leftIcon={<AddIcon fontSize="7px" />}
+                      onClick={() => {
+                        const vals = [
+                          ...(field.enumValues || []),
+                          `val_${(field.enumValues?.length || 0) + 1}`,
+                        ];
+                        updateField(idx, { enumValues: vals });
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </HStack>
+                  <Select
+                    size="xs"
+                    bg="#05060a"
+                    borderColor="#1a1a2e"
+                    color="white"
+                    value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
+                    onChange={(e) => updateField(idx, { defaultValue: e.target.value })}
+                  >
+                    {(field.enumValues || []).map((opt) => (
+                      <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
+                        {opt}
+                      </option>
+                    ))}
+                  </Select>
+                </VStack>
+              )}
+
+              {/* Optional description */}
+              <Input
+                size="xs"
+                bg="#05060a"
+                borderColor="#1a1a2e"
+                color="gray.500"
+                value={field.description ?? ''}
+                onChange={(e) => updateField(idx, { description: e.target.value || undefined })}
+                placeholder="Description (optional)"
+                _placeholder={{ color: 'gray.700' }}
+              />
+            </VStack>
+          </Box>
+        ))}
+      </VStack>
+    </Box>
+  );
+};
 
 // ─── Variable List Editor ───────────────────────────────────────────────────
 
@@ -62,7 +312,6 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
   onMove,
 }) => {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  // Stable internal ids so editing the key field doesn't lose focus
   const idMapRef = useRef<Record<string, string>>({});
   const genId = () => `vid_${Math.random().toString(36).slice(2, 9)}`;
   for (const v of variables) {
@@ -71,12 +320,7 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
 
   const handleAdd = useCallback(() => {
     const key = `variable_${Date.now()}`;
-    const v: GameVariable = {
-      key,
-      type: 'boolean',
-      category: 'Game State',
-      defaultValue: false,
-    };
+    const v: GameVariable = { key, type: 'boolean', category: 'Game State', defaultValue: false };
     onAdd(v);
     setExpandedKey(key);
   }, [onAdd]);
@@ -231,13 +475,20 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
                           const newType = e.target.value as GameVariableType;
                           onUpdate(v.key, {
                             type: newType,
-                            defaultValue: defaultValueForType(newType),
+                            defaultValue:
+                              newType === 'complex'
+                                ? ''
+                                : defaultValueForPrimitive(
+                                    newType as 'boolean' | 'number' | 'string' | 'enum',
+                                  ),
                             enumValues:
                               newType === 'enum'
                                 ? v.enumValues?.length
                                   ? v.enumValues
                                   : ['option1', 'option2']
                                 : undefined,
+                            complexFields:
+                              newType === 'complex' ? (v.complexFields ?? []) : undefined,
                           });
                         }}
                       >
@@ -265,62 +516,75 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
                     </Box>
                   </HStack>
 
-                  {/* Default value */}
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DEFAULT VALUE
-                    </Text>
-                    {v.type === 'boolean' && (
-                      <Switch
-                        size="sm"
-                        colorScheme="green"
-                        isChecked={!!v.defaultValue}
-                        onChange={(e) => onUpdate(v.key, { defaultValue: e.target.checked })}
+                  {/* Complex: field definitions */}
+                  {v.type === 'complex' && (
+                    <>
+                      <Divider borderColor="whiteAlpha.100" />
+                      <ComplexFieldEditor
+                        fields={v.complexFields ?? []}
+                        onChange={(fields) => onUpdate(v.key, { complexFields: fields })}
                       />
-                    )}
-                    {v.type === 'number' && (
-                      <NumberInput
-                        size="xs"
-                        value={typeof v.defaultValue === 'number' ? v.defaultValue : 0}
-                        step={1}
-                        onChange={(_, val) =>
-                          onUpdate(v.key, { defaultValue: isNaN(val) ? 0 : val })
-                        }
-                      >
-                        <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
-                        <NumberInputStepper>
-                          <NumberIncrementStepper />
-                          <NumberDecrementStepper />
-                        </NumberInputStepper>
-                      </NumberInput>
-                    )}
-                    {v.type === 'string' && (
-                      <Input
-                        size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
-                        onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
-                      />
-                    )}
-                    {v.type === 'enum' && (
-                      <Select
-                        size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
-                        onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
-                      >
-                        {(v.enumValues || []).map((opt) => (
-                          <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
-                            {opt}
-                          </option>
-                        ))}
-                      </Select>
-                    )}
-                  </Box>
+                    </>
+                  )}
+
+                  {/* Primitive: default value */}
+                  {v.type !== 'complex' && (
+                    <Box>
+                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                        DEFAULT VALUE
+                      </Text>
+                      {v.type === 'boolean' && (
+                        <Switch
+                          size="sm"
+                          colorScheme="green"
+                          isChecked={!!v.defaultValue}
+                          onChange={(e) => onUpdate(v.key, { defaultValue: e.target.checked })}
+                        />
+                      )}
+                      {v.type === 'number' && (
+                        <NumberInput
+                          size="xs"
+                          value={typeof v.defaultValue === 'number' ? v.defaultValue : 0}
+                          step={1}
+                          onChange={(_, val) =>
+                            onUpdate(v.key, { defaultValue: isNaN(val) ? 0 : val })
+                          }
+                        >
+                          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                          <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                          </NumberInputStepper>
+                        </NumberInput>
+                      )}
+                      {v.type === 'string' && (
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
+                          onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
+                        />
+                      )}
+                      {v.type === 'enum' && (
+                        <Select
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
+                          onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
+                        >
+                          {(v.enumValues || []).map((opt) => (
+                            <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
+                              {opt}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    </Box>
+                  )}
 
                   {/* Enum values editor */}
                   {v.type === 'enum' && (
@@ -437,9 +701,7 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
 
 // ─── Group summary grid ──────────────────────────────────────────────────────
 
-const VariableGrid: React.FC<{
-  variables: GameVariable[];
-}> = ({ variables }) => {
+const VariableGrid: React.FC<{ variables: GameVariable[] }> = ({ variables }) => {
   const grouped = useMemo(() => {
     const groups: Record<string, GameVariable[]> = {};
     for (const v of variables) {
@@ -484,6 +746,7 @@ const VariableGrid: React.FC<{
                     borderColor="#1a1a2e"
                     borderRadius="md"
                     spacing={3}
+                    align="flex-start"
                   >
                     <Text fontSize="xs" fontFamily="mono" color="gray.200" flex={1}>
                       {v.key}
@@ -501,9 +764,16 @@ const VariableGrid: React.FC<{
                         {v.enumValues.join(', ')}
                       </Text>
                     )}
-                    <Text fontSize="10px" color="gray.600" fontFamily="mono" flexShrink={0}>
-                      = {String(v.defaultValue)}
-                    </Text>
+                    {v.type === 'complex' && v.complexFields && v.complexFields.length > 0 && (
+                      <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="200px">
+                        {v.complexFields.map((f) => f.key).join(', ')}
+                      </Text>
+                    )}
+                    {v.type !== 'complex' && (
+                      <Text fontSize="10px" color="gray.600" fontFamily="mono" flexShrink={0}>
+                        = {String(v.defaultValue)}
+                      </Text>
+                    )}
                   </HStack>
                 );
               })}
@@ -523,7 +793,6 @@ export const VariableEditor: React.FC = () => {
   const updateGameVariable = useEditorStore((state) => state.updateGameVariable);
   const deleteGameVariable = useEditorStore((state) => state.deleteGameVariable);
 
-  // Collect known categories for datalist autocomplete
   const categories = useMemo(() => {
     const s = new Set<string>();
     gameVariables.forEach((v) => {
@@ -547,6 +816,7 @@ export const VariableEditor: React.FC = () => {
         description: a.description,
         defaultValue: a.defaultValue,
         enumValues: a.enumValues,
+        complexFields: a.complexFields,
       };
       const bData = {
         type: b.type,
@@ -554,6 +824,7 @@ export const VariableEditor: React.FC = () => {
         description: b.description,
         defaultValue: b.defaultValue,
         enumValues: b.enumValues,
+        complexFields: b.complexFields,
       };
       updateGameVariable(a.key, bData);
       updateGameVariable(b.key, aData);
@@ -581,25 +852,6 @@ export const VariableEditor: React.FC = () => {
       <VariableGrid variables={gameVariables} />
     );
 
-  const rightPanel = (
-    <Box h="full" overflowY="auto" bg="#05060a">
-      {/* Category autocomplete datalist */}
-      <datalist id="variable-categories">
-        {categories.map((c) => (
-          <option key={c} value={c} />
-        ))}
-      </datalist>
-
-      <VariableListEditor
-        variables={gameVariables}
-        onAdd={addGameVariable}
-        onUpdate={updateGameVariable}
-        onDelete={deleteGameVariable}
-        onMove={handleMove}
-      />
-    </Box>
-  );
-
   return (
     <Flex direction="column" h="full" overflow="hidden">
       {/* Header */}
@@ -620,13 +872,26 @@ export const VariableEditor: React.FC = () => {
         </Text>
       </HStack>
 
-      {/* Body: grid left, list editor right */}
+      {/* Body */}
       <Flex flex={1} overflow="hidden">
         <Box flex={1} overflow="hidden">
           {content}
         </Box>
         <Box w="320px" flexShrink={0} borderLeft="1px" borderColor="#071018" overflow="hidden">
-          {rightPanel}
+          <Box h="full" overflowY="auto" bg="#05060a">
+            <datalist id="variable-categories">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+            <VariableListEditor
+              variables={gameVariables}
+              onAdd={addGameVariable}
+              onUpdate={updateGameVariable}
+              onDelete={deleteGameVariable}
+              onMove={handleMove}
+            />
+          </Box>
         </Box>
       </Flex>
     </Flex>

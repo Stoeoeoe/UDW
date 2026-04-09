@@ -253,15 +253,27 @@ export interface MapMetadata {
 }
 
 // Game Variable Definitions — named runtime values exposed to the Lua sandbox
-export type GameVariableType = 'boolean' | 'number' | 'string' | 'enum';
+export type GameVariableType = 'boolean' | 'number' | 'string' | 'enum' | 'complex';
+
+/** A primitive field inside a complex (table) variable. No nesting beyond this. */
+export interface ComplexField {
+  key: string; // Field name within the table
+  type: 'boolean' | 'number' | 'string' | 'enum';
+  description?: string;
+  defaultValue: boolean | number | string;
+  enumValues?: string[]; // Only when type === 'enum'
+}
 
 export interface GameVariable {
   key: string; // Dotted Lua path, e.g. "weather.isRain" or "date.season"
   type: GameVariableType;
   category: string; // Grouping label, e.g. "Weather", "Date", "Game State"
   description?: string;
+  // For primitive types:
   defaultValue: boolean | number | string;
   enumValues?: string[]; // Only used when type === 'enum'
+  // For complex (table) type:
+  complexFields?: ComplexField[]; // Only used when type === 'complex'
 }
 
 // NPC Definitions

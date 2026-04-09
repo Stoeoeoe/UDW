@@ -228,8 +228,8 @@
         },
         "type": {
           "type": "string",
-          "enum": ["boolean", "number", "string", "enum"],
-          "description": "Runtime value type."
+          "enum": ["boolean", "number", "string", "enum", "complex"],
+          "description": "Runtime value type. 'complex' maps to a Lua table with named fields."
         },
         "category": {
           "type": "string",
@@ -245,7 +245,42 @@
             { "type": "number" },
             { "type": "string" }
           ],
-          "description": "Default value used for testing/preview in the editor."
+          "description": "Default value for primitive types. Ignored when type is 'complex'."
+        },
+        "enumValues": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed values when type is 'enum'."
+        },
+        "complexFields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ComplexField" },
+          "description": "Field definitions when type is 'complex'. Each field maps to a Lua table key."
+        }
+      }
+    },
+    "ComplexField": {
+      "type": "object",
+      "required": ["key", "type", "defaultValue"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Field name within the Lua table.",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["boolean", "number", "string", "enum"],
+          "description": "Primitive type of this field."
+        },
+        "description": { "type": "string" },
+        "defaultValue": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "number" },
+            { "type": "string" }
+          ]
         },
         "enumValues": {
           "type": "array",
