@@ -36,7 +36,7 @@ function App() {
         return <EntityEditor />;
       case 'npcs':
         return <NpcEditor />;
-      case 'variables':
+      case 'scripting':
         return <VariableEditor />;
       case 'settings':
         return <SettingsEditor />;

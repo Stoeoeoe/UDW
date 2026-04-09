@@ -17,6 +17,10 @@ import {
   EntityType,
   Npc,
   GameVariable,
+  ScriptTable,
+  ScriptFunction,
+  ScriptNamespace,
+  ScriptContextType,
   PropertyValues,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
@@ -260,6 +264,25 @@ async function persistProject(project: Project): Promise<void> {
   }, 2000);
 }
 
+/** Persist all scripting-related fields to project.json in one shot. */
+async function persistScriptingState(): Promise<void> {
+  const s = useEditorStore.getState();
+  const proj = s.project;
+  if (!proj) return;
+  const projectToSave = {
+    ...proj,
+    gameVariables: s.gameVariables,
+    scriptTables: s.scriptTables,
+    scriptFunctions: s.scriptFunctions,
+    scriptNamespaces: s.scriptNamespaces,
+    scriptContextTypes: s.scriptContextTypes,
+  };
+  await persistProject(projectToSave);
+  useEditorStore.setState((state) => {
+    state.project = castDraft(projectToSave);
+  });
+}
+
 const TILESET_SAVE_DEBOUNCE_MS = 300;
 const pendingTilesetSaves = new globalThis.Map<string, ReturnType<typeof setTimeout>>();
 
@@ -429,6 +452,26 @@ interface EditorStore extends EditorState {
   addGameVariable: (variable: GameVariable) => Promise<void>;
   updateGameVariable: (key: string, updates: Partial<GameVariable>) => Promise<void>;
   deleteGameVariable: (key: string) => Promise<void>;
+
+  // Script table CRUD
+  addScriptTable: (table: ScriptTable) => Promise<void>;
+  updateScriptTable: (id: string, updates: Partial<ScriptTable>) => Promise<void>;
+  deleteScriptTable: (id: string) => Promise<void>;
+
+  // Script function CRUD
+  addScriptFunction: (fn: ScriptFunction) => Promise<void>;
+  updateScriptFunction: (id: string, updates: Partial<ScriptFunction>) => Promise<void>;
+  deleteScriptFunction: (id: string) => Promise<void>;
+
+  // Script namespace CRUD
+  addScriptNamespace: (ns: ScriptNamespace) => Promise<void>;
+  updateScriptNamespace: (id: string, updates: Partial<ScriptNamespace>) => Promise<void>;
+  deleteScriptNamespace: (id: string) => Promise<void>;
+
+  // Script context type CRUD
+  addScriptContextType: (ct: ScriptContextType) => Promise<void>;
+  updateScriptContextType: (id: string, updates: Partial<ScriptContextType>) => Promise<void>;
+  deleteScriptContextType: (id: string) => Promise<void>;
 
   // Terrain actions
   addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
@@ -715,6 +758,10 @@ export const useEditorStore = create<EditorStore>()(
           terrainTypes: [],
           entityTypes: [],
           gameVariables: [],
+          scriptTables: [],
+          scriptFunctions: [],
+          scriptNamespaces: [],
+          scriptContextTypes: [],
           npcs: [],
           selectedNpcId: null,
           layerDefinitions: [],
@@ -775,6 +822,10 @@ export const useEditorStore = create<EditorStore>()(
                   state.selectedTileIndex = null;
                   state.entityTypes = [];
                   state.gameVariables = [];
+                  state.scriptTables = [];
+                  state.scriptFunctions = [];
+                  state.scriptNamespaces = [];
+                  state.scriptContextTypes = [];
                   state.npcs = [];
                   state.selectedNpcId = null;
                 }),
@@ -844,6 +895,28 @@ export const useEditorStore = create<EditorStore>()(
             if (proj?.gameVariables && Array.isArray(proj.gameVariables)) {
               set((state) => {
                 state.gameVariables = castDraft(proj.gameVariables!);
+              });
+            }
+
+            // 1.76 Load scripting primitives from project.json
+            if (proj?.scriptTables && Array.isArray(proj.scriptTables)) {
+              set((state) => {
+                state.scriptTables = castDraft(proj.scriptTables!);
+              });
+            }
+            if (proj?.scriptFunctions && Array.isArray(proj.scriptFunctions)) {
+              set((state) => {
+                state.scriptFunctions = castDraft(proj.scriptFunctions!);
+              });
+            }
+            if (proj?.scriptNamespaces && Array.isArray(proj.scriptNamespaces)) {
+              set((state) => {
+                state.scriptNamespaces = castDraft(proj.scriptNamespaces!);
+              });
+            }
+            if (proj?.scriptContextTypes && Array.isArray(proj.scriptContextTypes)) {
+              set((state) => {
+                state.scriptContextTypes = castDraft(proj.scriptContextTypes!);
               });
             }
 
@@ -2158,6 +2231,90 @@ export const useEditorStore = create<EditorStore>()(
                 state.project = castDraft(projectToSave);
               });
             }
+          },
+
+          // ── Script table CRUD ───────────────────────────────────
+          addScriptTable: async (table) => {
+            set((state) => {
+              state.scriptTables.push(castDraft(table));
+            });
+            await persistScriptingState();
+          },
+          updateScriptTable: async (id, updates) => {
+            set((state) => {
+              const t = state.scriptTables.find((x) => x.id === id);
+              if (t) Object.assign(t, updates);
+            });
+            await persistScriptingState();
+          },
+          deleteScriptTable: async (id) => {
+            set((state) => {
+              state.scriptTables = state.scriptTables.filter((x) => x.id !== id);
+            });
+            await persistScriptingState();
+          },
+
+          // ── Script function CRUD ──────────────────────────────────
+          addScriptFunction: async (fn) => {
+            set((state) => {
+              state.scriptFunctions.push(castDraft(fn));
+            });
+            await persistScriptingState();
+          },
+          updateScriptFunction: async (id, updates) => {
+            set((state) => {
+              const f = state.scriptFunctions.find((x) => x.id === id);
+              if (f) Object.assign(f, updates);
+            });
+            await persistScriptingState();
+          },
+          deleteScriptFunction: async (id) => {
+            set((state) => {
+              state.scriptFunctions = state.scriptFunctions.filter((x) => x.id !== id);
+            });
+            await persistScriptingState();
+          },
+
+          // ── Script namespace CRUD ─────────────────────────────────
+          addScriptNamespace: async (ns) => {
+            set((state) => {
+              state.scriptNamespaces.push(castDraft(ns));
+            });
+            await persistScriptingState();
+          },
+          updateScriptNamespace: async (id, updates) => {
+            set((state) => {
+              const n = state.scriptNamespaces.find((x) => x.id === id);
+              if (n) Object.assign(n, updates);
+            });
+            await persistScriptingState();
+          },
+          deleteScriptNamespace: async (id) => {
+            set((state) => {
+              state.scriptNamespaces = state.scriptNamespaces.filter((x) => x.id !== id);
+            });
+            await persistScriptingState();
+          },
+
+          // ── Script context type CRUD ──────────────────────────────
+          addScriptContextType: async (ct) => {
+            set((state) => {
+              state.scriptContextTypes.push(castDraft(ct));
+            });
+            await persistScriptingState();
+          },
+          updateScriptContextType: async (id, updates) => {
+            set((state) => {
+              const c = state.scriptContextTypes.find((x) => x.id === id);
+              if (c) Object.assign(c, updates);
+            });
+            await persistScriptingState();
+          },
+          deleteScriptContextType: async (id) => {
+            set((state) => {
+              state.scriptContextTypes = state.scriptContextTypes.filter((x) => x.id !== id);
+            });
+            await persistScriptingState();
           },
 
           // Layer definition actions

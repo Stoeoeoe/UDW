@@ -69,6 +69,26 @@
       "type": "array",
       "description": "Named variables exposed to the Lua sandbox at runtime.",
       "items": { "$ref": "#/$defs/GameVariable" }
+    },
+    "scriptTables": {
+      "type": "array",
+      "description": "Reusable table definitions with named fields, referenceable as a type.",
+      "items": { "$ref": "#/$defs/ScriptTable" }
+    },
+    "scriptFunctions": {
+      "type": "array",
+      "description": "Global functions callable anywhere in the Lua sandbox.",
+      "items": { "$ref": "#/$defs/ScriptFunction" }
+    },
+    "scriptNamespaces": {
+      "type": "array",
+      "description": "Singleton table-like namespaces (e.g. weather, camera, audio).",
+      "items": { "$ref": "#/$defs/ScriptNamespace" }
+    },
+    "scriptContextTypes": {
+      "type": "array",
+      "description": "Context types defining the shape of 'self' for script execution contexts.",
+      "items": { "$ref": "#/$defs/ScriptContextType" }
     }
   },
   "$defs": {
@@ -228,8 +248,8 @@
         },
         "type": {
           "type": "string",
-          "enum": ["boolean", "number", "string", "enum", "complex"],
-          "description": "Runtime value type. 'complex' maps to a Lua table with named fields."
+          "enum": ["boolean", "number", "string", "enum", "table"],
+          "description": "Runtime value type. 'table' references a ScriptTable definition."
         },
         "category": {
           "type": "string",
@@ -245,21 +265,42 @@
             { "type": "number" },
             { "type": "string" }
           ],
-          "description": "Default value for primitive types. Ignored when type is 'complex'."
+          "description": "Default value for primitive types. Ignored when type is 'table'."
         },
         "enumValues": {
           "type": "array",
           "items": { "type": "string" },
           "description": "Allowed values when type is 'enum'."
         },
+        "tableId": {
+          "type": "string",
+          "description": "Reference to a ScriptTable definition when type is 'table'."
+        },
         "complexFields": {
           "type": "array",
-          "items": { "$ref": "#/$defs/ComplexField" },
-          "description": "Field definitions when type is 'complex'. Each field maps to a Lua table key."
+          "items": { "$ref": "#/$defs/TableField" },
+          "description": "Legacy inline field definitions. Use tableId instead for new data."
         }
       }
     },
-    "ComplexField": {
+    "ScriptTable": {
+      "type": "object",
+      "required": ["id", "name", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "Table type name (e.g. 'npcData', 'questEntry')."
+        },
+        "description": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TableField" }
+        }
+      }
+    },
+    "TableField": {
       "type": "object",
       "required": ["key", "type", "defaultValue"],
       "additionalProperties": false,
@@ -286,6 +327,96 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Allowed values when type is 'enum'."
+        }
+      }
+    },
+    "ScriptParam": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Parameter name."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["boolean", "number", "string", "enum", "table", "void"],
+          "description": "Parameter type."
+        },
+        "description": { "type": "string" },
+        "enumValues": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed values when type is 'enum'."
+        }
+      }
+    },
+    "ScriptFunction": {
+      "type": "object",
+      "required": ["id", "name", "params", "returnType"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "Lua-callable function name."
+        },
+        "description": { "type": "string" },
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ScriptParam" }
+        },
+        "returnType": {
+          "type": "string",
+          "enum": ["boolean", "number", "string", "enum", "table", "void"],
+          "description": "Return type ('void' = no return value)."
+        },
+        "returnTableId": {
+          "type": "string",
+          "description": "Reference to a ScriptTable definition when returnType is 'table'."
+        }
+      }
+    },
+    "ScriptNamespace": {
+      "type": "object",
+      "required": ["id", "name", "fields", "functions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "Lua global name (e.g. 'weather', 'camera')."
+        },
+        "description": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GameVariable" }
+        },
+        "functions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ScriptFunction" }
+        }
+      }
+    },
+    "ScriptContextType": {
+      "type": "object",
+      "required": ["id", "name", "fields", "functions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "Context type name (e.g. 'npc', 'cutscene')."
+        },
+        "description": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GameVariable" }
+        },
+        "functions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ScriptFunction" }
         }
       }
     }

@@ -1,4 +1,16 @@
-import { Project, Tileset, Map, LayerDefinition, EntityType, Npc, GameVariable } from './schema';
+import {
+  Project,
+  Tileset,
+  Map,
+  LayerDefinition,
+  EntityType,
+  Npc,
+  GameVariable,
+  ScriptTable,
+  ScriptFunction,
+  ScriptNamespace,
+  ScriptContextType,
+} from './schema';
 
 export interface EditorState {
   // Project data
@@ -93,6 +105,12 @@ export interface EditorState {
   // Game variable registry (persisted in project.json)
   gameVariables: GameVariable[];
 
+  // Scripting primitives (persisted in project.json)
+  scriptTables: ScriptTable[];
+  scriptFunctions: ScriptFunction[];
+  scriptNamespaces: ScriptNamespace[];
+  scriptContextTypes: ScriptContextType[];
+
   // Project-level layer definitions (template layers for maps)
   layerDefinitions: LayerDefinition[];
   selectedLayerDefinitionId: string | null;
@@ -154,7 +172,7 @@ export type EditorMode =
   | 'tilesets'
   | 'entities'
   | 'npcs'
-  | 'variables'
+  | 'scripting'
   | 'settings'
   | 'terrain'
   | 'layers';

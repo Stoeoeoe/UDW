@@ -92,10 +92,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
         onClick={onModeChange}
       />
       <NavIcon
-        icon="📊"
-        label="Vars"
-        mode="variables"
-        active={activeMode === 'variables'}
+        icon="📜"
+        label="Script"
+        mode="scripting"
+        active={activeMode === 'scripting'}
         onClick={onModeChange}
       />
       <NavIcon

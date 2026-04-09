@@ -18,13 +18,25 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
-  Divider,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { GameVariable, GameVariableType, ComplexField } from '../../../types/schema';
+import {
+  GameVariable,
+  GameVariableType,
+  ScriptTable,
+  ScriptFunction,
+  ScriptNamespace,
+  ScriptContextType,
+} from '../../../types/schema';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { ConditionEditor } from './ConditionEditor';
+import { GlobalFunctionEditor } from './GlobalFunctionEditor';
+import { NamespaceEditor } from './NamespaceEditor';
+import { ContextTypeEditor } from './ContextTypeEditor';
+import { TableEditor } from './TableEditor';
+
+type ScriptingTab = 'variables' | 'tables' | 'functions' | 'namespaces' | 'contexts';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -42,7 +54,7 @@ const PRIMITIVE_TYPES: {
 
 const VARIABLE_TYPES: { value: GameVariableType; label: string; badge: string; color: string }[] = [
   ...PRIMITIVE_TYPES,
-  { value: 'complex', label: 'Complex', badge: '{}', color: 'orange' },
+  { value: 'table', label: 'Table', badge: '{}', color: 'orange' },
 ];
 
 function defaultValueForPrimitive(
@@ -60,245 +72,11 @@ function defaultValueForPrimitive(
   }
 }
 
-// ─── Complex field sub-editor ─────────────────────────────────────────────────
-
-interface ComplexFieldEditorProps {
-  fields: ComplexField[];
-  onChange: (fields: ComplexField[]) => void;
-}
-
-const ComplexFieldEditor: React.FC<ComplexFieldEditorProps> = ({ fields, onChange }) => {
-  const addField = () => {
-    onChange([...fields, { key: `field_${fields.length + 1}`, type: 'string', defaultValue: '' }]);
-  };
-
-  const updateField = (idx: number, updates: Partial<ComplexField>) => {
-    const next = fields.map((f, i) => (i === idx ? { ...f, ...updates } : f));
-    onChange(next);
-  };
-
-  const removeField = (idx: number) => {
-    onChange(fields.filter((_, i) => i !== idx));
-  };
-
-  return (
-    <Box>
-      <HStack mb={1} justify="space-between">
-        <Text fontSize="9px" color="gray.500" fontWeight="bold">
-          FIELDS
-        </Text>
-        <IconButton
-          aria-label="Add field"
-          icon={<AddIcon fontSize="8px" />}
-          size="xs"
-          variant="ghost"
-          color="gray.500"
-          _hover={{ color: 'white' }}
-          onClick={addField}
-        />
-      </HStack>
-
-      {fields.length === 0 && (
-        <Text fontSize="10px" color="gray.700" fontStyle="italic" mb={1}>
-          No fields — add one above
-        </Text>
-      )}
-
-      <VStack spacing={2} align="stretch">
-        {fields.map((field, idx) => (
-          <Box key={idx} bg="#0a0a0b" borderRadius="md" border="1px" borderColor="#1a1a2e" p={2}>
-            <VStack spacing={2} align="stretch">
-              {/* Key + type row */}
-              <HStack spacing={2}>
-                <Input
-                  size="xs"
-                  bg="#05060a"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  value={field.key}
-                  onChange={(e) =>
-                    updateField(idx, { key: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
-                  }
-                  placeholder="fieldName"
-                  flex={1}
-                />
-                <Select
-                  size="xs"
-                  bg="#05060a"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  value={field.type}
-                  w="100px"
-                  flexShrink={0}
-                  onChange={(e) => {
-                    const t = e.target.value as ComplexField['type'];
-                    updateField(idx, {
-                      type: t,
-                      defaultValue: defaultValueForPrimitive(t),
-                      enumValues:
-                        t === 'enum'
-                          ? field.enumValues?.length
-                            ? field.enumValues
-                            : ['value1']
-                          : undefined,
-                    });
-                  }}
-                >
-                  {PRIMITIVE_TYPES.map((t) => (
-                    <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
-                      {t.badge} {t.label}
-                    </option>
-                  ))}
-                </Select>
-                <IconButton
-                  aria-label="Remove field"
-                  icon={<DeleteIcon fontSize="8px" />}
-                  size="xs"
-                  variant="ghost"
-                  color="gray.700"
-                  _hover={{ color: 'red.300' }}
-                  onClick={() => removeField(idx)}
-                />
-              </HStack>
-
-              {/* Default value */}
-              {field.type === 'boolean' && (
-                <HStack spacing={2}>
-                  <Text fontSize="9px" color="gray.600">
-                    default
-                  </Text>
-                  <Switch
-                    size="sm"
-                    colorScheme="green"
-                    isChecked={!!field.defaultValue}
-                    onChange={(e) => updateField(idx, { defaultValue: e.target.checked })}
-                  />
-                </HStack>
-              )}
-              {field.type === 'number' && (
-                <NumberInput
-                  size="xs"
-                  value={typeof field.defaultValue === 'number' ? field.defaultValue : 0}
-                  onChange={(_, val) => updateField(idx, { defaultValue: isNaN(val) ? 0 : val })}
-                >
-                  <NumberInputField
-                    bg="#05060a"
-                    borderColor="#1a1a2e"
-                    color="white"
-                    placeholder="default"
-                  />
-                  <NumberInputStepper>
-                    <NumberIncrementStepper />
-                    <NumberDecrementStepper />
-                  </NumberInputStepper>
-                </NumberInput>
-              )}
-              {field.type === 'string' && (
-                <Input
-                  size="xs"
-                  bg="#05060a"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
-                  onChange={(e) => updateField(idx, { defaultValue: e.target.value })}
-                  placeholder="default"
-                />
-              )}
-              {field.type === 'enum' && (
-                <VStack spacing={1} align="stretch">
-                  <HStack spacing={1} flexWrap="wrap">
-                    {(field.enumValues || []).map((opt, oi) => (
-                      <HStack key={oi} spacing={1}>
-                        <Input
-                          size="xs"
-                          bg="#05060a"
-                          borderColor="#1a1a2e"
-                          color="white"
-                          value={opt}
-                          w="80px"
-                          onChange={(e) => {
-                            const vals = [...(field.enumValues || [])];
-                            vals[oi] = e.target.value;
-                            updateField(idx, { enumValues: vals });
-                          }}
-                        />
-                        <IconButton
-                          aria-label="Remove"
-                          icon={<DeleteIcon fontSize="7px" />}
-                          size="xs"
-                          variant="ghost"
-                          color="gray.700"
-                          _hover={{ color: 'red.300' }}
-                          onClick={() => {
-                            const vals = (field.enumValues || []).filter((_, i) => i !== oi);
-                            updateField(idx, {
-                              enumValues: vals,
-                              ...(field.defaultValue === opt
-                                ? { defaultValue: vals[0] ?? '' }
-                                : {}),
-                            });
-                          }}
-                        />
-                      </HStack>
-                    ))}
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      color="gray.600"
-                      _hover={{ color: 'white' }}
-                      leftIcon={<AddIcon fontSize="7px" />}
-                      onClick={() => {
-                        const vals = [
-                          ...(field.enumValues || []),
-                          `val_${(field.enumValues?.length || 0) + 1}`,
-                        ];
-                        updateField(idx, { enumValues: vals });
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </HStack>
-                  <Select
-                    size="xs"
-                    bg="#05060a"
-                    borderColor="#1a1a2e"
-                    color="white"
-                    value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
-                    onChange={(e) => updateField(idx, { defaultValue: e.target.value })}
-                  >
-                    {(field.enumValues || []).map((opt) => (
-                      <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
-                        {opt}
-                      </option>
-                    ))}
-                  </Select>
-                </VStack>
-              )}
-
-              {/* Optional description */}
-              <Input
-                size="xs"
-                bg="#05060a"
-                borderColor="#1a1a2e"
-                color="gray.500"
-                value={field.description ?? ''}
-                onChange={(e) => updateField(idx, { description: e.target.value || undefined })}
-                placeholder="Description (optional)"
-                _placeholder={{ color: 'gray.700' }}
-              />
-            </VStack>
-          </Box>
-        ))}
-      </VStack>
-    </Box>
-  );
-};
-
 // ─── Variable List Editor ───────────────────────────────────────────────────
 
 interface VariableListEditorProps {
   variables: GameVariable[];
+  tables: ScriptTable[];
   onAdd: (v: GameVariable) => void;
   onUpdate: (key: string, updates: Partial<GameVariable>) => void;
   onDelete: (key: string) => void;
@@ -307,6 +85,7 @@ interface VariableListEditorProps {
 
 const VariableListEditor: React.FC<VariableListEditorProps> = ({
   variables,
+  tables,
   onAdd,
   onUpdate,
   onDelete,
@@ -477,7 +256,7 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
                           onUpdate(v.key, {
                             type: newType,
                             defaultValue:
-                              newType === 'complex'
+                              newType === 'table'
                                 ? ''
                                 : defaultValueForPrimitive(
                                     newType as 'boolean' | 'number' | 'string' | 'enum',
@@ -488,8 +267,7 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
                                   ? v.enumValues
                                   : ['option1', 'option2']
                                 : undefined,
-                            complexFields:
-                              newType === 'complex' ? (v.complexFields ?? []) : undefined,
+                            tableId: newType === 'table' ? (v.tableId ?? undefined) : undefined,
                           });
                         }}
                       >
@@ -517,19 +295,34 @@ const VariableListEditor: React.FC<VariableListEditorProps> = ({
                     </Box>
                   </HStack>
 
-                  {/* Complex: field definitions */}
-                  {v.type === 'complex' && (
-                    <>
-                      <Divider borderColor="whiteAlpha.100" />
-                      <ComplexFieldEditor
-                        fields={v.complexFields ?? []}
-                        onChange={(fields) => onUpdate(v.key, { complexFields: fields })}
-                      />
-                    </>
+                  {/* Table: select a table definition */}
+                  {v.type === 'table' && (
+                    <Box>
+                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                        TABLE TYPE
+                      </Text>
+                      <Select
+                        size="xs"
+                        bg="#0a0a0b"
+                        borderColor="#1a1a2e"
+                        color="white"
+                        value={v.tableId ?? ''}
+                        onChange={(e) => onUpdate(v.key, { tableId: e.target.value || undefined })}
+                      >
+                        <option value="" style={{ background: '#0a0a0b' }}>
+                          — select a table —
+                        </option>
+                        {tables.map((t) => (
+                          <option key={t.id} value={t.id} style={{ background: '#0a0a0b' }}>
+                            {t.name} ({t.fields.length} fields)
+                          </option>
+                        ))}
+                      </Select>
+                    </Box>
                   )}
 
                   {/* Primitive: default value */}
-                  {v.type !== 'complex' && (
+                  {v.type !== 'table' && (
                     <Box>
                       <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
                         DEFAULT VALUE
@@ -765,12 +558,12 @@ const VariableGrid: React.FC<{ variables: GameVariable[] }> = ({ variables }) =>
                         {v.enumValues.join(', ')}
                       </Text>
                     )}
-                    {v.type === 'complex' && v.complexFields && v.complexFields.length > 0 && (
+                    {v.type === 'table' && v.tableId && (
                       <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="200px">
-                        {v.complexFields.map((f) => f.key).join(', ')}
+                        table ref
                       </Text>
                     )}
-                    {v.type !== 'complex' && (
+                    {v.type !== 'table' && (
                       <Text fontSize="10px" color="gray.600" fontFamily="mono" flexShrink={0}>
                         = {String(v.defaultValue)}
                       </Text>
@@ -786,11 +579,20 @@ const VariableGrid: React.FC<{ variables: GameVariable[] }> = ({ variables }) =>
   );
 };
 
-// ─── Condition Tester ────────────────────────────────────────────────────────
+// ─── Script Tester ───────────────────────────────────────────────────────────
 
-const ConditionTester: React.FC<{ variables: GameVariable[] }> = ({ variables }) => {
+const ScriptTester: React.FC<{
+  variables: GameVariable[];
+  tables: ScriptTable[];
+  functions: ScriptFunction[];
+  namespaces: ScriptNamespace[];
+  contextTypes: ScriptContextType[];
+}> = ({ variables, tables, functions, namespaces, contextTypes }) => {
   const [expr, setExpr] = useState('');
   const [open, setOpen] = useState(true);
+  const [selectedContext, setSelectedContext] = useState<string | ''>('');
+
+  const activeContext = contextTypes.find((ct) => ct.id === selectedContext);
 
   return (
     <Box borderTop="1px" borderColor="#071018" bg="#03040a" flexShrink={0}>
@@ -810,51 +612,140 @@ const ConditionTester: React.FC<{ variables: GameVariable[] }> = ({ variables })
           color="gray.500"
           flex={1}
         >
-          Condition Tester
+          Script Tester
         </Text>
         {open ? <ChevronUpIcon color="gray.600" /> : <ChevronDownIcon color="gray.600" />}
       </HStack>
       <Collapse in={open} animateOpacity>
         <Box px={3} pb={3} pt={1}>
-          <ConditionEditor value={expr} onChange={setExpr} variables={variables} />
+          {contextTypes.length > 0 && (
+            <HStack mb={2} spacing={2}>
+              <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                CONTEXT:
+              </Text>
+              <Select
+                size="xs"
+                bg="#0a0a0b"
+                borderColor="#1a1a2e"
+                color="white"
+                w="140px"
+                value={selectedContext}
+                onChange={(e) => setSelectedContext(e.target.value)}
+              >
+                <option value="" style={{ background: '#0a0a0b' }}>
+                  — none —
+                </option>
+                {contextTypes.map((ct) => (
+                  <option key={ct.id} value={ct.id} style={{ background: '#0a0a0b' }}>
+                    self ({ct.name})
+                  </option>
+                ))}
+              </Select>
+            </HStack>
+          )}
+          <ConditionEditor
+            value={expr}
+            onChange={setExpr}
+            variables={variables}
+            tables={tables}
+            functions={functions}
+            namespaces={namespaces}
+            activeContextType={activeContext}
+          />
         </Box>
       </Collapse>
     </Box>
   );
 };
 
+// ─── Tab button ─────────────────────────────────────────────────────────────
+
+const TAB_DEFS: {
+  id: ScriptingTab;
+  label: string;
+  badge: (s: ReturnType<typeof useScriptingState>) => number;
+}[] = [
+  { id: 'variables', label: 'Variables', badge: (s) => s.gameVariables.length },
+  { id: 'tables', label: 'Tables', badge: (s) => s.scriptTables.length },
+  { id: 'functions', label: 'Functions', badge: (s) => s.scriptFunctions.length },
+  { id: 'namespaces', label: 'Namespaces', badge: (s) => s.scriptNamespaces.length },
+  { id: 'contexts', label: 'Contexts', badge: (s) => s.scriptContextTypes.length },
+];
+
+function useScriptingState() {
+  const gameVariables = useEditorStore((s) => s.gameVariables);
+  const addGameVariable = useEditorStore((s) => s.addGameVariable);
+  const updateGameVariable = useEditorStore((s) => s.updateGameVariable);
+  const deleteGameVariable = useEditorStore((s) => s.deleteGameVariable);
+  const scriptTables = useEditorStore((s) => s.scriptTables);
+  const addScriptTable = useEditorStore((s) => s.addScriptTable);
+  const updateScriptTable = useEditorStore((s) => s.updateScriptTable);
+  const deleteScriptTable = useEditorStore((s) => s.deleteScriptTable);
+  const scriptFunctions = useEditorStore((s) => s.scriptFunctions);
+  const addScriptFunction = useEditorStore((s) => s.addScriptFunction);
+  const updateScriptFunction = useEditorStore((s) => s.updateScriptFunction);
+  const deleteScriptFunction = useEditorStore((s) => s.deleteScriptFunction);
+  const scriptNamespaces = useEditorStore((s) => s.scriptNamespaces);
+  const addScriptNamespace = useEditorStore((s) => s.addScriptNamespace);
+  const updateScriptNamespace = useEditorStore((s) => s.updateScriptNamespace);
+  const deleteScriptNamespace = useEditorStore((s) => s.deleteScriptNamespace);
+  const scriptContextTypes = useEditorStore((s) => s.scriptContextTypes);
+  const addScriptContextType = useEditorStore((s) => s.addScriptContextType);
+  const updateScriptContextType = useEditorStore((s) => s.updateScriptContextType);
+  const deleteScriptContextType = useEditorStore((s) => s.deleteScriptContextType);
+  return {
+    gameVariables,
+    addGameVariable,
+    updateGameVariable,
+    deleteGameVariable,
+    scriptTables,
+    addScriptTable,
+    updateScriptTable,
+    deleteScriptTable,
+    scriptFunctions,
+    addScriptFunction,
+    updateScriptFunction,
+    deleteScriptFunction,
+    scriptNamespaces,
+    addScriptNamespace,
+    updateScriptNamespace,
+    deleteScriptNamespace,
+    scriptContextTypes,
+    addScriptContextType,
+    updateScriptContextType,
+    deleteScriptContextType,
+  };
+}
+
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export const VariableEditor: React.FC = () => {
-  const gameVariables = useEditorStore((state) => state.gameVariables);
-  const addGameVariable = useEditorStore((state) => state.addGameVariable);
-  const updateGameVariable = useEditorStore((state) => state.updateGameVariable);
-  const deleteGameVariable = useEditorStore((state) => state.deleteGameVariable);
+  const s = useScriptingState();
+  const [activeTab, setActiveTab] = useState<ScriptingTab>('variables');
 
   const categories = useMemo(() => {
-    const s = new Set<string>();
-    gameVariables.forEach((v) => {
-      if (v.category) s.add(v.category);
+    const set = new Set<string>();
+    s.gameVariables.forEach((v) => {
+      if (v.category) set.add(v.category);
     });
-    return Array.from(s).sort();
-  }, [gameVariables]);
+    return Array.from(set).sort();
+  }, [s.gameVariables]);
 
   const handleMove = useCallback(
     (key: string, direction: -1 | 1) => {
-      const idx = gameVariables.findIndex((v) => v.key === key);
+      const idx = s.gameVariables.findIndex((v) => v.key === key);
       if (idx < 0) return;
       const newIdx = idx + direction;
-      if (newIdx < 0 || newIdx >= gameVariables.length) return;
-      // Keys are identity — swap all other fields between the two entries
-      const a = gameVariables[idx];
-      const b = gameVariables[newIdx];
+      if (newIdx < 0 || newIdx >= s.gameVariables.length) return;
+      const a = s.gameVariables[idx];
+      const b = s.gameVariables[newIdx];
       const aData = {
         type: a.type,
         category: a.category,
         description: a.description,
         defaultValue: a.defaultValue,
         enumValues: a.enumValues,
-        complexFields: a.complexFields,
+        tableId: a.tableId,
       };
       const bData = {
         type: b.type,
@@ -862,37 +753,176 @@ export const VariableEditor: React.FC = () => {
         description: b.description,
         defaultValue: b.defaultValue,
         enumValues: b.enumValues,
-        complexFields: b.complexFields,
+        tableId: b.tableId,
       };
-      updateGameVariable(a.key, bData);
-      updateGameVariable(b.key, aData);
+      s.updateGameVariable(a.key, bData);
+      s.updateGameVariable(b.key, aData);
     },
-    [gameVariables, updateGameVariable],
+    [s.gameVariables, s.updateGameVariable],
   );
 
-  const content =
-    gameVariables.length === 0 ? (
-      <EmptyScreen
-        icon="📊"
-        title="No Variables"
-        description="Define named variables the Lua sandbox exposes at runtime — weather, date, game state flags, and more."
-        buttonLabel="Add First Variable"
-        onCreate={() =>
-          addGameVariable({
-            key: 'variable_1',
-            type: 'boolean',
-            category: 'Game State',
-            defaultValue: false,
-          })
-        }
-      />
-    ) : (
-      <VariableGrid variables={gameVariables} />
-    );
+  // Left panel content depends on active tab
+  const mainContent = useMemo(() => {
+    switch (activeTab) {
+      case 'variables':
+        return s.gameVariables.length === 0 ? (
+          <EmptyScreen
+            icon="📊"
+            title="No Variables"
+            description="Define named variables the Lua sandbox exposes at runtime."
+            buttonLabel="Add First Variable"
+            onCreate={() =>
+              s.addGameVariable({
+                key: 'variable_1',
+                type: 'boolean',
+                category: 'Game State',
+                defaultValue: false,
+              })
+            }
+          />
+        ) : (
+          <VariableGrid variables={s.gameVariables} />
+        );
+      case 'tables':
+        return s.scriptTables.length === 0 ? (
+          <EmptyScreen
+            icon="{}"
+            title="No Tables"
+            description="Define reusable table structures that can be referenced as a type in variables, namespaces, and contexts."
+            buttonLabel="Add First Table"
+            onCreate={() =>
+              s.addScriptTable({ id: `tbl_${Date.now()}`, name: 'table', fields: [] })
+            }
+          />
+        ) : (
+          <TableGrid tables={s.scriptTables} />
+        );
+      case 'functions':
+        return s.scriptFunctions.length === 0 ? (
+          <EmptyScreen
+            icon="⚡"
+            title="No Global Functions"
+            description="Define functions callable anywhere in the Lua sandbox (e.g. wait, setFlag)."
+            buttonLabel="Add First Function"
+            onCreate={() =>
+              s.addScriptFunction({
+                id: `fn_${Date.now()}`,
+                name: 'newFunction',
+                params: [],
+                returnType: 'void',
+              })
+            }
+          />
+        ) : (
+          <FunctionGrid functions={s.scriptFunctions} tables={s.scriptTables} />
+        );
+      case 'namespaces':
+        return s.scriptNamespaces.length === 0 ? (
+          <EmptyScreen
+            icon="📦"
+            title="No Namespaces"
+            description="Define singleton table-like objects (e.g. weather, camera, audio)."
+            buttonLabel="Add First Namespace"
+            onCreate={() =>
+              s.addScriptNamespace({
+                id: `ns_${Date.now()}`,
+                name: 'namespace',
+                fields: [],
+                functions: [],
+              })
+            }
+          />
+        ) : (
+          <NamespaceGrid namespaces={s.scriptNamespaces} tables={s.scriptTables} />
+        );
+      case 'contexts':
+        return s.scriptContextTypes.length === 0 ? (
+          <EmptyScreen
+            icon="🎭"
+            title="No Context Types"
+            description="Define the shape of 'self' for script execution contexts (e.g. npc, cutscene)."
+            buttonLabel="Add First Context Type"
+            onCreate={() =>
+              s.addScriptContextType({
+                id: `ctx_${Date.now()}`,
+                name: 'context',
+                fields: [],
+                functions: [],
+              })
+            }
+          />
+        ) : (
+          <ContextGrid contextTypes={s.scriptContextTypes} tables={s.scriptTables} />
+        );
+    }
+  }, [activeTab, s]);
+
+  // Right panel editor depends on active tab
+  const sidebarContent = useMemo(() => {
+    switch (activeTab) {
+      case 'variables':
+        return (
+          <>
+            <datalist id="variable-categories">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+            <VariableListEditor
+              variables={s.gameVariables}
+              tables={s.scriptTables}
+              onAdd={s.addGameVariable}
+              onUpdate={s.updateGameVariable}
+              onDelete={s.deleteGameVariable}
+              onMove={handleMove}
+            />
+          </>
+        );
+      case 'tables':
+        return (
+          <TableEditor
+            tables={s.scriptTables}
+            onAdd={s.addScriptTable}
+            onUpdate={s.updateScriptTable}
+            onDelete={s.deleteScriptTable}
+          />
+        );
+      case 'functions':
+        return (
+          <GlobalFunctionEditor
+            functions={s.scriptFunctions}
+            tables={s.scriptTables}
+            onAdd={s.addScriptFunction}
+            onUpdate={s.updateScriptFunction}
+            onDelete={s.deleteScriptFunction}
+          />
+        );
+      case 'namespaces':
+        return (
+          <NamespaceEditor
+            namespaces={s.scriptNamespaces}
+            tables={s.scriptTables}
+            onAdd={s.addScriptNamespace}
+            onUpdate={s.updateScriptNamespace}
+            onDelete={s.deleteScriptNamespace}
+          />
+        );
+      case 'contexts':
+        return (
+          <ContextTypeEditor
+            contextTypes={s.scriptContextTypes}
+            tables={s.scriptTables}
+            onAdd={s.addScriptContextType}
+            onUpdate={s.updateScriptContextType}
+            onDelete={s.deleteScriptContextType}
+          />
+        );
+    }
+  }, [activeTab, s, categories, handleMove]);
 
   return (
     <Flex direction="column" h="full" overflow="hidden">
-      {/* Header */}
+      {/* Header with tabs */}
       <HStack
         px={4}
         h="10"
@@ -900,27 +930,61 @@ export const VariableEditor: React.FC = () => {
         borderBottom="1px"
         borderColor="#071018"
         flexShrink={0}
-        spacing={3}
+        spacing={1}
       >
-        <Text fontWeight="bold" fontSize="sm" color="white">
-          Variables
+        <Text fontWeight="bold" fontSize="sm" color="white" mr={3}>
+          Scripting
         </Text>
-        <Text fontSize="xs" color="gray.600">
-          {gameVariables.length} variable{gameVariables.length !== 1 ? 's' : ''} defined
-        </Text>
+        {TAB_DEFS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const count = tab.badge(s);
+          return (
+            <Button
+              key={tab.id}
+              size="xs"
+              variant="ghost"
+              color={isActive ? 'blue.300' : 'gray.500'}
+              bg={isActive ? 'whiteAlpha.100' : 'transparent'}
+              _hover={{ bg: 'whiteAlpha.100', color: isActive ? 'blue.300' : 'gray.300' }}
+              onClick={() => setActiveTab(tab.id)}
+              px={2}
+              h="6"
+              fontSize="11px"
+              fontWeight={isActive ? 'bold' : 'medium'}
+            >
+              {tab.label}
+              {count > 0 && (
+                <Badge
+                  ml={1}
+                  fontSize="9px"
+                  colorScheme={isActive ? 'blue' : 'gray'}
+                  variant="subtle"
+                >
+                  {count}
+                </Badge>
+              )}
+            </Button>
+          );
+        })}
       </HStack>
 
       {/* Body */}
       <Flex flex={1} overflow="hidden">
-        {/* Main panel: variable grid + condition tester pinned at bottom */}
+        {/* Main panel + script tester */}
         <Flex flex={1} direction="column" overflow="hidden">
           <Box flex={1} overflow="hidden">
-            {content}
+            {mainContent}
           </Box>
-          <ConditionTester variables={gameVariables} />
+          <ScriptTester
+            variables={s.gameVariables}
+            tables={s.scriptTables}
+            functions={s.scriptFunctions}
+            namespaces={s.scriptNamespaces}
+            contextTypes={s.scriptContextTypes}
+          />
         </Flex>
 
-        {/* Right sidebar: variable list editor */}
+        {/* Right sidebar */}
         <Box
           w="320px"
           flexShrink={0}
@@ -929,18 +993,7 @@ export const VariableEditor: React.FC = () => {
           overflowY="auto"
           bg="#05060a"
         >
-          <datalist id="variable-categories">
-            {categories.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-          <VariableListEditor
-            variables={gameVariables}
-            onAdd={addGameVariable}
-            onUpdate={updateGameVariable}
-            onDelete={deleteGameVariable}
-            onMove={handleMove}
-          />
+          {sidebarContent}
         </Box>
       </Flex>
     </Flex>
@@ -948,3 +1001,242 @@ export const VariableEditor: React.FC = () => {
 };
 
 export default VariableEditor;
+
+// ─── Summary grids for non-variable tabs ────────────────────────────────────
+
+const TableGrid: React.FC<{ tables: import('../../../types/schema').ScriptTable[] }> = ({
+  tables,
+}) => (
+  <Box p={6} overflowY="auto" h="full">
+    <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
+      {tables.map((tbl) => (
+        <Box key={tbl.id}>
+          <HStack spacing={2} mb={2}>
+            <Text
+              fontSize="xs"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="wider"
+              color="gray.500"
+            >
+              {tbl.name}
+            </Text>
+            <Badge fontSize="9px" colorScheme="orange" variant="subtle">
+              {tbl.fields.length} fields
+            </Badge>
+          </HStack>
+          {tbl.description && (
+            <Text fontSize="10px" color="gray.600" mb={2}>
+              {tbl.description}
+            </Text>
+          )}
+          <VStack align="stretch" spacing={1}>
+            {tbl.fields.map((f) => (
+              <HStack
+                key={f.key}
+                px={3}
+                py={1}
+                bg="#0a0a0b"
+                borderWidth="1px"
+                borderColor="#1a1a2e"
+                borderRadius="md"
+                spacing={3}
+              >
+                <Text fontSize="10px" fontFamily="mono" color="gray.400" flex={1}>
+                  {f.key}
+                </Text>
+                <Badge fontSize="9px" colorScheme="blue" variant="subtle">
+                  {f.type}
+                </Badge>
+                <Text fontSize="10px" color="gray.600" fontFamily="mono">
+                  = {String(f.defaultValue)}
+                </Text>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
+      ))}
+    </VStack>
+  </Box>
+);
+
+const getFunctionReturnLabel = (
+  fn: import('../../../types/schema').ScriptFunction,
+  tables: import('../../../types/schema').ScriptTable[],
+): string => {
+  if (fn.returnType !== 'table') return fn.returnType;
+  if (!fn.returnTableId) return 'table';
+  const table = tables.find((t) => t.id === fn.returnTableId);
+  return `table:${table?.name ?? '?'}`;
+};
+
+const FunctionGrid: React.FC<{
+  functions: import('../../../types/schema').ScriptFunction[];
+  tables: import('../../../types/schema').ScriptTable[];
+}> = ({ functions, tables }) => (
+  <Box p={6} overflowY="auto" h="full">
+    <VStack spacing={1} align="stretch" maxW="800px" mx="auto">
+      {functions.map((fn) => (
+        <HStack
+          key={fn.id}
+          px={3}
+          py={2}
+          bg="#0a0a0b"
+          borderWidth="1px"
+          borderColor="#1a1a2e"
+          borderRadius="md"
+          spacing={3}
+        >
+          <Text fontSize="xs" fontFamily="mono" color="gray.200" flex={1}>
+            {fn.name}({fn.params.map((p) => p.name).join(', ')})
+          </Text>
+          <Badge fontSize="9px" colorScheme="teal" variant="subtle">
+            {getFunctionReturnLabel(fn, tables)}
+          </Badge>
+          {fn.description && (
+            <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="200px">
+              {fn.description}
+            </Text>
+          )}
+        </HStack>
+      ))}
+    </VStack>
+  </Box>
+);
+
+const NamespaceGrid: React.FC<{
+  namespaces: import('../../../types/schema').ScriptNamespace[];
+  tables: import('../../../types/schema').ScriptTable[];
+}> = ({ namespaces, tables }) => (
+  <Box p={6} overflowY="auto" h="full">
+    <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
+      {namespaces.map((ns) => (
+        <Box key={ns.id}>
+          <HStack spacing={2} mb={2}>
+            <Text
+              fontSize="xs"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="wider"
+              color="gray.500"
+            >
+              {ns.name}
+            </Text>
+            <Badge fontSize="9px" colorScheme="cyan" variant="subtle">
+              {ns.fields.length} fields, {ns.functions.length} functions
+            </Badge>
+          </HStack>
+          <VStack align="stretch" spacing={1}>
+            {ns.fields.map((f) => (
+              <HStack
+                key={f.key}
+                px={3}
+                py={1}
+                bg="#0a0a0b"
+                borderWidth="1px"
+                borderColor="#1a1a2e"
+                borderRadius="md"
+              >
+                <Text fontSize="10px" fontFamily="mono" color="gray.400">
+                  {ns.name}.{f.key}
+                </Text>
+                <Badge fontSize="9px" colorScheme="blue" variant="subtle">
+                  {f.type}
+                </Badge>
+              </HStack>
+            ))}
+            {ns.functions.map((fn) => (
+              <HStack
+                key={fn.id}
+                px={3}
+                py={1}
+                bg="#0a0a0b"
+                borderWidth="1px"
+                borderColor="#1a1a2e"
+                borderRadius="md"
+              >
+                <Text fontSize="10px" fontFamily="mono" color="gray.400">
+                  {ns.name}.{fn.name}({fn.params.map((p) => p.name).join(', ')})
+                </Text>
+                <Badge fontSize="9px" colorScheme="teal" variant="subtle">
+                  {getFunctionReturnLabel(fn, tables)}
+                </Badge>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
+      ))}
+    </VStack>
+  </Box>
+);
+
+const ContextGrid: React.FC<{
+  contextTypes: import('../../../types/schema').ScriptContextType[];
+  tables: import('../../../types/schema').ScriptTable[];
+}> = ({ contextTypes, tables }) => (
+  <Box p={6} overflowY="auto" h="full">
+    <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
+      {contextTypes.map((ct) => (
+        <Box key={ct.id}>
+          <HStack spacing={2} mb={2}>
+            <Text
+              fontSize="xs"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="wider"
+              color="gray.500"
+            >
+              self ({ct.name})
+            </Text>
+            <Badge fontSize="9px" colorScheme="orange" variant="subtle">
+              {ct.fields.length} fields, {ct.functions.length} functions
+            </Badge>
+          </HStack>
+          {ct.description && (
+            <Text fontSize="10px" color="gray.600" mb={2}>
+              {ct.description}
+            </Text>
+          )}
+          <VStack align="stretch" spacing={1}>
+            {ct.fields.map((f) => (
+              <HStack
+                key={f.key}
+                px={3}
+                py={1}
+                bg="#0a0a0b"
+                borderWidth="1px"
+                borderColor="#1a1a2e"
+                borderRadius="md"
+              >
+                <Text fontSize="10px" fontFamily="mono" color="gray.400">
+                  self.{f.key}
+                </Text>
+                <Badge fontSize="9px" colorScheme="blue" variant="subtle">
+                  {f.type}
+                </Badge>
+              </HStack>
+            ))}
+            {ct.functions.map((fn) => (
+              <HStack
+                key={fn.id}
+                px={3}
+                py={1}
+                bg="#0a0a0b"
+                borderWidth="1px"
+                borderColor="#1a1a2e"
+                borderRadius="md"
+              >
+                <Text fontSize="10px" fontFamily="mono" color="gray.400">
+                  self:{fn.name}({fn.params.map((p) => p.name).join(', ')})
+                </Text>
+                <Badge fontSize="9px" colorScheme="teal" variant="subtle">
+                  {getFunctionReturnLabel(fn, tables)}
+                </Badge>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
+      ))}
+    </VStack>
+  </Box>
+);

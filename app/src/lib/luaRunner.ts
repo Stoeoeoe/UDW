@@ -67,11 +67,41 @@ function luaLiteral(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `{${value.map((entry) => luaLiteral(entry)).join(', ')}}`;
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const fields = Object.entries(record).map(([key, entryValue]) => {
+      const numericKey = Number(key);
+      const isNumericKey = key !== '' && Number.isFinite(numericKey) && String(numericKey) === key;
+      const keyExpr = isNumericKey
+        ? `[${numericKey}]`
+        : /^[A-Za-z_][A-Za-z0-9_]*$/.test(key)
+          ? key
+          : `[${JSON.stringify(key)}]`;
+      return `${keyExpr} = ${luaLiteral(entryValue)}`;
+    });
+    return `{${fields.join(', ')}}`;
+  }
   return 'nil';
 }
 
-function buildChunk(expression: string, vars: Record<string, unknown>): string {
+export interface LuaFunctionStub {
+  /** Lua-accessible name, e.g. "wait" or "weather.getHoursOfDay" */
+  path: string;
+  /** The value the stub should return when called */
+  returnValue: unknown;
+}
+
+function buildChunk(
+  expression: string,
+  vars: Record<string, unknown>,
+  functionStubs?: LuaFunctionStub[],
+): string {
   const lines: string[] = [];
+
+  // Declare plain variables / table fields
   for (const [path, value] of Object.entries(vars)) {
     const parts = path.split('.');
     for (let i = 1; i < parts.length; i++) {
@@ -80,6 +110,30 @@ function buildChunk(expression: string, vars: Record<string, unknown>): string {
     }
     lines.push(`${path} = ${luaLiteral(value)}`);
   }
+
+  // Declare function stubs that return a fixed mock value
+  if (functionStubs) {
+    for (const stub of functionStubs) {
+      const parts = stub.path.split('.');
+      // Ensure parent tables exist
+      for (let i = 1; i < parts.length; i++) {
+        const parent = parts.slice(0, i).join('.');
+        lines.push(`if ${parent} == nil then ${parent} = {} end`);
+      }
+
+      // Handle method-style self:fn() — stored as "self:methodName"
+      const colonIdx = stub.path.indexOf(':');
+      if (colonIdx >= 0) {
+        const receiver = stub.path.slice(0, colonIdx);
+        const method = stub.path.slice(colonIdx + 1);
+        lines.push(`if ${receiver} == nil then ${receiver} = {} end`);
+        lines.push(`function ${receiver}:${method}() return ${luaLiteral(stub.returnValue)} end`);
+      } else {
+        lines.push(`function ${stub.path}() return ${luaLiteral(stub.returnValue)} end`);
+      }
+    }
+  }
+
   lines.push(`return (${expression})`);
   return lines.join('\n');
 }
@@ -103,12 +157,16 @@ function extractError(L: unknown): string {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function evalLuaCondition(expression: string, vars: Record<string, unknown>): LuaRunResult {
+export function evalLuaCondition(
+  expression: string,
+  vars: Record<string, unknown>,
+  functionStubs?: LuaFunctionStub[],
+): LuaRunResult {
   if (!expression.trim()) return { ok: true, value: undefined };
   const L = luaL_newstate();
   luaL_openlibs(L);
   try {
-    const code = to_luastring(buildChunk(expression, vars));
+    const code = to_luastring(buildChunk(expression, vars, functionStubs));
     const loadStatus = luaL_loadstring(L, code);
     if (loadStatus !== LUA_OK) return { ok: false, error: extractError(L) };
     const callStatus = lua_pcall(L, 0, LUA_MULTRET, 0);
