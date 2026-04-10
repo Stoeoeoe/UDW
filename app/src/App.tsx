@@ -6,7 +6,8 @@ import {
   MapEditor,
   TilesetEditor,
   EntityEditor,
-  NpcEditor,
+  ActorEditor,
+  DialogueEditor,
   VariableEditor,
   SettingsEditor,
   TerrainEditor,
@@ -34,8 +35,10 @@ function App() {
         return <TilesetEditor />;
       case 'entities':
         return <EntityEditor />;
-      case 'npcs':
-        return <NpcEditor />;
+      case 'actors':
+        return <ActorEditor />;
+      case 'dialogues':
+        return <DialogueEditor />;
       case 'scripting':
         return <VariableEditor />;
       case 'settings':

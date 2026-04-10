@@ -144,6 +144,8 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     // 1. Create subdirectories
     await fs.mkdir(path.join(projectPath, 'maps'), { recursive: true });
     await fs.mkdir(path.join(projectPath, 'tilesets'), { recursive: true });
+    await fs.mkdir(path.join(projectPath, 'actors'), { recursive: true });
+    await fs.mkdir(path.join(projectPath, 'dialogues'), { recursive: true });
     await fs.mkdir(path.join(projectPath, 'assets'), { recursive: true });
 
     // 2. Write <id>.project.json

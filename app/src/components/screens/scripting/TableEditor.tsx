@@ -409,7 +409,7 @@ export const TableEditor: React.FC<TableEditorProps> = ({ tables, onAdd, onUpdat
                       onChange={(e) =>
                         onUpdate(tbl.id, { description: e.target.value || undefined })
                       }
-                      placeholder="e.g. Structure for NPC data"
+                      placeholder="e.g. Structure for actor data"
                     />
                   </Box>
 

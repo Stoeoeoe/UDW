@@ -1,17 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
-  VStack,
-  HStack,
-  Text,
-  Input,
-  FormControl,
-  FormLabel,
   Button,
   Flex,
+  FormControl,
+  FormLabel,
+  HStack,
+  Input,
+  Text,
+  VStack,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { Npc } from '../../../types/schema';
+import { Actor } from '../../../types/schema';
 
 const COMMON_ICONS = [
   '👤',
@@ -46,13 +46,13 @@ const COMMON_ICONS = [
   '🐓',
 ];
 
-interface CreateNpcDialogProps {
+interface CreateActorDialogProps {
   onClose: () => void;
 }
 
-export const CreateNpcDialog: React.FC<CreateNpcDialogProps> = ({ onClose }) => {
-  const npcs = useEditorStore((state) => state.npcs);
-  const addNpc = useEditorStore((state) => state.addNpc);
+export const CreateActorDialog: React.FC<CreateActorDialogProps> = ({ onClose }) => {
+  const actors = useEditorStore((state) => state.actors);
+  const addActor = useEditorStore((state) => state.addActor);
 
   const [name, setName] = useState('');
   const [customId, setCustomId] = useState('');
@@ -70,13 +70,13 @@ export const CreateNpcDialog: React.FC<CreateNpcDialogProps> = ({ onClose }) => 
   );
 
   const id = customId.trim() || derivedId;
-  const isDuplicate = npcs.some((n) => n.id === id);
+  const isDuplicate = actors.some((a) => a.id === id);
   const isValid = id.length > 0 && !isDuplicate;
 
   const handleCreate = async () => {
     if (!isValid) return;
-    const npc: Npc = { id, name: name.trim(), icon };
-    await addNpc(npc);
+    const actor: Actor = { id, name: name.trim(), icon, emotions: [] };
+    await addActor(actor);
     onClose();
   };
 
@@ -84,7 +84,7 @@ export const CreateNpcDialog: React.FC<CreateNpcDialogProps> = ({ onClose }) => 
     <Box p={6} minW="380px" bg="gray.900" border="1px" borderColor="gray.700" borderRadius="md">
       <VStack spacing={5} align="stretch">
         <Text fontWeight="bold" fontSize="lg" color="white">
-          New NPC
+          New Actor
         </Text>
 
         <FormControl isRequired>
@@ -164,7 +164,7 @@ export const CreateNpcDialog: React.FC<CreateNpcDialogProps> = ({ onClose }) => 
             Cancel
           </Button>
           <Button size="sm" colorScheme="blue" isDisabled={!isValid} onClick={handleCreate}>
-            Create NPC
+            Create Actor
           </Button>
         </HStack>
       </VStack>

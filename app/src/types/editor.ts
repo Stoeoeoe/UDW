@@ -4,7 +4,9 @@ import {
   Map,
   LayerDefinition,
   EntityType,
-  Npc,
+  Actor,
+  DialogueDocument,
+  DialogueIndex,
   GameVariable,
   ScriptTable,
   ScriptFunction,
@@ -98,9 +100,15 @@ export interface EditorState {
   // Project-level entity type definitions
   entityTypes: EntityType[];
 
-  // NPC definitions (persisted in npcs/ directory)
-  npcs: Npc[];
-  selectedNpcId: string | null;
+  // Actor definitions (persisted in actors/ or legacy npcs/ directory)
+  actors: Actor[];
+  selectedActorId: string | null;
+
+  // Dialogue database (stored separately from project.json)
+  dialogueIndex: DialogueIndex | null;
+  dialogues: globalThis.Map<string, DialogueDocument>;
+  selectedDialogueId: string | null;
+  selectedDialogueNodeId: string | null;
 
   // Game variable registry (persisted in project.json)
   gameVariables: GameVariable[];
@@ -171,7 +179,8 @@ export type EditorMode =
   | 'maps'
   | 'tilesets'
   | 'entities'
-  | 'npcs'
+  | 'actors'
+  | 'dialogues'
   | 'scripting'
   | 'settings'
   | 'terrain'

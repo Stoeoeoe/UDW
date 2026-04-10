@@ -5,7 +5,7 @@
  * works in the Electron renderer without dynamic require issues.
  */
 
-// @ts-ignore — no type definitions; aliased to fengari-web/dist/fengari-web.bundle.js
+// @ts-expect-error no type definitions; aliased to fengari-web/dist/fengari-web.bundle.js
 import * as fengariBundle from 'fengari';
 
 // The bundle's CJS exports land as named exports via Vite's interop
@@ -184,4 +184,20 @@ export function validateLuaExpression(expression: string, knownPaths: string[]):
   const zeroVars: Record<string, unknown> = {};
   for (const p of knownPaths) zeroVars[p] = null;
   return evalLuaCondition(expression, zeroVars);
+}
+
+export function validateLuaChunk(chunk: string): LuaRunResult {
+  if (!chunk.trim()) return { ok: true };
+
+  const L = luaL_newstate();
+  luaL_openlibs(L);
+
+  try {
+    const code = to_luastring(chunk);
+    const loadStatus = luaL_loadstring(L, code);
+    if (loadStatus !== LUA_OK) return { ok: false, error: extractError(L) };
+    return { ok: true };
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }

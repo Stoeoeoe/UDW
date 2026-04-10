@@ -399,7 +399,7 @@ export const EntityEditor: React.FC = () => {
       <EmptyScreen
         icon="🎯"
         title="No Entity Types"
-        description="Define entity blueprints that can be placed on maps. Entity types describe objects, NPCs, triggers, and other game elements."
+        description="Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements."
         buttonLabel="Create First Entity"
         onCreate={onOpen}
       />

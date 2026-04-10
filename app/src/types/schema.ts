@@ -338,11 +338,138 @@ export interface ScriptContextType {
   functions: ScriptFunction[];
 }
 
-// NPC Definitions
-export interface Npc {
+// Actor Definitions
+export interface Actor {
   id: string; // Unique identifier (kebab-case)
   name: string; // Display name
   icon: string; // Emoji icon for display
+  emotions?: string[]; // Named emotions available for line nodes
+}
+
+/** @deprecated Use Actor. Kept for compatibility while migrating call sites. */
+export type Npc = Actor;
+
+export interface DialogueCategory {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface DialogueCustomActor {
+  id: string;
+  name: string;
+  note?: string;
+}
+
+export interface DialogueListEntry {
+  id: string;
+  name: string;
+  oneShot: boolean;
+  nodeCount: number;
+  tags: string[];
+  updatedAt: string;
+}
+
+export interface DialogueNodeEditorMeta {
+  branchId?: string;
+  parentChoiceNodeId?: string;
+  parentOptionId?: string;
+  branchOrder?: number;
+}
+
+export type DialogueNodeType = 'line' | 'choice' | 'action' | 'jump' | 'comment' | 'end';
+
+export interface DialogueNodeBase {
+  id: string;
+  type: DialogueNodeType;
+  editor?: DialogueNodeEditorMeta;
+}
+
+export interface DialogueLineNode extends DialogueNodeBase {
+  type: 'line';
+  speaker?: string;
+  emotion?: string;
+  text: string;
+  msgKey: string;
+  next?: string | null;
+}
+
+export interface DialogueChoiceOption {
+  id: string;
+  text: string;
+  msgKey: string;
+  condition?: string | null;
+  targetNodeId: string;
+}
+
+export interface DialogueChoiceNode extends DialogueNodeBase {
+  type: 'choice';
+  options: DialogueChoiceOption[];
+}
+
+export interface DialogueActionNode extends DialogueNodeBase {
+  type: 'action';
+  lua: string;
+  next?: string | null;
+}
+
+export interface DialogueJumpNode extends DialogueNodeBase {
+  type: 'jump';
+  targetDialogueId?: string | null;
+  targetNodeId: string;
+}
+
+export interface DialogueCommentNode extends DialogueNodeBase {
+  type: 'comment';
+  text: string;
+}
+
+export interface DialogueEndNode extends DialogueNodeBase {
+  type: 'end';
+}
+
+export type DialogueNode =
+  | DialogueLineNode
+  | DialogueChoiceNode
+  | DialogueActionNode
+  | DialogueJumpNode
+  | DialogueCommentNode
+  | DialogueEndNode;
+
+export interface DialogueI18nMessage {
+  msgKey: string;
+  text: string;
+  nodeId: string;
+  sourceType: 'line' | 'choiceOption';
+  optionId?: string;
+}
+
+export interface DialogueI18nExport {
+  dialogueId: string;
+  dialogueName: string;
+  generatedAt: string;
+  messages: DialogueI18nMessage[];
+}
+
+export interface DialogueDocument {
+  version: number;
+  id: string;
+  name: string;
+  oneShot: boolean;
+  entryCondition?: string;
+  startNodeId: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  nodes: DialogueNode[];
+}
+
+export interface DialogueIndex {
+  version: number;
+  defaultContextTypeId?: string;
+  categories: DialogueCategory[];
+  customActors: DialogueCustomActor[];
+  dialogues: DialogueListEntry[];
 }
 
 // Entity Type Definitions
@@ -352,7 +479,7 @@ export interface EntityType {
   displayName: string;
   description?: string;
   icon?: string; // Emoji or icon identifier for display
-  group?: string; // Grouping label (e.g., "NPCs", "Interactables")
+  group?: string; // Grouping label (e.g., "Actors", "Interactables")
   placeholderColor: string; // Hex color for editor rendering
   placeholderIcon?: string; // Optional icon identifier (deprecated, use icon)
   properties: PropertyDefinition[];

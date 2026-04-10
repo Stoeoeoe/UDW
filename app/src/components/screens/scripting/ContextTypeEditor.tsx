@@ -365,7 +365,7 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
             No context types defined
           </Text>
           <Text fontSize="10px" color="gray.700" mt={1}>
-            Click + to define a self context (e.g. npc, cutscene)
+            Click + to define a self context (e.g. actor, cutscene)
           </Text>
         </Box>
       )}
@@ -452,7 +452,7 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
                       onChange={(e) =>
                         onUpdate(ct.id, { description: e.target.value || undefined })
                       }
-                      placeholder="e.g. Script context for NPC routines"
+                      placeholder="e.g. Script context for actor routines"
                     />
                   </Box>
 

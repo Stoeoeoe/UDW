@@ -840,7 +840,7 @@ export const VariableEditor: React.FC = () => {
           <EmptyScreen
             icon="🎭"
             title="No Context Types"
-            description="Define the shape of 'self' for script execution contexts (e.g. npc, cutscene)."
+            description="Define the shape of 'self' for script execution contexts (e.g. actor, cutscene)."
             buttonLabel="Add First Context Type"
             onCreate={() =>
               s.addScriptContextType({

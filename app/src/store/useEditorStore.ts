@@ -15,7 +15,9 @@ import {
   TileDefinition,
   LayerDefinition,
   EntityType,
-  Npc,
+  Actor,
+  DialogueDocument,
+  DialogueIndex,
   GameVariable,
   ScriptTable,
   ScriptFunction,
@@ -442,11 +444,11 @@ interface EditorStore extends EditorState {
   updateEntityType: (id: string, updates: Partial<EntityType>) => Promise<void>;
   deleteEntityType: (id: string) => Promise<void>;
 
-  // NPC CRUD
-  addNpc: (npc: Npc) => Promise<void>;
-  updateNpc: (id: string, updates: Partial<Npc>) => Promise<void>;
-  deleteNpc: (id: string) => Promise<void>;
-  setSelectedNpc: (id: string | null) => void;
+  // Actor CRUD
+  addActor: (actor: Actor) => Promise<void>;
+  updateActor: (id: string, updates: Partial<Actor>) => Promise<void>;
+  deleteActor: (id: string) => Promise<void>;
+  setSelectedActor: (id: string | null) => void;
 
   // Game variable CRUD
   addGameVariable: (variable: GameVariable) => Promise<void>;
@@ -762,8 +764,12 @@ export const useEditorStore = create<EditorStore>()(
           scriptFunctions: [],
           scriptNamespaces: [],
           scriptContextTypes: [],
-          npcs: [],
-          selectedNpcId: null,
+          actors: [],
+          selectedActorId: null,
+          dialogueIndex: null,
+          dialogues: new globalThis.Map(),
+          selectedDialogueId: null,
+          selectedDialogueNodeId: null,
           layerDefinitions: [],
           selectedLayerDefinitionId: null,
           validationErrors: [],
@@ -826,8 +832,12 @@ export const useEditorStore = create<EditorStore>()(
                   state.scriptFunctions = [];
                   state.scriptNamespaces = [];
                   state.scriptContextTypes = [];
-                  state.npcs = [];
-                  state.selectedNpcId = null;
+                  state.actors = [];
+                  state.selectedActorId = null;
+                  state.dialogueIndex = null;
+                  state.dialogues = new globalThis.Map();
+                  state.selectedDialogueId = null;
+                  state.selectedDialogueNodeId = null;
                 }),
               { clearHistory: true },
             );
@@ -920,10 +930,38 @@ export const useEditorStore = create<EditorStore>()(
               });
             }
 
-            // 1.8 Load NPCs from npcs/ directory
-            const npcs = await fileSystem.loadAllNpcs();
+            // 1.8 Load actors (actors/ preferred, legacy npcs/ fallback)
+            const actors = await fileSystem.loadAllActors();
             set((state) => {
-              state.npcs = castDraft(npcs);
+              state.actors = castDraft(actors);
+            });
+
+            // 1.85 Load dialogue index + documents (optional)
+            const loadedDialogueIndex =
+              (await fileSystem.readDialogueIndex()) ??
+              ({
+                version: 1,
+                categories: [],
+                customActors: [],
+                dialogues: [],
+              } satisfies DialogueIndex);
+
+            const loadedDialogues = await fileSystem.loadDialoguesByIds(
+              loadedDialogueIndex.dialogues.map((entry) => entry.id),
+            );
+
+            set((state) => {
+              state.dialogueIndex = castDraft(loadedDialogueIndex);
+              state.dialogues = new globalThis.Map<string, DialogueDocument>(
+                loadedDialogues.map((dialogue) => [dialogue.id, castDraft(dialogue)]),
+              );
+              state.selectedDialogueId = loadedDialogues[0]?.id ?? null;
+              state.selectedDialogueNodeId =
+                (loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string })
+                  ?.startNodeId ??
+                (loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string })
+                  ?.entryStepId ??
+                null;
             });
 
             // 1.9 Load entity type sprites
@@ -2142,42 +2180,42 @@ export const useEditorStore = create<EditorStore>()(
             }
           },
 
-          // NPC CRUD actions
-          setSelectedNpc: (id) =>
+          // Actor CRUD actions
+          setSelectedActor: (id) =>
             set((state) => {
-              state.selectedNpcId = id;
+              state.selectedActorId = id;
             }),
 
-          addNpc: async (npc) => {
+          addActor: async (actor) => {
             set((state) => {
-              state.npcs.push(castDraft(npc));
+              state.actors.push(castDraft(actor));
             });
-            await fileSystem.saveJson('npcs', `${npc.id}.npc.json`, {
-              $schema: '../../schemas/npc.schema.json',
-              ...npc,
+            await fileSystem.saveJson('actors', `${actor.id}.actor.json`, {
+              $schema: '../../schemas/actor.schema.json',
+              ...actor,
             });
           },
 
-          updateNpc: async (id, updates) => {
+          updateActor: async (id, updates) => {
             set((state) => {
-              const npc = state.npcs.find((n) => n.id === id);
-              if (npc) Object.assign(npc, updates);
+              const actor = state.actors.find((a) => a.id === id);
+              if (actor) Object.assign(actor, updates);
             });
-            const npc = useEditorStore.getState().npcs.find((n) => n.id === id);
-            if (npc) {
-              await fileSystem.saveJson('npcs', `${npc.id}.npc.json`, {
-                $schema: '../../schemas/npc.schema.json',
-                ...npc,
+            const actor = useEditorStore.getState().actors.find((a) => a.id === id);
+            if (actor) {
+              await fileSystem.saveJson('actors', `${actor.id}.actor.json`, {
+                $schema: '../../schemas/actor.schema.json',
+                ...actor,
               });
             }
           },
 
-          deleteNpc: async (id) => {
+          deleteActor: async (id) => {
             set((state) => {
-              state.npcs = state.npcs.filter((n) => n.id !== id);
-              if (state.selectedNpcId === id) state.selectedNpcId = null;
+              state.actors = state.actors.filter((a) => a.id !== id);
+              if (state.selectedActorId === id) state.selectedActorId = null;
             });
-            await fileSystem.deleteJson('npcs', `${id}.npc.json`);
+            await fileSystem.deleteJson('actors', `${id}.actor.json`);
           },
 
           // Game variable CRUD actions

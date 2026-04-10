@@ -83,13 +83,13 @@ export const ENTITY_TYPES: EntityType[] = [
   {
     id: 'npc_spawn',
     category: 'spawn',
-    displayName: 'NPC Spawn Point',
+    displayName: 'Actor Spawn Point',
     placeholderColor: '#4169E1',
     defaultSize: [1, 1],
     properties: [
       {
         key: 'npcId',
-        label: 'NPC ID',
+        label: 'Actor ID',
         type: 'string',
         defaultValue: '',
         required: true,

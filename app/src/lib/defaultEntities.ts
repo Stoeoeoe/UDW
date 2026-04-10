@@ -24,14 +24,14 @@ export const DEFAULT_ENTITY_TYPES: EntityType[] = [
   {
     id: 'npc_spawn',
     category: 'spawn',
-    displayName: 'NPC Spawn',
-    description: 'Placement for an NPC',
+    displayName: 'Actor Spawn',
+    description: 'Placement for an actor',
     placeholderColor: '#805ad5', // purple.500
     defaultSize: [1, 1],
     properties: [
       {
         key: 'npcId',
-        label: 'NPC ID',
+        label: 'Actor ID',
         type: 'string',
         defaultValue: 'villager_1',
         required: true,

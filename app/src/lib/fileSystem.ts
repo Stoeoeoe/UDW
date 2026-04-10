@@ -4,7 +4,14 @@
  * Electron IPC (Native) or Web File System Access API.
  */
 
-import { Project, Map as GameMap, Tileset, Npc } from '../types/schema';
+import {
+  Actor,
+  DialogueDocument,
+  DialogueIndex,
+  Map as GameMap,
+  Project,
+  Tileset,
+} from '../types/schema';
 import { migrateMapToEncodedData } from './tileRef';
 import { deserializeMap } from './mapMigration';
 
@@ -122,6 +129,8 @@ export class FileSystemManager {
       await this.writeJSONWeb(handle, `${projectConfig.id}.project.json`, projectConfig);
       await handle.getDirectoryHandle('maps', { create: true });
       await handle.getDirectoryHandle('tilesets', { create: true });
+      await handle.getDirectoryHandle('actors', { create: true });
+      await handle.getDirectoryHandle('dialogues', { create: true });
       await handle.getDirectoryHandle('assets', { create: true });
 
       return { path: handle.name };
@@ -177,37 +186,78 @@ export class FileSystemManager {
   }
 
   /**
-   * Load all NPCs from the npcs/ directory
+   * Load all actors from actors/ (preferred) with legacy npcs/ fallback.
    */
-  async loadAllNpcs(): Promise<Npc[]> {
+  async loadAllActors(): Promise<Actor[]> {
     if (this.isElectron()) {
+      const actors = (await window.ipcRenderer.invoke('app:fs-read-dir', {
+        projectPath: this.projectPath,
+        subDir: 'actors',
+      })) as Actor[];
+      if (actors.length > 0) return actors;
+
       return (await window.ipcRenderer.invoke('app:fs-read-dir', {
         projectPath: this.projectPath,
         subDir: 'npcs',
-      })) as Npc[];
+      })) as Actor[];
     } else {
       if (!this.projectRoot) throw new Error('No project open.');
-      const npcs: Npc[] = [];
+      const actors: Actor[] = [];
+      try {
+        const dir = await this.projectRoot.getDirectoryHandle('actors', { create: false });
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.actor.json')) {
+            const file = await (entry as FileSystemFileHandle).getFile();
+            actors.push(JSON.parse(await file.text()));
+          }
+        }
+      } catch {
+        // actors/ directory may not exist yet
+      }
+
+      if (actors.length > 0) return actors;
+
       try {
         const dir = await this.projectRoot.getDirectoryHandle('npcs', { create: false });
         for await (const entry of dir.values()) {
           if (entry.kind === 'file' && entry.name.endsWith('.npc.json')) {
             const file = await (entry as FileSystemFileHandle).getFile();
-            npcs.push(JSON.parse(await file.text()));
+            actors.push(JSON.parse(await file.text()));
           }
         }
       } catch {
-        // npcs/ directory may not exist yet
+        // legacy npcs/ directory may not exist
       }
-      return npcs;
+
+      return actors;
     }
+  }
+
+  /** @deprecated Use loadAllActors(). */
+  async loadAllNpcs(): Promise<Actor[]> {
+    return this.loadAllActors();
+  }
+
+  async readDialogueIndex(): Promise<DialogueIndex | null> {
+    const index = await this.readJson('dialogues', 'dialogues.index.json');
+    return (index as DialogueIndex | null) ?? null;
+  }
+
+  async loadDialogueById(id: string): Promise<DialogueDocument | null> {
+    const dialogue = await this.readJson('dialogues', `${id}.dialogue.json`);
+    return (dialogue as DialogueDocument | null) ?? null;
+  }
+
+  async loadDialoguesByIds(ids: string[]): Promise<DialogueDocument[]> {
+    const results = await Promise.all(ids.map((id) => this.loadDialogueById(id)));
+    return results.filter((item): item is DialogueDocument => item !== null);
   }
 
   /**
    * Save a JSON file (Map, Tileset, or Project)
    */
   async saveJson(
-    subDir: 'maps' | 'tilesets' | 'npcs' | '',
+    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | '',
     filename: string,
     data: unknown,
   ): Promise<void> {
@@ -228,7 +278,10 @@ export class FileSystemManager {
   /**
    * Delete a JSON file
    */
-  async deleteJson(subDir: 'maps' | 'tilesets' | 'npcs' | '', filename: string): Promise<void> {
+  async deleteJson(
+    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | '',
+    filename: string,
+  ): Promise<void> {
     if (this.isElectron()) {
       await window.ipcRenderer.invoke('app:fs-delete-json', {
         projectPath: this.projectPath,
