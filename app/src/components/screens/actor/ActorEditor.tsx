@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
 import { IconPicker } from '../common/FormFields';
+import * as GiIcons from 'react-icons/gi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
@@ -80,7 +81,13 @@ export const ActorEditor: React.FC = () => {
             justifyContent="center"
             fontSize="12px"
           >
-            {actor.icon}
+            {(() => {
+              const name = actor.icon;
+              if (!name) return '👤';
+              const Comp = (GiIcons as any)[name];
+              if (Comp) return <Comp size={14} />;
+              return name;
+            })()}
           </Box>
         ),
       })),
@@ -228,11 +235,7 @@ const ActorDetail: React.FC<{
           >
             Icon
           </FormLabel>
-          <IconPicker
-            value={actor.icon}
-            onChange={(v) => onUpdate(actor.id, { icon: v ?? '' })}
-            icons={COMMON_ICONS}
-          />
+          <IconPicker value={actor.icon} onChange={(v) => onUpdate(actor.id, { icon: v ?? '' })} />
         </FormControl>
       </VStack>
 

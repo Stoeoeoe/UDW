@@ -39,6 +39,7 @@ import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { IconPicker, ColorPicker } from '../common/FormFields';
+import * as GiIcons from 'react-icons/gi';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -93,7 +94,13 @@ export const EntityEditor: React.FC = () => {
             borderRadius="sm"
             fontSize="11px"
           >
-            {type.icon || '📦'}
+            {(() => {
+              const name = type.icon;
+              if (!name) return '📦';
+              const Comp = (GiIcons as any)[name];
+              if (Comp) return <Comp size={14} />;
+              return name;
+            })()}
           </Box>
         ),
       })),
