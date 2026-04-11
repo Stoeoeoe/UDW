@@ -3,7 +3,6 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
   Flex,
   FormControl,
   FormLabel,
@@ -22,6 +21,16 @@ import {
   PopoverBody,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, EditIcon, WarningIcon } from '@chakra-ui/icons';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import {
@@ -38,14 +47,20 @@ import {
 } from '../../../types/schema';
 import { fileSystem } from '../../../lib/fileSystem';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { InspectorEmptyState, InspectorPanel } from '../common';
+import {
+  EntityFormDialog,
+  InspectorEmptyState,
+  InspectorPanel,
+  ListPanel,
+  ListPanelItem,
+} from '../common';
 import { ConditionEditor } from '../scripting/ConditionEditor';
 import { EditorModal } from '../../common/EditorModal';
 import { validateLuaChunk } from '../../../lib/luaRunner';
 
 const BRANCH_COLORS = ['#7c5cff', '#34d399', '#60a5fa', '#f59e0b', '#ef4444', '#a78bfa'];
 
-type DialogueTab = 'timeline' | 'characters' | 'settings';
+type DialogueTab = 'timeline' | 'settings';
 
 type MetadataDraft = {
   name: string;
@@ -91,12 +106,10 @@ function nextDialogueId(index: DialogueIndex): string {
 }
 
 function nextNodeId(nodes: DialogueNode[]): string {
-  const max = nodes.reduce((acc, node) => {
-    const match = /^n(\d+)$/.exec(node.id);
-    if (!match) return acc;
-    return Math.max(acc, Number(match[1]));
-  }, 0);
-  return `n${max + 1}`;
+  const existing = new Set(nodes.map((n) => n.id));
+  let i = 1;
+  while (existing.has(`step_${i}`)) i++;
+  return `step_${i}`;
 }
 
 function nextOptionId(options: DialogueChoiceOption[]): string {
@@ -178,7 +191,7 @@ function createEmptyDialogue(
   oneShot: boolean,
   entryCondition: string,
 ): DialogueDocument {
-  const firstNodeId = 'n1';
+  const firstNodeId = 'step_1';
   return {
     version: 1,
     id,
@@ -895,13 +908,133 @@ function reorderNodeBlocks(
   return flattened;
 }
 
+const NodeTypeMenu: React.FC<{
+  trigger: React.ReactElement;
+  onSelect: (type: DialogueNodeType) => void;
+  placement?: React.ComponentProps<typeof Popover>['placement'];
+}> = ({ trigger, onSelect, placement = 'bottom' }) => {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const NODE_TYPES_MENU: Array<[DialogueNodeType, string]> = [
+    ['line', 'Line'],
+    ['choice', 'Choice'],
+    ['action', 'Action'],
+    ['jump', 'Jump'],
+    ['comment', 'Comment'],
+    ['end', 'End'],
+  ];
+  return (
+    <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} placement={placement} isLazy>
+      <PopoverTrigger>{trigger}</PopoverTrigger>
+      <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
+        <PopoverBody p={1}>
+          <VStack align="stretch" spacing={0}>
+            {NODE_TYPES_MENU.map(([type, label]) => (
+              <Button
+                key={type}
+                size="xs"
+                variant="ghost"
+                justifyContent="flex-start"
+                fontWeight="normal"
+                onClick={() => {
+                  onSelect(type);
+                  onClose();
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </VStack>
+        </PopoverBody>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+const SortableGroupWrapper: React.FC<{ id: string; children: React.ReactNode }> = ({
+  id,
+  children,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  return (
+    <Box
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      position="relative"
+    >
+      <Box
+        {...attributes}
+        {...listeners}
+        position="absolute"
+        top="6px"
+        right="6px"
+        zIndex={1}
+        cursor="grab"
+        color="gray.600"
+        _hover={{ color: 'gray.400' }}
+        fontSize="11px"
+        lineHeight={1}
+        userSelect="none"
+        title="Drag to reorder"
+      >
+        ⠿
+      </Box>
+      {children}
+    </Box>
+  );
+};
+
+const NodeIdField: React.FC<{
+  id: string;
+  nodes: DialogueNode[];
+  onRename: (newId: string) => void;
+}> = ({ id, nodes, onRename }) => {
+  const [draft, setDraft] = React.useState(id);
+  React.useEffect(() => {
+    setDraft(id);
+  }, [id]);
+
+  const isDuplicate = draft.trim() !== id && nodes.some((n) => n.id === draft.trim());
+
+  return (
+    <FormControl>
+      <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
+        Node ID
+      </FormLabel>
+      <Input
+        size="xs"
+        bg="#0a0a0b"
+        borderColor={isDuplicate ? 'red.500' : '#1a1a2e'}
+        color="white"
+        fontFamily="mono"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (!isDuplicate && draft.trim()) onRename(draft.trim());
+          else setDraft(id);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !isDuplicate && draft.trim()) onRename(draft.trim());
+          if (e.key === 'Escape') setDraft(id);
+        }}
+      />
+      {isDuplicate && (
+        <Text fontSize="10px" color="red.400" mt={1}>
+          ID already in use.
+        </Text>
+      )}
+    </FormControl>
+  );
+};
+
 export const DialogueEditor: React.FC = () => {
   const project = useEditorStore((state) => state.project);
   const actors = useEditorStore((state) => state.actors);
-  const addActor = useEditorStore((state) => state.addActor);
-  const updateActor = useEditorStore((state) => state.updateActor);
-  const deleteActor = useEditorStore((state) => state.deleteActor);
-
   const gameVariables = useEditorStore((state) => state.gameVariables);
   const scriptTables = useEditorStore((state) => state.scriptTables);
   const scriptFunctions = useEditorStore((state) => state.scriptFunctions);
@@ -915,8 +1048,6 @@ export const DialogueEditor: React.FC = () => {
   const [selectedDialogueId, setSelectedDialogueId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [expandedActionNodeIds, setExpandedActionNodeIds] = useState<Set<string>>(new Set());
-  const [draggedTopNodeId, setDraggedTopNodeId] = useState<string | null>(null);
-  const [hoveredGapIndex, setHoveredGapIndex] = useState<number | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isTimelineHeaderCollapsed, setIsTimelineHeaderCollapsed] = useState(false);
 
@@ -929,11 +1060,6 @@ export const DialogueEditor: React.FC = () => {
     oneShot: false,
     entryCondition: '',
   });
-
-  const [newActorName, setNewActorName] = useState('');
-  const [newActorId, setNewActorId] = useState('');
-  const [newActorIcon, setNewActorIcon] = useState('U');
-  const [newActorEmotions, setNewActorEmotions] = useState('neutral');
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyDialogueIdsRef = useRef<Set<string>>(new Set());
@@ -1069,7 +1195,7 @@ export const DialogueEditor: React.FC = () => {
       setDialogueIndex(syncedIndex);
       setDialogues(map);
       setSelectedDialogueId(normalizedDialogues[0]?.id ?? null);
-      setSelectedNodeId(normalizedDialogues[0]?.startNodeId ?? null);
+      setSelectedNodeId(null);
       setIsDirty(false);
       dirtyDialogueIdsRef.current.clear();
     };
@@ -1104,12 +1230,9 @@ export const DialogueEditor: React.FC = () => {
       return;
     }
 
-    const stillExists = selectedNodeId
-      ? selectedDialogue.nodes.some((node) => node.id === selectedNodeId)
-      : false;
-
-    if (!stillExists) {
-      setSelectedNodeId(selectedDialogue.startNodeId);
+    // If the currently selected node no longer exists (e.g. was deleted), clear selection
+    if (selectedNodeId && !selectedDialogue.nodes.some((node) => node.id === selectedNodeId)) {
+      setSelectedNodeId(null);
     }
   }, [selectedDialogue, selectedNodeId]);
 
@@ -1134,6 +1257,30 @@ export const DialogueEditor: React.FC = () => {
       .filter((entry) => (term ? entry.name.toLowerCase().includes(term) : true))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [dialogueIndex.dialogues, search]);
+
+  const dialoguePanelItems: ListPanelItem[] = useMemo(
+    () =>
+      dialogueItems.map((entry) => ({
+        id: entry.id,
+        label: entry.name,
+        sublabel: `${entry.nodeCount} node${entry.nodeCount === 1 ? '' : 's'}`,
+        badge: (
+          <Badge fontSize="9px" colorScheme={entry.oneShot ? 'purple' : 'green'} variant="subtle">
+            {entry.oneShot ? 'one-shot' : 'repeatable'}
+          </Badge>
+        ),
+      })),
+    [dialogueItems],
+  );
+
+  const handleSelectDialogue = useCallback(
+    (dialogueId: string) => {
+      setSelectedDialogueId(dialogueId);
+      const dialogue = dialogues.get(dialogueId);
+      setSelectedNodeId(dialogue?.startNodeId ?? null);
+    },
+    [dialogues],
+  );
 
   const dialogueNodeTargets = useMemo(
     () =>
@@ -1271,6 +1418,49 @@ export const DialogueEditor: React.FC = () => {
     queueSave();
   };
 
+  const renameNode = (oldId: string, newId: string) => {
+    if (!selectedDialogueId || !selectedDialogue) return;
+    const trimmed = newId.trim();
+    if (!trimmed || trimmed === oldId) return;
+    if (selectedDialogue.nodes.some((n) => n.id === trimmed)) return;
+
+    updateDialogue(selectedDialogueId, (dialogue) => {
+      const nodes = dialogue.nodes.map((n) => {
+        const updated = n.id === oldId ? { ...n, id: trimmed } : n;
+        if ((updated.type === 'line' || updated.type === 'action') && updated.next === oldId) {
+          return { ...updated, next: trimmed };
+        }
+        if (updated.type === 'choice') {
+          return {
+            ...updated,
+            options: updated.options.map((o) =>
+              o.targetNodeId === oldId ? { ...o, targetNodeId: trimmed } : o,
+            ),
+            editor:
+              updated.editor?.parentChoiceNodeId === oldId
+                ? { ...updated.editor, parentChoiceNodeId: trimmed }
+                : updated.editor,
+          };
+        }
+        if (
+          updated.type === 'jump' &&
+          updated.targetNodeId === oldId &&
+          !updated.targetDialogueId
+        ) {
+          return { ...updated, targetNodeId: trimmed };
+        }
+        if (updated.editor?.parentChoiceNodeId === oldId) {
+          return { ...updated, editor: { ...updated.editor, parentChoiceNodeId: trimmed } };
+        }
+        return updated;
+      });
+      const startNodeId = dialogue.startNodeId === oldId ? trimmed : dialogue.startNodeId;
+      return { ...dialogue, startNodeId, nodes };
+    });
+
+    if (selectedNodeId === oldId) setSelectedNodeId(trimmed);
+  };
+
   const insertNode = (nodeType: DialogueNodeType, index: number) => {
     if (!selectedDialogueId || !selectedDialogue) return;
 
@@ -1294,6 +1484,44 @@ export const DialogueEditor: React.FC = () => {
     if (insertedNodeId) {
       setSelectedNodeId(insertedNodeId);
     }
+  };
+
+  const appendNodeToBranch = (
+    nodeType: DialogueNodeType,
+    choiceNodeId: string,
+    optionId: string,
+    branchOrder: number,
+  ) => {
+    if (!selectedDialogueId || !selectedDialogue) return;
+
+    updateDialogue(selectedDialogueId, (dialogue) => {
+      // Find the last node that belongs to this branch
+      const branchId = `${choiceNodeId}:${optionId}`;
+      const branchNodes = dialogue.nodes.filter(
+        (n) =>
+          n.editor?.parentChoiceNodeId === choiceNodeId && n.editor?.parentOptionId === optionId,
+      );
+      const branchMeta: DialogueNodeEditorMeta = {
+        branchId,
+        parentChoiceNodeId: choiceNodeId,
+        parentOptionId: optionId,
+        branchOrder,
+      };
+      const created = createNodeByType(nodeType, dialogue, branchMeta);
+
+      // Insert after the last branch node, or after the choice node if branch is empty
+      let insertAt: number;
+      if (branchNodes.length > 0) {
+        const lastBranchNode = branchNodes[branchNodes.length - 1];
+        insertAt = dialogue.nodes.findIndex((n) => n.id === lastBranchNode.id) + 1;
+      } else {
+        insertAt = dialogue.nodes.findIndex((n) => n.id === choiceNodeId) + 1;
+      }
+
+      const nextNodes = [...dialogue.nodes];
+      nextNodes.splice(insertAt, 0, created);
+      return { ...dialogue, nodes: nextNodes };
+    });
   };
 
   const updateSelectedNode = (updater: (node: DialogueNode) => DialogueNode) => {
@@ -1373,66 +1601,32 @@ export const DialogueEditor: React.FC = () => {
     });
   };
 
-  const onDropTopLevelNode = (targetTopNodeId: string | null) => {
-    if (!selectedDialogueId || !draggedTopNodeId) return;
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !selectedDialogueId) return;
     updateDialogue(selectedDialogueId, (dialogue) => {
-      const reordered = reorderNodeBlocks(dialogue.nodes, draggedTopNodeId, targetTopNodeId);
+      const reordered = reorderNodeBlocks(dialogue.nodes, String(active.id), String(over.id));
+      const relinked = relinkLinearFlow(reordered);
+      const firstTopLevel = relinked.find((n) => !isBranchNode(n));
       return {
         ...dialogue,
-        nodes: relinkLinearFlow(reordered),
+        startNodeId: firstTopLevel?.id ?? dialogue.startNodeId,
+        nodes: relinked,
       };
     });
-
-    setDraggedTopNodeId(null);
-  };
-
-  const createActorFromTab = async () => {
-    const trimmedName = newActorName.trim();
-    if (!trimmedName) return;
-
-    const derived = newActorId.trim() || slugify(trimmedName);
-    if (!derived) return;
-    if (actors.some((actor) => actor.id === derived)) return;
-
-    await addActor({
-      id: derived,
-      name: trimmedName,
-      icon: newActorIcon || 'U',
-      emotions: parseTags(newActorEmotions),
-    });
-
-    setNewActorName('');
-    setNewActorId('');
-    setNewActorIcon('U');
-    setNewActorEmotions('neutral');
   };
 
   const leftPanel = (
-    <VStack align="stretch" spacing={0} h="full" bg="#17171c">
-      <Flex
-        h="40px"
-        px={3}
-        align="center"
-        justify="space-between"
-        borderBottom="1px"
-        borderColor="whiteAlpha.200"
-      >
-        <Text fontSize="11px" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-          Dialogues
-        </Text>
-        <IconButton
-          aria-label="Create dialogue"
-          icon={<AddIcon fontSize="10px" />}
-          size="xs"
-          variant="ghost"
-          color="gray.400"
-          _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-          onClick={openCreateDialogueModal}
-        />
-      </Flex>
-
-      <Box p={2} borderBottom="1px" borderColor="whiteAlpha.200">
+    <ListPanel
+      title="Dialogues"
+      items={dialoguePanelItems}
+      selectedId={selectedDialogueId}
+      onSelect={handleSelectDialogue}
+      onAdd={openCreateDialogueModal}
+      emptyMessage="No dialogues yet"
+      topContent={
         <Input
           size="xs"
           value={search}
@@ -1442,97 +1636,41 @@ export const DialogueEditor: React.FC = () => {
           borderColor="#333"
           color="gray.100"
         />
-      </Box>
-
-      <VStack align="stretch" spacing={0} p={1} flex={1} overflowY="auto">
-        {dialogueItems.map((entry) => {
-          const isSelected = selectedDialogueId === entry.id;
-          return (
-            <Box
-              key={entry.id}
-              px={3}
-              py={2}
-              role="group"
-              cursor="pointer"
-              borderLeft="2px solid"
-              borderLeftColor={isSelected ? '#6c63ff' : 'transparent'}
-              bg={isSelected ? '#1e1e2e' : 'transparent'}
-              _hover={{ bg: '#1e1e24' }}
-              onClick={() => {
-                setSelectedDialogueId(entry.id);
-                const dialogue = dialogues.get(entry.id);
-                setSelectedNodeId(dialogue?.startNodeId ?? null);
-              }}
-            >
-              <Flex align="center" gap={2}>
-                <Box flex={1} minW={0}>
-                  <Text fontSize="12px" color={isSelected ? '#a89fff' : 'gray.100'} noOfLines={1}>
-                    {entry.name}
-                  </Text>
-                  <HStack spacing={2} mt="2px">
-                    <Badge
-                      fontSize="9px"
-                      colorScheme={entry.oneShot ? 'purple' : 'green'}
-                      variant="subtle"
-                    >
-                      {entry.oneShot ? 'one-shot' : 'repeatable'}
-                    </Badge>
-                    <Text fontSize="10px" color="gray.500">
-                      {entry.nodeCount} nodes
-                    </Text>
-                  </HStack>
-                </Box>
-
-                <HStack spacing={1} opacity={0} _groupHover={{ opacity: 1 }}>
-                  <IconButton
-                    aria-label="Rename dialogue"
-                    icon={<EditIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openEditDialogueModal(entry.id);
-                    }}
-                  />
-                  <IconButton
-                    aria-label="Delete dialogue"
-                    icon={<DeleteIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'red.300', bg: 'whiteAlpha.100' }}
-                    onClick={async (event) => {
-                      event.stopPropagation();
-                      if (confirm(`Delete dialogue "${entry.name}"?`)) {
-                        await removeDialogue(entry.id);
-                      }
-                    }}
-                  />
-                </HStack>
-              </Flex>
-            </Box>
-          );
-        })}
-
-        {dialogueItems.length === 0 && (
-          <Text fontSize="xs" color="gray.600" textAlign="center" mt={4}>
-            No dialogues yet
-          </Text>
-        )}
-      </VStack>
-    </VStack>
+      }
+      itemActions={(item) => [
+        {
+          id: 'edit',
+          label: 'Edit dialogue metadata',
+          icon: <EditIcon fontSize="10px" />,
+          ariaLabel: 'Rename dialogue',
+          onClick: () => openEditDialogueModal(item.id),
+        },
+        {
+          id: 'delete',
+          label: 'Delete dialogue',
+          icon: <DeleteIcon fontSize="10px" />,
+          ariaLabel: 'Delete dialogue',
+          hoverColor: 'red.300',
+          onClick: async () => {
+            if (confirm(`Delete dialogue "${item.label}"?`)) {
+              await removeDialogue(item.id);
+            }
+          },
+        },
+      ]}
+    />
   );
 
-  const NODE_TYPES: Array<[DialogueNodeType, string]> = [
-    ['line', 'Line'],
-    ['choice', 'Choice'],
-    ['action', 'Action'],
-    ['jump', 'Jump'],
-    ['comment', 'Comment'],
-    ['end', 'End'],
-  ];
+  // Append a node at the very end of the top-level flow (never inherits branch context)
+  const appendTopLevelNode = (nodeType: DialogueNodeType) => {
+    if (!selectedDialogueId || !selectedDialogue) return;
+    updateDialogue(selectedDialogueId, (dialogue) => {
+      const created = createNodeByType(nodeType, dialogue, undefined);
+      const nextNodes = [...dialogue.nodes, created];
+      const relinked = relinkLinearFlow(nextNodes);
+      return { ...dialogue, startNodeId: dialogue.startNodeId || created.id, nodes: relinked };
+    });
+  };
 
   const rightPanel = (
     <InspectorPanel
@@ -1550,6 +1688,9 @@ export const DialogueEditor: React.FC = () => {
 
       {selectedDialogue && !selectedNode && (
         <VStack align="stretch" spacing={4}>
+          <Text fontSize="12px" color="gray.500" fontStyle="italic">
+            Click a node to inspect it.
+          </Text>
           <Text fontSize="10px" color="gray.500" textTransform="uppercase" fontWeight="bold">
             Dialogue Metadata
           </Text>
@@ -1634,6 +1775,13 @@ export const DialogueEditor: React.FC = () => {
           <Badge colorScheme="blue" w="fit-content">
             line
           </Badge>
+
+          <NodeIdField
+            key={selectedNode.id}
+            id={selectedNode.id}
+            nodes={selectedDialogue.nodes}
+            onRename={(newId) => renameNode(selectedNode.id, newId)}
+          />
 
           <FormControl>
             <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
@@ -1759,6 +1907,13 @@ export const DialogueEditor: React.FC = () => {
           <Badge colorScheme="purple" w="fit-content">
             choice
           </Badge>
+
+          <NodeIdField
+            key={selectedNode.id}
+            id={selectedNode.id}
+            nodes={selectedDialogue.nodes}
+            onRename={(newId) => renameNode(selectedNode.id, newId)}
+          />
 
           {selectedNode.options.map((option, index) => {
             const currentBranchId = `${selectedNode.id}:${option.id}`;
@@ -1943,6 +2098,13 @@ export const DialogueEditor: React.FC = () => {
             action
           </Badge>
 
+          <NodeIdField
+            key={selectedNode.id}
+            id={selectedNode.id}
+            nodes={selectedDialogue.nodes}
+            onRename={(newId) => renameNode(selectedNode.id, newId)}
+          />
+
           <FormControl>
             <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
               Lua Script
@@ -1988,6 +2150,13 @@ export const DialogueEditor: React.FC = () => {
           <Badge colorScheme="yellow" w="fit-content">
             jump
           </Badge>
+
+          <NodeIdField
+            key={selectedNode.id}
+            id={selectedNode.id}
+            nodes={selectedDialogue.nodes}
+            onRename={(newId) => renameNode(selectedNode.id, newId)}
+          />
 
           <FormControl>
             <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
@@ -2067,6 +2236,14 @@ export const DialogueEditor: React.FC = () => {
           <Badge colorScheme="gray" w="fit-content">
             comment (editor-only)
           </Badge>
+
+          <NodeIdField
+            key={selectedNode.id}
+            id={selectedNode.id}
+            nodes={selectedDialogue.nodes}
+            onRename={(newId) => renameNode(selectedNode.id, newId)}
+          />
+
           <Textarea
             minH="120px"
             bg="#0a0a0b"
@@ -2091,9 +2268,18 @@ export const DialogueEditor: React.FC = () => {
           <Badge colorScheme="red" w="fit-content">
             end
           </Badge>
-          <Text fontSize="12px" color="gray.400">
-            Terminal node. No fields.
+
+          <NodeIdField
+            key={selectedNode.id}
+            id={selectedNode.id}
+            nodes={selectedDialogue.nodes}
+            onRename={(newId) => renameNode(selectedNode.id, newId)}
+          />
+
+          <Text fontSize="11px" color="gray.500">
+            Ends the dialogue immediately. Useful for terminating a choice branch early.
           </Text>
+
           <Button size="xs" colorScheme="red" variant="outline" onClick={removeSelectedNode}>
             Delete Node
           </Button>
@@ -2137,40 +2323,21 @@ export const DialogueEditor: React.FC = () => {
 
         <HStack spacing={1} ml="auto" flexShrink={0}>
           {/* Add Node dropdown */}
-          <Popover placement="bottom-end" isLazy>
-            <PopoverTrigger>
+          <NodeTypeMenu
+            placement="bottom-end"
+            trigger={
               <Button size="xs" variant="outline" leftIcon={<AddIcon fontSize="9px" />}>
                 Add Node
               </Button>
-            </PopoverTrigger>
-            <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
-              <PopoverBody p={1}>
-                <VStack align="stretch" spacing={0}>
-                  {NODE_TYPES.map(([type, label]) => (
-                    <Button
-                      key={type}
-                      size="xs"
-                      variant="ghost"
-                      justifyContent="flex-start"
-                      fontWeight="normal"
-                      onClick={() => {
-                        if (!selectedDialogue) return;
-                        const idx = selectedNodeId
-                          ? Math.max(
-                              0,
-                              selectedDialogue.nodes.findIndex((n) => n.id === selectedNodeId) + 1,
-                            )
-                          : selectedDialogue.nodes.length;
-                        insertNode(type, idx);
-                      }}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </VStack>
-              </PopoverBody>
-            </PopoverContent>
-          </Popover>
+            }
+            onSelect={(type) => {
+              if (!selectedDialogue) return;
+              const idx = selectedNodeId
+                ? Math.max(0, selectedDialogue.nodes.findIndex((n) => n.id === selectedNodeId) + 1)
+                : selectedDialogue.nodes.length;
+              insertNode(type, idx);
+            }}
+          />
 
           <Button
             size="xs"
@@ -2181,128 +2348,117 @@ export const DialogueEditor: React.FC = () => {
           >
             {isTimelineHeaderCollapsed ? '▸ info' : '▾ info'}
           </Button>
-          <Button size="xs" variant="ghost" onClick={() => setSelectedNodeId(null)}>
-            Metadata
-          </Button>
         </HStack>
       </Flex>
 
-      <Box flex={1} overflowY="auto" p={3}>
-        {selectedDialogue.nodes.map((node, index) => {
-          const topLevel = !isBranchNode(node);
-          const selected = selectedNodeId === node.id;
-          const missingMsgKey =
-            (node.type === 'line' && !node.msgKey.trim()) ||
-            (node.type === 'choice' && node.options.some((option) => !option.msgKey.trim()));
-          const brokenRef = brokenReferenceNodeIds.has(node.id);
-          const branchMeta = node.editor;
-          const branchEnd =
-            Boolean(branchMeta?.branchId) &&
-            selectedDialogue.nodes[index + 1]?.editor?.branchId !== branchMeta?.branchId;
+      <Box
+        flex={1}
+        overflowY="auto"
+        p={3}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setSelectedNodeId(null);
+        }}
+      >
+        {(() => {
+          // Build top-level render groups
+          type RenderGroup =
+            | { kind: 'single'; node: DialogueNode; flatIndex: number }
+            | {
+                kind: 'choice';
+                choiceNode: DialogueChoiceNode;
+                flatIndex: number;
+                branches: Array<{
+                  optionId: string;
+                  nodes: Array<{ node: DialogueNode; flatIndex: number }>;
+                }>;
+              };
 
-          // Per-type visual config
-          const isComment = node.type === 'comment';
-          const isJump = node.type === 'jump';
-          const isAction = node.type === 'action';
-          const isChoice = node.type === 'choice';
-          const isEnd = node.type === 'end';
+          const groups: RenderGroup[] = [];
+          let i = 0;
+          while (i < selectedDialogue.nodes.length) {
+            const node = selectedDialogue.nodes[i];
+            if (isBranchNode(node)) {
+              i++;
+              continue;
+            }
+            if (node.type !== 'choice') {
+              groups.push({ kind: 'single', node, flatIndex: i });
+              i++;
+              continue;
+            }
+            const choiceNode = node as DialogueChoiceNode;
+            const branchMap = new Map<string, Array<{ node: DialogueNode; flatIndex: number }>>();
+            for (const opt of choiceNode.options) branchMap.set(opt.id, []);
+            let inner = i + 1;
+            while (inner < selectedDialogue.nodes.length) {
+              const child = selectedDialogue.nodes[inner];
+              if (child.editor?.parentChoiceNodeId !== choiceNode.id) break;
+              const optId = child.editor?.parentOptionId;
+              if (optId && branchMap.has(optId))
+                branchMap.get(optId)!.push({ node: child, flatIndex: inner });
+              inner++;
+            }
+            groups.push({
+              kind: 'choice',
+              choiceNode,
+              flatIndex: i,
+              branches: choiceNode.options.map((opt) => ({
+                optionId: opt.id,
+                nodes: branchMap.get(opt.id) ?? [],
+              })),
+            });
+            i = inner;
+          }
 
-          const typeColor =
-            node.type === 'line'
-              ? '#60a5fa'
-              : node.type === 'choice'
-                ? '#a78bfa'
-                : node.type === 'action'
-                  ? '#34d399'
-                  : node.type === 'jump'
-                    ? '#fbbf24'
-                    : node.type === 'comment'
-                      ? '#6b7280'
-                      : '#f87171'; // end
+          const groupIds = groups.map((g) => (g.kind === 'single' ? g.node.id : g.choiceNode.id));
 
-          const cardBg = isComment
-            ? '#161618'
-            : isAction
-              ? '#141a14'
-              : isEnd
-                ? '#1a1212'
-                : isJump
-                  ? '#1a1a10'
-                  : '#1e1e28';
+          // Render a node card (no drag logic — dragging handled by SortableGroupWrapper at group level)
+          const renderNodeCard = (node: DialogueNode) => {
+            const selected = selectedNodeId === node.id;
+            const missingMsgKey =
+              (node.type === 'line' && !node.msgKey.trim()) ||
+              (node.type === 'choice' && node.options.some((o) => !o.msgKey.trim()));
+            const brokenRef = brokenReferenceNodeIds.has(node.id);
+            const branchMeta = node.editor;
+            const isComment = node.type === 'comment';
+            const isJump = node.type === 'jump';
+            const isAction = node.type === 'action';
+            const isEnd = node.type === 'end';
+            const typeColor =
+              node.type === 'line'
+                ? '#60a5fa'
+                : node.type === 'choice'
+                  ? '#a78bfa'
+                  : node.type === 'action'
+                    ? '#34d399'
+                    : node.type === 'jump'
+                      ? '#fbbf24'
+                      : node.type === 'comment'
+                        ? '#6b7280'
+                        : '#f87171';
+            const cardBg = isComment
+              ? '#161618'
+              : isAction
+                ? '#141a14'
+                : isEnd
+                  ? '#1a1212'
+                  : isJump
+                    ? '#1a1a10'
+                    : '#1e1e28';
 
-          return (
-            <React.Fragment key={node.id}>
-              {/* Insert-gap button */}
+            return (
               <Box
-                onMouseEnter={() => setHoveredGapIndex(index)}
-                onMouseLeave={() =>
-                  setHoveredGapIndex((current) => (current === index ? null : current))
-                }
-                py="2px"
-              >
-                <Popover placement="top" isLazy>
-                  <PopoverTrigger>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      w="full"
-                      h="16px"
-                      opacity={hoveredGapIndex === index ? 0.55 : 0}
-                      _hover={{ opacity: 1 }}
-                      fontSize="10px"
-                      color="gray.500"
-                    >
-                      + insert
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
-                    <PopoverBody p={1}>
-                      <VStack align="stretch" spacing={0}>
-                        {NODE_TYPES.map(([type, label]) => (
-                          <Button
-                            key={type}
-                            size="xs"
-                            variant="ghost"
-                            justifyContent="flex-start"
-                            fontWeight="normal"
-                            onClick={() => insertNode(type, index)}
-                          >
-                            {label}
-                          </Button>
-                        ))}
-                      </VStack>
-                    </PopoverBody>
-                  </PopoverContent>
-                </Popover>
-              </Box>
-
-              {/* Node card */}
-              <Box
+                key={node.id}
                 role="group"
-                draggable={topLevel}
-                onDragStart={() => {
-                  if (!topLevel) return;
-                  setDraggedTopNodeId(node.id);
-                }}
-                onDragOver={(event) => {
-                  if (!topLevel || !draggedTopNodeId) return;
-                  event.preventDefault();
-                }}
-                onDrop={(event) => {
-                  if (!topLevel) return;
-                  event.preventDefault();
-                  onDropTopLevelNode(node.id);
-                }}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedNodeId(node.id);
-                  if (isAction) {
-                    setExpandedActionNodeIds((current) => {
-                      const next = new Set(current);
-                      if (next.has(node.id)) next.delete(node.id);
-                      else next.add(node.id);
-                      return next;
+                  if (isAction)
+                    setExpandedActionNodeIds((cur) => {
+                      const s = new Set(cur);
+                      s.has(node.id) ? s.delete(node.id) : s.add(node.id);
+                      return s;
                     });
-                  }
                 }}
                 border="1px"
                 borderStyle={isComment ? 'dashed' : 'solid'}
@@ -2318,13 +2474,11 @@ export const DialogueEditor: React.FC = () => {
                 borderRadius="md"
                 bg={cardBg}
                 p={isComment ? 2 : 3}
-                mb={isChoice ? 0 : 2}
+                mb={2}
                 cursor="pointer"
                 opacity={isComment ? 0.75 : 1}
-                _hover={{ borderColor: selected ? '#6c63ff' : isComment ? '#555' : '#555' }}
-                position="relative"
+                _hover={{ borderColor: selected ? '#6c63ff' : '#555' }}
               >
-                {/* Header row */}
                 <Flex align="center" gap={2} mb={isComment ? 1 : 2}>
                   <Text
                     fontSize="9px"
@@ -2336,22 +2490,15 @@ export const DialogueEditor: React.FC = () => {
                   >
                     {node.type}
                   </Text>
-                  <Text fontSize="10px" color="gray.600" fontFamily="mono">
+                  <Text fontSize="11px" color="gray.400" fontFamily="mono">
                     {node.id}
                   </Text>
-                  {node.id === selectedDialogue.startNodeId && (
-                    <Badge colorScheme="teal" fontSize="8px">
-                      start
-                    </Badge>
-                  )}
                   {missingMsgKey && <WarningIcon color="orange.300" boxSize="10px" />}
                   {brokenRef && (
                     <Badge colorScheme="red" fontSize="8px">
                       broken ref
                     </Badge>
                   )}
-
-                  {/* Hover delete button */}
                   <IconButton
                     aria-label="Delete node"
                     icon={<DeleteIcon fontSize="9px" />}
@@ -2367,27 +2514,22 @@ export const DialogueEditor: React.FC = () => {
                     p="2px"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedNodeId(node.id);
-                      // Defer to next tick so selectedNodeId is set first
-                      setTimeout(() => {
-                        if (!selectedDialogueId) return;
-                        updateDialogue(selectedDialogueId, (dialogue) => {
-                          const removeIds = new Set<string>([node.id]);
-                          if (node.type === 'choice') {
-                            for (const n of dialogue.nodes) {
-                              if (n.editor?.parentChoiceNodeId === node.id) removeIds.add(n.id);
-                            }
+                      if (!selectedDialogueId) return;
+                      updateDialogue(selectedDialogueId, (d) => {
+                        const ids = new Set<string>([node.id]);
+                        if (node.type === 'choice')
+                          for (const n of d.nodes) {
+                            if (n.editor?.parentChoiceNodeId === node.id) ids.add(n.id);
                           }
-                          const cleaned = removeNodesWithCleanup(dialogue, removeIds);
-                          return { ...cleaned, nodes: relinkLinearFlow(cleaned.nodes) };
-                        });
-                        setSelectedNodeId(null);
-                      }, 0);
+                        return {
+                          ...removeNodesWithCleanup(d, ids),
+                          nodes: relinkLinearFlow(removeNodesWithCleanup(d, ids).nodes),
+                        };
+                      });
+                      setSelectedNodeId(null);
                     }}
                   />
                 </Flex>
-
-                {/* Body content */}
                 {node.type === 'line' && (
                   <VStack align="stretch" spacing={1}>
                     {(node.speaker || node.emotion) && (
@@ -2405,7 +2547,7 @@ export const DialogueEditor: React.FC = () => {
                         {!!node.msgKey.trim() && (
                           <Text
                             fontSize="9px"
-                            color="gray.600"
+                            color="gray.500"
                             fontFamily="mono"
                             noOfLines={1}
                             ml="auto"
@@ -2424,58 +2566,6 @@ export const DialogueEditor: React.FC = () => {
                     </Text>
                   </VStack>
                 )}
-
-                {isChoice && (
-                  <VStack align="stretch" spacing={0} mt={1}>
-                    {node.options.map((option, optIdx) => {
-                      const optColor = BRANCH_COLORS[optIdx % BRANCH_COLORS.length];
-                      return (
-                        <Flex key={option.id} align="stretch" gap={0} mb={1}>
-                          {/* Colored branch indicator */}
-                          <Box
-                            w="3px"
-                            borderRadius="full"
-                            bg={optColor}
-                            flexShrink={0}
-                            mr={2}
-                            my="1px"
-                          />
-                          <Box flex={1} minW={0}>
-                            <Flex align="center" gap={2}>
-                              <Text fontSize="11px" color="gray.200" noOfLines={1} flex={1}>
-                                {option.text || (
-                                  <Text as="span" color="gray.600" fontStyle="italic">
-                                    (empty)
-                                  </Text>
-                                )}
-                              </Text>
-                              {option.condition?.trim() && (
-                                <Badge fontSize="8px" colorScheme="yellow" flexShrink={0}>
-                                  if
-                                </Badge>
-                              )}
-                              <Text
-                                fontSize="9px"
-                                color="gray.600"
-                                fontFamily="mono"
-                                flexShrink={0}
-                              >
-                                {option.targetNodeId ? (
-                                  `→ ${option.targetNodeId}`
-                                ) : (
-                                  <Text as="span" color="red.400">
-                                    no target
-                                  </Text>
-                                )}
-                              </Text>
-                            </Flex>
-                          </Box>
-                        </Flex>
-                      );
-                    })}
-                  </VStack>
-                )}
-
                 {isAction && (
                   <Box
                     bg="#0d1a0d"
@@ -2496,35 +2586,66 @@ export const DialogueEditor: React.FC = () => {
                     )}
                   </Box>
                 )}
-
-                {isJump && (
-                  <Flex align="center" gap={2}>
-                    <Text fontSize="11px" color="yellow.300" fontFamily="mono" fontWeight="bold">
-                      ⟶
-                    </Text>
-                    <Text fontSize="11px" color="yellow.200" fontFamily="mono">
-                      {node.targetDialogueId
-                        ? `${node.targetDialogueId} : ${node.targetNodeId || '?'}`
-                        : node.targetNodeId || (
-                            <Text as="span" color="gray.500">
-                              no target
+                {isJump &&
+                  (() => {
+                    const isExternal = Boolean(node.targetDialogueId);
+                    const label = isExternal
+                      ? `${node.targetDialogueId} › ${node.targetNodeId || '?'}`
+                      : node.targetNodeId || null;
+                    const canNavigate = !isExternal && !!node.targetNodeId;
+                    return (
+                      <Flex align="center" gap={2} mt={1}>
+                        <Box flex={1} h="1px" bg="#3a3a20" />
+                        <Box
+                          px={3}
+                          py={1}
+                          border="1px solid #fbbf24"
+                          borderRadius="full"
+                          bg="#1a1a08"
+                          flexShrink={0}
+                          cursor={canNavigate ? 'pointer' : 'default'}
+                          _hover={canNavigate ? { bg: '#2a2a10' } : {}}
+                          onClick={(e) => {
+                            if (!canNavigate) return;
+                            e.stopPropagation();
+                            setSelectedNodeId(node.targetNodeId);
+                          }}
+                          title={canNavigate ? `Go to ${node.targetNodeId}` : undefined}
+                        >
+                          <Flex align="center" gap={2}>
+                            <Text
+                              fontSize="11px"
+                              color="yellow.300"
+                              fontFamily="mono"
+                              fontWeight="bold"
+                            >
+                              ⟶
                             </Text>
-                          )}
-                    </Text>
-                    {node.targetNodeId && !node.targetDialogueId && (
-                      <Text fontSize="9px" color="gray.600" fontFamily="mono">
-                        (this dialogue)
-                      </Text>
-                    )}
-                  </Flex>
-                )}
-
+                            {label ? (
+                              <Text fontSize="11px" color="yellow.200" fontFamily="mono">
+                                {label}
+                              </Text>
+                            ) : (
+                              <Text fontSize="11px" color="gray.500" fontStyle="italic">
+                                no target
+                              </Text>
+                            )}
+                            {isExternal && (
+                              <Badge fontSize="8px" colorScheme="orange" ml={1}>
+                                ext
+                              </Badge>
+                            )}
+                          </Flex>
+                        </Box>
+                        <Box flex={1} h="1px" bg="#3a3a20" />
+                      </Flex>
+                    );
+                  })()}
                 {isComment && (
                   <Text fontSize="11px" color="gray.500" fontStyle="italic" noOfLines={3}>
                     {node.text || '(empty comment)'}
                   </Text>
                 )}
-
                 {isEnd && (
                   <Flex align="center" gap={2}>
                     <Box w="full" h="1px" bg="red.900" />
@@ -2535,173 +2656,224 @@ export const DialogueEditor: React.FC = () => {
                   </Flex>
                 )}
               </Box>
+            );
+          };
 
-              {/* Branch end divider */}
-              {branchEnd && (
-                <Box mb={2} ml={3} mr={0}>
-                  <Box h="1px" bg={branchColor(branchMeta?.branchOrder)} opacity={0.3} />
-                </Box>
-              )}
-            </React.Fragment>
+          const renderInsertGap = (flatIndex: number) => (
+            <Box key={`gap-${flatIndex}`} py="2px">
+              <NodeTypeMenu
+                placement="top"
+                trigger={
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    w="full"
+                    h="16px"
+                    opacity={0}
+                    _hover={{ opacity: 1 }}
+                    fontSize="10px"
+                    color="gray.500"
+                  >
+                    + insert
+                  </Button>
+                }
+                onSelect={(type) => insertNode(type, flatIndex)}
+              />
+            </Box>
           );
-        })}
 
-        <Box
-          onDragOver={(event) => {
-            if (!draggedTopNodeId) return;
-            event.preventDefault();
-          }}
-          onDrop={(event) => {
-            event.preventDefault();
-            onDropTopLevelNode(null);
-          }}
-          py="2px"
-        >
-          <Popover placement="top" isLazy>
-            <PopoverTrigger>
+          return (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={groupIds} strategy={verticalListSortingStrategy}>
+                {groups.map((group) => {
+                  if (group.kind === 'single') {
+                    return (
+                      <SortableGroupWrapper key={group.node.id} id={group.node.id}>
+                        {renderInsertGap(group.flatIndex)}
+                        {renderNodeCard(group.node)}
+                      </SortableGroupWrapper>
+                    );
+                  }
+
+                  const { choiceNode, flatIndex, branches } = group;
+                  const choiceSelected = selectedNodeId === choiceNode.id;
+                  const brokenRef = brokenReferenceNodeIds.has(choiceNode.id);
+                  const missingMsgKey = choiceNode.options.some((o) => !o.msgKey.trim());
+
+                  return (
+                    <SortableGroupWrapper key={choiceNode.id} id={choiceNode.id}>
+                      {renderInsertGap(flatIndex)}
+                      <Box
+                        role="group"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedNodeId(choiceNode.id);
+                        }}
+                        border="1px solid"
+                        borderColor={choiceSelected ? '#6c63ff' : '#2e2e3e'}
+                        borderLeftWidth="3px"
+                        borderLeftColor="#a78bfa"
+                        borderRadius="md"
+                        bg="#1e1e28"
+                        p={3}
+                        mb={0}
+                        cursor="pointer"
+                        _hover={{ borderColor: choiceSelected ? '#6c63ff' : '#555' }}
+                      >
+                        <Flex align="center" gap={2} mb={1}>
+                          <Text
+                            fontSize="9px"
+                            fontWeight="bold"
+                            textTransform="uppercase"
+                            letterSpacing="0.1em"
+                            color="#a78bfa"
+                            flexShrink={0}
+                          >
+                            choice
+                          </Text>
+                          <Text fontSize="11px" color="gray.400" fontFamily="mono">
+                            {choiceNode.id}
+                          </Text>
+                          {missingMsgKey && <WarningIcon color="orange.300" boxSize="10px" />}
+                          {brokenRef && (
+                            <Badge colorScheme="red" fontSize="8px">
+                              broken ref
+                            </Badge>
+                          )}
+                          <IconButton
+                            aria-label="Delete node"
+                            icon={<DeleteIcon fontSize="9px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.600"
+                            _hover={{ color: 'red.400', bg: 'transparent' }}
+                            opacity={0}
+                            _groupHover={{ opacity: 1 }}
+                            ml="auto"
+                            h="auto"
+                            minW="auto"
+                            p="2px"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!selectedDialogueId) return;
+                              updateDialogue(selectedDialogueId, (d) => {
+                                const ids = new Set<string>([choiceNode.id]);
+                                for (const n of d.nodes) {
+                                  if (n.editor?.parentChoiceNodeId === choiceNode.id) ids.add(n.id);
+                                }
+                                const c = removeNodesWithCleanup(d, ids);
+                                return { ...c, nodes: relinkLinearFlow(c.nodes) };
+                              });
+                              setSelectedNodeId(null);
+                            }}
+                          />
+                        </Flex>
+                        <Flex gap={2}>
+                          {choiceNode.options.map((opt, optIdx) => {
+                            const col = BRANCH_COLORS[optIdx % BRANCH_COLORS.length];
+                            return (
+                              <Box
+                                key={opt.id}
+                                flex={1}
+                                minW={0}
+                                borderTop="2px solid"
+                                borderColor={col}
+                                pt={1}
+                              >
+                                <Text fontSize="11px" color="gray.200" noOfLines={1}>
+                                  {opt.text || (
+                                    <Text as="span" color="gray.600" fontStyle="italic">
+                                      (empty)
+                                    </Text>
+                                  )}
+                                </Text>
+                                {opt.condition?.trim() && (
+                                  <Badge fontSize="8px" colorScheme="yellow" mt="2px">
+                                    if
+                                  </Badge>
+                                )}
+                              </Box>
+                            );
+                          })}
+                        </Flex>
+                      </Box>
+                      <Flex gap={2} mb={2} align="flex-start">
+                        {branches.map((branch, bIdx) => {
+                          const col = BRANCH_COLORS[bIdx % BRANCH_COLORS.length];
+                          const opt = choiceNode.options[bIdx];
+                          return (
+                            <Box
+                              key={branch.optionId}
+                              flex={1}
+                              minW={0}
+                              borderLeft="2px solid"
+                              borderColor={col}
+                              pl={2}
+                              pt={1}
+                            >
+                              {branch.nodes.map(({ node }) => renderNodeCard(node))}
+                              <NodeTypeMenu
+                                placement="bottom"
+                                trigger={
+                                  <Button
+                                    size="xs"
+                                    variant="ghost"
+                                    w="full"
+                                    h="18px"
+                                    fontSize="9px"
+                                    color="gray.600"
+                                    borderColor={col}
+                                    borderWidth="1px"
+                                    borderStyle="dashed"
+                                    borderRadius="sm"
+                                    _hover={{ color: 'gray.300', opacity: 1 }}
+                                    opacity={0.5}
+                                  >
+                                    + append
+                                  </Button>
+                                }
+                                onSelect={(type) =>
+                                  appendNodeToBranch(type, choiceNode.id, opt.id, bIdx)
+                                }
+                              />
+                            </Box>
+                          );
+                        })}
+                      </Flex>
+                    </SortableGroupWrapper>
+                  );
+                })}
+              </SortableContext>
+            </DndContext>
+          );
+        })()}
+
+        <Box py={1}>
+          <NodeTypeMenu
+            placement="top"
+            trigger={
               <Button
                 size="xs"
-                variant="ghost"
-                w="full"
-                h="20px"
-                fontSize="10px"
-                color="gray.600"
-                opacity={hoveredGapIndex === selectedDialogue.nodes.length ? 0.65 : 0.2}
-                onMouseEnter={() => setHoveredGapIndex(selectedDialogue.nodes.length)}
-                onMouseLeave={() => setHoveredGapIndex(null)}
-              >
-                + append
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
-              <PopoverBody p={1}>
-                <VStack align="stretch" spacing={0}>
-                  {NODE_TYPES.map(([type, label]) => (
-                    <Button
-                      key={type}
-                      size="xs"
-                      variant="ghost"
-                      justifyContent="flex-start"
-                      fontWeight="normal"
-                      onClick={() => insertNode(type, selectedDialogue.nodes.length)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </VStack>
-              </PopoverBody>
-            </PopoverContent>
-          </Popover>
-        </Box>
-      </Box>
-    </VStack>
-  );
-
-  const charactersContent = (
-    <VStack align="stretch" spacing={3} h="full" p={4} overflowY="auto">
-      <Box p={3} border="1px" borderColor="whiteAlpha.200" borderRadius="md" bg="#17171c">
-        <Text fontSize="12px" color="gray.200" mb={2}>
-          Add Character
-        </Text>
-        <VStack align="stretch" spacing={2}>
-          <Input
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            placeholder="Name"
-            value={newActorName}
-            onChange={(event) => setNewActorName(event.target.value)}
-          />
-          <Input
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            placeholder="ID (optional)"
-            value={newActorId}
-            onChange={(event) => setNewActorId(event.target.value)}
-          />
-          <Input
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            placeholder="Icon"
-            value={newActorIcon}
-            onChange={(event) => setNewActorIcon(event.target.value)}
-          />
-          <Input
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            placeholder="Emotions, comma separated"
-            value={newActorEmotions}
-            onChange={(event) => setNewActorEmotions(event.target.value)}
-          />
-          <Button size="sm" onClick={createActorFromTab}>
-            Add Character
-          </Button>
-        </VStack>
-      </Box>
-
-      {actors.map((actor) => (
-        <Box
-          key={actor.id}
-          p={3}
-          border="1px"
-          borderColor="whiteAlpha.200"
-          borderRadius="md"
-          bg="#17171c"
-        >
-          <VStack align="stretch" spacing={2}>
-            <HStack>
-              <Input
-                size="sm"
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                value={actor.name}
-                onChange={(event) => updateActor(actor.id, { name: event.target.value })}
-              />
-              <Input
-                size="sm"
-                w="70px"
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                value={actor.icon}
-                onChange={(event) => updateActor(actor.id, { icon: event.target.value })}
-              />
-              <Button
-                size="sm"
-                colorScheme="red"
                 variant="outline"
-                onClick={() => deleteActor(actor.id)}
+                w="full"
+                h="24px"
+                fontSize="10px"
+                color="gray.500"
+                borderColor="whiteAlpha.200"
+                borderStyle="dashed"
+                _hover={{ color: 'gray.200', borderColor: 'whiteAlpha.400' }}
               >
-                Delete
+                + append node
               </Button>
-            </HStack>
-            <Text fontSize="10px" color="gray.500" fontFamily="mono">
-              {actor.id}
-            </Text>
-            <Input
-              size="sm"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              value={(actor.emotions ?? []).join(', ')}
-              placeholder="Emotions, comma separated"
-              onChange={(event) =>
-                updateActor(actor.id, {
-                  emotions: parseTags(event.target.value),
-                })
-              }
-            />
-          </VStack>
+            }
+            onSelect={(type) => appendTopLevelNode(type)}
+          />
         </Box>
-      ))}
+      </Box>
     </VStack>
   );
 
@@ -2751,12 +2923,7 @@ export const DialogueEditor: React.FC = () => {
     </VStack>
   );
 
-  const centerContent =
-    activeTab === 'timeline'
-      ? timelineContent
-      : activeTab === 'characters'
-        ? charactersContent
-        : settingsContent;
+  const centerContent = activeTab === 'timeline' ? timelineContent : settingsContent;
 
   const content = (
     <VStack align="stretch" spacing={0} h="full">
@@ -2777,7 +2944,6 @@ export const DialogueEditor: React.FC = () => {
           {(
             [
               ['timeline', 'Timeline'],
-              ['characters', 'Characters'],
               ['settings', 'Settings'],
             ] as Array<[DialogueTab, string]>
           ).map(([tab, label]) => (
@@ -2794,9 +2960,6 @@ export const DialogueEditor: React.FC = () => {
 
         <HStack spacing={2} ml="auto">
           {isDirty && <Badge colorScheme="orange">Unsaved</Badge>}
-          <Button size="xs" variant="outline" onClick={() => flushSavesNow()}>
-            Save now
-          </Button>
         </HStack>
       </Flex>
 
@@ -2821,83 +2984,68 @@ export const DialogueEditor: React.FC = () => {
       />
 
       <EditorModal isOpen={metaModal.isOpen} onClose={metaModal.onClose} size="md">
-        <Box p={5} bg="gray.900" border="1px" borderColor="gray.700" borderRadius="md">
-          <VStack align="stretch" spacing={4}>
-            <Text color="white" fontSize="lg" fontWeight="bold">
-              {metaMode === 'create' ? 'Create Dialogue' : 'Edit Dialogue'}
-            </Text>
-
-            <FormControl isRequired>
-              <FormLabel fontSize="xs" color="gray.400">
-                Name
-              </FormLabel>
-              <Input
-                size="sm"
-                bg="gray.800"
-                color="white"
-                value={metadataDraft.name}
-                onChange={(event) =>
-                  setMetadataDraft((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                autoFocus
-              />
-            </FormControl>
-
-            <FormControl display="flex" alignItems="center" justifyContent="space-between">
-              <FormLabel fontSize="xs" color="gray.400" mb={0}>
-                One-shot dialogue
-              </FormLabel>
-              <Switch
-                size="sm"
-                isChecked={metadataDraft.oneShot}
-                onChange={(event) =>
-                  setMetadataDraft((current) => ({
-                    ...current,
-                    oneShot: event.target.checked,
-                  }))
-                }
-              />
-            </FormControl>
-
-            <Text fontSize="xs" color="gray.400" fontWeight="bold" textTransform="uppercase">
-              Entry Condition (Lua, optional)
-            </Text>
-
-            <ConditionEditor
-              value={metadataDraft.entryCondition}
-              onChange={(expr) =>
+        <EntityFormDialog
+          title={metaMode === 'create' ? 'Create Dialogue' : 'Edit Dialogue'}
+          onCancel={metaModal.onClose}
+          onSubmit={applyDialogueMetadata}
+          submitLabel={metaMode === 'create' ? 'Create' : 'Save'}
+          isSubmitDisabled={!metadataDraft.name.trim()}
+          minWidth="420px"
+        >
+          <FormControl isRequired>
+            <FormLabel fontSize="xs" color="gray.400">
+              Name
+            </FormLabel>
+            <Input
+              size="sm"
+              bg="gray.800"
+              color="white"
+              value={metadataDraft.name}
+              onChange={(event) =>
                 setMetadataDraft((current) => ({
                   ...current,
-                  entryCondition: expr,
+                  name: event.target.value,
                 }))
               }
-              variables={gameVariables}
-              tables={scriptTables}
-              functions={scriptFunctions}
-              namespaces={scriptNamespaces}
-              activeContextType={activeContextType}
+              autoFocus
             />
+          </FormControl>
 
-            <Divider borderColor="whiteAlpha.300" />
+          <FormControl display="flex" alignItems="center" justifyContent="space-between">
+            <FormLabel fontSize="xs" color="gray.400" mb={0}>
+              One-shot dialogue
+            </FormLabel>
+            <Switch
+              size="sm"
+              isChecked={metadataDraft.oneShot}
+              onChange={(event) =>
+                setMetadataDraft((current) => ({
+                  ...current,
+                  oneShot: event.target.checked,
+                }))
+              }
+            />
+          </FormControl>
 
-            <HStack justify="flex-end">
-              <Button size="sm" variant="ghost" onClick={metaModal.onClose}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                colorScheme="blue"
-                onClick={applyDialogueMetadata}
-                isDisabled={!metadataDraft.name.trim()}
-              >
-                {metaMode === 'create' ? 'Create' : 'Save'}
-              </Button>
-            </HStack>
-          </VStack>
-        </Box>
+          <Text fontSize="xs" color="gray.400" fontWeight="bold" textTransform="uppercase">
+            Entry Condition (Lua, optional)
+          </Text>
+
+          <ConditionEditor
+            value={metadataDraft.entryCondition}
+            onChange={(expr) =>
+              setMetadataDraft((current) => ({
+                ...current,
+                entryCondition: expr,
+              }))
+            }
+            variables={gameVariables}
+            tables={scriptTables}
+            functions={scriptFunctions}
+            namespaces={scriptNamespaces}
+            activeContextType={activeContextType}
+          />
+        </EntityFormDialog>
       </EditorModal>
     </>
   );
