@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   VStack,
   Box,
@@ -9,13 +9,59 @@ import {
   Circle,
   Select,
   useToast,
+  useDisclosure,
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
-import { ListPanel, ListPanelItem, InspectorPanel, EmptyScreen } from '../common';
+import {
+  ListPanel,
+  ListPanelItem,
+  InspectorPanel,
+  EmptyScreen,
+  EntityFormDialog,
+  useEntityFormDraft,
+} from '../common';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { LayerType } from '../../../types/schema';
 import { BsTree, BsBuilding, BsWater, BsLayersHalf, BsStack } from 'react-icons/bs';
+import { EditorModal } from '../../common/EditorModal';
+
+type LayerDefinitionDraft = {
+  id: string;
+  name: string;
+  color: string;
+  type: LayerType;
+  zIndex: number;
+  description: string;
+  icon: string;
+};
+
+const EMPTY_LAYER_DRAFT: LayerDefinitionDraft = {
+  id: '',
+  name: '',
+  color: '#3182ce',
+  type: 'tile',
+  zIndex: 0,
+  description: '',
+  icon: '',
+};
+
+const layerDefinitionToDraft = (layer: {
+  id: string;
+  name: string;
+  color: string;
+  type: LayerType;
+  zIndex: number;
+  description?: string;
+  icon?: string;
+}): LayerDefinitionDraft => ({
+  id: layer.id,
+  name: layer.name,
+  color: layer.color,
+  type: layer.type,
+  zIndex: layer.zIndex,
+  description: layer.description ?? '',
+  icon: layer.icon ?? '',
+});
 
 const layerIconComponents: Record<string, React.FC<{ size?: number }>> = {
   tree: BsTree,
@@ -65,65 +111,79 @@ export const LayerEditor: React.FC = () => {
   const deleteLayerDefinition = useEditorStore((state) => state.deleteLayerDefinition);
 
   const toast = useToast();
+  const createModal = useDisclosure();
+
+  const [newLayerName, setNewLayerName] = React.useState('');
+  const [newLayerType, setNewLayerType] = React.useState<LayerType>('tile');
+  const [newLayerColor, setNewLayerColor] = React.useState('#3182ce');
+  const [newLayerIcon, setNewLayerIcon] = React.useState('');
 
   const sorted = [...layerDefinitions].sort((a, b) => a.zIndex - b.zIndex);
   const selected = layerDefinitions.find((d) => d.id === selectedLayerDefinitionId) ?? null;
 
-  const [editName, setEditName] = useState(selected?.name ?? '');
-  const [editId, setEditId] = useState(selected?.id ?? '');
-  const [editColor, setEditColor] = useState(selected?.color ?? '#3182ce');
-  const [editType, setEditType] = useState<LayerType>(selected?.type ?? 'tile');
-  const [editZIndex, setEditZIndex] = useState(selected?.zIndex ?? 0);
-  const [editDescription, setEditDescription] = useState(selected?.description ?? '');
-  const [editIcon, setEditIcon] = useState(selected?.icon ?? '');
-
-  React.useEffect(() => {
-    setEditName(selected?.name ?? '');
-    setEditId(selected?.id ?? '');
-    setEditColor(selected?.color ?? '#3182ce');
-    setEditType(selected?.type ?? 'tile');
-    setEditZIndex(selected?.zIndex ?? 0);
-    setEditDescription(selected?.description ?? '');
-    setEditIcon(selected?.icon ?? '');
-  }, [selected]);
+  const { draft, patchDraft } = useEntityFormDraft(
+    selected,
+    layerDefinitionToDraft,
+    EMPTY_LAYER_DRAFT,
+  );
 
   const handleAdd = () => {
-    const id = `layer-${Date.now()}`;
+    createModal.onOpen();
+  };
+
+  const handleCreateLayer = () => {
+    const normalizedName = newLayerName.trim() || 'New Layer';
+    const slug = normalizedName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    let id = slug || `layer-${Date.now()}`;
+    let suffix = 2;
+    while (layerDefinitions.some((d) => d.id === id)) {
+      id = `${slug || 'layer'}-${suffix++}`;
+    }
+
     const nextZIndex =
       layerDefinitions.length > 0 ? Math.max(...layerDefinitions.map((d) => d.zIndex)) + 1 : 0;
     addLayerDefinition({
       id,
-      name: 'New Layer',
-      type: 'tile',
-      color: '#3182ce',
+      name: normalizedName,
+      type: newLayerType,
+      color: newLayerColor,
+      icon: newLayerIcon || undefined,
       zIndex: nextZIndex,
     });
     setSelectedLayerDefinition(id);
+    setNewLayerName('');
+    setNewLayerType('tile');
+    setNewLayerColor('#3182ce');
+    setNewLayerIcon('');
+    createModal.onClose();
     toast({ title: 'Layer definition created', status: 'success', duration: 1500 });
   };
 
   const handleSave = () => {
     if (!selected) return;
-    if (editId !== selected.id) {
+    if (draft.id !== selected.id) {
       deleteLayerDefinition(selected.id);
       addLayerDefinition({
-        id: editId,
-        name: editName,
-        type: editType,
-        color: editColor,
-        zIndex: editZIndex,
-        icon: editIcon || undefined,
-        description: editDescription || undefined,
+        id: draft.id,
+        name: draft.name,
+        type: draft.type,
+        color: draft.color,
+        zIndex: draft.zIndex,
+        icon: draft.icon || undefined,
+        description: draft.description || undefined,
       });
-      setSelectedLayerDefinition(editId);
+      setSelectedLayerDefinition(draft.id);
     } else {
       updateLayerDefinition(selected.id, {
-        name: editName,
-        type: editType,
-        color: editColor,
-        zIndex: editZIndex,
-        icon: editIcon || undefined,
-        description: editDescription || undefined,
+        name: draft.name,
+        type: draft.type,
+        color: draft.color,
+        zIndex: draft.zIndex,
+        icon: draft.icon || undefined,
+        description: draft.description || undefined,
       });
     }
     toast({ title: 'Layer definition saved', status: 'success', duration: 1200 });
@@ -152,27 +212,12 @@ export const LayerEditor: React.FC = () => {
       onAdd={handleAdd}
       autoSelectFirst
       emptyMessage="No layer definitions"
-      itemActions={(item) => [
-        {
-          id: 'edit',
-          label: 'Edit',
-          icon: <EditIcon fontSize="10px" />,
-          ariaLabel: 'Edit layer definition',
-          onClick: () => setSelectedLayerDefinition(item.id),
-        },
-        {
-          id: 'delete',
-          label: 'Delete',
-          icon: <DeleteIcon fontSize="10px" />,
-          ariaLabel: 'Delete layer definition',
-          hoverColor: 'red.300',
-          onClick: () => {
-            const def = layerDefinitions.find((entry) => entry.id === item.id);
-            if (!def) return;
-            handleDelete(def.id, def.name);
-          },
-        },
-      ]}
+      onDeleteItem={(item) => {
+        const def = layerDefinitions.find((entry) => entry.id === item.id);
+        if (!def) return;
+        handleDelete(def.id, def.name);
+      }}
+      deleteActionLabel="Delete layer"
     />
   );
 
@@ -181,6 +226,8 @@ export const LayerEditor: React.FC = () => {
       title={selected?.name ?? 'Layer'}
       subtitle={selected?.id}
       emptyState={<Text color="gray.500">No layer selected</Text>}
+      onDelete={selected ? () => handleDelete(selected.id, selected.name) : undefined}
+      deleteLabel="Delete Layer"
     >
       {selected && (
         <VStack align="stretch" spacing={3}>
@@ -195,8 +242,8 @@ export const LayerEditor: React.FC = () => {
               ID
             </Text>
             <Input
-              value={editId}
-              onChange={(e) => setEditId(e.target.value)}
+              value={draft.id}
+              onChange={(e) => patchDraft({ id: e.target.value })}
               bg="gray.950"
               size="sm"
             />
@@ -213,8 +260,8 @@ export const LayerEditor: React.FC = () => {
               Name
             </Text>
             <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
+              value={draft.name}
+              onChange={(e) => patchDraft({ name: e.target.value })}
               bg="gray.950"
               size="sm"
             />
@@ -231,8 +278,8 @@ export const LayerEditor: React.FC = () => {
               Type
             </Text>
             <Select
-              value={editType}
-              onChange={(e) => setEditType(e.target.value as LayerType)}
+              value={draft.type}
+              onChange={(e) => patchDraft({ type: e.target.value as LayerType })}
               bg="gray.950"
               size="sm"
             >
@@ -256,8 +303,8 @@ export const LayerEditor: React.FC = () => {
             </Text>
             <Input
               type="number"
-              value={editZIndex}
-              onChange={(e) => setEditZIndex(parseInt(e.target.value, 10) || 0)}
+              value={draft.zIndex}
+              onChange={(e) => patchDraft({ zIndex: parseInt(e.target.value, 10) || 0 })}
               bg="gray.950"
               size="sm"
             />
@@ -274,8 +321,8 @@ export const LayerEditor: React.FC = () => {
               Description
             </Text>
             <Input
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
+              value={draft.description}
+              onChange={(e) => patchDraft({ description: e.target.value })}
               bg="gray.950"
               size="sm"
               placeholder="Optional"
@@ -293,8 +340,8 @@ export const LayerEditor: React.FC = () => {
               Icon
             </Text>
             <Select
-              value={editIcon}
-              onChange={(e) => setEditIcon(e.target.value)}
+              value={draft.icon}
+              onChange={(e) => patchDraft({ icon: e.target.value })}
               bg="gray.950"
               size="sm"
             >
@@ -318,8 +365,8 @@ export const LayerEditor: React.FC = () => {
             </Text>
             <Input
               type="color"
-              value={editColor}
-              onChange={(e) => setEditColor(e.target.value)}
+              value={draft.color}
+              onChange={(e) => patchDraft({ color: e.target.value })}
               w="full"
               h="8"
               p={0}
@@ -381,21 +428,121 @@ export const LayerEditor: React.FC = () => {
   );
 
   return (
-    <ResizableEditorLayout
-      header={
-        selected
-          ? {
-              title: selected.name,
-              subtitle: `${selected.type} • Z-Index: ${selected.zIndex}`,
-            }
-          : undefined
-      }
-      content={content}
-      leftPanel={leftPanel}
-      rightPanel={rightPanel}
-      leftPanelDefaultSize={20}
-      rightPanelDefaultSize={25}
-    />
+    <>
+      <ResizableEditorLayout
+        header={
+          selected
+            ? {
+                title: selected.name,
+                subtitle: `${selected.type} • Z-Index: ${selected.zIndex}`,
+              }
+            : undefined
+        }
+        content={content}
+        leftPanel={leftPanel}
+        rightPanel={rightPanel}
+        leftPanelDefaultSize={20}
+        rightPanelDefaultSize={25}
+      />
+
+      <EditorModal isOpen={createModal.isOpen} onClose={createModal.onClose} size="sm">
+        <EntityFormDialog
+          title="Create Layer"
+          onCancel={createModal.onClose}
+          onSubmit={handleCreateLayer}
+          submitLabel="Create Layer"
+          isSubmitDisabled={!newLayerName.trim()}
+          minWidth="420px"
+        >
+          <Box>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              color="gray.500"
+              mb={1}
+            >
+              Name
+            </Text>
+            <Input
+              value={newLayerName}
+              onChange={(e) => setNewLayerName(e.target.value)}
+              size="sm"
+              bg="gray.950"
+            />
+          </Box>
+          <HStack spacing={3}>
+            <Box flex={1}>
+              <Text
+                fontSize="10px"
+                fontWeight="black"
+                textTransform="uppercase"
+                color="gray.500"
+                mb={1}
+              >
+                Type
+              </Text>
+              <Select
+                value={newLayerType}
+                onChange={(e) => setNewLayerType(e.target.value as LayerType)}
+                size="sm"
+                bg="gray.950"
+              >
+                {LAYER_TYPE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Box>
+            <Box flex={1}>
+              <Text
+                fontSize="10px"
+                fontWeight="black"
+                textTransform="uppercase"
+                color="gray.500"
+                mb={1}
+              >
+                Icon
+              </Text>
+              <Select
+                value={newLayerIcon}
+                onChange={(e) => setNewLayerIcon(e.target.value)}
+                size="sm"
+                bg="gray.950"
+              >
+                {AVAILABLE_ICONS.map((icon) => (
+                  <option key={icon.value} value={icon.value}>
+                    {icon.label}
+                  </option>
+                ))}
+              </Select>
+            </Box>
+          </HStack>
+          <Box>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              color="gray.500"
+              mb={1}
+            >
+              Color
+            </Text>
+            <Input
+              type="color"
+              value={newLayerColor}
+              onChange={(e) => setNewLayerColor(e.target.value)}
+              w="full"
+              h="8"
+              p={0}
+              border="none"
+              cursor="pointer"
+            />
+          </Box>
+        </EntityFormDialog>
+      </EditorModal>
+    </>
   );
 };
 

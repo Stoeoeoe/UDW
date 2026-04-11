@@ -1,18 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Box,
-  VStack,
-  HStack,
-  Text,
-  Input,
-  Select,
-  FormControl,
-  FormLabel,
-  Button,
-  Flex,
-} from '@chakra-ui/react';
+import { Box, HStack, Text, Input, Select, FormControl, FormLabel, Flex } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType, EntityCategory } from '../../../types/schema';
+import { EntityFormDialog } from '../common';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -127,183 +117,174 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
   };
 
   return (
-    <Box p={6} minW="420px" bg="gray.900" border="1px" borderColor="gray.700" borderRadius="md">
-      <VStack spacing={5} align="stretch">
-        <Text fontWeight="bold" fontSize="lg" color="white">
-          New Entity Type
-        </Text>
+    <EntityFormDialog
+      title="New Entity Type"
+      onCancel={onClose}
+      onSubmit={handleCreate}
+      submitLabel="Create Entity Type"
+      isSubmitDisabled={!isValid}
+      minWidth="420px"
+    >
+      {/* Name */}
+      <FormControl isRequired>
+        <FormLabel fontSize="xs" color="gray.400">
+          Display Name
+        </FormLabel>
+        <Input
+          size="sm"
+          bg="gray.800"
+          color="white"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Treasure Chest"
+          autoFocus
+        />
+      </FormControl>
 
-        {/* Name */}
-        <FormControl isRequired>
+      {/* ID (editable, auto-derived from name) */}
+      <FormControl>
+        <FormLabel fontSize="xs" color="gray.400">
+          ID
+        </FormLabel>
+        <Input
+          size="sm"
+          bg="gray.800"
+          color="white"
+          fontFamily="mono"
+          value={customId}
+          onChange={(e) => setCustomId(e.target.value)}
+          placeholder={derivedId || 'auto-generated from name'}
+          isInvalid={isDuplicate}
+        />
+        {isDuplicate && (
+          <Text fontSize="10px" color="red.400" mt={1}>
+            ID already exists
+          </Text>
+        )}
+        {!customId && derivedId && (
+          <Text fontSize="10px" color="gray.600" mt={1}>
+            Will use:{' '}
+            <Box as="span" fontFamily="mono">
+              {derivedId}
+            </Box>
+          </Text>
+        )}
+      </FormControl>
+
+      {/* Category & Group */}
+      <HStack spacing={4} align="start">
+        <FormControl flex={1}>
           <FormLabel fontSize="xs" color="gray.400">
-            Display Name
+            Category
           </FormLabel>
-          <Input
+          <Select
             size="sm"
-            bg="gray.800"
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
             color="white"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Treasure Chest"
-            autoFocus
-          />
+            value={category}
+            onChange={(e) => setCategory(e.target.value as EntityCategory)}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value} style={{ background: '#1a202c' }}>
+                {c.icon} {c.label}
+              </option>
+            ))}
+          </Select>
         </FormControl>
 
-        {/* ID (editable, auto-derived from name) */}
-        <FormControl>
+        <FormControl flex={1}>
           <FormLabel fontSize="xs" color="gray.400">
-            ID
+            Group
           </FormLabel>
           <Input
             size="sm"
-            bg="gray.800"
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
             color="white"
-            fontFamily="mono"
-            value={customId}
-            onChange={(e) => setCustomId(e.target.value)}
-            placeholder={derivedId || 'auto-generated from name'}
-            isInvalid={isDuplicate}
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            placeholder="e.g. Interactables"
+            list="entity-groups"
           />
-          {isDuplicate && (
-            <Text fontSize="10px" color="red.400" mt={1}>
-              ID already exists
-            </Text>
+          {existingGroups.length > 0 && (
+            <datalist id="entity-groups">
+              {existingGroups.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
           )}
-          {!customId && derivedId && (
-            <Text fontSize="10px" color="gray.600" mt={1}>
-              Will use:{' '}
-              <Box as="span" fontFamily="mono">
-                {derivedId}
+        </FormControl>
+      </HStack>
+
+      {/* Icon & Color */}
+      <HStack spacing={4} align="start">
+        <FormControl flex={1}>
+          <FormLabel fontSize="xs" color="gray.400">
+            Icon
+          </FormLabel>
+          <Flex gap={1} flexWrap="wrap">
+            {COMMON_ICONS.map((ic) => (
+              <Box
+                key={ic}
+                w="28px"
+                h="28px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                cursor="pointer"
+                borderRadius="md"
+                bg={icon === ic ? 'blue.800' : 'transparent'}
+                borderWidth="1px"
+                borderColor={icon === ic ? 'blue.500' : 'transparent'}
+                _hover={{ bg: 'whiteAlpha.100' }}
+                onClick={() => setIcon(ic)}
+                fontSize="sm"
+              >
+                {ic}
               </Box>
-            </Text>
-          )}
+            ))}
+          </Flex>
         </FormControl>
 
-        {/* Category & Group */}
-        <HStack spacing={4} align="start">
-          <FormControl flex={1}>
-            <FormLabel fontSize="xs" color="gray.400">
-              Category
-            </FormLabel>
-            <Select
-              size="sm"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as EntityCategory)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value} style={{ background: '#1a202c' }}>
-                  {c.icon} {c.label}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl flex={1}>
-            <FormLabel fontSize="xs" color="gray.400">
-              Group
-            </FormLabel>
-            <Input
-              size="sm"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              value={group}
-              onChange={(e) => setGroup(e.target.value)}
-              placeholder="e.g. Interactables"
-              list="entity-groups"
-            />
-            {existingGroups.length > 0 && (
-              <datalist id="entity-groups">
-                {existingGroups.map((g) => (
-                  <option key={g} value={g} />
-                ))}
-              </datalist>
-            )}
-          </FormControl>
-        </HStack>
-
-        {/* Icon & Color */}
-        <HStack spacing={4} align="start">
-          <FormControl flex={1}>
-            <FormLabel fontSize="xs" color="gray.400">
-              Icon
-            </FormLabel>
-            <Flex gap={1} flexWrap="wrap">
-              {COMMON_ICONS.map((ic) => (
-                <Box
-                  key={ic}
-                  w="28px"
-                  h="28px"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  cursor="pointer"
-                  borderRadius="md"
-                  bg={icon === ic ? 'blue.800' : 'transparent'}
-                  borderWidth="1px"
-                  borderColor={icon === ic ? 'blue.500' : 'transparent'}
-                  _hover={{ bg: 'whiteAlpha.100' }}
-                  onClick={() => setIcon(ic)}
-                  fontSize="sm"
-                >
-                  {ic}
-                </Box>
-              ))}
-            </Flex>
-          </FormControl>
-
-          <FormControl w="100px" flexShrink={0}>
-            <FormLabel fontSize="xs" color="gray.400">
-              Color
-            </FormLabel>
-            <Flex gap={1} flexWrap="wrap">
-              {DEFAULT_COLORS.map((c) => (
-                <Box
-                  key={c}
-                  w="20px"
-                  h="20px"
-                  bg={c}
-                  borderRadius="sm"
-                  cursor="pointer"
-                  borderWidth="2px"
-                  borderColor={color === c ? 'white' : 'transparent'}
-                  _hover={{ transform: 'scale(1.2)' }}
-                  transition="all 0.1s"
-                  onClick={() => setColor(c)}
-                />
-              ))}
-            </Flex>
-          </FormControl>
-        </HStack>
-
-        {/* Description */}
-        <FormControl>
+        <FormControl w="100px" flexShrink={0}>
           <FormLabel fontSize="xs" color="gray.400">
-            Description
+            Color
           </FormLabel>
-          <Input
-            size="sm"
-            bg="gray.800"
-            color="white"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Brief description (optional)"
-          />
+          <Flex gap={1} flexWrap="wrap">
+            {DEFAULT_COLORS.map((c) => (
+              <Box
+                key={c}
+                w="20px"
+                h="20px"
+                bg={c}
+                borderRadius="sm"
+                cursor="pointer"
+                borderWidth="2px"
+                borderColor={color === c ? 'white' : 'transparent'}
+                _hover={{ transform: 'scale(1.2)' }}
+                transition="all 0.1s"
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </Flex>
         </FormControl>
+      </HStack>
 
-        {/* Actions */}
-        <HStack justify="flex-end" spacing={3} pt={2}>
-          <Button size="sm" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button size="sm" colorScheme="blue" isDisabled={!isValid} onClick={handleCreate}>
-            Create Entity Type
-          </Button>
-        </HStack>
-      </VStack>
-    </Box>
+      {/* Description */}
+      <FormControl>
+        <FormLabel fontSize="xs" color="gray.400">
+          Description
+        </FormLabel>
+        <Input
+          size="sm"
+          bg="gray.800"
+          color="white"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Brief description (optional)"
+        />
+      </FormControl>
+    </EntityFormDialog>
   );
 };

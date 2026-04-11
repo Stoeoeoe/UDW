@@ -17,8 +17,29 @@ Expected composition:
 
 - `ResizableEditorLayout` (`app/src/components/screens/common/ResizableEditorLayout.tsx`)
 - `ListPanel` (`app/src/components/screens/common/ListPanel.tsx`)
+- `EntityFormDialog` (`app/src/components/screens/common/EntityFormDialog.tsx`)
+- `useEntityFormDraft` (`app/src/components/screens/common/useEntityFormDraft.ts`)
 - `InspectorPanel` and `InspectorEmptyState` (`app/src/components/screens/common/InspectorPanel.tsx`)
 - `EmptyScreen` (`app/src/components/screens/common/EmptyScreen.tsx`)
+
+## Entity + Forms Model
+
+Treat each editor as a collection of entities plus one or more forms.
+
+Core model:
+
+1. Collection list: stable selection, add action, hover edit/delete actions.
+2. Create form: modal form used to create a new entity.
+3. Edit form: inspector form bound to the selected entity.
+4. Draft lifecycle: selected entity mapped to draft state via `useEntityFormDraft`.
+
+Rules:
+
+- Prefer one draft object per selected entity instead of many independent field states.
+- Reuse `EntityFormDialog` for create/edit modal shells.
+- Keep create and edit validation rules aligned where possible.
+- Prefer list hover actions (`itemActions`) over burying edit/delete only in inspector danger zones.
+- Prefer `onEditItem` and `onDeleteItem` on `ListPanel` for standard edit/delete actions.
 
 ## Left Panel Pattern
 
@@ -29,6 +50,7 @@ Required behavior:
 - Provide `onAdd` so the top-right plus button creates a new item.
 - Use `selectedId` + `onSelect` for deterministic selection state.
 - Use `itemActions` for hover actions (for example edit metadata and delete).
+- Prefer `onEditItem` + `onDeleteItem` first for common edit/delete actions.
 - Use `topContent` when a filter/search row is needed.
 - Avoid ad-hoc list row implementations unless the screen has a unique structural need.
 
@@ -40,6 +62,13 @@ When an item supports metadata editing and deletion:
 - Add a delete action in `itemActions` with destructive coloring and confirmation.
 - Keep action handlers side-effect safe (stop row selection side effects unless intended).
 
+For common cases, use:
+
+- `onEditItem` callback only.
+- `onDeleteItem` callback only.
+
+Use custom `itemActions` only for additional non-standard actions.
+
 ## Right Inspector Pattern
 
 The right panel should always represent current selection context.
@@ -47,6 +76,7 @@ The right panel should always represent current selection context.
 - No selection: render `InspectorEmptyState` with actionable hint text.
 - Selection present: render form controls grouped by concern.
 - If multiple contexts are possible, switch inspector content by priority (selected object first, fallback to tool/global state).
+- For delete affordances, prefer `InspectorPanel` footer with `onDelete` and `deleteLabel` instead of ad-hoc danger blocks.
 
 ## Bottom Panel Pattern
 

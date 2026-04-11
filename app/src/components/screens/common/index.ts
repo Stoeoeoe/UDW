@@ -1,6 +1,11 @@
 export { ListPanel } from './ListPanel';
 export type { ListPanelItem, ListPanelAction, ListPanelProps } from './ListPanel';
 
+export { EntityFormDialog } from './EntityFormDialog';
+export type { EntityFormDialogProps } from './EntityFormDialog';
+
+export { useEntityFormDraft } from './useEntityFormDraft';
+
 export { InspectorPanel, InspectorEmptyState } from './InspectorPanel';
 export type { InspectorSection, InspectorPanelProps } from './InspectorPanel';
 

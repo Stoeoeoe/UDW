@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, VStack, Text, Divider, Flex } from '@chakra-ui/react';
+import { Box, VStack, Text, Divider, Flex, HStack, Button } from '@chakra-ui/react';
+import { DeleteIcon } from '@chakra-ui/icons';
 import PanelHeader from '../../../components/common/PanelHeader';
 
 /**
@@ -18,6 +19,9 @@ export interface InspectorPanelProps {
   sections?: InspectorSection[];
   children?: React.ReactNode;
   emptyState?: React.ReactNode;
+  footerActions?: React.ReactNode;
+  onDelete?: () => void;
+  deleteLabel?: string;
 }
 
 export const InspectorPanel: React.FC<InspectorPanelProps> = ({
@@ -26,8 +30,12 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   sections,
   children,
   emptyState,
+  footerActions,
+  onDelete,
+  deleteLabel = 'Delete',
 }) => {
   const hasContent = children || (sections && sections.length > 0);
+  const hasFooter = Boolean(footerActions) || Boolean(onDelete);
 
   return (
     <Flex direction="column" h="full" overflow="hidden">
@@ -61,6 +69,25 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           </VStack>
         )}
       </Box>
+
+      {hasFooter && (
+        <Box borderTop="1px" borderColor="editor.border" p={3}>
+          <HStack justify="flex-end" spacing={2}>
+            {footerActions}
+            {onDelete && (
+              <Button
+                size="xs"
+                colorScheme="red"
+                variant="outline"
+                leftIcon={<DeleteIcon fontSize="10px" />}
+                onClick={onDelete}
+              >
+                {deleteLabel}
+              </Button>
+            )}
+          </HStack>
+        </Box>
+      )}
     </Flex>
   );
 };

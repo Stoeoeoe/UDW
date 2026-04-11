@@ -28,6 +28,7 @@ export const PropertiesPanel: React.FC = () => {
   const tilesets = useEditorStore((state) => state.tilesets);
   const moveEntity = useEditorStore((state) => state.moveEntity);
   const updateEntityLabel = useEditorStore((state) => state.updateEntityLabel);
+  const removeEntity = useEditorStore((state) => state.removeEntity);
 
   const [localPosition, setLocalPosition] = React.useState({ x: '', y: '' });
   const positionFocusRef = React.useRef({ x: false, y: false });
@@ -79,6 +80,13 @@ export const PropertiesPanel: React.FC = () => {
     moveEntity(selectedEntityId, [selectedEntity.position[0], parsedValue]);
   };
 
+  const handleDeleteSelectedEntity = () => {
+    if (!selectedEntity) return;
+    const label = selectedEntity.label || selectedEntity.id;
+    if (!confirm(`Delete entity "${label}"?`)) return;
+    removeEntity(selectedEntity.id);
+  };
+
   // Contextual rendering for Tileset mode
   if (editorMode === 'tilesets') {
     const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
@@ -99,6 +107,7 @@ export const PropertiesPanel: React.FC = () => {
   return (
     <InspectorPanel
       title={selectedEntity ? entityType?.displayName || 'Entity' : 'Selection'}
+      subtitle={selectedEntity ? selectedEntity.id : undefined}
       emptyState={
         <InspectorEmptyState
           icon="🔍"
@@ -106,6 +115,8 @@ export const PropertiesPanel: React.FC = () => {
           hint="Select an entity on the map to view and edit properties"
         />
       }
+      onDelete={selectedEntity ? handleDeleteSelectedEntity : undefined}
+      deleteLabel="Delete Entity"
     >
       {selectedEntity && (
         <VStack align="stretch" spacing={5}>

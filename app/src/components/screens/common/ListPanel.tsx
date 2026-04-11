@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, VStack, HStack, Text, IconButton, Flex, Tooltip } from '@chakra-ui/react';
 import PanelHeader from '../../../components/common/PanelHeader';
-import { AddIcon } from '@chakra-ui/icons';
+import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 
 /**
  * ListPanel - A reusable panel for displaying lists of items with optional actions.
@@ -41,6 +41,10 @@ export interface ListPanelProps {
   topContent?: React.ReactNode;
   actions?: React.ReactNode;
   autoSelectFirst?: boolean;
+  onEditItem?: (item: ListPanelItem) => void;
+  onDeleteItem?: (item: ListPanelItem) => void;
+  editActionLabel?: string;
+  deleteActionLabel?: string;
 }
 
 export const ListPanel: React.FC<ListPanelProps> = ({
@@ -55,6 +59,10 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   topContent,
   actions,
   autoSelectFirst = false,
+  onEditItem,
+  onDeleteItem,
+  editActionLabel = 'Edit',
+  deleteActionLabel = 'Delete',
 }) => {
   React.useEffect(() => {
     if (!onSelect || !autoSelectFirst) return;
@@ -104,6 +112,32 @@ export const ListPanel: React.FC<ListPanelProps> = ({
           <VStack spacing={1} align="stretch">
             {items.map((item) => {
               const isSelected = item.id === selectedId;
+              const resolvedActions: ListPanelAction[] = [
+                ...(onEditItem
+                  ? [
+                      {
+                        id: 'default-edit',
+                        label: editActionLabel,
+                        icon: <EditIcon fontSize="10px" />,
+                        ariaLabel: editActionLabel,
+                        onClick: onEditItem,
+                      } satisfies ListPanelAction,
+                    ]
+                  : []),
+                ...(itemActions ? itemActions(item) : []),
+                ...(onDeleteItem
+                  ? [
+                      {
+                        id: 'default-delete',
+                        label: deleteActionLabel,
+                        icon: <DeleteIcon fontSize="10px" />,
+                        ariaLabel: deleteActionLabel,
+                        hoverColor: 'red.300',
+                        onClick: onDeleteItem,
+                      } satisfies ListPanelAction,
+                    ]
+                  : []),
+              ];
 
               if (renderItem) {
                 return (
@@ -150,9 +184,9 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                       {item.badge}
                     </HStack>
 
-                    {itemActions && (
+                    {resolvedActions.length > 0 && (
                       <HStack spacing={1} opacity={0} _groupHover={{ opacity: 1 }}>
-                        {itemActions(item).map((action) => (
+                        {resolvedActions.map((action) => (
                           <Tooltip key={action.id} label={action.label} placement="right" hasArrow>
                             <IconButton
                               aria-label={action.ariaLabel || action.label}

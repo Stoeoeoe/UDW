@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   VStack,
   Box,
@@ -9,10 +9,41 @@ import {
   Circle,
   Spacer,
   useToast,
+  useDisclosure,
 } from '@chakra-ui/react';
-import { ListPanel, ListPanelItem, InspectorPanel, EmptyScreen } from '../common';
+import {
+  ListPanel,
+  ListPanelItem,
+  InspectorPanel,
+  EmptyScreen,
+  EntityFormDialog,
+  useEntityFormDraft,
+} from '../common';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { EditorModal } from '../../common/EditorModal';
+
+type TerrainDraft = {
+  id: string;
+  displayName: string;
+  color: string;
+};
+
+const EMPTY_TERRAIN_DRAFT: TerrainDraft = {
+  id: '',
+  displayName: '',
+  color: '#3182ce',
+};
+
+const terrainToDraft = (terrain: {
+  id: string;
+  displayName: string;
+  color: string;
+}): TerrainDraft => ({
+  id: terrain.id,
+  displayName: terrain.displayName,
+  color: terrain.color,
+});
 
 export const TerrainEditor: React.FC = () => {
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
@@ -23,6 +54,9 @@ export const TerrainEditor: React.FC = () => {
   const deleteTerrainType = useEditorStore((state) => state.deleteTerrainType);
 
   const toast = useToast();
+  const createModal = useDisclosure();
+  const [newTerrainName, setNewTerrainName] = React.useState('');
+  const [newTerrainColor, setNewTerrainColor] = React.useState('#3182ce');
 
   const items: ListPanelItem[] = terrainTypes.map((t) => ({
     id: t.id,
@@ -33,41 +67,48 @@ export const TerrainEditor: React.FC = () => {
 
   const selected = terrainTypes.find((t) => t.id === selectedTerrainId) || null;
 
-  const [editName, setEditName] = useState(selected?.displayName || '');
-  const [editId, setEditId] = useState(selected?.id || '');
-  const [editColor, setEditColor] = useState(selected?.color || '#3182ce');
-
-  // Sync local edit fields when selection changes
-  React.useEffect(() => {
-    setEditName(selected?.displayName || '');
-    setEditId(selected?.id || '');
-    setEditColor(selected?.color || '#3182ce');
-  }, [selected]);
+  const { draft, patchDraft } = useEntityFormDraft(selected, terrainToDraft, EMPTY_TERRAIN_DRAFT);
 
   const handleAdd = () => {
-    const id = `terrain-${Date.now()}`;
-    addTerrainType({ id, displayName: 'New Terrain', color: '#3182ce' });
+    createModal.onOpen();
+  };
+
+  const handleCreateTerrain = () => {
+    const displayName = newTerrainName.trim() || 'New Terrain';
+    const slug = displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    let id = slug || `terrain-${Date.now()}`;
+    let suffix = 2;
+    while (terrainTypes.some((entry) => entry.id === id)) {
+      id = `${slug || 'terrain'}-${suffix++}`;
+    }
+
+    addTerrainType({ id, displayName, color: newTerrainColor });
     setSelectedTerrain(id);
+    setNewTerrainName('');
+    setNewTerrainColor('#3182ce');
+    createModal.onClose();
     toast({ title: 'Terrain created', status: 'success', duration: 1500 });
   };
 
   const handleSave = () => {
     if (!selected) return;
     // If ID changed, delete+recreate (simple approach)
-    if (editId !== selected.id) {
+    if (draft.id !== selected.id) {
       deleteTerrainType(selected.id);
-      addTerrainType({ id: editId, displayName: editName, color: editColor });
-      setSelectedTerrain(editId);
+      addTerrainType({ id: draft.id, displayName: draft.displayName, color: draft.color });
+      setSelectedTerrain(draft.id);
     } else {
-      updateTerrainType(selected.id, { displayName: editName, color: editColor });
+      updateTerrainType(selected.id, { displayName: draft.displayName, color: draft.color });
     }
     toast({ title: 'Terrain updated', status: 'success', duration: 1200 });
   };
 
-  const handleDelete = () => {
-    if (!selected) return;
-    if (!confirm(`Delete terrain "${selected.displayName}"?`)) return;
-    deleteTerrainType(selected.id);
+  const deleteTerrain = (id: string, displayName: string) => {
+    if (!confirm(`Delete terrain "${displayName}"?`)) return;
+    deleteTerrainType(id);
     setSelectedTerrain(null);
     toast({ title: 'Terrain deleted', status: 'info', duration: 1200 });
   };
@@ -81,6 +122,13 @@ export const TerrainEditor: React.FC = () => {
       onAdd={handleAdd}
       autoSelectFirst={true}
       emptyMessage="No terrain types defined"
+      onEditItem={(item) => setSelectedTerrain(item.id)}
+      onDeleteItem={(item) => {
+        const terrain = terrainTypes.find((entry) => entry.id === item.id);
+        if (!terrain) return;
+        deleteTerrain(terrain.id, terrain.displayName);
+      }}
+      deleteActionLabel="Delete terrain"
     />
   );
 
@@ -93,6 +141,8 @@ export const TerrainEditor: React.FC = () => {
           <Text color="gray.500">No terrain selected</Text>
         </Box>
       }
+      onDelete={selected ? () => deleteTerrain(selected.id, selected.displayName) : undefined}
+      deleteLabel="Delete Terrain"
     >
       {selected && (
         <VStack align="stretch" spacing={3}>
@@ -106,7 +156,11 @@ export const TerrainEditor: React.FC = () => {
             >
               ID
             </Text>
-            <Input value={editId} onChange={(e) => setEditId(e.target.value)} bg="gray.950" />
+            <Input
+              value={draft.id}
+              onChange={(e) => patchDraft({ id: e.target.value })}
+              bg="gray.950"
+            />
           </Box>
 
           <Box>
@@ -119,7 +173,11 @@ export const TerrainEditor: React.FC = () => {
             >
               Display Name
             </Text>
-            <Input value={editName} onChange={(e) => setEditName(e.target.value)} bg="gray.950" />
+            <Input
+              value={draft.displayName}
+              onChange={(e) => patchDraft({ displayName: e.target.value })}
+              bg="gray.950"
+            />
           </Box>
 
           <Box>
@@ -135,16 +193,13 @@ export const TerrainEditor: React.FC = () => {
             <HStack>
               <Input
                 type="color"
-                value={editColor}
-                onChange={(e) => setEditColor(e.target.value)}
+                value={draft.color}
+                onChange={(e) => patchDraft({ color: e.target.value })}
                 w="16"
                 h="10"
                 p={0}
               />
               <Spacer />
-              <Button colorScheme="red" size="sm" onClick={handleDelete}>
-                Delete
-              </Button>
               <Button colorScheme="blue" size="sm" onClick={handleSave}>
                 Save
               </Button>
@@ -182,14 +237,64 @@ export const TerrainEditor: React.FC = () => {
   );
 
   return (
-    <ResizableEditorLayout
-      header={{ title: 'Terrain', subtitle: `${terrainTypes.length} types` }}
-      content={content}
-      leftPanel={leftPanel}
-      rightPanel={rightPanel}
-      leftPanelDefaultSize={20}
-      rightPanelDefaultSize={25}
-    />
+    <>
+      <ResizableEditorLayout
+        header={{ title: 'Terrain', subtitle: `${terrainTypes.length} types` }}
+        content={content}
+        leftPanel={leftPanel}
+        rightPanel={rightPanel}
+        leftPanelDefaultSize={20}
+        rightPanelDefaultSize={25}
+      />
+
+      <EditorModal isOpen={createModal.isOpen} onClose={createModal.onClose} size="sm">
+        <EntityFormDialog
+          title="Create Terrain"
+          onCancel={createModal.onClose}
+          onSubmit={handleCreateTerrain}
+          submitLabel="Create Terrain"
+          isSubmitDisabled={!newTerrainName.trim()}
+          minWidth="380px"
+        >
+          <Box>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              color="gray.500"
+              mb={1}
+            >
+              Display Name
+            </Text>
+            <Input
+              value={newTerrainName}
+              onChange={(e) => setNewTerrainName(e.target.value)}
+              size="sm"
+              bg="gray.950"
+            />
+          </Box>
+          <Box>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              color="gray.500"
+              mb={1}
+            >
+              Color
+            </Text>
+            <Input
+              type="color"
+              value={newTerrainColor}
+              onChange={(e) => setNewTerrainColor(e.target.value)}
+              w="full"
+              h="8"
+              p={0}
+            />
+          </Box>
+        </EntityFormDialog>
+      </EditorModal>
+    </>
   );
 };
 

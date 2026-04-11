@@ -13,9 +13,10 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
+import { IconPicker } from '../common/FormFields';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { InspectorEmptyState, InspectorPanel, ListPanel, ListPanelItem } from '../common';
+import { ListPanel, ListPanelItem } from '../common';
 import { EditorModal } from '../../common/EditorModal';
 import { CreateActorDialog } from './CreateActorDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
@@ -60,6 +61,7 @@ export const ActorEditor: React.FC = () => {
   const updateActor = useEditorStore((state) => state.updateActor);
   const deleteActor = useEditorStore((state) => state.deleteActor);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [search, setSearch] = React.useState('');
 
   const selectedActor = actors.find((a) => a.id === selectedActorId);
 
@@ -85,134 +87,53 @@ export const ActorEditor: React.FC = () => {
     [actors],
   );
 
+  const filteredActorItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return actorItems;
+    return actorItems.filter((item) => {
+      const hitLabel = item.label.toLowerCase().includes(query);
+      const hitSublabel = item.sublabel?.toLowerCase().includes(query);
+      return hitLabel || Boolean(hitSublabel);
+    });
+  }, [actorItems, search]);
+
   const handleDelete = async () => {
-    if (selectedActorId) {
-      await deleteActor(selectedActorId);
-    }
+    if (!selectedActor) return;
+    await deleteActorById(selectedActor.id, selectedActor.name);
+  };
+
+  const deleteActorById = async (id: string, name: string) => {
+    if (!confirm(`Delete actor "${name}"?`)) return;
+    await deleteActor(id);
   };
 
   const leftPanel = (
     <ListPanel
       title="Actors"
-      items={actorItems}
+      items={filteredActorItems}
       selectedId={selectedActorId}
       onSelect={setSelectedActor}
       onAdd={onOpen}
       autoSelectFirst={true}
       emptyMessage="No actors defined"
-    />
-  );
-
-  const rightPanel = (
-    <InspectorPanel
-      title={selectedActor?.name || 'Actor'}
-      subtitle={selectedActor ? selectedActor.id : undefined}
-      emptyState={
-        <InspectorEmptyState icon="👤" message="No Actor Selected" hint="Select an actor to edit" />
+      topContent={
+        <Input
+          size="xs"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search actors..."
+          bg="#0a0a0b"
+          borderColor="#333"
+          color="gray.100"
+        />
       }
-    >
-      {selectedActor && (
-        <VStack align="stretch" spacing={5}>
-          <VStack align="stretch" spacing={3}>
-            <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                ID
-              </FormLabel>
-              <Text fontSize="xs" fontFamily="mono" color="gray.400">
-                {selectedActor.id}
-              </Text>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Name
-              </FormLabel>
-              <Input
-                size="xs"
-                variant="filled"
-                bg="#0a0a0b"
-                color="white"
-                value={selectedActor.name}
-                onChange={(e) => updateActor(selectedActor.id, { name: e.target.value })}
-                _hover={{ bg: '#071018' }}
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Icon
-              </FormLabel>
-              <HStack spacing={2} mb={2}>
-                <Text fontSize="2xl">{selectedActor.icon}</Text>
-              </HStack>
-              <Flex gap={1} flexWrap="wrap">
-                {COMMON_ICONS.map((ic) => (
-                  <Box
-                    key={ic}
-                    w="26px"
-                    h="26px"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    cursor="pointer"
-                    borderRadius="md"
-                    bg={selectedActor.icon === ic ? 'blue.800' : 'transparent'}
-                    borderWidth="1px"
-                    borderColor={selectedActor.icon === ic ? 'blue.500' : 'transparent'}
-                    _hover={{ bg: 'whiteAlpha.100' }}
-                    onClick={() => updateActor(selectedActor.id, { icon: ic })}
-                    fontSize="sm"
-                  >
-                    {ic}
-                  </Box>
-                ))}
-              </Flex>
-            </FormControl>
-          </VStack>
-
-          <Divider borderColor="#071018" />
-
-          <Box>
-            <Text
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={2}
-            >
-              Danger Zone
-            </Text>
-            <Button
-              size="xs"
-              colorScheme="red"
-              variant="outline"
-              leftIcon={<DeleteIcon fontSize="10px" />}
-              onClick={handleDelete}
-            >
-              Delete Actor
-            </Button>
-          </Box>
-        </VStack>
-      )}
-    </InspectorPanel>
+      onDeleteItem={async (item) => {
+        const actor = actors.find((entry) => entry.id === item.id);
+        if (!actor) return;
+        await deleteActorById(actor.id, actor.name);
+      }}
+      deleteActionLabel="Delete actor"
+    />
   );
 
   const content =
@@ -224,8 +145,14 @@ export const ActorEditor: React.FC = () => {
         buttonLabel="Create First Actor"
         onCreate={onOpen}
       />
+    ) : !selectedActor ? (
+      <EmptyScreen
+        icon="👤"
+        title="No Actor Selected"
+        description="Select an actor from the list to edit details."
+      />
     ) : (
-      <ActorGrid actors={actors} selectedId={selectedActorId} onSelect={setSelectedActor} />
+      <ActorDetail actor={selectedActor} onUpdate={updateActor} onDelete={handleDelete} />
     );
 
   return (
@@ -237,9 +164,7 @@ export const ActorEditor: React.FC = () => {
         }}
         content={content}
         leftPanel={leftPanel}
-        rightPanel={rightPanel}
         leftPanelDefaultSize={18}
-        rightPanelDefaultSize={25}
       />
 
       <EditorModal isOpen={isOpen} onClose={onClose}>
@@ -249,49 +174,85 @@ export const ActorEditor: React.FC = () => {
   );
 };
 
-const ActorGrid: React.FC<{
-  actors: { id: string; name: string; icon: string }[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}> = ({ actors, selectedId, onSelect }) => (
+const ActorDetail: React.FC<{
+  actor: { id: string; name: string; icon: string };
+  onUpdate: (id: string, updates: Partial<{ name: string; icon: string }>) => void;
+  onDelete: () => void;
+}> = ({ actor, onUpdate, onDelete }) => (
   <Box p={6} overflowY="auto" h="full">
-    <Box
-      display="grid"
-      gridTemplateColumns="repeat(auto-fill, minmax(140px, 1fr))"
-      gap={3}
-      maxW="800px"
-      mx="auto"
-    >
-      {actors.map((actor) => (
-        <Box
-          key={actor.id}
-          p={3}
-          bg={selectedId === actor.id ? 'blue.900' : '#0a0a0b'}
-          borderWidth="1px"
-          borderColor={selectedId === actor.id ? 'blue.500' : '#1a1a2e'}
-          borderRadius="md"
-          cursor="pointer"
-          _hover={{
-            bg: selectedId === actor.id ? 'blue.900' : '#0f0f1a',
-            borderColor: selectedId === actor.id ? 'blue.500' : 'gray.600',
-          }}
-          transition="all 0.1s"
-          onClick={() => onSelect(actor.id)}
+    <VStack align="stretch" spacing={5} maxW="680px" mx="auto">
+      <VStack align="stretch" spacing={3}>
+        <FormControl>
+          <FormLabel
+            color="gray.500"
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            mb={1}
+          >
+            ID
+          </FormLabel>
+          <Text fontSize="xs" fontFamily="mono" color="gray.400">
+            {actor.id}
+          </Text>
+        </FormControl>
+
+        <FormControl>
+          <FormLabel
+            color="gray.500"
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            mb={1}
+          >
+            Name
+          </FormLabel>
+          <Input
+            size="xs"
+            variant="filled"
+            bg="#0a0a0b"
+            color="white"
+            value={actor.name}
+            onChange={(e) => onUpdate(actor.id, { name: e.target.value })}
+            _hover={{ bg: '#071018' }}
+          />
+        </FormControl>
+
+        <FormControl>
+          <FormLabel
+            color="gray.500"
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            mb={1}
+          >
+            Icon
+          </FormLabel>
+          <IconPicker
+            value={actor.icon}
+            onChange={(v) => onUpdate(actor.id, { icon: v ?? '' })}
+            icons={COMMON_ICONS}
+          />
+        </FormControl>
+      </VStack>
+
+      <Divider borderColor="#071018" />
+
+      <Box>
+        <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={2}>
+          Actions
+        </Text>
+        <Button
+          size="xs"
+          colorScheme="red"
+          variant="outline"
+          leftIcon={<DeleteIcon fontSize="10px" />}
+          onClick={onDelete}
         >
-          <VStack spacing={2} align="center">
-            <Text fontSize="3xl">{actor.icon}</Text>
-            <VStack spacing={0}>
-              <Text fontSize="xs" fontWeight="bold" color="white" textAlign="center" noOfLines={1}>
-                {actor.name}
-              </Text>
-              <Text fontSize="10px" color="gray.600" fontFamily="mono" noOfLines={1}>
-                {actor.id}
-              </Text>
-            </VStack>
-          </VStack>
-        </Box>
-      ))}
-    </Box>
+          Delete Actor
+        </Button>
+      </Box>
+    </VStack>
   </Box>
 );
 

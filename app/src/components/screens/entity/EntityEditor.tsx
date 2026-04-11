@@ -13,7 +13,6 @@ import {
   IconButton,
   useDisclosure,
   Divider,
-  Badge,
   NumberInput,
   NumberInputField,
   Tooltip,
@@ -33,12 +32,13 @@ async function loadSpriteBlob(path: string): Promise<Blob> {
 }
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { ListPanel, ListPanelItem, InspectorPanel, InspectorEmptyState } from '../common';
+import { ListPanel, ListPanelItem } from '../common';
 import { EntityType, PropertyDefinition, EntityCategory } from '../../../types/schema';
 import { EditorModal } from '../../common/EditorModal';
 import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { IconPicker, ColorPicker } from '../common/FormFields';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -50,7 +50,14 @@ const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
 
 type EditableEntityTypeKey = keyof Pick<
   EntityType,
-  'displayName' | 'category' | 'group' | 'icon' | 'placeholderColor'
+  | 'displayName'
+  | 'category'
+  | 'group'
+  | 'icon'
+  | 'placeholderColor'
+  | 'description'
+  | 'defaultSize'
+  | 'sprite'
 >;
 
 /**
@@ -64,6 +71,7 @@ export const EntityEditor: React.FC = () => {
   const updateEntityType = useEditorStore((state) => state.updateEntityType);
   const deleteEntityType = useEditorStore((state) => state.deleteEntityType);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [search, setSearch] = useState('');
 
   const selectedType = entityTypes.find((t) => t.id === selectedEntityTypeId);
 
@@ -92,6 +100,16 @@ export const EntityEditor: React.FC = () => {
     [entityTypes],
   );
 
+  const filteredEntityItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return entityItems;
+    return entityItems.filter((item) => {
+      const hitLabel = item.label.toLowerCase().includes(query);
+      const hitSublabel = item.sublabel?.toLowerCase().includes(query);
+      return hitLabel || Boolean(hitSublabel);
+    });
+  }, [entityItems, search]);
+
   const handlePropertyChange = (key: EditableEntityTypeKey, value: unknown) => {
     if (selectedEntityTypeId && selectedType) {
       updateEntityType(selectedEntityTypeId, { [key]: value } as Partial<EntityType>);
@@ -106,8 +124,15 @@ export const EntityEditor: React.FC = () => {
 
   const handleDelete = async () => {
     if (selectedEntityTypeId) {
-      await deleteEntityType(selectedEntityTypeId);
+      const selectedEntity = entityTypes.find((entry) => entry.id === selectedEntityTypeId);
+      if (!selectedEntity) return;
+      await deleteEntityTypeById(selectedEntity.id, selectedEntity.displayName);
     }
+  };
+
+  const deleteEntityTypeById = async (id: string, displayName: string) => {
+    if (!confirm(`Delete entity type "${displayName}"?`)) return;
+    await deleteEntityType(id);
   };
 
   // Collect existing groups for autocomplete
@@ -123,277 +148,33 @@ export const EntityEditor: React.FC = () => {
   const leftPanel = (
     <ListPanel
       title="Entity Types"
-      items={entityItems}
+      items={filteredEntityItems}
       selectedId={selectedEntityTypeId}
       onSelect={setSelectedEntityType}
       onAdd={onOpen}
       autoSelectFirst={true}
       emptyMessage="No entity types defined"
+      topContent={
+        <Input
+          size="xs"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search entity types..."
+          bg="#0a0a0b"
+          borderColor="#333"
+          color="gray.100"
+        />
+      }
+      onDeleteItem={async (item) => {
+        const entityType = entityTypes.find((entry) => entry.id === item.id);
+        if (!entityType) return;
+        await deleteEntityTypeById(entityType.id, entityType.displayName);
+      }}
+      deleteActionLabel="Delete entity type"
     />
   );
 
-  // Right panel: inspector for the selected entity type
-  const rightPanel = (
-    <InspectorPanel
-      title={selectedType?.displayName || 'Entity'}
-      subtitle={
-        selectedType
-          ? `${selectedType.category} • ${selectedType.properties.length} properties`
-          : undefined
-      }
-      emptyState={
-        <InspectorEmptyState
-          icon="🎯"
-          message="No Entity Selected"
-          hint="Select an entity type to edit its definition"
-        />
-      }
-    >
-      {selectedType && (
-        <VStack align="stretch" spacing={5}>
-          {/* Identity */}
-          <VStack align="stretch" spacing={3}>
-            <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                ID
-              </FormLabel>
-              <Text fontSize="xs" fontFamily="mono" color="gray.400">
-                {selectedType.id}
-              </Text>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Display Name
-              </FormLabel>
-              <Input
-                size="xs"
-                variant="filled"
-                bg="#0a0a0b"
-                color="white"
-                value={selectedType.displayName}
-                onChange={(e) => handlePropertyChange('displayName', e.target.value)}
-                _hover={{ bg: '#071018' }}
-              />
-            </FormControl>
-
-            <HStack spacing={3}>
-              <FormControl flex={1}>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Category
-                </FormLabel>
-                <Select
-                  size="xs"
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  value={selectedType.category}
-                  onChange={(e) => handlePropertyChange('category', e.target.value)}
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value} style={{ background: '#0a0a0b' }}>
-                      {c.icon} {c.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl flex={1}>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Group
-                </FormLabel>
-                <Input
-                  size="xs"
-                  variant="filled"
-                  bg="#0a0a0b"
-                  color="white"
-                  value={selectedType.group ?? ''}
-                  onChange={(e) => handlePropertyChange('group', e.target.value || undefined)}
-                  placeholder="Ungrouped"
-                  list="inspector-entity-groups"
-                  _hover={{ bg: '#071018' }}
-                />
-                {existingGroups.length > 0 && (
-                  <datalist id="inspector-entity-groups">
-                    {existingGroups.map((g) => (
-                      <option key={g} value={g} />
-                    ))}
-                  </datalist>
-                )}
-              </FormControl>
-            </HStack>
-
-            <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Description
-              </FormLabel>
-              <Input
-                size="xs"
-                variant="filled"
-                bg="#0a0a0b"
-                color="white"
-                value={selectedType.description ?? ''}
-                onChange={(e) => handlePropertyChange('description', e.target.value || undefined)}
-                placeholder="Optional"
-                _hover={{ bg: '#071018' }}
-              />
-            </FormControl>
-
-            <HStack spacing={3}>
-              <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Icon
-                </FormLabel>
-                <Text fontSize="lg">{selectedType.icon || '📦'}</Text>
-              </FormControl>
-              <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Color
-                </FormLabel>
-                <Circle size="16px" bg={selectedType.placeholderColor} />
-              </FormControl>
-            </HStack>
-          </VStack>
-
-          <Divider borderColor="#071018" />
-
-          {/* Size */}
-          <VStack align="stretch" spacing={3}>
-            <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-              Size (px)
-            </Text>
-            <HStack spacing={2}>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                W
-              </Text>
-              <NumberInput
-                size="xs"
-                min={1}
-                value={selectedType.defaultSize?.[0] ?? 16}
-                precision={0}
-                onChange={(_, val) => {
-                  if (!isNaN(val)) {
-                    handlePropertyChange('defaultSize', [
-                      Math.round(val),
-                      selectedType.defaultSize?.[1] ?? 16,
-                    ]);
-                  }
-                }}
-                flex={1}
-              >
-                <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
-              </NumberInput>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                H
-              </Text>
-              <NumberInput
-                size="xs"
-                min={1}
-                value={selectedType.defaultSize?.[1] ?? 16}
-                precision={0}
-                onChange={(_, val) => {
-                  if (!isNaN(val)) {
-                    handlePropertyChange('defaultSize', [
-                      selectedType.defaultSize?.[0] ?? 16,
-                      Math.round(val),
-                    ]);
-                  }
-                }}
-                flex={1}
-              >
-                <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
-              </NumberInput>
-            </HStack>
-          </VStack>
-
-          <Divider borderColor="#071018" />
-
-          {/* Sprite */}
-          <EntitySpriteEditor
-            spritePath={selectedType.sprite?.path}
-            onPathChange={(path) => handlePropertyChange('sprite', path ? { path } : undefined)}
-            onSizeChange={(size) => handlePropertyChange('defaultSize', size)}
-          />
-
-          <Divider borderColor="#071018" />
-
-          {/* Property Definitions */}
-          <PropertyDefinitionEditor
-            properties={selectedType.properties}
-            onChange={handlePropertiesChange}
-          />
-
-          <Divider borderColor="#071018" />
-
-          {/* Danger Zone */}
-          <Box>
-            <Text
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={2}
-            >
-              Danger Zone
-            </Text>
-            <Button
-              size="xs"
-              colorScheme="red"
-              variant="outline"
-              leftIcon={<DeleteIcon fontSize="10px" />}
-              onClick={handleDelete}
-            >
-              Delete Entity Type
-            </Button>
-          </Box>
-        </VStack>
-      )}
-    </InspectorPanel>
-  );
-
-  // Main content: summary view
+  // Main content: master-detail
   const content =
     entityTypes.length === 0 ? (
       <EmptyScreen
@@ -403,11 +184,19 @@ export const EntityEditor: React.FC = () => {
         buttonLabel="Create First Entity"
         onCreate={onOpen}
       />
+    ) : !selectedType ? (
+      <EmptyScreen
+        icon="🎯"
+        title="No Entity Type Selected"
+        description="Select an entity type from the list to edit its data and property schema."
+      />
     ) : (
-      <EntityTypeGrid
-        entityTypes={entityTypes}
-        selectedId={selectedEntityTypeId}
-        onSelect={setSelectedEntityType}
+      <EntityTypeDetail
+        selectedType={selectedType}
+        existingGroups={existingGroups}
+        onPropertyChange={handlePropertyChange}
+        onPropertiesChange={handlePropertiesChange}
+        onDelete={handleDelete}
       />
     );
 
@@ -420,9 +209,7 @@ export const EntityEditor: React.FC = () => {
         }}
         content={content}
         leftPanel={leftPanel}
-        rightPanel={rightPanel}
         leftPanelDefaultSize={18}
-        rightPanelDefaultSize={25}
       />
 
       <EditorModal isOpen={isOpen} onClose={onClose}>
@@ -432,105 +219,252 @@ export const EntityEditor: React.FC = () => {
   );
 };
 
-/**
- * Grid view of entity types grouped by their group field
- */
-const EntityTypeGrid: React.FC<{
-  entityTypes: EntityType[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}> = ({ entityTypes, selectedId, onSelect }) => {
-  const grouped = useMemo(() => {
-    const groups: Record<string, EntityType[]> = {};
-    for (const et of entityTypes) {
-      const groupName = et.group || 'Ungrouped';
-      if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(et);
-    }
-    return groups;
-  }, [entityTypes]);
-
-  const groupNames = Object.keys(grouped).sort((a, b) => {
-    if (a === 'Ungrouped') return 1;
-    if (b === 'Ungrouped') return -1;
-    return a.localeCompare(b);
-  });
-
+const EntityTypeDetail: React.FC<{
+  selectedType: EntityType;
+  existingGroups: string[];
+  onPropertyChange: (key: EditableEntityTypeKey, value: unknown) => void;
+  onPropertiesChange: (properties: PropertyDefinition[]) => void;
+  onDelete: () => void;
+}> = ({ selectedType, existingGroups, onPropertyChange, onPropertiesChange, onDelete }) => {
   return (
     <Box p={6} overflowY="auto" h="full">
-      <VStack spacing={6} align="stretch" maxW="800px" mx="auto">
-        {groupNames.map((groupName) => (
-          <Box key={groupName}>
-            <HStack spacing={2} mb={3}>
-              <Text
-                fontSize="xs"
+      <VStack align="stretch" spacing={5} maxW="760px" mx="auto">
+        <VStack align="stretch" spacing={3}>
+          <FormControl>
+            <FormLabel
+              color="gray.500"
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              mb={1}
+            >
+              ID
+            </FormLabel>
+            <Text fontSize="xs" fontFamily="mono" color="gray.400">
+              {selectedType.id}
+            </Text>
+          </FormControl>
+
+          <FormControl>
+            <FormLabel
+              color="gray.500"
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              mb={1}
+            >
+              Display Name
+            </FormLabel>
+            <Input
+              size="xs"
+              variant="filled"
+              bg="#0a0a0b"
+              color="white"
+              value={selectedType.displayName}
+              onChange={(e) => onPropertyChange('displayName', e.target.value)}
+              _hover={{ bg: '#071018' }}
+            />
+          </FormControl>
+
+          <HStack spacing={3}>
+            <FormControl flex={1}>
+              <FormLabel
+                color="gray.500"
+                fontSize="10px"
                 fontWeight="black"
                 textTransform="uppercase"
-                letterSpacing="wider"
-                color="gray.500"
+                mb={1}
               >
-                {groupName}
-              </Text>
-              <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-                {grouped[groupName].length}
-              </Badge>
-            </HStack>
-            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(160px, 1fr))" gap={3}>
-              {grouped[groupName].map((et) => (
-                <Box
-                  key={et.id}
-                  p={3}
-                  bg={selectedId === et.id ? 'blue.900' : '#0a0a0b'}
-                  borderWidth="1px"
-                  borderColor={selectedId === et.id ? 'blue.500' : '#1a1a2e'}
-                  borderRadius="md"
-                  cursor="pointer"
-                  _hover={{
-                    bg: selectedId === et.id ? 'blue.900' : '#0f0f1a',
-                    borderColor: selectedId === et.id ? 'blue.500' : 'gray.600',
-                  }}
-                  transition="all 0.1s"
-                  onClick={() => onSelect(et.id)}
-                >
-                  <VStack spacing={2} align="center">
-                    <Box
-                      w="36px"
-                      h="36px"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      bg={et.placeholderColor}
-                      borderRadius="md"
-                      fontSize="lg"
-                    >
-                      {et.icon || '📦'}
-                    </Box>
-                    <VStack spacing={0}>
-                      <Text
-                        fontSize="xs"
-                        fontWeight="bold"
-                        color="white"
-                        textAlign="center"
-                        noOfLines={1}
-                      >
-                        {et.displayName}
-                      </Text>
-                      <Text fontSize="10px" color="gray.600" textAlign="center">
-                        {et.category}
-                      </Text>
-                    </VStack>
-                    {et.properties.length > 0 && (
-                      <Text fontSize="9px" color="gray.600">
-                        {et.properties.length} prop
-                        {et.properties.length !== 1 ? 's' : ''}
-                      </Text>
-                    )}
-                  </VStack>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        ))}
+                Category
+              </FormLabel>
+              <Select
+                size="xs"
+                bg="#0a0a0b"
+                borderColor="#1a1a2e"
+                color="white"
+                value={selectedType.category}
+                onChange={(e) => onPropertyChange('category', e.target.value)}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value} style={{ background: '#0a0a0b' }}>
+                    {c.icon} {c.label}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl flex={1}>
+              <FormLabel
+                color="gray.500"
+                fontSize="10px"
+                fontWeight="black"
+                textTransform="uppercase"
+                mb={1}
+              >
+                Group
+              </FormLabel>
+              <Input
+                size="xs"
+                variant="filled"
+                bg="#0a0a0b"
+                color="white"
+                value={selectedType.group ?? ''}
+                onChange={(e) => onPropertyChange('group', e.target.value || undefined)}
+                placeholder="Ungrouped"
+                list="entity-groups"
+                _hover={{ bg: '#071018' }}
+              />
+              {existingGroups.length > 0 && (
+                <datalist id="entity-groups">
+                  {existingGroups.map((g) => (
+                    <option key={g} value={g} />
+                  ))}
+                </datalist>
+              )}
+            </FormControl>
+          </HStack>
+
+          <FormControl>
+            <FormLabel
+              color="gray.500"
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              mb={1}
+            >
+              Description
+            </FormLabel>
+            <Input
+              size="xs"
+              variant="filled"
+              bg="#0a0a0b"
+              color="white"
+              value={selectedType.description ?? ''}
+              onChange={(e) => onPropertyChange('description', e.target.value || undefined)}
+              placeholder="Optional"
+              _hover={{ bg: '#071018' }}
+            />
+          </FormControl>
+
+          <VStack align="stretch" spacing={3}>
+            <FormControl>
+              <FormLabel
+                color="gray.500"
+                fontSize="10px"
+                fontWeight="black"
+                textTransform="uppercase"
+                mb={1}
+              >
+                Icon
+              </FormLabel>
+              <IconPicker value={selectedType.icon} onChange={(v) => onPropertyChange('icon', v)} />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel
+                color="gray.500"
+                fontSize="10px"
+                fontWeight="black"
+                textTransform="uppercase"
+                mb={1}
+              >
+                Color
+              </FormLabel>
+              <ColorPicker
+                value={selectedType.placeholderColor}
+                onChange={(c) => onPropertyChange('placeholderColor', c)}
+              />
+            </FormControl>
+          </VStack>
+        </VStack>
+
+        <Divider borderColor="#071018" />
+
+        <VStack align="stretch" spacing={3}>
+          <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
+            Size (px)
+          </Text>
+          <HStack spacing={2}>
+            <Text fontSize="xs" color="gray.400" flexShrink={0}>
+              W
+            </Text>
+            <NumberInput
+              size="xs"
+              min={1}
+              value={selectedType.defaultSize?.[0] ?? 16}
+              precision={0}
+              onChange={(_, val) => {
+                if (!isNaN(val)) {
+                  onPropertyChange('defaultSize', [
+                    Math.round(val),
+                    selectedType.defaultSize?.[1] ?? 16,
+                  ]);
+                }
+              }}
+              flex={1}
+            >
+              <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+            </NumberInput>
+            <Text fontSize="xs" color="gray.400" flexShrink={0}>
+              H
+            </Text>
+            <NumberInput
+              size="xs"
+              min={1}
+              value={selectedType.defaultSize?.[1] ?? 16}
+              precision={0}
+              onChange={(_, val) => {
+                if (!isNaN(val)) {
+                  onPropertyChange('defaultSize', [
+                    selectedType.defaultSize?.[0] ?? 16,
+                    Math.round(val),
+                  ]);
+                }
+              }}
+              flex={1}
+            >
+              <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+            </NumberInput>
+          </HStack>
+        </VStack>
+
+        <Divider borderColor="#071018" />
+
+        <EntitySpriteEditor
+          spritePath={selectedType.sprite?.path}
+          onPathChange={(path) => onPropertyChange('sprite', path ? { path } : undefined)}
+          onSizeChange={(size) => onPropertyChange('defaultSize', size)}
+        />
+
+        <Divider borderColor="#071018" />
+
+        <PropertyDefinitionEditor
+          properties={selectedType.properties}
+          onChange={onPropertiesChange}
+        />
+
+        <Divider borderColor="#071018" />
+
+        <Box>
+          <Text
+            color="gray.500"
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            mb={2}
+          >
+            Actions
+          </Text>
+          <Button
+            size="xs"
+            colorScheme="red"
+            variant="outline"
+            leftIcon={<DeleteIcon fontSize="10px" />}
+            onClick={onDelete}
+          >
+            Delete Entity Type
+          </Button>
+        </Box>
       </VStack>
     </Box>
   );
