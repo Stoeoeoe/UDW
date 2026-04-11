@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, VStack, HStack, Text, IconButton, Flex } from '@chakra-ui/react';
+import { Box, VStack, HStack, Text, IconButton, Flex, Tooltip } from '@chakra-ui/react';
 import PanelHeader from '../../../components/common/PanelHeader';
 import { AddIcon } from '@chakra-ui/icons';
 
@@ -17,6 +17,17 @@ export interface ListPanelItem {
   disabled?: boolean;
 }
 
+export interface ListPanelAction {
+  id: string;
+  label: string;
+  icon: React.ReactElement;
+  onClick: (item: ListPanelItem) => void;
+  ariaLabel?: string;
+  color?: string;
+  hoverColor?: string;
+  hoverBg?: string;
+}
+
 export interface ListPanelProps {
   title: string;
   items: ListPanelItem[];
@@ -26,6 +37,8 @@ export interface ListPanelProps {
   onRemove?: (id: string) => void;
   emptyMessage?: string;
   renderItem?: (item: ListPanelItem, isSelected: boolean) => React.ReactNode;
+  itemActions?: (item: ListPanelItem) => ListPanelAction[];
+  topContent?: React.ReactNode;
   actions?: React.ReactNode;
   autoSelectFirst?: boolean;
 }
@@ -38,6 +51,8 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   onAdd,
   emptyMessage = 'No items',
   renderItem,
+  itemActions,
+  topContent,
   actions,
   autoSelectFirst = false,
 }) => {
@@ -74,6 +89,12 @@ export const ListPanel: React.FC<ListPanelProps> = ({
       />
 
       {/* Items */}
+      {topContent && (
+        <Box px={2} py={2} borderBottom="1px" borderColor="editor.border">
+          {topContent}
+        </Box>
+      )}
+
       <Box flex={1} overflowY="auto" p={1}>
         {items.length === 0 ? (
           <Text fontSize="xs" color="gray.600" textAlign="center" mt={4} fontStyle="italic">
@@ -106,25 +127,53 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                   _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.50' }}
                   onClick={() => !item.disabled && onSelect?.(item.id)}
                   transition="all 0.1s"
+                  role="group"
                 >
-                  <HStack spacing={2}>
-                    {item.icon}
-                    <VStack align="start" spacing={0} flex={1}>
-                      <Text
-                        fontSize="xs"
-                        fontWeight={isSelected ? 'bold' : 'normal'}
-                        color="gray.200"
-                      >
-                        {item.label}
-                      </Text>
-                      {item.sublabel && (
-                        <Text fontSize="10px" color="gray.500">
-                          {item.sublabel}
+                  <Flex align="center" justify="space-between" gap={2}>
+                    <HStack spacing={2} flex={1} minW={0}>
+                      {item.icon}
+                      <VStack align="start" spacing={0} flex={1} minW={0}>
+                        <Text
+                          fontSize="xs"
+                          fontWeight={isSelected ? 'bold' : 'normal'}
+                          color="gray.200"
+                          noOfLines={1}
+                        >
+                          {item.label}
                         </Text>
-                      )}
-                    </VStack>
-                    {item.badge}
-                  </HStack>
+                        {item.sublabel && (
+                          <Text fontSize="10px" color="gray.500" noOfLines={1}>
+                            {item.sublabel}
+                          </Text>
+                        )}
+                      </VStack>
+                      {item.badge}
+                    </HStack>
+
+                    {itemActions && (
+                      <HStack spacing={1} opacity={0} _groupHover={{ opacity: 1 }}>
+                        {itemActions(item).map((action) => (
+                          <Tooltip key={action.id} label={action.label} placement="right" hasArrow>
+                            <IconButton
+                              aria-label={action.ariaLabel || action.label}
+                              icon={action.icon}
+                              size="xs"
+                              variant="ghost"
+                              color={action.color || 'gray.400'}
+                              _hover={{
+                                color: action.hoverColor || 'white',
+                                bg: action.hoverBg || 'whiteAlpha.100',
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                action.onClick(item);
+                              }}
+                            />
+                          </Tooltip>
+                        ))}
+                      </HStack>
+                    )}
+                  </Flex>
                 </Box>
               );
             })}

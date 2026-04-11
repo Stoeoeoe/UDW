@@ -7,9 +7,6 @@ import {
   Input,
   Button,
   Circle,
-  Flex,
-  IconButton,
-  Tooltip,
   Select,
   useToast,
 } from '@chakra-ui/react';
@@ -155,75 +152,27 @@ export const LayerEditor: React.FC = () => {
       onAdd={handleAdd}
       autoSelectFirst
       emptyMessage="No layer definitions"
-      renderItem={(item, isSelected) => {
-        const def = layerDefinitions.find((d) => d.id === item.id)!;
-        return (
-          <Box
-            px={3}
-            py={2}
-            rounded="md"
-            cursor="pointer"
-            bg={isSelected ? 'blue.900' : 'transparent'}
-            border="1px"
-            borderColor={isSelected ? 'blue.500' : 'transparent'}
-            _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.50' }}
-            transition="all 0.1s"
-            role="group"
-            onClick={() => setSelectedLayerDefinition(item.id)}
-          >
-            <Flex align="center" justify="space-between">
-              <HStack spacing={2} flex={1} minW={0}>
-                <LayerDefIcon icon={def.icon} color={def.color} />
-                <VStack align="start" spacing={0} flex={1} minW={0}>
-                  <Text
-                    fontSize="xs"
-                    fontWeight={isSelected ? 'bold' : 'normal'}
-                    color={isSelected ? 'white' : 'gray.200'}
-                    noOfLines={1}
-                  >
-                    {item.label}
-                  </Text>
-                  {item.sublabel && (
-                    <Text fontSize="10px" color="gray.500">
-                      {item.sublabel}
-                    </Text>
-                  )}
-                </VStack>
-              </HStack>
-              <Flex align="center" gap={1} opacity={0} _groupHover={{ opacity: 1 }}>
-                <Tooltip label="Edit" placement="right" hasArrow>
-                  <IconButton
-                    aria-label="Edit layer definition"
-                    icon={<EditIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedLayerDefinition(item.id);
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="Delete" placement="right" hasArrow>
-                  <IconButton
-                    aria-label="Delete layer definition"
-                    icon={<DeleteIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'red.300', bg: 'whiteAlpha.100' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(def.id, def.name);
-                    }}
-                  />
-                </Tooltip>
-              </Flex>
-            </Flex>
-          </Box>
-        );
-      }}
+      itemActions={(item) => [
+        {
+          id: 'edit',
+          label: 'Edit',
+          icon: <EditIcon fontSize="10px" />,
+          ariaLabel: 'Edit layer definition',
+          onClick: () => setSelectedLayerDefinition(item.id),
+        },
+        {
+          id: 'delete',
+          label: 'Delete',
+          icon: <DeleteIcon fontSize="10px" />,
+          ariaLabel: 'Delete layer definition',
+          hoverColor: 'red.300',
+          onClick: () => {
+            const def = layerDefinitions.find((entry) => entry.id === item.id);
+            if (!def) return;
+            handleDelete(def.id, def.name);
+          },
+        },
+      ]}
     />
   );
 

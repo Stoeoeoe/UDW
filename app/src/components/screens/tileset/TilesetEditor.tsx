@@ -1,15 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  Flex,
-  Box,
-  useDisclosure,
-  IconButton,
-  Tooltip,
-  useToast,
-  Text,
-  VStack,
-  Button,
-} from '@chakra-ui/react';
+import { Flex, Box, useDisclosure, useToast, Text, VStack, Button } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProject } from '../../../hooks/useProject';
@@ -58,88 +48,44 @@ export const TilesetEditor: React.FC = () => {
       autoSelectFirst={true}
       emptyMessage="No tilesets imported"
       onAdd={onCreatorOpen}
-      renderItem={(item, isSelected) => {
-        const ts = Array.from(tilesets.values()).find((t) => t.id === item.id)!;
-        return (
-          <Box
-            px={3}
-            py={2}
-            rounded="md"
-            cursor={item.disabled ? 'not-allowed' : 'pointer'}
-            bg={isSelected ? 'blue.900' : 'transparent'}
-            border="1px"
-            borderColor={isSelected ? 'blue.500' : 'transparent'}
-            _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.50' }}
-            transition="all 0.1s"
-            role="group"
-            onClick={() => !item.disabled && setActiveTileset(item.id)}
-          >
-            <Flex align="center" justify="space-between">
-              <Box flex={1} minW={0}>
-                <Text
-                  fontSize="xs"
-                  fontWeight={isSelected ? 'bold' : 'normal'}
-                  color={isSelected ? 'white' : 'gray.200'}
-                  noOfLines={1}
-                >
-                  {item.label}
-                </Text>
-                {item.sublabel && (
-                  <Text fontSize="10px" color="gray.500">
-                    {item.sublabel}
-                  </Text>
-                )}
-              </Box>
-              <Flex align="center" gap={1} opacity={0} _groupHover={{ opacity: 1 }}>
-                <Tooltip label="Edit tileset" placement="right" hasArrow>
-                  <IconButton
-                    aria-label="Edit Tileset"
-                    icon={<EditIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (activeTilesetId !== ts.id) setActiveTileset(ts.id);
-                      onMetaOpen();
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="Delete tileset" placement="right" hasArrow>
-                  <IconButton
-                    aria-label="Delete Tileset"
-                    icon={<DeleteIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'red.300', bg: 'whiteAlpha.100' }}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (
-                        confirm(
-                          `Delete tileset "${ts.name}"? This removes metadata but not the image file.`,
-                        )
-                      ) {
-                        try {
-                          await useEditorStore.getState().deleteTileset(ts.id);
-                          toast({ title: 'Tileset deleted', status: 'info' });
-                        } catch (err: unknown) {
-                          toast({
-                            title: 'Failed to delete',
-                            description: err instanceof Error ? err.message : 'Unknown error',
-                            status: 'error',
-                          });
-                        }
-                      }
-                    }}
-                  />
-                </Tooltip>
-              </Flex>
-            </Flex>
-          </Box>
-        );
-      }}
+      itemActions={(item) => [
+        {
+          id: 'edit',
+          label: 'Edit tileset',
+          icon: <EditIcon fontSize="10px" />,
+          ariaLabel: 'Edit Tileset',
+          onClick: () => {
+            if (activeTilesetId !== item.id) setActiveTileset(item.id);
+            onMetaOpen();
+          },
+        },
+        {
+          id: 'delete',
+          label: 'Delete tileset',
+          icon: <DeleteIcon fontSize="10px" />,
+          ariaLabel: 'Delete Tileset',
+          hoverColor: 'red.300',
+          onClick: async () => {
+            const ts = tilesets.get(item.id);
+            if (!ts) return;
+
+            if (
+              confirm(`Delete tileset "${ts.name}"? This removes metadata but not the image file.`)
+            ) {
+              try {
+                await useEditorStore.getState().deleteTileset(ts.id);
+                toast({ title: 'Tileset deleted', status: 'info' });
+              } catch (err: unknown) {
+                toast({
+                  title: 'Failed to delete',
+                  description: err instanceof Error ? err.message : 'Unknown error',
+                  status: 'error',
+                });
+              }
+            }
+          },
+        },
+      ]}
     />
   );
 
