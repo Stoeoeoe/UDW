@@ -9,6 +9,7 @@ import {
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { setupIpcHandlers } from './ipcHandlers';
+import { setupLuaLSHandlers } from './luaLanguageServer';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
@@ -127,6 +128,7 @@ function createWindow() {
 
   // Initialize IPC Handlers
   setupIpcHandlers(win);
+  setupLuaLSHandlers(win);
   setupApplicationMenu();
 
   // Test active push message to Renderer-process.

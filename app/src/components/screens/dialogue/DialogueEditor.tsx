@@ -22,11 +22,7 @@ import {
   PopoverBody,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, EditIcon, WarningIcon } from '@chakra-ui/icons';
-import CodeMirror from '@uiw/react-codemirror';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { StreamLanguage } from '@codemirror/language';
-import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
-import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import {
   DialogueChoiceNode,
@@ -1095,7 +1091,7 @@ export const DialogueEditor: React.FC = () => {
 
     const timeout = setTimeout(() => {
       setActionLuaValidation(validateLuaChunk(selectedNode.lua));
-    }, 250);
+    }, 800);
 
     return () => {
       clearTimeout(timeout);
@@ -1117,6 +1113,21 @@ export const DialogueEditor: React.FC = () => {
     }
   }, [selectedDialogue, selectedNodeId]);
 
+  // Delete selected node on Delete / Backspace when focus is on the timeline (not an input)
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+      const tag = (event.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (event.target as HTMLElement).isContentEditable)
+        return;
+      if (!selectedNodeId) return;
+      removeSelectedNode();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNodeId, selectedDialogueId]);
+
   const dialogueItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     return dialogueIndex.dialogues
@@ -1130,72 +1141,6 @@ export const DialogueEditor: React.FC = () => {
         ? selectedDialogue.nodes.filter((node) => node.type !== 'comment').map((node) => node.id)
         : [],
     [selectedDialogue],
-  );
-
-  const luaCompletionSymbols = useMemo(() => {
-    const symbols = new Set<string>();
-
-    for (const variable of gameVariables) {
-      symbols.add(variable.key);
-      if (variable.type === 'table') {
-        const table = variable.tableId
-          ? scriptTables.find((item) => item.id === variable.tableId)
-          : undefined;
-        const fields = table?.fields ?? variable.complexFields ?? [];
-        for (const field of fields) {
-          symbols.add(`${variable.key}.${field.key}`);
-        }
-      }
-    }
-
-    for (const fn of scriptFunctions) {
-      symbols.add(fn.name);
-    }
-
-    for (const namespace of scriptNamespaces) {
-      symbols.add(namespace.name);
-      for (const field of namespace.fields) {
-        symbols.add(`${namespace.name}.${field.key}`);
-      }
-      for (const fn of namespace.functions) {
-        symbols.add(`${namespace.name}.${fn.name}`);
-      }
-    }
-
-    if (activeContextType) {
-      symbols.add('self');
-      for (const field of activeContextType.fields) {
-        symbols.add(`self.${field.key}`);
-      }
-      for (const fn of activeContextType.functions) {
-        symbols.add(`self:${fn.name}`);
-      }
-    }
-
-    return Array.from(symbols).sort((a, b) => a.localeCompare(b));
-  }, [activeContextType, gameVariables, scriptFunctions, scriptNamespaces, scriptTables]);
-
-  const completeLua = useCallback(
-    (context: CompletionContext): CompletionResult | null => {
-      const word = context.matchBefore(/[\w.:]+/);
-      if (!word && !context.explicit) return null;
-
-      const from = word ? word.from : context.pos;
-      const token = (word?.text ?? '').toLowerCase();
-
-      const options = luaCompletionSymbols
-        .filter((symbol) => !token || symbol.toLowerCase().includes(token))
-        .slice(0, 80)
-        .map((symbol) => ({ label: symbol, type: 'variable' as const }));
-
-      return { from, options };
-    },
-    [luaCompletionSymbols],
-  );
-
-  const luaEditorExtensions = useMemo(
-    () => [StreamLanguage.define(luaMode), autocompletion({ override: [completeLua] })],
-    [completeLua],
   );
 
   const updateDialogue = useCallback(
@@ -1349,14 +1294,6 @@ export const DialogueEditor: React.FC = () => {
     if (insertedNodeId) {
       setSelectedNodeId(insertedNodeId);
     }
-  };
-
-  const addNodeFromPalette = (nodeType: DialogueNodeType) => {
-    if (!selectedDialogue) return;
-    const index = selectedNodeId
-      ? Math.max(0, selectedDialogue.nodes.findIndex((node) => node.id === selectedNodeId) + 1)
-      : selectedDialogue.nodes.length;
-    insertNode(nodeType, index);
   };
 
   const updateSelectedNode = (updater: (node: DialogueNode) => DialogueNode) => {
@@ -1588,29 +1525,14 @@ export const DialogueEditor: React.FC = () => {
     </VStack>
   );
 
-  const nodePalette = (
-    <VStack align="stretch" spacing={2} p={3} borderBottom="1px" borderColor="whiteAlpha.200">
-      <Text fontSize="10px" color="gray.500" textTransform="uppercase" fontWeight="bold">
-        Add Node
-      </Text>
-      <Flex wrap="wrap" gap={2}>
-        {(
-          [
-            ['line', 'Line'],
-            ['choice', 'Choice'],
-            ['action', 'Action'],
-            ['jump', 'Jump'],
-            ['comment', 'Comment'],
-            ['end', 'End'],
-          ] as Array<[DialogueNodeType, string]>
-        ).map(([type, label]) => (
-          <Button key={type} size="xs" variant="outline" onClick={() => addNodeFromPalette(type)}>
-            {label}
-          </Button>
-        ))}
-      </Flex>
-    </VStack>
-  );
+  const NODE_TYPES: Array<[DialogueNodeType, string]> = [
+    ['line', 'Line'],
+    ['choice', 'Choice'],
+    ['action', 'Action'],
+    ['jump', 'Jump'],
+    ['comment', 'Comment'],
+    ['end', 'End'],
+  ];
 
   const rightPanel = (
     <InspectorPanel
@@ -1624,8 +1546,6 @@ export const DialogueEditor: React.FC = () => {
         />
       }
     >
-      {nodePalette}
-
       {!selectedDialogue && null}
 
       {selectedDialogue && !selectedNode && (
@@ -2028,24 +1948,33 @@ export const DialogueEditor: React.FC = () => {
               Lua Script
             </FormLabel>
             <Box border="1px" borderColor="#1a1a2e" borderRadius="md" overflow="hidden">
-              <CodeMirror
+              <LuaScriptEditor
                 value={selectedNode.lua}
                 height="220px"
-                extensions={luaEditorExtensions}
-                theme={oneDark}
                 onChange={(value) =>
                   updateSelectedNode((node) => {
                     if (node.type !== 'action') return node;
                     return { ...node, lua: value };
                   })
                 }
+                gameVariables={gameVariables}
+                scriptTables={scriptTables}
+                scriptFunctions={scriptFunctions}
+                scriptNamespaces={scriptNamespaces}
+                activeContextType={activeContextType}
               />
             </Box>
-            {actionLuaValidation && !actionLuaValidation.ok && (
-              <Text mt={1} fontSize="10px" color="orange.300">
-                Lua syntax error: {actionLuaValidation.error ?? 'Invalid chunk'}
-              </Text>
-            )}
+            <Text
+              mt={1}
+              fontSize="10px"
+              color="orange.300"
+              minH="16px"
+              visibility={actionLuaValidation && !actionLuaValidation.ok ? 'visible' : 'hidden'}
+            >
+              {actionLuaValidation && !actionLuaValidation.ok
+                ? `Lua syntax error: ${actionLuaValidation.error ?? 'Invalid chunk'}`
+                : '\u00A0'}
+            </Text>
           </FormControl>
 
           <Button size="xs" colorScheme="red" variant="outline" onClick={removeSelectedNode}>
@@ -2187,33 +2116,75 @@ export const DialogueEditor: React.FC = () => {
         borderColor="whiteAlpha.200"
         align="center"
         gap={2}
+        minH="40px"
       >
-        <Text fontSize="13px" color="gray.100" fontWeight="semibold">
+        <Text fontSize="13px" color="gray.100" fontWeight="semibold" flexShrink={0}>
           {selectedDialogue.name}
         </Text>
-        <Badge colorScheme={selectedDialogue.oneShot ? 'purple' : 'green'}>
+        <Badge colorScheme={selectedDialogue.oneShot ? 'purple' : 'green'} flexShrink={0}>
           {selectedDialogue.oneShot ? 'one-shot' : 'repeatable'}
         </Badge>
         {!isTimelineHeaderCollapsed && selectedDialogue.entryCondition?.trim() && (
-          <Badge colorScheme="orange" variant="subtle" fontFamily="mono">
+          <Badge colorScheme="orange" variant="subtle" fontFamily="mono" maxW="160px" isTruncated>
             {selectedDialogue.entryCondition}
           </Badge>
         )}
         {!isTimelineHeaderCollapsed && !!selectedDialogue.tags.length && (
-          <Text fontSize="11px" color="gray.500" noOfLines={1}>
+          <Text fontSize="11px" color="gray.500" noOfLines={1} flexShrink={1} minW={0}>
             {selectedDialogue.tags.join(', ')}
           </Text>
         )}
-        <Button
-          size="xs"
-          variant="ghost"
-          onClick={() => setIsTimelineHeaderCollapsed((current) => !current)}
-        >
-          {isTimelineHeaderCollapsed ? 'Expand' : 'Collapse'}
-        </Button>
-        <Button size="xs" variant="ghost" ml="auto" onClick={() => setSelectedNodeId(null)}>
-          Dialogue metadata
-        </Button>
+
+        <HStack spacing={1} ml="auto" flexShrink={0}>
+          {/* Add Node dropdown */}
+          <Popover placement="bottom-end" isLazy>
+            <PopoverTrigger>
+              <Button size="xs" variant="outline" leftIcon={<AddIcon fontSize="9px" />}>
+                Add Node
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
+              <PopoverBody p={1}>
+                <VStack align="stretch" spacing={0}>
+                  {NODE_TYPES.map(([type, label]) => (
+                    <Button
+                      key={type}
+                      size="xs"
+                      variant="ghost"
+                      justifyContent="flex-start"
+                      fontWeight="normal"
+                      onClick={() => {
+                        if (!selectedDialogue) return;
+                        const idx = selectedNodeId
+                          ? Math.max(
+                              0,
+                              selectedDialogue.nodes.findIndex((n) => n.id === selectedNodeId) + 1,
+                            )
+                          : selectedDialogue.nodes.length;
+                        insertNode(type, idx);
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </VStack>
+              </PopoverBody>
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            size="xs"
+            variant="ghost"
+            color="gray.500"
+            onClick={() => setIsTimelineHeaderCollapsed((c) => !c)}
+            title={isTimelineHeaderCollapsed ? 'Show metadata' : 'Hide metadata'}
+          >
+            {isTimelineHeaderCollapsed ? '▸ info' : '▾ info'}
+          </Button>
+          <Button size="xs" variant="ghost" onClick={() => setSelectedNodeId(null)}>
+            Metadata
+          </Button>
+        </HStack>
       </Flex>
 
       <Box flex={1} overflowY="auto" p={3}>
@@ -2229,14 +2200,45 @@ export const DialogueEditor: React.FC = () => {
             Boolean(branchMeta?.branchId) &&
             selectedDialogue.nodes[index + 1]?.editor?.branchId !== branchMeta?.branchId;
 
+          // Per-type visual config
+          const isComment = node.type === 'comment';
+          const isJump = node.type === 'jump';
+          const isAction = node.type === 'action';
+          const isChoice = node.type === 'choice';
+          const isEnd = node.type === 'end';
+
+          const typeColor =
+            node.type === 'line'
+              ? '#60a5fa'
+              : node.type === 'choice'
+                ? '#a78bfa'
+                : node.type === 'action'
+                  ? '#34d399'
+                  : node.type === 'jump'
+                    ? '#fbbf24'
+                    : node.type === 'comment'
+                      ? '#6b7280'
+                      : '#f87171'; // end
+
+          const cardBg = isComment
+            ? '#161618'
+            : isAction
+              ? '#141a14'
+              : isEnd
+                ? '#1a1212'
+                : isJump
+                  ? '#1a1a10'
+                  : '#1e1e28';
+
           return (
             <React.Fragment key={node.id}>
+              {/* Insert-gap button */}
               <Box
                 onMouseEnter={() => setHoveredGapIndex(index)}
                 onMouseLeave={() =>
                   setHoveredGapIndex((current) => (current === index ? null : current))
                 }
-                py={1}
+                py="2px"
               >
                 <Popover placement="top" isLazy>
                   <PopoverTrigger>
@@ -2244,30 +2246,25 @@ export const DialogueEditor: React.FC = () => {
                       size="xs"
                       variant="ghost"
                       w="full"
-                      opacity={hoveredGapIndex === index ? 0.65 : 0}
+                      h="16px"
+                      opacity={hoveredGapIndex === index ? 0.55 : 0}
                       _hover={{ opacity: 1 }}
+                      fontSize="10px"
+                      color="gray.500"
                     >
-                      + node
+                      + insert
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent w="180px" bg="#1e1e24" borderColor="#333">
-                    <PopoverBody>
-                      <VStack align="stretch" spacing={1}>
-                        {(
-                          [
-                            ['line', 'Line'],
-                            ['choice', 'Choice'],
-                            ['action', 'Action'],
-                            ['jump', 'Jump'],
-                            ['comment', 'Comment'],
-                            ['end', 'End'],
-                          ] as Array<[DialogueNodeType, string]>
-                        ).map(([type, label]) => (
+                  <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
+                    <PopoverBody p={1}>
+                      <VStack align="stretch" spacing={0}>
+                        {NODE_TYPES.map(([type, label]) => (
                           <Button
                             key={type}
                             size="xs"
                             variant="ghost"
                             justifyContent="flex-start"
+                            fontWeight="normal"
                             onClick={() => insertNode(type, index)}
                           >
                             {label}
@@ -2279,7 +2276,9 @@ export const DialogueEditor: React.FC = () => {
                 </Popover>
               </Box>
 
+              {/* Node card */}
               <Box
+                role="group"
                 draggable={topLevel}
                 onDragStart={() => {
                   if (!topLevel) return;
@@ -2296,7 +2295,7 @@ export const DialogueEditor: React.FC = () => {
                 }}
                 onClick={() => {
                   setSelectedNodeId(node.id);
-                  if (node.type === 'action') {
+                  if (isAction) {
                     setExpandedActionNodeIds((current) => {
                       const next = new Set(current);
                       if (next.has(node.id)) next.delete(node.id);
@@ -2306,131 +2305,242 @@ export const DialogueEditor: React.FC = () => {
                   }
                 }}
                 border="1px"
-                borderColor={selected ? '#6c63ff' : '#2e2e3e'}
-                borderLeftWidth={branchMeta?.branchId ? '3px' : '1px'}
+                borderStyle={isComment ? 'dashed' : 'solid'}
+                borderColor={selected ? '#6c63ff' : isComment ? '#333' : '#2e2e3e'}
+                borderLeftWidth={branchMeta?.branchId ? '3px' : isComment ? '0px' : '3px'}
                 borderLeftColor={
-                  branchMeta?.branchId ? branchColor(branchMeta.branchOrder) : undefined
+                  branchMeta?.branchId
+                    ? branchColor(branchMeta.branchOrder)
+                    : isComment
+                      ? undefined
+                      : typeColor
                 }
                 borderRadius="md"
-                bg="#1e1e28"
-                p={3}
-                mb={2}
+                bg={cardBg}
+                p={isComment ? 2 : 3}
+                mb={isChoice ? 0 : 2}
                 cursor="pointer"
-                _hover={{ borderColor: selected ? '#6c63ff' : '#444' }}
+                opacity={isComment ? 0.75 : 1}
+                _hover={{ borderColor: selected ? '#6c63ff' : isComment ? '#555' : '#555' }}
+                position="relative"
               >
-                <HStack spacing={2} mb={2} align="start">
-                  <Badge
-                    colorScheme={
-                      node.type === 'line'
-                        ? 'blue'
-                        : node.type === 'choice'
-                          ? 'purple'
-                          : node.type === 'action'
-                            ? 'green'
-                            : node.type === 'jump'
-                              ? 'yellow'
-                              : node.type === 'comment'
-                                ? 'gray'
-                                : 'red'
-                    }
+                {/* Header row */}
+                <Flex align="center" gap={2} mb={isComment ? 1 : 2}>
+                  <Text
+                    fontSize="9px"
+                    fontWeight="bold"
+                    textTransform="uppercase"
+                    letterSpacing="0.1em"
+                    color={typeColor}
+                    flexShrink={0}
                   >
                     {node.type}
-                  </Badge>
-                  <Text fontSize="10px" color="gray.500" fontFamily="mono">
+                  </Text>
+                  <Text fontSize="10px" color="gray.600" fontFamily="mono">
                     {node.id}
                   </Text>
                   {node.id === selectedDialogue.startNodeId && (
-                    <Badge colorScheme="teal">start</Badge>
+                    <Badge colorScheme="teal" fontSize="8px">
+                      start
+                    </Badge>
                   )}
-                  {missingMsgKey && <WarningIcon color="orange.300" />}
-                  {brokenRef && <Badge colorScheme="red">broken ref</Badge>}
-                  {branchMeta?.branchId && (
-                    <Text fontSize="10px" color="gray.400" fontFamily="mono" ml="auto">
-                      {`⤷ ${branchMeta.branchId}`}
-                    </Text>
+                  {missingMsgKey && <WarningIcon color="orange.300" boxSize="10px" />}
+                  {brokenRef && (
+                    <Badge colorScheme="red" fontSize="8px">
+                      broken ref
+                    </Badge>
                   )}
-                </HStack>
 
+                  {/* Hover delete button */}
+                  <IconButton
+                    aria-label="Delete node"
+                    icon={<DeleteIcon fontSize="9px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.600"
+                    _hover={{ color: 'red.400', bg: 'transparent' }}
+                    opacity={0}
+                    _groupHover={{ opacity: 1 }}
+                    ml="auto"
+                    h="auto"
+                    minW="auto"
+                    p="2px"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedNodeId(node.id);
+                      // Defer to next tick so selectedNodeId is set first
+                      setTimeout(() => {
+                        if (!selectedDialogueId) return;
+                        updateDialogue(selectedDialogueId, (dialogue) => {
+                          const removeIds = new Set<string>([node.id]);
+                          if (node.type === 'choice') {
+                            for (const n of dialogue.nodes) {
+                              if (n.editor?.parentChoiceNodeId === node.id) removeIds.add(n.id);
+                            }
+                          }
+                          const cleaned = removeNodesWithCleanup(dialogue, removeIds);
+                          return { ...cleaned, nodes: relinkLinearFlow(cleaned.nodes) };
+                        });
+                        setSelectedNodeId(null);
+                      }, 0);
+                    }}
+                  />
+                </Flex>
+
+                {/* Body content */}
                 {node.type === 'line' && (
                   <VStack align="stretch" spacing={1}>
-                    <HStack spacing={2}>
-                      {node.speaker && <Badge>{node.speaker}</Badge>}
-                      {node.emotion && <Badge>{node.emotion}</Badge>}
-                      {!!node.msgKey.trim() && (
-                        <Text fontSize="10px" color="gray.500" fontFamily="mono" noOfLines={1}>
-                          {node.msgKey}
+                    {(node.speaker || node.emotion) && (
+                      <HStack spacing={2}>
+                        {node.speaker && (
+                          <Badge colorScheme="blue" fontSize="9px">
+                            {node.speaker}
+                          </Badge>
+                        )}
+                        {node.emotion && (
+                          <Badge colorScheme="cyan" variant="subtle" fontSize="9px">
+                            {node.emotion}
+                          </Badge>
+                        )}
+                        {!!node.msgKey.trim() && (
+                          <Text
+                            fontSize="9px"
+                            color="gray.600"
+                            fontFamily="mono"
+                            noOfLines={1}
+                            ml="auto"
+                          >
+                            {node.msgKey}
+                          </Text>
+                        )}
+                      </HStack>
+                    )}
+                    <Text fontSize="12px" color="gray.200" noOfLines={3} lineHeight="1.5">
+                      {node.text || (
+                        <Text as="span" color="gray.600" fontStyle="italic">
+                          (empty line)
                         </Text>
                       )}
-                    </HStack>
-                    <Text fontSize="12px" color="gray.200" noOfLines={3}>
-                      {node.text || '(empty line)'}
                     </Text>
                   </VStack>
                 )}
 
-                {node.type === 'choice' && (
-                  <VStack align="stretch" spacing={1}>
-                    {node.options.map((option) => (
-                      <HStack key={option.id} spacing={2}>
-                        <Text fontSize="12px" color="gray.200" noOfLines={1}>
-                          {option.text || '(empty option)'}
-                        </Text>
-                        {option.condition?.trim() && (
-                          <Badge fontSize="9px" colorScheme="yellow">
-                            conditional
-                          </Badge>
-                        )}
-                        <Text fontSize="10px" color="gray.500" fontFamily="mono" ml="auto">
-                          {option.targetNodeId ? `-> ${option.targetNodeId}` : 'missing target'}
-                        </Text>
-                      </HStack>
-                    ))}
+                {isChoice && (
+                  <VStack align="stretch" spacing={0} mt={1}>
+                    {node.options.map((option, optIdx) => {
+                      const optColor = BRANCH_COLORS[optIdx % BRANCH_COLORS.length];
+                      return (
+                        <Flex key={option.id} align="stretch" gap={0} mb={1}>
+                          {/* Colored branch indicator */}
+                          <Box
+                            w="3px"
+                            borderRadius="full"
+                            bg={optColor}
+                            flexShrink={0}
+                            mr={2}
+                            my="1px"
+                          />
+                          <Box flex={1} minW={0}>
+                            <Flex align="center" gap={2}>
+                              <Text fontSize="11px" color="gray.200" noOfLines={1} flex={1}>
+                                {option.text || (
+                                  <Text as="span" color="gray.600" fontStyle="italic">
+                                    (empty)
+                                  </Text>
+                                )}
+                              </Text>
+                              {option.condition?.trim() && (
+                                <Badge fontSize="8px" colorScheme="yellow" flexShrink={0}>
+                                  if
+                                </Badge>
+                              )}
+                              <Text
+                                fontSize="9px"
+                                color="gray.600"
+                                fontFamily="mono"
+                                flexShrink={0}
+                              >
+                                {option.targetNodeId ? (
+                                  `→ ${option.targetNodeId}`
+                                ) : (
+                                  <Text as="span" color="red.400">
+                                    no target
+                                  </Text>
+                                )}
+                              </Text>
+                            </Flex>
+                          </Box>
+                        </Flex>
+                      );
+                    })}
                   </VStack>
                 )}
 
-                {node.type === 'action' && (
-                  <Box>
+                {isAction && (
+                  <Box
+                    bg="#0d1a0d"
+                    borderRadius="sm"
+                    px={2}
+                    py={1}
+                    fontFamily="mono"
+                    fontSize="11px"
+                  >
                     {expandedActionNodeIds.has(node.id) ? (
-                      <Text
-                        fontSize="11px"
-                        color="green.200"
-                        fontFamily="mono"
-                        whiteSpace="pre-wrap"
-                        noOfLines={8}
-                      >
-                        {node.lua || '(empty lua block)'}
+                      <Text color="green.200" whiteSpace="pre-wrap" noOfLines={8}>
+                        {node.lua || '(empty)'}
                       </Text>
                     ) : (
-                      <Text fontSize="11px" color="gray.500" fontFamily="mono" noOfLines={1}>
-                        {node.lua || '(lua collapsed)'}
+                      <Text color="green.400" noOfLines={1}>
+                        {node.lua ? node.lua.split('\n')[0] : '(empty)'}
                       </Text>
                     )}
                   </Box>
                 )}
 
-                {node.type === 'jump' && (
-                  <Text fontSize="11px" color="yellow.200" fontFamily="mono">
-                    {`jump -> ${node.targetDialogueId || selectedDialogue.id}:${node.targetNodeId || '?'}`}
-                  </Text>
+                {isJump && (
+                  <Flex align="center" gap={2}>
+                    <Text fontSize="11px" color="yellow.300" fontFamily="mono" fontWeight="bold">
+                      ⟶
+                    </Text>
+                    <Text fontSize="11px" color="yellow.200" fontFamily="mono">
+                      {node.targetDialogueId
+                        ? `${node.targetDialogueId} : ${node.targetNodeId || '?'}`
+                        : node.targetNodeId || (
+                            <Text as="span" color="gray.500">
+                              no target
+                            </Text>
+                          )}
+                    </Text>
+                    {node.targetNodeId && !node.targetDialogueId && (
+                      <Text fontSize="9px" color="gray.600" fontFamily="mono">
+                        (this dialogue)
+                      </Text>
+                    )}
+                  </Flex>
                 )}
 
-                {node.type === 'comment' && (
-                  <Text fontSize="12px" color="gray.400" noOfLines={4}>
+                {isComment && (
+                  <Text fontSize="11px" color="gray.500" fontStyle="italic" noOfLines={3}>
                     {node.text || '(empty comment)'}
                   </Text>
                 )}
 
-                {node.type === 'end' && (
-                  <Text fontSize="11px" color="red.300">
-                    end of dialogue path
-                  </Text>
+                {isEnd && (
+                  <Flex align="center" gap={2}>
+                    <Box w="full" h="1px" bg="red.900" />
+                    <Text fontSize="10px" color="red.500" flexShrink={0} fontFamily="mono">
+                      END
+                    </Text>
+                    <Box w="full" h="1px" bg="red.900" />
+                  </Flex>
                 )}
               </Box>
 
+              {/* Branch end divider */}
               {branchEnd && (
-                <Text mb={2} ml={2} fontSize="10px" color="gray.500" fontFamily="mono">
-                  end of branch
-                </Text>
+                <Box mb={2} ml={3} mr={0}>
+                  <Box h="1px" bg={branchColor(branchMeta?.branchOrder)} opacity={0.3} />
+                </Box>
               )}
             </React.Fragment>
           );
@@ -2445,7 +2555,7 @@ export const DialogueEditor: React.FC = () => {
             event.preventDefault();
             onDropTopLevelNode(null);
           }}
-          py={1}
+          py="2px"
         >
           <Popover placement="top" isLazy>
             <PopoverTrigger>
@@ -2453,31 +2563,26 @@ export const DialogueEditor: React.FC = () => {
                 size="xs"
                 variant="ghost"
                 w="full"
-                opacity={hoveredGapIndex === selectedDialogue.nodes.length ? 0.65 : 0.15}
+                h="20px"
+                fontSize="10px"
+                color="gray.600"
+                opacity={hoveredGapIndex === selectedDialogue.nodes.length ? 0.65 : 0.2}
                 onMouseEnter={() => setHoveredGapIndex(selectedDialogue.nodes.length)}
                 onMouseLeave={() => setHoveredGapIndex(null)}
               >
-                + node
+                + append
               </Button>
             </PopoverTrigger>
-            <PopoverContent w="180px" bg="#1e1e24" borderColor="#333">
-              <PopoverBody>
-                <VStack align="stretch" spacing={1}>
-                  {(
-                    [
-                      ['line', 'Line'],
-                      ['choice', 'Choice'],
-                      ['action', 'Action'],
-                      ['jump', 'Jump'],
-                      ['comment', 'Comment'],
-                      ['end', 'End'],
-                    ] as Array<[DialogueNodeType, string]>
-                  ).map(([type, label]) => (
+            <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
+              <PopoverBody p={1}>
+                <VStack align="stretch" spacing={0}>
+                  {NODE_TYPES.map(([type, label]) => (
                     <Button
                       key={type}
                       size="xs"
                       variant="ghost"
                       justifyContent="flex-start"
+                      fontWeight="normal"
                       onClick={() => insertNode(type, selectedDialogue.nodes.length)}
                     >
                       {label}

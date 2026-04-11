@@ -9,6 +9,13 @@
     output: 'release/${version}',
   },
   files: ['dist', 'dist-electron'],
+  extraResources: [
+    {
+      from: 'resources/lua-language-server',
+      to: 'lua-language-server',
+      filter: ['**/*'],
+    },
+  ],
   mac: {
     target: ['dmg'],
     artifactName: '${productName}-Mac-${version}-Installer.${ext}',
