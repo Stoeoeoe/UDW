@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "id": "dlg_new_dialogue",
+  "name": "New Dialogue",
+  "oneShot": false,
+  "startNodeId": "step_4",
+  "tags": [],
+  "createdAt": "2026-04-11T08:30:29.445Z",
+  "updatedAt": "2026-04-11T13:35:26.949Z",
+  "nodes": [
+    {
+      "id": "step_4",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.04",
+      "next": "step_3"
+    },
+    {
+      "id": "step_3",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.03",
+      "next": "step_1"
+    },
+    {
+      "id": "step_1",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.01",
+      "next": "step_2"
+    },
+    {
+      "id": "step_2",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.02",
+      "next": "step_5"
+    },
+    {
+      "id": "step_5",
+      "type": "choice",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Option 1",
+          "msgKey": "dlg.dlg_new_dialogue.05a",
+          "condition": null,
+          "targetNodeId": ""
+        },
+        {
+          "id": "o2",
+          "text": "Option 2",
+          "msgKey": "dlg.dlg_new_dialogue.06c2",
+          "condition": null,
+          "targetNodeId": ""
+        },
+        {
+          "id": "o3",
+          "text": "Option 3",
+          "msgKey": "dlg.dlg_new_dialogue.07c3",
+          "condition": null,
+          "targetNodeId": ""
+        }
+      ]
+    },
+    {
+      "id": "step_8",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.10",
+      "next": "step_11"
+    },
+    {
+      "id": "step_11",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.13",
+      "next": null
+    },
+    {
+      "id": "step_7",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.09",
+      "next": "step_10"
+    },
+    {
+      "id": "step_10",
+      "type": "action",
+      "lua": "",
+      "next": null
+    },
+    {
+      "id": "step_13",
+      "type": "jump",
+      "targetDialogueId": null,
+      "targetNodeId": "step_5"
+    },
+    {
+      "id": "step_6",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_new_dialogue.08",
+      "next": null
+    },
+    {
+      "id": "step_12",
+      "type": "action",
+      "lua": "",
+      "next": null
+    }
+  ]
+}

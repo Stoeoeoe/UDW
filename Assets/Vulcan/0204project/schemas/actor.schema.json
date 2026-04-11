@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "actor.schema.json",
+  "title": "Actor",
+  "description": "An actor definition (*.actor.json).",
+  "type": "object",
+  "required": ["id", "name", "icon"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this actor (kebab-case).",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name shown in the editor and game."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji icon used to represent this actor in the editor."
+    },
+    "emotions": {
+      "type": "array",
+      "description": "List of emotion IDs available for this actor in dialogue line nodes.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

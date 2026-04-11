@@ -5,13 +5,14 @@ using Character;
 using Core.Events;
 using Core.Items;
 using Core.Location;
+using Core.Tile.Vulcan;
 using JetBrains.Annotations;
 using MoreMountains.Tools;
 using Plants;
-using SuperTiled2Unity;
 using Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 namespace Core.Tile
@@ -25,8 +26,8 @@ namespace Core.Tile
 
         private const float InteractionDistance = 0.55f;
 
-        private SuperMap _currentMap;
-        private string _currentMapId;
+        private VulcanImportedMap _currentMap;
+        private GameObject _spawnedMapInstance;
         private Tilemap _terrainTilemap;
         private Tilemap _farmlandTilemap;
         private Tilemap _plowedTilemap;
@@ -35,6 +36,7 @@ namespace Core.Tile
         private GameObject _plantParentGameObject;
         private Dictionary<TerrainType, TerrainData> _terrainDataByType;
         private Dictionary<Vector2Int, TileData> _tileDataCache;
+
 
         // Farmland state persisted across scene loads, keyed by locationId → tile coords
         [Flags]
@@ -68,19 +70,12 @@ namespace Core.Tile
                     return new Bounds(center, size);
                 }
 
-                // Fallback to an approximation using SuperMap if available
+                // Fallback to map metadata if available
                 if (_currentMap != null)
                 {
-                    try
-                    {
-                        var width = (_currentMap.m_Width / (float)_currentMap.m_TileWidth);
-                        var height = (_currentMap.m_Height / (float)_currentMap.m_TileHeight);
-                        return new Bounds(_currentMap.transform.position, new Vector3(width, height, 0f));
-                    }
-                    catch
-                    {
-                        // ignore and return empty bounds
-                    }
+                    var width = Mathf.Max(1, _currentMap.Width);
+                    var height = Mathf.Max(1, _currentMap.Height);
+                    return new Bounds(_currentMap.transform.position, new Vector3(width, height, 0f));
                 }
 
                 return new Bounds(Vector3.zero, Vector3.zero);
@@ -208,6 +203,9 @@ namespace Core.Tile
 
         public Vector2Int GetCurrentTileCoordinates(GameCharacter character)
         {
+            if (_terrainTilemap == null)
+                return Vector2Int.zero;
+
             var worldPosition = character.ToolInteractionAnchor.position;
             var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
             return new Vector2Int(cellPosition.x, cellPosition.y);
@@ -220,6 +218,9 @@ namespace Core.Tile
 
         public Vector2Int GetInteractionOriginTile(GameCharacter character)
         {
+            if (_terrainTilemap == null)
+                return Vector2Int.zero;
+
             var forward = character.Orientation.FacingDirection;
             var probeWorldPosition = (Vector2)character.ToolInteractionAnchor.position + forward * InteractionDistance;
             var cell = _terrainTilemap.WorldToCell(probeWorldPosition);
@@ -335,6 +336,7 @@ namespace Core.Tile
 
         public void InitializeForLocation(LocationData location)
         {
+            EnsureLocationMapInstance(location);
             InitializeMap();
         }
 
@@ -360,75 +362,177 @@ namespace Core.Tile
 
         private bool LoadTilemapReferences()
         {
-            _currentMap = FindFirstObjectByType<SuperMap>();
-
-            if (!_currentMap)
+            _currentMap = FindFirstObjectByType<VulcanImportedMap>();
+            if (_currentMap != null)
             {
-                Debug.LogWarning("[MapManager] No SuperMap found in scene.");
+                _terrainTilemap = _currentMap.TerrainTilemap;
+                _farmlandTilemap = _currentMap.FarmlandTilemap;
+                _plowedTilemap = _currentMap.PlowedTilemap;
+                _irrigatedTilemap = _currentMap.IrrigatedTilemap;
+                OverlayTilemap = _currentMap.OverlayTilemap;
+            }
+            else
+            {
+                var grid = FindFirstObjectByType<Grid>();
+                var mapRoot = grid != null ? grid.transform.parent : null;
+                if (mapRoot == null)
+                {
+                    Debug.LogWarning("[MapManager] No imported map found in scene.");
+                    return false;
+                }
+
+                _terrainTilemap = FindTilemap(mapRoot, "Terrain");
+                _farmlandTilemap = FindTilemap(mapRoot, "FarmLand");
+                _plowedTilemap = FindTilemap(mapRoot, "FarmLand_Plowed");
+                _irrigatedTilemap = FindTilemap(mapRoot, "FarmLand_Irrigated");
+                OverlayTilemap = FindTilemap(mapRoot, "Overlay");
+            }
+
+            _plowedTilemap = EnsureTilemap(_plowedTilemap, "FarmLand_Plowed", 10, 0.5f);
+            _irrigatedTilemap = EnsureTilemap(_irrigatedTilemap, "FarmLand_Irrigated", 11, 0.5f);
+            OverlayTilemap = EnsureTilemap(OverlayTilemap, "Overlay", 999, 0.5f);
+
+            if (_terrainTilemap == null)
+            {
+                Debug.LogWarning("[MapManager] Missing Terrain tilemap in imported map.");
                 return false;
             }
 
-            var superMapTransform = _currentMap.transform;
-            _terrainTilemap = FindTilemap(superMapTransform, "Terrain");
-            _farmlandTilemap = FindTilemap(superMapTransform, "FarmLand");
-            _plowedTilemap = FindTilemap(superMapTransform, "FarmLand_Plowed");
-            _irrigatedTilemap = FindTilemap(superMapTransform, "FarmLand_Irrigated");
-            OverlayTilemap = FindTilemap(superMapTransform, "Overlay");
             return true;
         }
 
         private static Tilemap FindTilemap(Transform parent, string name)
         {
-            return parent.MMFindDeepChildDepthFirst(name)?.GetComponent<Tilemap>();
+            return parent?.MMFindDeepChildDepthFirst(name)?.GetComponent<Tilemap>();
+        }
+
+        private Tilemap EnsureTilemap(Tilemap tilemap, string tilemapName, int sortOrder, float alpha)
+        {
+            if (tilemap != null)
+                return tilemap;
+
+            var grid = FindFirstObjectByType<Grid>();
+            if (grid == null)
+                return null;
+
+            var existing = FindTilemap(grid.transform.parent, tilemapName);
+            if (existing != null)
+                return existing;
+
+            var tilemapObject = new GameObject(tilemapName);
+            tilemapObject.transform.SetParent(grid.transform, false);
+            // Keep overlay tilemaps aligned with the grid origin. Visual offset is handled at the Grid level.
+            tilemapObject.transform.localPosition = Vector3.zero;
+
+            var createdTilemap = tilemapObject.AddComponent<Tilemap>();
+            createdTilemap.color = new Color(1f, 1f, 1f, alpha);
+
+            var tilemapRenderer = tilemapObject.AddComponent<TilemapRenderer>();
+            tilemapRenderer.sortOrder = TilemapRenderer.SortOrder.TopLeft;
+            tilemapRenderer.sortingOrder = sortOrder;
+
+            return createdTilemap;
         }
 
         private void BuildTileDataCache()
         {
             _tileDataCache = new Dictionary<Vector2Int, TileData>();
-            var bounds = _terrainTilemap.cellBounds;
 
-            ProcessTilemap(_terrainTilemap, bounds, ProcessTerrainTile);
+            // All tilemaps are children of the same Grid, so cell coordinates are
+            // shared across layers. Process terrain first, then farmland layers
+            // overwrite matching entries so farmland takes precedence.
+            if (_terrainTilemap != null)
+                ProcessTerrainTilemap(_terrainTilemap);
 
+            // Farmland layers overwrite terrain entries at matching coordinates.
             if (_farmlandTilemap != null)
-                ProcessTilemap(_farmlandTilemap, bounds, ProcessFarmlandTile);
+                ProcessFarmlandTilemap(_farmlandTilemap);
         }
 
-        private void ProcessTilemap(Tilemap tilemap, BoundsInt bounds, Action<Vector2Int, SuperTile> processor)
+        private void ProcessTerrainTilemap(Tilemap tilemap)
         {
-            for (int x = bounds.xMin; x < bounds.xMax; x++)
-            for (int y = bounds.yMin; y < bounds.yMax; y++)
+            var cellBounds = tilemap.cellBounds;
+            for (int x = cellBounds.xMin; x < cellBounds.xMax; x++)
+            for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
             {
-                var cellPosition = new Vector3Int(x, y, 0);
-                if (tilemap.GetTile(cellPosition) is SuperTile superTile)
-                    processor(new Vector2Int(x, y), superTile);
+                var cell = new Vector3Int(x, y, 0);
+                var tileBase = tilemap.GetTile(cell);
+                if (tileBase == null) continue;
+
+                var coords = new Vector2Int(x, y);
+                var terrainType = ResolveTerrainType(coords, tileBase);
+                if (terrainType == TerrainType.Invalid)
+                    terrainType = TerrainType.Dirt;
+
+                if (!_terrainDataByType.TryGetValue(terrainType, out var terrainData))
+                    continue;
+
+                var worldPosition = GetWorldPositionFromTileCoordinates(coords);
+                var tileData = new TileData(tileBase, x, y, terrainData, worldPosition);
+
+                if (terrainType == TerrainType.FarmLand)
+                    tileData.TryEnableFarmland();
+
+                _tileDataCache[coords] = tileData;
             }
         }
 
-        private void ProcessTerrainTile(Vector2Int coordinates, SuperTile superTile)
+        private void ProcessFarmlandTilemap(Tilemap tilemap)
         {
-            var terrainType = superTile.GetPropertyValueAsEnum<TerrainType>("terrain_type");
-            if (!_terrainDataByType.TryGetValue(terrainType, out var terrainData))
+            if (!_terrainDataByType.TryGetValue(TerrainType.FarmLand, out var farmlandData))
                 return;
 
-            var worldPosition = GetWorldPositionFromTileCoordinates(coordinates);
-            var tileData = new TileData(superTile, coordinates.x, coordinates.y, terrainData, worldPosition);
+            var cellBounds = tilemap.cellBounds;
+            for (int x = cellBounds.xMin; x < cellBounds.xMax; x++)
+            for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
+            {
+                var cell = new Vector3Int(x, y, 0);
+                var tileBase = tilemap.GetTile(cell);
+                if (tileBase == null) continue;
 
-            if (terrainType == TerrainType.FarmLand)
+                var coords = new Vector2Int(x, y);
+                var worldPosition = GetWorldPositionFromTileCoordinates(coords);
+                var tileData = new TileData(tileBase, x, y, farmlandData, worldPosition);
                 tileData.TryEnableFarmland();
-
-            _tileDataCache[coordinates] = tileData;
+                _tileDataCache[coords] = tileData;
+            }
         }
 
-        private void ProcessFarmlandTile(Vector2Int coordinates, SuperTile superTile)
+        private TerrainType ResolveTerrainType(Vector2Int coordinates, TileBase tileBase)
         {
-            var terrainType = superTile.GetPropertyValueAsEnum<TerrainType>("terrain_type");
-            if (terrainType != TerrainType.FarmLand) return;
+            if (_currentMap != null && _currentMap.TryGetTerrainType(coordinates, out var terrainFromMap))
+                return terrainFromMap;
 
-            var worldPosition = GetWorldPositionFromTileCoordinates(coordinates);
-            var tileData = new TileData(superTile, coordinates.x, coordinates.y,
-                _terrainDataByType[TerrainType.FarmLand], worldPosition);
-            tileData.TryEnableFarmland();
-            _tileDataCache[coordinates] = tileData;
+            if (tileBase is VulcanTile vulcanTile)
+                return vulcanTile.TerrainType;
+
+            return TerrainType.Invalid;
+        }
+
+        private void EnsureLocationMapInstance(LocationData location)
+        {
+            if (_spawnedMapInstance != null)
+            {
+                Destroy(_spawnedMapInstance);
+                _spawnedMapInstance = null;
+            }
+
+            GameObject mapPrefab = null;
+            if (LevelManager.Instance != null)
+                LevelManager.Instance.TryResolveMapPrefab(location, out mapPrefab);
+            else
+                mapPrefab = location != null ? location.tiledMapPrefab : null;
+
+            if (mapPrefab == null)
+                return;
+
+            // If map data is already present in the scene, don't spawn a duplicate.
+            if (FindFirstObjectByType<VulcanImportedMap>() != null || FindFirstObjectByType<Tilemap>() != null)
+                return;
+
+            _spawnedMapInstance = Instantiate(mapPrefab);
+            _spawnedMapInstance.name = mapPrefab.name;
+            SceneManager.MoveGameObjectToScene(_spawnedMapInstance, SceneManager.GetActiveScene());
         }
 
         #endregion
@@ -497,3 +601,4 @@ namespace Core.Tile
         #endregion
     }
 }
+

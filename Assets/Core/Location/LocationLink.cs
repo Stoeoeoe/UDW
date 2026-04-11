@@ -1,10 +1,8 @@
-using System;
 using Character;
+using Core.Tile.Vulcan;
 using EditorUI.Attributes;
-using Interaction;
 using PixelCrushers;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Core.Location
 {
@@ -12,40 +10,71 @@ namespace Core.Location
     /// Portal/door to another location. Calls LevelManager.Instance.LoadLocation.
     /// Door = walk-in (button press needed). Open = no button press required.
     /// </summary>
-    public class LocationLink : AbstractInteractable
+    public class LocationLink : ILocationLink
     {
         [SerializeField] private LocationData targetLocation;
+        [SerializeField] private string targetLocationId;
         [SerializeField] private string targetEntryKey;
         [SerializeField] private LocationLinkType linkType;
-        [Dial(45)][SerializeField] public Vector2 exitFacingDirection;
-        [SerializeField] private float exitSpawnOffset = 0.8f;
-
-        /// <summary>Key identifying this link in the current scene (used as the destination entry key elsewhere).</summary>
-        [field: SerializeField]
-        public string Key { get; private set; }
+        [Dial(45)] [SerializeField] private Vector2 previewFacingDirection;
 
         public LocationData TargetLocation  => targetLocation;
-        public Vector3      ExitSpawnOffset => exitFacingDirection.normalized * exitSpawnOffset;
-        
+        public string TargetLocationId => targetLocationId;
+        public string TargetEntryKey => targetEntryKey;
+
         public override bool RequiresButtonPress => linkType == LocationLinkType.Door;
+
+        private void OnValidate()
+        {
+            if (previewFacingDirection != Vector2.zero)
+                exitFacingDirection = previewFacingDirection;
+        }
+
+        public override void ApplyVulcanData(VulcanLocationLinkData data, VulcanWorldCatalog catalog)
+        {
+            Key = data.id;
+            targetLocationId = data.targetMapId;
+            targetEntryKey = string.IsNullOrWhiteSpace(data.targetLinkId)
+                ? data.targetMapId
+                : data.targetLinkId;
+
+            if (catalog != null && catalog.TryGetLocationDataByMapId(data.targetMapId, out var mappedLocation))
+                targetLocation = mappedLocation;
+
+            var suggestedFacing = data.SuggestedExitFacingDirection;
+            if (suggestedFacing != Vector2.zero)
+            {
+                exitFacingDirection = suggestedFacing;
+                previewFacingDirection = suggestedFacing;
+            }
+        }
 
 
         protected override void Interact(GameCharacter instigator)
         {
-            if (!targetLocation)
+            var resolvedTarget = targetLocation;
+            if (!resolvedTarget && !string.IsNullOrWhiteSpace(targetLocationId))
+                resolvedTarget = LevelManager.Instance.GetLocationDataById(targetLocationId);
+
+            if (!resolvedTarget)
             {
                 Debug.LogWarning($"[LocationLink] {gameObject.name} has no target LocationData assigned.");
                 return;
             }
 
-            LevelManager.Instance.LoadLocation(targetLocation, targetEntryKey, instigator.Orientation.FacingDirection);
+            var entryKey = string.IsNullOrWhiteSpace(targetEntryKey)
+                ? targetLocationId
+                : targetEntryKey;
+
+            LevelManager.Instance.LoadLocation(resolvedTarget, entryKey, instigator.Orientation.FacingDirection);
         }
 
         private void OnDrawGizmos()
         {
             Gizmos.color = Color.green;
-            var position = transform.position + (Vector3)(exitFacingDirection.normalized * 0.5f);
-            MoreGizmos.DrawArrow(position, exitFacingDirection.normalized, 0.25f);
+            var facing = previewFacingDirection != Vector2.zero ? previewFacingDirection : exitFacingDirection;
+            var position = transform.position + (Vector3)(facing.normalized * 0.5f);
+            MoreGizmos.DrawArrow(position, facing.normalized, 0.25f);
         }
     }
 }

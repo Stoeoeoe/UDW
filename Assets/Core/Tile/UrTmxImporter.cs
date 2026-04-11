@@ -1,3 +1,4 @@
+#if UNITY_EDITOR && USE_SUPERTILED2UNITY
 using System.Linq;
 using MoreMountains.Tools;
 using SuperTiled2Unity;
@@ -85,3 +86,4 @@ namespace Core.Tile
         }
     }
 }
+#endif

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "npc.schema.json",
+  "title": "NPC",
+  "description": "A non-player character definition (*.npc.json).",
+  "type": "object",
+  "required": ["id", "name", "icon"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this NPC (kebab-case).",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name shown in the editor and game."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji icon used to represent this NPC in the editor."
+    }
+  }
+}

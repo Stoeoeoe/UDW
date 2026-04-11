@@ -1,12 +1,12 @@
 using JetBrains.Annotations;
-using SuperTiled2Unity;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace Core.Tile
 {
     public sealed class TileData
     {
-        public SuperTile TilemapTile { get; }
+        public TileBase TilemapTile { get; }
         public Vector2Int Coordinates { get; }
         public TerrainData TerrainData { get; }
         public Vector2 WorldPosition { get; }
@@ -15,7 +15,7 @@ namespace Core.Tile
         public GameObject PlacedObject { get; set; }
 
         public TileData(
-            SuperTile tilemapTile,
+            TileBase tilemapTile,
             int x,
             int y,
             TerrainData terrainData,

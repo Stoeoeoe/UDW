@@ -9,19 +9,39 @@
   "tiles": {
     "16": {
       "id": "tile_16_0",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "17": {
       "id": "tile_17_0",
-      "terrainCorners": ["dirt", "dirt", "dirt", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "grass"
+      ]
     },
     "18": {
       "id": "tile_18_0",
-      "terrainCorners": ["dirt", "dirt", "grass", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "grass",
+        "grass"
+      ]
     },
     "19": {
       "id": "tile_19_0",
-      "terrainCorners": ["dirt", "dirt", "grass", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "grass",
+        "dirt"
+      ]
     },
     "32": {
       "id": "tile_0_1"
@@ -73,20 +93,40 @@
     },
     "48": {
       "id": "tile_16_1",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "49": {
       "id": "tile_17_1",
-      "terrainCorners": ["dirt", "grass", "dirt", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "dirt",
+        "grass"
+      ]
     },
     "50": {
       "id": "tile_18_1",
       "probability": 40,
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "51": {
       "id": "tile_19_1",
-      "terrainCorners": ["grass", "dirt", "grass", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "grass",
+        "dirt"
+      ]
     },
     "52": {
       "id": "tile_20_1"
@@ -106,10 +146,22 @@
             "id": "poly-1",
             "type": "polygon",
             "points": [
-              [0, 0],
-              [1, 0],
-              [1, 1],
-              [0, 1]
+              [
+                0,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
             ]
           }
         ]
@@ -189,19 +241,39 @@
     },
     "80": {
       "id": "tile_16_2",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "81": {
       "id": "tile_17_2",
-      "terrainCorners": ["dirt", "grass", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "dirt",
+        "dirt"
+      ]
     },
     "82": {
       "id": "tile_18_2",
-      "terrainCorners": ["grass", "grass", "dirt", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "dirt",
+        "dirt"
+      ]
     },
     "83": {
       "id": "tile_19_2",
-      "terrainCorners": ["grass", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "84": {
       "id": "tile_20_2"
@@ -290,19 +362,39 @@
     "112": {
       "id": "tile_16_3",
       "probability": 20,
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "113": {
       "id": "tile_17_3",
-      "terrainCorners": ["grass", "grass", "grass", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "dirt"
+      ]
     },
     "114": {
       "id": "tile_18_3",
-      "terrainCorners": ["grass", "grass", "dirt", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "dirt",
+        "grass"
+      ]
     },
     "115": {
       "id": "tile_19_3",
-      "terrainCorners": ["dirt", "grass", "grass", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "grass",
+        "dirt"
+      ]
     },
     "116": {
       "id": "tile_20_3"
@@ -331,13 +423,34 @@
             "id": "poly-1",
             "type": "polygon",
             "points": [
-              [0.375, 0.5625],
-              [0.5625, 0.5],
-              [0.75, 0.4375],
-              [1, 0.4375],
-              [1, 1],
-              [0, 1],
-              [0.1875, 0.75]
+              [
+                0.375,
+                0.5625
+              ],
+              [
+                0.5625,
+                0.5
+              ],
+              [
+                0.75,
+                0.4375
+              ],
+              [
+                1,
+                0.4375
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                0.1875,
+                0.75
+              ]
             ]
           }
         ]
@@ -352,10 +465,22 @@
             "id": "poly-1",
             "type": "polygon",
             "points": [
-              [0, 0.4375],
-              [0.4375, 0.5625],
-              [1, 1],
-              [0, 1]
+              [
+                0,
+                0.4375
+              ],
+              [
+                0.4375,
+                0.5625
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
             ]
           }
         ]
@@ -383,7 +508,13 @@
       "id": "tile_0_4"
     },
     "129": {
-      "id": "tile_1_4"
+      "id": "tile_1_4",
+      "properties": [
+        {
+          "key": "isFarmable",
+          "value": true
+        }
+      ]
     },
     "130": {
       "id": "tile_2_4"
@@ -430,19 +561,39 @@
     "144": {
       "id": "tile_16_4",
       "probability": 10,
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "145": {
       "id": "tile_17_4",
-      "terrainCorners": ["grass", "dirt", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "grass",
+        "grass"
+      ]
     },
     "146": {
       "id": "tile_18_4",
-      "terrainCorners": ["dirt", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "147": {
       "id": "tile_19_4",
-      "terrainCorners": ["grass", "dirt", "dirt", "grass"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "dirt",
+        "grass"
+      ]
     },
     "148": {
       "id": "tile_20_4"
@@ -483,11 +634,26 @@
             "id": "poly-1",
             "type": "polygon",
             "points": [
-              [0, 0],
-              [1, 0],
-              [1, 0.6875],
-              [0.75, 0.625],
-              [0.75, 0.1875]
+              [
+                0,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                0.6875
+              ],
+              [
+                0.75,
+                0.625
+              ],
+              [
+                0.75,
+                0.1875
+              ]
             ]
           }
         ]
@@ -555,19 +721,39 @@
     },
     "176": {
       "id": "tile_16_5",
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "177": {
       "id": "tile_17_5",
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "178": {
       "id": "tile_18_5",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "179": {
       "id": "tile_19_5",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "180": {
       "id": "tile_20_5"
@@ -655,19 +841,39 @@
     },
     "208": {
       "id": "tile_16_6",
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "209": {
       "id": "tile_17_6",
-      "terrainCorners": ["grass", "grass", "grass", "grass"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "210": {
       "id": "tile_18_6",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "211": {
       "id": "tile_19_6",
-      "terrainCorners": ["dirt", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "212": {
       "id": "tile_20_6"
@@ -705,15 +911,42 @@
             "id": "poly-1",
             "type": "polygon",
             "points": [
-              [0.57421875, 0.24722222222222223],
-              [0.8186631944444445, 0.3861111111111111],
-              [0.5908854166666667, 0.725],
-              [0.4019965277777778, 0.5694444444444444],
-              [0.36866319444444445, 0.4027777777777778],
-              [0.34088541666666666, 0.2916666666666667],
-              [0.37421875, 0.16944444444444445],
-              [0.47977430555555556, 0.15833333333333333],
-              [0.5964409722222223, 0.13055555555555556]
+              [
+                0.57421875,
+                0.24722222222222223
+              ],
+              [
+                0.8186631944444445,
+                0.3861111111111111
+              ],
+              [
+                0.5908854166666667,
+                0.725
+              ],
+              [
+                0.4019965277777778,
+                0.5694444444444444
+              ],
+              [
+                0.36866319444444445,
+                0.4027777777777778
+              ],
+              [
+                0.34088541666666666,
+                0.2916666666666667
+              ],
+              [
+                0.37421875,
+                0.16944444444444445
+              ],
+              [
+                0.47977430555555556,
+                0.15833333333333333
+              ],
+              [
+                0.5964409722222223,
+                0.13055555555555556
+              ]
             ]
           }
         ]
@@ -889,19 +1122,39 @@
     },
     "278": {
       "id": "tile_22_8",
-      "terrainCorners": ["dirt", "dirt", "dirt", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "grass"
+      ]
     },
     "279": {
       "id": "tile_23_8",
-      "terrainCorners": ["dirt", "dirt", "grass", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "grass",
+        "grass"
+      ]
     },
     "280": {
       "id": "tile_24_8",
-      "terrainCorners": ["dirt", "dirt", "grass", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "grass",
+        "grass"
+      ]
     },
     "281": {
       "id": "tile_25_8",
-      "terrainCorners": ["dirt", "dirt", "grass", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "grass",
+        "dirt"
+      ]
     },
     "282": {
       "id": "tile_26_8"
@@ -989,19 +1242,39 @@
     },
     "310": {
       "id": "tile_22_9",
-      "terrainCorners": ["dirt", "grass", "dirt", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "dirt",
+        "grass"
+      ]
     },
     "311": {
       "id": "tile_23_9",
-      "terrainCorners": ["grass", "grass", "dirt", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "dirt",
+        "dirt"
+      ]
     },
     "312": {
       "id": "tile_24_9",
-      "terrainCorners": ["grass", "grass", "dirt", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "dirt",
+        "dirt"
+      ]
     },
     "313": {
       "id": "tile_25_9",
-      "terrainCorners": ["grass", "dirt", "grass", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "grass",
+        "dirt"
+      ]
     },
     "314": {
       "id": "tile_26_9"
@@ -1089,19 +1362,39 @@
     },
     "342": {
       "id": "tile_22_10",
-      "terrainCorners": ["dirt", "grass", "dirt", "grass"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "dirt",
+        "grass"
+      ]
     },
     "343": {
       "id": "tile_23_10",
-      "terrainCorners": ["dirt", "grass", "dirt", "dirt"]
+      "terrainCorners": [
+        "dirt",
+        "grass",
+        "dirt",
+        "dirt"
+      ]
     },
     "344": {
       "id": "tile_24_10",
-      "terrainCorners": ["grass", "dirt", "dirt", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "345": {
       "id": "tile_25_10",
-      "terrainCorners": ["grass", "dirt", "grass", "dirt"]
+      "terrainCorners": [
+        "grass",
+        "dirt",
+        "grass",
+        "dirt"
+      ]
     },
     "346": {
       "id": "tile_26_10"

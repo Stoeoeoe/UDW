@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0e3b987a9736c640a67e9386997e5d5, type: 3}
+  m_Name: vulcan.project.world
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Vulcan.VulcanWorldCatalog
+  project: {fileID: -1814933055721424766, guid: 2c438313e9e4ec448b0139ecb06a4881,
+    type: 3}
+  locationLinkPrefab: {fileID: 4189245286425888593, guid: 3af879b38f53ead4e93b7eef62371a61,
+    type: 3}
+  entityPrefabMappings:
+  - entityTypeId: torch
+    entityDisplayName: Torch
+    prefab: {fileID: 5775923001401589703, guid: 9853aa2db08ba664d8684cf8fa37d0ec,
+      type: 3}
+    candidatePrefabPaths:
+    - Assets/Environment/Torch.prefab
+  locationMappings:
+  - mapId: another-map
+    locationData: {fileID: 0}
+  - mapId: new-map
+    locationData: {fileID: 0}
+  mapBindings:
+  - mapId: another-map
+    mapPrefab: {fileID: -9073308874702422234, guid: 76ae254a7a3f28f449370eaac502de01,
+      type: 3}
+    locationData: {fileID: 11400000, guid: 33f341d742892814ebfc3e5d8582fae8, type: 2}
+  - mapId: new-map
+    mapPrefab: {fileID: -678225615432937206, guid: a025804bd8ccdc9428243a7f5cc79e1d,
+      type: 3}
+    locationData: {fileID: 11400000, guid: 519aff2edb21476499b89667e4e6fe97, type: 2}

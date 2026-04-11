@@ -5,6 +5,7 @@ using System.Linq;
 using Character;
 using Core.Events;
 using Core.Tile;
+using Core.Tile.Vulcan;
 using Core.TimeAndWeather;
 using DG.Tweening;
 using Input;
@@ -26,6 +27,9 @@ namespace Core.Location
 
         [SerializeField] ScreenFader _fader;
         [SerializeField] MainCharacter _mainCharacterPrefab;
+
+        [Header("Vulcan")]
+        [SerializeField] VulcanWorldCatalog _vulcanWorldCatalog;
 
         [Header("Fallback spawn (editor / first run)")] [SerializeField]
         string _defaultSpawnKey = "Default";
@@ -50,7 +54,24 @@ namespace Core.Location
         {
             base.OnAwake();
             _allLocations = Resources.LoadAll<LocationData>("Locations").ToList();
-            _locationById = _allLocations.ToDictionary(l => l.id, l => l);
+
+            if (_vulcanWorldCatalog != null)
+            {
+                var mappedLocations = _vulcanWorldCatalog.GetMappedLocations();
+                for (int i = 0; i < mappedLocations.Length; i++)
+                {
+                    var location = mappedLocations[i];
+                    if (location == null || _allLocations.Contains(location))
+                        continue;
+
+                    _allLocations.Add(location);
+                }
+            }
+
+            _locationById = _allLocations
+                .Where(l => l != null && !string.IsNullOrWhiteSpace(l.id))
+                .GroupBy(l => l.id, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         }
 
         void OnEnable() => this.Subscribe();
@@ -124,6 +145,18 @@ namespace Core.Location
         public LocationData GetLocationDataById(string id) =>
             _locationById.GetValueOrDefault(id);
 
+        public bool TryResolveMapPrefab(LocationData locationData, out GameObject mapPrefab)
+        {
+            mapPrefab = locationData != null ? locationData.tiledMapPrefab : null;
+            if (mapPrefab != null)
+                return true;
+
+            if (_vulcanWorldCatalog != null)
+                return _vulcanWorldCatalog.TryGetMapPrefabForLocation(locationData, out mapPrefab);
+
+            return false;
+        }
+
         public void RegisterLifecycle(ILocationLifecycle component)
         {
             if (!_lifecycleComponents.Contains(component))
@@ -195,13 +228,13 @@ namespace Core.Location
 
             if (_transitionContext is { HasTarget: true })
             {
-                var links = FindObjectsByType<LocationLink>(FindObjectsSortMode.None);
+                var links = FindObjectsByType<ILocationLink>(FindObjectsSortMode.None);
                 var link = Array.Find(links, l => l.Key == _transitionContext.TargetEntryKey);
                 if (link != null)
                 {
                     character.transform.position = link.transform.position + link.ExitSpawnOffset;
-                    var facing = link.exitFacingDirection != Vector2.zero
-                        ? link.exitFacingDirection
+                    var facing = link.ExitFacingDirection != Vector2.zero
+                        ? link.ExitFacingDirection
                         : _transitionContext.FacingDirection;
                     character.Orientation.ForceDirection(facing);
                     return;

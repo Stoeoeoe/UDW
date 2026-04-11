@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dialogue-index.schema.json",
+  "title": "Dialogue Index",
+  "description": "Global dialogue metadata and registries stored in dialogues/dialogues.index.json.",
+  "type": "object",
+  "required": ["version", "categories", "customActors", "dialogues"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "defaultContextTypeId": { "type": "string" },
+    "categories": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DialogueCategory" }
+    },
+    "customActors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DialogueCustomActor" }
+    },
+    "dialogues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DialogueListEntry" }
+    }
+  },
+  "$defs": {
+    "DialogueCategory": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "DialogueCustomActor": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "DialogueListEntry": {
+      "type": "object",
+      "required": ["id", "name", "oneShot", "nodeCount", "tags", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "oneShot": { "type": "boolean" },
+        "nodeCount": { "type": "integer", "minimum": 0 },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

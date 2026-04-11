@@ -1,0 +1,6 @@
+{
+  "$schema": "../../schemas/npc.schema.json",
+  "id": "gagaa",
+  "name": "Gagaa",
+  "icon": "🐗"
+}

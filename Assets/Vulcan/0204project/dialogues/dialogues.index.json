@@ -1,0 +1,17 @@
+{
+  "$schema": "../../schemas/dialogue-index.schema.json",
+  "version": 1,
+  "defaultContextTypeId": "ctx_1775752353427",
+  "categories": [],
+  "customActors": [],
+  "dialogues": [
+    {
+      "id": "dlg_new_dialogue",
+      "name": "New Dialogue",
+      "oneShot": false,
+      "nodeCount": 12,
+      "tags": [],
+      "updatedAt": "2026-04-11T13:35:26.949Z"
+    }
+  ]
+}
