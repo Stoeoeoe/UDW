@@ -8,6 +8,7 @@ import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
+import { getIconTexture } from '../../../lib/iconRaster';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
 
 interface UseMapRendererProps {
@@ -481,7 +482,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       const ex = entity.position[0];
       const ey = entity.position[1];
 
-      // Render body: sprite if loaded, else colored rect
+      // Render body: sprite if loaded, icon if set, else colored rect
       const spriteImg = type?.sprite?.path ? loadedSprites.get(type.sprite.path) : null;
       if (spriteImg) {
         const texture = Texture.from(spriteImg as unknown as HTMLImageElement);
@@ -494,10 +495,26 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         sprite.alpha = 0.9;
         entityContainer.addChild(sprite);
       } else {
+        // Background box
         const g = new Graphics();
         g.rect(ex, ey, ew, eh);
         g.fill({ color, alpha: 0.6 });
         entityContainer.addChild(g);
+
+        // Render icon inside the box if the entity type has one
+        if (type?.icon) {
+          const iconSize = Math.min(ew, eh);
+          const iconTex = getIconTexture(type.icon, '#ffffff', renderEntities);
+          if (iconTex) {
+            const iconSprite = new Sprite(iconTex);
+            iconSprite.x = ex + (ew - iconSize) / 2;
+            iconSprite.y = ey + (eh - iconSize) / 2;
+            iconSprite.width = iconSize;
+            iconSprite.height = iconSize;
+            iconSprite.alpha = 0.9;
+            entityContainer.addChild(iconSprite);
+          }
+        }
       }
 
       // Arrows: render one arrow per vector2 property on the instance

@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Box, Flex, HStack, Text, Select, VStack, Tooltip } from '@chakra-ui/react';
+import * as GiIcons from 'react-icons/gi';
+import type { IconType } from 'react-icons';
 import PanelHeader from '../../../components/common/PanelHeader';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType } from '../../../types/schema';
@@ -133,7 +135,16 @@ export const EntityBottomPalette: React.FC = () => {
                     borderRadius="sm"
                     fontSize="14px"
                   >
-                    {et.icon || '📦'}
+                    {et.icon
+                      ? (() => {
+                          const IconComp = (GiIcons as Record<string, IconType>)[et.icon];
+                          return IconComp ? (
+                            <IconComp size={16} color="#ffffff" />
+                          ) : (
+                            <Text fontSize="9px">{et.icon}</Text>
+                          );
+                        })()
+                      : '📦'}
                   </Box>
                   <Text
                     fontSize="9px"
