@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Core.Tile.Vulcan;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -88,6 +89,15 @@ namespace Core.Tile.Editor.Vulcan
                 group = e.Group
             }).ToArray();
 
+            var metadataDefs = dto.TileMetadataDefinitions?.Select(d => new VulcanProject.PropertyDefinition
+            {
+                key = d.Key,
+                label = d.Label,
+                type = d.Type,
+                defaultValue = d.DefaultValue?.ToString(Newtonsoft.Json.Formatting.None),
+                required = d.Required
+            }).ToArray() ?? Array.Empty<VulcanProject.PropertyDefinition>();
+
             var previousProject = AssetDatabase.LoadAssetAtPath<VulcanProject>(ctx.assetPath);
             var catalog = VulcanProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
 
@@ -114,7 +124,8 @@ namespace Core.Tile.Editor.Vulcan
                 dto.DefaultMapHeight > 0 ? dto.DefaultMapHeight : 32,
                 terrainDefs,
                 layerDefs,
-                entityDefs);
+                entityDefs,
+                metadataDefs);
 
             project.SetMappings(locationLinkPrefab, entityMappings, locationMappings, warnings.ToArray());
 
@@ -162,6 +173,34 @@ namespace Core.Tile.Editor.Vulcan
                 var tags = meta?.Tags?.ToArray() ?? Array.Empty<string>();
                 var collisionKind = ParseCollisionKind(meta?.Collision);
                 var tileId = !string.IsNullOrEmpty(meta?.Id) ? meta.Id : $"{tilesetId}_{i}";
+                Core.Tile.Vulcan.VulcanTile.VulcanTileProperty[] metaProps = null;
+                if (meta?.Properties != null && meta.Properties.Count > 0)
+                {
+                    var list = new List<Core.Tile.Vulcan.VulcanTile.VulcanTileProperty>();
+                    for (int p = 0; p < meta.Properties.Count; p++)
+                    {
+                        var pi = meta.Properties[p];
+                        if (pi == null) continue;
+
+                        // Attempt to apply the property directly to the VulcanTile instance
+                        // if a matching field/property (case-insensitive) exists. If applied,
+                        // do not store in the fallback Properties bag.
+                        var applied = TryApplyPropertyToObject(tile, pi.Key, pi.Value);
+                        if (applied)
+                            continue;
+
+                        // Fallback: store as JSON string in the serializable property bag.
+                        var vp = new Core.Tile.Vulcan.VulcanTile.VulcanTileProperty
+                        {
+                            key = pi?.Key,
+                            jsonValue = pi?.Value != null ? pi.Value.ToString(Newtonsoft.Json.Formatting.None) : null
+                        };
+                        list.Add(vp);
+                    }
+
+                    if (list.Count > 0)
+                        metaProps = list.ToArray();
+                }
 
                 var sprite = CreateSpriteForTile(texture, columns, tileSize, i);
                 if (sprite != null)
@@ -171,7 +210,7 @@ namespace Core.Tile.Editor.Vulcan
                     tile.sprite = sprite;
                 }
 
-                tile.Configure(i, tileId, terrainId, MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind);
+                tile.Configure(i, tileId, terrainId, MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind, metaProps);
                 tiles[i] = tile;
                 ctx.AddObjectToAsset($"tile_{i}", tile);
             }
@@ -260,9 +299,9 @@ namespace Core.Tile.Editor.Vulcan
             SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, ctx);
             SpawnLocationLinks(mapRoot.transform, dto.LocationLinks, height, catalog, ctx);
 
-            var plowedTilemap    = CreateTilemapLayer(gridGo.transform, "FarmLand_Plowed",    10,  DefaultOverlayAlpha);
-            var irrigatedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Irrigated", 11,  DefaultOverlayAlpha);
-            var overlayTilemap   = CreateTilemapLayer(gridGo.transform, "Overlay",            999, DefaultOverlayAlpha);
+            var plowedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Plowed", 10, DefaultOverlayAlpha);
+            var irrigatedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Irrigated", 11, DefaultOverlayAlpha);
+            var overlayTilemap = CreateTilemapLayer(gridGo.transform, "Overlay", 999, DefaultOverlayAlpha);
 
             if (terrainTilemap == null)
                 terrainTilemap = CreateTilemapLayer(gridGo.transform, "Terrain", 0, 1f);
@@ -361,7 +400,7 @@ namespace Core.Tile.Editor.Vulcan
         {
             if (encodedTile < 0) return null;
             var tilesetIndex = encodedTile >> 16;
-            var tileIndex    = encodedTile & 0xFFFF;
+            var tileIndex = encodedTile & 0xFFFF;
             if (tilesetIndex >= tilesetsByIndex.Count) return null;
             var tileset = tilesetsByIndex[tilesetIndex];
             return tileset != null && tileset.TryGetTile(tileIndex, out var tile) ? tile : null;
@@ -400,13 +439,13 @@ namespace Core.Tile.Editor.Vulcan
 
             var entityData = new VulcanEntityInstanceData
             {
-                id              = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
-                typeId          = dto.TypeId ?? "",
-                layerId         = dto.LayerId ?? "",
-                label           = dto.Label ?? "",
-                pixelPosition   = new Vector2(px, py),
+                id = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
+                typeId = dto.TypeId ?? "",
+                layerId = dto.LayerId ?? "",
+                label = dto.Label ?? "",
+                pixelPosition = new Vector2(px, py),
                 rotationDegrees = dto.Rotation,
-                propertiesJson  = JsonConvert.SerializeObject(dto.Properties ?? new JObject())
+                propertiesJson = JsonConvert.SerializeObject(dto.Properties ?? new JObject())
             };
 
             var ts = Mathf.Max(1, tileSize);
@@ -451,24 +490,24 @@ namespace Core.Tile.Editor.Vulcan
             {
                 var srcX = dto.SourcePosition != null && dto.SourcePosition.Count > 0 ? dto.SourcePosition[0] : 0;
                 var srcY = dto.SourcePosition != null && dto.SourcePosition.Count > 1 ? dto.SourcePosition[1] : 0;
-                var szX  = dto.TriggerSize    != null && dto.TriggerSize.Count    > 0 ? dto.TriggerSize[0]    : 1;
-                var szY  = dto.TriggerSize    != null && dto.TriggerSize.Count    > 1 ? dto.TriggerSize[1]    : 1;
+                var szX = dto.TriggerSize != null && dto.TriggerSize.Count > 0 ? dto.TriggerSize[0] : 1;
+                var szY = dto.TriggerSize != null && dto.TriggerSize.Count > 1 ? dto.TriggerSize[1] : 1;
                 var tgtX = dto.TargetPosition != null && dto.TargetPosition.Count > 0 ? dto.TargetPosition[0] : 0;
                 var tgtY = dto.TargetPosition != null && dto.TargetPosition.Count > 1 ? dto.TargetPosition[1] : 0;
 
                 var data = new VulcanLocationLinkData
                 {
-                    id             = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
-                    label          = dto.Label ?? "",
+                    id = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
+                    label = dto.Label ?? "",
                     sourcePosition = new Vector2Int(srcX, srcY),
-                    triggerSize    = new Vector2Int(szX, szY),
-                    targetMapId    = dto.TargetMapId ?? "",
+                    triggerSize = new Vector2Int(szX, szY),
+                    targetMapId = dto.TargetMapId ?? "",
                     targetPosition = new Vector2Int(tgtX, tgtY),
-                    targetLinkId   = dto.TargetLinkId ?? "",
-                    direction      = dto.Direction ?? ""
+                    targetLinkId = dto.TargetLinkId ?? "",
+                    direction = dto.Direction ?? ""
                 };
 
-                var cellY    = mapHeight - 1 - data.sourcePosition.y;
+                var cellY = mapHeight - 1 - data.sourcePosition.y;
                 var worldPos = new Vector3(data.sourcePosition.x + 0.5f, cellY + 0.5f, 0f);
 
                 GameObject linkPrefab = null;
@@ -542,7 +581,7 @@ namespace Core.Tile.Editor.Vulcan
         private static VulcanCollisionKind ParseCollisionKind(CollisionDto collision)
         {
             if (collision == null) return VulcanCollisionKind.None;
-            if (collision.Type.Equals("full",    StringComparison.OrdinalIgnoreCase)) return VulcanCollisionKind.Full;
+            if (collision.Type.Equals("full", StringComparison.OrdinalIgnoreCase)) return VulcanCollisionKind.Full;
             if (collision.Type.Equals("complex", StringComparison.OrdinalIgnoreCase)) return VulcanCollisionKind.Complex;
             return VulcanCollisionKind.None;
         }
@@ -552,13 +591,10 @@ namespace Core.Tile.Editor.Vulcan
             if (project != null && project.TryMapTerrainId(terrainId, out var mapped)) return mapped;
             if (string.IsNullOrWhiteSpace(terrainId)) return TerrainType.Invalid;
 
-            if (terrainId.Equals("farmland",  StringComparison.OrdinalIgnoreCase) ||
-                terrainId.Equals("farm",      StringComparison.OrdinalIgnoreCase) ||
-                terrainId.Equals("farm_land", StringComparison.OrdinalIgnoreCase)) return TerrainType.FarmLand;
             if (terrainId.Equals("grass", StringComparison.OrdinalIgnoreCase)) return TerrainType.Grass;
-            if (terrainId.Equals("dirt",  StringComparison.OrdinalIgnoreCase) ||
-                terrainId.Equals("soil",  StringComparison.OrdinalIgnoreCase))  return TerrainType.Dirt;
-            if (terrainId.Equals("sand",  StringComparison.OrdinalIgnoreCase)) return TerrainType.Sand;
+            if (terrainId.Equals("dirt", StringComparison.OrdinalIgnoreCase) ||
+                terrainId.Equals("soil", StringComparison.OrdinalIgnoreCase)) return TerrainType.Dirt;
+            if (terrainId.Equals("sand", StringComparison.OrdinalIgnoreCase)) return TerrainType.Sand;
             if (terrainId.Equals("water", StringComparison.OrdinalIgnoreCase)) return TerrainType.Water;
 
             return TerrainType.Invalid;
@@ -574,7 +610,7 @@ namespace Core.Tile.Editor.Vulcan
             value = 0;
             if (token == null || token.Type == JTokenType.Null) return false;
             if (token.Type == JTokenType.Integer) { value = token.Value<int>(); return true; }
-            if (token.Type == JTokenType.Float)   { value = Mathf.RoundToInt(token.Value<float>()); return true; }
+            if (token.Type == JTokenType.Float) { value = Mathf.RoundToInt(token.Value<float>()); return true; }
             if (token.Type != JTokenType.String) return false;
             return int.TryParse(token.Value<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
         }
@@ -587,9 +623,9 @@ namespace Core.Tile.Editor.Vulcan
         private static string GetBaseName(string assetPath)
         {
             var fileName = Path.GetFileName(assetPath);
-            if (fileName.EndsWith(".map.json",     StringComparison.OrdinalIgnoreCase)) return fileName[..^".map.json".Length];
+            if (fileName.EndsWith(".map.json", StringComparison.OrdinalIgnoreCase)) return fileName[..^".map.json".Length];
             if (fileName.EndsWith(".tileset.json", StringComparison.OrdinalIgnoreCase)) return fileName[..^".tileset.json".Length];
-            if (fileName.EndsWith(".json",         StringComparison.OrdinalIgnoreCase)) return fileName[..^".json".Length];
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return fileName[..^".json".Length];
             return Path.GetFileNameWithoutExtension(fileName);
         }
 
@@ -633,7 +669,7 @@ namespace Core.Tile.Editor.Vulcan
         {
             if (string.IsNullOrEmpty(tilesetId)) return null;
 
-            var mapFolder   = Path.GetDirectoryName(ToAbsolutePath(mapAssetPath));
+            var mapFolder = Path.GetDirectoryName(ToAbsolutePath(mapAssetPath));
             var projectRoot = !string.IsNullOrEmpty(projectAssetPath)
                 ? Path.GetDirectoryName(ToAbsolutePath(projectAssetPath))
                 : Path.GetDirectoryName(mapFolder) ?? mapFolder;
@@ -663,7 +699,7 @@ namespace Core.Tile.Editor.Vulcan
 
             if (!string.IsNullOrEmpty(projectAssetPath))
             {
-                var projectRoot    = Path.GetDirectoryName(ToAbsolutePath(projectAssetPath));
+                var projectRoot = Path.GetDirectoryName(ToAbsolutePath(projectAssetPath));
                 var targetFileName = Path.GetFileName(relativePath);
                 if (!string.IsNullOrWhiteSpace(projectRoot) && !string.IsNullOrWhiteSpace(targetFileName) && Directory.Exists(projectRoot))
                 {
@@ -708,7 +744,7 @@ namespace Core.Tile.Editor.Vulcan
         internal static bool TryAbsoluteToAssetPath(string absolutePath, out string assetPath)
         {
             var normalizedAbsolute = Path.GetFullPath(absolutePath).Replace('\\', '/');
-            var assetsRoot         = Path.GetFullPath(Application.dataPath).Replace('\\', '/');
+            var assetsRoot = Path.GetFullPath(Application.dataPath).Replace('\\', '/');
 
             if (normalizedAbsolute.StartsWith(assetsRoot, StringComparison.OrdinalIgnoreCase))
             {
@@ -718,6 +754,54 @@ namespace Core.Tile.Editor.Vulcan
 
             assetPath = null;
             return false;
+        }
+
+        private static bool TryApplyPropertyToObject(object target, string key, JToken token)
+        {
+            if (target == null || string.IsNullOrWhiteSpace(key) || token == null) return false;
+
+            var type = target.GetType();
+            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase;
+
+            var field = type.GetField(key, flags);
+            var prop = field == null ? type.GetProperty(key, flags) : null;
+            if (field == null && prop == null) return false;
+
+            Type targetType = field != null ? field.FieldType : prop.PropertyType;
+
+            object value = null;
+            try
+            {
+                if (targetType == typeof(bool) || targetType == typeof(bool?))
+                {
+                    if (token.Type == JTokenType.Boolean)
+                        value = token.Value<bool>();
+                    else if (token.Type == JTokenType.Integer)
+                        value = token.Value<int>() != 0;
+                    else
+                    {
+                        var s = token.ToString();
+                        if (bool.TryParse(s, out var b)) value = b;
+                        else if (int.TryParse(s, out var iv)) value = iv != 0;
+                        else value = false;
+                    }
+                }
+                else
+                {
+                    value = token.ToObject(targetType);
+                }
+
+                if (field != null)
+                    field.SetValue(target, value);
+                else
+                    prop.SetValue(target, value);
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 
@@ -743,7 +827,7 @@ namespace Core.Tile.Editor.Vulcan
 
             if (string.IsNullOrWhiteSpace(projectId)) return null;
 
-            var dir             = Path.GetDirectoryName(projectAssetPath)?.Replace('\\', '/');
+            var dir = Path.GetDirectoryName(projectAssetPath)?.Replace('\\', '/');
             var catalogAssetPath = $"{dir}/{projectId}.project.world.asset";
             return AssetDatabase.LoadAssetAtPath<VulcanWorldCatalog>(catalogAssetPath);
         }

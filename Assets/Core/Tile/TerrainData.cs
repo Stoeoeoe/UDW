@@ -11,7 +11,5 @@ namespace Core.Tile
 
         [SerializeField] private SurfaceSound surfaceSound;
         public SurfaceSound SurfaceSound => surfaceSound;
-        
-        public bool IsFarmable => terrainType == TerrainType.FarmLand;
     }
 }

@@ -24,7 +24,7 @@ namespace Interaction.Tools.Hoe
 
         public override bool CanBeUsedOnTile(TileData tile)
         {
-            return tile.TerrainData.IsFarmable;
+            return tile.IsFarmable;
         }
     }
 }

@@ -17,6 +17,7 @@ namespace Core.Tile.Editor.Vulcan
         [JsonProperty("terrainTypes")] public List<TerrainTypeDto> TerrainTypes { get; set; } = new();
         [JsonProperty("layerDefinitions")] public List<LayerDefinitionDto> LayerDefinitions { get; set; } = new();
         [JsonProperty("entityTypes")] public List<EntityTypeDto> EntityTypes { get; set; } = new();
+        [JsonProperty("tileMetadataDefinitions")] public List<PropertyDefinitionDto> TileMetadataDefinitions { get; set; } = new();
     }
 
     internal class TerrainTypeDto
@@ -64,11 +65,28 @@ namespace Core.Tile.Editor.Vulcan
         [JsonProperty("terrainCorners")] public List<string> TerrainCorners { get; set; }
         [JsonProperty("tags")] public List<string> Tags { get; set; }
         [JsonProperty("collision")] public CollisionDto Collision { get; set; }
+        [JsonProperty("properties")] public List<PropertyInstanceDto> Properties { get; set; } = new();
     }
 
     internal class CollisionDto
     {
         [JsonProperty("type")] public string Type { get; set; } = "";
+    }
+
+    internal class PropertyInstanceDto
+    {
+        [JsonProperty("key")] public string Key { get; set; }
+        // Kept as raw token so importer can decide how to persist it.
+        [JsonProperty("value")] public Newtonsoft.Json.Linq.JToken Value { get; set; }
+    }
+
+    internal class PropertyDefinitionDto
+    {
+        [JsonProperty("key")] public string Key { get; set; }
+        [JsonProperty("label")] public string Label { get; set; }
+        [JsonProperty("type")] public string Type { get; set; }
+        [JsonProperty("defaultValue")] public Newtonsoft.Json.Linq.JToken DefaultValue { get; set; }
+        [JsonProperty("required")] public bool Required { get; set; }
     }
 
     // ── Map ───────────────────────────────────────────────────────────────────

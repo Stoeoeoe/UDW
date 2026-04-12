@@ -37,6 +37,16 @@ namespace Core.Tile.Vulcan
         }
 
         [Serializable]
+        public struct PropertyDefinition
+        {
+            public string key;
+            public string label;
+            public string type;
+            public string defaultValue;
+            public bool required;
+        }
+
+        [Serializable]
         public class EntityPrefabMapping
         {
             public string entityTypeId;
@@ -60,6 +70,7 @@ namespace Core.Tile.Vulcan
         [SerializeField] private TerrainDefinition[] terrainTypes = Array.Empty<TerrainDefinition>();
         [SerializeField] private LayerDefinition[] layerDefinitions = Array.Empty<LayerDefinition>();
         [SerializeField] private EntityTypeDefinition[] entityTypes = Array.Empty<EntityTypeDefinition>();
+        [SerializeField] private PropertyDefinition[] tileMetadataDefinitions = Array.Empty<PropertyDefinition>();
 
         [Header("Mappings")]
         [SerializeField] private GameObject locationLinkPrefab;
@@ -77,6 +88,7 @@ namespace Core.Tile.Vulcan
         public TerrainDefinition[] TerrainTypes => terrainTypes;
         public LayerDefinition[] LayerDefinitions => layerDefinitions;
         public EntityTypeDefinition[] EntityTypes => entityTypes;
+        public PropertyDefinition[] TileMetadataDefinitions => tileMetadataDefinitions;
         public GameObject LocationLinkPrefab => locationLinkPrefab;
         public EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
         public MapLocationMapping[] LocationMappings => locationMappings;
@@ -90,7 +102,8 @@ namespace Core.Tile.Vulcan
             int mapHeight,
             TerrainDefinition[] terrains,
             LayerDefinition[] layers,
-            EntityTypeDefinition[] entities)
+            EntityTypeDefinition[] entities,
+            PropertyDefinition[] metadataDefinitions = null)
         {
             version = fileVersion;
             projectName = name;
@@ -100,6 +113,7 @@ namespace Core.Tile.Vulcan
             terrainTypes = terrains ?? Array.Empty<TerrainDefinition>();
             layerDefinitions = layers ?? Array.Empty<LayerDefinition>();
             entityTypes = entities ?? Array.Empty<EntityTypeDefinition>();
+            tileMetadataDefinitions = metadataDefinitions ?? Array.Empty<PropertyDefinition>();
         }
 
         public void SetMappings(

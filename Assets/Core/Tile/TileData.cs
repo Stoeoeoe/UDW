@@ -11,7 +11,9 @@ namespace Core.Tile
         public TerrainData TerrainData { get; }
         public Vector2 WorldPosition { get; }
         [CanBeNull] public FarmlandInfo FarmlandData { get; private set; }
-        
+        // TODO: Right now, IsFarmable and TerrainType = FarmLand are essentially the same information. We should consider consolidating them, but for now we'll keep them separate to avoid unintended consequences.
+        public bool IsFarmable { get; }
+
         public GameObject PlacedObject { get; set; }
 
         public TileData(
@@ -19,20 +21,20 @@ namespace Core.Tile
             int x,
             int y,
             TerrainData terrainData,
-            Vector3 worldPosition)
+            Vector3 worldPosition,
+            bool isFarmable = false)
         {
             TilemapTile = tilemapTile;
             Coordinates = new Vector2Int(x, y);
             TerrainData = terrainData;
             WorldPosition = worldPosition;
             PlacedObject = null;
+            IsFarmable = isFarmable;
         }
-
-        public bool CanBeFarmed => TerrainData.IsFarmable;
 
         public bool TryEnableFarmland()
         {
-            if (!CanBeFarmed)
+            if (!IsFarmable)
                 return false;
 
             FarmlandData ??= new FarmlandInfo();
@@ -57,7 +59,7 @@ namespace Core.Tile
         {
             FarmlandData?.DryOut();
         }
-        
+
         public void AddObject(GameObject obj)
         {
             PlacedObject = obj;

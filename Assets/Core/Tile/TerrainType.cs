@@ -7,6 +7,5 @@ namespace Core.Tile
         Sand,
         Water,
         Grass,
-        FarmLand,
     }
 }

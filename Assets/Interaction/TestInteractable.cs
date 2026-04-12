@@ -17,22 +17,22 @@ namespace Interaction
 
         private void PlowFields()
         {
-            var allFarmLand = MapManager.Instance.GetTileDataForTerrainType(TerrainType.FarmLand);
-            foreach (var tileData in allFarmLand)
-            {
-                if (IsPlowingAllFields)
-                {
-                    MapManager.Instance.PlowTile(tileData);
-                    if (IsIrrigatingSomeFields)
-                    {
-                        MapManager.Instance.DryTile(tileData);
-                        if (Random.value > 0.5f) continue;
-                    
-                        MapManager.Instance.IrrigateTile(tileData);
-                    }
-                }
-
-            }
+            // var allFarmLand = MapManager.Instance.GetTileDataForTerrainType(TerrainType.FarmLand);
+            // foreach (var tileData in allFarmLand)
+            // {
+            //     if (IsPlowingAllFields)
+            //     {
+            //         MapManager.Instance.PlowTile(tileData);
+            //         if (IsIrrigatingSomeFields)
+            //         {
+            //             MapManager.Instance.DryTile(tileData);
+            //             if (Random.value > 0.5f) continue;
+            //         
+            //             MapManager.Instance.IrrigateTile(tileData);
+            //         }
+            //     }
+            //
+            // }
         }
     }
 }

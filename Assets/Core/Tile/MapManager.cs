@@ -245,7 +245,7 @@ namespace Core.Tile
 
         public void PlowTile(TileData tile)
         {
-            if (tile?.TerrainData.TerrainType != TerrainType.FarmLand) return;
+            if (!tile.IsFarmable) return;
             tile.FarmlandData?.Plow();
             SetTileAt(_plowedTilemap, tile.Coordinates, plowedFarmlandTile);
             UpdateFarmlandState(tile.Coordinates, plowed: true);
@@ -253,7 +253,7 @@ namespace Core.Tile
 
         public void UnplowTile(TileData tile)
         {
-            if (tile?.TerrainData.TerrainType != TerrainType.FarmLand) return;
+            if (!tile.IsFarmable) return;
             tile.FarmlandData?.Unplow();
             SetTileAt(_plowedTilemap, tile.Coordinates, null);
             UpdateFarmlandState(tile.Coordinates, plowed: false);
@@ -261,7 +261,7 @@ namespace Core.Tile
 
         public void IrrigateTile(TileData tile)
         {
-            if (tile?.TerrainData.TerrainType != TerrainType.FarmLand) return;
+            if (!tile.IsFarmable) return;
             tile.FarmlandData?.Irrigate();
             SetTileAt(_irrigatedTilemap, tile.Coordinates, irrigatedFarmlandTile);
             UpdateFarmlandState(tile.Coordinates, irrigated: true);
@@ -269,16 +269,10 @@ namespace Core.Tile
 
         public void DryTile(TileData tile)
         {
-            if (tile?.TerrainData.TerrainType != TerrainType.FarmLand) return;
+            if (!tile.IsFarmable) return;
             tile.DryOut();
             SetTileAt(_irrigatedTilemap, tile.Coordinates, null);
             UpdateFarmlandState(tile.Coordinates, irrigated: false);
-        }
-
-        public bool IsFarmLand(int x, int y)
-        {
-            var tile = GetTileDataAtCoordinates(new Vector2Int(x, y));
-            return tile?.TerrainData.TerrainType == TerrainType.FarmLand;
         }
 
         private void SetTileAt(Tilemap tilemap, Vector2Int coordinates, TileBase tile)
@@ -453,49 +447,61 @@ namespace Core.Tile
         {
             var cellBounds = tilemap.cellBounds;
             for (int x = cellBounds.xMin; x < cellBounds.xMax; x++)
-            for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
-            {
-                var cell = new Vector3Int(x, y, 0);
-                var tileBase = tilemap.GetTile(cell);
-                if (tileBase == null) continue;
+                for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
+                {
+                    var cell = new Vector3Int(x, y, 0);
+                    var tile = tilemap.GetTile(cell) as VulcanTile;
+                    if (tile == null) continue;
 
-                var coords = new Vector2Int(x, y);
-                var terrainType = ResolveTerrainType(coords, tileBase);
-                if (terrainType == TerrainType.Invalid)
-                    terrainType = TerrainType.Dirt;
+                    var coords = new Vector2Int(x, y);
+                    var terrainType = ResolveTerrainType(coords, tile);
 
-                if (!_terrainDataByType.TryGetValue(terrainType, out var terrainData))
-                    continue;
+                    // For now, farmland is always dirt
+                    if (tile.IsFarmable)
+                        terrainType = TerrainType.Dirt;
 
-                var worldPosition = GetWorldPositionFromTileCoordinates(coords);
-                var tileData = new TileData(tileBase, x, y, terrainData, worldPosition);
+                    if (terrainType == TerrainType.Invalid)
+                        terrainType = TerrainType.Dirt;
 
-                if (terrainType == TerrainType.FarmLand)
-                    tileData.TryEnableFarmland();
+                    if (!_terrainDataByType.TryGetValue(terrainType, out var terrainData))
+                        continue;
 
-                _tileDataCache[coords] = tileData;
-            }
+                    var worldPosition = GetWorldPositionFromTileCoordinates(coords);
+                    var tileData = new TileData(tile, x, y, terrainData, worldPosition, tile.IsFarmable);
+
+                    if (tileData.IsFarmable)
+                        tileData.TryEnableFarmland();
+
+                    _tileDataCache[coords] = tileData;
+                }
         }
 
         private void ProcessFarmlandTilemap(Tilemap tilemap)
         {
-            if (!_terrainDataByType.TryGetValue(TerrainType.FarmLand, out var farmlandData))
-                return;
+            // Use dirt terrain data for now
+            var dirtData = _terrainDataByType.GetValueOrDefault(TerrainType.Dirt);
 
             var cellBounds = tilemap.cellBounds;
             for (int x = cellBounds.xMin; x < cellBounds.xMax; x++)
-            for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
-            {
-                var cell = new Vector3Int(x, y, 0);
-                var tileBase = tilemap.GetTile(cell);
-                if (tileBase == null) continue;
+                for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
+                {
+                    var cell = new Vector3Int(x, y, 0);
+                    var tile = tilemap.GetTile(cell) as VulcanTile;
+                    if (tile == null) continue;
 
-                var coords = new Vector2Int(x, y);
-                var worldPosition = GetWorldPositionFromTileCoordinates(coords);
-                var tileData = new TileData(tileBase, x, y, farmlandData, worldPosition);
-                tileData.TryEnableFarmland();
-                _tileDataCache[coords] = tileData;
-            }
+                    var coords = new Vector2Int(x, y);
+                    var worldPosition = GetWorldPositionFromTileCoordinates(coords);
+                    // Do not overwrite tiles that were explicitly marked farmable by tile properties.
+                    // if (_tileDataCache != null && _tileDataCache.TryGetValue(coords, out var existing) && existing != null && existing.IsFarmable)
+                    //     continue;
+
+                    if (tile.IsFarmable)
+                    {
+                        var tileData = new TileData(tile, x, y, dirtData, worldPosition, true);
+                        tileData.TryEnableFarmland();
+                        _tileDataCache[coords] = tileData;
+                    }
+                }
         }
 
         private TerrainType ResolveTerrainType(Vector2Int coordinates, TileBase tileBase)
