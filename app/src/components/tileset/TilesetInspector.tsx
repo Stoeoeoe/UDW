@@ -197,7 +197,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                 {
                   key: 'probability',
                   label: 'Probability',
-                  type: 'number',
+                  type: 'float',
                   description: 'Weight for random tile selection (higher = more likely)',
                 },
                 {
