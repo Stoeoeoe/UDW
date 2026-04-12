@@ -4,7 +4,6 @@ import {
   HStack,
   Input,
   Button,
-  Circle,
   Text,
   Popover,
   PopoverTrigger,

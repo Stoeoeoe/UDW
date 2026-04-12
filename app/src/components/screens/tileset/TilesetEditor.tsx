@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Flex, Box, useDisclosure, useToast, Text, VStack, Button } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -12,6 +12,8 @@ import TilesetCreator from '../../dialogs/TilesetCreator';
 import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
 import { EditorModal } from '../../common/EditorModal';
 import { useTileSelection } from '../../../hooks/useTileSelection';
+import TileMetadataDefinitionsDialog from '../../tileset/TileMetadataDefinitionsDialog';
+import TilesetMetadataEntryInspector from '../../tileset/TilesetMetadataEntryInspector';
 
 /**
  * TilesetEditor - The complete tileset editing experience.
@@ -23,6 +25,8 @@ export const TilesetEditor: React.FC = () => {
   const tilesets = useEditorStore((state) => state.tilesets);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
   const resetSelectedTiles = useEditorStore((state) => state.resetSelectedTiles);
+  const tileMetadataDefinitions = useEditorStore((state) => state.tileMetadataDefinitions);
+  const setTileMetadataDefinitions = useEditorStore((state) => state.setTileMetadataDefinitions);
 
   const { selectedTileIndex, handleTileSelect } = useTileSelection();
   const { tileSize } = useProject();
@@ -35,16 +39,60 @@ export const TilesetEditor: React.FC = () => {
     sublabel: `${tileSize}×${tileSize} • ${ts.tileCount} tiles`,
   }));
 
+  const metadataItems: ListPanelItem[] = useMemo(
+    () =>
+      tileMetadataDefinitions.map((definition) => ({
+        id: definition.key,
+        label: definition.label || definition.key,
+        sublabel: `${definition.type}${definition.required ? ' • required' : ''}`,
+      })),
+    [tileMetadataDefinitions],
+  );
+
+  const [selectedMetadataKey, setSelectedMetadataKey] = useState<string | null>(null);
+
   const toast = useToast();
   const { isOpen: isCreatorOpen, onOpen: onCreatorOpen, onClose: onCreatorClose } = useDisclosure();
   const { isOpen: isMetaOpen, onOpen: onMetaOpen, onClose: onMetaClose } = useDisclosure();
+  const {
+    isOpen: isMetadataDefsOpen,
+    onOpen: onMetadataDefsOpen,
+    onClose: onMetadataDefsClose,
+  } = useDisclosure();
 
-  const leftPanel = (
+  const selectedMetadataDefinition = useMemo(
+    () =>
+      selectedMetadataKey
+        ? tileMetadataDefinitions.find((definition) => definition.key === selectedMetadataKey) ||
+          null
+        : null,
+    [selectedMetadataKey, tileMetadataDefinitions],
+  );
+
+  const handleSelectTileset = (id: string) => {
+    setSelectedMetadataKey(null);
+    setActiveTileset(id);
+    resetSelectedTiles?.();
+  };
+
+  const handleSelectMetadata = (id: string) => {
+    setSelectedMetadataKey(id);
+    resetSelectedTiles?.();
+  };
+
+  const handleCreateMetadataDefinition = async (
+    definition: (typeof tileMetadataDefinitions)[number],
+  ) => {
+    await setTileMetadataDefinitions([...tileMetadataDefinitions, definition]);
+    setSelectedMetadataKey(definition.key);
+  };
+
+  const tilesetListPanel = (
     <ListPanel
       title="Tilesets"
       items={tilesetItems}
       selectedId={activeTilesetId}
-      onSelect={setActiveTileset}
+      onSelect={handleSelectTileset}
       autoSelectFirst={true}
       emptyMessage="No tilesets imported"
       onAdd={onCreatorOpen}
@@ -55,7 +103,7 @@ export const TilesetEditor: React.FC = () => {
           icon: <EditIcon fontSize="10px" />,
           ariaLabel: 'Edit Tileset',
           onClick: () => {
-            if (activeTilesetId !== item.id) setActiveTileset(item.id);
+            if (activeTilesetId !== item.id) handleSelectTileset(item.id);
             onMetaOpen();
           },
         },
@@ -89,8 +137,49 @@ export const TilesetEditor: React.FC = () => {
     />
   );
 
+  const metadataListPanel = (
+    <ListPanel
+      title="Metadata"
+      items={metadataItems}
+      selectedId={selectedMetadataKey}
+      onSelect={handleSelectMetadata}
+      onAdd={onMetadataDefsOpen}
+      emptyMessage="No metadata fields defined"
+      onDeleteItem={async (item) => {
+        const nextDefinitions = tileMetadataDefinitions.filter(
+          (definition) => definition.key !== item.id,
+        );
+        await setTileMetadataDefinitions(nextDefinitions);
+        if (selectedMetadataKey === item.id) {
+          setSelectedMetadataKey(null);
+        }
+      }}
+      deleteActionLabel="Delete metadata field"
+    />
+  );
+
+  const leftPanel = (
+    <Flex direction="column" h="full">
+      <Box flex={3} minH={0}>
+        {tilesetListPanel}
+      </Box>
+      <Box h="1px" bg="editor.border" />
+      <Box flex={2} minH={0}>
+        {metadataListPanel}
+      </Box>
+    </Flex>
+  );
+
   const rightPanel = activeTileset ? (
-    tilesetMode === 'terrain' ? (
+    selectedMetadataDefinition ? (
+      <TilesetMetadataEntryInspector
+        tileset={activeTileset}
+        selectedTileIndex={selectedTileIndex}
+        metadataDefinition={selectedMetadataDefinition}
+        metadataDefinitions={tileMetadataDefinitions}
+        onMetadataDefinitionsChange={setTileMetadataDefinitions}
+      />
+    ) : tilesetMode === 'terrain' ? (
       <TilesetTerrainPanel tileset={activeTileset} />
     ) : (
       <TilesetInspector tileset={activeTileset} selectedIndex={selectedTileIndex} />
@@ -102,6 +191,16 @@ export const TilesetEditor: React.FC = () => {
       resetSelectedTiles?.();
     }
   }, [activeTilesetId, resetSelectedTiles]);
+
+  useEffect(() => {
+    if (!selectedMetadataKey) return;
+    const stillExists = tileMetadataDefinitions.some(
+      (definition) => definition.key === selectedMetadataKey,
+    );
+    if (!stillExists) {
+      setSelectedMetadataKey(null);
+    }
+  }, [selectedMetadataKey, tileMetadataDefinitions]);
 
   // Extra store helpers for handling missing sprite replacement
   const loadedSprites = useEditorStore((s) => s.loadedSprites);
@@ -138,37 +237,51 @@ export const TilesetEditor: React.FC = () => {
   // If tileset metadata exists but sprite failed to load, show repair UI
   if (activeTileset && !sprite) {
     return (
-      <ResizableEditorLayout
-        header={{
-          title: activeTileset.name,
-          subtitle: `${tileSize}×${tileSize} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
-        }}
-        content={
-          <Flex h="full" alignItems="center" justifyContent="center">
-            <VStack spacing={4} align="center">
-              <Text fontSize="lg" fontWeight="black">
-                Tileset image missing
-              </Text>
-              <Text color="gray.400" maxW="xl" textAlign="center">
-                The image for this tileset could not be loaded (it may have been moved or deleted).
-                Choose a replacement image or re-import the tileset metadata.
-              </Text>
-              <VStack spacing={3} pt={4}>
-                <Button colorScheme="blue" onClick={handleSetImage}>
-                  Choose Image
-                </Button>
-                <Button variant="ghost" onClick={onCreatorOpen}>
-                  Import New Tileset
-                </Button>
+      <>
+        <ResizableEditorLayout
+          header={{
+            title: activeTileset.name,
+            subtitle: `${tileSize}×${tileSize} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
+          }}
+          content={
+            <Flex h="full" alignItems="center" justifyContent="center">
+              <VStack spacing={4} align="center">
+                <Text fontSize="lg" fontWeight="black">
+                  Tileset image missing
+                </Text>
+                <Text color="gray.400" maxW="xl" textAlign="center">
+                  The image for this tileset could not be loaded (it may have been moved or
+                  deleted). Choose a replacement image or re-import the tileset metadata.
+                </Text>
+                <VStack spacing={3} pt={4}>
+                  <Button colorScheme="blue" onClick={handleSetImage}>
+                    Choose Image
+                  </Button>
+                  <Button variant="ghost" onClick={onCreatorOpen}>
+                    Import New Tileset
+                  </Button>
+                </VStack>
               </VStack>
-            </VStack>
-          </Flex>
-        }
-        leftPanel={leftPanel}
-        rightPanel={rightPanel}
-        leftPanelDefaultSize={18}
-        rightPanelDefaultSize={22}
-      />
+            </Flex>
+          }
+          leftPanel={leftPanel}
+          rightPanel={rightPanel}
+          leftPanelDefaultSize={18}
+          rightPanelDefaultSize={22}
+        />
+
+        <EditorModal isOpen={isCreatorOpen} onClose={onCreatorClose}>
+          <TilesetCreator onCreate={onCreatorClose} onCancel={onCreatorClose} />
+        </EditorModal>
+
+        <EditorModal isOpen={isMetadataDefsOpen} onClose={onMetadataDefsClose}>
+          <TileMetadataDefinitionsDialog
+            existingDefinitions={tileMetadataDefinitions}
+            onCreate={handleCreateMetadataDefinition}
+            onClose={onMetadataDefsClose}
+          />
+        </EditorModal>
+      </>
     );
   }
 
@@ -189,6 +302,14 @@ export const TilesetEditor: React.FC = () => {
         />
         <EditorModal isOpen={isCreatorOpen} onClose={onCreatorClose}>
           <TilesetCreator onCreate={onCreatorClose} onCancel={onCreatorClose} />
+        </EditorModal>
+
+        <EditorModal isOpen={isMetadataDefsOpen} onClose={onMetadataDefsClose}>
+          <TileMetadataDefinitionsDialog
+            existingDefinitions={tileMetadataDefinitions}
+            onCreate={handleCreateMetadataDefinition}
+            onClose={onMetadataDefsClose}
+          />
         </EditorModal>
       </>
     );
@@ -228,6 +349,14 @@ export const TilesetEditor: React.FC = () => {
 
       <EditorModal isOpen={isCreatorOpen} onClose={onCreatorClose}>
         <TilesetCreator onCreate={onCreatorClose} onCancel={onCreatorClose} />
+      </EditorModal>
+
+      <EditorModal isOpen={isMetadataDefsOpen} onClose={onMetadataDefsClose}>
+        <TileMetadataDefinitionsDialog
+          existingDefinitions={tileMetadataDefinitions}
+          onCreate={handleCreateMetadataDefinition}
+          onClose={onMetadataDefsClose}
+        />
       </EditorModal>
 
       <TilesetMetadataDialog isOpen={isMetaOpen} onClose={onMetaClose} tileset={activeTileset} />

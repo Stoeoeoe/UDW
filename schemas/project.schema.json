@@ -65,6 +65,11 @@
       "description": "Project-level entity type definitions.",
       "items": { "$ref": "#/$defs/EntityType" }
     },
+    "tileMetadataDefinitions": {
+      "type": "array",
+      "description": "Project-level tile metadata definitions shared across all tilesets.",
+      "items": { "$ref": "#/$defs/PropertyDefinition" }
+    },
     "gameVariables": {
       "type": "array",
       "description": "Named variables exposed to the Lua sandbox at runtime.",

@@ -23,6 +23,7 @@ import {
   ScriptFunction,
   ScriptNamespace,
   ScriptContextType,
+  PropertyDefinition,
   PropertyValues,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
@@ -443,6 +444,7 @@ interface EditorStore extends EditorState {
   addEntityType: (entityType: EntityType) => Promise<void>;
   updateEntityType: (id: string, updates: Partial<EntityType>) => Promise<void>;
   deleteEntityType: (id: string) => Promise<void>;
+  setTileMetadataDefinitions: (definitions: PropertyDefinition[]) => Promise<void>;
 
   // Actor CRUD
   addActor: (actor: Actor) => Promise<void>;
@@ -759,6 +761,7 @@ export const useEditorStore = create<EditorStore>()(
           },
           terrainTypes: [],
           entityTypes: [],
+          tileMetadataDefinitions: [],
           gameVariables: [],
           scriptTables: [],
           scriptFunctions: [],
@@ -796,6 +799,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.activeVariationId = null;
                   state.terrainTypes = [];
                   state.entityTypes = [];
+                  state.tileMetadataDefinitions = [];
                 }),
               { clearHistory: true },
             );
@@ -827,6 +831,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
                   state.entityTypes = [];
+                  state.tileMetadataDefinitions = [];
                   state.gameVariables = [];
                   state.scriptTables = [];
                   state.scriptFunctions = [];
@@ -898,6 +903,15 @@ export const useEditorStore = create<EditorStore>()(
             if (proj?.entityTypes && Array.isArray(proj.entityTypes)) {
               set((state) => {
                 state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
+              });
+            }
+
+            // 1.72 Load project-level tile metadata definitions (if present)
+            if (proj?.tileMetadataDefinitions && Array.isArray(proj.tileMetadataDefinitions)) {
+              set((state) => {
+                state.tileMetadataDefinitions = proj.tileMetadataDefinitions!.map((definition) =>
+                  castDraft(definition),
+                );
               });
             }
 
@@ -1337,7 +1351,8 @@ export const useEditorStore = create<EditorStore>()(
           setActiveTileset: (id) =>
             set((state) => {
               state.activeTilesetId = id;
-              state.selectedTileIndex = 0;
+              state.selectedTileIndex = null;
+              state.selectedTileIndices = [];
               state.selectedTerrainId = null; // Selection clear terrain
             }),
 
@@ -2172,6 +2187,25 @@ export const useEditorStore = create<EditorStore>()(
               const projectToSave = {
                 ...proj,
                 entityTypes: useEditorStore.getState().entityTypes,
+              };
+              await persistProject(projectToSave);
+              set((state) => {
+                state.project = castDraft(projectToSave);
+              });
+            }
+          },
+
+          setTileMetadataDefinitions: async (definitions) => {
+            set((state) => {
+              state.tileMetadataDefinitions = definitions.map((definition) =>
+                castDraft(definition),
+              );
+            });
+            const proj = useEditorStore.getState().project;
+            if (proj) {
+              const projectToSave = {
+                ...proj,
+                tileMetadataDefinitions: useEditorStore.getState().tileMetadataDefinitions,
               };
               await persistProject(projectToSave);
               set((state) => {

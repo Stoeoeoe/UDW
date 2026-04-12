@@ -12,6 +12,7 @@ import {
   ScriptFunction,
   ScriptNamespace,
   ScriptContextType,
+  PropertyDefinition,
 } from './schema';
 
 export interface EditorState {
@@ -99,6 +100,9 @@ export interface EditorState {
 
   // Project-level entity type definitions
   entityTypes: EntityType[];
+
+  // Project-level tile metadata definitions (applies to all tilesets)
+  tileMetadataDefinitions: PropertyDefinition[];
 
   // Actor definitions (persisted in actors/ or legacy npcs/ directory)
   actors: Actor[];

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -35,6 +35,7 @@ const PROPERTY_TYPES: { value: PropertyType; label: string; icon: string }[] = [
 interface PropertyDefinitionEditorProps {
   properties: PropertyDefinition[];
   onChange: (properties: PropertyDefinition[]) => void;
+  allowedTypes?: PropertyType[];
 }
 
 /**
@@ -44,6 +45,7 @@ interface PropertyDefinitionEditorProps {
 export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> = ({
   properties,
   onChange,
+  allowedTypes,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Maintain a stable internal id for each property so that
@@ -65,6 +67,16 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
     }
   };
   ensureIds();
+
+  const availablePropertyTypes = useMemo(() => {
+    if (!allowedTypes || allowedTypes.length === 0) {
+      return PROPERTY_TYPES;
+    }
+
+    const allowedSet = new Set<PropertyType>(allowedTypes);
+    const filtered = PROPERTY_TYPES.filter((type) => allowedSet.has(type.value));
+    return filtered.length > 0 ? filtered : PROPERTY_TYPES;
+  }, [allowedTypes]);
 
   const addProperty = useCallback(() => {
     const key = `prop_${Date.now()}`;
@@ -314,7 +326,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                           });
                         }}
                       >
-                        {PROPERTY_TYPES.map((t) => (
+                        {availablePropertyTypes.map((t) => (
                           <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
                             {t.icon} {t.label}
                           </option>
