@@ -13,17 +13,7 @@ import {
   EntityInstance,
   Tileset,
   TileDefinition,
-  LayerDefinition,
-  EntityType,
-  Actor,
-  DialogueDocument,
-  DialogueIndex,
-  GameVariable,
-  ScriptTable,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptContextType,
-  PropertyDefinition,
+  LocationLink,
   PropertyValues,
 } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
@@ -33,7 +23,6 @@ import { samplePatternAt, createTileRef } from '../lib/tileUtils';
 import { fileSystem } from '../lib/fileSystem';
 import { floodFillCollect } from '../lib/algorithms';
 import { saveMapDebounced, useSaveStore } from '../lib/saveManager';
-import { encodeTileRef } from '../lib/tileRef';
 import { serializeTileset } from '../lib/tilesetMigration';
 import { serializeMap } from '../lib/mapMigration';
 import { resolveSpriteAsset } from '../lib/asepriteUtils';
@@ -42,252 +31,26 @@ import {
   findBestMatchingTileWithFallback,
   getCornerTerrainsForTile,
 } from '../lib/terrainUtils';
+import {
+  addMissingDefinitionLayers,
+  createLayersFromDefinitions,
+  ensureLocationLinkLayer,
+  createDefaultLayer,
+  getPreferredSelectedLayerId,
+  syncToolStateForSelectedLayer,
+  setTileInState,
+  pendingTilesetSaves,
+  TILESET_SAVE_DEBOUNCE_MS,
+} from './storeHelpers';
+import { createActorSlice, ActorSlice } from './slices/actorSlice';
+import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
+import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice';
+import { createLayerDefinitionSlice, LayerDefinitionSlice } from './slices/layerDefinitionSlice';
+import { createScriptingSlice, ScriptingSlice } from './slices/scriptingSlice';
 
 // ============================================================================
-// Helper functions for layer management
+// Tileset debounced save (references store instance, stays here)
 // ============================================================================
-
-/** Creates an empty 2D grid filled with null values */
-function createEmptyGrid(width: number, height: number): (number | null)[][] {
-  return Array.from({ length: height }, () => Array(width).fill(null));
-}
-
-/** Creates an empty 2D grid filled with null values for variations */
-function createEmptyStringGrid(width: number, height: number): (string | null)[][] {
-  return Array.from({ length: height }, () => Array(width).fill(null));
-}
-
-/** Adds missing layers from layer definitions to a map */
-function addMissingDefinitionLayers(map: GameMap, layerDefs: LayerDefinition[]): GameMap {
-  if (layerDefs.length === 0) return map;
-
-  const existingDefIds = new Set(
-    map.layers.filter((l) => l.definitionId).map((l) => l.definitionId),
-  );
-  const missingDefs = layerDefs.filter((def) => !existingDefIds.has(def.id));
-  if (missingDefs.length === 0) return map;
-
-  const newLayers: Layer[] = missingDefs.map((def) => ({
-    id: def.id,
-    name: def.name,
-    kind: def.type === 'entity' ? 'entity' : def.type === 'terrain' ? 'terrain' : 'visual',
-    visible: true,
-    locked: false,
-    opacity: 1,
-    zOrder: def.zIndex,
-    ...(def.type === 'entity'
-      ? { entities: [] as EntityInstance[] }
-      : {
-          data: createEmptyGrid(map.width, map.height),
-          ...(def.type === 'terrain'
-            ? { terrainData: createEmptyStringGrid(map.width, map.height) }
-            : {}),
-        }),
-    definitionId: def.id,
-  }));
-
-  const allLayers = [...map.layers, ...newLayers].sort((a, b) => a.zOrder - b.zOrder);
-  return { ...map, layers: allLayers };
-}
-
-/** Creates layers from layer definitions */
-function createLayersFromDefinitions(
-  layerDefs: LayerDefinition[],
-  width: number,
-  height: number,
-): Layer[] {
-  return layerDefs
-    .slice()
-    .sort((a, b) => a.zIndex - b.zIndex)
-    .map((def) => ({
-      id: def.id,
-      name: def.name,
-      kind: def.type === 'entity' ? 'entity' : def.type === 'terrain' ? 'terrain' : 'visual',
-      visible: true,
-      locked: false,
-      opacity: 1,
-      zOrder: def.zIndex,
-      ...(def.type === 'entity'
-        ? { entities: [] as EntityInstance[] }
-        : {
-            data: createEmptyGrid(width, height),
-            ...(def.type === 'terrain'
-              ? { terrainData: createEmptyStringGrid(width, height) }
-              : {}),
-          }),
-      definitionId: def.id,
-    }));
-}
-
-/** Ensures a map has exactly one locationlink layer (creates one if missing) */
-function ensureLocationLinkLayer(map: GameMap): GameMap {
-  const hasLinkLayer = map.layers.some((l) => l.kind === 'locationlink');
-  if (hasLinkLayer) return map;
-  const linkLayer: Layer = {
-    id: 'location-links',
-    name: 'Location Links',
-    kind: 'locationlink',
-    visible: true,
-    locked: false,
-    opacity: 1,
-    zOrder: 9999, // Always on top in the list
-  };
-  return { ...map, layers: [...map.layers, linkLayer] };
-}
-
-const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
-  terrain: 'terrain',
-  visual: 'stamp',
-  collision: 'stamp',
-  navigation: 'stamp',
-  metadata: 'stamp',
-  entity: 'entitySelect',
-  locationlink: 'linkSelect',
-};
-
-const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
-  terrain: ['terrain', 'erase'],
-  visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
-  collision: ['stamp', 'erase', 'fill', 'select'],
-  navigation: ['stamp', 'erase', 'fill', 'select'],
-  metadata: ['stamp', 'erase', 'fill', 'select'],
-  entity: ['entitySelect', 'entityPlace', 'entityDelete'],
-  locationlink: ['linkSelect', 'linkDelete'],
-};
-
-function getPreferredSelectedLayerId(map: GameMap | null): string | null {
-  if (!map) return null;
-  const firstNonLink = map.layers.find((layer) => layer.kind !== 'locationlink');
-  return firstNonLink?.id ?? map.layers[0]?.id ?? null;
-}
-
-function syncToolStateForSelectedLayer(
-  state: {
-    currentMap: GameMap | null;
-    selectedLayerId: string | null;
-    activeTool: ToolType;
-    selectedTerrainId: string | null;
-    terrainTypes: Array<{ id: string }>;
-    selectedLinkId: string | null;
-    selectedEntityId: string | null;
-    selectedEntityIds: Set<string>;
-  },
-  options: { forceDefault?: boolean } = {},
-): void {
-  const layer = state.currentMap?.layers.find(
-    (candidate) => candidate.id === state.selectedLayerId,
-  );
-  if (!layer) {
-    return;
-  }
-
-  const validTools = VALID_TOOLS_BY_KIND[layer.kind] ?? ['stamp'];
-  if (options.forceDefault || !validTools.includes(state.activeTool)) {
-    state.activeTool = DEFAULT_TOOL_BY_KIND[layer.kind] ?? 'stamp';
-  }
-
-  if (layer.kind === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
-    state.selectedTerrainId = state.terrainTypes[0].id;
-  }
-
-  if (layer.kind !== 'locationlink') {
-    state.selectedLinkId = null;
-  }
-
-  if (layer.kind !== 'entity') {
-    state.selectedEntityId = null;
-    state.selectedEntityIds = new Set();
-  }
-}
-
-/** Creates a default ground layer */
-function createDefaultLayer(width: number, height: number): Layer {
-  return {
-    id: 'ground',
-    name: 'Ground',
-    kind: 'visual',
-    visible: true,
-    locked: false,
-    opacity: 1,
-    zOrder: 0,
-    data: createEmptyGrid(width, height),
-  };
-}
-
-/** Ensures a variation has a layer override initialized */
-function ensureVariationLayerOverride(
-  variation: Variation,
-  layerId: string,
-  width: number,
-  height: number,
-): void {
-  if (!variation.layerOverrides) variation.layerOverrides = {};
-  if (!variation.layerOverrides[layerId]) {
-    variation.layerOverrides[layerId] = {
-      mode: 'merge',
-      data: createEmptyStringGrid(width, height),
-    };
-  }
-}
-
-/** Sets a tile value, handling variation overrides */
-function setTileInState(
-  map: GameMap,
-  activeVariationId: string | null,
-  layerId: string,
-  x: number,
-  y: number,
-  value: string | null,
-): void {
-  if (activeVariationId) {
-    const variation = map.variations?.find((v) => v.id === activeVariationId);
-    if (variation) {
-      ensureVariationLayerOverride(variation, layerId, map.width, map.height);
-      variation.layerOverrides![layerId].data[y][x] = value; // Keep as string for variations
-      return;
-    }
-  }
-  const encodedValue = value ? encodeTileRef(value, map.tilesetRefs) : null;
-  const layer = map.layers.find((l) => l.id === layerId);
-  if (layer && layer.data && layer.data[y] && !layer.locked) {
-    layer.data[y][x] = encodedValue;
-  }
-}
-
-/** Persists project data to project.json with save status feedback */
-async function persistProject(project: Project): Promise<void> {
-  useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('', `${project.id}.project.json`, {
-    $schema: '../schemas/project.schema.json',
-    ...project,
-  });
-  useSaveStore.getState().setStatus('saved');
-  setTimeout(() => {
-    if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
-  }, 2000);
-}
-
-/** Persist all scripting-related fields to project.json in one shot. */
-async function persistScriptingState(): Promise<void> {
-  const s = useEditorStore.getState();
-  const proj = s.project;
-  if (!proj) return;
-  const projectToSave = {
-    ...proj,
-    gameVariables: s.gameVariables,
-    scriptTables: s.scriptTables,
-    scriptFunctions: s.scriptFunctions,
-    scriptNamespaces: s.scriptNamespaces,
-    scriptContextTypes: s.scriptContextTypes,
-  };
-  await persistProject(projectToSave);
-  useEditorStore.setState((state) => {
-    state.project = castDraft(projectToSave);
-  });
-}
-
-const TILESET_SAVE_DEBOUNCE_MS = 300;
-const pendingTilesetSaves = new globalThis.Map<string, ReturnType<typeof setTimeout>>();
 
 function scheduleTilesetSave(tilesetId: string): void {
   const existing = pendingTilesetSaves.get(tilesetId);
@@ -314,12 +77,23 @@ function scheduleTilesetSave(tilesetId: string): void {
   pendingTilesetSaves.set(tilesetId, timeoutId);
 }
 
-interface EditorStore extends EditorState {
+// ============================================================================
+// Store interface
+// ============================================================================
+
+export interface EditorStore
+  extends
+    EditorState,
+    ActorSlice,
+    TerrainSlice,
+    EntityTypeSlice,
+    LayerDefinitionSlice,
+    ScriptingSlice {
   // Actions
   loadProject: (path: string, project: Project) => Promise<void>;
   closeProject: () => void;
-  loadProjectResources: () => Promise<void>; // Load all maps, tilesets, sprites
-  loadSprite: (path: string, blob: Blob) => Promise<string>; // Returns object URL
+  loadProjectResources: () => Promise<void>;
+  loadSprite: (path: string, blob: Blob) => Promise<string>;
   updateProject: (project: Project) => Promise<void>;
 
   // Map Actions
@@ -371,12 +145,7 @@ interface EditorStore extends EditorState {
   paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
   paintTilesBatch: (
     layerId: string,
-    tiles: Array<{
-      x: number;
-      y: number;
-      tilesetId: string;
-      tileIndex: number;
-    }>,
+    tiles: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }>,
   ) => void;
   eraseTile: (layerId: string, x: number, y: number) => void;
   eraseTilesBatch: (layerId: string, positions: Array<{ x: number; y: number }>) => void;
@@ -399,15 +168,14 @@ interface EditorStore extends EditorState {
       mode: 'stamp' | 'random' | 'erase';
       tilesetId?: string;
       tileIndex?: number;
-      tileIndices?: number[]; // For stencil or random selection
+      tileIndices?: number[];
       pattern?: {
         pattern: (number | null)[][];
         patternW: number;
         patternH: number;
-      }; // For stencil fill
+      };
     },
   ) => void;
-  // Tileset corner terrain actions
   setTileCornerTerrain: (
     tilesetId: string,
     index: number,
@@ -436,62 +204,9 @@ interface EditorStore extends EditorState {
   updateVariation: (id: string, updates: Partial<Variation>) => void;
   removeVariation: (id: string) => void;
 
-  // Entity Actions
+  // Entity selection
   selectEntity: (id: string | null) => void;
   setSelectedEntityType: (id: string | null) => void;
-
-  // Entity type CRUD (project-level)
-  addEntityType: (entityType: EntityType) => Promise<void>;
-  updateEntityType: (id: string, updates: Partial<EntityType>) => Promise<void>;
-  deleteEntityType: (id: string) => Promise<void>;
-  setTileMetadataDefinitions: (definitions: PropertyDefinition[]) => Promise<void>;
-
-  // Actor CRUD
-  addActor: (actor: Actor) => Promise<void>;
-  updateActor: (id: string, updates: Partial<Actor>) => Promise<void>;
-  deleteActor: (id: string) => Promise<void>;
-  setSelectedActor: (id: string | null) => void;
-
-  // Game variable CRUD
-  addGameVariable: (variable: GameVariable) => Promise<void>;
-  updateGameVariable: (key: string, updates: Partial<GameVariable>) => Promise<void>;
-  deleteGameVariable: (key: string) => Promise<void>;
-
-  // Script table CRUD
-  addScriptTable: (table: ScriptTable) => Promise<void>;
-  updateScriptTable: (id: string, updates: Partial<ScriptTable>) => Promise<void>;
-  deleteScriptTable: (id: string) => Promise<void>;
-
-  // Script function CRUD
-  addScriptFunction: (fn: ScriptFunction) => Promise<void>;
-  updateScriptFunction: (id: string, updates: Partial<ScriptFunction>) => Promise<void>;
-  deleteScriptFunction: (id: string) => Promise<void>;
-
-  // Script namespace CRUD
-  addScriptNamespace: (ns: ScriptNamespace) => Promise<void>;
-  updateScriptNamespace: (id: string, updates: Partial<ScriptNamespace>) => Promise<void>;
-  deleteScriptNamespace: (id: string) => Promise<void>;
-
-  // Script context type CRUD
-  addScriptContextType: (ct: ScriptContextType) => Promise<void>;
-  updateScriptContextType: (id: string, updates: Partial<ScriptContextType>) => Promise<void>;
-  deleteScriptContextType: (id: string) => Promise<void>;
-
-  // Terrain actions
-  addTerrainType: (terrain: { id: string; displayName: string; color: string }) => Promise<void>;
-  updateTerrainType: (
-    id: string,
-    updates: Partial<{ displayName: string; color: string }>,
-  ) => Promise<void>;
-  deleteTerrainType: (id: string) => Promise<void>;
-
-  // Layer definition actions
-  layerDefinitions: LayerDefinition[];
-  selectedLayerDefinitionId: string | null;
-  setSelectedLayerDefinition: (id: string | null) => void;
-  addLayerDefinition: (definition: LayerDefinition) => Promise<void>;
-  updateLayerDefinition: (id: string, updates: Partial<LayerDefinition>) => Promise<void>;
-  deleteLayerDefinition: (id: string) => Promise<void>;
 
   // Camera actions
   setCamera: (camera: Partial<EditorState['camera']>) => void;
@@ -504,27 +219,27 @@ interface EditorStore extends EditorState {
   // Tileset toolbar mode
   setTilesetToolMode: (mode: 'select' | 'terrain') => void;
 
-  // Reset selected tiles in global editor state
+  // Reset selected tiles
   resetSelectedTiles: () => void;
 
   // Location link actions
-  addLocationLink: (link: import('../types/schema').LocationLink) => void;
-  updateLocationLink: (
-    id: string,
-    updates: Partial<import('../types/schema').LocationLink>,
-  ) => void;
+  addLocationLink: (link: LocationLink) => void;
+  updateLocationLink: (id: string, updates: Partial<LocationLink>) => void;
   removeLocationLink: (id: string) => void;
   selectLink: (id: string | null) => void;
   startPickingLinkTarget: (linkId: string) => void;
   cancelPickingLinkTarget: () => void;
   commitLinkTarget: (linkId: string, mapId: string, position: [number, number]) => void;
   clearPendingNewLink: () => void;
-  /** Create counterpart link on target map and wire targetLinkId on both ends. */
   createBidirectionalCounterpart: (sourceLinkId: string) => Promise<void>;
 
   // Validation
   validate: () => ValidationError[];
 }
+
+// ============================================================================
+// History machinery
+// ============================================================================
 
 type EditorHistorySnapshot = {
   currentMap: GameMap | null;
@@ -710,15 +425,26 @@ function isTrackedHistoryEqual(
   return pastState.currentMap === currentState.currentMap;
 }
 
+// ============================================================================
+// Store creation
+// ============================================================================
+
 export const useEditorStore = create<EditorStore>()(
   temporal(
     devtools(
       subscribeWithSelector(
-        immer((set) => ({
-          // Initial state
+        immer((set, get) => ({
+          // ── Slices ─────────────────────────────────────────────────────────
+          ...createActorSlice(set, get, {} as never),
+          ...createTerrainSlice(set, get, {} as never),
+          ...createEntityTypeSlice(set, get, {} as never),
+          ...createLayerDefinitionSlice(set, get, {} as never),
+          ...createScriptingSlice(set, get, {} as never),
+
+          // ── Initial state ──────────────────────────────────────────────────
           project: null,
           projectPath: null,
-          mode: 'project',
+          mode: 'project' as EditorMode,
           tilesets: new globalThis.Map(),
           loadedSprites: new globalThis.Map(),
           maps: [],
@@ -727,8 +453,8 @@ export const useEditorStore = create<EditorStore>()(
           activeVariationId: null,
           timePreviewEnabled: false,
           timeOfDay: 0.5,
-          activeTool: 'stamp',
-          drawMode: 'point',
+          activeTool: 'stamp' as ToolType,
+          drawMode: 'point' as const,
           brushSize: 1,
           hoveredTile: null,
           drawPreview: { isDrawing: false, start: null, end: null },
@@ -745,13 +471,13 @@ export const useEditorStore = create<EditorStore>()(
           selectedEntityTypeId: null,
           selectedEntityId: null,
           selectedEntityIds: new Set(),
-          entitySnapMode: 'grid',
+          entitySnapMode: 'grid' as const,
           showCollisionOverlay: false,
           showTilesetCollisionOverlay: false,
           showTerrainOverlay: false,
           camera: { x: 0, y: 0, zoom: 1.5 },
           mapCameras: {},
-          tilesetToolMode: 'select',
+          tilesetToolMode: 'select' as const,
           panels: {
             layersOpen: true,
             tilesetPaletteOpen: true,
@@ -759,35 +485,22 @@ export const useEditorStore = create<EditorStore>()(
             inspectorOpen: true,
             variationsOpen: true,
           },
-          terrainTypes: [],
-          entityTypes: [],
-          tileMetadataDefinitions: [],
-          gameVariables: [],
-          scriptTables: [],
-          scriptFunctions: [],
-          scriptNamespaces: [],
-          scriptContextTypes: [],
-          actors: [],
-          selectedActorId: null,
           dialogueIndex: null,
           dialogues: new globalThis.Map(),
           selectedDialogueId: null,
           selectedDialogueNodeId: null,
-          layerDefinitions: [],
-          selectedLayerDefinitionId: null,
           validationErrors: [],
           selectedLinkId: null,
           pickingLinkTargetForLinkId: null,
           pendingNewLinkId: null,
 
-          // Actions implementation
+          // ── Project actions ────────────────────────────────────────────────
           loadProject: async (path, project) => {
             withHistorySuppressed(
               () =>
                 set((state) => {
                   state.project = project;
                   state.projectPath = path;
-                  // Reset resources and map state
                   state.currentMap = null;
                   state.currentMapPath = null;
                   state.maps = [];
@@ -852,9 +565,6 @@ export const useEditorStore = create<EditorStore>()(
             // 1. Load all tilesets
             const tilesets = await fileSystem.loadAllTilesets();
             for (const tileset of tilesets) {
-              // Ensure tileCount is sensible — some saved tilesets may have
-              // incorrect tileCount (e.g. equal to columns). Prefer the
-              // explicit tiles object length when available.
               const tilesObjCount = tileset.tiles ? Object.keys(tileset.tiles).length : 0;
               const normalizedTileCount = Math.max(
                 tileset.tileCount || 0,
@@ -867,7 +577,6 @@ export const useEditorStore = create<EditorStore>()(
                 state.tilesets.set(tileset.id, castDraft(normalized));
               });
 
-              // Load sprite for each tileset
               try {
                 const blob = await fileSystem.loadAsset(tileset.spriteSheet);
                 await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
@@ -876,7 +585,6 @@ export const useEditorStore = create<EditorStore>()(
               }
             }
 
-            // Set first tileset as active if none is set
             set((state) => {
               if (!state.activeTilesetId && tilesets.length > 0) {
                 state.activeTilesetId = tilesets[0].id;
@@ -884,45 +592,46 @@ export const useEditorStore = create<EditorStore>()(
               }
             });
 
-            // 1.5 Load terrain types from project.json (if present)
             const proj = useEditorStore.getState().project;
+
+            // 1.5 Terrain types
             if (proj?.terrainTypes && Array.isArray(proj.terrainTypes)) {
               set((state) => {
                 state.terrainTypes = proj.terrainTypes!.map((t) => castDraft(t));
               });
             }
 
-            // 1.6 Load layer definitions from project.json (if present)
+            // 1.6 Layer definitions
             if (proj?.layerDefinitions && Array.isArray(proj.layerDefinitions)) {
               set((state) => {
                 state.layerDefinitions = proj.layerDefinitions!.map((d) => castDraft(d));
               });
             }
 
-            // 1.7 Load entity types from project.json (if present)
+            // 1.7 Entity types
             if (proj?.entityTypes && Array.isArray(proj.entityTypes)) {
               set((state) => {
                 state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
               });
             }
 
-            // 1.72 Load project-level tile metadata definitions (if present)
+            // 1.72 Tile metadata definitions
             if (proj?.tileMetadataDefinitions && Array.isArray(proj.tileMetadataDefinitions)) {
               set((state) => {
-                state.tileMetadataDefinitions = proj.tileMetadataDefinitions!.map((definition) =>
-                  castDraft(definition),
+                state.tileMetadataDefinitions = proj.tileMetadataDefinitions!.map((d) =>
+                  castDraft(d),
                 );
               });
             }
 
-            // 1.75 Load game variables from project.json (if present)
+            // 1.75 Game variables
             if (proj?.gameVariables && Array.isArray(proj.gameVariables)) {
               set((state) => {
                 state.gameVariables = castDraft(proj.gameVariables!);
               });
             }
 
-            // 1.76 Load scripting primitives from project.json
+            // 1.76 Scripting primitives
             if (proj?.scriptTables && Array.isArray(proj.scriptTables)) {
               set((state) => {
                 state.scriptTables = castDraft(proj.scriptTables!);
@@ -944,13 +653,13 @@ export const useEditorStore = create<EditorStore>()(
               });
             }
 
-            // 1.8 Load actors (actors/ preferred, legacy npcs/ fallback)
+            // 1.8 Actors
             const actors = await fileSystem.loadAllActors();
             set((state) => {
               state.actors = castDraft(actors);
             });
 
-            // 1.85 Load dialogue index + documents (optional)
+            // 1.85 Dialogue index + documents
             const loadedDialogueIndex =
               (await fileSystem.readDialogueIndex()) ??
               ({
@@ -958,7 +667,7 @@ export const useEditorStore = create<EditorStore>()(
                 categories: [],
                 customActors: [],
                 dialogues: [],
-              } satisfies DialogueIndex);
+              } as import('../types/schema').DialogueIndex);
 
             const loadedDialogues = await fileSystem.loadDialoguesByIds(
               loadedDialogueIndex.dialogues.map((entry) => entry.id),
@@ -966,25 +675,32 @@ export const useEditorStore = create<EditorStore>()(
 
             set((state) => {
               state.dialogueIndex = castDraft(loadedDialogueIndex);
-              state.dialogues = new globalThis.Map<string, DialogueDocument>(
+              state.dialogues = new globalThis.Map(
                 loadedDialogues.map((dialogue) => [dialogue.id, castDraft(dialogue)]),
               );
               state.selectedDialogueId = loadedDialogues[0]?.id ?? null;
               state.selectedDialogueNodeId =
-                (loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string })
-                  ?.startNodeId ??
-                (loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string })
-                  ?.entryStepId ??
+                (
+                  loadedDialogues[0] as unknown as {
+                    startNodeId?: string;
+                    entryStepId?: string;
+                  }
+                )?.startNodeId ??
+                (
+                  loadedDialogues[0] as unknown as {
+                    startNodeId?: string;
+                    entryStepId?: string;
+                  }
+                )?.entryStepId ??
                 null;
             });
 
-            // 1.9 Load entity type sprites
+            // 1.9 Entity type sprites
             const entityTypes = useEditorStore.getState().entityTypes;
             for (const et of entityTypes) {
               if (!et.sprite?.path) continue;
               try {
                 const path = et.sprite.path;
-                // Try relative path first (new format), fall back to absolute (legacy)
                 const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
                 const blob = looksRelative
                   ? await fileSystem.loadAsset(path)
@@ -997,11 +713,7 @@ export const useEditorStore = create<EditorStore>()(
 
             // 2. Load all maps
             const maps = await fileSystem.loadAllMaps();
-
-            // Get layer definitions to inject into maps
             const layerDefs = useEditorStore.getState().layerDefinitions;
-
-            // Enrich all maps with missing layers and store the full list
             const enrichedMaps = maps.map((m) => addMissingDefinitionLayers(m, layerDefs));
 
             withHistorySuppressed(() =>
@@ -1010,7 +722,6 @@ export const useEditorStore = create<EditorStore>()(
               }),
             );
 
-            // Optionally load the first map as current
             if (enrichedMaps.length > 0) {
               withHistorySuppressed(
                 () =>
@@ -1035,7 +746,6 @@ export const useEditorStore = create<EditorStore>()(
               img.onerror = reject;
             });
 
-            // Replace the Map instance so selectors depending on the Map identity update
             set((state) => {
               state.loadedSprites = new Map(state.loadedSprites);
               state.loadedSprites.set(path, castDraft(img));
@@ -1054,6 +764,7 @@ export const useEditorStore = create<EditorStore>()(
             });
           },
 
+          // ── Map actions ────────────────────────────────────────────────────
           setCurrentMap: (map) => {
             withHistorySuppressed(
               () =>
@@ -1064,7 +775,6 @@ export const useEditorStore = create<EditorStore>()(
                     return;
                   }
 
-                  // Add missing layers from layer definitions + ensure link layer
                   const withDefs = addMissingDefinitionLayers(map, state.layerDefinitions);
                   const enrichedMap = ensureLocationLinkLayer(withDefs);
 
@@ -1074,7 +784,6 @@ export const useEditorStore = create<EditorStore>()(
                   if (enrichedMap && state.mapCameras && state.mapCameras[enrichedMap.id]) {
                     state.camera = { ...state.mapCameras[enrichedMap.id] };
                   }
-                  // Auto-select first non-link layer, or any layer if all are system layers
                   if (
                     !state.selectedLayerId ||
                     !enrichedMap.layers.find((l) => l.id === state.selectedLayerId)
@@ -1094,7 +803,6 @@ export const useEditorStore = create<EditorStore>()(
                   const map = state.maps.find((m) => m.id === mapId);
                   if (!map) return;
 
-                  // Save camera for current map before switching
                   if (state.currentMap) {
                     state.mapCameras = state.mapCameras || {};
                     state.mapCameras[state.currentMap.id] = { ...state.camera };
@@ -1108,14 +816,12 @@ export const useEditorStore = create<EditorStore>()(
                   state.selectedEntityIds = new Set();
                   state.selectedLinkId = null;
 
-                  // Restore camera for the loaded map
                   if (state.mapCameras && state.mapCameras[mapId]) {
                     state.camera = { ...state.mapCameras[mapId] };
                   } else {
                     state.camera = { x: 0, y: 0, zoom: 1.5 };
                   }
 
-                  // Auto-select first non-link layer
                   state.selectedLayerId = getPreferredSelectedLayerId(enrichedMap);
                   syncToolStateForSelectedLayer(state, { forceDefault: true });
                 }),
@@ -1123,22 +829,9 @@ export const useEditorStore = create<EditorStore>()(
             );
           },
 
-          setTilesetToolMode: (mode) =>
-            set((state) => {
-              state.tilesetToolMode = mode;
-              // Auto-select first terrain when entering terrain mode
-              if (mode === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
-                state.selectedTerrainId = state.terrainTypes[0].id;
-              }
-            }),
-
           createNewMap: async (name, width, height, tilesetId) => {
             const id = name.toLowerCase().replace(/\s+/g, '-');
-
-            // Get layer definitions from store to create default layers
             const layerDefs = useEditorStore.getState().layerDefinitions;
-
-            // Create layers from definitions, or use a default ground layer, plus always a link layer
             const definedLayers = createLayersFromDefinitions(layerDefs, width, height);
             const baseLayers =
               definedLayers.length > 0 ? definedLayers : [createDefaultLayer(width, height)];
@@ -1177,7 +870,6 @@ export const useEditorStore = create<EditorStore>()(
           },
 
           addMap: (map: GameMap) => {
-            // This might be used for loading, but currentMap is the primary state
             set((state) => {
               state.currentMap = castDraft(map);
             });
@@ -1186,10 +878,8 @@ export const useEditorStore = create<EditorStore>()(
           updateCurrentMap: (updates) => {
             set((state) => {
               if (!state.currentMap) return;
-
               Object.assign(state.currentMap, updates);
 
-              // Keep base tileset accessible for encoding/decoding tile references.
               if (
                 updates.baseTilesetId &&
                 !state.currentMap.tilesetRefs.includes(updates.baseTilesetId)
@@ -1197,7 +887,6 @@ export const useEditorStore = create<EditorStore>()(
                 state.currentMap.tilesetRefs.unshift(updates.baseTilesetId);
               }
 
-              // When editing base metadata, align palette with the map's base tileset.
               if (updates.baseTilesetId && !state.activeVariationId) {
                 state.activeTilesetId = updates.baseTilesetId;
               }
@@ -1208,17 +897,13 @@ export const useEditorStore = create<EditorStore>()(
             const map = useEditorStore.getState().maps.find((m) => m.id === mapId);
             if (!map) return;
 
-            // Delete from filesystem
-            const filename = `${mapId}.map.json`;
-            await fileSystem.deleteJson('maps', filename);
+            await fileSystem.deleteJson('maps', `${mapId}.map.json`);
 
             withHistorySuppressed(
               () =>
                 set((state) => {
-                  // Remove from maps list
                   state.maps = state.maps.filter((m) => m.id !== mapId);
 
-                  // If we just deleted the current map, clear or switch
                   if (state.currentMap?.id === mapId) {
                     if (state.maps.length > 0) {
                       state.currentMap = castDraft(state.maps[0]);
@@ -1238,14 +923,13 @@ export const useEditorStore = create<EditorStore>()(
             );
           },
 
+          // ── Tool actions ───────────────────────────────────────────────────
           setActiveTool: (tool) => {
             set((state) => {
               state.activeTool = tool;
-              // If switching to paint tool and no layer selected, select first
               if (tool === 'stamp' && !state.selectedLayerId && state.currentMap) {
                 state.selectedLayerId = state.currentMap.layers[0]?.id || null;
               }
-              // If switching to terrain tool and no terrain selected, default to first terrain
               if (tool === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
                 state.selectedTerrainId = state.terrainTypes[0].id;
               }
@@ -1276,7 +960,6 @@ export const useEditorStore = create<EditorStore>()(
               const tileset = state.tilesets.get(activeTilesetId);
               if (!tileset) return;
 
-              // Pre-compute the encoded base for this tileset (avoids indexOf per cell)
               const tilesetIndex = map.tilesetRefs.indexOf(activeTilesetId);
               if (tilesetIndex === -1) return;
               const tilesetBase = tilesetIndex << 16;
@@ -1324,7 +1007,6 @@ export const useEditorStore = create<EditorStore>()(
               state.brushSize = Math.max(1, Math.round(size));
             }),
 
-          // Drawing preview used while dragging shapes
           setDrawPreview: (preview) =>
             set((state) => {
               state.drawPreview = preview;
@@ -1338,7 +1020,6 @@ export const useEditorStore = create<EditorStore>()(
           setMode: (mode) => {
             set((state) => {
               state.mode = mode;
-              // Reset all tile selection state when changing screen
               state.selectedTileIndex = null;
               state.selectedTileIndices = [];
               state.mapEditorSelectedTileIndex = null;
@@ -1348,12 +1029,13 @@ export const useEditorStore = create<EditorStore>()(
             });
           },
 
+          // ── Tileset actions ────────────────────────────────────────────────
           setActiveTileset: (id) =>
             set((state) => {
               state.activeTilesetId = id;
               state.selectedTileIndex = null;
               state.selectedTileIndices = [];
-              state.selectedTerrainId = null; // Selection clear terrain
+              state.selectedTerrainId = null;
             }),
 
           setSelectedTile: (index) =>
@@ -1361,7 +1043,7 @@ export const useEditorStore = create<EditorStore>()(
               state.selectedTileIndex = index;
               if (index !== null) state.selectedTerrainId = null;
               state.selectedTileIndices = index !== null ? [index] : [];
-              state.sampledPattern = null; // Clear sampled pattern when selecting tiles normally
+              state.sampledPattern = null;
             }),
 
           setSelectedTiles: (indexes) =>
@@ -1369,7 +1051,7 @@ export const useEditorStore = create<EditorStore>()(
               state.selectedTileIndices = indexes.slice();
               state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
               if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
-              state.sampledPattern = null; // Clear sampled pattern when selecting tiles normally
+              state.sampledPattern = null;
             }),
 
           toggleSelectedTile: (index) =>
@@ -1393,7 +1075,6 @@ export const useEditorStore = create<EditorStore>()(
           setSampledPattern: (pattern) =>
             set((state) => {
               state.sampledPattern = pattern;
-              // Clear normal tile selection when setting a sampled pattern
               if (pattern) {
                 state.selectedTileIndices = [];
               }
@@ -1417,7 +1098,6 @@ export const useEditorStore = create<EditorStore>()(
               if (!state.activeTilesetId) state.activeTilesetId = tileset.id;
             });
 
-            // Load sprite
             try {
               const blob = await fileSystem.loadAsset(tileset.spriteSheet);
               await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
@@ -1433,7 +1113,7 @@ export const useEditorStore = create<EditorStore>()(
               const ts = state.tilesets.get(id);
               if (ts) {
                 Object.assign(ts, updates);
-                updatedTileset = JSON.parse(JSON.stringify(ts)); // Clone for safety
+                updatedTileset = JSON.parse(JSON.stringify(ts));
               }
             });
 
@@ -1450,7 +1130,6 @@ export const useEditorStore = create<EditorStore>()(
                   useSaveStore.getState().setStatus('idle');
               }, 2000);
 
-              // Reload sprite if spriteSheet changed
               if ('spriteSheet' in updates && updatedTileset.spriteSheet) {
                 try {
                   const blob = await fileSystem.loadAsset(updatedTileset.spriteSheet);
@@ -1500,12 +1179,10 @@ export const useEditorStore = create<EditorStore>()(
               if (!tile.terrainCorners) tile.terrainCorners = [null, null, null, null];
               tile.terrainCorners[corner] = terrainId;
 
-              // If terrainId is null, clear the terrain information for the corner
               if (terrainId === null) {
                 const updatedCorners = [...tile.terrainCorners];
                 updatedCorners[corner] = null;
-                // Check if all corners are null, and if so, remove the terrainCorners property
-                if (updatedCorners.every((corner) => corner === null)) {
+                if (updatedCorners.every((c) => c === null)) {
                   delete tile.terrainCorners;
                 } else {
                   tile.terrainCorners = updatedCorners;
@@ -1531,6 +1208,7 @@ export const useEditorStore = create<EditorStore>()(
             }
           },
 
+          // ── Tile painting ──────────────────────────────────────────────────
           paintTile: (layerId, x, y, tilesetId, tileIndex) =>
             set((state) => {
               if (!state.currentMap) return;
@@ -1588,13 +1266,7 @@ export const useEditorStore = create<EditorStore>()(
               }
             }),
 
-          bucketFill: (
-            layerId: string,
-            startX: number,
-            startY: number,
-            tilesetId: string,
-            tileIndex: number,
-          ) =>
+          bucketFill: (layerId, startX, startY, tilesetId, tileIndex) =>
             set((state) => {
               if (!state.currentMap) return;
               const map = state.currentMap;
@@ -1701,49 +1373,40 @@ export const useEditorStore = create<EditorStore>()(
               }
             }),
 
+          // ── Entity instance actions ────────────────────────────────────────
           placeEntity: (entity) =>
             set((state) => {
               if (!state.currentMap) return;
 
-              // If a layer is selected and it's an entity layer, attach to that layer
               const selectedLayer = state.currentMap.layers.find(
                 (l) => l.id === state.selectedLayerId,
               );
               if (selectedLayer && selectedLayer.kind === 'entity') {
                 const toAdd: EntityInstance = { ...entity, layerId: selectedLayer.id };
 
-                // If variation active, record as variation-level add override
                 if (state.activeVariationId) {
                   const variation = state.currentMap.variations?.find(
                     (v) => v.id === state.activeVariationId,
                   );
                   if (variation) {
                     if (!variation.entityOverrides) variation.entityOverrides = [];
-                    variation.entityOverrides.push({
-                      action: 'add',
-                      entity: castDraft(toAdd),
-                    });
+                    variation.entityOverrides.push({ action: 'add', entity: castDraft(toAdd) });
                     return;
                   }
                 }
 
-                // Otherwise add to the layer's entities
                 if (!selectedLayer.entities) selectedLayer.entities = [];
                 selectedLayer.entities.push(castDraft(toAdd));
                 return;
               }
 
-              // Fallback: add to top-level entities (legacy behavior)
               if (state.activeVariationId) {
                 const variation = state.currentMap.variations?.find(
                   (v) => v.id === state.activeVariationId,
                 );
                 if (variation) {
                   if (!variation.entityOverrides) variation.entityOverrides = [];
-                  variation.entityOverrides.push({
-                    action: 'add',
-                    entity: castDraft(entity),
-                  });
+                  variation.entityOverrides.push({ action: 'add', entity: castDraft(entity) });
                   return;
                 }
               }
@@ -1762,7 +1425,6 @@ export const useEditorStore = create<EditorStore>()(
                 if (variation) {
                   if (!variation.entityOverrides) variation.entityOverrides = [];
 
-                  // If it was an "add" override, just remove it
                   const existingAddIdx = variation.entityOverrides.findIndex(
                     (o) => o.action === 'add' && o.entity?.id === entityId,
                   );
@@ -1771,21 +1433,15 @@ export const useEditorStore = create<EditorStore>()(
                     return;
                   }
 
-                  // Otherwise add a "remove" override for the base entity
-                  variation.entityOverrides.push({
-                    action: 'remove',
-                    entityId,
-                  });
+                  variation.entityOverrides.push({ action: 'remove', entityId });
                   return;
                 }
               }
 
-              // Remove from top-level entities
               state.currentMap.entities = state.currentMap.entities.filter(
                 (e) => e.id !== entityId,
               );
 
-              // Also remove from any entity layers
               for (const layer of state.currentMap.layers) {
                 if (layer.kind === 'entity' && layer.entities) {
                   layer.entities = layer.entities.filter((e) => e.id !== entityId);
@@ -1817,30 +1473,26 @@ export const useEditorStore = create<EditorStore>()(
                   );
                   if (existingModify) {
                     if (!existingModify.entity) {
-                      existingModify.entity = {} as Partial<
-                        import('../types/schema').EntityInstance
-                      >;
+                      existingModify.entity = {} as Partial<EntityInstance>;
                     }
                     existingModify.entity.position = position;
                   } else {
                     variation.entityOverrides.push({
                       action: 'modify',
                       entityId,
-                      entity: { position } as Partial<import('../types/schema').EntityInstance>,
+                      entity: { position } as Partial<EntityInstance>,
                     });
                   }
                   return;
                 }
               }
 
-              // Update in top-level entities
               const entity = state.currentMap.entities.find((e) => e.id === entityId);
               if (entity) {
                 entity.position = position;
                 return;
               }
 
-              // Update in entity layers
               for (const layer of state.currentMap.layers) {
                 if (layer.kind === 'entity' && layer.entities) {
                   const layerEntity = layer.entities.find((e) => e.id === entityId);
@@ -1876,16 +1528,14 @@ export const useEditorStore = create<EditorStore>()(
                   );
                   if (existingModify) {
                     if (!existingModify.entity) {
-                      existingModify.entity = {} as Partial<
-                        import('../types/schema').EntityInstance
-                      >;
+                      existingModify.entity = {} as Partial<EntityInstance>;
                     }
                     existingModify.entity.label = label;
                   } else {
                     variation.entityOverrides.push({
                       action: 'modify',
                       entityId,
-                      entity: { label } as Partial<import('../types/schema').EntityInstance>,
+                      entity: { label } as Partial<EntityInstance>,
                     });
                   }
                   return;
@@ -1920,7 +1570,6 @@ export const useEditorStore = create<EditorStore>()(
                 if (variation) {
                   if (!variation.entityOverrides) variation.entityOverrides = [];
 
-                  // Check if we already have an override for this entity in this variation
                   const existingOverride = variation.entityOverrides.find(
                     (o) =>
                       (o.action === 'add' && o.entity?.id === entityId) ||
@@ -1935,9 +1584,7 @@ export const useEditorStore = create<EditorStore>()(
                       } as PropertyValues;
                     } else if (existingOverride.action === 'modify') {
                       if (!existingOverride.entity)
-                        existingOverride.entity = { properties: {} } as Partial<
-                          import('../types/schema').EntityInstance
-                        >;
+                        existingOverride.entity = { properties: {} } as Partial<EntityInstance>;
                       if (existingOverride.entity) {
                         existingOverride.entity.properties = {
                           ...((existingOverride.entity.properties as PropertyValues) || {}),
@@ -1946,21 +1593,18 @@ export const useEditorStore = create<EditorStore>()(
                       }
                     }
                   } else {
-                    // Create a new "modify" override with a sparse entity
                     variation.entityOverrides.push({
                       action: 'modify',
                       entityId,
-                      entity: { properties } as Partial<import('../types/schema').EntityInstance>,
+                      entity: { properties } as Partial<EntityInstance>,
                     });
                   }
                   return;
                 }
               }
 
-              // Try to find entity in top-level entities
               let entity = state.currentMap.entities.find((e) => e.id === entityId);
               if (!entity) {
-                // Try to find in layers
                 for (const layer of state.currentMap.layers) {
                   if (layer.kind === 'entity' && layer.entities) {
                     const found = layer.entities.find((en) => en.id === entityId);
@@ -1977,6 +1621,7 @@ export const useEditorStore = create<EditorStore>()(
               }
             }),
 
+          // ── Layer actions ──────────────────────────────────────────────────
           addLayer: (layer) =>
             set((state) => {
               if (state.currentMap) {
@@ -1997,7 +1642,6 @@ export const useEditorStore = create<EditorStore>()(
               const layer = state.currentMap.layers.find((l) => l.id === layerId);
               if (layer) {
                 layer.zOrder = newZOrder;
-                // Stability: Sort layers by zOrder to keep indices predictable
                 state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
               }
             }),
@@ -2027,13 +1671,13 @@ export const useEditorStore = create<EditorStore>()(
               const layer = state.currentMap?.layers.find((l) => l.id === layerId);
               if (layer) {
                 Object.assign(layer, updates);
-                // Re-sort layers by zOrder if zOrder changed
                 if (updates.zOrder !== undefined && state.currentMap) {
                   state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
                 }
               }
             }),
 
+          // ── Variation actions ──────────────────────────────────────────────
           setActiveVariation: (variationId) => {
             withHistorySuppressed(
               () =>
@@ -2073,10 +1717,11 @@ export const useEditorStore = create<EditorStore>()(
             });
           },
 
+          // ── Entity selection ───────────────────────────────────────────────
           selectEntity: (id) =>
             set((state) => {
               state.selectedEntityId = id;
-              if (id !== null) state.selectedLinkId = null; // mutual exclusion
+              if (id !== null) state.selectedLinkId = null;
             }),
 
           setSelectedEntityType: (id) =>
@@ -2087,442 +1732,10 @@ export const useEditorStore = create<EditorStore>()(
               }
             }),
 
-          // Terrain actions
-          addTerrainType: async (terrain) => {
-            set((state) => {
-              state.terrainTypes.push(castDraft(terrain));
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                terrainTypes: useEditorStore.getState().terrainTypes,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          updateTerrainType: async (id, updates) => {
-            set((state) => {
-              const t = state.terrainTypes.find((tt) => tt.id === id);
-              if (t) Object.assign(t, updates);
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                terrainTypes: useEditorStore.getState().terrainTypes,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          deleteTerrainType: async (id) => {
-            set((state) => {
-              state.terrainTypes = state.terrainTypes.filter((t) => t.id !== id);
-              if (state.selectedTerrainId === id) state.selectedTerrainId = null;
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                terrainTypes: useEditorStore.getState().terrainTypes,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          // Entity type CRUD actions
-          addEntityType: async (entityType) => {
-            set((state) => {
-              state.entityTypes.push(castDraft(entityType));
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                entityTypes: useEditorStore.getState().entityTypes,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          updateEntityType: async (id, updates) => {
-            set((state) => {
-              const et = state.entityTypes.find((e) => e.id === id);
-              if (et) Object.assign(et, updates);
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                entityTypes: useEditorStore.getState().entityTypes,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          deleteEntityType: async (id) => {
-            set((state) => {
-              state.entityTypes = state.entityTypes.filter((e) => e.id !== id);
-              if (state.selectedEntityTypeId === id) state.selectedEntityTypeId = null;
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                entityTypes: useEditorStore.getState().entityTypes,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          setTileMetadataDefinitions: async (definitions) => {
-            set((state) => {
-              state.tileMetadataDefinitions = definitions.map((definition) =>
-                castDraft(definition),
-              );
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                tileMetadataDefinitions: useEditorStore.getState().tileMetadataDefinitions,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          // Actor CRUD actions
-          setSelectedActor: (id) =>
-            set((state) => {
-              state.selectedActorId = id;
-            }),
-
-          addActor: async (actor) => {
-            set((state) => {
-              state.actors.push(castDraft(actor));
-            });
-            await fileSystem.saveJson('actors', `${actor.id}.actor.json`, {
-              $schema: '../../schemas/actor.schema.json',
-              ...actor,
-            });
-          },
-
-          updateActor: async (id, updates) => {
-            set((state) => {
-              const actor = state.actors.find((a) => a.id === id);
-              if (actor) Object.assign(actor, updates);
-            });
-            const actor = useEditorStore.getState().actors.find((a) => a.id === id);
-            if (actor) {
-              await fileSystem.saveJson('actors', `${actor.id}.actor.json`, {
-                $schema: '../../schemas/actor.schema.json',
-                ...actor,
-              });
-            }
-          },
-
-          deleteActor: async (id) => {
-            set((state) => {
-              state.actors = state.actors.filter((a) => a.id !== id);
-              if (state.selectedActorId === id) state.selectedActorId = null;
-            });
-            await fileSystem.deleteJson('actors', `${id}.actor.json`);
-          },
-
-          // Game variable CRUD actions
-          addGameVariable: async (variable) => {
-            set((state) => {
-              state.gameVariables.push(castDraft(variable));
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                gameVariables: useEditorStore.getState().gameVariables,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          updateGameVariable: async (key, updates) => {
-            set((state) => {
-              const v = state.gameVariables.find((g) => g.key === key);
-              if (v) Object.assign(v, updates);
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                gameVariables: useEditorStore.getState().gameVariables,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          deleteGameVariable: async (key) => {
-            set((state) => {
-              state.gameVariables = state.gameVariables.filter((g) => g.key !== key);
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                gameVariables: useEditorStore.getState().gameVariables,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
-          // ── Script table CRUD ───────────────────────────────────
-          addScriptTable: async (table) => {
-            set((state) => {
-              state.scriptTables.push(castDraft(table));
-            });
-            await persistScriptingState();
-          },
-          updateScriptTable: async (id, updates) => {
-            set((state) => {
-              const t = state.scriptTables.find((x) => x.id === id);
-              if (t) Object.assign(t, updates);
-            });
-            await persistScriptingState();
-          },
-          deleteScriptTable: async (id) => {
-            set((state) => {
-              state.scriptTables = state.scriptTables.filter((x) => x.id !== id);
-            });
-            await persistScriptingState();
-          },
-
-          // ── Script function CRUD ──────────────────────────────────
-          addScriptFunction: async (fn) => {
-            set((state) => {
-              state.scriptFunctions.push(castDraft(fn));
-            });
-            await persistScriptingState();
-          },
-          updateScriptFunction: async (id, updates) => {
-            set((state) => {
-              const f = state.scriptFunctions.find((x) => x.id === id);
-              if (f) Object.assign(f, updates);
-            });
-            await persistScriptingState();
-          },
-          deleteScriptFunction: async (id) => {
-            set((state) => {
-              state.scriptFunctions = state.scriptFunctions.filter((x) => x.id !== id);
-            });
-            await persistScriptingState();
-          },
-
-          // ── Script namespace CRUD ─────────────────────────────────
-          addScriptNamespace: async (ns) => {
-            set((state) => {
-              state.scriptNamespaces.push(castDraft(ns));
-            });
-            await persistScriptingState();
-          },
-          updateScriptNamespace: async (id, updates) => {
-            set((state) => {
-              const n = state.scriptNamespaces.find((x) => x.id === id);
-              if (n) Object.assign(n, updates);
-            });
-            await persistScriptingState();
-          },
-          deleteScriptNamespace: async (id) => {
-            set((state) => {
-              state.scriptNamespaces = state.scriptNamespaces.filter((x) => x.id !== id);
-            });
-            await persistScriptingState();
-          },
-
-          // ── Script context type CRUD ──────────────────────────────
-          addScriptContextType: async (ct) => {
-            set((state) => {
-              state.scriptContextTypes.push(castDraft(ct));
-            });
-            await persistScriptingState();
-          },
-          updateScriptContextType: async (id, updates) => {
-            set((state) => {
-              const c = state.scriptContextTypes.find((x) => x.id === id);
-              if (c) Object.assign(c, updates);
-            });
-            await persistScriptingState();
-          },
-          deleteScriptContextType: async (id) => {
-            set((state) => {
-              state.scriptContextTypes = state.scriptContextTypes.filter((x) => x.id !== id);
-            });
-            await persistScriptingState();
-          },
-
-          // Layer definition actions
-          setSelectedLayerDefinition: (id) =>
-            set((state) => {
-              state.selectedLayerDefinitionId = id;
-            }),
-
-          addLayerDefinition: async (definition) => {
-            set((state) => {
-              state.layerDefinitions.push(castDraft(definition));
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                layerDefinitions: useEditorStore.getState().layerDefinitions,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-                if (state.currentMap) {
-                  state.currentMap = castDraft(
-                    addMissingDefinitionLayers(state.currentMap, state.layerDefinitions),
-                  );
-                }
-              });
-            }
-          },
-
-          updateLayerDefinition: async (id, updates) => {
-            set((state) => {
-              const def = state.layerDefinitions.find((d) => d.id === id);
-              if (def) Object.assign(def, updates);
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                layerDefinitions: useEditorStore.getState().layerDefinitions,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-
-                // Propagate updated definition to existing maps' layers
-                const updatedDef = state.layerDefinitions.find((d) => d.id === id);
-                if (updatedDef) {
-                  const applyDefToLayer = (layer: Layer, mapWidth: number, mapHeight: number) => {
-                    layer.name = updatedDef.name;
-                    layer.zOrder = updatedDef.zIndex;
-                    layer.kind =
-                      updatedDef.type === 'entity'
-                        ? 'entity'
-                        : updatedDef.type === 'terrain'
-                          ? 'terrain'
-                          : 'visual';
-                    if (updatedDef.icon) layer.icon = updatedDef.icon;
-
-                    // Ensure fields match layer type
-                    if (updatedDef.type === 'entity') {
-                      if (!layer.entities) {
-                        delete layer.data;
-                        delete layer.terrainData;
-                        layer.entities = [] as EntityInstance[];
-                      }
-                    } else if (updatedDef.type === 'terrain') {
-                      if (!layer.data) layer.data = createEmptyGrid(mapWidth, mapHeight);
-                      if (!layer.terrainData)
-                        layer.terrainData = createEmptyStringGrid(mapWidth, mapHeight);
-                      if (layer.entities) delete layer.entities;
-                    } else {
-                      // tile/visual
-                      if (!layer.data) layer.data = createEmptyGrid(mapWidth, mapHeight);
-                      if (layer.terrainData) delete layer.terrainData;
-                      if (layer.entities) delete layer.entities;
-                    }
-                  };
-
-                  // Track which maps were modified so we can trigger saves
-                  const modifiedMapIds = new Set<string>();
-
-                  for (const map of state.maps) {
-                    let changed = false;
-                    for (const layer of map.layers) {
-                      if (layer.definitionId === id) {
-                        applyDefToLayer(layer as Layer, map.width, map.height);
-                        changed = true;
-                      }
-                    }
-                    if (changed) {
-                      // resort layers by zOrder
-                      map.layers = map.layers.slice().sort((a, b) => a.zOrder - b.zOrder);
-                      modifiedMapIds.add(map.id);
-                    }
-                  }
-
-                  // Also update currentMap if it's loaded separately
-                  if (state.currentMap && modifiedMapIds.has(state.currentMap.id)) {
-                    // find the updated map from maps array and set currentMap to that snapshot
-                    const updated = state.maps.find((m) => m.id === state.currentMap!.id);
-                    if (updated) state.currentMap = castDraft(updated);
-                  }
-
-                  // Trigger saves for modified maps (debounced)
-                  for (const mid of modifiedMapIds) {
-                    const m = state.maps.find((x) => x.id === mid);
-                    if (m) saveMapDebounced(m as GameMap);
-                  }
-                }
-              });
-            }
-          },
-
-          deleteLayerDefinition: async (id) => {
-            set((state) => {
-              state.layerDefinitions = state.layerDefinitions.filter((d) => d.id !== id);
-              if (state.selectedLayerDefinitionId === id) state.selectedLayerDefinitionId = null;
-            });
-            const proj = useEditorStore.getState().project;
-            if (proj) {
-              const projectToSave = {
-                ...proj,
-                layerDefinitions: useEditorStore.getState().layerDefinitions,
-              };
-              await persistProject(projectToSave);
-              set((state) => {
-                state.project = castDraft(projectToSave);
-              });
-            }
-          },
-
+          // ── Camera ─────────────────────────────────────────────────────────
           setCamera: (camera) =>
             set((state) => {
               state.camera = { ...state.camera, ...camera };
-              // Persist camera per-map so reopening a map restores its last view
               if (state.currentMap) {
                 try {
                   state.mapCameras = state.mapCameras || {};
@@ -2538,11 +1751,12 @@ export const useEditorStore = create<EditorStore>()(
               state.camera = { x: 0, y: 0, zoom: 1.5 };
             }),
 
-          // Time preview
+          // ── Time preview ───────────────────────────────────────────────────
           setTimePreviewEnabled: (enabled) =>
             set((state) => {
               state.timePreviewEnabled = enabled;
             }),
+
           setTimeOfDay: (time) =>
             set((state) => {
               state.timeOfDay = Math.max(0, Math.min(1, time));
@@ -2556,6 +1770,14 @@ export const useEditorStore = create<EditorStore>()(
               state.sampledPattern = null;
             }),
 
+          setTilesetToolMode: (mode) =>
+            set((state) => {
+              state.tilesetToolMode = mode;
+              if (mode === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
+                state.selectedTerrainId = state.terrainTypes[0].id;
+              }
+            }),
+
           // ── Location link actions ──────────────────────────────────────────
           addLocationLink: (link) => {
             set((state) => {
@@ -2563,7 +1785,7 @@ export const useEditorStore = create<EditorStore>()(
               if (!state.currentMap.locationLinks) state.currentMap.locationLinks = [];
               state.currentMap.locationLinks.push(castDraft(link));
               state.selectedLinkId = link.id;
-              state.pendingNewLinkId = link.id; // trigger setup dialog
+              state.pendingNewLinkId = link.id;
             });
             const { currentMap } = useEditorStore.getState();
             if (currentMap) saveMapDebounced(currentMap);
@@ -2596,7 +1818,7 @@ export const useEditorStore = create<EditorStore>()(
           selectLink: (id) => {
             set((state) => {
               state.selectedLinkId = id;
-              if (id !== null) state.selectedEntityId = null; // mutual exclusion
+              if (id !== null) state.selectedEntityId = null;
             });
           },
 
@@ -2645,8 +1867,7 @@ export const useEditorStore = create<EditorStore>()(
 
             const counterpartId = `link-${Date.now()}`;
 
-            // Build counterpart: source ↔ target swapped
-            const counterpart: import('../types/schema').LocationLink = {
+            const counterpart: LocationLink = {
               id: counterpartId,
               label: sourceLink.label ? `↩ ${sourceLink.label}` : undefined,
               sourcePosition: sourceLink.targetPosition,
@@ -2657,14 +1878,12 @@ export const useEditorStore = create<EditorStore>()(
               direction: 'bidirectional',
             };
 
-            // Add counterpart to target map
-            const updatedTargetMap: import('../types/schema').Map = {
+            const updatedTargetMap: GameMap = {
               ...targetMap,
               locationLinks: [...(targetMap.locationLinks ?? []), counterpart],
             };
 
-            // Wire targetLinkId back on the source link
-            const updatedSourceMap: import('../types/schema').Map = {
+            const updatedSourceMap: GameMap = {
               ...sourceMap,
               locationLinks: sourceMap.locationLinks!.map((l) =>
                 l.id === sourceLinkId
@@ -2673,7 +1892,6 @@ export const useEditorStore = create<EditorStore>()(
               ),
             };
 
-            // Persist both maps
             await fileSystem.saveJson('maps', `${targetMap.id}.map.json`, {
               $schema: '../../schemas/map.schema.json',
               ...serializeMap(updatedTargetMap),
@@ -2683,17 +1901,13 @@ export const useEditorStore = create<EditorStore>()(
               ...serializeMap(updatedSourceMap),
             });
 
-            // Update store
             set((s) => {
-              // Update maps list for target map
               const targetIdx = s.maps.findIndex((m) => m.id === targetMap.id);
               if (targetIdx !== -1) s.maps[targetIdx] = castDraft(updatedTargetMap);
 
-              // Update maps list for source map
               const sourceIdx = s.maps.findIndex((m) => m.id === sourceMap.id);
               if (sourceIdx !== -1) s.maps[sourceIdx] = castDraft(updatedSourceMap);
 
-              // Update current map if it is the source
               if (s.currentMap?.id === sourceMap.id) {
                 s.currentMap = castDraft(updatedSourceMap);
               }
@@ -2701,7 +1915,7 @@ export const useEditorStore = create<EditorStore>()(
           },
 
           validate: () => {
-            return []; // Placeholder
+            return [];
           },
         })),
       ),
@@ -2719,7 +1933,10 @@ export const useEditorStore = create<EditorStore>()(
   ),
 );
 
-// Listen for native asset changes (Electron) and reload affected sprites/tilesets
+// ============================================================================
+// IPC listeners (Electron hot-reload for assets and tilesets)
+// ============================================================================
+
 if ('ipcRenderer' in window) {
   window.ipcRenderer.on(
     'app:asset-changed',
@@ -2728,7 +1945,6 @@ if ('ipcRenderer' in window) {
       try {
         const state = useEditorStore.getState();
 
-        // If we already have this asset loaded, reload it
         if (state.loadedSprites.has(relativePath)) {
           try {
             const blob = await fileSystem.loadAsset(relativePath);
@@ -2739,7 +1955,6 @@ if ('ipcRenderer' in window) {
           }
         }
 
-        // Also, if any tileset references this spriteSheet path, reload its image
         for (const [id, ts] of state.tilesets.entries()) {
           try {
             if (ts.spriteSheet === relativePath) {
@@ -2747,7 +1962,6 @@ if ('ipcRenderer' in window) {
                 const blob = await fileSystem.loadAsset(relativePath);
                 await state.loadSprite(relativePath, blob);
               }
-              // Optionally, reload tileset metadata if needed (not implemented here)
               console.info('Tileset sprite changed for tileset:', id, relativePath);
             }
           } catch (e) {
@@ -2773,7 +1987,6 @@ if ('ipcRenderer' in window) {
           return;
         }
 
-        // Replace tilesets Map reference so selectors react
         useEditorStore.setState((state) => {
           const newMap = new Map(state.tilesets);
           try {
@@ -2784,7 +1997,6 @@ if ('ipcRenderer' in window) {
           return { tilesets: newMap };
         });
 
-        // If tileset references a spriteSheet, reload the image blob
         if (tileset.spriteSheet) {
           try {
             const blob = await fileSystem.loadAsset(tileset.spriteSheet);
@@ -2804,14 +2016,12 @@ if ('ipcRenderer' in window) {
   });
 }
 
-// =============================================================================
-// Auto-save subscription: Save currentMap whenever it changes
-// =============================================================================
+// ============================================================================
+// Auto-save subscription
+// ============================================================================
 
-// Track the last saved map state to avoid re-saving on initial load
 let lastSavedMapJson: string | null = null;
 
-// Subscribe to currentMap changes and auto-save with debouncing
 useEditorStore.subscribe(
   (state) => state.currentMap,
   (currentMap, prevMap) => {
@@ -2820,20 +2030,16 @@ useEditorStore.subscribe(
       return;
     }
 
-    // Skip if this is just loading a map (not a mutation)
     const currentJson = JSON.stringify(currentMap);
     if (currentMap.id !== prevMap?.id) {
-      // Map changed (loaded different map), just track it
       lastSavedMapJson = currentJson;
       return;
     }
 
-    // If content actually changed, save it
     if (currentJson !== lastSavedMapJson) {
       lastSavedMapJson = currentJson;
       saveMapDebounced(currentMap);
 
-      // Sync changes back to the maps list so browsing stays up-to-date
       useEditorStore.setState((state) => {
         const idx = state.maps.findIndex((m) => m.id === currentMap.id);
         if (idx !== -1) {
@@ -2845,7 +2051,6 @@ useEditorStore.subscribe(
   { fireImmediately: false },
 );
 
-// Subscribe to project settings changes and update save status
 useEditorStore.subscribe(
   (state) => ({
     terrainTypes: state.terrainTypes,
@@ -2853,8 +2058,6 @@ useEditorStore.subscribe(
     layerDefinitions: state.layerDefinitions,
   }),
   () => {
-    // The individual actions already call persistProject,
-    // but we update save status here for visual feedback
     useSaveStore.getState().setStatus('saved');
     setTimeout(() => {
       if (useSaveStore.getState().status === 'saved') {
