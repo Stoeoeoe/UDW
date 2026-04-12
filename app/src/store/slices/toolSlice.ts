@@ -1,0 +1,203 @@
+import { StateCreator } from 'zustand';
+import { ToolType, EditorMode, EditorState } from '../../types/editor';
+import {
+  buildTerrainGridFromLayer,
+  findBestMatchingTileWithFallback,
+  getCornerTerrainsForTile,
+} from '../../lib/terrainUtils';
+import type { EditorStore } from '../useEditorStore';
+
+type ImmerStateCreator<T> = StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  T
+>;
+
+export interface ToolSlice {
+  // State
+  activeTool: ToolType;
+  drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood';
+  brushSize: number;
+  hoveredTile: { x: number; y: number } | null;
+  drawPreview: {
+    isDrawing: boolean;
+    start: { x: number; y: number } | null;
+    end: { x: number; y: number } | null;
+    mode?: 'draw' | 'select';
+  };
+  tilesetToolMode: 'select' | 'terrain';
+  entitySnapMode: 'grid' | 'pixel';
+  showCollisionOverlay: boolean;
+  showTilesetCollisionOverlay: boolean;
+  showTerrainOverlay: boolean;
+  timePreviewEnabled: boolean;
+  timeOfDay: number;
+  camera: EditorState['camera'];
+  mapCameras: Record<string, { x: number; y: number; zoom: number }>;
+
+  // Actions
+  setActiveTool: (tool: ToolType) => void;
+  setEntitySnapMode: (mode: 'grid' | 'pixel') => void;
+  setShowCollisionOverlay: (enabled: boolean) => void;
+  setShowTilesetCollisionOverlay: (enabled: boolean) => void;
+  setShowTerrainOverlay: (enabled: boolean) => void;
+  reloadTerrainLayers: () => void;
+  setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
+  setBrushSize: (size: number) => void;
+  setMode: (mode: EditorMode) => void;
+  setHoveredTile: (pos: { x: number; y: number } | null) => void;
+  setDrawPreview: (preview: {
+    isDrawing: boolean;
+    start: { x: number; y: number } | null;
+    end: { x: number; y: number } | null;
+    mode?: 'draw' | 'select';
+  }) => void;
+  setTilesetToolMode: (mode: 'select' | 'terrain') => void;
+  setCamera: (camera: Partial<EditorState['camera']>) => void;
+  resetCamera: () => void;
+  setTimePreviewEnabled: (enabled: boolean) => void;
+  setTimeOfDay: (time: number) => void;
+  resetSelectedTiles: () => void;
+}
+
+export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
+  // Initial state
+  activeTool: 'stamp',
+  drawMode: 'point',
+  brushSize: 1,
+  hoveredTile: null,
+  drawPreview: { isDrawing: false, start: null, end: null },
+  tilesetToolMode: 'select',
+  entitySnapMode: 'grid',
+  showCollisionOverlay: false,
+  showTilesetCollisionOverlay: false,
+  showTerrainOverlay: false,
+  timePreviewEnabled: false,
+  timeOfDay: 0.5,
+  camera: { x: 0, y: 0, zoom: 1.5 },
+  mapCameras: {},
+
+  setActiveTool: (tool) =>
+    set((state) => {
+      state.activeTool = tool;
+      if (tool === 'stamp' && !state.selectedLayerId && state.currentMap) {
+        state.selectedLayerId = state.currentMap.layers[0]?.id || null;
+      }
+      if (tool === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
+        state.selectedTerrainId = state.terrainTypes[0].id;
+      }
+    }),
+
+  setEntitySnapMode: (mode) =>
+    set((state) => {
+      state.entitySnapMode = mode;
+    }),
+  setShowCollisionOverlay: (enabled) =>
+    set((state) => {
+      state.showCollisionOverlay = enabled;
+    }),
+  setShowTilesetCollisionOverlay: (enabled) =>
+    set((state) => {
+      state.showTilesetCollisionOverlay = enabled;
+    }),
+  setShowTerrainOverlay: (enabled) =>
+    set((state) => {
+      state.showTerrainOverlay = enabled;
+    }),
+
+  reloadTerrainLayers: () =>
+    set((state) => {
+      const { currentMap, activeTilesetId, tilesets } = state;
+      if (!currentMap || !activeTilesetId) return;
+      const tileset = tilesets.get(activeTilesetId);
+      if (!tileset) return;
+
+      const tilesetIndex = currentMap.tilesetRefs.indexOf(activeTilesetId);
+      if (tilesetIndex === -1) return;
+      const tilesetBase = tilesetIndex << 16;
+
+      for (const layer of currentMap.layers) {
+        if (layer.kind !== 'terrain' || !layer.terrainData || !layer.data) continue;
+        const terrainGrid = buildTerrainGridFromLayer(layer.data, tilesets, currentMap.tilesetRefs);
+        for (let y = 0; y < currentMap.height; y++) {
+          for (let x = 0; x < currentMap.width; x++) {
+            const corners = getCornerTerrainsForTile(x, y, terrainGrid);
+            if (corners.every((c) => c === null)) {
+              layer.data[y][x] = null;
+              continue;
+            }
+            const tileIdx = findBestMatchingTileWithFallback(tileset, corners, true);
+            layer.data[y][x] =
+              tileIdx !== null ? ((tilesetBase | tileIdx) as unknown as number) : null;
+          }
+        }
+      }
+    }),
+
+  setDrawMode: (mode) =>
+    set((state) => {
+      state.drawMode = mode;
+    }),
+  setBrushSize: (size) =>
+    set((state) => {
+      state.brushSize = Math.max(1, Math.round(size));
+    }),
+  setDrawPreview: (preview) =>
+    set((state) => {
+      state.drawPreview = preview;
+    }),
+  setHoveredTile: (pos) =>
+    set((state) => {
+      state.hoveredTile = pos;
+    }),
+
+  setMode: (mode) =>
+    set((state) => {
+      state.mode = mode;
+      state.selectedTileIndex = null;
+      state.selectedTileIndices = [];
+      state.mapEditorSelectedTileIndex = null;
+      state.mapEditorSelectedTileIndices = [];
+      state.tilesetEditorSelectedTileIndex = null;
+      state.tilesetEditorSelectedTileIndices = [];
+    }),
+
+  setTilesetToolMode: (mode) =>
+    set((state) => {
+      state.tilesetToolMode = mode;
+      if (mode === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
+        state.selectedTerrainId = state.terrainTypes[0].id;
+      }
+    }),
+
+  setCamera: (camera) =>
+    set((state) => {
+      state.camera = { ...state.camera, ...camera };
+      if (state.currentMap) {
+        state.mapCameras = state.mapCameras || {};
+        state.mapCameras[state.currentMap.id] = { ...state.camera };
+      }
+    }),
+
+  resetCamera: () =>
+    set((state) => {
+      state.camera = { x: 0, y: 0, zoom: 1.5 };
+    }),
+  setTimePreviewEnabled: (enabled) =>
+    set((state) => {
+      state.timePreviewEnabled = enabled;
+    }),
+  setTimeOfDay: (time) =>
+    set((state) => {
+      state.timeOfDay = Math.max(0, Math.min(1, time));
+    }),
+
+  resetSelectedTiles: () =>
+    set((state) => {
+      state.selectedTileIndex = null;
+      state.selectedTileIndices = [];
+      state.selectedTerrainId = null;
+      state.sampledPattern = null;
+    }),
+});
