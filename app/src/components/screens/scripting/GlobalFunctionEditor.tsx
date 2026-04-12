@@ -1,7 +1,7 @@
 /**
  * GlobalFunctionEditor — list + inline editor for ScriptFunction entries.
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -89,9 +89,10 @@ const ParamRow: React.FC<{
 interface GlobalFunctionEditorProps {
   functions: ScriptFunction[];
   tables: ScriptTable[];
-  onAdd: (fn: ScriptFunction) => void;
-  onUpdate: (id: string, updates: Partial<ScriptFunction>) => void;
-  onDelete: (id: string) => void;
+  onAdd: (fn: ScriptFunction) => void | Promise<void>;
+  onUpdate: (id: string, updates: Partial<ScriptFunction>) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
+  initialExpandedId?: string | null;
 }
 
 export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
@@ -100,8 +101,13 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
   onAdd,
   onUpdate,
   onDelete,
+  initialExpandedId,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedId(initialExpandedId ?? null);
+  }, [initialExpandedId]);
+
   const idMapRef = useRef<Record<string, string>>({});
   const genId = () => `sfid_${Math.random().toString(36).slice(2, 9)}`;
   for (const f of functions) {
@@ -136,44 +142,162 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
     onUpdate(fnId, { params: fn.params.filter((_, i) => i !== paramIdx) });
   };
 
+  const renderExpanded = (fn: ScriptFunction) => (
+    <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+      <VStack spacing={3} align="stretch">
+        <Box>
+          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+            NAME
+          </Text>
+          <Input
+            size="xs"
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
+            color="white"
+            fontFamily="mono"
+            value={fn.name}
+            onChange={(e) =>
+              onUpdate(fn.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+            }
+          />
+        </Box>
+
+        <Box>
+          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+            RETURN TYPE
+          </Text>
+          <Select
+            size="xs"
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
+            color="white"
+            value={fn.returnType}
+            onChange={(e) => {
+              const nextReturnType = e.target.value as ScriptPrimitiveType;
+              onUpdate(fn.id, {
+                returnType: nextReturnType,
+                returnTableId: nextReturnType === 'table' ? fn.returnTableId : undefined,
+              });
+            }}
+          >
+            {RETURN_TYPES.map((t) => (
+              <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+                {t.label}
+              </option>
+            ))}
+          </Select>
+          {fn.returnType === 'table' && (
+            <Select
+              mt={2}
+              size="xs"
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              value={fn.returnTableId ?? ''}
+              onChange={(e) => onUpdate(fn.id, { returnTableId: e.target.value || undefined })}
+            >
+              <option value="" style={{ background: '#0a0a0b' }}>
+                - select table -
+              </option>
+              {tables.map((table) => (
+                <option key={table.id} value={table.id} style={{ background: '#0a0a0b' }}>
+                  {table.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Box>
+
+        <Box>
+          <HStack mb={1} justify="space-between">
+            <Text fontSize="9px" color="gray.500" fontWeight="bold">
+              PARAMETERS
+            </Text>
+            <IconButton
+              aria-label="Add param"
+              icon={<AddIcon fontSize="8px" />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              _hover={{ color: 'white' }}
+              onClick={() => addParam(fn.id)}
+            />
+          </HStack>
+          {fn.params.length === 0 && (
+            <Text fontSize="10px" color="gray.700" fontStyle="italic">
+              No parameters
+            </Text>
+          )}
+          <VStack spacing={1} align="stretch">
+            {fn.params.map((p, pi) => (
+              <ParamRow
+                key={pi}
+                param={p}
+                onChange={(u) => updateParam(fn.id, pi, u)}
+                onDelete={() => removeParam(fn.id, pi)}
+              />
+            ))}
+          </VStack>
+        </Box>
+
+        <Box>
+          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+            DESCRIPTION
+          </Text>
+          <Input
+            size="xs"
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
+            color="white"
+            value={fn.description ?? ''}
+            onChange={(e) => onUpdate(fn.id, { description: e.target.value || undefined })}
+            placeholder="Optional"
+          />
+        </Box>
+      </VStack>
+    </Box>
+  );
+
   return (
     <VStack spacing={0} align="stretch">
-      <Flex
-        px={3}
-        py={2}
-        align="center"
-        justify="space-between"
-        borderBottom="1px"
-        borderColor="whiteAlpha.50"
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Global Functions
-          </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {functions.length}
-          </Badge>
-        </HStack>
-        <Tooltip label="Add Function" hasArrow>
-          <IconButton
-            aria-label="Add Function"
-            icon={<AddIcon fontSize="9px" />}
-            size="xs"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={handleAdd}
-          />
-        </Tooltip>
-      </Flex>
+      {!initialExpandedId && (
+        <Flex
+          px={3}
+          py={2}
+          align="center"
+          justify="space-between"
+          borderBottom="1px"
+          borderColor="whiteAlpha.50"
+        >
+          <HStack spacing={2}>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="widest"
+              color="gray.500"
+            >
+              Global Functions
+            </Text>
+            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+              {functions.length}
+            </Badge>
+          </HStack>
+          <Tooltip label="Add Function" hasArrow>
+            <IconButton
+              aria-label="Add Function"
+              icon={<AddIcon fontSize="9px" />}
+              size="xs"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={handleAdd}
+            />
+          </Tooltip>
+        </Flex>
+      )}
 
-      {functions.length === 0 && (
+      {!initialExpandedId && functions.length === 0 && (
         <Box px={3} py={6} textAlign="center">
           <Text fontSize="xs" color="gray.600" fontStyle="italic">
             No global functions defined
@@ -184,193 +308,207 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
         </Box>
       )}
 
-      {functions.map((fn) => {
-        const isExpanded = expandedId === fn.id;
-        const stableId = idMapRef.current[fn.id] || genId();
-        if (!idMapRef.current[fn.id]) idMapRef.current[fn.id] = stableId;
+      {initialExpandedId
+        ? (() => {
+            const fn = functions.find((f) => f.id === initialExpandedId);
+            return fn ? (
+              <Box key={fn.id} borderTop="1px" borderColor="whiteAlpha.50">
+                {renderExpanded(fn)}
+              </Box>
+            ) : null;
+          })()
+        : functions.map((fn) => {
+            const isExpanded = expandedId === fn.id;
+            const stableId = idMapRef.current[fn.id] || genId();
+            if (!idMapRef.current[fn.id]) idMapRef.current[fn.id] = stableId;
 
-        const sig = `${fn.name}(${fn.params.map((p) => p.name).join(', ')})`;
-        const returnLabel =
-          fn.returnType === 'table'
-            ? `table${
-                fn.returnTableId
-                  ? `:${tables.find((t) => t.id === fn.returnTableId)?.name ?? '?'}`
-                  : ''
-              }`
-            : fn.returnType;
+            const sig = `${fn.name}(${fn.params.map((p) => p.name).join(', ')})`;
+            const returnLabel =
+              fn.returnType === 'table'
+                ? `table${
+                    fn.returnTableId
+                      ? `:${tables.find((t) => t.id === fn.returnTableId)?.name ?? '?'}`
+                      : ''
+                  }`
+                : fn.returnType;
 
-        return (
-          <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
-            <HStack
-              px={3}
-              py={1.5}
-              spacing={2}
-              cursor="pointer"
-              _hover={{ bg: 'whiteAlpha.50' }}
-              onClick={() => setExpandedId(isExpanded ? null : fn.id)}
-              role="group"
-            >
-              <Text fontSize="10px" color="gray.600" w="14px">
-                {isExpanded ? '▾' : '▸'}
-              </Text>
-              <Text
-                fontSize="xs"
-                fontWeight="medium"
-                color="gray.200"
-                flex={1}
-                noOfLines={1}
-                fontFamily="mono"
-              >
-                {sig}
-              </Text>
-              <Badge fontSize="9px" colorScheme="teal" variant="subtle">
-                {returnLabel}
-              </Badge>
-              <IconButton
-                aria-label="Delete"
-                icon={<DeleteIcon fontSize="8px" />}
-                size="xs"
-                variant="ghost"
-                color="gray.700"
-                opacity={0}
-                _groupHover={{ opacity: 1 }}
-                _hover={{ color: 'red.300', bg: 'red.900' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(fn.id);
-                  if (expandedId === fn.id) setExpandedId(null);
-                }}
-              />
-            </HStack>
+            return (
+              <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
+                <HStack
+                  px={3}
+                  py={1.5}
+                  spacing={2}
+                  cursor="pointer"
+                  _hover={{ bg: 'whiteAlpha.50' }}
+                  onClick={() => setExpandedId(isExpanded ? null : fn.id)}
+                  role="group"
+                >
+                  <Text fontSize="10px" color="gray.600" w="14px">
+                    {isExpanded ? '▾' : '▸'}
+                  </Text>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="medium"
+                    color="gray.200"
+                    flex={1}
+                    noOfLines={1}
+                    fontFamily="mono"
+                  >
+                    {sig}
+                  </Text>
+                  <Badge fontSize="9px" colorScheme="teal" variant="subtle">
+                    {returnLabel}
+                  </Badge>
+                  <IconButton
+                    aria-label="Delete"
+                    icon={<DeleteIcon fontSize="8px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.700"
+                    opacity={0}
+                    _groupHover={{ opacity: 1 }}
+                    _hover={{ color: 'red.300', bg: 'red.900' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(fn.id);
+                      if (expandedId === fn.id) setExpandedId(null);
+                    }}
+                  />
+                </HStack>
 
-            <Collapse in={isExpanded} animateOpacity>
-              <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
-                <VStack spacing={3} align="stretch">
-                  {/* Name */}
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      NAME
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      fontFamily="mono"
-                      value={fn.name}
-                      onChange={(e) =>
-                        onUpdate(fn.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
-                      }
-                    />
-                  </Box>
-
-                  {/* Return type */}
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      RETURN TYPE
-                    </Text>
-                    <Select
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      value={fn.returnType}
-                      onChange={(e) => {
-                        const nextReturnType = e.target.value as ScriptPrimitiveType;
-                        onUpdate(fn.id, {
-                          returnType: nextReturnType,
-                          returnTableId: nextReturnType === 'table' ? fn.returnTableId : undefined,
-                        });
-                      }}
-                    >
-                      {RETURN_TYPES.map((t) => (
-                        <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </Select>
-                    {fn.returnType === 'table' && (
-                      <Select
-                        mt={2}
-                        size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={fn.returnTableId ?? ''}
-                        onChange={(e) =>
-                          onUpdate(fn.id, {
-                            returnTableId: e.target.value || undefined,
-                          })
-                        }
-                      >
-                        <option value="" style={{ background: '#0a0a0b' }}>
-                          - select table -
-                        </option>
-                        {tables.map((table) => (
-                          <option key={table.id} value={table.id} style={{ background: '#0a0a0b' }}>
-                            {table.name}
-                          </option>
-                        ))}
-                      </Select>
-                    )}
-                  </Box>
-
-                  {/* Params */}
-                  <Box>
-                    <HStack mb={1} justify="space-between">
-                      <Text fontSize="9px" color="gray.500" fontWeight="bold">
-                        PARAMETERS
-                      </Text>
-                      <IconButton
-                        aria-label="Add param"
-                        icon={<AddIcon fontSize="8px" />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white' }}
-                        onClick={() => addParam(fn.id)}
-                      />
-                    </HStack>
-                    {fn.params.length === 0 && (
-                      <Text fontSize="10px" color="gray.700" fontStyle="italic">
-                        No parameters
-                      </Text>
-                    )}
-                    <VStack spacing={1} align="stretch">
-                      {fn.params.map((p, pi) => (
-                        <ParamRow
-                          key={pi}
-                          param={p}
-                          onChange={(u) => updateParam(fn.id, pi, u)}
-                          onDelete={() => removeParam(fn.id, pi)}
+                <Collapse in={isExpanded} animateOpacity>
+                  <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+                    <VStack spacing={3} align="stretch">
+                      {/* Name */}
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          NAME
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          fontFamily="mono"
+                          value={fn.name}
+                          onChange={(e) =>
+                            onUpdate(fn.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+                          }
                         />
-                      ))}
+                      </Box>
+
+                      {/* Return type */}
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          RETURN TYPE
+                        </Text>
+                        <Select
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={fn.returnType}
+                          onChange={(e) => {
+                            const nextReturnType = e.target.value as ScriptPrimitiveType;
+                            onUpdate(fn.id, {
+                              returnType: nextReturnType,
+                              returnTableId:
+                                nextReturnType === 'table' ? fn.returnTableId : undefined,
+                            });
+                          }}
+                        >
+                          {RETURN_TYPES.map((t) => (
+                            <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </Select>
+                        {fn.returnType === 'table' && (
+                          <Select
+                            mt={2}
+                            size="xs"
+                            bg="#0a0a0b"
+                            borderColor="#1a1a2e"
+                            color="white"
+                            value={fn.returnTableId ?? ''}
+                            onChange={(e) =>
+                              onUpdate(fn.id, {
+                                returnTableId: e.target.value || undefined,
+                              })
+                            }
+                          >
+                            <option value="" style={{ background: '#0a0a0b' }}>
+                              - select table -
+                            </option>
+                            {tables.map((table) => (
+                              <option
+                                key={table.id}
+                                value={table.id}
+                                style={{ background: '#0a0a0b' }}
+                              >
+                                {table.name}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                      </Box>
+
+                      {/* Params */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            PARAMETERS
+                          </Text>
+                          <IconButton
+                            aria-label="Add param"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addParam(fn.id)}
+                          />
+                        </HStack>
+                        {fn.params.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No parameters
+                          </Text>
+                        )}
+                        <VStack spacing={1} align="stretch">
+                          {fn.params.map((p, pi) => (
+                            <ParamRow
+                              key={pi}
+                              param={p}
+                              onChange={(u) => updateParam(fn.id, pi, u)}
+                              onDelete={() => removeParam(fn.id, pi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+
+                      {/* Description */}
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          DESCRIPTION
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={fn.description ?? ''}
+                          onChange={(e) =>
+                            onUpdate(fn.id, { description: e.target.value || undefined })
+                          }
+                          placeholder="Optional"
+                        />
+                      </Box>
                     </VStack>
                   </Box>
-
-                  {/* Description */}
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DESCRIPTION
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      value={fn.description ?? ''}
-                      onChange={(e) =>
-                        onUpdate(fn.id, { description: e.target.value || undefined })
-                      }
-                      placeholder="Optional"
-                    />
-                  </Box>
-                </VStack>
+                </Collapse>
               </Box>
-            </Collapse>
-          </Box>
-        );
-      })}
+            );
+          })}
     </VStack>
   );
 };

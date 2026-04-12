@@ -3,7 +3,7 @@
  * Tables are reusable field definitions that can be referenced by variables,
  * namespace fields, and context type fields.
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -239,10 +239,21 @@ interface TableEditorProps {
   onAdd: (table: ScriptTable) => void;
   onUpdate: (id: string, updates: Partial<ScriptTable>) => void;
   onDelete: (id: string) => void;
+  initialExpandedId?: string | null;
 }
 
-export const TableEditor: React.FC<TableEditorProps> = ({ tables, onAdd, onUpdate, onDelete }) => {
+export const TableEditor: React.FC<TableEditorProps> = ({
+  tables,
+  onAdd,
+  onUpdate,
+  onDelete,
+  initialExpandedId,
+}) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedId(initialExpandedId ?? null);
+  }, [initialExpandedId]);
+
   const idMapRef = useRef<Record<string, string>>({});
   const genId = () => `tbid_${Math.random().toString(36).slice(2, 9)}`;
   for (const t of tables) {
@@ -281,42 +292,44 @@ export const TableEditor: React.FC<TableEditorProps> = ({ tables, onAdd, onUpdat
 
   return (
     <VStack spacing={0} align="stretch">
-      <Flex
-        px={3}
-        py={2}
-        align="center"
-        justify="space-between"
-        borderBottom="1px"
-        borderColor="whiteAlpha.50"
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Tables
-          </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {tables.length}
-          </Badge>
-        </HStack>
-        <Tooltip label="Add Table" hasArrow>
-          <IconButton
-            aria-label="Add Table"
-            icon={<AddIcon fontSize="9px" />}
-            size="xs"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={handleAdd}
-          />
-        </Tooltip>
-      </Flex>
+      {!initialExpandedId && (
+        <Flex
+          px={3}
+          py={2}
+          align="center"
+          justify="space-between"
+          borderBottom="1px"
+          borderColor="whiteAlpha.50"
+        >
+          <HStack spacing={2}>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="widest"
+              color="gray.500"
+            >
+              Tables
+            </Text>
+            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+              {tables.length}
+            </Badge>
+          </HStack>
+          <Tooltip label="Add Table" hasArrow>
+            <IconButton
+              aria-label="Add Table"
+              icon={<AddIcon fontSize="9px" />}
+              size="xs"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={handleAdd}
+            />
+          </Tooltip>
+        </Flex>
+      )}
 
-      {tables.length === 0 && (
+      {!initialExpandedId && tables.length === 0 && (
         <Box px={3} py={6} textAlign="center">
           <Text fontSize="xs" color="gray.600" fontStyle="italic">
             No tables defined
@@ -327,56 +340,61 @@ export const TableEditor: React.FC<TableEditorProps> = ({ tables, onAdd, onUpdat
         </Box>
       )}
 
-      {tables.map((tbl) => {
+      {(initialExpandedId && initialExpandedId
+        ? tables.filter((t) => t.id === initialExpandedId)
+        : tables
+      ).map((tbl) => {
         const isExpanded = expandedId === tbl.id;
         const stableId = idMapRef.current[tbl.id] || genId();
         if (!idMapRef.current[tbl.id]) idMapRef.current[tbl.id] = stableId;
 
         return (
           <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
-            <HStack
-              px={3}
-              py={1.5}
-              spacing={2}
-              cursor="pointer"
-              _hover={{ bg: 'whiteAlpha.50' }}
-              onClick={() => setExpandedId(isExpanded ? null : tbl.id)}
-              role="group"
-            >
-              <Text fontSize="10px" color="gray.600" w="14px">
-                {isExpanded ? '▾' : '▸'}
-              </Text>
-              <Text
-                fontSize="xs"
-                fontWeight="medium"
-                color="gray.200"
-                flex={1}
-                noOfLines={1}
-                fontFamily="mono"
+            {!initialExpandedId && (
+              <HStack
+                px={3}
+                py={1.5}
+                spacing={2}
+                cursor="pointer"
+                _hover={{ bg: 'whiteAlpha.50' }}
+                onClick={() => setExpandedId(isExpanded ? null : tbl.id)}
+                role="group"
               >
-                {tbl.name}
-              </Text>
-              <Badge fontSize="9px" colorScheme="orange" variant="subtle">
-                {tbl.fields.length} fields
-              </Badge>
-              <IconButton
-                aria-label="Delete"
-                icon={<DeleteIcon fontSize="8px" />}
-                size="xs"
-                variant="ghost"
-                color="gray.700"
-                opacity={0}
-                _groupHover={{ opacity: 1 }}
-                _hover={{ color: 'red.300', bg: 'red.900' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(tbl.id);
-                  if (expandedId === tbl.id) setExpandedId(null);
-                }}
-              />
-            </HStack>
+                <Text fontSize="10px" color="gray.600" w="14px">
+                  {isExpanded ? '▾' : '▸'}
+                </Text>
+                <Text
+                  fontSize="xs"
+                  fontWeight="medium"
+                  color="gray.200"
+                  flex={1}
+                  noOfLines={1}
+                  fontFamily="mono"
+                >
+                  {tbl.name}
+                </Text>
+                <Badge fontSize="9px" colorScheme="orange" variant="subtle">
+                  {tbl.fields.length} fields
+                </Badge>
+                <IconButton
+                  aria-label="Delete"
+                  icon={<DeleteIcon fontSize="8px" />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.700"
+                  opacity={0}
+                  _groupHover={{ opacity: 1 }}
+                  _hover={{ color: 'red.300', bg: 'red.900' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(tbl.id);
+                    if (expandedId === tbl.id) setExpandedId(null);
+                  }}
+                />
+              </HStack>
+            )}
 
-            <Collapse in={isExpanded} animateOpacity>
+            <Collapse in={initialExpandedId || isExpanded} animateOpacity>
               <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
                 <VStack spacing={3} align="stretch">
                   <Box>

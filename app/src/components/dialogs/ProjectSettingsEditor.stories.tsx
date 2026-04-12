@@ -21,6 +21,7 @@ export const NewProject: Story = {
 export const EditExisting: Story = {
   args: {
     initialProject: {
+      id: 'project_example',
       version: '1',
       name: 'Stardew Clone',
       tileSize: 32,

@@ -304,7 +304,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
 
           {tileMetadataSchema.length === 0 ? (
             <Text fontSize="xs" color="gray.600">
-              No metadata fields defined yet. Add fields from the Metadata group in the left panel.
+              No metadata fields defined yet. Add fields from Map Settings in the Tile Metadata tab.
             </Text>
           ) : (
             <PropertyForm

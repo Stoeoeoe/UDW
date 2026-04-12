@@ -176,7 +176,7 @@ export function deserializeMap(raw: WireMap): GameMap {
         layer.terrainData = wireLayer.terrainData as (string | null)[][];
       }
       // Remove wire-only field
-      delete (layer as Record<string, unknown>).terrainPalette;
+      delete (layer as unknown as Record<string, unknown>).terrainPalette;
     }
 
     return layer;

@@ -306,7 +306,7 @@ export async function generateAutotileTilesetAtlas(
 
       const outX = (tileIndex % columns) * tileSize;
       const outY = Math.floor(tileIndex / columns) * tileSize;
-      outCtx.putImageData(new ImageData(out, tileSize, tileSize), outX, outY);
+      outCtx.putImageData(new ImageData(out as any, tileSize, tileSize), outX, outY);
 
       tiles[tileIndex] = {
         id: buildOutputTileId(prefix, pattern, variant, safeVariants),

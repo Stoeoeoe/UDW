@@ -5,7 +5,6 @@
  * works in the Electron renderer without dynamic require issues.
  */
 
-// @ts-expect-error no type definitions; aliased to fengari-web/dist/fengari-web.bundle.js
 import * as fengariBundle from 'fengari';
 
 // The bundle's CJS exports land as named exports via Vite's interop

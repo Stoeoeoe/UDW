@@ -187,5 +187,6 @@ export type EditorMode =
   | 'dialogues'
   | 'scripting'
   | 'settings'
+  | 'mapConfig'
   | 'terrain'
   | 'layers';

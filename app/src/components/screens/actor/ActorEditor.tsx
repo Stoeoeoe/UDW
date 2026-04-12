@@ -3,10 +3,8 @@ import {
   Box,
   Button,
   Divider,
-  Flex,
   FormControl,
   FormLabel,
-  HStack,
   Input,
   Text,
   useDisclosure,
@@ -21,39 +19,6 @@ import { ListPanel, ListPanelItem } from '../common';
 import { EditorModal } from '../../common/EditorModal';
 import { CreateActorDialog } from './CreateActorDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
-
-const COMMON_ICONS = [
-  '👤',
-  '🧙',
-  '👸',
-  '🤴',
-  '🧝',
-  '🧟',
-  '🧛',
-  '🧜',
-  '🧚',
-  '🥷',
-  '👮',
-  '💂',
-  '👨‍🌾',
-  '👨‍🍳',
-  '👨‍⚕️',
-  '👨‍🔧',
-  '👨‍💼',
-  '🧓',
-  '👴',
-  '👵',
-  '🐾',
-  '🐺',
-  '🦊',
-  '🐻',
-  '🐗',
-  '🦝',
-  '🐴',
-  '🐑',
-  '🐄',
-  '🐓',
-];
 
 export const ActorEditor: React.FC = () => {
   const actors = useEditorStore((state) => state.actors);
@@ -84,7 +49,7 @@ export const ActorEditor: React.FC = () => {
             {(() => {
               const name = actor.icon;
               if (!name) return '👤';
-              const Comp = (GiIcons as any)[name];
+              const Comp = (GiIcons as Record<string, React.FC<{ size?: number }>>)[name];
               if (Comp) return <Comp size={14} />;
               return name;
             })()}
@@ -103,11 +68,6 @@ export const ActorEditor: React.FC = () => {
       return hitLabel || Boolean(hitSublabel);
     });
   }, [actorItems, search]);
-
-  const handleDelete = async () => {
-    if (!selectedActor) return;
-    await deleteActorById(selectedActor.id, selectedActor.name);
-  };
 
   const deleteActorById = async (id: string, name: string) => {
     if (!confirm(`Delete actor "${name}"?`)) return;
@@ -152,15 +112,36 @@ export const ActorEditor: React.FC = () => {
         buttonLabel="Create First Actor"
         onCreate={onOpen}
       />
-    ) : !selectedActor ? (
+    ) : (
       <EmptyScreen
         icon="👤"
         title="No Actor Selected"
         description="Select an actor from the list to edit details."
       />
-    ) : (
-      <ActorDetail actor={selectedActor} onUpdate={updateActor} onDelete={handleDelete} />
     );
+
+  const centerContent = selectedActor ? (
+    <Box h="full" overflowY="auto" p={6}>
+      <Box
+        w="80%"
+        maxW="900px"
+        mx="auto"
+        bg="editor.panelBg"
+        border="1px"
+        borderColor="whiteAlpha.100"
+        borderRadius="lg"
+        overflow="hidden"
+      >
+        <ActorDetail
+          actor={selectedActor}
+          onUpdate={updateActor}
+          onDelete={async () => deleteActorById(selectedActor.id, selectedActor.name)}
+        />
+      </Box>
+    </Box>
+  ) : (
+    content
+  );
 
   return (
     <>
@@ -169,7 +150,7 @@ export const ActorEditor: React.FC = () => {
           title: 'Actors',
           subtitle: `${actors.length} actor${actors.length !== 1 ? 's' : ''} defined`,
         }}
-        content={content}
+        content={centerContent}
         leftPanel={leftPanel}
         leftPanelDefaultSize={18}
       />
@@ -186,8 +167,8 @@ const ActorDetail: React.FC<{
   onUpdate: (id: string, updates: Partial<{ name: string; icon: string }>) => void;
   onDelete: () => void;
 }> = ({ actor, onUpdate, onDelete }) => (
-  <Box p={6} overflowY="auto" h="full">
-    <VStack align="stretch" spacing={5} maxW="680px" mx="auto">
+  <Box p={6}>
+    <VStack align="stretch" spacing={5}>
       <VStack align="stretch" spacing={3}>
         <FormControl>
           <FormLabel
@@ -215,13 +196,11 @@ const ActorDetail: React.FC<{
             Name
           </FormLabel>
           <Input
-            size="xs"
-            variant="filled"
-            bg="#0a0a0b"
+            size="sm"
+            bg="gray.950"
             color="white"
             value={actor.name}
             onChange={(e) => onUpdate(actor.id, { name: e.target.value })}
-            _hover={{ bg: '#071018' }}
           />
         </FormControl>
 
@@ -241,20 +220,16 @@ const ActorDetail: React.FC<{
 
       <Divider borderColor="#071018" />
 
-      <Box>
-        <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={2}>
-          Actions
-        </Text>
-        <Button
-          size="xs"
-          colorScheme="red"
-          variant="outline"
-          leftIcon={<DeleteIcon fontSize="10px" />}
-          onClick={onDelete}
-        >
-          Delete Actor
-        </Button>
-      </Box>
+      <Button
+        size="xs"
+        colorScheme="red"
+        variant="outline"
+        leftIcon={<DeleteIcon fontSize="10px" />}
+        onClick={onDelete}
+        alignSelf="flex-start"
+      >
+        Delete Actor
+      </Button>
     </VStack>
   </Box>
 );

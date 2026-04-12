@@ -10,9 +10,8 @@ import {
   DialogueEditor,
   VariableEditor,
   SettingsEditor,
-  TerrainEditor,
-  LayerEditor,
 } from './components/screens';
+import MapSettingsEditor from './components/screens/settings/MapSettingsEditor';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 
@@ -43,10 +42,12 @@ function App() {
         return <VariableEditor />;
       case 'settings':
         return <SettingsEditor />;
+      case 'mapConfig':
+        return <MapSettingsEditor />;
       case 'terrain':
-        return <TerrainEditor />;
+        return <MapSettingsEditor initialTab="terrain" />;
       case 'layers':
-        return <LayerEditor />;
+        return <MapSettingsEditor initialTab="layers" />;
       default:
         return null;
     }

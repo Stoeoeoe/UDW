@@ -11,7 +11,5 @@ export { default as ActorEditor } from './actor/ActorEditor';
 export { DialogueEditor } from './dialogue';
 export { VariableEditor } from './scripting/VariableEditor';
 export { SettingsEditor } from './settings/SettingsEditor';
-export { TerrainEditor } from './terrain/TerrainEditor';
-export { LayerEditor } from './layer/LayerEditor';
 
 export * from './common';

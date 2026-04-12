@@ -14,3 +14,9 @@ export type { EmptyScreenProps } from './EmptyScreen';
 
 export { ResizableEditorLayout } from './ResizableEditorLayout';
 export type { ResizableEditorLayoutProps } from './ResizableEditorLayout';
+
+export { TopTabbedEditorLayout } from './TopTabbedEditorLayout';
+export type { TopTabbedEditorTab } from './TopTabbedEditorLayout';
+
+export { DialogListWorkspace } from './DialogListWorkspace';
+export type { DialogListItem } from './DialogListWorkspace';

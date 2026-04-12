@@ -99,7 +99,7 @@ export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[
 export function migrateMapToEncodedData(map: MigratableMap): GameMap {
   if (!map.tilesetRefs) {
     // Build tilesetRefs from data
-    map.tilesetRefs = buildTilesetRefsFromData(map.layers);
+    map.tilesetRefs = buildTilesetRefsFromData(map.layers as any);
   }
 
   // Convert layer data

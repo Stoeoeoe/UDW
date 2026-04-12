@@ -3,7 +3,10 @@
     "allow": [
       "Read(//c/Users/Stoeoeoe/Downloads/**)",
       "Bash(npx tsc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git -C e:/map-editor status --short)",
+      "Bash(git -C e:/map-editor status --short --untracked-files=all)",
+      "Bash(git -C e:/map-editor show HEAD:app/src/store/useEditorStore.ts)"
     ]
   },
   "enabledPlugins": {

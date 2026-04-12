@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -8,16 +8,13 @@ import {
   Select,
   Switch,
   IconButton,
-  Flex,
   Badge,
   Tooltip,
   Collapse,
   Button,
   NumberInput,
   NumberInputField,
-  NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -29,12 +26,14 @@ import {
   ScriptNamespace,
   ScriptContextType,
 } from '../../../types/schema';
-import { EmptyScreen } from '../common/EmptyScreen';
 import { ConditionEditor } from './ConditionEditor';
 import { GlobalFunctionEditor } from './GlobalFunctionEditor';
 import { NamespaceEditor } from './NamespaceEditor';
 import { ContextTypeEditor } from './ContextTypeEditor';
 import { TableEditor } from './TableEditor';
+import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
+import { DialogListWorkspace } from '../common/DialogListWorkspace';
+import { EditorModal } from '../../common/EditorModal';
 
 type ScriptingTab = 'variables' | 'tables' | 'functions' | 'namespaces' | 'contexts';
 
@@ -72,508 +71,262 @@ function defaultValueForPrimitive(
   }
 }
 
-// ─── Variable List Editor ───────────────────────────────────────────────────
-
-interface VariableListEditorProps {
-  variables: GameVariable[];
+// Single-entry variable editor — shown in dialog when editing a variable
+export const VariableListEditorSingle: React.FC<{
+  variable: GameVariable;
   tables: ScriptTable[];
-  onAdd: (v: GameVariable) => void;
   onUpdate: (key: string, updates: Partial<GameVariable>) => void;
   onDelete: (key: string) => void;
   onMove: (key: string, direction: -1 | 1) => void;
-}
-
-const VariableListEditor: React.FC<VariableListEditorProps> = ({
-  variables,
-  tables,
-  onAdd,
-  onUpdate,
-  onDelete,
-  onMove,
-}) => {
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const idMapRef = useRef<Record<string, string>>({});
-  const genId = () => `vid_${Math.random().toString(36).slice(2, 9)}`;
-  for (const v of variables) {
-    if (!idMapRef.current[v.key]) idMapRef.current[v.key] = genId();
-  }
-
-  const handleAdd = useCallback(() => {
-    const key = `variable_${Date.now()}`;
-    const v: GameVariable = { key, type: 'boolean', category: 'Game State', defaultValue: false };
-    onAdd(v);
-    setExpandedKey(key);
-  }, [onAdd]);
-
+}> = ({ variable: v, tables, onUpdate, onDelete, onMove }) => {
+  const typeInfo = VARIABLE_TYPES.find((t) => t.value === v.type)!;
   return (
-    <VStack spacing={0} align="stretch">
-      <Flex
-        px={3}
-        py={2}
-        align="center"
-        justify="space-between"
-        borderBottom="1px"
-        borderColor="whiteAlpha.50"
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Variables
+    <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+      <VStack spacing={3} align="stretch">
+        <Box>
+          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+            KEY (Lua path)
           </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {variables.length}
-          </Badge>
-        </HStack>
-        <Tooltip label="Add Variable" hasArrow>
-          <IconButton
-            aria-label="Add Variable"
-            icon={<AddIcon fontSize="9px" />}
+          <Input
             size="xs"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={handleAdd}
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
+            color="white"
+            fontFamily="mono"
+            value={v.key}
+            onChange={(e) =>
+              onUpdate(v.key, { key: e.target.value.replace(/[^a-zA-Z0-9_.]/g, '') })
+            }
+            placeholder="e.g. weather.isRain"
           />
-        </Tooltip>
-      </Flex>
-
-      {variables.length === 0 && (
-        <Box px={3} py={6} textAlign="center">
-          <Text fontSize="xs" color="gray.600" fontStyle="italic">
-            No variables defined
-          </Text>
-          <Text fontSize="10px" color="gray.700" mt={1}>
-            Click + to add a Lua-exposed variable
-          </Text>
         </Box>
-      )}
 
-      {variables.map((v, idx) => {
-        const isExpanded = expandedKey === v.key;
-        const stableId = idMapRef.current[v.key] || genId();
-        if (!idMapRef.current[v.key]) idMapRef.current[v.key] = stableId;
-        const typeInfo = VARIABLE_TYPES.find((t) => t.value === v.type)!;
-
-        return (
-          <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
-            {/* Collapsed row */}
-            <HStack
-              px={3}
-              py={1.5}
-              spacing={2}
-              cursor="pointer"
-              _hover={{ bg: 'whiteAlpha.50' }}
-              onClick={() => setExpandedKey(isExpanded ? null : v.key)}
-              role="group"
+        <HStack spacing={3}>
+          <Box flex={1}>
+            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+              TYPE
+            </Text>
+            <Select
+              size="xs"
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              value={v.type}
+              onChange={(e) => {
+                const newType = e.target.value as GameVariableType;
+                onUpdate(v.key, {
+                  type: newType,
+                  defaultValue:
+                    newType === 'table'
+                      ? ''
+                      : defaultValueForPrimitive(
+                          newType as 'boolean' | 'number' | 'string' | 'enum',
+                        ),
+                  enumValues:
+                    newType === 'enum'
+                      ? v.enumValues?.length
+                        ? v.enumValues
+                        : ['option1', 'option2']
+                      : undefined,
+                  tableId: newType === 'table' ? (v.tableId ?? undefined) : undefined,
+                });
+              }}
             >
-              <Text fontSize="10px" color="gray.600" w="14px">
-                {isExpanded ? '▾' : '▸'}
-              </Text>
-              <Text
-                fontSize="xs"
-                fontWeight="medium"
-                color="gray.200"
-                flex={1}
-                noOfLines={1}
-                fontFamily="mono"
+              {VARIABLE_TYPES.map((t) => (
+                <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+                  {t.badge} {t.label}
+                </option>
+              ))}
+            </Select>
+          </Box>
+          <Box flex={1}>
+            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+              CATEGORY
+            </Text>
+            <Input
+              size="xs"
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              value={v.category}
+              onChange={(e) => onUpdate(v.key, { category: e.target.value })}
+              placeholder="e.g. Weather"
+              list="variable-categories"
+            />
+          </Box>
+        </HStack>
+
+        {v.type === 'table' && (
+          <Box>
+            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+              TABLE TYPE
+            </Text>
+            <Select
+              size="xs"
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              value={v.tableId ?? ''}
+              onChange={(e) => onUpdate(v.key, { tableId: e.target.value || undefined })}
+            >
+              <option value="" style={{ background: '#0a0a0b' }}>
+                — select a table —
+              </option>
+              {tables.map((t) => (
+                <option key={t.id} value={t.id} style={{ background: '#0a0a0b' }}>
+                  {t.name} ({t.fields.length} fields)
+                </option>
+              ))}
+            </Select>
+          </Box>
+        )}
+
+        {v.type !== 'table' && (
+          <Box>
+            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+              DEFAULT VALUE
+            </Text>
+            {v.type === 'boolean' && (
+              <Switch
+                size="sm"
+                colorScheme="green"
+                isChecked={!!v.defaultValue}
+                onChange={(e) => onUpdate(v.key, { defaultValue: e.target.checked })}
+              />
+            )}
+            {v.type === 'number' && (
+              <NumberInput
+                size="xs"
+                value={typeof v.defaultValue === 'number' ? v.defaultValue : 0}
+                step={1}
+                onChange={(_, val) => onUpdate(v.key, { defaultValue: isNaN(val) ? 0 : val })}
               >
-                {v.key}
-              </Text>
-              {v.category && (
-                <Text fontSize="10px" color="gray.600" noOfLines={1}>
-                  {v.category}
-                </Text>
-              )}
-              <Badge fontSize="9px" colorScheme={typeInfo.color} variant="subtle">
-                {typeInfo.badge} {v.type}
-              </Badge>
-              <IconButton
-                aria-label="Delete Variable"
-                icon={<DeleteIcon fontSize="8px" />}
+                <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+              </NumberInput>
+            )}
+            {v.type === 'string' && (
+              <Input
+                size="xs"
+                bg="#0a0a0b"
+                borderColor="#1a1a2e"
+                color="white"
+                value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
+                onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
+              />
+            )}
+            {v.type === 'enum' && (
+              <Select
+                size="xs"
+                bg="#0a0a0b"
+                borderColor="#1a1a2e"
+                color="white"
+                value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
+                onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
+              >
+                {(v.enumValues || []).map((opt) => (
+                  <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
+                    {opt}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Box>
+        )}
+
+        {v.type === 'enum' && (
+          <Box>
+            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+              ENUM VALUES
+            </Text>
+            <VStack spacing={1} align="stretch">
+              {(v.enumValues || []).map((opt, optIdx) => (
+                <HStack key={optIdx} spacing={1}>
+                  <Input
+                    size="xs"
+                    bg="#0a0a0b"
+                    borderColor="#1a1a2e"
+                    color="white"
+                    value={opt}
+                    onChange={(e) => {
+                      const vals = [...(v.enumValues || [])];
+                      vals[optIdx] = e.target.value;
+                      onUpdate(v.key, { enumValues: vals });
+                    }}
+                  />
+                  <IconButton
+                    aria-label="Remove value"
+                    icon={<DeleteIcon fontSize="8px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.600"
+                    _hover={{ color: 'red.300' }}
+                    onClick={() => {
+                      const vals = (v.enumValues || []).filter((_, i) => i !== optIdx);
+                      onUpdate(v.key, {
+                        enumValues: vals,
+                        ...(v.defaultValue === opt ? { defaultValue: vals[0] ?? '' } : {}),
+                      });
+                    }}
+                  />
+                </HStack>
+              ))}
+              <Button
                 size="xs"
                 variant="ghost"
-                color="gray.700"
-                opacity={0}
-                _groupHover={{ opacity: 1 }}
-                _hover={{ color: 'red.300', bg: 'red.900' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(v.key);
-                  if (expandedKey === v.key) setExpandedKey(null);
-                }}
-              />
-            </HStack>
-
-            {/* Expanded editor */}
-            <Collapse in={isExpanded} animateOpacity>
-              <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
-                <VStack spacing={3} align="stretch">
-                  {/* Key */}
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      KEY (Lua path)
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      fontFamily="mono"
-                      value={v.key}
-                      onChange={(e) => {
-                        const newKey = e.target.value.replace(/[^a-zA-Z0-9_.]/g, '');
-                        const oldId = idMapRef.current[v.key];
-                        if (oldId) {
-                          idMapRef.current[newKey] = oldId;
-                          delete idMapRef.current[v.key];
-                        }
-                        onUpdate(v.key, { key: newKey });
-                        setExpandedKey(newKey);
-                      }}
-                      placeholder="e.g. weather.isRain"
-                    />
-                  </Box>
-
-                  {/* Type & Category */}
-                  <HStack spacing={3}>
-                    <Box flex={1}>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        TYPE
-                      </Text>
-                      <Select
-                        size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={v.type}
-                        onChange={(e) => {
-                          const newType = e.target.value as GameVariableType;
-                          onUpdate(v.key, {
-                            type: newType,
-                            defaultValue:
-                              newType === 'table'
-                                ? ''
-                                : defaultValueForPrimitive(
-                                    newType as 'boolean' | 'number' | 'string' | 'enum',
-                                  ),
-                            enumValues:
-                              newType === 'enum'
-                                ? v.enumValues?.length
-                                  ? v.enumValues
-                                  : ['option1', 'option2']
-                                : undefined,
-                            tableId: newType === 'table' ? (v.tableId ?? undefined) : undefined,
-                          });
-                        }}
-                      >
-                        {VARIABLE_TYPES.map((t) => (
-                          <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
-                            {t.badge} {t.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </Box>
-                    <Box flex={1}>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        CATEGORY
-                      </Text>
-                      <Input
-                        size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={v.category}
-                        onChange={(e) => onUpdate(v.key, { category: e.target.value })}
-                        placeholder="e.g. Weather"
-                        list="variable-categories"
-                      />
-                    </Box>
-                  </HStack>
-
-                  {/* Table: select a table definition */}
-                  {v.type === 'table' && (
-                    <Box>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        TABLE TYPE
-                      </Text>
-                      <Select
-                        size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={v.tableId ?? ''}
-                        onChange={(e) => onUpdate(v.key, { tableId: e.target.value || undefined })}
-                      >
-                        <option value="" style={{ background: '#0a0a0b' }}>
-                          — select a table —
-                        </option>
-                        {tables.map((t) => (
-                          <option key={t.id} value={t.id} style={{ background: '#0a0a0b' }}>
-                            {t.name} ({t.fields.length} fields)
-                          </option>
-                        ))}
-                      </Select>
-                    </Box>
-                  )}
-
-                  {/* Primitive: default value */}
-                  {v.type !== 'table' && (
-                    <Box>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        DEFAULT VALUE
-                      </Text>
-                      {v.type === 'boolean' && (
-                        <Switch
-                          size="sm"
-                          colorScheme="green"
-                          isChecked={!!v.defaultValue}
-                          onChange={(e) => onUpdate(v.key, { defaultValue: e.target.checked })}
-                        />
-                      )}
-                      {v.type === 'number' && (
-                        <NumberInput
-                          size="xs"
-                          value={typeof v.defaultValue === 'number' ? v.defaultValue : 0}
-                          step={1}
-                          onChange={(_, val) =>
-                            onUpdate(v.key, { defaultValue: isNaN(val) ? 0 : val })
-                          }
-                        >
-                          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
-                          <NumberInputStepper>
-                            <NumberIncrementStepper />
-                            <NumberDecrementStepper />
-                          </NumberInputStepper>
-                        </NumberInput>
-                      )}
-                      {v.type === 'string' && (
-                        <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
-                          value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
-                          onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
-                        />
-                      )}
-                      {v.type === 'enum' && (
-                        <Select
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
-                          value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
-                          onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
-                        >
-                          {(v.enumValues || []).map((opt) => (
-                            <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
-                              {opt}
-                            </option>
-                          ))}
-                        </Select>
-                      )}
-                    </Box>
-                  )}
-
-                  {/* Enum values editor */}
-                  {v.type === 'enum' && (
-                    <Box>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        ENUM VALUES
-                      </Text>
-                      <VStack spacing={1} align="stretch">
-                        {(v.enumValues || []).map((opt, optIdx) => (
-                          <HStack key={optIdx} spacing={1}>
-                            <Input
-                              size="xs"
-                              bg="#0a0a0b"
-                              borderColor="#1a1a2e"
-                              color="white"
-                              value={opt}
-                              onChange={(e) => {
-                                const vals = [...(v.enumValues || [])];
-                                vals[optIdx] = e.target.value;
-                                onUpdate(v.key, { enumValues: vals });
-                              }}
-                            />
-                            <IconButton
-                              aria-label="Remove value"
-                              icon={<DeleteIcon fontSize="8px" />}
-                              size="xs"
-                              variant="ghost"
-                              color="gray.600"
-                              _hover={{ color: 'red.300' }}
-                              onClick={() => {
-                                const vals = (v.enumValues || []).filter((_, i) => i !== optIdx);
-                                onUpdate(v.key, {
-                                  enumValues: vals,
-                                  ...(v.defaultValue === opt
-                                    ? { defaultValue: vals[0] ?? '' }
-                                    : {}),
-                                });
-                              }}
-                            />
-                          </HStack>
-                        ))}
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          color="gray.500"
-                          _hover={{ color: 'white' }}
-                          leftIcon={<AddIcon fontSize="8px" />}
-                          onClick={() => {
-                            const vals = [
-                              ...(v.enumValues || []),
-                              `value_${(v.enumValues?.length || 0) + 1}`,
-                            ];
-                            onUpdate(v.key, { enumValues: vals });
-                          }}
-                        >
-                          Add Value
-                        </Button>
-                      </VStack>
-                    </Box>
-                  )}
-
-                  {/* Description */}
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DESCRIPTION
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      value={v.description ?? ''}
-                      onChange={(e) =>
-                        onUpdate(v.key, { description: e.target.value || undefined })
-                      }
-                      placeholder="Optional — shown in editor UI"
-                    />
-                  </Box>
-
-                  {/* Reorder */}
-                  <HStack spacing={1} justify="flex-end">
-                    <Tooltip label="Move Up" hasArrow>
-                      <IconButton
-                        aria-label="Move Up"
-                        icon={<ChevronUpIcon />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        isDisabled={idx === 0}
-                        onClick={() => onMove(v.key, -1)}
-                      />
-                    </Tooltip>
-                    <Tooltip label="Move Down" hasArrow>
-                      <IconButton
-                        aria-label="Move Down"
-                        icon={<ChevronDownIcon />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        isDisabled={idx === variables.length - 1}
-                        onClick={() => onMove(v.key, 1)}
-                      />
-                    </Tooltip>
-                  </HStack>
-                </VStack>
-              </Box>
-            </Collapse>
-          </Box>
-        );
-      })}
-    </VStack>
-  );
-};
-
-// ─── Group summary grid ──────────────────────────────────────────────────────
-
-const VariableGrid: React.FC<{ variables: GameVariable[] }> = ({ variables }) => {
-  const grouped = useMemo(() => {
-    const groups: Record<string, GameVariable[]> = {};
-    for (const v of variables) {
-      const cat = v.category || 'Uncategorized';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(v);
-    }
-    return groups;
-  }, [variables]);
-
-  const categories = Object.keys(grouped).sort();
-
-  return (
-    <Box p={6} overflowY="auto" h="full">
-      <VStack spacing={6} align="stretch" maxW="800px" mx="auto">
-        {categories.map((cat) => (
-          <Box key={cat}>
-            <HStack spacing={2} mb={3}>
-              <Text
-                fontSize="xs"
-                fontWeight="black"
-                textTransform="uppercase"
-                letterSpacing="wider"
                 color="gray.500"
+                _hover={{ color: 'white' }}
+                leftIcon={<AddIcon fontSize="8px" />}
+                onClick={() => {
+                  const vals = [
+                    ...(v.enumValues || []),
+                    `value_${(v.enumValues?.length || 0) + 1}`,
+                  ];
+                  onUpdate(v.key, { enumValues: vals });
+                }}
               >
-                {cat}
-              </Text>
-              <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-                {grouped[cat].length}
-              </Badge>
-            </HStack>
-            <VStack align="stretch" spacing={1}>
-              {grouped[cat].map((v) => {
-                const typeInfo = VARIABLE_TYPES.find((t) => t.value === v.type)!;
-                return (
-                  <HStack
-                    key={v.key}
-                    px={3}
-                    py={2}
-                    bg="#0a0a0b"
-                    borderWidth="1px"
-                    borderColor="#1a1a2e"
-                    borderRadius="md"
-                    spacing={3}
-                    align="flex-start"
-                  >
-                    <Text fontSize="xs" fontFamily="mono" color="gray.200" flex={1}>
-                      {v.key}
-                    </Text>
-                    <Badge
-                      fontSize="9px"
-                      colorScheme={typeInfo.color}
-                      variant="subtle"
-                      flexShrink={0}
-                    >
-                      {typeInfo.badge} {v.type}
-                    </Badge>
-                    {v.type === 'enum' && v.enumValues && (
-                      <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="160px">
-                        {v.enumValues.join(', ')}
-                      </Text>
-                    )}
-                    {v.type === 'table' && v.tableId && (
-                      <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="200px">
-                        table ref
-                      </Text>
-                    )}
-                    {v.type !== 'table' && (
-                      <Text fontSize="10px" color="gray.600" fontFamily="mono" flexShrink={0}>
-                        = {String(v.defaultValue)}
-                      </Text>
-                    )}
-                  </HStack>
-                );
-              })}
+                Add Value
+              </Button>
             </VStack>
           </Box>
-        ))}
+        )}
+
+        <Box>
+          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+            DESCRIPTION
+          </Text>
+          <Input
+            size="xs"
+            bg="#0a0a0b"
+            borderColor="#1a1a2e"
+            color="white"
+            value={v.description ?? ''}
+            onChange={(e) => onUpdate(v.key, { description: e.target.value || undefined })}
+            placeholder="Optional — shown in editor UI"
+          />
+        </Box>
+
+        <HStack spacing={1} justify="flex-end">
+          <Tooltip label="Move Up" hasArrow>
+            <IconButton
+              aria-label="Move Up"
+              icon={<ChevronUpIcon />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              onClick={() => onMove(v.key, -1)}
+            />
+          </Tooltip>
+          <Tooltip label="Move Down" hasArrow>
+            <IconButton
+              aria-label="Move Down"
+              icon={<ChevronDownIcon />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              onClick={() => onMove(v.key, 1)}
+            />
+          </Tooltip>
+        </HStack>
       </VStack>
     </Box>
   );
@@ -722,6 +475,56 @@ function useScriptingState() {
 export const VariableEditor: React.FC = () => {
   const s = useScriptingState();
   const [activeTab, setActiveTab] = useState<ScriptingTab>('variables');
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const itemDialog = useDisclosure();
+
+  const openEditDialog = useCallback(
+    (id: string) => {
+      setFocusedItemId(id);
+      itemDialog.onOpen();
+    },
+    [itemDialog],
+  );
+
+  const closeDialog = useCallback(() => {
+    setFocusedItemId(null);
+    itemDialog.onClose();
+  }, [itemDialog]);
+
+  const handleAddItem = useCallback(() => {
+    switch (activeTab) {
+      case 'variables': {
+        const key = `variable_${Date.now()}`;
+        s.addGameVariable({ key, type: 'boolean', category: 'Game State', defaultValue: false });
+        openEditDialog(key);
+        break;
+      }
+      case 'tables': {
+        const id = `tbl_${Date.now()}`;
+        s.addScriptTable({ id, name: 'table', fields: [] });
+        openEditDialog(id);
+        break;
+      }
+      case 'functions': {
+        const id = `fn_${Date.now()}`;
+        s.addScriptFunction({ id, name: 'newFunction', params: [], returnType: 'void' });
+        openEditDialog(id);
+        break;
+      }
+      case 'namespaces': {
+        const id = `ns_${Date.now()}`;
+        s.addScriptNamespace({ id, name: 'namespace', fields: [], functions: [] });
+        openEditDialog(id);
+        break;
+      }
+      case 'contexts': {
+        const id = `ctx_${Date.now()}`;
+        s.addScriptContextType({ id, name: 'context', fields: [], functions: [] });
+        openEditDialog(id);
+        break;
+      }
+    }
+  }, [activeTab, s, openEditDialog]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -758,126 +561,217 @@ export const VariableEditor: React.FC = () => {
       s.updateGameVariable(a.key, bData);
       s.updateGameVariable(b.key, aData);
     },
-    [s.gameVariables, s.updateGameVariable],
+    [s],
   );
 
-  // Left panel content depends on active tab
+  const handleUpdateGameVariable = useCallback(
+    (key: string, updates: Partial<GameVariable>) => {
+      s.updateGameVariable(key, updates);
+      if (focusedItemId && key === focusedItemId && typeof updates.key === 'string') {
+        setFocusedItemId(updates.key);
+      }
+    },
+    [focusedItemId, s],
+  );
+
+  const variableItems = useMemo(
+    () =>
+      s.gameVariables.map((v) => {
+        const typeInfo = VARIABLE_TYPES.find((t) => t.value === v.type)!;
+        return {
+          id: v.key,
+          title: v.key,
+          subtitle: v.category || 'Uncategorized',
+          badge: (
+            <Badge fontSize="9px" colorScheme={typeInfo.color} variant="subtle">
+              {typeInfo.badge} {v.type}
+            </Badge>
+          ),
+          meta: (
+            <Text fontSize="10px" color="gray.500" fontFamily="mono">
+              {v.type === 'table'
+                ? `table: ${v.tableId || '(unset)'}`
+                : `default: ${String(v.defaultValue)}`}
+            </Text>
+          ),
+        };
+      }),
+    [s.gameVariables],
+  );
+
+  const tableItems = useMemo(
+    () =>
+      s.scriptTables.map((table) => ({
+        id: table.id,
+        title: table.name,
+        subtitle: table.id,
+        badge: (
+          <Badge fontSize="9px" colorScheme="orange" variant="subtle">
+            {table.fields.length} fields
+          </Badge>
+        ),
+      })),
+    [s.scriptTables],
+  );
+
+  const functionItems = useMemo(
+    () =>
+      s.scriptFunctions.map((fn) => ({
+        id: fn.id,
+        title: `${fn.name}(${fn.params.map((p) => p.name).join(', ')})`,
+        subtitle: fn.description || fn.id,
+        badge: (
+          <Badge fontSize="9px" colorScheme="teal" variant="subtle">
+            {fn.returnType}
+          </Badge>
+        ),
+      })),
+    [s.scriptFunctions],
+  );
+
+  const namespaceItems = useMemo(
+    () =>
+      s.scriptNamespaces.map((ns) => ({
+        id: ns.id,
+        title: ns.name,
+        subtitle: ns.id,
+        badge: (
+          <Badge fontSize="9px" colorScheme="cyan" variant="subtle">
+            {ns.fields.length} fields, {ns.functions.length} funcs
+          </Badge>
+        ),
+      })),
+    [s.scriptNamespaces],
+  );
+
+  const contextItems = useMemo(
+    () =>
+      s.scriptContextTypes.map((ct) => ({
+        id: ct.id,
+        title: `self (${ct.name})`,
+        subtitle: ct.id,
+        badge: (
+          <Badge fontSize="9px" colorScheme="orange" variant="subtle">
+            {ct.fields.length} fields, {ct.functions.length} funcs
+          </Badge>
+        ),
+      })),
+    [s.scriptContextTypes],
+  );
+
+  // Center workspace content depends on active tab
   const mainContent = useMemo(() => {
     switch (activeTab) {
       case 'variables':
-        return s.gameVariables.length === 0 ? (
-          <EmptyScreen
-            icon="📊"
-            title="No Variables"
-            description="Define named variables the Lua sandbox exposes at runtime."
-            buttonLabel="Add First Variable"
-            onCreate={() =>
-              s.addGameVariable({
-                key: 'variable_1',
-                type: 'boolean',
-                category: 'Game State',
-                defaultValue: false,
-              })
-            }
+        return (
+          <DialogListWorkspace
+            title="Variables"
+            description="Lua-exposed runtime variables. Click an entry to edit it."
+            items={variableItems}
+            addLabel="Add Variable"
+            onAdd={handleAddItem}
+            onOpenItem={openEditDialog}
+            onDeleteItem={(key) => s.deleteGameVariable(key)}
+            emptyIcon="📊"
+            emptyTitle="No variables"
+            emptyDescription="Create variables for game state, flags, and script values."
           />
-        ) : (
-          <VariableGrid variables={s.gameVariables} />
         );
       case 'tables':
-        return s.scriptTables.length === 0 ? (
-          <EmptyScreen
-            icon="{}"
-            title="No Tables"
-            description="Define reusable table structures that can be referenced as a type in variables, namespaces, and contexts."
-            buttonLabel="Add First Table"
-            onCreate={() =>
-              s.addScriptTable({ id: `tbl_${Date.now()}`, name: 'table', fields: [] })
-            }
+        return (
+          <DialogListWorkspace
+            title="Tables"
+            description="Reusable table schemas used by variables, namespaces, and context types."
+            items={tableItems}
+            addLabel="Add Table"
+            onAdd={handleAddItem}
+            onOpenItem={openEditDialog}
+            onDeleteItem={(id) => s.deleteScriptTable(id)}
+            emptyIcon="{}"
+            emptyTitle="No table schemas"
+            emptyDescription="Define structured table types for script APIs."
           />
-        ) : (
-          <TableGrid tables={s.scriptTables} />
         );
       case 'functions':
-        return s.scriptFunctions.length === 0 ? (
-          <EmptyScreen
-            icon="⚡"
-            title="No Global Functions"
-            description="Define functions callable anywhere in the Lua sandbox (e.g. wait, setFlag)."
-            buttonLabel="Add First Function"
-            onCreate={() =>
-              s.addScriptFunction({
-                id: `fn_${Date.now()}`,
-                name: 'newFunction',
-                params: [],
-                returnType: 'void',
-              })
-            }
+        return (
+          <DialogListWorkspace
+            title="Global Functions"
+            description="Callable functions available anywhere in the Lua sandbox."
+            items={functionItems}
+            addLabel="Add Function"
+            onAdd={handleAddItem}
+            onOpenItem={openEditDialog}
+            onDeleteItem={(id) => s.deleteScriptFunction(id)}
+            emptyIcon="⚡"
+            emptyTitle="No global functions"
+            emptyDescription="Define reusable script functions such as wait, setFlag, or query helpers."
           />
-        ) : (
-          <FunctionGrid functions={s.scriptFunctions} tables={s.scriptTables} />
         );
       case 'namespaces':
-        return s.scriptNamespaces.length === 0 ? (
-          <EmptyScreen
-            icon="📦"
-            title="No Namespaces"
-            description="Define singleton table-like objects (e.g. weather, camera, audio)."
-            buttonLabel="Add First Namespace"
-            onCreate={() =>
-              s.addScriptNamespace({
-                id: `ns_${Date.now()}`,
-                name: 'namespace',
-                fields: [],
-                functions: [],
-              })
-            }
+        return (
+          <DialogListWorkspace
+            title="Namespaces"
+            description="Singleton script APIs such as weather, camera, and audio systems."
+            items={namespaceItems}
+            addLabel="Add Namespace"
+            onAdd={handleAddItem}
+            onOpenItem={openEditDialog}
+            onDeleteItem={(id) => s.deleteScriptNamespace(id)}
+            emptyIcon="📦"
+            emptyTitle="No namespaces"
+            emptyDescription="Create namespace APIs to group fields and callable functions."
           />
-        ) : (
-          <NamespaceGrid namespaces={s.scriptNamespaces} tables={s.scriptTables} />
         );
       case 'contexts':
-        return s.scriptContextTypes.length === 0 ? (
-          <EmptyScreen
-            icon="🎭"
-            title="No Context Types"
-            description="Define the shape of 'self' for script execution contexts (e.g. actor, cutscene)."
-            buttonLabel="Add First Context Type"
-            onCreate={() =>
-              s.addScriptContextType({
-                id: `ctx_${Date.now()}`,
-                name: 'context',
-                fields: [],
-                functions: [],
-              })
-            }
+        return (
+          <DialogListWorkspace
+            title="Context Types"
+            description="Defines the shape of self for script execution contexts."
+            items={contextItems}
+            addLabel="Add Context"
+            onAdd={handleAddItem}
+            onOpenItem={openEditDialog}
+            onDeleteItem={(id) => s.deleteScriptContextType(id)}
+            emptyIcon="🎭"
+            emptyTitle="No context types"
+            emptyDescription="Create context definitions for actor, cutscene, or event script scopes."
           />
-        ) : (
-          <ContextGrid contextTypes={s.scriptContextTypes} tables={s.scriptTables} />
         );
     }
-  }, [activeTab, s]);
+  }, [
+    activeTab,
+    contextItems,
+    functionItems,
+    handleAddItem,
+    openEditDialog,
+    namespaceItems,
+    tableItems,
+    variableItems,
+    s,
+  ]);
 
-  // Right panel editor depends on active tab
-  const sidebarContent = useMemo(() => {
+  const dialogContent = useMemo(() => {
+    if (!focusedItemId) return null;
     switch (activeTab) {
-      case 'variables':
-        return (
-          <>
+      case 'variables': {
+        const variable = s.gameVariables.find((v) => v.key === focusedItemId);
+        return variable ? (
+          <Box>
             <datalist id="variable-categories">
               {categories.map((c) => (
                 <option key={c} value={c} />
               ))}
             </datalist>
-            <VariableListEditor
-              variables={s.gameVariables}
+            <VariableListEditorSingle
+              variable={variable}
               tables={s.scriptTables}
-              onAdd={s.addGameVariable}
-              onUpdate={s.updateGameVariable}
+              onUpdate={handleUpdateGameVariable}
               onDelete={s.deleteGameVariable}
               onMove={handleMove}
             />
-          </>
-        );
+          </Box>
+        ) : null;
+      }
       case 'tables':
         return (
           <TableEditor
@@ -885,6 +779,7 @@ export const VariableEditor: React.FC = () => {
             onAdd={s.addScriptTable}
             onUpdate={s.updateScriptTable}
             onDelete={s.deleteScriptTable}
+            initialExpandedId={focusedItemId}
           />
         );
       case 'functions':
@@ -895,6 +790,7 @@ export const VariableEditor: React.FC = () => {
             onAdd={s.addScriptFunction}
             onUpdate={s.updateScriptFunction}
             onDelete={s.deleteScriptFunction}
+            initialExpandedId={focusedItemId}
           />
         );
       case 'namespaces':
@@ -905,6 +801,7 @@ export const VariableEditor: React.FC = () => {
             onAdd={s.addScriptNamespace}
             onUpdate={s.updateScriptNamespace}
             onDelete={s.deleteScriptNamespace}
+            initialExpandedId={focusedItemId}
           />
         );
       case 'contexts':
@@ -915,66 +812,25 @@ export const VariableEditor: React.FC = () => {
             onAdd={s.addScriptContextType}
             onUpdate={s.updateScriptContextType}
             onDelete={s.deleteScriptContextType}
+            initialExpandedId={focusedItemId}
           />
         );
     }
-  }, [activeTab, s, categories, handleMove]);
+  }, [activeTab, categories, focusedItemId, handleMove, handleUpdateGameVariable, s]);
 
   return (
-    <Flex direction="column" h="full" overflow="hidden">
-      {/* Header with tabs */}
-      <HStack
-        px={4}
-        h="10"
-        bg="#03040a"
-        borderBottom="1px"
-        borderColor="#071018"
-        flexShrink={0}
-        spacing={1}
-      >
-        <Text fontWeight="bold" fontSize="sm" color="white" mr={3}>
-          Scripting
-        </Text>
-        {TAB_DEFS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const count = tab.badge(s);
-          return (
-            <Button
-              key={tab.id}
-              size="xs"
-              variant="ghost"
-              color={isActive ? 'blue.300' : 'gray.500'}
-              bg={isActive ? 'whiteAlpha.100' : 'transparent'}
-              _hover={{ bg: 'whiteAlpha.100', color: isActive ? 'blue.300' : 'gray.300' }}
-              onClick={() => setActiveTab(tab.id)}
-              px={2}
-              h="6"
-              fontSize="11px"
-              fontWeight={isActive ? 'bold' : 'medium'}
-            >
-              {tab.label}
-              {count > 0 && (
-                <Badge
-                  ml={1}
-                  fontSize="9px"
-                  colorScheme={isActive ? 'blue' : 'gray'}
-                  variant="subtle"
-                >
-                  {count}
-                </Badge>
-              )}
-            </Button>
-          );
-        })}
-      </HStack>
-
-      {/* Body */}
-      <Flex flex={1} overflow="hidden">
-        {/* Main panel + script tester */}
-        <Flex flex={1} direction="column" overflow="hidden">
-          <Box flex={1} overflow="hidden">
-            {mainContent}
-          </Box>
+    <>
+      <TopTabbedEditorLayout
+        title="Scripting"
+        tabs={TAB_DEFS.map((tab) => ({
+          id: tab.id,
+          label: tab.label,
+          badge: tab.badge(s),
+        }))}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        mainContent={mainContent}
+        footerContent={
           <ScriptTester
             variables={s.gameVariables}
             tables={s.scriptTables}
@@ -982,261 +838,24 @@ export const VariableEditor: React.FC = () => {
             namespaces={s.scriptNamespaces}
             contextTypes={s.scriptContextTypes}
           />
-        </Flex>
+        }
+      />
 
-        {/* Right sidebar */}
+      <EditorModal isOpen={itemDialog.isOpen} onClose={closeDialog} size="2xl">
         <Box
-          w="320px"
-          flexShrink={0}
-          borderLeft="1px"
-          borderColor="#071018"
+          bg="gray.900"
+          border="1px"
+          borderColor="gray.700"
+          borderRadius="md"
+          overflow="hidden"
+          maxH="75vh"
           overflowY="auto"
-          bg="#05060a"
         >
-          {sidebarContent}
+          {dialogContent}
         </Box>
-      </Flex>
-    </Flex>
+      </EditorModal>
+    </>
   );
 };
 
 export default VariableEditor;
-
-// ─── Summary grids for non-variable tabs ────────────────────────────────────
-
-const TableGrid: React.FC<{ tables: import('../../../types/schema').ScriptTable[] }> = ({
-  tables,
-}) => (
-  <Box p={6} overflowY="auto" h="full">
-    <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
-      {tables.map((tbl) => (
-        <Box key={tbl.id}>
-          <HStack spacing={2} mb={2}>
-            <Text
-              fontSize="xs"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="wider"
-              color="gray.500"
-            >
-              {tbl.name}
-            </Text>
-            <Badge fontSize="9px" colorScheme="orange" variant="subtle">
-              {tbl.fields.length} fields
-            </Badge>
-          </HStack>
-          {tbl.description && (
-            <Text fontSize="10px" color="gray.600" mb={2}>
-              {tbl.description}
-            </Text>
-          )}
-          <VStack align="stretch" spacing={1}>
-            {tbl.fields.map((f) => (
-              <HStack
-                key={f.key}
-                px={3}
-                py={1}
-                bg="#0a0a0b"
-                borderWidth="1px"
-                borderColor="#1a1a2e"
-                borderRadius="md"
-                spacing={3}
-              >
-                <Text fontSize="10px" fontFamily="mono" color="gray.400" flex={1}>
-                  {f.key}
-                </Text>
-                <Badge fontSize="9px" colorScheme="blue" variant="subtle">
-                  {f.type}
-                </Badge>
-                <Text fontSize="10px" color="gray.600" fontFamily="mono">
-                  = {String(f.defaultValue)}
-                </Text>
-              </HStack>
-            ))}
-          </VStack>
-        </Box>
-      ))}
-    </VStack>
-  </Box>
-);
-
-const getFunctionReturnLabel = (
-  fn: import('../../../types/schema').ScriptFunction,
-  tables: import('../../../types/schema').ScriptTable[],
-): string => {
-  if (fn.returnType !== 'table') return fn.returnType;
-  if (!fn.returnTableId) return 'table';
-  const table = tables.find((t) => t.id === fn.returnTableId);
-  return `table:${table?.name ?? '?'}`;
-};
-
-const FunctionGrid: React.FC<{
-  functions: import('../../../types/schema').ScriptFunction[];
-  tables: import('../../../types/schema').ScriptTable[];
-}> = ({ functions, tables }) => (
-  <Box p={6} overflowY="auto" h="full">
-    <VStack spacing={1} align="stretch" maxW="800px" mx="auto">
-      {functions.map((fn) => (
-        <HStack
-          key={fn.id}
-          px={3}
-          py={2}
-          bg="#0a0a0b"
-          borderWidth="1px"
-          borderColor="#1a1a2e"
-          borderRadius="md"
-          spacing={3}
-        >
-          <Text fontSize="xs" fontFamily="mono" color="gray.200" flex={1}>
-            {fn.name}({fn.params.map((p) => p.name).join(', ')})
-          </Text>
-          <Badge fontSize="9px" colorScheme="teal" variant="subtle">
-            {getFunctionReturnLabel(fn, tables)}
-          </Badge>
-          {fn.description && (
-            <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="200px">
-              {fn.description}
-            </Text>
-          )}
-        </HStack>
-      ))}
-    </VStack>
-  </Box>
-);
-
-const NamespaceGrid: React.FC<{
-  namespaces: import('../../../types/schema').ScriptNamespace[];
-  tables: import('../../../types/schema').ScriptTable[];
-}> = ({ namespaces, tables }) => (
-  <Box p={6} overflowY="auto" h="full">
-    <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
-      {namespaces.map((ns) => (
-        <Box key={ns.id}>
-          <HStack spacing={2} mb={2}>
-            <Text
-              fontSize="xs"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="wider"
-              color="gray.500"
-            >
-              {ns.name}
-            </Text>
-            <Badge fontSize="9px" colorScheme="cyan" variant="subtle">
-              {ns.fields.length} fields, {ns.functions.length} functions
-            </Badge>
-          </HStack>
-          <VStack align="stretch" spacing={1}>
-            {ns.fields.map((f) => (
-              <HStack
-                key={f.key}
-                px={3}
-                py={1}
-                bg="#0a0a0b"
-                borderWidth="1px"
-                borderColor="#1a1a2e"
-                borderRadius="md"
-              >
-                <Text fontSize="10px" fontFamily="mono" color="gray.400">
-                  {ns.name}.{f.key}
-                </Text>
-                <Badge fontSize="9px" colorScheme="blue" variant="subtle">
-                  {f.type}
-                </Badge>
-              </HStack>
-            ))}
-            {ns.functions.map((fn) => (
-              <HStack
-                key={fn.id}
-                px={3}
-                py={1}
-                bg="#0a0a0b"
-                borderWidth="1px"
-                borderColor="#1a1a2e"
-                borderRadius="md"
-              >
-                <Text fontSize="10px" fontFamily="mono" color="gray.400">
-                  {ns.name}.{fn.name}({fn.params.map((p) => p.name).join(', ')})
-                </Text>
-                <Badge fontSize="9px" colorScheme="teal" variant="subtle">
-                  {getFunctionReturnLabel(fn, tables)}
-                </Badge>
-              </HStack>
-            ))}
-          </VStack>
-        </Box>
-      ))}
-    </VStack>
-  </Box>
-);
-
-const ContextGrid: React.FC<{
-  contextTypes: import('../../../types/schema').ScriptContextType[];
-  tables: import('../../../types/schema').ScriptTable[];
-}> = ({ contextTypes, tables }) => (
-  <Box p={6} overflowY="auto" h="full">
-    <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
-      {contextTypes.map((ct) => (
-        <Box key={ct.id}>
-          <HStack spacing={2} mb={2}>
-            <Text
-              fontSize="xs"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="wider"
-              color="gray.500"
-            >
-              self ({ct.name})
-            </Text>
-            <Badge fontSize="9px" colorScheme="orange" variant="subtle">
-              {ct.fields.length} fields, {ct.functions.length} functions
-            </Badge>
-          </HStack>
-          {ct.description && (
-            <Text fontSize="10px" color="gray.600" mb={2}>
-              {ct.description}
-            </Text>
-          )}
-          <VStack align="stretch" spacing={1}>
-            {ct.fields.map((f) => (
-              <HStack
-                key={f.key}
-                px={3}
-                py={1}
-                bg="#0a0a0b"
-                borderWidth="1px"
-                borderColor="#1a1a2e"
-                borderRadius="md"
-              >
-                <Text fontSize="10px" fontFamily="mono" color="gray.400">
-                  self.{f.key}
-                </Text>
-                <Badge fontSize="9px" colorScheme="blue" variant="subtle">
-                  {f.type}
-                </Badge>
-              </HStack>
-            ))}
-            {ct.functions.map((fn) => (
-              <HStack
-                key={fn.id}
-                px={3}
-                py={1}
-                bg="#0a0a0b"
-                borderWidth="1px"
-                borderColor="#1a1a2e"
-                borderRadius="md"
-              >
-                <Text fontSize="10px" fontFamily="mono" color="gray.400">
-                  self:{fn.name}({fn.params.map((p) => p.name).join(', ')})
-                </Text>
-                <Badge fontSize="9px" colorScheme="teal" variant="subtle">
-                  {getFunctionReturnLabel(fn, tables)}
-                </Badge>
-              </HStack>
-            ))}
-          </VStack>
-        </Box>
-      ))}
-    </VStack>
-  </Box>
-);

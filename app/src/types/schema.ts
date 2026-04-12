@@ -53,6 +53,7 @@ export interface Tileset {
 
 export interface TileDefinition {
   id?: string; // Optional semantic string ID (e.g. "player_spawn")
+  spriteIndex?: number; // Optional index into the tileset sprite sheet
   tags?: string[]; // Semantic tags (e.g. ["walkable", "water"])
   collision?: CollisionDefinition;
   properties?: PropertyInstance[];

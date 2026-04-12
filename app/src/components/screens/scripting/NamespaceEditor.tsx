@@ -2,7 +2,7 @@
  * NamespaceEditor — list + inline editor for ScriptNamespace entries.
  * Each namespace has fields (GameVariable[]) and functions (ScriptFunction[]).
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -246,8 +246,9 @@ interface NamespaceEditorProps {
   namespaces: ScriptNamespace[];
   tables: ScriptTable[];
   onAdd: (ns: ScriptNamespace) => void;
-  onUpdate: (id: string, updates: Partial<ScriptNamespace>) => void;
-  onDelete: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<ScriptNamespace>) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
+  initialExpandedId?: string | null;
 }
 
 export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
@@ -256,8 +257,13 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
   onAdd,
   onUpdate,
   onDelete,
+  initialExpandedId,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedId(initialExpandedId ?? null);
+  }, [initialExpandedId]);
+
   const idMapRef = useRef<Record<string, string>>({});
   const genId = () => `nsid_${Math.random().toString(36).slice(2, 9)}`;
   for (const ns of namespaces) {
@@ -325,42 +331,44 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
 
   return (
     <VStack spacing={0} align="stretch">
-      <Flex
-        px={3}
-        py={2}
-        align="center"
-        justify="space-between"
-        borderBottom="1px"
-        borderColor="whiteAlpha.50"
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Namespaces
-          </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {namespaces.length}
-          </Badge>
-        </HStack>
-        <Tooltip label="Add Namespace" hasArrow>
-          <IconButton
-            aria-label="Add Namespace"
-            icon={<AddIcon fontSize="9px" />}
-            size="xs"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={handleAdd}
-          />
-        </Tooltip>
-      </Flex>
+      {!initialExpandedId && (
+        <Flex
+          px={3}
+          py={2}
+          align="center"
+          justify="space-between"
+          borderBottom="1px"
+          borderColor="whiteAlpha.50"
+        >
+          <HStack spacing={2}>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="widest"
+              color="gray.500"
+            >
+              Namespaces
+            </Text>
+            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+              {namespaces.length}
+            </Badge>
+          </HStack>
+          <Tooltip label="Add Namespace" hasArrow>
+            <IconButton
+              aria-label="Add Namespace"
+              icon={<AddIcon fontSize="9px" />}
+              size="xs"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={handleAdd}
+            />
+          </Tooltip>
+        </Flex>
+      )}
 
-      {namespaces.length === 0 && (
+      {!initialExpandedId && namespaces.length === 0 && (
         <Box px={3} py={6} textAlign="center">
           <Text fontSize="xs" color="gray.600" fontStyle="italic">
             No namespaces defined
@@ -371,168 +379,290 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
         </Box>
       )}
 
-      {namespaces.map((ns) => {
-        const isExpanded = expandedId === ns.id;
-        const stableId = idMapRef.current[ns.id] || genId();
-        if (!idMapRef.current[ns.id]) idMapRef.current[ns.id] = stableId;
+      {initialExpandedId
+        ? (() => {
+            const ns = namespaces.find((n) => n.id === initialExpandedId);
+            if (!ns) return null;
+            const stableId = idMapRef.current[ns.id] || genId();
+            if (!idMapRef.current[ns.id]) idMapRef.current[ns.id] = stableId;
 
-        return (
-          <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
-            <HStack
-              px={3}
-              py={1.5}
-              spacing={2}
-              cursor="pointer"
-              _hover={{ bg: 'whiteAlpha.50' }}
-              onClick={() => setExpandedId(isExpanded ? null : ns.id)}
-              role="group"
-            >
-              <Text fontSize="10px" color="gray.600" w="14px">
-                {isExpanded ? '▾' : '▸'}
-              </Text>
-              <Text
-                fontSize="xs"
-                fontWeight="medium"
-                color="gray.200"
-                flex={1}
-                noOfLines={1}
-                fontFamily="mono"
-              >
-                {ns.name}
-              </Text>
-              <Badge fontSize="9px" colorScheme="cyan" variant="subtle">
-                {ns.fields.length}F {ns.functions.length}fn
-              </Badge>
-              <IconButton
-                aria-label="Delete"
-                icon={<DeleteIcon fontSize="8px" />}
-                size="xs"
-                variant="ghost"
-                color="gray.700"
-                opacity={0}
-                _groupHover={{ opacity: 1 }}
-                _hover={{ color: 'red.300', bg: 'red.900' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(ns.id);
-                  if (expandedId === ns.id) setExpandedId(null);
-                }}
-              />
-            </HStack>
-
-            <Collapse in={isExpanded} animateOpacity>
-              <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
-                <VStack spacing={3} align="stretch">
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      NAME
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      fontFamily="mono"
-                      value={ns.name}
-                      onChange={(e) =>
-                        onUpdate(ns.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
-                      }
-                    />
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DESCRIPTION
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      value={ns.description ?? ''}
-                      onChange={(e) =>
-                        onUpdate(ns.id, { description: e.target.value || undefined })
-                      }
-                      placeholder="Optional"
-                    />
-                  </Box>
-
-                  <Divider borderColor="whiteAlpha.100" />
-
-                  {/* Fields */}
-                  <Box>
-                    <HStack mb={1} justify="space-between">
-                      <Text fontSize="9px" color="gray.500" fontWeight="bold">
-                        FIELDS
-                      </Text>
-                      <IconButton
-                        aria-label="Add field"
-                        icon={<AddIcon fontSize="8px" />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white' }}
-                        onClick={() => addField(ns.id)}
-                      />
-                    </HStack>
-                    {ns.fields.length === 0 && (
-                      <Text fontSize="10px" color="gray.700" fontStyle="italic">
-                        No fields
-                      </Text>
-                    )}
-                    <VStack spacing={1} align="stretch">
-                      {ns.fields.map((f, fi) => (
-                        <InlineField
-                          key={fi}
-                          field={f}
-                          onChange={(u) => updateField(ns.id, fi, u)}
-                          onDelete={() => removeField(ns.id, fi)}
+            return (
+              <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
+                <Collapse in={true} animateOpacity>
+                  <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+                    <VStack spacing={3} align="stretch">
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          NAME
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          fontFamily="mono"
+                          value={ns.name}
+                          onChange={(e) =>
+                            onUpdate(ns.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+                          }
                         />
-                      ))}
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          DESCRIPTION
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={ns.description ?? ''}
+                          onChange={(e) =>
+                            onUpdate(ns.id, { description: e.target.value || undefined })
+                          }
+                          placeholder="Optional"
+                        />
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Fields */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FIELDS
+                          </Text>
+                          <IconButton
+                            aria-label="Add field"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addField(ns.id)}
+                          />
+                        </HStack>
+                        {ns.fields.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No fields
+                          </Text>
+                        )}
+                        <VStack spacing={1} align="stretch">
+                          {ns.fields.map((f, fi) => (
+                            <InlineField
+                              key={fi}
+                              field={f}
+                              onChange={(u) => updateField(ns.id, fi, u)}
+                              onDelete={() => removeField(ns.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Functions */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FUNCTIONS
+                          </Text>
+                          <IconButton
+                            aria-label="Add function"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addFn(ns.id)}
+                          />
+                        </HStack>
+                        {ns.functions.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No functions
+                          </Text>
+                        )}
+                        <VStack spacing={2} align="stretch">
+                          {ns.functions.map((fn, fi) => (
+                            <InlineFunction
+                              key={fi}
+                              fn={fn}
+                              tables={tables}
+                              onChange={(u) => updateFn(ns.id, fi, u)}
+                              onDelete={() => removeFn(ns.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
                     </VStack>
                   </Box>
-
-                  <Divider borderColor="whiteAlpha.100" />
-
-                  {/* Functions */}
-                  <Box>
-                    <HStack mb={1} justify="space-between">
-                      <Text fontSize="9px" color="gray.500" fontWeight="bold">
-                        FUNCTIONS
-                      </Text>
-                      <IconButton
-                        aria-label="Add function"
-                        icon={<AddIcon fontSize="8px" />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white' }}
-                        onClick={() => addFn(ns.id)}
-                      />
-                    </HStack>
-                    {ns.functions.length === 0 && (
-                      <Text fontSize="10px" color="gray.700" fontStyle="italic">
-                        No functions
-                      </Text>
-                    )}
-                    <VStack spacing={2} align="stretch">
-                      {ns.functions.map((fn, fi) => (
-                        <InlineFunction
-                          key={fi}
-                          fn={fn}
-                          tables={tables}
-                          onChange={(u) => updateFn(ns.id, fi, u)}
-                          onDelete={() => removeFn(ns.id, fi)}
-                        />
-                      ))}
-                    </VStack>
-                  </Box>
-                </VStack>
+                </Collapse>
               </Box>
-            </Collapse>
-          </Box>
-        );
-      })}
+            );
+          })()
+        : namespaces.map((ns) => {
+            const isExpanded = expandedId === ns.id;
+            const stableId = idMapRef.current[ns.id] || genId();
+            if (!idMapRef.current[ns.id]) idMapRef.current[ns.id] = stableId;
+
+            return (
+              <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
+                <HStack
+                  px={3}
+                  py={1.5}
+                  spacing={2}
+                  cursor="pointer"
+                  _hover={{ bg: 'whiteAlpha.50' }}
+                  onClick={() => setExpandedId(isExpanded ? null : ns.id)}
+                  role="group"
+                >
+                  <Text fontSize="10px" color="gray.600" w="14px">
+                    {isExpanded ? '▾' : '▸'}
+                  </Text>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="medium"
+                    color="gray.200"
+                    flex={1}
+                    noOfLines={1}
+                    fontFamily="mono"
+                  >
+                    {ns.name}
+                  </Text>
+                  <Badge fontSize="9px" colorScheme="cyan" variant="subtle">
+                    {ns.fields.length}F {ns.functions.length}fn
+                  </Badge>
+                  <IconButton
+                    aria-label="Delete"
+                    icon={<DeleteIcon fontSize="8px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.700"
+                    opacity={0}
+                    _groupHover={{ opacity: 1 }}
+                    _hover={{ color: 'red.300', bg: 'red.900' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(ns.id);
+                      if (expandedId === ns.id) setExpandedId(null);
+                    }}
+                  />
+                </HStack>
+
+                <Collapse in={isExpanded} animateOpacity>
+                  <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+                    <VStack spacing={3} align="stretch">
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          NAME
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          fontFamily="mono"
+                          value={ns.name}
+                          onChange={(e) =>
+                            onUpdate(ns.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+                          }
+                        />
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          DESCRIPTION
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={ns.description ?? ''}
+                          onChange={(e) =>
+                            onUpdate(ns.id, { description: e.target.value || undefined })
+                          }
+                          placeholder="Optional"
+                        />
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Fields */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FIELDS
+                          </Text>
+                          <IconButton
+                            aria-label="Add field"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addField(ns.id)}
+                          />
+                        </HStack>
+                        {ns.fields.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No fields
+                          </Text>
+                        )}
+                        <VStack spacing={1} align="stretch">
+                          {ns.fields.map((f, fi) => (
+                            <InlineField
+                              key={fi}
+                              field={f}
+                              onChange={(u) => updateField(ns.id, fi, u)}
+                              onDelete={() => removeField(ns.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Functions */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FUNCTIONS
+                          </Text>
+                          <IconButton
+                            aria-label="Add function"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addFn(ns.id)}
+                          />
+                        </HStack>
+                        {ns.functions.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No functions
+                          </Text>
+                        )}
+                        <VStack spacing={2} align="stretch">
+                          {ns.functions.map((fn, fi) => (
+                            <InlineFunction
+                              key={fi}
+                              fn={fn}
+                              tables={tables}
+                              onChange={(u) => updateFn(ns.id, fi, u)}
+                              onDelete={() => removeFn(ns.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </Collapse>
+              </Box>
+            );
+          })}
     </VStack>
   );
 };

@@ -724,7 +724,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         }
 
         for (const shape of collision.shapes || []) {
-          const points = shapeToNormalizedPolygon(shape, tileSize, tileSize);
+          const points = shapeToNormalizedPolygon(shape, tileSize);
           if (points.length < 3) continue;
 
           ctx.beginPath();

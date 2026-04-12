@@ -2,7 +2,7 @@
  * ContextTypeEditor — list + inline editor for ScriptContextType entries.
  * Defines the shape of `self` for script execution contexts.
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -245,8 +245,9 @@ interface ContextTypeEditorProps {
   contextTypes: ScriptContextType[];
   tables: ScriptTable[];
   onAdd: (ct: ScriptContextType) => void;
-  onUpdate: (id: string, updates: Partial<ScriptContextType>) => void;
-  onDelete: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<ScriptContextType>) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
+  initialExpandedId?: string | null;
 }
 
 export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
@@ -255,8 +256,13 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
   onAdd,
   onUpdate,
   onDelete,
+  initialExpandedId,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedId(initialExpandedId ?? null);
+  }, [initialExpandedId]);
+
   const idMapRef = useRef<Record<string, string>>({});
   const genId = () => `ctid_${Math.random().toString(36).slice(2, 9)}`;
   for (const ct of contextTypes) {
@@ -324,42 +330,44 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
 
   return (
     <VStack spacing={0} align="stretch">
-      <Flex
-        px={3}
-        py={2}
-        align="center"
-        justify="space-between"
-        borderBottom="1px"
-        borderColor="whiteAlpha.50"
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Context Types
-          </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {contextTypes.length}
-          </Badge>
-        </HStack>
-        <Tooltip label="Add Context Type" hasArrow>
-          <IconButton
-            aria-label="Add Context Type"
-            icon={<AddIcon fontSize="9px" />}
-            size="xs"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-            onClick={handleAdd}
-          />
-        </Tooltip>
-      </Flex>
+      {!initialExpandedId && (
+        <Flex
+          px={3}
+          py={2}
+          align="center"
+          justify="space-between"
+          borderBottom="1px"
+          borderColor="whiteAlpha.50"
+        >
+          <HStack spacing={2}>
+            <Text
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              letterSpacing="widest"
+              color="gray.500"
+            >
+              Context Types
+            </Text>
+            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+              {contextTypes.length}
+            </Badge>
+          </HStack>
+          <Tooltip label="Add Context Type" hasArrow>
+            <IconButton
+              aria-label="Add Context Type"
+              icon={<AddIcon fontSize="9px" />}
+              size="xs"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={handleAdd}
+            />
+          </Tooltip>
+        </Flex>
+      )}
 
-      {contextTypes.length === 0 && (
+      {!initialExpandedId && contextTypes.length === 0 && (
         <Box px={3} py={6} textAlign="center">
           <Text fontSize="xs" color="gray.600" fontStyle="italic">
             No context types defined
@@ -370,168 +378,290 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
         </Box>
       )}
 
-      {contextTypes.map((ct) => {
-        const isExpanded = expandedId === ct.id;
-        const stableId = idMapRef.current[ct.id] || genId();
-        if (!idMapRef.current[ct.id]) idMapRef.current[ct.id] = stableId;
+      {initialExpandedId
+        ? (() => {
+            const ct = contextTypes.find((c) => c.id === initialExpandedId);
+            if (!ct) return null;
+            const stableId = idMapRef.current[ct.id] || genId();
+            if (!idMapRef.current[ct.id]) idMapRef.current[ct.id] = stableId;
 
-        return (
-          <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
-            <HStack
-              px={3}
-              py={1.5}
-              spacing={2}
-              cursor="pointer"
-              _hover={{ bg: 'whiteAlpha.50' }}
-              onClick={() => setExpandedId(isExpanded ? null : ct.id)}
-              role="group"
-            >
-              <Text fontSize="10px" color="gray.600" w="14px">
-                {isExpanded ? '▾' : '▸'}
-              </Text>
-              <Text
-                fontSize="xs"
-                fontWeight="medium"
-                color="gray.200"
-                flex={1}
-                noOfLines={1}
-                fontFamily="mono"
-              >
-                self ({ct.name})
-              </Text>
-              <Badge fontSize="9px" colorScheme="orange" variant="subtle">
-                {ct.fields.length}F {ct.functions.length}fn
-              </Badge>
-              <IconButton
-                aria-label="Delete"
-                icon={<DeleteIcon fontSize="8px" />}
-                size="xs"
-                variant="ghost"
-                color="gray.700"
-                opacity={0}
-                _groupHover={{ opacity: 1 }}
-                _hover={{ color: 'red.300', bg: 'red.900' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(ct.id);
-                  if (expandedId === ct.id) setExpandedId(null);
-                }}
-              />
-            </HStack>
-
-            <Collapse in={isExpanded} animateOpacity>
-              <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
-                <VStack spacing={3} align="stretch">
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      NAME
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      fontFamily="mono"
-                      value={ct.name}
-                      onChange={(e) =>
-                        onUpdate(ct.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
-                      }
-                    />
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DESCRIPTION
-                    </Text>
-                    <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
-                      value={ct.description ?? ''}
-                      onChange={(e) =>
-                        onUpdate(ct.id, { description: e.target.value || undefined })
-                      }
-                      placeholder="e.g. Script context for actor routines"
-                    />
-                  </Box>
-
-                  <Divider borderColor="whiteAlpha.100" />
-
-                  {/* Fields (self.x) */}
-                  <Box>
-                    <HStack mb={1} justify="space-between">
-                      <Text fontSize="9px" color="gray.500" fontWeight="bold">
-                        FIELDS (self.*)
-                      </Text>
-                      <IconButton
-                        aria-label="Add field"
-                        icon={<AddIcon fontSize="8px" />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white' }}
-                        onClick={() => addField(ct.id)}
-                      />
-                    </HStack>
-                    {ct.fields.length === 0 && (
-                      <Text fontSize="10px" color="gray.700" fontStyle="italic">
-                        No fields
-                      </Text>
-                    )}
-                    <VStack spacing={1} align="stretch">
-                      {ct.fields.map((f, fi) => (
-                        <InlineField
-                          key={fi}
-                          field={f}
-                          onChange={(u) => updateField(ct.id, fi, u)}
-                          onDelete={() => removeField(ct.id, fi)}
+            return (
+              <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
+                <Collapse in={true} animateOpacity>
+                  <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+                    <VStack spacing={3} align="stretch">
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          NAME
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          fontFamily="mono"
+                          value={ct.name}
+                          onChange={(e) =>
+                            onUpdate(ct.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+                          }
                         />
-                      ))}
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          DESCRIPTION
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={ct.description ?? ''}
+                          onChange={(e) =>
+                            onUpdate(ct.id, { description: e.target.value || undefined })
+                          }
+                          placeholder="e.g. Script context for actor routines"
+                        />
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Fields (self.x) */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FIELDS (self.*)
+                          </Text>
+                          <IconButton
+                            aria-label="Add field"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addField(ct.id)}
+                          />
+                        </HStack>
+                        {ct.fields.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No fields
+                          </Text>
+                        )}
+                        <VStack spacing={1} align="stretch">
+                          {ct.fields.map((f, fi) => (
+                            <InlineField
+                              key={fi}
+                              field={f}
+                              onChange={(u) => updateField(ct.id, fi, u)}
+                              onDelete={() => removeField(ct.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Functions (self:method()) */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FUNCTIONS (self:*)
+                          </Text>
+                          <IconButton
+                            aria-label="Add function"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addFn(ct.id)}
+                          />
+                        </HStack>
+                        {ct.functions.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No functions
+                          </Text>
+                        )}
+                        <VStack spacing={2} align="stretch">
+                          {ct.functions.map((fn, fi) => (
+                            <InlineFunction
+                              key={fi}
+                              fn={fn}
+                              tables={tables}
+                              onChange={(u) => updateFn(ct.id, fi, u)}
+                              onDelete={() => removeFn(ct.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
                     </VStack>
                   </Box>
-
-                  <Divider borderColor="whiteAlpha.100" />
-
-                  {/* Functions (self:method()) */}
-                  <Box>
-                    <HStack mb={1} justify="space-between">
-                      <Text fontSize="9px" color="gray.500" fontWeight="bold">
-                        FUNCTIONS (self:*)
-                      </Text>
-                      <IconButton
-                        aria-label="Add function"
-                        icon={<AddIcon fontSize="8px" />}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.500"
-                        _hover={{ color: 'white' }}
-                        onClick={() => addFn(ct.id)}
-                      />
-                    </HStack>
-                    {ct.functions.length === 0 && (
-                      <Text fontSize="10px" color="gray.700" fontStyle="italic">
-                        No functions
-                      </Text>
-                    )}
-                    <VStack spacing={2} align="stretch">
-                      {ct.functions.map((fn, fi) => (
-                        <InlineFunction
-                          key={fi}
-                          fn={fn}
-                          tables={tables}
-                          onChange={(u) => updateFn(ct.id, fi, u)}
-                          onDelete={() => removeFn(ct.id, fi)}
-                        />
-                      ))}
-                    </VStack>
-                  </Box>
-                </VStack>
+                </Collapse>
               </Box>
-            </Collapse>
-          </Box>
-        );
-      })}
+            );
+          })()
+        : contextTypes.map((ct) => {
+            const isExpanded = expandedId === ct.id;
+            const stableId = idMapRef.current[ct.id] || genId();
+            if (!idMapRef.current[ct.id]) idMapRef.current[ct.id] = stableId;
+
+            return (
+              <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
+                <HStack
+                  px={3}
+                  py={1.5}
+                  spacing={2}
+                  cursor="pointer"
+                  _hover={{ bg: 'whiteAlpha.50' }}
+                  onClick={() => setExpandedId(isExpanded ? null : ct.id)}
+                  role="group"
+                >
+                  <Text fontSize="10px" color="gray.600" w="14px">
+                    {isExpanded ? '▾' : '▸'}
+                  </Text>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="medium"
+                    color="gray.200"
+                    flex={1}
+                    noOfLines={1}
+                    fontFamily="mono"
+                  >
+                    self ({ct.name})
+                  </Text>
+                  <Badge fontSize="9px" colorScheme="orange" variant="subtle">
+                    {ct.fields.length}F {ct.functions.length}fn
+                  </Badge>
+                  <IconButton
+                    aria-label="Delete"
+                    icon={<DeleteIcon fontSize="8px" />}
+                    size="xs"
+                    variant="ghost"
+                    color="gray.700"
+                    opacity={0}
+                    _groupHover={{ opacity: 1 }}
+                    _hover={{ color: 'red.300', bg: 'red.900' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(ct.id);
+                      if (expandedId === ct.id) setExpandedId(null);
+                    }}
+                  />
+                </HStack>
+
+                <Collapse in={isExpanded} animateOpacity>
+                  <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
+                    <VStack spacing={3} align="stretch">
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          NAME
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          fontFamily="mono"
+                          value={ct.name}
+                          onChange={(e) =>
+                            onUpdate(ct.id, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })
+                          }
+                        />
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
+                          DESCRIPTION
+                        </Text>
+                        <Input
+                          size="xs"
+                          bg="#0a0a0b"
+                          borderColor="#1a1a2e"
+                          color="white"
+                          value={ct.description ?? ''}
+                          onChange={(e) =>
+                            onUpdate(ct.id, { description: e.target.value || undefined })
+                          }
+                          placeholder="e.g. Script context for actor routines"
+                        />
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Fields (self.x) */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FIELDS (self.*)
+                          </Text>
+                          <IconButton
+                            aria-label="Add field"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addField(ct.id)}
+                          />
+                        </HStack>
+                        {ct.fields.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No fields
+                          </Text>
+                        )}
+                        <VStack spacing={1} align="stretch">
+                          {ct.fields.map((f, fi) => (
+                            <InlineField
+                              key={fi}
+                              field={f}
+                              onChange={(u) => updateField(ct.id, fi, u)}
+                              onDelete={() => removeField(ct.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+
+                      <Divider borderColor="whiteAlpha.100" />
+
+                      {/* Functions (self:method()) */}
+                      <Box>
+                        <HStack mb={1} justify="space-between">
+                          <Text fontSize="9px" color="gray.500" fontWeight="bold">
+                            FUNCTIONS (self:*)
+                          </Text>
+                          <IconButton
+                            aria-label="Add function"
+                            icon={<AddIcon fontSize="8px" />}
+                            size="xs"
+                            variant="ghost"
+                            color="gray.500"
+                            _hover={{ color: 'white' }}
+                            onClick={() => addFn(ct.id)}
+                          />
+                        </HStack>
+                        {ct.functions.length === 0 && (
+                          <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                            No functions
+                          </Text>
+                        )}
+                        <VStack spacing={2} align="stretch">
+                          {ct.functions.map((fn, fi) => (
+                            <InlineFunction
+                              key={fi}
+                              fn={fn}
+                              tables={tables}
+                              onChange={(u) => updateFn(ct.id, fi, u)}
+                              onDelete={() => removeFn(ct.id, fi)}
+                            />
+                          ))}
+                        </VStack>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </Collapse>
+              </Box>
+            );
+          })}
     </VStack>
   );
 };

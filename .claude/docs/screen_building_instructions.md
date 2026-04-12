@@ -2,105 +2,77 @@
 
 Use this guide whenever you add or refactor an editor-like screen.
 
-## Core Layout Contract
+## Which Layout to Use
 
-Use `ResizableEditorLayout` for every screen that follows the editor shell pattern.
+### ResizableEditorLayout — list + detail form side by side
 
-Expected composition:
+Use when selecting an item should immediately show its editable form without a separate click. The form lives in the center as a card. Good for: EntityEditor, ActorEditor.
 
-1. Left panel: navigable list of domain items.
-2. Center content: main workspace where editing happens.
-3. Right panel: context-sensitive inspector for the current selection.
-4. Bottom panel (optional): debug, palette, auxiliary tools, or mode-specific detail.
+```
+ResizableEditorLayout
+├── leftPanel:  ListPanel (list + add/delete)
+└── content:    card-wrapped detail form, or EmptyScreen when nothing selected
+```
+
+The `content` slot renders a full-height scrollable area with a centered card:
+
+```tsx
+content={selectedItem ? (
+  <Box h="full" overflowY="auto" p={6} bg="#0d0f1a">
+    <Box maxW="760px" mx="auto" bg="editor.panelBg" border="1px" borderColor="whiteAlpha.100" borderRadius="lg" overflow="hidden">
+      <ItemDetail ... />
+    </Box>
+  </Box>
+) : <EmptyScreen ... />}
+```
+
+- The outer `bg="#0d0f1a"` gives a slightly lighter backdrop so the card has visible depth.
+- The inner card uses `bg="editor.panelBg"` with a `whiteAlpha.100` border for subtle definition.
+- `ItemDetail` renders `<Box p={6}><VStack ...>` — no `overflowY`/`h="full"` needed (scrolling is on the outer Box).
+- Use `EmptyScreen` for the zero-items and no-selection states.
+- Put the delete button at the bottom of the form.
+- Do **not** use `rightPanel` — the form goes in `content`, no separate right panel.
+
+### TopTabbedEditorLayout + DialogListWorkspace — tabbed list + modal CRUD
+
+Use when items are simple enough that create/edit fits in a modal, or when one screen manages multiple categories of items. Good for: MapSettingsEditor, VariableEditor.
+
+```
+TopTabbedEditorLayout
+└── mainContent: DialogListWorkspace (list + "Add X" button)
+    └── onAdd / onOpenItem → EditorModal > EntityFormDialog (single-item form)
+```
+
+**Key rule:** Always create the item in the store first, then open the dialog with `initialExpandedId`. Never put an "Add" button inside the modal.
+
+---
 
 ## Reusable Building Blocks
 
-- `ResizableEditorLayout` (`app/src/components/screens/common/ResizableEditorLayout.tsx`)
-- `ListPanel` (`app/src/components/screens/common/ListPanel.tsx`)
-- `EntityFormDialog` (`app/src/components/screens/common/EntityFormDialog.tsx`)
-- `useEntityFormDraft` (`app/src/components/screens/common/useEntityFormDraft.ts`)
-- `InspectorPanel` and `InspectorEmptyState` (`app/src/components/screens/common/InspectorPanel.tsx`)
-- `EmptyScreen` (`app/src/components/screens/common/EmptyScreen.tsx`)
+- `ResizableEditorLayout` — shell with resizable left/right/bottom panels and optional header
+- `ListPanel` — left-side list with add/delete/search
+- `TopTabbedEditorLayout` — tabbed layout with badge counts, optional sidebar and footer slot
+- `DialogListWorkspace` — list manager used as tab content; emits `onAdd` and `onOpenItem`
+- `EntityFormDialog` — modal form shell (title + children + cancel/submit footer)
+- `EmptyScreen` — full-area placeholder with optional CTA button
+- `EditorModal` — Chakra modal wrapper with consistent sizing
+- `InspectorPanel` + `InspectorEmptyState` — right-side inspector (use only when there's a meaningful center canvas, e.g. map editor)
 
-## Entity + Forms Model
-
-Treat each editor as a collection of entities plus one or more forms.
-
-Core model:
-
-1. Collection list: stable selection, add action, hover edit/delete actions.
-2. Create form: modal form used to create a new entity.
-3. Edit form: inspector form bound to the selected entity.
-4. Draft lifecycle: selected entity mapped to draft state via `useEntityFormDraft`.
-
-Rules:
-
-- Prefer one draft object per selected entity instead of many independent field states.
-- Reuse `EntityFormDialog` for create/edit modal shells.
-- Keep create and edit validation rules aligned where possible.
-- Prefer list hover actions (`itemActions`) over burying edit/delete only in inspector danger zones.
-- Prefer `onEditItem` and `onDeleteItem` on `ListPanel` for standard edit/delete actions.
+---
 
 ## Left Panel Pattern
 
-Use `ListPanel` as the default for entity/layer/tileset/dialogue lists.
+Use `ListPanel` as the default for navigable item lists.
 
-Required behavior:
+- Provide `onAdd` for the top-right plus button.
+- Use `selectedId` + `onSelect` for selection state.
+- Use `onDeleteItem` for delete confirmation.
+- Use `topContent` for a search/filter row.
 
-- Provide `onAdd` so the top-right plus button creates a new item.
-- Use `selectedId` + `onSelect` for deterministic selection state.
-- Use `itemActions` for hover actions (for example edit metadata and delete).
-- Prefer `onEditItem` + `onDeleteItem` first for common edit/delete actions.
-- Use `topContent` when a filter/search row is needed.
-- Avoid ad-hoc list row implementations unless the screen has a unique structural need.
-
-## Hover Actions Pattern
-
-When an item supports metadata editing and deletion:
-
-- Add an edit action in `itemActions` that opens metadata/editor UI.
-- Add a delete action in `itemActions` with destructive coloring and confirmation.
-- Keep action handlers side-effect safe (stop row selection side effects unless intended).
-
-For common cases, use:
-
-- `onEditItem` callback only.
-- `onDeleteItem` callback only.
-
-Use custom `itemActions` only for additional non-standard actions.
-
-## Right Inspector Pattern
-
-The right panel should always represent current selection context.
-
-- No selection: render `InspectorEmptyState` with actionable hint text.
-- Selection present: render form controls grouped by concern.
-- If multiple contexts are possible, switch inspector content by priority (selected object first, fallback to tool/global state).
-- For delete affordances, prefer `InspectorPanel` footer with `onDelete` and `deleteLabel` instead of ad-hoc danger blocks.
-
-## Bottom Panel Pattern
-
-Use `bottomPanel` only when there is a secondary workflow that benefits from persistent visibility.
-
-Examples:
-
-- tileset palette
-- debug output
-- mode-specific link/entity helpers
-
-If the active mode does not need it, pass `undefined` or `null`.
+---
 
 ## DRY Rules
 
 - Prefer extending shared `common` components over duplicating screen-specific variants.
-- If two screens repeat panel/list/inspector behavior, move that behavior into `common` first.
-- Keep screen files focused on state wiring and domain logic, not repeated layout primitives.
-
-## Acceptance Checklist For New Screens
-
-- Uses `ResizableEditorLayout`.
-- Uses `ListPanel` for left navigation list.
-- Uses `InspectorPanel` for right context editing.
-- Uses `itemActions` for hover edit/delete when applicable.
-- Uses `topContent` for list filtering when needed.
-- Keeps optional bottom panel mode-aware.
+- Keep screen files focused on state wiring and domain logic, not layout primitives.
+- For sub-editors used inside modals (e.g. TableEditor): hide their header/add button when `initialExpandedId` is set — derive this from `!!initialExpandedId`, no separate `singleMode` prop needed.
