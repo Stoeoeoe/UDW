@@ -15,6 +15,8 @@ import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { useEditorStore } from '../../store/useEditorStore';
 import { PropertyDefinition, PropertyValue, TileDefinition, Tileset } from '../../types/schema';
 import { TileCollisionEditor } from './TileCollisionEditor';
+import { FcSearch } from 'react-icons/fc';
+import { InspectorEmptyState } from '../screens';
 
 interface TilesetInspectorProps {
   tileset: Tileset;
@@ -166,14 +168,11 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
       </VStack>
 
       {selectedIndex === null ? (
-        <VStack mt="10" spacing={2} textAlign="center" opacity={0.5}>
-          <Text color="gray.500" fontSize="sm">
-            No tile selected
-          </Text>
-          <Text fontSize="10px" color="gray.600">
-            Click a tile in the viewer
-          </Text>
-        </VStack>
+        <InspectorEmptyState
+          icon={FcSearch}
+          message="No Tile Selected"
+          hint="Select a tile on the map to view and edit properties"
+        />
       ) : (
         <VStack align="stretch" spacing={5}>
           <VStack align="start" spacing={1}>

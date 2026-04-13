@@ -76,20 +76,18 @@ export const EntityEditor: React.FC = () => {
         sublabel: type.group ? `${type.group} • ${type.category}` : type.category.toUpperCase(),
         icon: (
           <Box
-            w="20px"
-            h="20px"
+            w="24px"
+            h="24px"
             display="flex"
             alignItems="center"
             justifyContent="center"
-            bg={type.placeholderColor}
-            borderRadius="sm"
-            fontSize="11px"
+            fontSize="24px"
           >
             {(() => {
               const name = type.icon;
-              if (!name) return '📦';
+              if (!name) return 'GiYinYang';
               const Comp = (GiIcons as Record<string, React.FC<{ size?: number }>>)[name];
-              if (Comp) return <Comp size={14} />;
+              if (Comp) return <Comp size={24} />;
               return name;
             })()}
           </Box>

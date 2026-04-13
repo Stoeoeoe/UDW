@@ -19,6 +19,7 @@ import { ListPanel, ListPanelItem } from '../common';
 import { EditorModal } from '../../common/EditorModal';
 import { CreateActorDialog } from './CreateActorDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { GiPerson } from 'react-icons/gi';
 
 export const ActorEditor: React.FC = () => {
   const actors = useEditorStore((state) => state.actors);
@@ -39,18 +40,18 @@ export const ActorEditor: React.FC = () => {
         sublabel: actor.id,
         icon: (
           <Box
-            w="20px"
-            h="20px"
+            w="24px"
+            h="24px"
             display="flex"
             alignItems="center"
             justifyContent="center"
-            fontSize="12px"
+            fontSize="24px"
           >
             {(() => {
               const name = actor.icon;
               if (!name) return '👤';
               const Comp = (GiIcons as Record<string, React.FC<{ size?: number }>>)[name];
-              if (Comp) return <Comp size={14} />;
+              if (Comp) return <Comp size={24} />;
               return name;
             })()}
           </Box>
@@ -106,7 +107,7 @@ export const ActorEditor: React.FC = () => {
   const content =
     actors.length === 0 ? (
       <EmptyScreen
-        icon="👤"
+        icon={<GiPerson />}
         title="No Actors"
         description="Define characters or named roles available to dialogue and gameplay systems."
         buttonLabel="Create First Actor"
@@ -114,7 +115,7 @@ export const ActorEditor: React.FC = () => {
       />
     ) : (
       <EmptyScreen
-        icon="👤"
+        icon={<GiPerson />}
         title="No Actor Selected"
         description="Select an actor from the list to edit details."
       />

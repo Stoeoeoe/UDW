@@ -1,9 +1,21 @@
 import React from 'react';
-import { VStack, Text, Spacer } from '@chakra-ui/react';
+import { VStack, Text, Spacer, Icon } from '@chakra-ui/react';
+import { IconType } from 'react-icons';
+import {
+  FcFolder,
+  FcGlobe,
+  FcGrid,
+  FcElectronics,
+  FcBusinessman,
+  FcComments,
+  FcCommandLine,
+  FcMindMap,
+  FcSettings,
+} from 'react-icons/fc';
 import { EditorMode } from '../../types/editor';
 
 interface NavIconProps {
-  icon: string;
+  icon: IconType;
   label: string;
   mode: EditorMode;
   active: boolean;
@@ -26,7 +38,7 @@ const NavIcon: React.FC<NavIconProps> = ({ icon, label, mode, active, onClick })
     transition="all 0.2s"
     title={label}
   >
-    <Text fontSize="2xl">{icon}</Text>
+    <Icon as={icon} boxSize={5} />
     <Text fontSize="10px" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
       {label}
     </Text>
@@ -50,56 +62,56 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
       flexShrink={0}
     >
       <NavIcon
-        icon="📋"
+        icon={FcFolder}
         label="Project"
         mode="project"
         active={activeMode === 'project'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="🗺️"
+        icon={FcGlobe}
         label="Maps"
         mode="maps"
         active={activeMode === 'maps'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="🎨"
+        icon={FcGrid}
         label="Tiles"
         mode="tilesets"
         active={activeMode === 'tilesets'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="👾"
+        icon={FcElectronics}
         label="Entities"
         mode="entities"
         active={activeMode === 'entities'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="👤"
+        icon={FcBusinessman}
         label="Actors"
         mode="actors"
         active={activeMode === 'actors'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="💬"
+        icon={FcComments}
         label="Dialog"
         mode="dialogues"
         active={activeMode === 'dialogues'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="📜"
+        icon={FcCommandLine}
         label="Script"
         mode="scripting"
         active={activeMode === 'scripting'}
         onClick={onModeChange}
       />
       <NavIcon
-        icon="🗂️"
+        icon={FcMindMap}
         label="MapCfg"
         mode="mapConfig"
         active={activeMode === 'mapConfig' || activeMode === 'layers' || activeMode === 'terrain'}
@@ -107,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
       />
       <Spacer />
       <NavIcon
-        icon="⚙️"
+        icon={FcSettings}
         label="Settings"
         mode="settings"
         active={activeMode === 'settings'}

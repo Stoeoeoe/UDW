@@ -10,6 +10,7 @@ import {
   NumberInput,
   NumberInputField,
 } from '@chakra-ui/react';
+import { FcPicture, FcSearch } from 'react-icons/fc';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
@@ -96,7 +97,7 @@ export const PropertiesPanel: React.FC = () => {
     return (
       <InspectorPanel title="Tile Properties">
         <InspectorEmptyState
-          icon="🎨"
+          icon={FcPicture}
           message="No Tileset Selected"
           hint="Select a tileset to inspect tiles"
         />
@@ -110,7 +111,7 @@ export const PropertiesPanel: React.FC = () => {
       subtitle={selectedEntity ? selectedEntity.id : undefined}
       emptyState={
         <InspectorEmptyState
-          icon="🔍"
+          icon={FcSearch}
           message="No Object Selected"
           hint="Select an entity on the map to view and edit properties"
         />

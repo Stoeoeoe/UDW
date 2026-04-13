@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, VStack, Text, Divider, Flex, HStack, Button } from '@chakra-ui/react';
+import { Box, VStack, Text, Divider, Flex, HStack, Button, Icon } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
+import { IconType } from 'react-icons';
 import PanelHeader from '../../../components/common/PanelHeader';
 
 /**
@@ -94,12 +95,12 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
 /** Empty state component for when nothing is selected */
 export const InspectorEmptyState: React.FC<{
-  icon?: string;
+  icon?: IconType;
   message: string;
   hint?: string;
-}> = ({ icon = '🔍', message, hint }) => (
+}> = ({ icon, message, hint }) => (
   <VStack mt={10} spacing={2} textAlign="center" opacity={0.4}>
-    <Text fontSize="4xl">{icon}</Text>
+    {icon && <Icon as={icon} boxSize={8} />}
     <Text color="gray.500" fontSize="sm">
       {message}
     </Text>

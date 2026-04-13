@@ -3,39 +3,7 @@ import { Box, Flex, FormControl, FormLabel, Input, Text } from '@chakra-ui/react
 import { useEditorStore } from '../../../store/useEditorStore';
 import { Actor } from '../../../types/schema';
 import { EntityFormDialog } from '../common';
-
-const COMMON_ICONS = [
-  '👤',
-  '🧙',
-  '👸',
-  '🤴',
-  '🧝',
-  '🧟',
-  '🧛',
-  '🧜',
-  '🧚',
-  '🥷',
-  '👮',
-  '💂',
-  '👨‍🌾',
-  '👨‍🍳',
-  '👨‍⚕️',
-  '👨‍🔧',
-  '👨‍💼',
-  '🧓',
-  '👴',
-  '👵',
-  '🐾',
-  '🐺',
-  '🦊',
-  '🐻',
-  '🐗',
-  '🦝',
-  '🐴',
-  '🐑',
-  '🐄',
-  '🐓',
-];
+import { IconPicker } from '../common/FormFields';
 
 interface CreateActorDialogProps {
   onClose: () => void;
@@ -47,7 +15,7 @@ export const CreateActorDialog: React.FC<CreateActorDialogProps> = ({ onClose })
 
   const [name, setName] = useState('');
   const [customId, setCustomId] = useState('');
-  const [icon, setIcon] = useState('👤');
+  const [icon, setIcon] = useState('GiPerson');
 
   const derivedId = useMemo(
     () =>
@@ -123,33 +91,17 @@ export const CreateActorDialog: React.FC<CreateActorDialogProps> = ({ onClose })
           </Text>
         )}
       </FormControl>
-
       <FormControl>
-        <FormLabel fontSize="xs" color="gray.400">
+        <FormLabel
+          color="gray.500"
+          fontSize="10px"
+          fontWeight="black"
+          textTransform="uppercase"
+          mb={1}
+        >
           Icon
         </FormLabel>
-        <Flex gap={1} flexWrap="wrap">
-          {COMMON_ICONS.map((ic) => (
-            <Box
-              key={ic}
-              w="28px"
-              h="28px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              cursor="pointer"
-              borderRadius="md"
-              bg={icon === ic ? 'blue.800' : 'transparent'}
-              borderWidth="1px"
-              borderColor={icon === ic ? 'blue.500' : 'transparent'}
-              _hover={{ bg: 'whiteAlpha.100' }}
-              onClick={() => setIcon(ic)}
-              fontSize="sm"
-            >
-              {ic}
-            </Box>
-          ))}
-        </Flex>
+        <IconPicker value={icon} onChange={(v) => setIcon(v ?? '')} />
       </FormControl>
     </EntityFormDialog>
   );

@@ -1,0 +1,1470 @@
+{
+  "summary": [
+    {
+      "emoji": "❌",
+      "count": 27
+    },
+    {
+      "emoji": "✅",
+      "count": 17
+    },
+    {
+      "emoji": "📦",
+      "count": 10
+    },
+    {
+      "emoji": "🎯",
+      "count": 8
+    },
+    {
+      "emoji": "👤",
+      "count": 7
+    },
+    {
+      "emoji": "👉",
+      "count": 7
+    },
+    {
+      "emoji": "🌿",
+      "count": 6
+    },
+    {
+      "emoji": "👨",
+      "count": 5
+    },
+    {
+      "emoji": "🗺",
+      "count": 4
+    },
+    {
+      "emoji": "🎨",
+      "count": 4
+    },
+    {
+      "emoji": "⚡",
+      "count": 4
+    },
+    {
+      "emoji": "🏷",
+      "count": 4
+    },
+    {
+      "emoji": "⚠",
+      "count": 4
+    },
+    {
+      "emoji": "⚙",
+      "count": 3
+    },
+    {
+      "emoji": "🚪",
+      "count": 3
+    },
+    {
+      "emoji": "🌳",
+      "count": 3
+    },
+    {
+      "emoji": "☀",
+      "count": 3
+    },
+    {
+      "emoji": "🔗",
+      "count": 3
+    },
+    {
+      "emoji": "📜",
+      "count": 2
+    },
+    {
+      "emoji": "🔍",
+      "count": 2
+    },
+    {
+      "emoji": "🧙",
+      "count": 2
+    },
+    {
+      "emoji": "🐾",
+      "count": 2
+    },
+    {
+      "emoji": "☰",
+      "count": 2
+    },
+    {
+      "emoji": "🌸",
+      "count": 2
+    },
+    {
+      "emoji": "🍂",
+      "count": 2
+    },
+    {
+      "emoji": "❄",
+      "count": 2
+    },
+    {
+      "emoji": "📊",
+      "count": 2
+    },
+    {
+      "emoji": "📐",
+      "count": 2
+    },
+    {
+      "emoji": "😄",
+      "count": 2
+    },
+    {
+      "emoji": "🚧",
+      "count": 1
+    }
+  ],
+  "totalEmojiTypes": 97,
+  "totalFiles": 35,
+  "files": {
+    "E:\\map-editor\\app\\electron\\main.ts": [
+      {
+        "line": 26,
+        "column": 4,
+        "char": "🚧",
+        "context": "// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\navigation\\Sidebar.tsx": [
+      {
+        "line": 53,
+        "column": 15,
+        "char": "📋",
+        "context": "icon=\"📋\""
+      },
+      {
+        "line": 60,
+        "column": 15,
+        "char": "🗺",
+        "context": "icon=\"🗺️\""
+      },
+      {
+        "line": 67,
+        "column": 15,
+        "char": "🎨",
+        "context": "icon=\"🎨\""
+      },
+      {
+        "line": 74,
+        "column": 15,
+        "char": "👾",
+        "context": "icon=\"👾\""
+      },
+      {
+        "line": 81,
+        "column": 15,
+        "char": "👤",
+        "context": "icon=\"👤\""
+      },
+      {
+        "line": 88,
+        "column": 15,
+        "char": "💬",
+        "context": "icon=\"💬\""
+      },
+      {
+        "line": 95,
+        "column": 15,
+        "char": "📜",
+        "context": "icon=\"📜\""
+      },
+      {
+        "line": 102,
+        "column": 15,
+        "char": "🗂",
+        "context": "icon=\"🗂️\""
+      },
+      {
+        "line": 110,
+        "column": 15,
+        "char": "⚙",
+        "context": "icon=\"⚙️\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\panels\\ProjectPanel.tsx": [
+      {
+        "line": 66,
+        "column": 38,
+        "char": "🚀",
+        "context": "<Text fontSize=\"3xl\">🚀</Text>"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\panels\\PropertiesPanel.tsx": [
+      {
+        "line": 99,
+        "column": 17,
+        "char": "🎨",
+        "context": "icon=\"🎨\""
+      },
+      {
+        "line": 113,
+        "column": 17,
+        "char": "🔍",
+        "context": "icon=\"🔍\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\actor\\ActorEditor.tsx": [
+      {
+        "line": 51,
+        "column": 34,
+        "char": "",
+        "context": "if (!name) return '👤';"
+      },
+      {
+        "line": 109,
+        "column": 15,
+        "char": "👤",
+        "context": "icon=\"👤\""
+      },
+      {
+        "line": 117,
+        "column": 15,
+        "char": "👤",
+        "context": "icon=\"👤\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\actor\\CreateActorDialog.tsx": [
+      {
+        "line": 8,
+        "column": 4,
+        "char": "👤",
+        "context": "'👤',"
+      },
+      {
+        "line": 9,
+        "column": 4,
+        "char": "🧙",
+        "context": "'🧙',"
+      },
+      {
+        "line": 10,
+        "column": 4,
+        "char": "👸",
+        "context": "'👸',"
+      },
+      {
+        "line": 11,
+        "column": 4,
+        "char": "🤴",
+        "context": "'🤴',"
+      },
+      {
+        "line": 12,
+        "column": 4,
+        "char": "🧝",
+        "context": "'🧝',"
+      },
+      {
+        "line": 13,
+        "column": 4,
+        "char": "🧟",
+        "context": "'🧟',"
+      },
+      {
+        "line": 14,
+        "column": 4,
+        "char": "🧛",
+        "context": "'🧛',"
+      },
+      {
+        "line": 15,
+        "column": 4,
+        "char": "🧜",
+        "context": "'🧜',"
+      },
+      {
+        "line": 16,
+        "column": 4,
+        "char": "🧚",
+        "context": "'🧚',"
+      },
+      {
+        "line": 17,
+        "column": 4,
+        "char": "🥷",
+        "context": "'🥷',"
+      },
+      {
+        "line": 18,
+        "column": 4,
+        "char": "👮",
+        "context": "'👮',"
+      },
+      {
+        "line": 19,
+        "column": 4,
+        "char": "💂",
+        "context": "'💂',"
+      },
+      {
+        "line": 20,
+        "column": 4,
+        "char": "👨",
+        "context": "'👨‍🌾',"
+      },
+      {
+        "line": 20,
+        "column": 7,
+        "char": "🌾",
+        "context": "'👨‍🌾',"
+      },
+      {
+        "line": 21,
+        "column": 4,
+        "char": "👨",
+        "context": "'👨‍🍳',"
+      },
+      {
+        "line": 21,
+        "column": 7,
+        "char": "🍳",
+        "context": "'👨‍🍳',"
+      },
+      {
+        "line": 22,
+        "column": 4,
+        "char": "👨",
+        "context": "'👨‍⚕️',"
+      },
+      {
+        "line": 22,
+        "column": 7,
+        "char": "⚕",
+        "context": "'👨‍⚕️',"
+      },
+      {
+        "line": 23,
+        "column": 4,
+        "char": "👨",
+        "context": "'👨‍🔧',"
+      },
+      {
+        "line": 23,
+        "column": 7,
+        "char": "🔧",
+        "context": "'👨‍🔧',"
+      },
+      {
+        "line": 24,
+        "column": 4,
+        "char": "👨",
+        "context": "'👨‍💼',"
+      },
+      {
+        "line": 24,
+        "column": 7,
+        "char": "💼",
+        "context": "'👨‍💼',"
+      },
+      {
+        "line": 25,
+        "column": 4,
+        "char": "🧓",
+        "context": "'🧓',"
+      },
+      {
+        "line": 26,
+        "column": 4,
+        "char": "👴",
+        "context": "'👴',"
+      },
+      {
+        "line": 27,
+        "column": 4,
+        "char": "👵",
+        "context": "'👵',"
+      },
+      {
+        "line": 28,
+        "column": 4,
+        "char": "🐾",
+        "context": "'🐾',"
+      },
+      {
+        "line": 29,
+        "column": 4,
+        "char": "🐺",
+        "context": "'🐺',"
+      },
+      {
+        "line": 30,
+        "column": 4,
+        "char": "🦊",
+        "context": "'🦊',"
+      },
+      {
+        "line": 31,
+        "column": 4,
+        "char": "🐻",
+        "context": "'🐻',"
+      },
+      {
+        "line": 32,
+        "column": 4,
+        "char": "🐗",
+        "context": "'🐗',"
+      },
+      {
+        "line": 33,
+        "column": 4,
+        "char": "🦝",
+        "context": "'🦝',"
+      },
+      {
+        "line": 34,
+        "column": 4,
+        "char": "🐴",
+        "context": "'🐴',"
+      },
+      {
+        "line": 35,
+        "column": 4,
+        "char": "🐑",
+        "context": "'🐑',"
+      },
+      {
+        "line": 36,
+        "column": 4,
+        "char": "🐄",
+        "context": "'🐄',"
+      },
+      {
+        "line": 37,
+        "column": 4,
+        "char": "🐓",
+        "context": "'🐓',"
+      },
+      {
+        "line": 50,
+        "column": 37,
+        "char": "👤",
+        "context": "const [icon, setIcon] = useState('👤');"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\common\\InspectorPanel.tsx": [
+      {
+        "line": 100,
+        "column": 17,
+        "char": "🔍",
+        "context": "}> = ({ icon = '🔍', message, hint }) => ("
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\common\\MainViewport.tsx": [
+      {
+        "line": 27,
+        "column": 38,
+        "char": "🗺",
+        "context": "<Text fontSize=\"6xl\">🗺️</Text>"
+      },
+      {
+        "line": 58,
+        "column": 34,
+        "char": "⚙",
+        "context": "<Text fontSize=\"4xl\">⚙️</Text>"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\entity\\CreateEntityTypeDialog.tsx": [
+      {
+        "line": 8,
+        "column": 46,
+        "char": "📦",
+        "context": "{ value: 'object', label: 'Object', icon: '📦' },"
+      },
+      {
+        "line": 9,
+        "column": 48,
+        "char": "⚡",
+        "context": "{ value: 'trigger', label: 'Trigger', icon: '⚡' },"
+      },
+      {
+        "line": 10,
+        "column": 44,
+        "char": "🎯",
+        "context": "{ value: 'spawn', label: 'Spawn', icon: '🎯' },"
+      },
+      {
+        "line": 11,
+        "column": 54,
+        "char": "🚪",
+        "context": "{ value: 'transition', label: 'Transition', icon: '🚪' },"
+      },
+      {
+        "line": 12,
+        "column": 54,
+        "char": "🌿",
+        "context": "{ value: 'decoration', label: 'Decoration', icon: '🌿' },"
+      },
+      {
+        "line": 29,
+        "column": 4,
+        "char": "📦",
+        "context": "'📦',"
+      },
+      {
+        "line": 30,
+        "column": 4,
+        "char": "⚡",
+        "context": "'⚡',"
+      },
+      {
+        "line": 31,
+        "column": 4,
+        "char": "🎯",
+        "context": "'🎯',"
+      },
+      {
+        "line": 32,
+        "column": 4,
+        "char": "🚪",
+        "context": "'🚪',"
+      },
+      {
+        "line": 33,
+        "column": 4,
+        "char": "🌿",
+        "context": "'🌿',"
+      },
+      {
+        "line": 34,
+        "column": 4,
+        "char": "💎",
+        "context": "'💎',"
+      },
+      {
+        "line": 35,
+        "column": 4,
+        "char": "🔑",
+        "context": "'🔑',"
+      },
+      {
+        "line": 36,
+        "column": 4,
+        "char": "🗡",
+        "context": "'🗡️',"
+      },
+      {
+        "line": 37,
+        "column": 4,
+        "char": "🛡",
+        "context": "'🛡️',"
+      },
+      {
+        "line": 38,
+        "column": 4,
+        "char": "🏠",
+        "context": "'🏠',"
+      },
+      {
+        "line": 39,
+        "column": 4,
+        "char": "🌳",
+        "context": "'🌳',"
+      },
+      {
+        "line": 40,
+        "column": 4,
+        "char": "🪨",
+        "context": "'🪨',"
+      },
+      {
+        "line": 41,
+        "column": 4,
+        "char": "💡",
+        "context": "'💡',"
+      },
+      {
+        "line": 42,
+        "column": 4,
+        "char": "🔔",
+        "context": "'🔔',"
+      },
+      {
+        "line": 43,
+        "column": 4,
+        "char": "🎵",
+        "context": "'🎵',"
+      },
+      {
+        "line": 44,
+        "column": 4,
+        "char": "🐾",
+        "context": "'🐾',"
+      },
+      {
+        "line": 45,
+        "column": 4,
+        "char": "👤",
+        "context": "'👤',"
+      },
+      {
+        "line": 46,
+        "column": 4,
+        "char": "🧙",
+        "context": "'🧙',"
+      },
+      {
+        "line": 47,
+        "column": 4,
+        "char": "🐛",
+        "context": "'🐛',"
+      },
+      {
+        "line": 49,
+        "column": 4,
+        "char": "🏪",
+        "context": "'🏪',"
+      },
+      {
+        "line": 50,
+        "column": 4,
+        "char": "🎪",
+        "context": "'🎪',"
+      },
+      {
+        "line": 51,
+        "column": 4,
+        "char": "⛲",
+        "context": "'⛲',"
+      },
+      {
+        "line": 52,
+        "column": 4,
+        "char": "🗿",
+        "context": "'🗿',"
+      },
+      {
+        "line": 53,
+        "column": 4,
+        "char": "📜",
+        "context": "'📜',"
+      },
+      {
+        "line": 54,
+        "column": 4,
+        "char": "🧪",
+        "context": "'🧪',"
+      },
+      {
+        "line": 55,
+        "column": 4,
+        "char": "🔥",
+        "context": "'🔥',"
+      },
+      {
+        "line": 56,
+        "column": 4,
+        "char": "💧",
+        "context": "'💧',"
+      },
+      {
+        "line": 57,
+        "column": 4,
+        "char": "🌀",
+        "context": "'🌀',"
+      },
+      {
+        "line": 58,
+        "column": 4,
+        "char": "🎁",
+        "context": "'🎁',"
+      },
+      {
+        "line": 72,
+        "column": 37,
+        "char": "📦",
+        "context": "const [icon, setIcon] = useState('📦');"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\entity\\EntityBottomPalette.tsx": [
+      {
+        "line": 147,
+        "column": 26,
+        "char": "📦",
+        "context": ": '📦'}"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\entity\\EntityEditor.test.tsx": [
+      {
+        "line": 57,
+        "column": 10,
+        "char": "📦",
+        "context": "icon: '📦',"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\entity\\EntityEditor.tsx": [
+      {
+        "line": 41,
+        "column": 46,
+        "char": "📦",
+        "context": "{ value: 'object', label: 'Object', icon: '📦' },"
+      },
+      {
+        "line": 42,
+        "column": 48,
+        "char": "⚡",
+        "context": "{ value: 'trigger', label: 'Trigger', icon: '⚡' },"
+      },
+      {
+        "line": 43,
+        "column": 44,
+        "char": "🎯",
+        "context": "{ value: 'spawn', label: 'Spawn', icon: '🎯' },"
+      },
+      {
+        "line": 44,
+        "column": 54,
+        "char": "🚪",
+        "context": "{ value: 'transition', label: 'Transition', icon: '🚪' },"
+      },
+      {
+        "line": 45,
+        "column": 54,
+        "char": "🌿",
+        "context": "{ value: 'decoration', label: 'Decoration', icon: '🌿' },"
+      },
+      {
+        "line": 90,
+        "column": 34,
+        "char": "📦",
+        "context": "if (!name) return '📦';"
+      },
+      {
+        "line": 168,
+        "column": 15,
+        "char": "🎯",
+        "context": "icon=\"🎯\""
+      },
+      {
+        "line": 176,
+        "column": 15,
+        "char": "🎯",
+        "context": "icon=\"🎯\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\entity\\EntityPalette.tsx": [
+      {
+        "line": 75,
+        "column": 32,
+        "char": "🎯",
+        "context": "<Text fontSize=\"2xl\">🎯</Text>"
+      },
+      {
+        "line": 202,
+        "column": 42,
+        "char": "📦",
+        "context": "{et.icon || '📦'}"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\entity\\PropertyDefinitionEditor.tsx": [
+      {
+        "line": 30,
+        "column": 42,
+        "char": "☰",
+        "context": "{ value: 'enum', label: 'Enum', icon: '☰' },"
+      },
+      {
+        "line": 32,
+        "column": 44,
+        "char": "🎨",
+        "context": "{ value: 'color', label: 'Color', icon: '🎨' },"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\CreateVariationDialog.tsx": [
+      {
+        "line": 23,
+        "column": 43,
+        "char": "🌸",
+        "context": "{ id: 'spring', label: 'Spring', icon: '🌸' },"
+      },
+      {
+        "line": 24,
+        "column": 43,
+        "char": "☀",
+        "context": "{ id: 'summer', label: 'Summer', icon: '☀️' },"
+      },
+      {
+        "line": 25,
+        "column": 43,
+        "char": "🍂",
+        "context": "{ id: 'autumn', label: 'Autumn', icon: '🍂' },"
+      },
+      {
+        "line": 26,
+        "column": 43,
+        "char": "❄",
+        "context": "{ id: 'winter', label: 'Winter', icon: '❄️' },"
+      },
+      {
+        "line": 172,
+        "column": 17,
+        "char": "🌿",
+        "context": "🌿 Season"
+      },
+      {
+        "line": 181,
+        "column": 17,
+        "char": "🏷",
+        "context": "🏷️ Custom"
+      },
+      {
+        "line": 255,
+        "column": 45,
+        "char": "🌿",
+        "context": "{v.kind === 'season' ? '🌿 ' : '🏷️ '}"
+      },
+      {
+        "line": 255,
+        "column": 53,
+        "char": "🏷",
+        "context": "{v.kind === 'season' ? '🌿 ' : '🏷️ '}"
+      },
+      {
+        "line": 330,
+        "column": 41,
+        "char": "🌿",
+        "context": "{kind === 'season' ? '🌿 Season' : '🏷️ Custom'}"
+      },
+      {
+        "line": 330,
+        "column": 55,
+        "char": "🏷",
+        "context": "{kind === 'season' ? '🌿 Season' : '🏷️ Custom'}"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\layerConstants.ts": [
+      {
+        "line": 6,
+        "column": 28,
+        "char": "🌳",
+        "context": "{ value: 'tree', label: '🌳 Tree' },"
+      },
+      {
+        "line": 7,
+        "column": 32,
+        "char": "🏢",
+        "context": "{ value: 'building', label: '🏢 Building' },"
+      },
+      {
+        "line": 8,
+        "column": 29,
+        "char": "🌊",
+        "context": "{ value: 'water', label: '🌊 Water' },"
+      },
+      {
+        "line": 9,
+        "column": 30,
+        "char": "📊",
+        "context": "{ value: 'ground', label: '📊 Ground' },"
+      },
+      {
+        "line": 10,
+        "column": 31,
+        "char": "📐",
+        "context": "{ value: 'overlay', label: '📐 Overlay' },"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\LinkBottomPanel.tsx": [
+      {
+        "line": 56,
+        "column": 31,
+        "char": "🔗",
+        "context": "<Text fontSize=\"lg\">🔗</Text>"
+      },
+      {
+        "line": 116,
+        "column": 25,
+        "char": "⚠",
+        "context": "⚠ broken"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\LinkInspector.tsx": [
+      {
+        "line": 81,
+        "column": 17,
+        "char": "🔗",
+        "context": "icon=\"🔗\""
+      },
+      {
+        "line": 284,
+        "column": 17,
+        "char": "⚠",
+        "context": "⚠ Target map not found"
+      },
+      {
+        "line": 385,
+        "column": 53,
+        "char": "🎯",
+        "context": "icon={<Text fontSize=\"10px\">🎯</Text>}"
+      },
+      {
+        "line": 402,
+        "column": 19,
+        "char": "⚠",
+        "context": "⚠ Target map not found"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\LocationLinksPanel.tsx": [
+      {
+        "line": 109,
+        "column": 70,
+        "char": "⚠",
+        "context": "const targetLabel = isSameMap ? 'same map' : isBroken ? '⚠ missing' : targetMap!.name;"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\MapBrowser.tsx": [
+      {
+        "line": 170,
+        "column": 23,
+        "char": "🗺",
+        "context": "🗺️"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\MapEditor.tsx": [
+      {
+        "line": 106,
+        "column": 21,
+        "char": "👈",
+        "context": "icon=\"👈\""
+      },
+      {
+        "line": 121,
+        "column": 17,
+        "char": "🗺",
+        "context": "icon=\"🗺️\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\MapsPanel.tsx": [
+      {
+        "line": 122,
+        "column": 19,
+        "char": "🌳",
+        "context": "🌳"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\NewLinkDialog.tsx": [
+      {
+        "line": 101,
+        "column": 11,
+        "char": "🔗",
+        "context": "🔗 New Location Link"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\TimePreviewPanel.tsx": [
+      {
+        "line": 22,
+        "column": 12,
+        "char": "🌅",
+        "context": "icon: '🌅',"
+      },
+      {
+        "line": 30,
+        "column": 12,
+        "char": "🌤",
+        "context": "icon: '🌤',"
+      },
+      {
+        "line": 38,
+        "column": 12,
+        "char": "☀",
+        "context": "icon: '☀️',"
+      },
+      {
+        "line": 46,
+        "column": 12,
+        "char": "🌇",
+        "context": "icon: '🌇',"
+      },
+      {
+        "line": 54,
+        "column": 12,
+        "char": "🌆",
+        "context": "icon: '🌆',"
+      },
+      {
+        "line": 62,
+        "column": 12,
+        "char": "🌙",
+        "context": "icon: '🌙',"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\useMapTools.ts": [
+      {
+        "line": 243,
+        "column": 34,
+        "char": "🎯",
+        "context": "// ── Target-picking mode (🎯 pick entry tile for a link) ────────────────"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\map\\VariationManager.tsx": [
+      {
+        "line": 21,
+        "column": 12,
+        "char": "🌸",
+        "context": "spring: '🌸',"
+      },
+      {
+        "line": 22,
+        "column": 12,
+        "char": "☀",
+        "context": "summer: '☀️',"
+      },
+      {
+        "line": 23,
+        "column": 12,
+        "char": "🍂",
+        "context": "autumn: '🍂',"
+      },
+      {
+        "line": 24,
+        "column": 12,
+        "char": "❄",
+        "context": "winter: '❄️',"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\scripting\\ConditionEditor.tsx": [
+      {
+        "line": 766,
+        "column": 22,
+        "char": "✅",
+        "context": "console.log('✅ Forcing Autocomplete via Bridge');"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\scripting\\VariableEditor.tsx": [
+      {
+        "line": 51,
+        "column": 43,
+        "char": "☰",
+        "context": "{ value: 'enum', label: 'Enum', badge: '☰', color: 'purple' },"
+      },
+      {
+        "line": 675,
+        "column": 24,
+        "char": "📊",
+        "context": "emptyIcon=\"📊\""
+      },
+      {
+        "line": 705,
+        "column": 24,
+        "char": "⚡",
+        "context": "emptyIcon=\"⚡\""
+      },
+      {
+        "line": 720,
+        "column": 24,
+        "char": "📦",
+        "context": "emptyIcon=\"📦\""
+      },
+      {
+        "line": 735,
+        "column": 24,
+        "char": "🎭",
+        "context": "emptyIcon=\"🎭\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\settings\\MapSettingsEditor.tsx": [
+      {
+        "line": 490,
+        "column": 20,
+        "char": "🏷",
+        "context": "emptyIcon=\"🏷️\""
+      },
+      {
+        "line": 505,
+        "column": 20,
+        "char": "🧱",
+        "context": "emptyIcon=\"🧱\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\settings\\SettingsEditor.tsx": [
+      {
+        "line": 77,
+        "column": 52,
+        "char": "⚙",
+        "context": "{ id: 'general', label: 'General', icon: <Text>⚙️</Text> },"
+      },
+      {
+        "line": 78,
+        "column": 50,
+        "char": "✏",
+        "context": "{ id: 'editor', label: 'Editor', icon: <Text>✏️</Text> },"
+      },
+      {
+        "line": 79,
+        "column": 56,
+        "char": "📐",
+        "context": "{ id: 'grid', label: 'Grid & Display', icon: <Text>📐</Text> },"
+      },
+      {
+        "line": 80,
+        "column": 50,
+        "char": "📦",
+        "context": "{ id: 'export', label: 'Export', icon: <Text>📦</Text> },"
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\screens\\tileset\\TilesetEditor.tsx": [
+      {
+        "line": 194,
+        "column": 21,
+        "char": "🎨",
+        "context": "icon=\"🎨\""
+      }
+    ],
+    "E:\\map-editor\\app\\src\\components\\startup\\LandingScreen\\index.tsx": [
+      {
+        "line": 116,
+        "column": 21,
+        "char": "📂",
+        "context": "icon=\"📂\""
+      },
+      {
+        "line": 124,
+        "column": 21,
+        "char": "✨",
+        "context": "icon=\"✨\""
+      }
+    ],
+    "E:\\map-editor\\app\\vite.config.ts": [
+      {
+        "line": 55,
+        "column": 14,
+        "char": "👉",
+        "context": "// See 👉 https://github.com/electron-vite/vite-plugin-electron-renderer"
+      }
+    ],
+    "E:\\map-editor\\docs\\discussion-with-ai.md": [
+      {
+        "line": 282,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌Crops"
+      },
+      {
+        "line": 283,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌Growth stages"
+      },
+      {
+        "line": 284,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌Farming logic"
+      },
+      {
+        "line": 855,
+        "column": 8,
+        "char": "👍",
+        "context": "Applied👍"
+      },
+      {
+        "line": 1089,
+        "column": 20,
+        "char": "❌",
+        "context": "· **Backend now?** ❌No"
+      },
+      {
+        "line": 1090,
+        "column": 18,
+        "char": "✅",
+        "context": "· **PWA first?** ✅Yes"
+      },
+      {
+        "line": 1091,
+        "column": 22,
+        "char": "✅",
+        "context": "· **Desktop later?** ✅Definitely"
+      },
+      {
+        "line": 1092,
+        "column": 14,
+        "char": "❌",
+        "context": "· **Nexus?** ❌Overkill"
+      },
+      {
+        "line": 1093,
+        "column": 27,
+        "char": "✅",
+        "context": "· **Local files + JSON?** ✅100%"
+      },
+      {
+        "line": 1106,
+        "column": 56,
+        "char": "😄",
+        "context": "Ah! That makes much more sense — thanks for clarifying.😄"
+      },
+      {
+        "line": 1167,
+        "column": 5,
+        "char": "✅",
+        "context": "Done✅The spec now includes a full **Persistence & Deployment** section with project folder"
+      },
+      {
+        "line": 1287,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No real-time playback"
+      },
+      {
+        "line": 1288,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No simulation stepping"
+      },
+      {
+        "line": 1289,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No validation of “logical correctness”"
+      },
+      {
+        "line": 1290,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No dependency between entities"
+      },
+      {
+        "line": 1291,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No global schedule resolution"
+      },
+      {
+        "line": 1336,
+        "column": 21,
+        "char": "❌",
+        "context": "# 1. What not to do ❌"
+      },
+      {
+        "line": 1338,
+        "column": 4,
+        "char": "❌",
+        "context": "## ❌ “Seasons are just editor filters”"
+      },
+      {
+        "line": 1346,
+        "column": 4,
+        "char": "❌",
+        "context": "## ❌ “One mega-map with tons of conditionals”"
+      },
+      {
+        "line": 1382,
+        "column": 36,
+        "char": "✅",
+        "context": "## Option C (best): Map Variations ✅"
+      },
+      {
+        "line": 1513,
+        "column": 3,
+        "char": "✅",
+        "context": "· ✅ **Map Variations for seasons**"
+      },
+      {
+        "line": 1514,
+        "column": 3,
+        "char": "✅",
+        "context": "· ✅ **Tileset variants tied to variations**"
+      },
+      {
+        "line": 1515,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No separate seasonal maps"
+      },
+      {
+        "line": 1516,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No conditional tiles inside a single layer"
+      },
+      {
+        "line": 1517,
+        "column": 3,
+        "char": "✅",
+        "context": "· ✅Time of day = toggles + slider"
+      },
+      {
+        "line": 1518,
+        "column": 3,
+        "char": "✅",
+        "context": "· ✅All of this = editor context, not runtime logic"
+      },
+      {
+        "line": 1742,
+        "column": 1,
+        "char": "👉",
+        "context": "👉 **Integrate “Map Variations” as a first-class concept in the spec** , including:"
+      },
+      {
+        "line": 1757,
+        "column": 1,
+        "char": "👉",
+        "context": "👉 **Seasons are not “just another variation”** , but"
+      },
+      {
+        "line": 1758,
+        "column": 1,
+        "char": "👉",
+        "context": "👉 **They should not break the variation system either**"
+      },
+      {
+        "line": 1832,
+        "column": 30,
+        "char": "❌",
+        "context": "# 4. What seasons do not get ❌"
+      },
+      {
+        "line": 1906,
+        "column": 1,
+        "char": "👉",
+        "context": "👉 **Update the spec** to:"
+      },
+      {
+        "line": 1917,
+        "column": 1,
+        "char": "😂",
+        "context": "😂all good — and don’t worry, this is actually a **very legit requirement** , not scope creep."
+      },
+      {
+        "line": 1923,
+        "column": 1,
+        "char": "👉",
+        "context": "👉You don’t need a whole new system"
+      },
+      {
+        "line": 1924,
+        "column": 1,
+        "char": "👉",
+        "context": "👉You need **one more axis** in a _controlled_ way"
+      },
+      {
+        "line": 1993,
+        "column": 27,
+        "char": "❌",
+        "context": "1. Tryfarm_spring_festival❌(none)"
+      },
+      {
+        "line": 1994,
+        "column": 27,
+        "char": "✅",
+        "context": "2. Try parent →farm_spring✅"
+      },
+      {
+        "line": 2054,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No multiple inheritance"
+      },
+      {
+        "line": 2055,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No parallel active variations"
+      },
+      {
+        "line": 2056,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No runtime evaluation logic"
+      },
+      {
+        "line": 2057,
+        "column": 3,
+        "char": "❌",
+        "context": "· ❌No automatic merging conflicts"
+      },
+      {
+        "line": 2074,
+        "column": 55,
+        "char": "😄",
+        "context": "And yes — **this is the last layer you need**. Promise😄"
+      },
+      {
+        "line": 2712,
+        "column": 5,
+        "char": "✅",
+        "context": "Done✅"
+      }
+    ],
+    "E:\\map-editor\\docs\\practical-editor-spec.md": [
+      {
+        "line": 27,
+        "column": 1,
+        "char": "✅",
+        "context": "✅ A 2D tile map editor"
+      },
+      {
+        "line": 28,
+        "column": 1,
+        "char": "✅",
+        "context": "✅ A structured data authoring tool"
+      },
+      {
+        "line": 29,
+        "column": 1,
+        "char": "✅",
+        "context": "✅ A spatial geometry editor (tiles, entities, paths, areas)"
+      },
+      {
+        "line": 30,
+        "column": 1,
+        "char": "✅",
+        "context": "✅ A content validation tool"
+      },
+      {
+        "line": 31,
+        "column": 1,
+        "char": "✅",
+        "context": "✅ A file-based, offline-first application"
+      },
+      {
+        "line": 35,
+        "column": 1,
+        "char": "❌",
+        "context": "❌ A game engine"
+      },
+      {
+        "line": 36,
+        "column": 1,
+        "char": "❌",
+        "context": "❌ A simulation or preview runtime"
+      },
+      {
+        "line": 37,
+        "column": 1,
+        "char": "❌",
+        "context": "❌ A visual scripting system"
+      },
+      {
+        "line": 38,
+        "column": 1,
+        "char": "❌",
+        "context": "❌ A Unity replacement"
+      },
+      {
+        "line": 39,
+        "column": 1,
+        "char": "❌",
+        "context": "❌ An animation editor"
+      },
+      {
+        "line": 40,
+        "column": 1,
+        "char": "❌",
+        "context": "❌ A tileset drawing tool (use external image editors)"
+      },
+      {
+        "line": 896,
+        "column": 30,
+        "char": "✓",
+        "context": "2. `grassland_spring` (found ✓)"
+      }
+    ]
+  }
+}

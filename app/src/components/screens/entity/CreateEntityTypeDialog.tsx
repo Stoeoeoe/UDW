@@ -3,6 +3,7 @@ import { Box, HStack, Text, Input, Select, FormControl, FormLabel, Flex } from '
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType, EntityCategory } from '../../../types/schema';
 import { EntityFormDialog } from '../common';
+import { IconPicker } from '../common/FormFields';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -25,39 +26,6 @@ const DEFAULT_COLORS = [
   '#8B4513',
 ];
 
-const COMMON_ICONS = [
-  '📦',
-  '⚡',
-  '🎯',
-  '🚪',
-  '🌿',
-  '💎',
-  '🔑',
-  '🗡️',
-  '🛡️',
-  '🏠',
-  '🌳',
-  '🪨',
-  '💡',
-  '🔔',
-  '🎵',
-  '🐾',
-  '👤',
-  '🧙',
-  '🐛',
-  '⭐',
-  '🏪',
-  '🎪',
-  '⛲',
-  '🗿',
-  '📜',
-  '🧪',
-  '🔥',
-  '💧',
-  '🌀',
-  '🎁',
-];
-
 interface CreateEntityTypeDialogProps {
   onClose: () => void;
 }
@@ -69,7 +37,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
   const [name, setName] = useState('');
   const [customId, setCustomId] = useState('');
   const [category, setCategory] = useState<EntityCategory>('object');
-  const [icon, setIcon] = useState('📦');
+  const [icon, setIcon] = useState('GiYinYang');
   const [group, setGroup] = useState('');
   const [color, setColor] = useState(DEFAULT_COLORS[0]);
   const [description, setDescription] = useState('');
@@ -219,32 +187,17 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
 
       {/* Icon & Color */}
       <HStack spacing={4} align="start">
-        <FormControl flex={1}>
-          <FormLabel fontSize="xs" color="gray.400">
+        <FormControl>
+          <FormLabel
+            color="gray.500"
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            mb={1}
+          >
             Icon
           </FormLabel>
-          <Flex gap={1} flexWrap="wrap">
-            {COMMON_ICONS.map((ic) => (
-              <Box
-                key={ic}
-                w="28px"
-                h="28px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                cursor="pointer"
-                borderRadius="md"
-                bg={icon === ic ? 'blue.800' : 'transparent'}
-                borderWidth="1px"
-                borderColor={icon === ic ? 'blue.500' : 'transparent'}
-                _hover={{ bg: 'whiteAlpha.100' }}
-                onClick={() => setIcon(ic)}
-                fontSize="sm"
-              >
-                {ic}
-              </Box>
-            ))}
-          </Flex>
+          <IconPicker value={icon} onChange={(v) => setIcon(v ?? '')} />
         </FormControl>
 
         <FormControl w="100px" flexShrink={0}>

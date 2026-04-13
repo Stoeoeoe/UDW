@@ -2,7 +2,7 @@ import React from 'react';
 import { VStack, Text, Center, Button } from '@chakra-ui/react';
 
 export interface EmptyScreenProps {
-  icon: string;
+  icon: string | React.ReactNode;
   title: string;
   description: string;
   buttonLabel?: string;
