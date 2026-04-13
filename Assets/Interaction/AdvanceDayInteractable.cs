@@ -12,7 +12,7 @@ namespace Interaction
     {
         protected override void Interact(GameCharacter instigator)
         {
-            var timeManager = UrTimeManager.Current as UrTimeManager;
+            var timeManager = UrTimeManager.Instance;
             if (timeManager == null)
             {
                 Debug.LogWarning("[AdvanceDayInteractable] No UrTimeManager found in scene.");

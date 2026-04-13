@@ -49,7 +49,7 @@ namespace Core.Context
                 character?.ConditionState,
                 character?.MovementState,
                 UrDialogueManager.Instance.CurrentConversation,
-                (UrTimeManager.Current as UrTimeManager)?.CurrentTime
+                (UrTimeManager.Instance)?.CurrentTime
             );
 
             if (CurrentSnapshot != null && CurrentSnapshot == snapshot)
