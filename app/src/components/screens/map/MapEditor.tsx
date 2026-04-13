@@ -15,6 +15,8 @@ import { LinkBottomPanel } from './LinkBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
 import { EditorModal } from '../../common/EditorModal';
 import { resolveMapContext } from '../../../lib/mapUtils';
+import { Button, HStack } from '@chakra-ui/react';
+import { MapWorldView } from './MapWorldView.tsx';
 
 /**
  * Right panel — always shows the inspector for whatever is *selected*.
@@ -66,6 +68,28 @@ export const MapEditor: React.FC = () => {
   const pendingNewLinkId = useEditorStore((state) => state.pendingNewLinkId);
   const clearPendingNewLink = useEditorStore((state) => state.clearPendingNewLink);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [activeView, setActiveView] = React.useState<'canvas' | 'world'>('canvas');
+
+  const viewToggle = (
+    <HStack spacing={1}>
+      <Button
+        size="xs"
+        variant={activeView === 'canvas' ? 'solid' : 'ghost'}
+        colorScheme={activeView === 'canvas' ? 'blue' : undefined}
+        onClick={() => setActiveView('canvas')}
+      >
+        Canvas
+      </Button>
+      <Button
+        size="xs"
+        variant={activeView === 'world' ? 'solid' : 'ghost'}
+        colorScheme={activeView === 'world' ? 'blue' : undefined}
+        onClick={() => setActiveView('world')}
+      >
+        World
+      </Button>
+    </HStack>
+  );
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -95,20 +119,37 @@ export const MapEditor: React.FC = () => {
   if (!currentMap) {
     // If we have maps, show the browser so user can select one
     if (maps.length > 0) {
+      const includedCount = maps.filter((map) => map.metadata?.world?.included).length;
       return (
         <ResizableEditorLayout
           header={{
-            title: 'Maps',
-            subtitle: `${maps.length} map${maps.length !== 1 ? 's' : ''} in project`,
+            title: activeView === 'world' ? 'World' : 'Maps',
+            subtitle:
+              activeView === 'world'
+                ? `${includedCount} map${includedCount !== 1 ? 's' : ''} placed in world`
+                : `${maps.length} map${maps.length !== 1 ? 's' : ''} in project`,
+            actions: viewToggle,
           }}
           content={
-            <EmptyScreen
-              icon="👈"
-              title="Select a Map"
-              description="Choose a map from the browser to start editing."
-            />
+            activeView === 'world' ? (
+              <MapWorldView />
+            ) : (
+              <EmptyScreen
+                icon="👈"
+                title="Select a Map"
+                description="Choose a map from the browser to start editing."
+              />
+            )
           }
-          leftPanel={<MapLeftPanel />}
+          leftPanel={
+            activeView === 'world' ? (
+              <VStack align="stretch" spacing={0} h="full" overflow="hidden">
+                <MapBrowser showEditingPanels={false} />
+              </VStack>
+            ) : (
+              <MapLeftPanel />
+            )
+          }
           leftPanelDefaultSize={20}
         />
       );
@@ -142,14 +183,26 @@ export const MapEditor: React.FC = () => {
     <>
       <ResizableEditorLayout
         header={{
-          title: effectiveMap.name || 'Map',
-          subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers${activeVariation ? ` • ${activeVariation.displayName}` : ''}`,
+          title: activeView === 'world' ? 'World' : effectiveMap.name || 'Map',
+          subtitle:
+            activeView === 'world'
+              ? `${maps.filter((map) => map.metadata?.world?.included).length} map${maps.filter((map) => map.metadata?.world?.included).length !== 1 ? 's' : ''} placed • ${maps.length} total`
+              : `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers${activeVariation ? ` • ${activeVariation.displayName}` : ''}`,
+          actions: viewToggle,
         }}
-        content={<MapViewportPixi />}
-        leftPanel={<MapLeftPanel />}
-        rightPanel={<MapRightPanel />}
+        content={activeView === 'world' ? <MapWorldView /> : <MapViewportPixi />}
+        leftPanel={
+          activeView === 'world' ? (
+            <VStack align="stretch" spacing={0} h="full" overflow="hidden">
+              <MapBrowser showEditingPanels={false} />
+            </VStack>
+          ) : (
+            <MapLeftPanel />
+          )
+        }
+        rightPanel={activeView === 'world' ? undefined : <MapRightPanel />}
         bottomPanel={
-          selectedLayerKind === 'entity' ? (
+          activeView === 'world' ? undefined : selectedLayerKind === 'entity' ? (
             <EntityBottomPalette />
           ) : selectedLayerKind === 'locationlink' ? (
             <LinkBottomPanel />

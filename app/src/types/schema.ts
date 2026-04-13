@@ -254,12 +254,20 @@ export interface MapMetadata {
   description?: string;
   music?: string;
   ambience?: string;
+  world?: WorldMapMetadata;
   entryPoints?: { id: string; position: [number, number] }[];
   exitPoints?: {
     id: string;
     targetMap: string;
     targetPosition: [number, number];
   }[];
+}
+
+export interface WorldMapMetadata {
+  included?: boolean;
+  x?: number;
+  y?: number;
+  category?: 'world' | 'indoor' | 'special';
 }
 
 // Game Variable Definitions — named runtime values exposed to the Lua sandbox

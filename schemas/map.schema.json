@@ -395,6 +395,7 @@
         "description": { "type": "string" },
         "music": { "type": "string" },
         "ambience": { "type": "string" },
+        "world": { "$ref": "#/$defs/WorldMapMetadata" },
         "entryPoints": {
           "type": "array",
           "items": {
@@ -429,6 +430,19 @@
               }
             }
           }
+        }
+      }
+    },
+    "WorldMapMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "included": { "type": "boolean" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "category": {
+          "type": "string",
+          "enum": ["world", "indoor", "special"]
         }
       }
     },

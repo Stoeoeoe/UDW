@@ -1,7 +1,20 @@
 import React from 'react';
-import { FormControl, FormLabel, Input, Select, Textarea, Text, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  FormControl,
+  FormLabel,
+  Heading,
+  Input,
+  NumberInput,
+  NumberInputField,
+  Select,
+  Switch,
+  Text,
+  Textarea,
+  VStack,
+} from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import type { PropertyValue } from '../../../types/schema';
+import type { PropertyValue, WorldMapMetadata } from '../../../types/schema';
 import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { EditorModal } from '../../common/EditorModal';
 import { EntityFormDialog } from '../common/EntityFormDialog';
@@ -25,6 +38,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
   const locationMetadataDefinitions = useEditorStore((s) => s.locationMetadataDefinitions);
 
   const activeVariation = currentMap?.variations?.find((v) => v.id === activeVariationId) || null;
+  const worldMetadata = currentMap?.metadata?.world || {};
 
   if (!currentMap) {
     return (
@@ -47,21 +61,49 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
   };
 
   const updateMapMetadataGeneric = (key: string, value: unknown) => {
-    const next = { ...(currentMap.metadata || {}), [key]: value ?? undefined } as Record<
-      string,
-      unknown
-    >;
+    const next = {
+      ...((currentMap.metadata || {}) as Record<string, PropertyValue>),
+    } as Record<string, PropertyValue>;
+
+    if (value === undefined) {
+      delete next[key];
+    } else {
+      next[key] = value as PropertyValue;
+    }
+
     updateCurrentMap({ metadata: Object.keys(next).length > 0 ? next : undefined });
+  };
+
+  const updateWorldMetadata = (updates: Partial<WorldMapMetadata>) => {
+    const nextWorld = {
+      ...(currentMap.metadata?.world || {}),
+      ...updates,
+    };
+
+    Object.keys(nextWorld).forEach((key) => {
+      if (nextWorld[key as keyof WorldMapMetadata] === undefined) {
+        delete nextWorld[key as keyof WorldMapMetadata];
+      }
+    });
+
+    updateCurrentMap({
+      metadata: {
+        ...(currentMap.metadata || {}),
+        world: Object.keys(nextWorld).length > 0 ? nextWorld : undefined,
+      },
+    });
   };
 
   const updateVariationMetadata = (key: VariationOverrideKey, value: string) => {
     if (!activeVariation) return;
-    const next: VariationMetadataValues = {
-      ...((activeVariation.metadata || {}) as VariationMetadataValues),
-      [key]: value || undefined,
-    };
+    const next = { ...((activeVariation.metadata || {}) as Record<string, PropertyValue>) };
+    if (value.trim()) {
+      next[key] = value;
+    } else {
+      delete next[key];
+    }
     (['mapNameOverride', 'baseTilesetIdOverride', 'descriptionOverride'] as const).forEach((k) => {
-      if (!next[k]?.trim()) delete next[k];
+      if (typeof next[k] === 'string' && !next[k].trim()) delete next[k];
     });
     updateVariation(activeVariation.id, {
       metadata: Object.keys(next).length > 0 ? next : undefined,
@@ -70,13 +112,12 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
 
   const updateVariationMetadataGeneric = (key: string, value: unknown) => {
     if (!activeVariation) return;
-    const next: Record<string, unknown> = {
-      ...((activeVariation.metadata || {}) as Record<string, unknown>),
-      [key]: value ?? undefined,
-    };
-    Object.keys(next).forEach((k) => {
-      if (next[k] === undefined) delete next[k];
-    });
+    const next = { ...((activeVariation.metadata || {}) as Record<string, PropertyValue>) };
+    if (value === undefined) {
+      delete next[key];
+    } else {
+      next[key] = value as PropertyValue;
+    }
     updateVariation(activeVariation.id, {
       metadata: Object.keys(next).length > 0 ? next : undefined,
     });
@@ -84,6 +125,76 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
 
   const variationMetadata = (activeVariation?.metadata || {}) as VariationMetadataValues;
   const hasLocationDefs = (locationMetadataDefinitions || []).length > 0;
+
+  const renderWorldSection = () => (
+    <VStack
+      spacing={4}
+      align="stretch"
+      borderWidth="1px"
+      borderColor="whiteAlpha.100"
+      borderRadius="lg"
+      p={4}
+    >
+      <Box>
+        <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
+          World
+        </Heading>
+        <Text fontSize="xs" color="gray.500" mt={1}>
+          Control whether this map appears in the world overview and where it is placed.
+        </Text>
+      </Box>
+
+      <FormControl display="flex" alignItems="center" justifyContent="space-between">
+        <FormLabel mb={0}>Include In World View</FormLabel>
+        <Switch
+          isChecked={Boolean(worldMetadata.included)}
+          onChange={(e) => updateWorldMetadata({ included: e.target.checked || undefined })}
+        />
+      </FormControl>
+
+      <FormControl>
+        <FormLabel>World Category</FormLabel>
+        <Select
+          value={worldMetadata.category || 'world'}
+          onChange={(e) =>
+            updateWorldMetadata({ category: e.target.value as WorldMapMetadata['category'] })
+          }
+        >
+          <option value="world">World</option>
+          <option value="indoor">Indoor</option>
+          <option value="special">Special</option>
+        </Select>
+      </FormControl>
+
+      <FormControl isDisabled={!worldMetadata.included}>
+        <FormLabel>World Position X</FormLabel>
+        <NumberInput
+          value={worldMetadata.x ?? 0}
+          onChange={(_, valueAsNumber) =>
+            updateWorldMetadata({
+              x: Number.isFinite(valueAsNumber) ? Math.round(valueAsNumber) : 0,
+            })
+          }
+        >
+          <NumberInputField />
+        </NumberInput>
+      </FormControl>
+
+      <FormControl isDisabled={!worldMetadata.included}>
+        <FormLabel>World Position Y</FormLabel>
+        <NumberInput
+          value={worldMetadata.y ?? 0}
+          onChange={(_, valueAsNumber) =>
+            updateWorldMetadata({
+              y: Number.isFinite(valueAsNumber) ? Math.round(valueAsNumber) : 0,
+            })
+          }
+        >
+          <NumberInputField />
+        </NumberInput>
+      </FormControl>
+    </VStack>
+  );
 
   const isVariationTab = initialTab === 'variation' && !!activeVariation;
   const title = isVariationTab ? `Variation: ${activeVariation.displayName}` : 'Map Metadata';
@@ -177,13 +288,18 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
             </VStack>
           )
         ) : hasLocationDefs ? (
-          <PropertyForm
-            schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
-            values={(currentMap.metadata || {}) as Record<string, PropertyValue>}
-            onChange={(k, v) => updateMapMetadataGeneric(k, v)}
-          />
+          <VStack spacing={5} align="stretch">
+            {renderWorldSection()}
+            <PropertyForm
+              schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
+              values={(currentMap.metadata || {}) as Record<string, PropertyValue>}
+              onChange={(k, v) => updateMapMetadataGeneric(k, v)}
+            />
+          </VStack>
         ) : (
           <VStack spacing={4} align="stretch">
+            {renderWorldSection()}
+
             <FormControl>
               <FormLabel>Map Name</FormLabel>
               <Input

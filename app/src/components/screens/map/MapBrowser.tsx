@@ -18,12 +18,16 @@ import { VariationManager } from './VariationManager';
 import { LayersPanel } from './LayersPanel';
 import { MetadataDialog } from './MetadataDialog';
 
+interface MapBrowserProps {
+  showEditingPanels?: boolean;
+}
+
 /**
  * MapBrowser - A sidebar panel for browsing all maps in the project,
  * switching between them, creating new ones, and managing variations
  * for the active map. Also integrates the layers panel below.
  */
-export const MapBrowser: React.FC = () => {
+export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true }) => {
   const maps = useEditorStore((state) => state.maps);
   const currentMap = useEditorStore((state) => state.currentMap);
   const loadMap = useEditorStore((state) => state.loadMap);
@@ -236,21 +240,25 @@ export const MapBrowser: React.FC = () => {
         )}
       </Box>
 
-      {/* Divider */}
-      <Box borderBottom="1px" borderColor="editor.border" />
+      {showEditingPanels && (
+        <>
+          {/* Divider */}
+          <Box borderBottom="1px" borderColor="editor.border" />
 
-      {/* Variation Manager for active map */}
-      <Box flex="0 0 auto" maxH="280px" overflow="hidden">
-        <VariationManager />
-      </Box>
+          {/* Variation Manager for active map */}
+          <Box flex="0 0 auto" maxH="280px" overflow="hidden">
+            <VariationManager />
+          </Box>
 
-      {/* Divider */}
-      <Box borderBottom="1px" borderColor="editor.border" />
+          {/* Divider */}
+          <Box borderBottom="1px" borderColor="editor.border" />
 
-      {/* Layers Panel */}
-      <Box flex={1} overflow="hidden" minH="100px">
-        <LayersPanel />
-      </Box>
+          {/* Layers Panel */}
+          <Box flex={1} overflow="hidden" minH="100px">
+            <LayersPanel />
+          </Box>
+        </>
+      )}
 
       {/* Map Creator Modal */}
       <EditorModal isOpen={isMapCreatorOpen} onClose={onMapCreatorClose}>
