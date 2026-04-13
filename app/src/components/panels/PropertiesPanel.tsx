@@ -13,7 +13,7 @@ import {
 import { FcPicture, FcSearch } from 'react-icons/fc';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetInspector } from '../tileset/TilesetInspector';
-import { PropertyForm, PropertySchema } from '../common/PropertyForm';
+import { PropertyForm, propertyDefinitionsToSchema } from '../common/PropertyForm';
 import { resolveEntities } from '../../lib/mapUtils';
 import { InspectorPanel, InspectorEmptyState } from '../screens/common';
 import type { PropertyValue } from '../../types/schema';
@@ -264,7 +264,7 @@ export const PropertiesPanel: React.FC = () => {
 
             {entityType?.properties && (
               <PropertyForm
-                schema={entityType.properties as unknown as PropertySchema[]}
+                schema={propertyDefinitionsToSchema(entityType.properties)}
                 values={selectedEntity?.properties || {}}
                 onChange={(k, v) => handlePropertyChange(k, v)}
               />

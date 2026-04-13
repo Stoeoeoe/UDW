@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Button,
   FormControl,
   FormLabel,
   HStack,
+  IconButton,
   Input,
   NumberInput,
   NumberInputField,
@@ -12,7 +14,9 @@ import {
   Select,
   Switch,
   Text,
+  VStack,
 } from '@chakra-ui/react';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { EntityFormDialog } from '../screens/common';
 import { PropertyDefinition, PropertyType, PropertyValue } from '../../types/schema';
 
@@ -34,7 +38,7 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
   const [type, setType] = useState<PropertyType>('string');
   const [description, setDescription] = useState('');
   const [required, setRequired] = useState(false);
-  const [enumOptionsText, setEnumOptionsText] = useState('');
+  const [enumOptions, setEnumOptions] = useState<string[]>([]);
   const [defaultNumber, setDefaultNumber] = useState(0);
   const [defaultString, setDefaultString] = useState('');
   const [defaultBoolean, setDefaultBoolean] = useState(false);
@@ -52,15 +56,9 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
     if (!normalizedKey) return false;
     if (keyExists) return false;
     if (!label.trim()) return false;
-    if (type === 'enum') {
-      const options = enumOptionsText
-        .split(',')
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0);
-      return options.length > 0;
-    }
+    if (type === 'enum') return enumOptions.filter((o) => o.trim()).length > 0;
     return true;
-  }, [enumOptionsText, isSaving, keyExists, label, normalizedKey, type]);
+  }, [enumOptions, isSaving, keyExists, label, normalizedKey, type]);
 
   const getDefaultValue = (): PropertyValue => {
     if (type === 'boolean') return defaultBoolean;
@@ -74,12 +72,7 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
 
     const constraints =
       type === 'enum'
-        ? {
-            options: enumOptionsText
-              .split(',')
-              .map((entry) => entry.trim())
-              .filter((entry) => entry.length > 0),
-          }
+        ? { options: enumOptions.filter((o) => o.trim()).map((o) => o.trim()) }
         : undefined;
 
     const nextDefinition: PropertyDefinition = {
@@ -164,15 +157,11 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
             onChange={(event) => {
               const nextType = event.target.value as PropertyType;
               setType(nextType);
-              if (nextType === 'string' || nextType === 'enum') {
-                setDefaultString('');
-              }
-              if (nextType === 'int' || nextType === 'float' || nextType === 'number') {
+              if (nextType === 'string' || nextType === 'enum') setDefaultString('');
+              if (nextType === 'int' || nextType === 'float' || nextType === 'number')
                 setDefaultNumber(0);
-              }
-              if (nextType === 'boolean') {
-                setDefaultBoolean(false);
-              }
+              if (nextType === 'boolean') setDefaultBoolean(false);
+              if (nextType !== 'enum') setEnumOptions([]);
             }}
           >
             {SUPPORTED_METADATA_TYPES.map((entry) => (
@@ -200,15 +189,43 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
           <FormLabel fontSize="xs" color="gray.400">
             Enum Options
           </FormLabel>
-          <Input
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            value={enumOptionsText}
-            onChange={(event) => setEnumOptionsText(event.target.value)}
-            placeholder="yes, no, unknown"
-          />
+          <VStack spacing={1} align="stretch">
+            {enumOptions.map((opt, idx) => (
+              <HStack key={idx} spacing={1}>
+                <Input
+                  size="sm"
+                  bg="#0a0a0b"
+                  borderColor="#1a1a2e"
+                  color="white"
+                  value={opt}
+                  onChange={(e) => {
+                    const next = [...enumOptions];
+                    next[idx] = e.target.value;
+                    setEnumOptions(next);
+                  }}
+                />
+                <IconButton
+                  aria-label="Remove option"
+                  icon={<DeleteIcon fontSize="8px" />}
+                  size="sm"
+                  variant="ghost"
+                  color="gray.600"
+                  _hover={{ color: 'red.300' }}
+                  onClick={() => setEnumOptions(enumOptions.filter((_, i) => i !== idx))}
+                />
+              </HStack>
+            ))}
+            <Button
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              _hover={{ color: 'white' }}
+              leftIcon={<AddIcon fontSize="8px" />}
+              onClick={() => setEnumOptions([...enumOptions, `option_${enumOptions.length + 1}`])}
+            >
+              Add Option
+            </Button>
+          </VStack>
         </FormControl>
       )}
 

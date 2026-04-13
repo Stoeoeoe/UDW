@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   VStack,
+  HStack,
   FormControl,
   FormLabel,
   Input,
@@ -14,9 +15,17 @@ import {
   Text,
   Box,
 } from '@chakra-ui/react';
-import { PropertyValue } from '../../types/schema';
+import { PropertyDefinition, PropertyValue } from '../../types/schema';
 
-export type PropertyType = 'string' | 'float' | 'boolean' | 'enum' | 'color' | 'custom';
+export type PropertyType =
+  | 'string'
+  | 'int'
+  | 'float'
+  | 'boolean'
+  | 'enum'
+  | 'color'
+  | 'vector2'
+  | 'custom';
 
 export interface PropertySchema {
   key: string;
@@ -31,6 +40,58 @@ export interface PropertySchema {
   };
   // Optional custom renderer for complex fields. Receives current value and an onChange callback.
   customRenderer?: (value: PropertyValue, onChange: (v: PropertyValue) => void) => React.ReactNode;
+}
+
+/**
+ * Convert a PropertyDefinition array (from schema.ts) into PropertySchema[] for use with PropertyForm.
+ * This is the single canonical mapping — all callers should use this instead of rolling their own.
+ */
+export function propertyDefinitionsToSchema(definitions: PropertyDefinition[]): PropertySchema[] {
+  return definitions.map((d) => {
+    const common: Pick<PropertySchema, 'key' | 'label' | 'description'> = {
+      key: d.key,
+      label: d.label,
+      description: d.description,
+    };
+
+    switch (d.type) {
+      case 'int':
+        return {
+          ...common,
+          type: 'int',
+          constraints: {
+            min: d.constraints?.min,
+            max: d.constraints?.max,
+          },
+        };
+      case 'float':
+      case 'number':
+        return {
+          ...common,
+          type: 'float',
+          constraints: {
+            min: d.constraints?.min,
+            max: d.constraints?.max,
+            step: 0.01,
+          },
+        };
+      case 'boolean':
+        return { ...common, type: 'boolean' };
+      case 'enum':
+        return {
+          ...common,
+          type: 'enum',
+          constraints: { options: d.constraints?.options ?? [] },
+        };
+      case 'color':
+        return { ...common, type: 'color' };
+      case 'vector2':
+        return { ...common, type: 'vector2' };
+      case 'string':
+      default:
+        return { ...common, type: 'string' };
+    }
+  });
 }
 
 interface PropertyFormProps {
@@ -52,7 +113,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
       const v =
         rawVal !== undefined
           ? rawVal
-          : prop.type === 'float'
+          : prop.type === 'float' || prop.type === 'int'
             ? 0
             : prop.type === 'boolean'
               ? false
@@ -64,14 +125,14 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
 
   const numericRegex = /^-?\d+(?:\.\d+)?$/;
 
-  const commitValue = (key: string) => {
+  const commitNumeric = (key: string, integer: boolean) => {
     const str = localValues[key] ?? '';
     if (numericRegex.test(str)) {
-      onChange(key, parseFloat(str));
-    } else {
-      // Fallback: try parseFloat even if not strict match
       const n = parseFloat(str);
-      onChange(key, isNaN(n) ? str : n);
+      onChange(key, integer ? Math.round(n) : n);
+    } else {
+      const n = parseFloat(str);
+      onChange(key, isNaN(n) ? (integer ? 0 : 0) : integer ? Math.round(n) : n);
     }
   };
 
@@ -82,7 +143,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
         const currentValue =
           rawVal !== undefined
             ? rawVal
-            : prop.type === 'float'
+            : prop.type === 'float' || prop.type === 'int'
               ? 0
               : prop.type === 'boolean'
                 ? false
@@ -125,9 +186,38 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   }}
                   onBlur={() => {
                     focusedRef.current[prop.key] = false;
-                    commitValue(prop.key);
                   }}
                 />
+              )}
+
+              {prop.type === 'int' && (
+                <NumberInput
+                  size="sm"
+                  value={localVal}
+                  min={prop.constraints?.min}
+                  max={prop.constraints?.max}
+                  step={1}
+                  precision={0}
+                  onChange={(str) => {
+                    setLocalValues((prev) => ({ ...prev, [prop.key]: str }));
+                    if (numericRegex.test(str)) {
+                      onChange(prop.key, Math.round(parseFloat(str)));
+                    }
+                  }}
+                  onFocus={() => {
+                    focusedRef.current[prop.key] = true;
+                  }}
+                  onBlur={() => {
+                    focusedRef.current[prop.key] = false;
+                    commitNumeric(prop.key, true);
+                  }}
+                >
+                  <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
               )}
 
               {prop.type === 'float' && (
@@ -139,7 +229,6 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   step={prop.constraints?.step ?? 0.01}
                   onChange={(str) => {
                     setLocalValues((prev) => ({ ...prev, [prop.key]: str }));
-                    // If string is a valid number, commit immediately (this covers steppers)
                     if (numericRegex.test(str)) {
                       onChange(prop.key, parseFloat(str));
                     }
@@ -149,7 +238,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   }}
                   onBlur={() => {
                     focusedRef.current[prop.key] = false;
-                    commitValue(prop.key);
+                    commitNumeric(prop.key, false);
                   }}
                 >
                   <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
@@ -191,18 +280,6 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                 </Select>
               )}
 
-              {prop.type === 'custom' && prop.customRenderer && (
-                <Box>
-                  {prop.customRenderer(localVal, (v) => {
-                    setLocalValues((prev) => ({
-                      ...prev,
-                      [prop.key]: String(v),
-                    }));
-                    onChange(prop.key, v);
-                  })}
-                </Box>
-              )}
-
               {prop.type === 'color' && (
                 <Input
                   type="color"
@@ -216,6 +293,69 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     onChange(prop.key, e.target.value);
                   }}
                 />
+              )}
+
+              {prop.type === 'vector2' && (
+                <HStack spacing={2}>
+                  <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                    X
+                  </Text>
+                  <NumberInput
+                    size="sm"
+                    value={
+                      Array.isArray(currentValue)
+                        ? String(currentValue[0] ?? 0)
+                        : (localValues[`${prop.key}.__x`] ?? '0')
+                    }
+                    step={0.01}
+                    onChange={(str) => {
+                      setLocalValues((prev) => ({ ...prev, [`${prop.key}.__x`]: str }));
+                      const x = parseFloat(str);
+                      const y = Array.isArray(currentValue)
+                        ? ((currentValue[1] as number) ?? 0)
+                        : parseFloat(localValues[`${prop.key}.__y`] ?? '0') || 0;
+                      if (!isNaN(x)) onChange(prop.key, [x, y]);
+                    }}
+                    flex={1}
+                  >
+                    <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                  </NumberInput>
+                  <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                    Y
+                  </Text>
+                  <NumberInput
+                    size="sm"
+                    value={
+                      Array.isArray(currentValue)
+                        ? String(currentValue[1] ?? 0)
+                        : (localValues[`${prop.key}.__y`] ?? '0')
+                    }
+                    step={0.01}
+                    onChange={(str) => {
+                      setLocalValues((prev) => ({ ...prev, [`${prop.key}.__y`]: str }));
+                      const x = Array.isArray(currentValue)
+                        ? ((currentValue[0] as number) ?? 0)
+                        : parseFloat(localValues[`${prop.key}.__x`] ?? '0') || 0;
+                      const y = parseFloat(str);
+                      if (!isNaN(y)) onChange(prop.key, [x, y]);
+                    }}
+                    flex={1}
+                  >
+                    <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                  </NumberInput>
+                </HStack>
+              )}
+
+              {prop.type === 'custom' && prop.customRenderer && (
+                <Box>
+                  {prop.customRenderer(localVal, (v) => {
+                    setLocalValues((prev) => ({
+                      ...prev,
+                      [prop.key]: String(v),
+                    }));
+                    onChange(prop.key, v);
+                  })}
+                </Box>
               )}
             </Box>
 

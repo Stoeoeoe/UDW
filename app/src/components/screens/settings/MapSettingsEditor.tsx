@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Box,
+  Button,
   Circle,
   FormControl,
   FormLabel,
   HStack,
+  IconButton,
   Input,
   NumberInput,
   NumberInputField,
@@ -17,7 +19,9 @@ import {
   Text,
   useDisclosure,
   useToast,
+  VStack,
 } from '@chakra-ui/react';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { BsTree, BsBuilding, BsWater, BsLayersHalf, BsStack } from 'react-icons/bs';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { LayerType, PropertyDefinition, PropertyType, PropertyValue } from '../../../types/schema';
@@ -57,7 +61,7 @@ type MetadataDraft = {
   type: PropertyType;
   description: string;
   required: boolean;
-  enumOptionsText: string;
+  enumOptions: string[];
   defaultString: string;
   defaultNumber: number;
   defaultBoolean: boolean;
@@ -145,7 +149,7 @@ const metadataDraftFromDefinition = (definition: PropertyDefinition): MetadataDr
     type: definition.type,
     description: definition.description || '',
     required: definition.required,
-    enumOptionsText: (definition.constraints?.options || []).join(', '),
+    enumOptions: definition.constraints?.options || [],
     defaultString,
     defaultNumber,
     defaultBoolean,
@@ -158,7 +162,7 @@ const emptyMetadataDraft = (): MetadataDraft => ({
   type: 'string',
   description: '',
   required: false,
-  enumOptionsText: '',
+  enumOptions: [],
   defaultString: '',
   defaultNumber: 0,
   defaultBoolean: false,
@@ -458,10 +462,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
       return;
     }
 
-    const options = metadataDraft.enumOptionsText
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0);
+    const options = metadataDraft.enumOptions;
 
     if (metadataDraft.type === 'enum' && options.length === 0) {
       toast({ title: 'Enum metadata requires options', status: 'warning', duration: 1500 });
@@ -947,7 +948,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
                         ? 0
                         : previous.defaultNumber,
                     defaultBoolean: nextType === 'boolean' ? false : previous.defaultBoolean,
-                    enumOptionsText: nextType === 'enum' ? previous.enumOptionsText : '',
+                    enumOptions: nextType === 'enum' ? previous.enumOptions : [],
                   }));
                 }}
               >
@@ -992,18 +993,49 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
               >
                 Enum Options
               </FormLabel>
-              <Input
-                size="sm"
-                bg="gray.950"
-                value={metadataDraft.enumOptionsText}
-                onChange={(event) =>
-                  setMetadataDraft((previous) => ({
-                    ...previous,
-                    enumOptionsText: event.target.value,
-                  }))
-                }
-                placeholder="yes, no, unknown"
-              />
+              <VStack spacing={1} align="stretch">
+                {metadataDraft.enumOptions.map((opt, idx) => (
+                  <HStack key={idx} spacing={1}>
+                    <Input
+                      size="sm"
+                      bg="gray.950"
+                      value={opt}
+                      onChange={(e) => {
+                        const next = [...metadataDraft.enumOptions];
+                        next[idx] = e.target.value;
+                        setMetadataDraft((prev) => ({ ...prev, enumOptions: next }));
+                      }}
+                    />
+                    <IconButton
+                      aria-label="Remove option"
+                      icon={<DeleteIcon fontSize="8px" />}
+                      size="sm"
+                      variant="ghost"
+                      color="gray.600"
+                      _hover={{ color: 'red.300' }}
+                      onClick={() => {
+                        const next = metadataDraft.enumOptions.filter((_, i) => i !== idx);
+                        setMetadataDraft((prev) => ({ ...prev, enumOptions: next }));
+                      }}
+                    />
+                  </HStack>
+                ))}
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color="gray.500"
+                  _hover={{ color: 'white' }}
+                  leftIcon={<AddIcon fontSize="8px" />}
+                  onClick={() =>
+                    setMetadataDraft((prev) => ({
+                      ...prev,
+                      enumOptions: [...prev.enumOptions, `option_${prev.enumOptions.length + 1}`],
+                    }))
+                  }
+                >
+                  Add Option
+                </Button>
+              </VStack>
             </FormControl>
           )}
 

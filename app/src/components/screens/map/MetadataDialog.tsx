@@ -12,7 +12,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { PropertyForm, PropertySchema } from '../../common/PropertyForm';
+import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { EditorModal } from '../../common/EditorModal';
 
 interface MetadataDialogProps {
@@ -155,25 +155,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
             <VStack spacing={3} align="stretch" flex={1} overflowY="auto">
               {hasLocationDefs ? (
                 <PropertyForm
-                  schema={locationMetadataDefinitions.map((d) => {
-                    const common: Pick<PropertySchema, 'key' | 'label' | 'description'> = {
-                      key: d.key,
-                      label: d.label,
-                      description: d.description,
-                    };
-                    if (d.type === 'int')
-                      return { ...common, type: 'float', constraints: { step: 1 } };
-                    if (d.type === 'float' || d.type === 'number')
-                      return { ...common, type: 'float', constraints: { step: 0.01 } };
-                    if (d.type === 'boolean') return { ...common, type: 'boolean' };
-                    if (d.type === 'enum')
-                      return {
-                        ...common,
-                        type: 'enum',
-                        constraints: { options: d.constraints?.options || [] },
-                      };
-                    return { ...common, type: 'string' };
-                  })}
+                  schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
                   values={(activeVariation.metadata || {}) as Record<string, any>}
                   onChange={(k, v) => updateVariationMetadataGeneric(k, v)}
                 />
@@ -288,25 +270,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
             <VStack spacing={3} align="stretch" flex={1} overflowY="auto">
               {hasLocationDefs ? (
                 <PropertyForm
-                  schema={locationMetadataDefinitions.map((d) => {
-                    const common: Pick<PropertySchema, 'key' | 'label' | 'description'> = {
-                      key: d.key,
-                      label: d.label,
-                      description: d.description,
-                    };
-                    if (d.type === 'int')
-                      return { ...common, type: 'float', constraints: { step: 1 } };
-                    if (d.type === 'float' || d.type === 'number')
-                      return { ...common, type: 'float', constraints: { step: 0.01 } };
-                    if (d.type === 'boolean') return { ...common, type: 'boolean' };
-                    if (d.type === 'enum')
-                      return {
-                        ...common,
-                        type: 'enum',
-                        constraints: { options: d.constraints?.options || [] },
-                      };
-                    return { ...common, type: 'string' };
-                  })}
+                  schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
                   values={(currentMap.metadata || {}) as Record<string, any>}
                   onChange={(k, v) => updateMapMetadataGeneric(k, v)}
                 />

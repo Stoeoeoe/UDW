@@ -4,7 +4,17 @@
   "title": "Map",
   "description": "A map file (.map.json). Layer tile data may be dense (2D array) or sparse (object with 'sparse: true'). Terrain data uses a palette index when 'terrainPalette' is present.",
   "type": "object",
-  "required": ["version", "id", "name", "width", "height", "baseTilesetId", "tilesetRefs", "layers", "entities"],
+  "required": [
+    "version",
+    "id",
+    "name",
+    "width",
+    "height",
+    "baseTilesetId",
+    "tilesetRefs",
+    "layers",
+    "entities"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {
@@ -63,14 +73,30 @@
   "$defs": {
     "Layer": {
       "type": "object",
-      "required": ["id", "name", "kind", "visible", "locked", "opacity", "zOrder"],
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "visible",
+        "locked",
+        "opacity",
+        "zOrder"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "kind": {
           "type": "string",
-          "enum": ["visual", "collision", "navigation", "metadata", "entity", "terrain", "locationlink"]
+          "enum": [
+            "visual",
+            "collision",
+            "navigation",
+            "metadata",
+            "entity",
+            "terrain",
+            "locationlink"
+          ]
         },
         "visible": { "type": "boolean" },
         "locked": { "type": "boolean" },
@@ -148,7 +174,10 @@
             "properties": {
               "x": { "type": "integer", "minimum": 0 },
               "y": { "type": "integer", "minimum": 0 },
-              "v": { "type": "integer", "description": "Encoded tile ref: (tilesetIndex << 16) | tileIndex." }
+              "v": {
+                "type": "integer",
+                "description": "Encoded tile ref: (tilesetIndex << 16) | tileIndex."
+              }
             }
           }
         }
@@ -200,7 +229,14 @@
     },
     "LocationLink": {
       "type": "object",
-      "required": ["id", "sourcePosition", "triggerSize", "targetMapId", "targetPosition", "direction"],
+      "required": [
+        "id",
+        "sourcePosition",
+        "triggerSize",
+        "targetMapId",
+        "targetPosition",
+        "direction"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
@@ -407,7 +443,9 @@
         { "type": "array", "items": { "type": "number" } },
         {
           "type": "object",
-          "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+          "additionalProperties": {
+            "type": ["string", "number", "boolean", "null"]
+          }
         }
       ]
     }
