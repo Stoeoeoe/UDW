@@ -103,6 +103,8 @@ export interface EditorState {
 
   // Project-level tile metadata definitions (applies to all tilesets)
   tileMetadataDefinitions: PropertyDefinition[];
+  // Project-level location metadata definitions (applies to maps/locations)
+  locationMetadataDefinitions: PropertyDefinition[];
 
   // Actor definitions (persisted in actors/ or legacy npcs/ directory)
   actors: Actor[];

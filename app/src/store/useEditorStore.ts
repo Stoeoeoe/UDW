@@ -262,6 +262,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.terrainTypes = [];
                   state.entityTypes = [];
                   state.tileMetadataDefinitions = [];
+                  state.locationMetadataDefinitions = [];
                 }),
               { clearHistory: true },
             );
@@ -292,6 +293,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.selectedTileIndex = null;
                   state.entityTypes = [];
                   state.tileMetadataDefinitions = [];
+                  state.locationMetadataDefinitions = [];
                   state.gameVariables = [];
                   state.scriptTables = [];
                   state.scriptFunctions = [];

@@ -14,16 +14,19 @@ type ImmerStateCreator<T> = StateCreator<
 export interface EntityTypeSlice {
   entityTypes: EntityType[];
   tileMetadataDefinitions: PropertyDefinition[];
+  locationMetadataDefinitions: PropertyDefinition[];
 
   addEntityType: (entityType: EntityType) => Promise<void>;
   updateEntityType: (id: string, updates: Partial<EntityType>) => Promise<void>;
   deleteEntityType: (id: string) => Promise<void>;
   setTileMetadataDefinitions: (definitions: PropertyDefinition[]) => Promise<void>;
+  setLocationMetadataDefinitions: (definitions: PropertyDefinition[]) => Promise<void>;
 }
 
 export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, get) => ({
   entityTypes: [],
   tileMetadataDefinitions: [],
+  locationMetadataDefinitions: [],
 
   addEntityType: async (entityType) => {
     set((state) => {
@@ -78,6 +81,23 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
       const projectToSave = {
         ...proj,
         tileMetadataDefinitions: get().tileMetadataDefinitions,
+      };
+      await persistProject(projectToSave);
+      set((state) => {
+        state.project = castDraft(projectToSave);
+      });
+    }
+  },
+
+  setLocationMetadataDefinitions: async (definitions) => {
+    set((state) => {
+      state.locationMetadataDefinitions = definitions.map((d) => castDraft(d));
+    });
+    const proj = get().project;
+    if (proj) {
+      const projectToSave = {
+        ...proj,
+        locationMetadataDefinitions: get().locationMetadataDefinitions,
       };
       await persistProject(projectToSave);
       set((state) => {

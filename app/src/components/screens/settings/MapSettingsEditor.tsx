@@ -29,7 +29,7 @@ import {
 } from '../common';
 import { EditorModal } from '../../common/EditorModal';
 
-type MapSettingsTab = 'terrain' | 'metadata' | 'layers';
+type MapSettingsTab = 'terrain' | 'metadata' | 'layers' | 'locations';
 
 interface MapSettingsEditorProps {
   initialTab?: MapSettingsTab;
@@ -179,6 +179,10 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
 
   const tileMetadataDefinitions = useEditorStore((state) => state.tileMetadataDefinitions);
   const setTileMetadataDefinitions = useEditorStore((state) => state.setTileMetadataDefinitions);
+  const locationMetadataDefinitions = useEditorStore((state) => state.locationMetadataDefinitions);
+  const setLocationMetadataDefinitions = useEditorStore(
+    (state) => state.setLocationMetadataDefinitions,
+  );
 
   const [activeTab, setActiveTab] = useState<MapSettingsTab>(initialTab);
   const toast = useToast();
@@ -234,6 +238,29 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
   }));
 
   const metadataItems: DialogListItem[] = tileMetadataDefinitions.map((definition) => ({
+    id: definition.key,
+    title: definition.label,
+    subtitle: definition.key,
+    badge: (
+      <Badge fontSize="9px" colorScheme="purple" variant="subtle">
+        {definition.type}
+      </Badge>
+    ),
+    meta: (
+      <HStack spacing={2}>
+        {definition.required && (
+          <Badge fontSize="9px" colorScheme="red" variant="subtle">
+            required
+          </Badge>
+        )}
+        <Text fontSize="10px" color="gray.500" fontFamily="mono">
+          default: {String(definition.defaultValue ?? '')}
+        </Text>
+      </HStack>
+    ),
+  }));
+
+  const locationItems: DialogListItem[] = locationMetadataDefinitions.map((definition) => ({
     id: definition.key,
     title: definition.label,
     subtitle: definition.key,
@@ -394,8 +421,23 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
     metadataDialog.onOpen();
   };
 
+  const openCreateLocation = () => {
+    setEditingMetadataKey(null);
+    setMetadataDraft(emptyMetadataDraft());
+    metadataDialog.onOpen();
+  };
+
   const openEditMetadata = (key: string) => {
     const definition = tileMetadataDefinitions.find((entry) => entry.key === key);
+    if (!definition) return;
+
+    setEditingMetadataKey(key);
+    setMetadataDraft(metadataDraftFromDefinition(definition));
+    metadataDialog.onOpen();
+  };
+
+  const openEditLocation = (key: string) => {
+    const definition = locationMetadataDefinitions.find((entry) => entry.key === key);
     if (!definition) return;
 
     setEditingMetadataKey(key);
@@ -437,14 +479,30 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
     };
 
     if (!editingMetadataKey) {
-      await setTileMetadataDefinitions([...tileMetadataDefinitions, nextDefinition]);
+      if (activeTab === 'metadata') {
+        await setTileMetadataDefinitions([...tileMetadataDefinitions, nextDefinition]);
+      } else {
+        await setLocationMetadataDefinitions([...locationMetadataDefinitions, nextDefinition]);
+      }
       toast({ title: 'Metadata field created', status: 'success', duration: 1200 });
     } else {
-      await setTileMetadataDefinitions(
-        tileMetadataDefinitions.map((entry) =>
-          entry.key === editingMetadataKey ? { ...nextDefinition, key: editingMetadataKey } : entry,
-        ),
-      );
+      if (activeTab === 'metadata') {
+        await setTileMetadataDefinitions(
+          tileMetadataDefinitions.map((entry) =>
+            entry.key === editingMetadataKey
+              ? { ...nextDefinition, key: editingMetadataKey }
+              : entry,
+          ),
+        );
+      } else {
+        await setLocationMetadataDefinitions(
+          locationMetadataDefinitions.map((entry) =>
+            entry.key === editingMetadataKey
+              ? { ...nextDefinition, key: editingMetadataKey }
+              : entry,
+          ),
+        );
+      }
       toast({ title: 'Metadata field updated', status: 'success', duration: 1200 });
     }
 
@@ -452,11 +510,21 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
   };
 
   const deleteMetadata = async (key: string) => {
-    const definition = tileMetadataDefinitions.find((entry) => entry.key === key);
+    const definition =
+      tileMetadataDefinitions.find((entry) => entry.key === key) ||
+      locationMetadataDefinitions.find((entry) => entry.key === key);
     if (!definition) return;
     if (!confirm(`Delete metadata field "${definition.label}"?`)) return;
 
-    await setTileMetadataDefinitions(tileMetadataDefinitions.filter((entry) => entry.key !== key));
+    if (tileMetadataDefinitions.some((d) => d.key === key)) {
+      await setTileMetadataDefinitions(
+        tileMetadataDefinitions.filter((entry) => entry.key !== key),
+      );
+    } else {
+      await setLocationMetadataDefinitions(
+        locationMetadataDefinitions.filter((entry) => entry.key !== key),
+      );
+    }
     toast({ title: 'Metadata field deleted', status: 'info', duration: 1200 });
   };
 
@@ -491,6 +559,21 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         emptyTitle="No metadata fields"
         emptyDescription="Define metadata schema fields that can be assigned per tile."
       />
+    ) : activeTab === 'locations' ? (
+      <DialogListWorkspace
+        title="Location Metadata Fields"
+        description="Project-level metadata schema for maps/locations."
+        items={locationItems}
+        addLabel="Add Location Metadata"
+        onAdd={openCreateLocation}
+        onOpenItem={openEditLocation}
+        onDeleteItem={(id) => {
+          void deleteMetadata(id);
+        }}
+        emptyIcon="📍"
+        emptyTitle="No location metadata"
+        emptyDescription="Define map/location metadata fields (e.g., music, indoors/outdoors)."
+      />
     ) : (
       <DialogListWorkspace
         title="Layer Definitions"
@@ -516,6 +599,11 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
           { id: 'terrain', label: 'Terrain', badge: terrainTypes.length },
           { id: 'metadata', label: 'Tile Metadata', badge: tileMetadataDefinitions.length },
           { id: 'layers', label: 'Layers', badge: layerDefinitions.length },
+          {
+            id: 'locations',
+            label: 'Location Metadata',
+            badge: locationMetadataDefinitions.length,
+          },
         ]}
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}

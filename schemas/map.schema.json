@@ -354,7 +354,7 @@
     },
     "MapMetadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": { "$ref": "#/$defs/PropertyValue" },
       "properties": {
         "description": { "type": "string" },
         "music": { "type": "string" },

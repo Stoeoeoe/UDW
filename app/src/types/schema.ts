@@ -19,6 +19,8 @@ export interface Project {
   entityTypes?: EntityType[];
   // Project-level tile metadata definitions shared by every tileset
   tileMetadataDefinitions?: PropertyDefinition[];
+  // Project-level location metadata definitions for maps/locations
+  locationMetadataDefinitions?: PropertyDefinition[];
   // Named variables exposed to the Lua sandbox at runtime
   gameVariables?: GameVariable[];
   // Scripting primitives

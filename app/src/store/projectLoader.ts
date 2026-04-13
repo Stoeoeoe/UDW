@@ -79,6 +79,15 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
     });
   }
 
+  // 1.73 Location (map) metadata definitions
+  if (proj?.locationMetadataDefinitions?.length) {
+    set((state) => {
+      state.locationMetadataDefinitions = proj.locationMetadataDefinitions!.map((d) =>
+        castDraft(d),
+      );
+    });
+  }
+
   // 1.75 Game variables
   if (proj?.gameVariables?.length) {
     set((state) => {
