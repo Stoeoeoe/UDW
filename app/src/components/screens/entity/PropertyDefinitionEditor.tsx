@@ -18,6 +18,7 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
+  FormLabel,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { PropertyDefinition, PropertyType } from '../../../types/schema';
@@ -48,19 +49,14 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
   allowedTypes,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  // Maintain a stable internal id for each property so that
-  // editing the editable `key` field doesn't change the React
-  // element identity and cause inputs to lose focus.
   const idMapRef = useRef<Record<string, string>>({});
 
   const genId = () => `pid_${Math.random().toString(36).slice(2, 9)}`;
 
-  // Ensure all incoming properties have an id assigned
   for (const p of properties) {
     if (!idMapRef.current[p.key]) idMapRef.current[p.key] = genId();
   }
 
-  // assign ids for newly added properties proactively
   const ensureIds = () => {
     for (const p of properties) {
       if (!idMapRef.current[p.key]) idMapRef.current[p.key] = genId();
@@ -69,12 +65,9 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
   ensureIds();
 
   const availablePropertyTypes = useMemo(() => {
-    if (!allowedTypes || allowedTypes.length === 0) {
-      return PROPERTY_TYPES;
-    }
-
-    const allowedSet = new Set<PropertyType>(allowedTypes);
-    const filtered = PROPERTY_TYPES.filter((type) => allowedSet.has(type.value));
+    if (!allowedTypes || allowedTypes.length === 0) return PROPERTY_TYPES;
+    const allowed = new Set<PropertyType>(allowedTypes);
+    const filtered = PROPERTY_TYPES.filter((t) => allowed.has(t.value));
     return filtered.length > 0 ? filtered : PROPERTY_TYPES;
   }, [allowedTypes]);
 
@@ -102,8 +95,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
     (key: string) => {
       onChange(properties.filter((p) => p.key !== key));
       if (expandedId === key) setExpandedId(null);
-      // cleanup id mapping
-      if (idMapRef.current[key]) delete idMapRef.current[key];
+      delete idMapRef.current[key];
     },
     [properties, onChange, expandedId],
   );
@@ -177,7 +169,6 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
         </Tooltip>
       </Flex>
 
-      {/* Property list */}
       {properties.length === 0 && (
         <Box px={3} py={4} textAlign="center">
           <Text fontSize="xs" color="gray.600" fontStyle="italic">
@@ -192,8 +183,6 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
       {properties.map((prop, idx) => {
         const isExpanded = expandedId === prop.key;
         const stableId = idMapRef.current[prop.key] || genId();
-
-        // ensure mapping exists
         if (!idMapRef.current[prop.key]) idMapRef.current[prop.key] = stableId;
 
         return (
@@ -261,43 +250,30 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                   {/* Label & Key */}
                   <HStack spacing={3}>
                     <Box flex={1}>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        LABEL
-                      </Text>
+                      <FormLabel>Label</FormLabel>
                       <Input
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         value={prop.label}
                         onChange={(e) => updateProperty(prop.key, { label: e.target.value })}
                       />
                     </Box>
                     <Box flex={1}>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        KEY
-                      </Text>
+                      <FormLabel>Key</FormLabel>
                       <Input
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         fontFamily="mono"
                         value={prop.key}
                         onChange={(e) => {
                           const newKey = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
-                          // Update key in the property
                           const updated = properties.map((p) =>
                             p.key === prop.key ? { ...p, key: newKey } : p,
                           );
-                          // Preserve internal id mapping so element identity doesn't change
                           const oldId = idMapRef.current[prop.key];
                           if (oldId) {
                             idMapRef.current[newKey] = oldId;
                             delete idMapRef.current[prop.key];
                           }
                           onChange(updated);
-                          // Keep expanded on the new key
                           setExpandedId(newKey);
                         }}
                       />
@@ -307,14 +283,9 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                   {/* Type & Required */}
                   <HStack spacing={3}>
                     <Box flex={1}>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        TYPE
-                      </Text>
+                      <FormLabel>Type</FormLabel>
                       <Select
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         value={prop.type}
                         onChange={(e) => {
                           const newType = e.target.value as PropertyType;
@@ -327,46 +298,31 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                         }}
                       >
                         {availablePropertyTypes.map((t) => (
-                          <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+                          <option key={t.value} value={t.value}>
                             {t.icon} {t.label}
                           </option>
                         ))}
                       </Select>
                     </Box>
                     <Box>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        REQUIRED
-                      </Text>
+                      <FormLabel>Required</FormLabel>
                       <Switch
                         size="sm"
                         colorScheme="blue"
                         isChecked={prop.required}
-                        onChange={(e) =>
-                          updateProperty(prop.key, {
-                            required: e.target.checked,
-                          })
-                        }
+                        onChange={(e) => updateProperty(prop.key, { required: e.target.checked })}
                       />
                     </Box>
                   </HStack>
 
                   {/* Default value */}
                   <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DEFAULT VALUE
-                    </Text>
+                    <FormLabel>Default Value</FormLabel>
                     {prop.type === 'string' && (
                       <Input
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         value={typeof prop.defaultValue === 'string' ? prop.defaultValue : ''}
-                        onChange={(e) =>
-                          updateProperty(prop.key, {
-                            defaultValue: e.target.value,
-                          })
-                        }
+                        onChange={(e) => updateProperty(prop.key, { defaultValue: e.target.value })}
                       />
                     )}
                     {prop.type === 'int' && (
@@ -381,7 +337,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                           })
                         }
                       >
-                        <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                        <NumberInputField />
                         <NumberInputStepper>
                           <NumberIncrementStepper />
                           <NumberDecrementStepper />
@@ -395,12 +351,10 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                         step={0.1}
                         precision={2}
                         onChange={(_, val) =>
-                          updateProperty(prop.key, {
-                            defaultValue: isNaN(val) ? 0 : val,
-                          })
+                          updateProperty(prop.key, { defaultValue: isNaN(val) ? 0 : val })
                         }
                       >
-                        <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                        <NumberInputField />
                         <NumberInputStepper>
                           <NumberIncrementStepper />
                           <NumberDecrementStepper />
@@ -413,9 +367,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                         colorScheme="green"
                         isChecked={!!prop.defaultValue}
                         onChange={(e) =>
-                          updateProperty(prop.key, {
-                            defaultValue: e.target.checked,
-                          })
+                          updateProperty(prop.key, { defaultValue: e.target.checked })
                         }
                       />
                     )}
@@ -442,7 +394,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                           }
                           flex={1}
                         >
-                          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                          <NumberInputField />
                         </NumberInput>
                         <Text fontSize="xs" color="gray.400" flexShrink={0}>
                           Y
@@ -465,25 +417,18 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                           }
                           flex={1}
                         >
-                          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+                          <NumberInputField />
                         </NumberInput>
                       </HStack>
                     )}
                     {prop.type === 'enum' && (
                       <Select
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         value={typeof prop.defaultValue === 'string' ? prop.defaultValue : ''}
-                        onChange={(e) =>
-                          updateProperty(prop.key, {
-                            defaultValue: e.target.value,
-                          })
-                        }
+                        onChange={(e) => updateProperty(prop.key, { defaultValue: e.target.value })}
                       >
                         {(prop.constraints?.options || []).map((opt) => (
-                          <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
+                          <option key={opt} value={opt}>
                             {opt}
                           </option>
                         ))}
@@ -494,26 +439,18 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                   {/* Enum options editor */}
                   {prop.type === 'enum' && (
                     <Box>
-                      <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                        ENUM OPTIONS
-                      </Text>
+                      <FormLabel>Enum Options</FormLabel>
                       <VStack spacing={1} align="stretch">
                         {(prop.constraints?.options || []).map((opt, optIdx) => (
                           <HStack key={optIdx} spacing={1}>
                             <Input
                               size="xs"
-                              bg="#0a0a0b"
-                              borderColor="#1a1a2e"
-                              color="white"
                               value={opt}
                               onChange={(e) => {
                                 const opts = [...(prop.constraints?.options || [])];
                                 opts[optIdx] = e.target.value;
                                 updateProperty(prop.key, {
-                                  constraints: {
-                                    ...prop.constraints,
-                                    options: opts,
-                                  },
+                                  constraints: { ...prop.constraints, options: opts },
                                 });
                               }}
                             />
@@ -529,11 +466,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                                   (_, i) => i !== optIdx,
                                 );
                                 updateProperty(prop.key, {
-                                  constraints: {
-                                    ...prop.constraints,
-                                    options: opts,
-                                  },
-                                  // Reset default if it was removed
+                                  constraints: { ...prop.constraints, options: opts },
                                   ...(prop.defaultValue === opt
                                     ? { defaultValue: opts[0] || '' }
                                     : {}),
@@ -554,10 +487,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                               `option_${(prop.constraints?.options?.length || 0) + 1}`,
                             ];
                             updateProperty(prop.key, {
-                              constraints: {
-                                ...prop.constraints,
-                                options: opts,
-                              },
+                              constraints: { ...prop.constraints, options: opts },
                             });
                           }}
                         >
@@ -571,9 +501,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                   {(prop.type === 'int' || prop.type === 'float' || prop.type === 'number') && (
                     <HStack spacing={3}>
                       <Box flex={1}>
-                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                          MIN
-                        </Text>
+                        <FormLabel>Min</FormLabel>
                         <NumberInput
                           size="xs"
                           value={prop.constraints?.min ?? ''}
@@ -586,18 +514,11 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                             })
                           }
                         >
-                          <NumberInputField
-                            bg="#0a0a0b"
-                            borderColor="#1a1a2e"
-                            color="white"
-                            placeholder="—"
-                          />
+                          <NumberInputField placeholder="—" />
                         </NumberInput>
                       </Box>
                       <Box flex={1}>
-                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                          MAX
-                        </Text>
+                        <FormLabel>Max</FormLabel>
                         <NumberInput
                           size="xs"
                           value={prop.constraints?.max ?? ''}
@@ -610,12 +531,7 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
                             })
                           }
                         >
-                          <NumberInputField
-                            bg="#0a0a0b"
-                            borderColor="#1a1a2e"
-                            color="white"
-                            placeholder="—"
-                          />
+                          <NumberInputField placeholder="—" />
                         </NumberInput>
                       </Box>
                     </HStack>
@@ -623,25 +539,18 @@ export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> =
 
                   {/* Description */}
                   <Box>
-                    <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                      DESCRIPTION
-                    </Text>
+                    <FormLabel>Description</FormLabel>
                     <Input
                       size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
                       value={prop.description ?? ''}
                       onChange={(e) =>
-                        updateProperty(prop.key, {
-                          description: e.target.value || undefined,
-                        })
+                        updateProperty(prop.key, { description: e.target.value || undefined })
                       }
                       placeholder="Optional help text"
                     />
                   </Box>
 
-                  {/* Reorder buttons */}
+                  {/* Reorder */}
                   <HStack spacing={1} justify="flex-end">
                     <Tooltip label="Move Up" hasArrow>
                       <IconButton

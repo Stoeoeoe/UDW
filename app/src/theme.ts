@@ -6,6 +6,21 @@ const config: ThemeConfig = {
   useSystemColorMode: false,
 };
 
+// Shared field style applied to all text-entry components
+const inputFieldStyle = {
+  bg: '#0a0a0b',
+  borderColor: 'gray.700',
+  color: 'white',
+  fontSize: 'sm',
+  _hover: {
+    borderColor: 'gray.600',
+  },
+  _focus: {
+    borderColor: 'blue.500',
+    boxShadow: 'none',
+  },
+};
+
 export const theme = extendTheme({
   config,
   colors: {
@@ -33,6 +48,7 @@ export const theme = extendTheme({
         fontSize: 'xs',
         fontWeight: 'bold',
         textTransform: 'uppercase',
+        letterSpacing: 'wide',
         color: 'gray.500',
         mb: 2,
       },
@@ -40,16 +56,33 @@ export const theme = extendTheme({
     Input: {
       variants: {
         outline: {
+          field: inputFieldStyle,
+        },
+      },
+      defaultProps: {
+        size: 'sm',
+        variant: 'outline',
+      },
+    },
+    NumberInput: {
+      variants: {
+        outline: {
+          field: inputFieldStyle,
+        },
+      },
+      defaultProps: {
+        size: 'sm',
+        variant: 'outline',
+      },
+    },
+    Select: {
+      variants: {
+        outline: {
           field: {
-            bg: 'gray.950',
-            borderColor: 'gray.700',
-            fontSize: 'sm',
-            _hover: {
-              borderColor: 'gray.600',
-            },
-            _focus: {
-              borderColor: 'blue.500',
-              boxShadow: 'none',
+            ...inputFieldStyle,
+            // Native select needs explicit option background for dark mode
+            '> option, > optgroup': {
+              bg: '#0a0a0b',
             },
           },
         },
@@ -61,18 +94,7 @@ export const theme = extendTheme({
     },
     Textarea: {
       variants: {
-        outline: {
-          bg: 'gray.950',
-          borderColor: 'gray.700',
-          fontSize: 'sm',
-          _hover: {
-            borderColor: 'gray.600',
-          },
-          _focus: {
-            borderColor: 'blue.500',
-            boxShadow: 'none',
-          },
-        },
+        outline: inputFieldStyle,
       },
       defaultProps: {
         size: 'sm',

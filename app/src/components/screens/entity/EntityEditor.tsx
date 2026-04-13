@@ -146,9 +146,6 @@ export const EntityEditor: React.FC = () => {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search entity types..."
-          bg="#0a0a0b"
-          borderColor="#333"
-          color="gray.100"
         />
       }
       onDeleteItem={async (item) => {
@@ -232,34 +229,15 @@ const EntityTypeDetail: React.FC<{
     <VStack align="stretch" spacing={5}>
       <VStack align="stretch" spacing={3}>
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            ID
-          </FormLabel>
+          <FormLabel>ID</FormLabel>
           <Text fontSize="xs" fontFamily="mono" color="gray.400">
             {selectedType.id}
           </Text>
         </FormControl>
 
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Display Name
-          </FormLabel>
+          <FormLabel>Display Name</FormLabel>
           <Input
-            size="sm"
-            bg="gray.950"
-            color="white"
             value={selectedType.displayName}
             onChange={(e) => onPropertyChange('displayName', e.target.value)}
           />
@@ -267,44 +245,21 @@ const EntityTypeDetail: React.FC<{
 
         <HStack spacing={3}>
           <FormControl flex={1}>
-            <FormLabel
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={1}
-            >
-              Category
-            </FormLabel>
+            <FormLabel>Category</FormLabel>
             <Select
-              size="sm"
-              bg="gray.950"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedType.category}
               onChange={(e) => onPropertyChange('category', e.target.value)}
             >
               {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value} style={{ background: '#0a0a0b' }}>
+                <option key={c.value} value={c.value}>
                   {c.icon} {c.label}
                 </option>
               ))}
             </Select>
           </FormControl>
           <FormControl flex={1}>
-            <FormLabel
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={1}
-            >
-              Group
-            </FormLabel>
+            <FormLabel>Group</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
-              color="white"
               value={selectedType.group ?? ''}
               onChange={(e) => onPropertyChange('group', e.target.value || undefined)}
               placeholder="Ungrouped"
@@ -321,19 +276,8 @@ const EntityTypeDetail: React.FC<{
         </HStack>
 
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Description
-          </FormLabel>
+          <FormLabel>Description</FormLabel>
           <Input
-            size="sm"
-            bg="gray.950"
-            color="white"
             value={selectedType.description ?? ''}
             onChange={(e) => onPropertyChange('description', e.target.value || undefined)}
             placeholder="Optional"
@@ -342,27 +286,11 @@ const EntityTypeDetail: React.FC<{
 
         <HStack spacing={3}>
           <FormControl flex={1}>
-            <FormLabel
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={1}
-            >
-              Icon
-            </FormLabel>
+            <FormLabel>Icon</FormLabel>
             <IconPicker value={selectedType.icon} onChange={(v) => onPropertyChange('icon', v)} />
           </FormControl>
           <FormControl flex={1}>
-            <FormLabel
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={1}
-            >
-              Color
-            </FormLabel>
+            <FormLabel>Color</FormLabel>
             <ColorPicker
               value={selectedType.placeholderColor}
               onChange={(c) => onPropertyChange('placeholderColor', c)}
@@ -371,7 +299,7 @@ const EntityTypeDetail: React.FC<{
         </HStack>
       </VStack>
 
-      <Divider borderColor="#071018" />
+      <Divider />
 
       <VStack align="stretch" spacing={3}>
         <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
@@ -382,7 +310,6 @@ const EntityTypeDetail: React.FC<{
             W
           </Text>
           <NumberInput
-            size="sm"
             min={1}
             value={selectedType.defaultSize?.[0] ?? 16}
             precision={0}
@@ -395,13 +322,12 @@ const EntityTypeDetail: React.FC<{
             }}
             flex={1}
           >
-            <NumberInputField bg="gray.950" borderColor="#1a1a2e" color="white" />
+            <NumberInputField />
           </NumberInput>
           <Text fontSize="xs" color="gray.400" flexShrink={0}>
             H
           </Text>
           <NumberInput
-            size="sm"
             min={1}
             value={selectedType.defaultSize?.[1] ?? 16}
             precision={0}
@@ -414,12 +340,12 @@ const EntityTypeDetail: React.FC<{
             }}
             flex={1}
           >
-            <NumberInputField bg="gray.950" borderColor="#1a1a2e" color="white" />
+            <NumberInputField />
           </NumberInput>
         </HStack>
       </VStack>
 
-      <Divider borderColor="#071018" />
+      <Divider />
 
       <EntitySpriteEditor
         spritePath={selectedType.sprite?.path}
@@ -427,14 +353,14 @@ const EntityTypeDetail: React.FC<{
         onSizeChange={(size) => onPropertyChange('defaultSize', size)}
       />
 
-      <Divider borderColor="#071018" />
+      <Divider />
 
       <PropertyDefinitionEditor
         properties={selectedType.properties}
         onChange={onPropertiesChange}
       />
 
-      <Divider borderColor="#071018" />
+      <Divider />
 
       <Box>
         <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={2}>

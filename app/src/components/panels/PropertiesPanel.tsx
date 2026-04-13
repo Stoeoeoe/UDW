@@ -124,57 +124,24 @@ export const PropertiesPanel: React.FC = () => {
           {/* Static Identity Section */}
           <VStack align="stretch" spacing={3}>
             <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Core ID
-              </FormLabel>
-              <Input
-                size="xs"
-                variant="filled"
-                bg="#0a0a0b"
-                value={selectedEntity.id}
-                isReadOnly
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
-              />
+              <FormLabel>Core ID</FormLabel>
+              <Input value={selectedEntity.id} isReadOnly fontFamily="mono" />
             </FormControl>
 
             <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Entity Type
-              </FormLabel>
+              <FormLabel>Entity Type</FormLabel>
               <Text fontSize="xs" color="blue.400" fontWeight="bold">
                 {selectedEntity.typeId}
               </Text>
             </FormControl>
 
             <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Position
-              </FormLabel>
+              <FormLabel>Position</FormLabel>
               <HStack spacing={2}>
                 <Text fontSize="xs" color="gray.400" flexShrink={0}>
                   X
                 </Text>
                 <NumberInput
-                  size="xs"
                   value={localPosition.x}
                   step={0.01}
                   onChange={(str) => {
@@ -189,19 +156,12 @@ export const PropertiesPanel: React.FC = () => {
                   }}
                   flex={1}
                 >
-                  <NumberInputField
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
-                    fontFamily="mono"
-                    _hover={{ bg: '#071018' }}
-                  />
+                  <NumberInputField fontFamily="mono" />
                 </NumberInput>
                 <Text fontSize="xs" color="gray.400" flexShrink={0}>
                   Y
                 </Text>
                 <NumberInput
-                  size="xs"
                   value={localPosition.y}
                   step={0.01}
                   onChange={(str) => {
@@ -216,32 +176,14 @@ export const PropertiesPanel: React.FC = () => {
                   }}
                   flex={1}
                 >
-                  <NumberInputField
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
-                    fontFamily="mono"
-                    _hover={{ bg: '#071018' }}
-                  />
+                  <NumberInputField fontFamily="mono" />
                 </NumberInput>
               </HStack>
             </FormControl>
 
             <FormControl>
-              <FormLabel
-                color="gray.500"
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                mb={1}
-              >
-                Label
-              </FormLabel>
+              <FormLabel>Label</FormLabel>
               <Input
-                size="xs"
-                variant="filled"
-                bg="#0a0a0b"
-                color="white"
                 value={selectedEntity.label ?? ''}
                 placeholder="Optional display label"
                 onChange={(e) => {
@@ -249,12 +191,11 @@ export const PropertiesPanel: React.FC = () => {
                     updateEntityLabel(selectedEntityId, e.target.value || undefined);
                   }
                 }}
-                _hover={{ bg: '#071018' }}
               />
             </FormControl>
           </VStack>
 
-          <Divider borderColor="#071018" />
+          <Divider />
 
           {/* Dynamic Properties Section */}
           <VStack align="stretch" spacing={4}>

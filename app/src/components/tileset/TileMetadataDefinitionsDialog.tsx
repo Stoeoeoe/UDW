@@ -45,17 +45,13 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
   const [isSaving, setIsSaving] = useState(false);
 
   const normalizedKey = useMemo(() => key.replace(/[^a-zA-Z0-9_]/g, '').trim(), [key]);
-
   const keyExists = useMemo(
-    () => existingDefinitions.some((definition) => definition.key === normalizedKey),
+    () => existingDefinitions.some((d) => d.key === normalizedKey),
     [existingDefinitions, normalizedKey],
   );
 
   const canSave = useMemo(() => {
-    if (isSaving) return false;
-    if (!normalizedKey) return false;
-    if (keyExists) return false;
-    if (!label.trim()) return false;
+    if (isSaving || !normalizedKey || keyExists || !label.trim()) return false;
     if (type === 'enum') return enumOptions.filter((o) => o.trim()).length > 0;
     return true;
   }, [enumOptions, isSaving, keyExists, label, normalizedKey, type]);
@@ -69,12 +65,10 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
 
   const handleCreate = async () => {
     if (!canSave) return;
-
     const constraints =
       type === 'enum'
         ? { options: enumOptions.filter((o) => o.trim()).map((o) => o.trim()) }
         : undefined;
-
     const nextDefinition: PropertyDefinition = {
       key: normalizedKey,
       label: label.trim(),
@@ -84,7 +78,6 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
       description: description.trim() || undefined,
       constraints,
     };
-
     setIsSaving(true);
     try {
       await onCreate(nextDefinition);
@@ -97,6 +90,7 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
   return (
     <EntityFormDialog
       title="New Tile Metadata"
+      description="Define a new project-level metadata field for tiles."
       onCancel={onClose}
       onSubmit={() => {
         void handleCreate();
@@ -106,38 +100,26 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
       minWidth="520px"
     >
       <FormControl isRequired>
-        <FormLabel fontSize="xs" color="gray.400">
-          Label
-        </FormLabel>
+        <FormLabel>Label</FormLabel>
         <Input
-          size="sm"
-          bg="#0a0a0b"
-          borderColor="#1a1a2e"
-          color="white"
           value={label}
-          onChange={(event) => setLabel(event.target.value)}
+          onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. Is Farmable"
           autoFocus
         />
       </FormControl>
 
       <FormControl isRequired>
-        <FormLabel fontSize="xs" color="gray.400">
-          Key
-        </FormLabel>
+        <FormLabel>Key</FormLabel>
         <Input
-          size="sm"
-          bg="#0a0a0b"
-          borderColor="#1a1a2e"
-          color="white"
           value={key}
-          onChange={(event) => setKey(event.target.value)}
+          onChange={(e) => setKey(e.target.value)}
           placeholder="isFarmable"
           fontFamily="mono"
           isInvalid={keyExists}
         />
         {keyExists && (
-          <Text mt={1} fontSize="10px" color="red.400">
+          <Text mt={1} fontSize="xs" color="red.400">
             A metadata entry with this key already exists.
           </Text>
         )}
@@ -145,17 +127,11 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
 
       <HStack spacing={4} align="start">
         <FormControl>
-          <FormLabel fontSize="xs" color="gray.400">
-            Type
-          </FormLabel>
+          <FormLabel>Type</FormLabel>
           <Select
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
             value={type}
-            onChange={(event) => {
-              const nextType = event.target.value as PropertyType;
+            onChange={(e) => {
+              const nextType = e.target.value as PropertyType;
               setType(nextType);
               if (nextType === 'string' || nextType === 'enum') setDefaultString('');
               if (nextType === 'int' || nextType === 'float' || nextType === 'number')
@@ -164,39 +140,27 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
               if (nextType !== 'enum') setEnumOptions([]);
             }}
           >
-            {SUPPORTED_METADATA_TYPES.map((entry) => (
-              <option key={entry} value={entry} style={{ background: '#0a0a0b' }}>
-                {entry}
+            {SUPPORTED_METADATA_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
               </option>
             ))}
           </Select>
         </FormControl>
 
         <FormControl>
-          <FormLabel fontSize="xs" color="gray.400">
-            Required
-          </FormLabel>
-          <Switch
-            size="sm"
-            isChecked={required}
-            onChange={(event) => setRequired(event.target.checked)}
-          />
+          <FormLabel>Required</FormLabel>
+          <Switch size="sm" isChecked={required} onChange={(e) => setRequired(e.target.checked)} />
         </FormControl>
       </HStack>
 
       {type === 'enum' && (
         <FormControl isRequired>
-          <FormLabel fontSize="xs" color="gray.400">
-            Enum Options
-          </FormLabel>
+          <FormLabel>Enum Options</FormLabel>
           <VStack spacing={1} align="stretch">
             {enumOptions.map((opt, idx) => (
               <HStack key={idx} spacing={1}>
                 <Input
-                  size="sm"
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
                   value={opt}
                   onChange={(e) => {
                     const next = [...enumOptions];
@@ -230,58 +194,38 @@ export const TileMetadataDefinitionsDialog: React.FC<TileMetadataDefinitionsDial
       )}
 
       <FormControl>
-        <FormLabel fontSize="xs" color="gray.400">
-          Default Value
-        </FormLabel>
+        <FormLabel>Default Value</FormLabel>
         {(type === 'int' || type === 'float' || type === 'number') && (
           <NumberInput
-            size="sm"
             value={defaultNumber}
             step={type === 'int' ? 1 : 0.01}
             precision={type === 'int' ? 0 : 2}
-            onChange={(_, valueAsNumber) => {
-              setDefaultNumber(Number.isNaN(valueAsNumber) ? 0 : valueAsNumber);
-            }}
+            onChange={(_, v) => setDefaultNumber(Number.isNaN(v) ? 0 : v)}
           >
-            <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+            <NumberInputField />
             <NumberInputStepper>
               <NumberIncrementStepper />
               <NumberDecrementStepper />
             </NumberInputStepper>
           </NumberInput>
         )}
-
         {(type === 'string' || type === 'enum') && (
-          <Input
-            size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            value={defaultString}
-            onChange={(event) => setDefaultString(event.target.value)}
-          />
+          <Input value={defaultString} onChange={(e) => setDefaultString(e.target.value)} />
         )}
-
         {type === 'boolean' && (
           <Switch
             size="sm"
             isChecked={defaultBoolean}
-            onChange={(event) => setDefaultBoolean(event.target.checked)}
+            onChange={(e) => setDefaultBoolean(e.target.checked)}
           />
         )}
       </FormControl>
 
       <FormControl>
-        <FormLabel fontSize="xs" color="gray.400">
-          Description
-        </FormLabel>
+        <FormLabel>Description</FormLabel>
         <Input
-          size="sm"
-          bg="#0a0a0b"
-          borderColor="#1a1a2e"
-          color="white"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional"
         />
       </FormControl>

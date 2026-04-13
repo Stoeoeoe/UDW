@@ -152,33 +152,14 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
 
         return (
           <FormControl key={prop.key}>
-            <FormLabel
-              fontSize="10px"
-              color="gray.400"
-              mb={2}
-              textTransform="uppercase"
-              letterSpacing="wide"
-            >
-              {prop.label}
-            </FormLabel>
+            <FormLabel>{prop.label}</FormLabel>
 
             <Box>
               {prop.type === 'string' && (
                 <Input
-                  size="sm"
-                  bg="#05060a"
-                  borderColor="#0b1116"
-                  _focus={{
-                    borderColor: 'blue.500',
-                    boxShadow: '0 0 0 2px rgba(66,153,225,0.6)',
-                  }}
-                  color="white"
                   value={localVal}
                   onChange={(e) => {
-                    setLocalValues((prev) => ({
-                      ...prev,
-                      [prop.key]: e.target.value,
-                    }));
+                    setLocalValues((prev) => ({ ...prev, [prop.key]: e.target.value }));
                     onChange(prop.key, e.target.value);
                   }}
                   onFocus={() => {
@@ -192,7 +173,6 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
 
               {prop.type === 'int' && (
                 <NumberInput
-                  size="sm"
                   value={localVal}
                   min={prop.constraints?.min}
                   max={prop.constraints?.max}
@@ -200,9 +180,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   precision={0}
                   onChange={(str) => {
                     setLocalValues((prev) => ({ ...prev, [prop.key]: str }));
-                    if (numericRegex.test(str)) {
-                      onChange(prop.key, Math.round(parseFloat(str)));
-                    }
+                    if (numericRegex.test(str)) onChange(prop.key, Math.round(parseFloat(str)));
                   }}
                   onFocus={() => {
                     focusedRef.current[prop.key] = true;
@@ -212,7 +190,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     commitNumeric(prop.key, true);
                   }}
                 >
-                  <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                  <NumberInputField />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
@@ -222,16 +200,13 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
 
               {prop.type === 'float' && (
                 <NumberInput
-                  size="sm"
                   value={localVal}
                   min={prop.constraints?.min}
                   max={prop.constraints?.max}
                   step={prop.constraints?.step ?? 0.01}
                   onChange={(str) => {
                     setLocalValues((prev) => ({ ...prev, [prop.key]: str }));
-                    if (numericRegex.test(str)) {
-                      onChange(prop.key, parseFloat(str));
-                    }
+                    if (numericRegex.test(str)) onChange(prop.key, parseFloat(str));
                   }}
                   onFocus={() => {
                     focusedRef.current[prop.key] = true;
@@ -241,7 +216,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     commitNumeric(prop.key, false);
                   }}
                 >
-                  <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                  <NumberInputField />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
@@ -259,21 +234,14 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
 
               {prop.type === 'enum' && (
                 <Select
-                  size="sm"
-                  bg="#05060a"
-                  borderColor="#0b1116"
-                  color="white"
                   value={localVal}
                   onChange={(e) => {
-                    setLocalValues((prev) => ({
-                      ...prev,
-                      [prop.key]: e.target.value,
-                    }));
+                    setLocalValues((prev) => ({ ...prev, [prop.key]: e.target.value }));
                     onChange(prop.key, e.target.value);
                   }}
                 >
                   {(prop.constraints?.options || []).map((opt) => (
-                    <option key={opt} value={opt} style={{ background: '#05060a', color: '#fff' }}>
+                    <option key={opt} value={opt}>
                       {opt}
                     </option>
                   ))}
@@ -283,13 +251,9 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
               {prop.type === 'color' && (
                 <Input
                   type="color"
-                  size="sm"
                   value={localVal}
                   onChange={(e) => {
-                    setLocalValues((prev) => ({
-                      ...prev,
-                      [prop.key]: e.target.value,
-                    }));
+                    setLocalValues((prev) => ({ ...prev, [prop.key]: e.target.value }));
                     onChange(prop.key, e.target.value);
                   }}
                 />
@@ -301,7 +265,6 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     X
                   </Text>
                   <NumberInput
-                    size="sm"
                     value={
                       Array.isArray(currentValue)
                         ? String(currentValue[0] ?? 0)
@@ -318,13 +281,12 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     }}
                     flex={1}
                   >
-                    <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                    <NumberInputField />
                   </NumberInput>
                   <Text fontSize="xs" color="gray.400" flexShrink={0}>
                     Y
                   </Text>
                   <NumberInput
-                    size="sm"
                     value={
                       Array.isArray(currentValue)
                         ? String(currentValue[1] ?? 0)
@@ -341,7 +303,7 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                     }}
                     flex={1}
                   >
-                    <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
+                    <NumberInputField />
                   </NumberInput>
                 </HStack>
               )}

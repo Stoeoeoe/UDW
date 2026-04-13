@@ -1,19 +1,10 @@
 import React from 'react';
-import {
-  Box,
-  Button,
-  FormControl,
-  FormLabel,
-  HStack,
-  Input,
-  Select,
-  Text,
-  Textarea,
-  VStack,
-} from '@chakra-ui/react';
+import { FormControl, FormLabel, Input, Select, Textarea, Text, VStack } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
+import type { PropertyValue } from '../../../types/schema';
 import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { EditorModal } from '../../common/EditorModal';
+import { EntityFormDialog } from '../common/EntityFormDialog';
 
 interface MetadataDialogProps {
   isOpen: boolean;
@@ -22,7 +13,6 @@ interface MetadataDialogProps {
 }
 
 type VariationOverrideKey = 'mapNameOverride' | 'baseTilesetIdOverride' | 'descriptionOverride';
-
 type VariationMetadataValues = Record<string, string | undefined>;
 
 export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose, initialTab }) => {
@@ -32,338 +22,220 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
   const updateVariation = useEditorStore((state) => state.updateVariation);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
   const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
-
-  const activeVariation =
-    currentMap?.variations?.find((variation) => variation.id === activeVariationId) || null;
-
   const locationMetadataDefinitions = useEditorStore((s) => s.locationMetadataDefinitions);
+
+  const activeVariation = currentMap?.variations?.find((v) => v.id === activeVariationId) || null;
 
   if (!currentMap) {
     return (
-      <EditorModal isOpen={isOpen} onClose={onClose}>
-        <Box
-          bg="gray.900"
-          p={8}
-          rounded="2xl"
-          border="1px"
-          borderColor="gray.800"
-          boxShadow="2xl"
-          w="lg"
+      <EditorModal isOpen={isOpen} onClose={onClose} size="sm">
+        <EntityFormDialog
+          title="Map Metadata"
+          description="Select a map first to edit map or variation metadata."
+          onCancel={onClose}
         >
-          <VStack spacing={4} align="stretch">
-            <Text color="white" fontSize="lg" fontWeight="bold">
-              Map Metadata
-            </Text>
-            <Text fontSize="sm" color="gray.500">
-              Select a map first to edit map or variation metadata.
-            </Text>
-            <Button onClick={onClose} alignSelf="flex-end">
-              Close
-            </Button>
-          </VStack>
-        </Box>
+          <Text fontSize="sm" color="gray.500">
+            No map is currently open.
+          </Text>
+        </EntityFormDialog>
       </EditorModal>
     );
   }
 
   const updateMapMetadata = (key: 'description' | 'music' | 'ambience', value: string) => {
-    const nextMetadata = {
-      ...(currentMap.metadata || {}),
-      [key]: value || undefined,
-    };
-    updateCurrentMap({ metadata: nextMetadata });
+    updateCurrentMap({ metadata: { ...(currentMap.metadata || {}), [key]: value || undefined } });
   };
 
   const updateMapMetadataGeneric = (key: string, value: unknown) => {
-    const nextMetadata = {
-      ...(currentMap.metadata || {}),
-      [key]: value ?? undefined,
-    } as Record<string, unknown>;
-    updateCurrentMap({ metadata: Object.keys(nextMetadata).length > 0 ? nextMetadata : undefined });
+    const next = { ...(currentMap.metadata || {}), [key]: value ?? undefined } as Record<
+      string,
+      unknown
+    >;
+    updateCurrentMap({ metadata: Object.keys(next).length > 0 ? next : undefined });
   };
 
   const updateVariationMetadata = (key: VariationOverrideKey, value: string) => {
     if (!activeVariation) return;
-
-    const currentMetadata = (activeVariation.metadata || {}) as VariationMetadataValues;
-    const nextMetadata: VariationMetadataValues = {
-      ...currentMetadata,
+    const next: VariationMetadataValues = {
+      ...((activeVariation.metadata || {}) as VariationMetadataValues),
       [key]: value || undefined,
     };
-
-    (['mapNameOverride', 'baseTilesetIdOverride', 'descriptionOverride'] as const).forEach(
-      (overrideKey) => {
-        const raw = nextMetadata[overrideKey];
-        if (!raw || !String(raw).trim()) {
-          delete nextMetadata[overrideKey];
-        }
-      },
-    );
-
+    (['mapNameOverride', 'baseTilesetIdOverride', 'descriptionOverride'] as const).forEach((k) => {
+      if (!next[k]?.trim()) delete next[k];
+    });
     updateVariation(activeVariation.id, {
-      metadata: Object.keys(nextMetadata).length > 0 ? nextMetadata : undefined,
+      metadata: Object.keys(next).length > 0 ? next : undefined,
     });
   };
 
   const updateVariationMetadataGeneric = (key: string, value: unknown) => {
     if (!activeVariation) return;
-    const currentMetadata = (activeVariation.metadata || {}) as Record<string, unknown>;
-    const nextMetadata: Record<string, unknown> = {
-      ...currentMetadata,
+    const next: Record<string, unknown> = {
+      ...((activeVariation.metadata || {}) as Record<string, unknown>),
       [key]: value ?? undefined,
     };
-    // remove empty entries
-    Object.keys(nextMetadata).forEach((k) => {
-      if (nextMetadata[k] === undefined) delete nextMetadata[k];
+    Object.keys(next).forEach((k) => {
+      if (next[k] === undefined) delete next[k];
     });
     updateVariation(activeVariation.id, {
-      metadata: Object.keys(nextMetadata).length > 0 ? nextMetadata : undefined,
+      metadata: Object.keys(next).length > 0 ? next : undefined,
     });
   };
 
-  const variationMetadata = ((activeVariation?.metadata || {}) as VariationMetadataValues) || {};
-
-  // If project defines location metadata fields, render them dynamically
+  const variationMetadata = (activeVariation?.metadata || {}) as VariationMetadataValues;
   const hasLocationDefs = (locationMetadataDefinitions || []).length > 0;
 
+  const isVariationTab = initialTab === 'variation' && !!activeVariation;
+  const title = isVariationTab ? `Variation: ${activeVariation.displayName}` : 'Map Metadata';
+  const description = isVariationTab
+    ? 'Override map properties for this variation.'
+    : 'Edit base map metadata.';
+
   return (
-    <EditorModal isOpen={isOpen} onClose={onClose}>
-      <Box
-        bg="gray.900"
-        p={6}
-        rounded="2xl"
-        border="1px"
-        borderColor="gray.800"
-        boxShadow="2xl"
-        w="2xl"
-        maxW="90vw"
-        maxH="85vh"
-        overflow="hidden"
+    <EditorModal isOpen={isOpen} onClose={onClose} size="xl">
+      <EntityFormDialog
+        title={title}
+        description={description}
+        onCancel={onClose}
+        minWidth="560px"
+        scrollable
       >
-        <VStack spacing={5} align="stretch" h="full">
-          <VStack align="start" spacing={1}>
-            <Text color="white" fontSize="lg" fontWeight="bold">
-              Map Metadata
-            </Text>
-            <Text color="gray.500" fontSize="sm">
-              Edit base map metadata and active variation overrides in one place.
-            </Text>
-          </VStack>
-
-          {/* Contextual content: either base map fields or variation overrides */}
-          {initialTab === 'variation' && activeVariation ? (
-            <VStack spacing={3} align="stretch" flex={1} overflowY="auto">
-              {hasLocationDefs ? (
-                <PropertyForm
-                  schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
-                  values={(activeVariation.metadata || {}) as Record<string, any>}
-                  onChange={(k, v) => updateVariationMetadataGeneric(k, v)}
-                />
-              ) : (
-                <VStack spacing={3} align="stretch">
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Variation Name
-                    </FormLabel>
-                    {activeVariation.kind === 'season' ? (
-                      <Text fontSize="sm" color="gray.300">
-                        {activeVariation.displayName} (season)
-                      </Text>
-                    ) : (
-                      <Input
-                        size="sm"
-                        value={activeVariation.displayName}
-                        onChange={(event) =>
-                          updateVariation(activeVariation.id, {
-                            displayName: event.target.value,
-                          })
-                        }
-                        bg="gray.950"
-                        borderColor="gray.700"
-                      />
-                    )}
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Tileset Suffix
-                    </FormLabel>
-                    <Input
-                      size="sm"
-                      value={activeVariation.tilesetSuffix || ''}
-                      placeholder="_winter"
-                      onChange={(event) =>
-                        updateVariation(activeVariation.id, {
-                          tilesetSuffix: event.target.value || undefined,
-                        })
-                      }
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    />
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Override Map Name
-                    </FormLabel>
-                    <Input
-                      size="sm"
-                      value={variationMetadata.mapNameOverride || ''}
-                      placeholder={currentMap.name}
-                      onChange={(event) =>
-                        updateVariationMetadata('mapNameOverride', event.target.value)
-                      }
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    />
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Override Base Tileset
-                    </FormLabel>
-                    <Select
-                      size="sm"
-                      value={variationMetadata.baseTilesetIdOverride || ''}
-                      onChange={(event) => {
-                        updateVariationMetadata('baseTilesetIdOverride', event.target.value);
-                        if (event.target.value) setActiveTileset(event.target.value);
-                      }}
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    >
-                      <option value="" style={{ background: '#171923' }}>
-                        Use map base ({currentMap.baseTilesetId})
-                      </option>
-                      {tilesets.map((tileset) => (
-                        <option
-                          key={tileset.id}
-                          value={tileset.id}
-                          style={{ background: '#171923' }}
-                        >
-                          {tileset.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Override Description
-                    </FormLabel>
-                    <Textarea
-                      size="sm"
-                      value={variationMetadata.descriptionOverride || ''}
-                      placeholder={currentMap.metadata?.description || 'No base description'}
-                      onChange={(event) =>
-                        updateVariationMetadata('descriptionOverride', event.target.value)
-                      }
-                      bg="gray.950"
-                      borderColor="gray.700"
-                      minH="90px"
-                    />
-                  </FormControl>
-                </VStack>
-              )}
-            </VStack>
+        {isVariationTab ? (
+          hasLocationDefs ? (
+            <PropertyForm
+              schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
+              values={(activeVariation.metadata || {}) as Record<string, PropertyValue>}
+              onChange={(k, v) => updateVariationMetadataGeneric(k, v)}
+            />
           ) : (
-            <VStack spacing={3} align="stretch" flex={1} overflowY="auto">
-              {hasLocationDefs ? (
-                <PropertyForm
-                  schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
-                  values={(currentMap.metadata || {}) as Record<string, any>}
-                  onChange={(k, v) => updateMapMetadataGeneric(k, v)}
+            <VStack spacing={4} align="stretch">
+              <FormControl>
+                <FormLabel>Variation Name</FormLabel>
+                {activeVariation.kind === 'season' ? (
+                  <Text fontSize="sm" color="gray.300">
+                    {activeVariation.displayName} (season)
+                  </Text>
+                ) : (
+                  <Input
+                    value={activeVariation.displayName}
+                    onChange={(e) =>
+                      updateVariation(activeVariation.id, { displayName: e.target.value })
+                    }
+                  />
+                )}
+              </FormControl>
+
+              <FormControl>
+                <FormLabel>Tileset Suffix</FormLabel>
+                <Input
+                  value={activeVariation.tilesetSuffix || ''}
+                  placeholder="_winter"
+                  onChange={(e) =>
+                    updateVariation(activeVariation.id, {
+                      tilesetSuffix: e.target.value || undefined,
+                    })
+                  }
                 />
-              ) : (
-                <>
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Map Name
-                    </FormLabel>
-                    <Input
-                      size="sm"
-                      value={currentMap.name}
-                      onChange={(event) => updateCurrentMap({ name: event.target.value })}
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    />
-                  </FormControl>
+              </FormControl>
 
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Base Tileset
-                    </FormLabel>
-                    <Select
-                      size="sm"
-                      value={currentMap.baseTilesetId}
-                      onChange={(event) => {
-                        updateCurrentMap({ baseTilesetId: event.target.value });
-                        setActiveTileset(event.target.value);
-                      }}
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    >
-                      {tilesets.map((tileset) => (
-                        <option
-                          key={tileset.id}
-                          value={tileset.id}
-                          style={{ background: '#171923' }}
-                        >
-                          {tileset.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
+              <FormControl>
+                <FormLabel>Override Map Name</FormLabel>
+                <Input
+                  value={variationMetadata.mapNameOverride || ''}
+                  placeholder={currentMap.name}
+                  onChange={(e) => updateVariationMetadata('mapNameOverride', e.target.value)}
+                />
+              </FormControl>
 
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Description
-                    </FormLabel>
-                    <Textarea
-                      size="sm"
-                      value={currentMap.metadata?.description || ''}
-                      onChange={(event) => updateMapMetadata('description', event.target.value)}
-                      bg="gray.950"
-                      borderColor="gray.700"
-                      minH="90px"
-                    />
-                  </FormControl>
+              <FormControl>
+                <FormLabel>Override Base Tileset</FormLabel>
+                <Select
+                  value={variationMetadata.baseTilesetIdOverride || ''}
+                  onChange={(e) => {
+                    updateVariationMetadata('baseTilesetIdOverride', e.target.value);
+                    if (e.target.value) setActiveTileset(e.target.value);
+                  }}
+                >
+                  <option value="">Use map base ({currentMap.baseTilesetId})</option>
+                  {tilesets.map((ts) => (
+                    <option key={ts.id} value={ts.id}>
+                      {ts.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
 
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Music Cue
-                    </FormLabel>
-                    <Input
-                      size="sm"
-                      value={currentMap.metadata?.music || ''}
-                      onChange={(event) => updateMapMetadata('music', event.target.value)}
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    />
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                      Ambience Cue
-                    </FormLabel>
-                    <Input
-                      size="sm"
-                      value={currentMap.metadata?.ambience || ''}
-                      onChange={(event) => updateMapMetadata('ambience', event.target.value)}
-                      bg="gray.950"
-                      borderColor="gray.700"
-                    />
-                  </FormControl>
-                </>
-              )}
+              <FormControl>
+                <FormLabel>Override Description</FormLabel>
+                <Textarea
+                  value={variationMetadata.descriptionOverride || ''}
+                  placeholder={currentMap.metadata?.description || 'No base description'}
+                  onChange={(e) => updateVariationMetadata('descriptionOverride', e.target.value)}
+                  minH="90px"
+                />
+              </FormControl>
             </VStack>
-          )}
+          )
+        ) : hasLocationDefs ? (
+          <PropertyForm
+            schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
+            values={(currentMap.metadata || {}) as Record<string, PropertyValue>}
+            onChange={(k, v) => updateMapMetadataGeneric(k, v)}
+          />
+        ) : (
+          <VStack spacing={4} align="stretch">
+            <FormControl>
+              <FormLabel>Map Name</FormLabel>
+              <Input
+                value={currentMap.name}
+                onChange={(e) => updateCurrentMap({ name: e.target.value })}
+              />
+            </FormControl>
 
-          <HStack justify="flex-end">
-            <Button onClick={onClose}>Close</Button>
-          </HStack>
-        </VStack>
-      </Box>
+            <FormControl>
+              <FormLabel>Base Tileset</FormLabel>
+              <Select
+                value={currentMap.baseTilesetId}
+                onChange={(e) => {
+                  updateCurrentMap({ baseTilesetId: e.target.value });
+                  setActiveTileset(e.target.value);
+                }}
+              >
+                {tilesets.map((ts) => (
+                  <option key={ts.id} value={ts.id}>
+                    {ts.name}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Description</FormLabel>
+              <Textarea
+                value={currentMap.metadata?.description || ''}
+                onChange={(e) => updateMapMetadata('description', e.target.value)}
+                minH="90px"
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Music Cue</FormLabel>
+              <Input
+                value={currentMap.metadata?.music || ''}
+                onChange={(e) => updateMapMetadata('music', e.target.value)}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Ambience Cue</FormLabel>
+              <Input
+                value={currentMap.metadata?.ambience || ''}
+                onChange={(e) => updateMapMetadata('ambience', e.target.value)}
+              />
+            </FormControl>
+          </VStack>
+        )}
+      </EntityFormDialog>
     </EditorModal>
   );
 };

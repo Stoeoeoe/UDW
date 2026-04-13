@@ -623,59 +623,25 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
           minWidth="420px"
         >
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              ID
-            </FormLabel>
+            <FormLabel>ID</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={terrainDraft.id}
-              onChange={(event) =>
-                setTerrainDraft((previous) => ({ ...previous, id: event.target.value }))
-              }
+              onChange={(e) => setTerrainDraft((p) => ({ ...p, id: e.target.value }))}
             />
           </FormControl>
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Display Name
-            </FormLabel>
+            <FormLabel>Display Name</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={terrainDraft.displayName}
-              onChange={(event) =>
-                setTerrainDraft((previous) => ({ ...previous, displayName: event.target.value }))
-              }
+              onChange={(e) => setTerrainDraft((p) => ({ ...p, displayName: e.target.value }))}
             />
           </FormControl>
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Color
-            </FormLabel>
+            <FormLabel>Color</FormLabel>
             <Input
               type="color"
               value={terrainDraft.color}
-              onChange={(event) =>
-                setTerrainDraft((previous) => ({ ...previous, color: event.target.value }))
-              }
+              onChange={(e) => setTerrainDraft((p) => ({ ...p, color: e.target.value }))}
               h="9"
               p={0}
             />
@@ -695,93 +661,44 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
           minWidth="460px"
         >
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              ID
-            </FormLabel>
+            <FormLabel>ID</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={layerDraft.id}
-              onChange={(event) =>
-                setLayerDraft((previous) => ({ ...previous, id: event.target.value }))
-              }
+              onChange={(e) => setLayerDraft((p) => ({ ...p, id: e.target.value }))}
             />
           </FormControl>
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Name
-            </FormLabel>
+            <FormLabel>Name</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={layerDraft.name}
-              onChange={(event) =>
-                setLayerDraft((previous) => ({ ...previous, name: event.target.value }))
-              }
+              onChange={(e) => setLayerDraft((p) => ({ ...p, name: e.target.value }))}
             />
           </FormControl>
           <HStack spacing={3} align="start">
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Type
-              </FormLabel>
+              <FormLabel>Type</FormLabel>
               <Select
-                size="sm"
-                bg="gray.950"
                 value={layerDraft.type}
-                onChange={(event) =>
-                  setLayerDraft((previous) => ({
-                    ...previous,
-                    type: event.target.value as LayerType,
-                  }))
+                onChange={(e) =>
+                  setLayerDraft((p) => ({ ...p, type: e.target.value as LayerType }))
                 }
               >
-                {LAYER_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {LAYER_TYPE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
                   </option>
                 ))}
               </Select>
             </FormControl>
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Icon
-              </FormLabel>
+              <FormLabel>Icon</FormLabel>
               <Select
-                size="sm"
-                bg="gray.950"
                 value={layerDraft.icon}
-                onChange={(event) =>
-                  setLayerDraft((previous) => ({ ...previous, icon: event.target.value }))
-                }
+                onChange={(e) => setLayerDraft((p) => ({ ...p, icon: e.target.value }))}
               >
-                {AVAILABLE_ICONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {AVAILABLE_ICONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
                   </option>
                 ))}
               </Select>
@@ -789,26 +706,14 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
           </HStack>
           <HStack spacing={3} align="start">
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Z-Index
-              </FormLabel>
+              <FormLabel>Z-Index</FormLabel>
               <NumberInput
-                size="sm"
                 value={layerDraft.zIndex}
-                onChange={(_, valueAsNumber) => {
-                  setLayerDraft((previous) => ({
-                    ...previous,
-                    zIndex: Number.isNaN(valueAsNumber) ? 0 : Math.round(valueAsNumber),
-                  }));
-                }}
+                onChange={(_, v) =>
+                  setLayerDraft((p) => ({ ...p, zIndex: Number.isNaN(v) ? 0 : Math.round(v) }))
+                }
               >
-                <NumberInputField bg="gray.950" />
+                <NumberInputField />
                 <NumberInputStepper>
                   <NumberIncrementStepper />
                   <NumberDecrementStepper />
@@ -816,43 +721,21 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
               </NumberInput>
             </FormControl>
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Color
-              </FormLabel>
+              <FormLabel>Color</FormLabel>
               <Input
                 type="color"
                 value={layerDraft.color}
-                onChange={(event) =>
-                  setLayerDraft((previous) => ({ ...previous, color: event.target.value }))
-                }
+                onChange={(e) => setLayerDraft((p) => ({ ...p, color: e.target.value }))}
                 h="9"
                 p={0}
               />
             </FormControl>
           </HStack>
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Description
-            </FormLabel>
+            <FormLabel>Description</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={layerDraft.description}
-              onChange={(event) =>
-                setLayerDraft((previous) => ({ ...previous, description: event.target.value }))
-              }
+              onChange={(e) => setLayerDraft((p) => ({ ...p, description: e.target.value }))}
               placeholder="Optional"
             />
           </FormControl>
@@ -873,82 +756,52 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
           minWidth="520px"
         >
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Key
-            </FormLabel>
+            <FormLabel>Key</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={metadataDraft.key}
               onChange={(event) =>
-                setMetadataDraft((previous) => ({
-                  ...previous,
+                setMetadataDraft((prev) => ({
+                  ...prev,
                   key: normalizeMetadataKey(event.target.value),
                 }))
               }
               isReadOnly={Boolean(editingMetadataKey)}
             />
             {editingMetadataKey && (
-              <Text mt={1} fontSize="10px" color="gray.600">
+              <Text mt={1} fontSize="xs" color="gray.600">
                 Keys are locked after creation to avoid breaking existing tile assignments.
               </Text>
             )}
           </FormControl>
 
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Label
-            </FormLabel>
+            <FormLabel>Label</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={metadataDraft.label}
               onChange={(event) =>
-                setMetadataDraft((previous) => ({ ...previous, label: event.target.value }))
+                setMetadataDraft((prev) => ({ ...prev, label: event.target.value }))
               }
             />
           </FormControl>
 
           <HStack spacing={3} align="start">
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Type
-              </FormLabel>
+              <FormLabel>Type</FormLabel>
               <Select
-                size="sm"
-                bg="gray.950"
                 value={metadataDraft.type}
                 onChange={(event) => {
                   const nextType = event.target.value as PropertyType;
-                  setMetadataDraft((previous) => ({
-                    ...previous,
+                  setMetadataDraft((prev) => ({
+                    ...prev,
                     type: nextType,
                     defaultString:
-                      nextType === 'string' || nextType === 'enum' ? '' : previous.defaultString,
+                      nextType === 'string' || nextType === 'enum' ? '' : prev.defaultString,
                     defaultNumber:
                       nextType === 'int' || nextType === 'float' || nextType === 'number'
                         ? 0
-                        : previous.defaultNumber,
-                    defaultBoolean: nextType === 'boolean' ? false : previous.defaultBoolean,
-                    enumOptions: nextType === 'enum' ? previous.enumOptions : [],
+                        : prev.defaultNumber,
+                    defaultBoolean: nextType === 'boolean' ? false : prev.defaultBoolean,
+                    enumOptions: nextType === 'enum' ? prev.enumOptions : [],
                   }));
                 }}
               >
@@ -960,23 +813,12 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
               </Select>
             </FormControl>
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Required
-              </FormLabel>
+              <FormLabel>Required</FormLabel>
               <Switch
                 size="sm"
                 isChecked={metadataDraft.required}
                 onChange={(event) =>
-                  setMetadataDraft((previous) => ({
-                    ...previous,
-                    required: event.target.checked,
-                  }))
+                  setMetadataDraft((prev) => ({ ...prev, required: event.target.checked }))
                 }
               />
             </FormControl>
@@ -984,21 +826,11 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
 
           {metadataDraft.type === 'enum' && (
             <FormControl>
-              <FormLabel
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                color="gray.500"
-                mb={1}
-              >
-                Enum Options
-              </FormLabel>
+              <FormLabel>Enum Options</FormLabel>
               <VStack spacing={1} align="stretch">
                 {metadataDraft.enumOptions.map((opt, idx) => (
                   <HStack key={idx} spacing={1}>
                     <Input
-                      size="sm"
-                      bg="gray.950"
                       value={opt}
                       onChange={(e) => {
                         const next = [...metadataDraft.enumOptions];
@@ -1013,10 +845,12 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
                       variant="ghost"
                       color="gray.600"
                       _hover={{ color: 'red.300' }}
-                      onClick={() => {
-                        const next = metadataDraft.enumOptions.filter((_, i) => i !== idx);
-                        setMetadataDraft((prev) => ({ ...prev, enumOptions: next }));
-                      }}
+                      onClick={() =>
+                        setMetadataDraft((prev) => ({
+                          ...prev,
+                          enumOptions: prev.enumOptions.filter((_, i) => i !== idx),
+                        }))
+                      }
                     />
                   </HStack>
                 ))}
@@ -1040,85 +874,53 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
           )}
 
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Default Value
-            </FormLabel>
+            <FormLabel>Default Value</FormLabel>
             {(metadataDraft.type === 'int' ||
               metadataDraft.type === 'float' ||
               metadataDraft.type === 'number') && (
               <NumberInput
-                size="sm"
                 value={metadataDraft.defaultNumber}
                 step={metadataDraft.type === 'int' ? 1 : 0.01}
                 precision={metadataDraft.type === 'int' ? 0 : 2}
-                onChange={(_, valueAsNumber) => {
-                  setMetadataDraft((previous) => ({
-                    ...previous,
+                onChange={(_, valueAsNumber) =>
+                  setMetadataDraft((prev) => ({
+                    ...prev,
                     defaultNumber: Number.isNaN(valueAsNumber) ? 0 : valueAsNumber,
-                  }));
-                }}
+                  }))
+                }
               >
-                <NumberInputField bg="gray.950" />
+                <NumberInputField />
                 <NumberInputStepper>
                   <NumberIncrementStepper />
                   <NumberDecrementStepper />
                 </NumberInputStepper>
               </NumberInput>
             )}
-
             {(metadataDraft.type === 'string' || metadataDraft.type === 'enum') && (
               <Input
-                size="sm"
-                bg="gray.950"
                 value={metadataDraft.defaultString}
                 onChange={(event) =>
-                  setMetadataDraft((previous) => ({
-                    ...previous,
-                    defaultString: event.target.value,
-                  }))
+                  setMetadataDraft((prev) => ({ ...prev, defaultString: event.target.value }))
                 }
               />
             )}
-
             {metadataDraft.type === 'boolean' && (
               <Switch
                 size="sm"
                 isChecked={metadataDraft.defaultBoolean}
                 onChange={(event) =>
-                  setMetadataDraft((previous) => ({
-                    ...previous,
-                    defaultBoolean: event.target.checked,
-                  }))
+                  setMetadataDraft((prev) => ({ ...prev, defaultBoolean: event.target.checked }))
                 }
               />
             )}
           </FormControl>
 
           <FormControl>
-            <FormLabel
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              color="gray.500"
-              mb={1}
-            >
-              Description
-            </FormLabel>
+            <FormLabel>Description</FormLabel>
             <Input
-              size="sm"
-              bg="gray.950"
               value={metadataDraft.description}
               onChange={(event) =>
-                setMetadataDraft((previous) => ({
-                  ...previous,
-                  description: event.target.value,
-                }))
+                setMetadataDraft((prev) => ({ ...prev, description: event.target.value }))
               }
               placeholder="Optional"
             />

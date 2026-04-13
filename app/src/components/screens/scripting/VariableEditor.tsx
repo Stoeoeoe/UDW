@@ -12,6 +12,7 @@ import {
   Tooltip,
   Collapse,
   Button,
+  FormLabel,
   NumberInput,
   NumberInputField,
   useDisclosure,
@@ -34,6 +35,7 @@ import { TableEditor } from './TableEditor';
 import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
 import { DialogListWorkspace } from '../common/DialogListWorkspace';
 import { EditorModal } from '../../common/EditorModal';
+import { EntityFormDialog } from '../common/EntityFormDialog';
 
 type ScriptingTab = 'variables' | 'tables' | 'functions' | 'namespaces' | 'contexts';
 
@@ -81,254 +83,205 @@ export const VariableListEditorSingle: React.FC<{
 }> = ({ variable: v, tables, onUpdate, onDelete, onMove }) => {
   const typeInfo = VARIABLE_TYPES.find((t) => t.value === v.type)!;
   return (
-    <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
-      <VStack spacing={3} align="stretch">
-        <Box>
-          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-            KEY (Lua path)
-          </Text>
+    <VStack spacing={3} align="stretch" p={4}>
+      <Box>
+        <FormLabel>Key (Lua path)</FormLabel>
+        <Input
+          size="xs"
+          fontFamily="mono"
+          value={v.key}
+          onChange={(e) => onUpdate(v.key, { key: e.target.value.replace(/[^a-zA-Z0-9_.]/g, '') })}
+          placeholder="e.g. weather.isRain"
+        />
+      </Box>
+
+      <HStack spacing={3}>
+        <Box flex={1}>
+          <FormLabel>Type</FormLabel>
+          <Select
+            size="xs"
+            value={v.type}
+            onChange={(e) => {
+              const newType = e.target.value as GameVariableType;
+              onUpdate(v.key, {
+                type: newType,
+                defaultValue:
+                  newType === 'table'
+                    ? ''
+                    : defaultValueForPrimitive(newType as 'boolean' | 'number' | 'string' | 'enum'),
+                enumValues:
+                  newType === 'enum'
+                    ? v.enumValues?.length
+                      ? v.enumValues
+                      : ['option1', 'option2']
+                    : undefined,
+                tableId: newType === 'table' ? (v.tableId ?? undefined) : undefined,
+              });
+            }}
+          >
+            {VARIABLE_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.badge} {t.label}
+              </option>
+            ))}
+          </Select>
+        </Box>
+        <Box flex={1}>
+          <FormLabel>Category</FormLabel>
           <Input
             size="xs"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            fontFamily="mono"
-            value={v.key}
-            onChange={(e) =>
-              onUpdate(v.key, { key: e.target.value.replace(/[^a-zA-Z0-9_.]/g, '') })
-            }
-            placeholder="e.g. weather.isRain"
+            value={v.category}
+            onChange={(e) => onUpdate(v.key, { category: e.target.value })}
+            placeholder="e.g. Weather"
+            list="variable-categories"
           />
         </Box>
+      </HStack>
 
-        <HStack spacing={3}>
-          <Box flex={1}>
-            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-              TYPE
-            </Text>
-            <Select
+      {v.type === 'table' && (
+        <Box>
+          <FormLabel>Table Type</FormLabel>
+          <Select
+            size="xs"
+            value={v.tableId ?? ''}
+            onChange={(e) => onUpdate(v.key, { tableId: e.target.value || undefined })}
+          >
+            <option value="">— select a table —</option>
+            {tables.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.fields.length} fields)
+              </option>
+            ))}
+          </Select>
+        </Box>
+      )}
+
+      {v.type !== 'table' && (
+        <Box>
+          <FormLabel>Default Value</FormLabel>
+          {v.type === 'boolean' && (
+            <Switch
+              size="sm"
+              colorScheme="green"
+              isChecked={!!v.defaultValue}
+              onChange={(e) => onUpdate(v.key, { defaultValue: e.target.checked })}
+            />
+          )}
+          {v.type === 'number' && (
+            <NumberInput
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              value={v.type}
-              onChange={(e) => {
-                const newType = e.target.value as GameVariableType;
-                onUpdate(v.key, {
-                  type: newType,
-                  defaultValue:
-                    newType === 'table'
-                      ? ''
-                      : defaultValueForPrimitive(
-                          newType as 'boolean' | 'number' | 'string' | 'enum',
-                        ),
-                  enumValues:
-                    newType === 'enum'
-                      ? v.enumValues?.length
-                        ? v.enumValues
-                        : ['option1', 'option2']
-                      : undefined,
-                  tableId: newType === 'table' ? (v.tableId ?? undefined) : undefined,
-                });
-              }}
+              value={typeof v.defaultValue === 'number' ? v.defaultValue : 0}
+              step={1}
+              onChange={(_, val) => onUpdate(v.key, { defaultValue: isNaN(val) ? 0 : val })}
             >
-              {VARIABLE_TYPES.map((t) => (
-                <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
-                  {t.badge} {t.label}
-                </option>
-              ))}
-            </Select>
-          </Box>
-          <Box flex={1}>
-            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-              CATEGORY
-            </Text>
+              <NumberInputField />
+            </NumberInput>
+          )}
+          {v.type === 'string' && (
             <Input
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              value={v.category}
-              onChange={(e) => onUpdate(v.key, { category: e.target.value })}
-              placeholder="e.g. Weather"
-              list="variable-categories"
+              value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
+              onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
             />
-          </Box>
-        </HStack>
-
-        {v.type === 'table' && (
-          <Box>
-            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-              TABLE TYPE
-            </Text>
+          )}
+          {v.type === 'enum' && (
             <Select
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              value={v.tableId ?? ''}
-              onChange={(e) => onUpdate(v.key, { tableId: e.target.value || undefined })}
+              value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
+              onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
             >
-              <option value="" style={{ background: '#0a0a0b' }}>
-                — select a table —
-              </option>
-              {tables.map((t) => (
-                <option key={t.id} value={t.id} style={{ background: '#0a0a0b' }}>
-                  {t.name} ({t.fields.length} fields)
+              {(v.enumValues || []).map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
                 </option>
               ))}
             </Select>
-          </Box>
-        )}
-
-        {v.type !== 'table' && (
-          <Box>
-            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-              DEFAULT VALUE
-            </Text>
-            {v.type === 'boolean' && (
-              <Switch
-                size="sm"
-                colorScheme="green"
-                isChecked={!!v.defaultValue}
-                onChange={(e) => onUpdate(v.key, { defaultValue: e.target.checked })}
-              />
-            )}
-            {v.type === 'number' && (
-              <NumberInput
-                size="xs"
-                value={typeof v.defaultValue === 'number' ? v.defaultValue : 0}
-                step={1}
-                onChange={(_, val) => onUpdate(v.key, { defaultValue: isNaN(val) ? 0 : val })}
-              >
-                <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
-              </NumberInput>
-            )}
-            {v.type === 'string' && (
-              <Input
-                size="xs"
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
-                onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
-              />
-            )}
-            {v.type === 'enum' && (
-              <Select
-                size="xs"
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                value={typeof v.defaultValue === 'string' ? v.defaultValue : ''}
-                onChange={(e) => onUpdate(v.key, { defaultValue: e.target.value })}
-              >
-                {(v.enumValues || []).map((opt) => (
-                  <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
-                    {opt}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Box>
-        )}
-
-        {v.type === 'enum' && (
-          <Box>
-            <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-              ENUM VALUES
-            </Text>
-            <VStack spacing={1} align="stretch">
-              {(v.enumValues || []).map((opt, optIdx) => (
-                <HStack key={optIdx} spacing={1}>
-                  <Input
-                    size="xs"
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
-                    value={opt}
-                    onChange={(e) => {
-                      const vals = [...(v.enumValues || [])];
-                      vals[optIdx] = e.target.value;
-                      onUpdate(v.key, { enumValues: vals });
-                    }}
-                  />
-                  <IconButton
-                    aria-label="Remove value"
-                    icon={<DeleteIcon fontSize="8px" />}
-                    size="xs"
-                    variant="ghost"
-                    color="gray.600"
-                    _hover={{ color: 'red.300' }}
-                    onClick={() => {
-                      const vals = (v.enumValues || []).filter((_, i) => i !== optIdx);
-                      onUpdate(v.key, {
-                        enumValues: vals,
-                        ...(v.defaultValue === opt ? { defaultValue: vals[0] ?? '' } : {}),
-                      });
-                    }}
-                  />
-                </HStack>
-              ))}
-              <Button
-                size="xs"
-                variant="ghost"
-                color="gray.500"
-                _hover={{ color: 'white' }}
-                leftIcon={<AddIcon fontSize="8px" />}
-                onClick={() => {
-                  const vals = [
-                    ...(v.enumValues || []),
-                    `value_${(v.enumValues?.length || 0) + 1}`,
-                  ];
-                  onUpdate(v.key, { enumValues: vals });
-                }}
-              >
-                Add Value
-              </Button>
-            </VStack>
-          </Box>
-        )}
-
-        <Box>
-          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-            DESCRIPTION
-          </Text>
-          <Input
-            size="xs"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            value={v.description ?? ''}
-            onChange={(e) => onUpdate(v.key, { description: e.target.value || undefined })}
-            placeholder="Optional — shown in editor UI"
-          />
+          )}
         </Box>
+      )}
 
-        <HStack spacing={1} justify="flex-end">
-          <Tooltip label="Move Up" hasArrow>
-            <IconButton
-              aria-label="Move Up"
-              icon={<ChevronUpIcon />}
+      {v.type === 'enum' && (
+        <Box>
+          <FormLabel>Enum Values</FormLabel>
+          <VStack spacing={1} align="stretch">
+            {(v.enumValues || []).map((opt, optIdx) => (
+              <HStack key={optIdx} spacing={1}>
+                <Input
+                  size="xs"
+                  value={opt}
+                  onChange={(e) => {
+                    const vals = [...(v.enumValues || [])];
+                    vals[optIdx] = e.target.value;
+                    onUpdate(v.key, { enumValues: vals });
+                  }}
+                />
+                <IconButton
+                  aria-label="Remove value"
+                  icon={<DeleteIcon fontSize="8px" />}
+                  size="xs"
+                  variant="ghost"
+                  color="gray.600"
+                  _hover={{ color: 'red.300' }}
+                  onClick={() => {
+                    const vals = (v.enumValues || []).filter((_, i) => i !== optIdx);
+                    onUpdate(v.key, {
+                      enumValues: vals,
+                      ...(v.defaultValue === opt ? { defaultValue: vals[0] ?? '' } : {}),
+                    });
+                  }}
+                />
+              </HStack>
+            ))}
+            <Button
               size="xs"
               variant="ghost"
               color="gray.500"
-              onClick={() => onMove(v.key, -1)}
-            />
-          </Tooltip>
-          <Tooltip label="Move Down" hasArrow>
-            <IconButton
-              aria-label="Move Down"
-              icon={<ChevronDownIcon />}
-              size="xs"
-              variant="ghost"
-              color="gray.500"
-              onClick={() => onMove(v.key, 1)}
-            />
-          </Tooltip>
-        </HStack>
-      </VStack>
-    </Box>
+              _hover={{ color: 'white' }}
+              leftIcon={<AddIcon fontSize="8px" />}
+              onClick={() => {
+                const vals = [...(v.enumValues || []), `value_${(v.enumValues?.length || 0) + 1}`];
+                onUpdate(v.key, { enumValues: vals });
+              }}
+            >
+              Add Value
+            </Button>
+          </VStack>
+        </Box>
+      )}
+
+      <Box>
+        <FormLabel>Description</FormLabel>
+        <Input
+          size="xs"
+          value={v.description ?? ''}
+          onChange={(e) => onUpdate(v.key, { description: e.target.value || undefined })}
+          placeholder="Optional — shown in editor UI"
+        />
+      </Box>
+
+      <HStack spacing={1} justify="flex-end">
+        <Tooltip label="Move Up" hasArrow>
+          <IconButton
+            aria-label="Move Up"
+            icon={<ChevronUpIcon />}
+            size="xs"
+            variant="ghost"
+            color="gray.500"
+            onClick={() => onMove(v.key, -1)}
+          />
+        </Tooltip>
+        <Tooltip label="Move Down" hasArrow>
+          <IconButton
+            aria-label="Move Down"
+            icon={<ChevronDownIcon />}
+            size="xs"
+            variant="ghost"
+            color="gray.500"
+            onClick={() => onMove(v.key, 1)}
+          />
+        </Tooltip>
+      </HStack>
+    </VStack>
   );
 };
 
@@ -378,18 +331,13 @@ const ScriptTester: React.FC<{
               </Text>
               <Select
                 size="xs"
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
                 w="140px"
                 value={selectedContext}
                 onChange={(e) => setSelectedContext(e.target.value)}
               >
-                <option value="" style={{ background: '#0a0a0b' }}>
-                  — none —
-                </option>
+                <option value="">— none —</option>
                 {contextTypes.map((ct) => (
-                  <option key={ct.id} value={ct.id} style={{ background: '#0a0a0b' }}>
+                  <option key={ct.id} value={ct.id}>
                     self ({ct.name})
                   </option>
                 ))}
@@ -841,18 +789,24 @@ export const VariableEditor: React.FC = () => {
         }
       />
 
-      <EditorModal isOpen={itemDialog.isOpen} onClose={closeDialog} size="2xl">
-        <Box
-          bg="gray.900"
-          border="1px"
-          borderColor="gray.700"
-          borderRadius="md"
-          overflow="hidden"
-          maxH="75vh"
-          overflowY="auto"
+      <EditorModal isOpen={itemDialog.isOpen} onClose={closeDialog} size="xl">
+        <EntityFormDialog
+          title={
+            activeTab === 'variables'
+              ? 'Edit Variable'
+              : activeTab === 'tables'
+                ? 'Edit Table'
+                : activeTab === 'functions'
+                  ? 'Edit Function'
+                  : activeTab === 'namespaces'
+                    ? 'Edit Namespace'
+                    : 'Edit Context Type'
+          }
+          onCancel={closeDialog}
+          scrollable
         >
           {dialogContent}
-        </Box>
+        </EntityFormDialog>
       </EditorModal>
     </>
   );
