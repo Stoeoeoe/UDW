@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, VStack, Text } from '@chakra-ui/react';
+import { VStack, Text } from '@chakra-ui/react';
 import { RecentProject } from '../../../lib/recentProjects';
+import { EditorCard } from '../../common/Surfaces';
 
 interface RecentProjectItemProps {
   project: RecentProject;
@@ -8,17 +9,14 @@ interface RecentProjectItemProps {
 }
 
 export const RecentProjectItem: React.FC<RecentProjectItemProps> = ({ project, onClick }) => (
-  <Box
+  <EditorCard
     p={3}
-    bg="gray.900"
     rounded="md"
-    border="1px"
-    borderColor="gray.800"
     cursor="pointer"
     display="flex"
     justifyContent="space-between"
     alignItems="center"
-    _hover={{ bg: 'gray.800', borderColor: 'gray.700' }}
+    _hover={{ bg: 'editorHoverBg', borderColor: 'gray.700' }}
     onClick={() => onClick(project)}
   >
     <VStack align="start" spacing={0}>
@@ -32,5 +30,5 @@ export const RecentProjectItem: React.FC<RecentProjectItemProps> = ({ project, o
     <Text color="gray.700" fontSize="xs">
       {new Date(project.lastOpened).toLocaleDateString()}
     </Text>
-  </Box>
+  </EditorCard>
 );

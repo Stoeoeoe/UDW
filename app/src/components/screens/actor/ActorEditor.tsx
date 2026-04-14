@@ -4,7 +4,6 @@ import {
   Button,
   Divider,
   FormControl,
-  FormLabel,
   Input,
   Text,
   useDisclosure,
@@ -22,6 +21,7 @@ import { useFilteredList } from '../../../hooks/useFilteredList';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { FormLabelUppercase } from '../../common/FormLabel';
+import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
 
 export const ActorEditor: React.FC = () => {
@@ -174,15 +174,7 @@ const ActorDetail: React.FC<{
       <VStack align="stretch" spacing={5}>
         <VStack align="stretch" spacing={3}>
           <FormControl>
-            <FormLabel
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={1}
-            >
-              ID
-            </FormLabel>
+            <FieldLabel>ID</FieldLabel>
             <Text fontSize="xs" fontFamily="mono" color="gray.400">
               {actor.id}
             </Text>
@@ -191,15 +183,7 @@ const ActorDetail: React.FC<{
           <form.Field name="name">
             {(field) => (
               <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Name
-                </FormLabel>
+                <FieldLabel>Name</FieldLabel>
                 <Input
                   size="sm"
                   bg="gray.950"
@@ -216,15 +200,7 @@ const ActorDetail: React.FC<{
           <form.Field name="icon">
             {(field) => (
               <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Icon
-                </FormLabel>
+                <FieldLabel>Icon</FieldLabel>
                 <IconPicker
                   value={field.state.value}
                   onChange={(v) => field.handleChange(v ?? '')}

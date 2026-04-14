@@ -18,10 +18,10 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
-  FormLabel,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { PropertyDefinition, PropertyType } from '../../../types/schema';
+import { FormLabel } from '../../common/FormLabel';
 
 const PROPERTY_TYPES: { value: PropertyType; label: string; icon: string }[] = [
   { value: 'string', label: 'String', icon: 'Aa' },

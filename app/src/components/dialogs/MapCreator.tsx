@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import {
   VStack,
   HStack,
-  Box,
   Text,
   Button,
   Input,
   FormControl,
-  FormLabel,
   NumberInput,
   NumberInputField,
   NumberInputStepper,
@@ -18,6 +16,9 @@ import {
   Heading,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { FormLabel } from '../common/FormLabel';
+import { EditorCard } from '../common/Surfaces';
+import { CaptionText } from '../common/Typography.tsx';
 
 interface MapCreatorProps {
   onCreate?: () => void;
@@ -66,15 +67,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
   };
 
   return (
-    <Box
-      bg="gray.900"
-      p={8}
-      rounded="2xl"
-      border="1px"
-      borderColor="gray.800"
-      boxShadow="2xl"
-      w="lg"
-    >
+    <EditorCard p={8} w="lg">
       <VStack spacing={6} align="stretch">
         <VStack align="start" spacing={1}>
           <Heading size="md" color="white">
@@ -91,8 +84,8 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              bg="gray.950"
-              borderColor="gray.800"
+              bg="editorPanelBg"
+              borderColor="editorBorderSubtle"
               _focus={{ borderColor: 'blue.500' }}
               color="white"
             />
@@ -108,7 +101,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
                 onChange={(_, v) => setWidth(v)}
                 color="white"
               >
-                <NumberInputField bg="gray.950" borderColor="gray.800" />
+                <NumberInputField bg="editorPanelBg" borderColor="editorBorderSubtle" />
                 <NumberInputStepper>
                   <NumberIncrementStepper border="none" color="gray.600" />
                   <NumberDecrementStepper border="none" color="gray.600" />
@@ -125,7 +118,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
                 onChange={(_, v) => setHeight(v)}
                 color="white"
               >
-                <NumberInputField bg="gray.950" borderColor="gray.800" />
+                <NumberInputField bg="editorPanelBg" borderColor="editorBorderSubtle" />
                 <NumberInputStepper>
                   <NumberIncrementStepper border="none" color="gray.600" />
                   <NumberDecrementStepper border="none" color="gray.600" />
@@ -139,8 +132,8 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
             <Select
               value={tilesetId}
               onChange={(e) => setTilesetId(e.target.value)}
-              bg="gray.950"
-              borderColor="gray.800"
+              bg="editorPanelBg"
+              borderColor="editorBorderSubtle"
               _focus={{ borderColor: 'blue.500' }}
               color="white"
             >
@@ -151,9 +144,9 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
               ))}
             </Select>
             {tilesets.length === 0 && (
-              <Text fontSize="10px" color="red.400" mt={1}>
+              <CaptionText color="red.400" mt={1}>
                 No tilesets found. Please import a tileset first.
-              </Text>
+              </CaptionText>
             )}
           </FormControl>
         </VStack>
@@ -173,6 +166,6 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
           </Button>
         </HStack>
       </VStack>
-    </Box>
+    </EditorCard>
   );
 };

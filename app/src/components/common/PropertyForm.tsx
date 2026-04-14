@@ -3,7 +3,6 @@ import {
   VStack,
   HStack,
   FormControl,
-  FormLabel,
   Input,
   NumberInput,
   NumberInputField,
@@ -16,6 +15,7 @@ import {
   Box,
 } from '@chakra-ui/react';
 import { PropertyDefinition, PropertyValue } from '../../types/schema';
+import { FormLabel } from './FormLabel';
 
 export type PropertyType =
   | 'string'

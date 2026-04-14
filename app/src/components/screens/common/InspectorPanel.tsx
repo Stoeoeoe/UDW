@@ -3,6 +3,7 @@ import { Box, VStack, Text, Divider, Flex, HStack, Button, Icon } from '@chakra-
 import { DeleteIcon } from '@chakra-ui/icons';
 import { IconType } from 'react-icons';
 import PanelHeader from '../../../components/common/PanelHeader';
+import { SectionLabel } from '../../../components/common/Typography.tsx';
 
 /**
  * InspectorPanel - A reusable right-side panel for viewing/editing properties.
@@ -52,15 +53,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             {sections?.map((section, idx) => (
               <VStack key={idx} align="stretch" spacing={3}>
                 {section.title && (
-                  <Text
-                    fontSize="10px"
-                    fontWeight="black"
-                    textTransform="uppercase"
-                    letterSpacing="widest"
-                    color="gray.500"
-                  >
-                    {section.title}
-                  </Text>
+                  <SectionLabel textStyle="inspectorSectionLabel">{section.title}</SectionLabel>
                 )}
                 {section.content}
                 {idx < sections.length - 1 && <Divider borderColor="#071018" />}

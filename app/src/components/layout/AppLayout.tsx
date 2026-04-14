@@ -26,7 +26,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       h="100vh"
       w="100vw"
       overflow="hidden"
-      bg="gray.900"
+      bg="editorAppBg"
       color="gray.200"
       userSelect="none"
     >
@@ -34,8 +34,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <Box
         h="12"
         borderBottom="1px"
-        borderColor="gray.800"
-        bg="gray.950"
+        borderColor="editorBorderSubtle"
+        bg="editorPanelBg"
         zIndex="20"
         flexShrink={0}
       >
@@ -47,9 +47,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* Left Panel */}
         <Box
           flexShrink={0}
-          bg="gray.950"
+          bg="editorPanelBg"
           borderRightWidth={leftPanelOpen ? '1px' : '0'}
-          borderColor="gray.800"
+          borderColor="editorBorderSubtle"
           transition="width 0.2s ease-in-out"
           w={leftPanelOpen ? leftWidth : '0'}
           overflow="hidden"
@@ -62,7 +62,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* Viewport (Center) */}
         <Box
           flex={1}
-          bg="gray.800"
+          bg="editorCanvasBg"
           position="relative"
           zIndex={0}
           overflow="hidden"
@@ -75,9 +75,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* Right Panel */}
         <Box
           flexShrink={0}
-          bg="gray.950"
+          bg="editorPanelBg"
           borderLeftWidth={rightPanelOpen ? '1px' : '0'}
-          borderColor="gray.800"
+          borderColor="editorBorderSubtle"
           transition="width 0.2s ease-in-out"
           w={rightPanelOpen ? '80' : '0'}
           overflow="hidden"
@@ -91,13 +91,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       {/* Status Bar */}
       <Flex
         h="6"
-        bg="gray.900"
+        bg="editorChromeBg"
         borderTop="1px"
-        borderColor="gray.800"
+        borderColor="editorBorderSubtle"
         alignItems="center"
         px="2"
         fontSize="xs"
-        color="gray.500"
+        color="editorMutedText"
         zIndex="20"
         flexShrink={0}
       >

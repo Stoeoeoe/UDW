@@ -1,5 +1,5 @@
 import React from 'react';
-import { VStack, Text, Spacer, Icon } from '@chakra-ui/react';
+import { VStack, Spacer, Icon } from '@chakra-ui/react';
 import { IconType } from 'react-icons';
 import {
   FcFolder,
@@ -13,6 +13,7 @@ import {
   FcSettings,
 } from 'react-icons/fc';
 import { EditorMode } from '../../types/editor';
+import { CaptionText } from '../common/Typography.tsx';
 
 interface NavIconProps {
   icon: IconType;
@@ -30,18 +31,26 @@ const NavIcon: React.FC<NavIconProps> = ({ icon, label, mode, active, onClick })
     justify="center"
     w="16"
     h="16"
-    bg={active ? 'gray.800' : 'transparent'}
+    bg={active ? 'editorCanvasBg' : 'transparent'}
     color={active ? 'blue.400' : 'gray.500'}
     borderLeftWidth={active ? '2px' : '0'}
     borderColor="blue.500"
-    _hover={{ bg: active ? 'gray.800' : 'blackAlpha.400', color: active ? 'blue.400' : 'gray.300' }}
+    _hover={{
+      bg: active ? 'editorCanvasBg' : 'editorHoverBg',
+      color: active ? 'blue.400' : 'gray.300',
+    }}
     transition="all 0.2s"
     title={label}
   >
     <Icon as={icon} boxSize={5} />
-    <Text fontSize="10px" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+    <CaptionText
+      fontWeight="medium"
+      textTransform="uppercase"
+      letterSpacing="wider"
+      color="inherit"
+    >
       {label}
-    </Text>
+    </CaptionText>
   </VStack>
 );
 
@@ -55,9 +64,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
     <VStack
       spacing={0}
       h="full"
-      bg="#03040a"
+      bg="editorPanelBg"
       borderRight="1px"
-      borderColor="#071018"
+      borderColor="editorBorderSubtle"
       w="16"
       flexShrink={0}
     >

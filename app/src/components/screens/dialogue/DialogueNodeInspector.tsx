@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   FormControl,
-  FormLabel,
   HStack,
   IconButton,
   Input,
@@ -18,6 +17,7 @@ import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { ConditionEditor } from '../scripting/ConditionEditor';
 import { InspectorEmptyState, InspectorPanel } from '../common';
+import { FieldLabel } from '../../common/Typography.tsx';
 import { NodeIdField } from './DialogueNodeWidgets';
 import {
   assignBranchMetaToNode,
@@ -104,9 +104,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </Text>
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Name
-            </FormLabel>
+            <FieldLabel>Name</FieldLabel>
             <Input
               size="xs"
               bg="#0a0a0b"
@@ -123,9 +121,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </FormControl>
 
           <FormControl display="flex" alignItems="center" justifyContent="space-between">
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={0}>
-              One-shot
-            </FormLabel>
+            <FieldLabel mb={0}>One-shot</FieldLabel>
             <Switch
               size="sm"
               isChecked={selectedDialogue.oneShot}
@@ -139,9 +135,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Tags (comma separated)
-            </FormLabel>
+            <FieldLabel>Tags (comma separated)</FieldLabel>
             <Input
               size="xs"
               bg="#0a0a0b"
@@ -192,9 +186,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           />
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Speaker
-            </FormLabel>
+            <FieldLabel>Speaker</FieldLabel>
             <Select
               size="xs"
               bg="#0a0a0b"
@@ -226,9 +218,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Emotion
-            </FormLabel>
+            <FieldLabel>Emotion</FieldLabel>
             <Select
               size="xs"
               bg="#0a0a0b"
@@ -259,9 +249,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Message Key
-            </FormLabel>
+            <FieldLabel>Message Key</FieldLabel>
             <Input
               size="xs"
               bg="#0a0a0b"
@@ -283,9 +271,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Text
-            </FormLabel>
+            <FieldLabel>Text</FieldLabel>
             <Textarea
               minH="110px"
               bg="#0a0a0b"
@@ -514,9 +500,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           />
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Lua Script
-            </FormLabel>
+            <FieldLabel>Lua Script</FieldLabel>
             <Box border="1px" borderColor="#1a1a2e" borderRadius="md" overflow="hidden">
               <LuaScriptEditor
                 value={selectedNode.lua}
@@ -567,9 +551,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           />
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Target Dialogue
-            </FormLabel>
+            <FieldLabel>Target Dialogue</FieldLabel>
             <Select
               size="xs"
               bg="#0a0a0b"
@@ -601,9 +583,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-              Target Node
-            </FormLabel>
+            <FieldLabel>Target Node</FieldLabel>
             <Select
               size="xs"
               bg="#0a0a0b"

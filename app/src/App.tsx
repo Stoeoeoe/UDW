@@ -59,7 +59,7 @@ function App() {
       h="100vh"
       w="100vw"
       overflow="hidden"
-      bg="gray.900"
+      bg="editorAppBg"
       color="gray.200"
       userSelect="none"
     >
@@ -67,8 +67,8 @@ function App() {
       <Box
         h="12"
         borderBottom="1px"
-        borderColor="gray.800"
-        bg="gray.950"
+        borderColor="editorBorderSubtle"
+        bg="editorPanelBg"
         zIndex="20"
         flexShrink={0}
       >
@@ -89,13 +89,13 @@ function App() {
       {/* Status Bar */}
       <Flex
         h="6"
-        bg="gray.900"
+        bg="editorChromeBg"
         borderTop="1px"
-        borderColor="gray.800"
+        borderColor="editorBorderSubtle"
         alignItems="center"
         px="2"
         fontSize="xs"
-        color="gray.500"
+        color="editorMutedText"
         zIndex="20"
         flexShrink={0}
       >

@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   Button,
   FormControl,
-  FormLabel,
   HStack,
   IconButton,
   Input,
@@ -19,6 +18,7 @@ import {
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { EntityFormDialog } from '../screens/common';
 import { PropertyDefinition, PropertyType, PropertyValue } from '../../types/schema';
+import { FormLabel } from '../common/FormLabel';
 
 interface TileMetadataDefinitionsDialogProps {
   existingDefinitions: PropertyDefinition[];

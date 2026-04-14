@@ -3,6 +3,7 @@ import { VStack, HStack, Text, Box, Divider, Button, useDisclosure } from '@chak
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
 import { AutotileGeneratorDialog } from './AutotileGeneratorDialog';
+import { SectionLabel } from '../common/Typography.tsx';
 
 interface TilesetTerrainPanelProps {
   tileset: Tileset;
@@ -17,15 +18,13 @@ export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tilese
   return (
     <VStack align="stretch" spacing={4} p={6}>
       <VStack align="start" spacing={1}>
-        <Text fontSize="xs" fontWeight="black" color="gray.500" textTransform="uppercase">
-          Terrain Palette
-        </Text>
+        <SectionLabel>Terrain Palette</SectionLabel>
         <Text fontSize="sm" color="gray.400">
           Select a terrain then click tile corners to paint.
         </Text>
       </VStack>
 
-      <Divider borderColor="gray.800" />
+      <Divider borderColor="editorBorderSubtle" />
 
       {terrainTypes.length === 0 ? (
         <Text color="gray.500">No terrain types defined in project.</Text>
@@ -94,12 +93,10 @@ export const TilesetTerrainPanel: React.FC<TilesetTerrainPanelProps> = ({ tilese
         </VStack>
       )}
 
-      <Divider borderColor="gray.800" />
+      <Divider borderColor="editorBorderSubtle" />
 
       <VStack align="stretch" spacing={2}>
-        <Text fontSize="xs" color="gray.500" textTransform="uppercase" fontWeight="black">
-          Auto Tile Utility
-        </Text>
+        <SectionLabel>Auto Tile Utility</SectionLabel>
         <Text fontSize="sm" color="gray.400">
           Generate transition tiles from two terrain sample groups in this tileset.
         </Text>

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { FormControl, FormLabel, Input, Switch, Text } from '@chakra-ui/react';
+import { FormControl, Input, Switch } from '@chakra-ui/react';
 import { EntityFormDialog } from '../common';
 import { EditorModal } from '../../common/EditorModal';
 import { ConditionEditor } from '../scripting/ConditionEditor';
+import { FormLabel } from '../../common/FormLabel';
+import { SectionLabel } from '../../common/Typography.tsx';
 import {
   GameVariable,
   ScriptContextType,
@@ -60,9 +62,7 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
         minWidth="420px"
       >
         <FormControl isRequired>
-          <FormLabel fontSize="xs" color="gray.400">
-            Name
-          </FormLabel>
+          <FormLabel>Name</FormLabel>
           <Input
             size="sm"
             bg="gray.800"
@@ -74,9 +74,7 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
         </FormControl>
 
         <FormControl display="flex" alignItems="center" justifyContent="space-between">
-          <FormLabel fontSize="xs" color="gray.400" mb={0}>
-            One-shot dialogue
-          </FormLabel>
+          <FormLabel mb={0}>One-shot dialogue</FormLabel>
           <Switch
             size="sm"
             isChecked={draft.oneShot}
@@ -84,9 +82,7 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
           />
         </FormControl>
 
-        <Text fontSize="xs" color="gray.400" fontWeight="bold" textTransform="uppercase">
-          Entry Condition (Lua, optional)
-        </Text>
+        <SectionLabel textStyle="mutedFieldLabel">Entry Condition (Lua, optional)</SectionLabel>
 
         <ConditionEditor
           value={draft.entryCondition}

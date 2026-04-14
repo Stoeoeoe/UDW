@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Flex, VStack, Heading, Text, HStack } from '@chakra-ui/react';
+import { Box, Flex, VStack, Text, HStack } from '@chakra-ui/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { SectionLabel } from '../../../components/common/Typography.tsx';
 
 /**
  * ResizableEditorLayout - A flexible, resizable layout shell for any editor mode.
@@ -101,11 +102,7 @@ export const ResizableEditorLayout: React.FC<ResizableEditorLayoutProps> = ({
           flexShrink={0}
         >
           <VStack align="start" spacing={0}>
-            {header?.title && (
-              <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
-                {header.title}
-              </Heading>
-            )}
+            {header?.title && <SectionLabel textStyle="panelLabel">{header.title}</SectionLabel>}
             {header?.subtitle && (
               <Text fontSize="10px" color="gray.500" fontWeight="bold">
                 {header.subtitle}

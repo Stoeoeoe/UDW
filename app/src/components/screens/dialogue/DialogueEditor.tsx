@@ -5,7 +5,6 @@ import {
   Button,
   Flex,
   FormControl,
-  FormLabel,
   HStack,
   Input,
   Select,
@@ -57,6 +56,7 @@ import {
 import { DialogueNodeInspector } from './DialogueNodeInspector';
 import { DialogueTimeline } from './DialogueTimeline';
 import { CreateDialogueDialog } from './CreateDialogueDialog';
+import { FieldLabel } from '../../common/Typography.tsx';
 
 export const DialogueEditor: React.FC = () => {
   const project = useEditorStore((state) => state.project);
@@ -685,9 +685,7 @@ export const DialogueEditor: React.FC = () => {
           Dialogue Settings
         </Text>
         <FormControl>
-          <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-            Default Lua Context (`self`)
-          </FormLabel>
+          <FieldLabel>Default Lua Context (`self`)</FieldLabel>
           <Select
             size="sm"
             bg="#0a0a0b"

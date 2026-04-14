@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   FormControl,
-  FormLabel,
   HStack,
   Input,
   NumberInput,
@@ -18,6 +17,7 @@ import {
 import { PropertyDefinition, PropertyValue, TileDefinition, Tileset } from '../../types/schema';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { useEditorStore } from '../../store/useEditorStore';
+import { FieldLabel, SectionLabel } from '../common/Typography.tsx';
 
 interface TilesetMetadataEntryInspectorProps {
   tileset: Tileset;
@@ -212,9 +212,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
   return (
     <VStack align="stretch" spacing={5} p={6}>
       <VStack align="start" spacing={1}>
-        <Text fontSize="xs" fontWeight="black" color="gray.500" textTransform="uppercase">
-          Metadata Entry
-        </Text>
+        <SectionLabel>Metadata Entry</SectionLabel>
         <Text fontSize="2xl" fontWeight="black" color="white" lineHeight={1.2}>
           {metadataDefinition.label}
         </Text>
@@ -224,15 +222,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
       </VStack>
 
       <FormControl>
-        <FormLabel
-          color="gray.500"
-          fontSize="10px"
-          fontWeight="black"
-          textTransform="uppercase"
-          mb={1}
-        >
-          Label
-        </FormLabel>
+        <FieldLabel>Label</FieldLabel>
         <Input
           size="xs"
           variant="filled"
@@ -248,15 +238,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
 
       <HStack spacing={3}>
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Type
-          </FormLabel>
+          <FieldLabel>Type</FieldLabel>
           <Input
             size="xs"
             variant="filled"
@@ -268,15 +250,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
         </FormControl>
 
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Required
-          </FormLabel>
+          <FieldLabel>Required</FieldLabel>
           <Switch
             size="sm"
             isChecked={metadataDefinition.required}
@@ -290,15 +264,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
 
       {metadataDefinition.type === 'enum' && (
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Enum Options
-          </FormLabel>
+          <FieldLabel>Enum Options</FieldLabel>
           <Input
             size="xs"
             variant="filled"
@@ -324,15 +290,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
       )}
 
       <FormControl>
-        <FormLabel
-          color="gray.500"
-          fontSize="10px"
-          fontWeight="black"
-          textTransform="uppercase"
-          mb={1}
-        >
-          Description
-        </FormLabel>
+        <FieldLabel>Description</FieldLabel>
         <Input
           size="xs"
           variant="filled"
@@ -347,9 +305,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
       </FormControl>
 
       <Box borderTop="1px" borderColor="#071018" pt={4}>
-        <Text fontSize="xs" fontWeight="black" color="gray.500" textTransform="uppercase" mb={2}>
-          Tile Assignment
-        </Text>
+        <SectionLabel mb={2}>Tile Assignment</SectionLabel>
 
         {selectedTileIndex === null ? (
           <Text fontSize="xs" color="gray.500">

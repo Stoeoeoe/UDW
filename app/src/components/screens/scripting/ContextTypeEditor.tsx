@@ -27,6 +27,7 @@ import {
   GameVariableType,
   ScriptTable,
 } from '../../../types/schema';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 // ─── Shared inline editors (same as NamespaceEditor) ────────────────────────
 
@@ -112,9 +113,7 @@ const InlineFunction: React.FC<{
         )}
         <Box>
           <HStack mb={1} justify="space-between">
-            <Text fontSize="9px" color="gray.600">
-              Params
-            </Text>
+            <SectionLabel textStyle="panelLabel">Params</SectionLabel>
             <IconButton
               aria-label="Add param"
               icon={<AddIcon fontSize="7px" />}
@@ -340,15 +339,7 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
           borderColor="whiteAlpha.50"
         >
           <HStack spacing={2}>
-            <Text
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="widest"
-              color="gray.500"
-            >
-              Context Types
-            </Text>
+            <SectionLabel textStyle="fieldLabel">Context Types</SectionLabel>
             <Badge fontSize="9px" colorScheme="gray" variant="subtle">
               {contextTypes.length}
             </Badge>
@@ -391,9 +382,9 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
                   <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
                     <VStack spacing={3} align="stretch">
                       <Box>
-                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                          NAME
-                        </Text>
+                        <SectionLabel textStyle="panelLabel" mb={1}>
+                          Name
+                        </SectionLabel>
                         <Input
                           size="xs"
                           bg="#0a0a0b"
@@ -408,9 +399,9 @@ export const ContextTypeEditor: React.FC<ContextTypeEditorProps> = ({
                       </Box>
 
                       <Box>
-                        <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-                          DESCRIPTION
-                        </Text>
+                        <SectionLabel textStyle="panelLabel" mb={1}>
+                          Description
+                        </SectionLabel>
                         <Input
                           size="xs"
                           bg="#0a0a0b"

@@ -1,7 +1,7 @@
 import React from 'react';
-import { HStack, Button, Tooltip } from '@chakra-ui/react';
+import { HStack } from '@chakra-ui/react';
 import { FiMousePointer, FiEdit2, FiShield } from 'react-icons/fi';
-import Toolbar, { ToolItem } from '../../common/Toolbar';
+import Toolbar, { ToolItem, ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 
 export const TilesetToolbar: React.FC = () => {
@@ -23,26 +23,23 @@ export const TilesetToolbar: React.FC = () => {
     terrainTypes && terrainTypes.length > 0 ? TOOLS : TOOLS.filter((t) => t.id !== 'terrain');
 
   return (
-    <HStack spacing={4}>
+    <HStack spacing={2}>
       <Toolbar
         items={visibleTools}
         activeId={tilesetToolMode}
         onActivate={(id) => setTilesetToolMode(id as 'select' | 'terrain')}
       />
-      <Tooltip
-        label={showTilesetCollisionOverlay ? 'Hide collision overlays' : 'Show collision overlays'}
-        fontSize="xs"
-      >
-        <Button
-          size="xs"
-          variant={showTilesetCollisionOverlay ? 'solid' : 'outline'}
+      <ToolbarShell>
+        <ToolbarToggleButton
+          label={
+            showTilesetCollisionOverlay ? 'Hide collision overlays' : 'Show collision overlays'
+          }
+          icon={<FiShield />}
           colorScheme="orange"
-          aria-label="Toggle tileset collision overlays"
+          isActive={showTilesetCollisionOverlay}
           onClick={() => setShowTilesetCollisionOverlay(!showTilesetCollisionOverlay)}
-        >
-          <FiShield />
-        </Button>
-      </Tooltip>
+        />
+      </ToolbarShell>
     </HStack>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, HStack, VStack, Heading, Text } from '@chakra-ui/react';
+import { Box, HStack, VStack, Text } from '@chakra-ui/react';
+import { SectionLabel } from './Typography.tsx';
 
 interface ViewportShellProps {
   title?: string;
@@ -22,11 +23,7 @@ export const ViewportShell: React.FC<ViewportShellProps> = ({ title, subtitle, c
         zIndex={2}
       >
         <VStack align="start" spacing={0}>
-          {title && (
-            <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
-              {title}
-            </Heading>
-          )}
+          {title && <SectionLabel textStyle="panelLabel">{title}</SectionLabel>}
           {subtitle && (
             <Text fontSize="10px" color="gray.500" fontWeight="bold">
               {subtitle}

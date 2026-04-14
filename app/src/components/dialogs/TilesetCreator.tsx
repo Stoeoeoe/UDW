@@ -6,7 +6,6 @@ import {
   Button,
   Input,
   FormControl,
-  FormLabel,
   HStack,
   useToast,
   Image,
@@ -16,6 +15,8 @@ import { fileSystem } from '../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 import type { TileDefinition } from '../../types/schema';
 import { useProject } from '../../hooks/useProject';
+import { MutedFieldLabel } from '../common/Typography.tsx';
+import { EditorCard } from '../common/Surfaces';
 
 interface Props {
   onCreate?: () => void;
@@ -129,7 +130,7 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
   };
 
   return (
-    <Box bg="gray.900" p={6} rounded="2xl" border="1px" borderColor="gray.800" w="lg">
+    <EditorCard p={6} w="lg">
       <VStack spacing={4} align="stretch">
         <VStack align="start" spacing={0}>
           <Text color="white" fontSize="lg" fontWeight="bold">
@@ -141,23 +142,24 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
         </VStack>
 
         <FormControl>
-          <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-            Name
-          </FormLabel>
+          <MutedFieldLabel>Name</MutedFieldLabel>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            bg="gray.950"
-            borderColor="gray.700"
+            bg="editorPanelBg"
+            borderColor="editorBorderLight"
           />
         </FormControl>
 
         <FormControl>
-          <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-            Sprite Image
-          </FormLabel>
+          <MutedFieldLabel>Sprite Image</MutedFieldLabel>
           <HStack>
-            <Input value={filePath || ''} readOnly bg="gray.950" borderColor="gray.700" />
+            <Input
+              value={filePath || ''}
+              readOnly
+              bg="editorPanelBg"
+              borderColor="editorBorderLight"
+            />
             <Button size="sm" onClick={handleSelectFile}>
               Choose
             </Button>
@@ -184,7 +186,7 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
           </Button>
         </HStack>
       </VStack>
-    </Box>
+    </EditorCard>
   );
 };
 

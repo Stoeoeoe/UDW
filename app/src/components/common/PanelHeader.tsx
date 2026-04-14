@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, VStack, Heading, Text, HStack } from '@chakra-ui/react';
+import { Box, VStack, Heading, HStack } from '@chakra-ui/react';
+import { CaptionText, SectionLabel } from './Typography.tsx';
 
 export interface PanelHeaderProps {
   label?: string; // small uppercase label above the title
@@ -21,26 +22,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ label, title, subtitle
     >
       <HStack justify="space-between" align="start" spacing={3}>
         <VStack align="start" spacing={0} flex={1} minW={0}>
-          {label && (
-            <Text
-              fontSize="9px"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="widest"
-              color="gray.500"
-            >
-              {label}
-            </Text>
-          )}
+          {label && <SectionLabel textStyle="panelLabel">{label}</SectionLabel>}
           {title && (
             <Heading size="xs" color="white">
               {title}
             </Heading>
           )}
           {subtitle && (
-            <Text fontSize="10px" color="gray.500" mt={0.5}>
+            <CaptionText color="gray.500" mt={0.5}>
               {subtitle}
-            </Text>
+            </CaptionText>
           )}
         </VStack>
 

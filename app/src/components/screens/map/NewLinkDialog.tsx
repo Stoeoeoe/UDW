@@ -10,7 +10,6 @@ import {
   Button,
   Checkbox,
   FormControl,
-  FormLabel,
   Input,
   Select,
   VStack,
@@ -23,6 +22,7 @@ import {
 import { useEditorStore } from '../../../store/useEditorStore';
 import { LocationLink } from '../../../types/schema';
 import { MapPreviewPicker } from '../../common/MapPreviewPicker';
+import { FieldLabel } from '../../common/Typography.tsx';
 
 interface NewLinkDialogProps {
   linkId: string | null;
@@ -108,18 +108,12 @@ const NewLinkDialogForm: React.FC<{
             <form.Field name="label">
               {(field) => (
                 <FormControl>
-                  <FormLabel
-                    fontSize="xs"
-                    fontWeight="bold"
-                    textTransform="uppercase"
-                    color="gray.500"
-                    mb={1}
-                  >
+                  <FieldLabel>
                     Label{' '}
                     <Text as="span" color="gray.600" fontWeight="normal">
                       (optional)
                     </Text>
-                  </FormLabel>
+                  </FieldLabel>
                   <Input
                     size="sm"
                     bg="gray.800"
@@ -141,15 +135,7 @@ const NewLinkDialogForm: React.FC<{
             <form.Field name="targetMapId">
               {(field) => (
                 <FormControl>
-                  <FormLabel
-                    fontSize="xs"
-                    fontWeight="bold"
-                    textTransform="uppercase"
-                    color="gray.500"
-                    mb={1}
-                  >
-                    Target Map
-                  </FormLabel>
+                  <FieldLabel>Target Map</FieldLabel>
                   <Select
                     size="sm"
                     bg="gray.800"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { HStack, Button, ButtonGroup, Tooltip, Box } from '@chakra-ui/react';
+import { HStack } from '@chakra-ui/react';
 import {
   FiMousePointer,
   FiEdit2,
@@ -16,7 +16,7 @@ import {
   FiMaximize,
   FiLink,
 } from 'react-icons/fi';
-import Toolbar, { ToolItem } from '../../common/Toolbar';
+import Toolbar, { ToolItem, ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ToolType } from '../../../types/editor';
 import { LayerKind } from '../../../types/schema';
@@ -95,17 +95,12 @@ export const MapToolbar: React.FC = () => {
 
   return (
     <HStack spacing={2}>
-      {/* Global select — always leftmost, visually separated */}
-      <Box
-        bg="gray.900"
-        p="1"
-        rounded="xl"
-        border="1px"
-        borderColor={activeTool === 'select' ? 'blue.600' : 'gray.800'}
-        boxShadow="lg"
-      >
-        <Toolbar items={[GLOBAL_SELECT_TOOL]} activeId={activeTool} onActivate={onActivate} />
-      </Box>
+      <Toolbar
+        items={[GLOBAL_SELECT_TOOL]}
+        activeId={activeTool}
+        onActivate={onActivate}
+        shellProps={{ borderColor: activeTool === 'select' ? 'blue.600' : 'gray.800' }}
+      />
 
       {/* Layer-specific tools */}
       {layerTools.length > 0 && (
@@ -114,71 +109,46 @@ export const MapToolbar: React.FC = () => {
 
       {/* Draw mode selector */}
       {showDrawModes && (
-        <HStack
-          bg="gray.900"
-          p="1"
-          rounded="xl"
-          border="1px"
-          borderColor="gray.800"
-          spacing="1"
-          boxShadow="lg"
-        >
-          <Button
-            aria-label="Point"
+        <ToolbarShell>
+          <ToolbarToggleButton
+            label="Point"
+            icon={<FiTarget />}
+            isActive={drawMode === 'point'}
             onClick={() => setDrawMode('point')}
-            size="xs"
-            variant={drawMode === 'point' ? 'solid' : 'ghost'}
-            colorScheme="blue"
-          >
-            <FiTarget />
-          </Button>
-          <Button
-            aria-label="Rect"
+          />
+          <ToolbarToggleButton
+            label="Rect"
+            icon={<FiSquare />}
+            isActive={drawMode === 'rect'}
             onClick={() => setDrawMode('rect')}
-            size="xs"
-            variant={drawMode === 'rect' ? 'solid' : 'ghost'}
-            colorScheme="blue"
-          >
-            <FiSquare />
-          </Button>
-          <Button
-            aria-label="Circle"
+          />
+          <ToolbarToggleButton
+            label="Circle"
+            icon={<FiCircle />}
+            isActive={drawMode === 'circle'}
             onClick={() => setDrawMode('circle')}
-            size="xs"
-            variant={drawMode === 'circle' ? 'solid' : 'ghost'}
-            colorScheme="blue"
-          >
-            <FiCircle />
-          </Button>
-        </HStack>
+          />
+        </ToolbarShell>
       )}
 
       {/* Snap toggle */}
       {showSnapToggle && (
-        <ButtonGroup size="xs" isAttached variant="outline" colorScheme="purple">
-          <Tooltip label="Snap to grid" fontSize="xs">
-            <Button
-              bg={entitySnapMode === 'grid' ? 'purple.600' : 'transparent'}
-              color={entitySnapMode === 'grid' ? 'white' : 'gray.400'}
-              borderColor="gray.700"
-              _hover={{ bg: entitySnapMode === 'grid' ? 'purple.500' : 'gray.800' }}
-              onClick={() => setEntitySnapMode('grid')}
-            >
-              <FiGrid />
-            </Button>
-          </Tooltip>
-          <Tooltip label="Pixel perfect" fontSize="xs">
-            <Button
-              bg={entitySnapMode === 'pixel' ? 'purple.600' : 'transparent'}
-              color={entitySnapMode === 'pixel' ? 'white' : 'gray.400'}
-              borderColor="gray.700"
-              _hover={{ bg: entitySnapMode === 'pixel' ? 'purple.500' : 'gray.800' }}
-              onClick={() => setEntitySnapMode('pixel')}
-            >
-              <FiMaximize />
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
+        <ToolbarShell>
+          <ToolbarToggleButton
+            label="Snap to grid"
+            icon={<FiGrid />}
+            colorScheme="purple"
+            isActive={entitySnapMode === 'grid'}
+            onClick={() => setEntitySnapMode('grid')}
+          />
+          <ToolbarToggleButton
+            label="Pixel perfect"
+            icon={<FiMaximize />}
+            colorScheme="purple"
+            isActive={entitySnapMode === 'pixel'}
+            onClick={() => setEntitySnapMode('pixel')}
+          />
+        </ToolbarShell>
       )}
     </HStack>
   );

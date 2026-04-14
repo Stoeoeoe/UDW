@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   FormControl,
-  FormLabel,
   Input,
   Text,
   VStack,
@@ -16,6 +15,7 @@ import {
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DialogueNode, DialogueNodeType } from '../../../types/schema';
+import { FieldLabel } from '../../common/Typography.tsx';
 
 // ── NodeTypeMenu ──────────────────────────────────────────────────────────────
 
@@ -119,9 +119,7 @@ export const NodeIdField: React.FC<{
 
   return (
     <FormControl>
-      <FormLabel fontSize="10px" color="gray.500" textTransform="uppercase" mb={1}>
-        Node ID
-      </FormLabel>
+      <FieldLabel>Node ID</FieldLabel>
       <Input
         size="xs"
         bg="#0a0a0b"

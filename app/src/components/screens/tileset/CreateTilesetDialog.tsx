@@ -16,6 +16,7 @@ import type { TileDefinition } from '../../../types/schema';
 import { useProject } from '../../../hooks/useProject';
 import { EditorModal } from '../../common/EditorModal';
 import { EntityFormDialog } from '../common';
+import { MutedFieldLabel } from '../../common/Typography.tsx';
 
 interface CreateTilesetDialogProps {
   isOpen: boolean;
@@ -136,9 +137,7 @@ export const CreateTilesetDialog: React.FC<CreateTilesetDialogProps> = ({ isOpen
         isSubmitDisabled={!blob || isProcessing}
       >
         <FormControl>
-          <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-            Name
-          </FormLabel>
+          <MutedFieldLabel>Name</MutedFieldLabel>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -148,9 +147,7 @@ export const CreateTilesetDialog: React.FC<CreateTilesetDialogProps> = ({ isOpen
         </FormControl>
 
         <FormControl>
-          <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-            Sprite Image
-          </FormLabel>
+          <MutedFieldLabel>Sprite Image</MutedFieldLabel>
           <HStack>
             <Input value={filePath || ''} readOnly bg="gray.950" borderColor="gray.700" />
             <Button size="sm" onClick={handleSelectFile}>

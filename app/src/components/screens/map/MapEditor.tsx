@@ -122,6 +122,7 @@ export const MapEditor: React.FC = () => {
       const includedCount = maps.filter((map) => map.metadata?.world?.included).length;
       return (
         <ResizableEditorLayout
+          editorName="Maps"
           header={{
             title: activeView === 'world' ? 'World' : 'Maps',
             subtitle:

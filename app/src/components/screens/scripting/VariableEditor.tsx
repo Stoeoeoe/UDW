@@ -12,7 +12,6 @@ import {
   Tooltip,
   Collapse,
   Button,
-  FormLabel,
   NumberInput,
   NumberInputField,
   useDisclosure,
@@ -28,6 +27,7 @@ import {
   ScriptContextType,
 } from '../../../types/schema';
 import { ConditionEditor } from './ConditionEditor';
+import { FormLabel } from '../../common/FormLabel';
 import { GlobalFunctionEditor } from './GlobalFunctionEditor';
 import { NamespaceEditor } from './NamespaceEditor';
 import { ContextTypeEditor } from './ContextTypeEditor';
@@ -36,6 +36,7 @@ import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
 import { DialogListWorkspace } from '../common/DialogListWorkspace';
 import { EditorModal } from '../../common/EditorModal';
 import { EntityFormDialog } from '../common/EntityFormDialog';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 type ScriptingTab = 'variables' | 'tables' | 'functions' | 'namespaces' | 'contexts';
 
@@ -310,25 +311,16 @@ const ScriptTester: React.FC<{
         _hover={{ bg: 'whiteAlpha.50' }}
         spacing={2}
       >
-        <Text
-          fontSize="9px"
-          fontWeight="bold"
-          textTransform="uppercase"
-          letterSpacing="wider"
-          color="gray.500"
-          flex={1}
-        >
+        <SectionLabel textStyle="panelLabel" flex={1}>
           Script Tester
-        </Text>
+        </SectionLabel>
         {open ? <ChevronUpIcon color="gray.600" /> : <ChevronDownIcon color="gray.600" />}
       </HStack>
       <Collapse in={open} animateOpacity>
         <Box px={3} pb={3} pt={1}>
           {contextTypes.length > 0 && (
             <HStack mb={2} spacing={2}>
-              <Text fontSize="9px" color="gray.500" fontWeight="bold">
-                CONTEXT:
-              </Text>
+              <SectionLabel textStyle="panelLabel">Context</SectionLabel>
               <Select
                 size="xs"
                 w="140px"

@@ -5,7 +5,6 @@ import {
   Divider,
   Input,
   FormControl,
-  FormLabel,
   HStack,
   NumberInput,
   NumberInputField,
@@ -17,6 +16,8 @@ import { PropertyForm, propertyDefinitionsToSchema } from '../common/PropertyFor
 import { resolveEntities } from '../../lib/mapUtils';
 import { InspectorPanel, InspectorEmptyState } from '../screens/common';
 import type { PropertyValue } from '../../types/schema';
+import { FormLabel } from '../common/FormLabel';
+import { SectionLabel } from '../common/Typography.tsx';
 
 export const PropertiesPanel: React.FC = () => {
   const editorMode = useEditorStore((state) => state.mode);
@@ -199,9 +200,7 @@ export const PropertiesPanel: React.FC = () => {
 
           {/* Dynamic Properties Section */}
           <VStack align="stretch" spacing={4}>
-            <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-              Behavior Properties
-            </Text>
+            <SectionLabel textStyle="fieldLabel">Behavior Properties</SectionLabel>
 
             {entityType?.properties && (
               <PropertyForm

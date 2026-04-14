@@ -27,6 +27,7 @@ import {
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { ScriptTable, TableField } from '../../../types/schema';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 const FIELD_TYPES: { value: TableField['type']; label: string }[] = [
   { value: 'boolean', label: 'boolean' },
@@ -302,15 +303,7 @@ export const TableEditor: React.FC<TableEditorProps> = ({
           borderColor="whiteAlpha.50"
         >
           <HStack spacing={2}>
-            <Text
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="widest"
-              color="gray.500"
-            >
-              Tables
-            </Text>
+            <SectionLabel textStyle="fieldLabel">Tables</SectionLabel>
             <Badge fontSize="9px" colorScheme="gray" variant="subtle">
               {tables.length}
             </Badge>

@@ -1,10 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Box,
   Button,
   Divider,
   FormControl,
-  FormLabel,
   Grid,
   GridItem,
   HStack,
@@ -26,6 +24,8 @@ import {
   getAutoTilePatterns,
   generateAutotileTilesetAtlas,
 } from '../../lib/autotileGenerator';
+import { CaptionText, MutedFieldLabel, SectionLabel } from '../common/Typography.tsx';
+import { EditorCard } from '../common/Surfaces';
 
 interface AutotileGeneratorDialogProps {
   isOpen: boolean;
@@ -75,7 +75,7 @@ const PatternSwatch: React.FC<{
       spacing={1}
       align="stretch"
       border="1px"
-      borderColor="gray.700"
+      borderColor="editorBorderLight"
       rounded="md"
       p={2}
       bg="gray.900"
@@ -287,7 +287,7 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
 
   return (
     <EditorModal isOpen={isOpen} onClose={handleClose} size="2xl">
-      <Box bg="gray.900" p={6} rounded="2xl" border="1px" borderColor="gray.800" boxShadow="2xl">
+      <EditorCard p={6}>
         <VStack align="stretch" spacing={4}>
           <VStack align="start" spacing={0}>
             <Text color="white" fontSize="lg" fontWeight="bold">
@@ -300,12 +300,10 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
 
           <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={4}>
             <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Terrain A
-              </FormLabel>
+              <MutedFieldLabel>Terrain A</MutedFieldLabel>
               <Select
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={terrainAId}
                 onChange={(e) => setTerrainAId(e.target.value)}
                 isDisabled={!hasEnoughTerrains}
@@ -319,12 +317,10 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
             </FormControl>
 
             <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Terrain B
-              </FormLabel>
+              <MutedFieldLabel>Terrain B</MutedFieldLabel>
               <Select
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={terrainBId}
                 onChange={(e) => setTerrainBId(e.target.value)}
                 isDisabled={!hasEnoughTerrains}
@@ -341,17 +337,15 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
           <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={4}>
             <FormControl>
               <HStack justify="space-between" mb={1}>
-                <FormLabel m={0} fontSize="xs" color="gray.400" textTransform="uppercase">
-                  Source Tiles A
-                </FormLabel>
+                <MutedFieldLabel m={0}>Source Tiles A</MutedFieldLabel>
                 <Button size="xs" variant="outline" onClick={applyCurrentSelectionToA}>
                   Use Selection
                 </Button>
               </HStack>
               <Input
                 placeholder="e.g. 0, 1, 2"
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={sourceAInput}
                 onChange={(e) => setSourceAInput(e.target.value)}
               />
@@ -359,35 +353,31 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
 
             <FormControl>
               <HStack justify="space-between" mb={1}>
-                <FormLabel m={0} fontSize="xs" color="gray.400" textTransform="uppercase">
-                  Source Tiles B
-                </FormLabel>
+                <MutedFieldLabel m={0}>Source Tiles B</MutedFieldLabel>
                 <Button size="xs" variant="outline" onClick={applyCurrentSelectionToB}>
                   Use Selection
                 </Button>
               </HStack>
               <Input
                 placeholder="e.g. 16, 17, 18"
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={sourceBInput}
                 onChange={(e) => setSourceBInput(e.target.value)}
               />
             </FormControl>
           </Grid>
 
-          <Text fontSize="xs" color="gray.500">
+          <CaptionText fontSize="xs" color="gray.500">
             Current tile selection: {selectedIndicesLabel}
-          </Text>
+          </CaptionText>
 
           <Grid templateColumns="repeat(3, minmax(0, 1fr))" gap={4}>
             <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Preset
-              </FormLabel>
+              <MutedFieldLabel>Preset</MutedFieldLabel>
               <Select
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={preset}
                 onChange={(e) => {
                   const next = e.target.value as AutoTilePreset;
@@ -403,9 +393,7 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
             </FormControl>
 
             <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                Variants Per Pattern
-              </FormLabel>
+              <MutedFieldLabel>Variants Per Pattern</MutedFieldLabel>
               <NumberInput
                 min={1}
                 max={8}
@@ -414,14 +402,12 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
                   setVariantsPerPattern(Number.isFinite(valueAsNumber) ? valueAsNumber : 1)
                 }
               >
-                <NumberInputField bg="gray.950" borderColor="gray.700" />
+                <NumberInputField bg="editorPanelBg" borderColor="editorBorderLight" />
               </NumberInput>
             </FormControl>
 
             <VStack align="start" justify="center" spacing={0}>
-              <Text fontSize="xs" color="gray.400" textTransform="uppercase">
-                Output Count
-              </Text>
+              <SectionLabel color="gray.400">Output Count</SectionLabel>
               <Text color="white" fontWeight="bold">
                 {patterns.length * Math.max(1, Math.floor(variantsPerPattern))} tiles
               </Text>
@@ -430,12 +416,10 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
 
           <Grid templateColumns="repeat(2, minmax(0, 1fr))" gap={4}>
             <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                New Tileset Name
-              </FormLabel>
+              <MutedFieldLabel>New Tileset Name</MutedFieldLabel>
               <Input
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={outputName}
                 onChange={(e) => {
                   setOutputNameTouched(true);
@@ -445,12 +429,10 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
             </FormControl>
 
             <FormControl>
-              <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-                New Tileset ID
-              </FormLabel>
+              <MutedFieldLabel>New Tileset ID</MutedFieldLabel>
               <Input
-                bg="gray.950"
-                borderColor="gray.700"
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
                 value={outputId}
                 onChange={(e) => {
                   setOutputIdTouched(true);
@@ -460,12 +442,10 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
             </FormControl>
           </Grid>
 
-          <Divider borderColor="gray.800" />
+          <Divider borderColor="editorBorderSubtle" />
 
           <VStack align="start" spacing={2}>
-            <Text fontSize="xs" color="gray.400" textTransform="uppercase">
-              Pattern Preview
-            </Text>
+            <SectionLabel color="gray.400">Pattern Preview</SectionLabel>
             <Grid
               templateColumns="repeat(7, minmax(0, 1fr))"
               gap={2}
@@ -499,7 +479,7 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
             </Button>
           </HStack>
         </VStack>
-      </Box>
+      </EditorCard>
     </EditorModal>
   );
 };

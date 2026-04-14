@@ -5,7 +5,6 @@ import * as z from 'zod';
 import {
   Button,
   FormControl,
-  FormLabel,
   Input,
   FormErrorMessage,
   SimpleGrid,
@@ -15,6 +14,7 @@ import {
   Divider,
 } from '@chakra-ui/react';
 import { Project } from '../../types/schema';
+import { FormLabel } from '../common/FormLabel';
 
 interface ProjectSettingsEditorProps {
   initialProject?: Project;
@@ -100,7 +100,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               <FormLabel>Project Name</FormLabel>
               <Input
                 bg="gray.950"
-                borderColor="gray.700"
+                borderColor="editorBorderLight"
                 _hover={{ borderColor: 'blue.500' }}
                 _focus={{ borderColor: 'blue.500', ring: 1, ringColor: 'blue.500' }}
                 placeholder="e.g. My Awesome Game"
@@ -112,7 +112,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               <FormLabel>Project ID</FormLabel>
               <Input
                 bg="gray.950"
-                borderColor="gray.700"
+                borderColor="editorBorderLight"
                 _hover={{ borderColor: 'blue.500' }}
                 _focus={{ borderColor: 'blue.500', ring: 1, ringColor: 'blue.500' }}
                 placeholder="e.g. my-awesome-game"
@@ -125,7 +125,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                 <FormLabel>Tile Size (px)</FormLabel>
                 <Input
                   bg="gray.950"
-                  borderColor="gray.700"
+                  borderColor="editorBorderLight"
                   type="number"
                   {...register('tileSize', {
                     setValueAs: (v) => (v === '' ? 0 : Number(v)),
@@ -138,7 +138,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                 <FormLabel>Version</FormLabel>
                 <Input
                   bg="gray.800"
-                  borderColor="gray.700"
+                  borderColor="editorBorderLight"
                   disabled={true}
                   value={initialProject?.version || '1.0'}
                 />
@@ -150,7 +150,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                 <FormLabel>Default Width</FormLabel>
                 <Input
                   bg="gray.950"
-                  borderColor="gray.700"
+                  borderColor="editorBorderLight"
                   type="number"
                   {...register('defaultMapWidth', {
                     setValueAs: (v) => (v === '' ? 0 : Number(v)),
@@ -163,7 +163,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                 <FormLabel>Default Height</FormLabel>
                 <Input
                   bg="gray.950"
-                  borderColor="gray.700"
+                  borderColor="editorBorderLight"
                   type="number"
                   {...register('defaultMapHeight', {
                     setValueAs: (v) => (v === '' ? 0 : Number(v)),
@@ -178,7 +178,11 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
           <VStack spacing={4} align="stretch">
             <FormControl isInvalid={!!errors.metadata?.author}>
               <FormLabel>Author</FormLabel>
-              <Input bg="gray.950" borderColor="gray.700" {...register('metadata.author')} />
+              <Input
+                bg="gray.950"
+                borderColor="editorBorderLight"
+                {...register('metadata.author')}
+              />
               <FormErrorMessage>{errors.metadata?.author?.message}</FormErrorMessage>
             </FormControl>
 
@@ -192,7 +196,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               <Textarea
                 flex={1}
                 bg="gray.950"
-                borderColor="gray.700"
+                borderColor="editorBorderLight"
                 rows={6}
                 resize="none"
                 {...register('metadata.description')}
@@ -202,7 +206,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
           </VStack>
         </SimpleGrid>
 
-        <Divider borderColor="gray.800" />
+        <Divider borderColor="editorBorderSubtle" />
 
         <HStack justify="flex-end" spacing="3">
           <Button

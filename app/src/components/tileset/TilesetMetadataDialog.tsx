@@ -1,21 +1,13 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Button,
-  FormControl,
-  FormLabel,
-  HStack,
-  Input,
-  Text,
-  VStack,
-  useToast,
-} from '@chakra-ui/react';
+import { Button, FormControl, HStack, Input, Text, VStack, useToast } from '@chakra-ui/react';
 import { EditorModal } from '../common/EditorModal';
 import { Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 import { useProject } from '../../hooks/useProject';
+import { MutedFieldLabel } from '../common/Typography.tsx';
+import { EditorCard } from '../common/Surfaces';
 
 interface Props {
   isOpen: boolean;
@@ -126,15 +118,7 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
 
   return (
     <EditorModal isOpen={isOpen} onClose={onClose}>
-      <Box
-        bg="gray.900"
-        p={6}
-        rounded="2xl"
-        border="1px"
-        borderColor="gray.800"
-        boxShadow="2xl"
-        w="lg"
-      >
+      <EditorCard p={6} w="lg">
         <VStack align="stretch" spacing={4}>
           <VStack align="start" spacing={0}>
             <Text color="white" fontSize="lg" fontWeight="bold">
@@ -146,23 +130,19 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
           </VStack>
 
           <FormControl>
-            <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-              Name
-            </FormLabel>
+            <MutedFieldLabel>Name</MutedFieldLabel>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              bg="gray.950"
-              borderColor="gray.700"
+              bg="editorPanelBg"
+              borderColor="editorBorderLight"
             />
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-              Sprite Image
-            </FormLabel>
+            <MutedFieldLabel>Sprite Image</MutedFieldLabel>
             <HStack>
-              <Input value={spritePath} bg="gray.950" borderColor="gray.700" />
+              <Input value={spritePath} bg="editorPanelBg" borderColor="editorBorderLight" />
               <Button size="sm" onClick={handleSelectSprite} isLoading={isProcessing}>
                 Choose
               </Button>
@@ -170,15 +150,13 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
           </FormControl>
 
           <FormControl>
-            <FormLabel fontSize="xs" color="gray.400" textTransform="uppercase">
-              Columns
-            </FormLabel>
+            <MutedFieldLabel>Columns</MutedFieldLabel>
             <Input
               type="number"
               value={columns}
               onChange={(e) => setColumns(Number(e.target.value))}
-              bg="gray.950"
-              borderColor="gray.700"
+              bg="editorPanelBg"
+              borderColor="editorBorderLight"
             />
           </FormControl>
 
@@ -191,7 +169,7 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
             </Button>
           </HStack>
         </VStack>
-      </Box>
+      </EditorCard>
     </EditorModal>
   );
 };

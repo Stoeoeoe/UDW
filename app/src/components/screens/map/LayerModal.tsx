@@ -11,12 +11,12 @@ import {
   Input,
   Select,
   FormControl,
-  FormLabel,
   Text,
   VStack,
 } from '@chakra-ui/react';
 import { LayerKind } from '../../../types/schema';
 import { LAYER_ICONS } from './layerConstants';
+import { FieldLabel } from '../../common/Typography.tsx';
 
 export interface LayerFormData {
   name: string;
@@ -68,7 +68,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
       <ModalOverlay backdropFilter="blur(4px)" />
-      <ModalContent bg="gray.900" border="1px" borderColor="gray.700">
+      <ModalContent bg="gray.900" border="1px" borderColor="editorBorderLight">
         <ModalHeader fontSize="md" pb={2}>
           {isEditing ? 'Edit Layer' : 'Add Layer'}
         </ModalHeader>
@@ -84,14 +84,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
               <form.Field name="name">
                 {(field) => (
                   <FormControl>
-                    <FormLabel
-                      fontSize="xs"
-                      fontWeight="bold"
-                      textTransform="uppercase"
-                      color="gray.500"
-                    >
-                      Name
-                    </FormLabel>
+                    <FieldLabel>Name</FieldLabel>
                     <Input
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -108,14 +101,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
               <form.Field name="kind">
                 {(field) => (
                   <FormControl>
-                    <FormLabel
-                      fontSize="xs"
-                      fontWeight="bold"
-                      textTransform="uppercase"
-                      color="gray.500"
-                    >
-                      Type
-                    </FormLabel>
+                    <FieldLabel>Type</FieldLabel>
                     <Select
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value as LayerKind)}
@@ -137,14 +123,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
               <form.Field name="zOrder">
                 {(field) => (
                   <FormControl>
-                    <FormLabel
-                      fontSize="xs"
-                      fontWeight="bold"
-                      textTransform="uppercase"
-                      color="gray.500"
-                    >
-                      Z-Order
-                    </FormLabel>
+                    <FieldLabel>Z-Order</FieldLabel>
                     <Input
                       type="number"
                       value={field.state.value}
@@ -163,14 +142,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
               <form.Field name="icon">
                 {(field) => (
                   <FormControl>
-                    <FormLabel
-                      fontSize="xs"
-                      fontWeight="bold"
-                      textTransform="uppercase"
-                      color="gray.500"
-                    >
-                      Icon
-                    </FormLabel>
+                    <FieldLabel>Icon</FieldLabel>
                     <Select
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}

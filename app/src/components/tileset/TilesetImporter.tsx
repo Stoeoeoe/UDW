@@ -7,7 +7,6 @@ import {
   Button,
   Input,
   FormControl,
-  FormLabel,
   Heading,
   Image,
   SimpleGrid,
@@ -18,6 +17,8 @@ import { TileDefinition, Tileset } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
 import { useProject } from '../../hooks/useProject';
+import { CaptionText, FieldLabel } from '../common/Typography.tsx';
+import { EditorCard } from '../common/Surfaces';
 
 interface TilesetImporterProps {
   onImport: () => void;
@@ -142,7 +143,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
   };
 
   return (
-    <Box bg="gray.900" p={8} rounded="2xl" border="2px" borderColor="gray.800" shadow="2xl">
+    <EditorCard p={8} border="2px" shadow="2xl">
       <VStack spacing={6} align="stretch">
         <VStack align="start" spacing={1}>
           <Heading size="md" color="white">
@@ -157,7 +158,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
           <Box
             h="48"
             border="2px dashed"
-            borderColor="gray.700"
+            borderColor="editorBorderLight"
             rounded="xl"
             display="flex"
             alignItems="center"
@@ -197,9 +198,9 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
                 <Text color="gray.300" fontWeight="bold">
                   Select Tileset Image
                 </Text>
-                <Text color="gray.600" fontSize="xs">
+                <CaptionText color="gray.600" fontSize="xs">
                   PNG/JPG/Aseprite supported
-                </Text>
+                </CaptionText>
               </VStack>
             </VStack>
           </Box>
@@ -213,7 +214,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
               alignItems="center"
               justifyContent="center"
               border="1px"
-              borderColor="gray.800"
+              borderColor="editorBorderSubtle"
             >
               <Image
                 src={fileData.url}
@@ -225,17 +226,10 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
 
             <VStack spacing={4} align="stretch">
               <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="xs"
-                  fontWeight="bold"
-                  textTransform="uppercase"
-                >
-                  Tileset Name
-                </FormLabel>
+                <FieldLabel>Tileset Name</FieldLabel>
                 <Input
-                  bg="gray.950"
-                  borderColor="gray.700"
+                  bg="editorPanelBg"
+                  borderColor="editorBorderLight"
                   value={tilesetName}
                   onChange={(e) => setTilesetName(e.target.value)}
                 />
@@ -278,6 +272,6 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
           </Button>
         </HStack>
       </VStack>
-    </Box>
+    </EditorCard>
   );
 };

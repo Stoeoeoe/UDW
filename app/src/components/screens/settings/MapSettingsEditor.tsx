@@ -6,7 +6,6 @@ import {
   Button,
   Circle,
   FormControl,
-  FormLabel,
   HStack,
   IconButton,
   Input,
@@ -26,6 +25,7 @@ import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { BsTree, BsBuilding, BsWater, BsLayersHalf, BsStack } from 'react-icons/bs';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { LayerType, PropertyDefinition, PropertyType, PropertyValue } from '../../../types/schema';
+import { FormLabel } from '../../common/FormLabel';
 import {
   DialogListItem,
   DialogListWorkspace,

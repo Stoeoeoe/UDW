@@ -22,6 +22,7 @@ import {
   ScriptPrimitiveType,
   ScriptTable,
 } from '../../../types/schema';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 const RETURN_TYPES: { value: ScriptPrimitiveType; label: string }[] = [
   { value: 'void', label: 'void' },
@@ -146,9 +147,9 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
     <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
       <VStack spacing={3} align="stretch">
         <Box>
-          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-            NAME
-          </Text>
+          <SectionLabel textStyle="panelLabel" mb={1}>
+            Name
+          </SectionLabel>
           <Input
             size="xs"
             bg="#0a0a0b"
@@ -163,9 +164,9 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
         </Box>
 
         <Box>
-          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-            RETURN TYPE
-          </Text>
+          <SectionLabel textStyle="panelLabel" mb={1}>
+            Return Type
+          </SectionLabel>
           <Select
             size="xs"
             bg="#0a0a0b"
@@ -210,9 +211,7 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
 
         <Box>
           <HStack mb={1} justify="space-between">
-            <Text fontSize="9px" color="gray.500" fontWeight="bold">
-              PARAMETERS
-            </Text>
+            <SectionLabel textStyle="panelLabel">Parameters</SectionLabel>
             <IconButton
               aria-label="Add param"
               icon={<AddIcon fontSize="8px" />}
@@ -241,9 +240,9 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
         </Box>
 
         <Box>
-          <Text fontSize="9px" color="gray.500" mb={1} fontWeight="bold">
-            DESCRIPTION
-          </Text>
+          <SectionLabel textStyle="panelLabel" mb={1}>
+            Description
+          </SectionLabel>
           <Input
             size="xs"
             bg="#0a0a0b"
@@ -270,15 +269,7 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
           borderColor="whiteAlpha.50"
         >
           <HStack spacing={2}>
-            <Text
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="widest"
-              color="gray.500"
-            >
-              Global Functions
-            </Text>
+            <SectionLabel textStyle="fieldLabel">Global Functions</SectionLabel>
             <Badge fontSize="9px" colorScheme="gray" variant="subtle">
               {functions.length}
             </Badge>

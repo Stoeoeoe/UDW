@@ -27,6 +27,7 @@ import {
   GameVariableType,
   ScriptTable,
 } from '../../../types/schema';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 // ─── Shared inline editors ──────────────────────────────────────────────────
 
@@ -113,9 +114,7 @@ const InlineFunction: React.FC<{
         {/* Params */}
         <Box>
           <HStack mb={1} justify="space-between">
-            <Text fontSize="9px" color="gray.600">
-              Params
-            </Text>
+            <SectionLabel textStyle="panelLabel">Params</SectionLabel>
             <IconButton
               aria-label="Add param"
               icon={<AddIcon fontSize="7px" />}
@@ -341,15 +340,7 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
           borderColor="whiteAlpha.50"
         >
           <HStack spacing={2}>
-            <Text
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              letterSpacing="widest"
-              color="gray.500"
-            >
-              Namespaces
-            </Text>
+            <SectionLabel textStyle="fieldLabel">Namespaces</SectionLabel>
             <Badge fontSize="9px" colorScheme="gray" variant="subtle">
               {namespaces.length}
             </Badge>

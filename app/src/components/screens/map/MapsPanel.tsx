@@ -4,7 +4,6 @@ import {
   HStack,
   Box,
   Text,
-  IconButton,
   Button,
   Spacer,
   Collapse,
@@ -16,6 +15,8 @@ import { MapCreator } from '../../dialogs/MapCreator';
 import { LayersPanel } from './LayersPanel';
 import { EditorModal } from '../../common/EditorModal';
 import PanelHeader from '../../../components/common/PanelHeader';
+import { GhostIconButton } from '../../common/IconButtons';
+import { SurfaceSectionHeader } from '../../common/Surfaces';
 
 export const MapsPanel: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
@@ -46,21 +47,24 @@ export const MapsPanel: React.FC = () => {
   return (
     <VStack
       h="full"
-      bg="gray.950"
+      bg="editorPanelBg"
       spacing={0}
       align="stretch"
       borderLeft="1px"
-      borderColor="gray.800"
+      borderColor="editorBorderSubtle"
     >
       {/* Header: Map Title */}
       <PanelHeader
         title={currentMap?.name || 'No Map Loaded'}
         actions={
-          <IconButton
+          <GhostIconButton
             aria-label="New Map"
             icon={<AddIcon fontSize="10px" />}
             size="xs"
             colorScheme="blue"
+            color="white"
+            bg="blue.600"
+            _hover={{ bg: 'blue.500' }}
             onClick={onOpen}
           />
         }
@@ -68,43 +72,30 @@ export const MapsPanel: React.FC = () => {
 
       <VStack spacing={0} align="stretch" flex={1} overflow="hidden">
         {/* Variations Section */}
-        <Box flex="0 0 auto" borderBottom="1px" borderColor="gray.800">
-          <Box
-            bg="gray.900"
-            px={4}
-            py={2}
+        <Box flex="0 0 auto" borderBottom="1px" borderColor="editorBorderSubtle">
+          <SurfaceSectionHeader
+            title="Variations"
             cursor="pointer"
             onClick={() => setVariationsOpen(!variationsOpen)}
-            _hover={{ bg: 'gray.800' }}
-          >
-            <HStack>
-              <Text
-                fontSize="10px"
-                fontWeight="black"
-                textTransform="uppercase"
-                letterSpacing="widest"
-                color="gray.400"
-              >
-                Variations
-              </Text>
-              <Spacer />
-              <IconButton
+            _hover={{ bg: 'editorHoverBg' }}
+            actions={
+              <GhostIconButton
                 aria-label="Add Variation"
                 icon={<AddIcon fontSize="10px" />}
-                size="xs"
-                variant="ghost"
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
                   handleAddVariation();
                 }}
               />
-              {variationsOpen ? (
-                <ChevronUpIcon color="gray.500" />
-              ) : (
-                <ChevronDownIcon color="gray.500" />
-              )}
-            </HStack>
-          </Box>
+            }
+          >
+            <Spacer />
+            {variationsOpen ? (
+              <ChevronUpIcon color="gray.500" />
+            ) : (
+              <ChevronDownIcon color="gray.500" />
+            )}
+          </SurfaceSectionHeader>
 
           <Collapse in={variationsOpen}>
             <VStack align="stretch" spacing={1} p={2} maxH="200px" overflowY="auto">
@@ -141,11 +132,9 @@ export const MapsPanel: React.FC = () => {
                     </Text>
                     {v.displayName}
                   </Button>
-                  <IconButton
+                  <GhostIconButton
                     aria-label="Delete Variation"
                     icon={<DeleteIcon fontSize="10px" />}
-                    size="xs"
-                    variant="ghost"
                     colorScheme="red"
                     opacity={0.3}
                     _hover={{ opacity: 1 }}

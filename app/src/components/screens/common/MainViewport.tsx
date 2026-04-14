@@ -21,7 +21,7 @@ export const MainViewport: React.FC<MainViewportProps> = ({ mode }) => {
     case 'maps':
       if (!currentMap) {
         return (
-          <Center w="full" h="full" bg="gray.950">
+          <Center w="full" h="full" bg="editorPanelBg">
             <VStack spacing={6}>
               <VStack spacing={2}>
                 <Text fontSize="6xl">🗺️</Text>

@@ -1,15 +1,7 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Flex,
-  Text,
-  VStack,
-  IconButton,
-  Collapse,
-  useToast,
-  useDisclosure,
-} from '@chakra-ui/react';
+import React, { useState, type MouseEvent } from 'react';
+import { Box, Flex, Text, VStack, Collapse, useToast, useDisclosure } from '@chakra-ui/react';
 import PanelHeader from '../../../components/common/PanelHeader';
+import { GhostIconButton } from '../../common/IconButtons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { AddIcon, ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { Layer } from '../../../types/schema';
@@ -17,6 +9,7 @@ import { useLayerDragDrop } from '../../../hooks/useLayerDragDrop';
 import { LayerItem } from './LayerItem';
 import { LayerModal, LayerFormData } from './LayerModal';
 import { LAYER_CATEGORIES, LayerCategoryConfig, kindToCategory } from './layerConstants';
+import { CaptionText, SectionLabel } from '../../../components/common/Typography.tsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Category section header with collapse toggle + add button
@@ -55,30 +48,19 @@ const CategoryHeader: React.FC<CategoryHeaderProps> = ({
       {isOpen ? <ChevronDownIcon boxSize={3} /> : <ChevronRightIcon boxSize={3} />}
     </Box>
     <Box w="6px" h="6px" borderRadius="full" bg={config.color} mr="2" flexShrink={0} />
-    <Text
-      flex={1}
-      fontSize="9px"
-      fontWeight="black"
-      textTransform="uppercase"
-      letterSpacing="widest"
-      color="gray.500"
-    >
+    <SectionLabel textStyle="panelLabel" flex={1}>
       {config.label}
-    </Text>
+    </SectionLabel>
     {count > 0 && (
       <Text fontSize="9px" color="gray.600" mr="1">
         {count}
       </Text>
     )}
     {!hideAdd && (
-      <IconButton
+      <GhostIconButton
         aria-label={`Add ${config.label} layer`}
         icon={<AddIcon fontSize="8px" />}
-        size="xs"
-        variant="ghost"
-        color="gray.600"
-        _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-        onClick={(e) => {
+        onClick={(e: MouseEvent<HTMLButtonElement>) => {
           e.stopPropagation();
           onAdd();
         }}
@@ -264,13 +246,11 @@ export const LayersPanel: React.FC = () => {
         <PanelHeader
           title="Layers"
           actions={
-            <IconButton
+            <GhostIconButton
               aria-label="Add Layer"
               icon={<AddIcon fontSize="10px" />}
-              size="md"
-              variant="ghost"
               color="gray.400"
-              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              size="md"
               onClick={() => handleOpenAddModal()}
             />
           }
@@ -298,9 +278,9 @@ export const LayersPanel: React.FC = () => {
                 <Collapse in={!isCollapsed} animateOpacity>
                   {catLayers.length === 0 ? (
                     <Box px="4" py="2">
-                      <Text fontSize="10px" color="gray.700" fontStyle="italic">
+                      <CaptionText color="gray.700" fontStyle="italic">
                         No {catConfig.label.toLowerCase()} layers
-                      </Text>
+                      </CaptionText>
                     </Box>
                   ) : (
                     <VStack spacing={0} align="stretch" px={1} py={1}>

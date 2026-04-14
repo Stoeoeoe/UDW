@@ -159,66 +159,55 @@ export const TopBar: React.FC = () => {
               variant="ghost"
               size="xs"
               color="gray.400"
-              _hover={{ color: 'white', bg: 'gray.800' }}
               _active={{ bg: 'gray.700' }}
               fontWeight="medium"
             >
               File
             </MenuButton>
             <MenuList
-              bg="gray.800"
-              borderColor="gray.700"
+              bg="editorCanvasBg"
+              borderColor="editorBorderLight"
               color="gray.200"
               boxShadow="xl"
               py="1"
               zIndex="50"
             >
-              <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleOpenProject}>
-                Open Project...
-              </MenuItem>
-              <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }} onClick={handleSaveProject}>
-                Save Project
-              </MenuItem>
-              <MenuDivider borderColor="gray.700" />
               <MenuItem
                 bg="transparent"
-                _hover={{ bg: 'gray.700' }}
+                _hover={{ bg: 'editorPanelBg' }}
+                onClick={handleOpenProject}
+              >
+                Open Project...
+              </MenuItem>
+              <MenuItem
+                bg="transparent"
+                _hover={{ bg: 'editorPanelBg' }}
+                onClick={handleSaveProject}
+              >
+                Save Project
+              </MenuItem>
+              <MenuDivider borderColor="editorBorderLight" />
+              <MenuItem
+                bg="transparent"
+                _hover={{ bg: 'editorPanelBg' }}
                 color="red.400"
                 onClick={handleCloseProject}
               >
                 Close Project
               </MenuItem>
-              <MenuItem bg="transparent" _hover={{ bg: 'gray.700' }}>
+              <MenuItem bg="transparent" _hover={{ bg: 'editorPanelBg' }}>
                 Exit Control Panel
               </MenuItem>
             </MenuList>
           </Menu>
 
-          <Button
-            variant="ghost"
-            size="xs"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'gray.800' }}
-            fontWeight="medium"
-          >
+          <Button variant="ghost" size="xs" color="gray.400" fontWeight="medium">
             Edit
           </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'gray.800' }}
-            fontWeight="medium"
-          >
+          <Button variant="ghost" size="xs" color="gray.400" fontWeight="medium">
             View
           </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            color="gray.400"
-            _hover={{ color: 'white', bg: 'gray.800' }}
-            fontWeight="medium"
-          >
+          <Button variant="ghost" size="xs" color="gray.400" fontWeight="medium">
             Window
           </Button>
         </HStack>

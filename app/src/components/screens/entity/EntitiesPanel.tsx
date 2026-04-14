@@ -1,6 +1,8 @@
 import React from 'react';
 import { VStack, Box, Text, Heading, HStack, Circle } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { CaptionText } from '../../common/Typography.tsx';
+import { SurfaceSectionHeader } from '../../common/Surfaces';
 
 export const EntitiesPanel: React.FC = () => {
   const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
@@ -10,29 +12,20 @@ export const EntitiesPanel: React.FC = () => {
   return (
     <VStack
       h="full"
-      bg="gray.950"
+      bg="editorPanelBg"
       spacing={0}
       align="stretch"
       borderLeft="1px"
-      borderColor="gray.800"
+      borderColor="editorBorderSubtle"
     >
       {/* Header */}
-      <Box bg="gray.900" borderBottom="1px" borderColor="gray.800" px={4} py={3}>
+      <SurfaceSectionHeader title="Library" py={3}>
         <VStack align="start" spacing={0}>
-          <Text
-            fontSize="xs"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Library
-          </Text>
           <Heading size="xs" color="white">
             Blueprint Entities
           </Heading>
         </VStack>
-      </Box>
+      </SurfaceSectionHeader>
 
       {/* List */}
       <Box flex={1} overflowY="auto" p={3}>
@@ -44,11 +37,11 @@ export const EntitiesPanel: React.FC = () => {
               py={3}
               rounded="md"
               cursor="pointer"
-              bg={selectedEntityTypeId === type.id ? 'blue.900' : 'gray.900'}
+              bg={selectedEntityTypeId === type.id ? 'blue.900' : 'editorChromeBg'}
               border="1px"
-              borderColor={selectedEntityTypeId === type.id ? 'blue.500' : 'gray.800'}
+              borderColor={selectedEntityTypeId === type.id ? 'blue.500' : 'editorBorderSubtle'}
               _hover={{
-                bg: selectedEntityTypeId === type.id ? 'blue.900' : 'gray.800',
+                bg: selectedEntityTypeId === type.id ? 'blue.900' : 'editorHoverBg',
               }}
               onClick={() => setSelectedEntityType(type.id)}
               transition="all 0.1s"
@@ -59,9 +52,7 @@ export const EntitiesPanel: React.FC = () => {
                   <Text fontSize="xs" fontWeight="bold" color="white">
                     {type.displayName}
                   </Text>
-                  <Text fontSize="10px" color="gray.500">
-                    {type.category.toUpperCase()}
-                  </Text>
+                  <CaptionText color="gray.500">{type.category.toUpperCase()}</CaptionText>
                 </VStack>
               </HStack>
             </Box>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Flex, VStack, Heading, Text, HStack } from '@chakra-ui/react';
+import { Box, Flex, VStack, Text, HStack } from '@chakra-ui/react';
+import { SectionLabel } from '../../../components/common/Typography.tsx';
 
 /**
  * EditorLayout is a flexible layout shell for any editor mode.
@@ -62,11 +63,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
           flexShrink={0}
         >
           <VStack align="start" spacing={0}>
-            {header?.title && (
-              <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
-                {header.title}
-              </Heading>
-            )}
+            {header?.title && <SectionLabel textStyle="panelLabel">{header.title}</SectionLabel>}
             {header?.subtitle && (
               <Text fontSize="10px" color="gray.500" fontWeight="bold">
                 {header.subtitle}

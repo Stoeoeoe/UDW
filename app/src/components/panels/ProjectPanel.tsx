@@ -3,6 +3,7 @@ import { Box, Heading, VStack, HStack, Flex, Text, useToast } from '@chakra-ui/r
 import { useEditorStore } from '../../store/useEditorStore';
 import { ProjectSettingsEditor } from '../dialogs/ProjectSettingsEditor';
 import { Project } from '../../types/schema';
+import { EditorCard, SurfaceSectionHeader } from '../common/Surfaces';
 
 export const ProjectPanel: React.FC = () => {
   const project = useEditorStore((state) => state.project);
@@ -32,7 +33,7 @@ export const ProjectPanel: React.FC = () => {
   };
 
   return (
-    <Box h="full" w="full" bg="gray.950" position="relative" overflow="hidden">
+    <Box h="full" w="full" bg="editorPanelBg" position="relative" overflow="hidden">
       {/* Focused Ambient Glow */}
       <Box
         position="absolute"
@@ -77,33 +78,20 @@ export const ProjectPanel: React.FC = () => {
           </VStack>
 
           {/* Dashboard Main Card */}
-          <Box
-            w="full"
-            maxW="800px"
-            bg="gray.900"
-            rounded="2xl"
-            border="2px"
-            borderColor="gray.800"
-            p={0}
-            overflow="hidden"
-            shadow="dark-lg"
-          >
-            <Box bg="gray.800" px={8} py={5} borderBottom="2px" borderColor="gray.700">
-              <Text
-                color="white"
-                fontWeight="900"
-                fontSize="xs"
-                textTransform="uppercase"
-                letterSpacing="0.2em"
-              >
-                General Configuration
-              </Text>
-            </Box>
+          <EditorCard w="full" maxW="800px" border="2px" p={0} overflow="hidden" shadow="dark-lg">
+            <SurfaceSectionHeader
+              title="General Configuration"
+              bg="editorCanvasBg"
+              borderBottom="2px"
+              borderColor="editorBorderLight"
+              px={8}
+              py={5}
+            />
 
             <Box p={10}>
               <ProjectSettingsEditor initialProject={project} onSave={handleSave} />
             </Box>
-          </Box>
+          </EditorCard>
         </VStack>
       </Box>
     </Box>

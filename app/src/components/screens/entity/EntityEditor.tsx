@@ -8,7 +8,6 @@ import {
   Input,
   Select,
   FormControl,
-  FormLabel,
   Button,
   IconButton,
   useDisclosure,
@@ -37,6 +36,8 @@ import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { IconPicker, ColorPicker } from '../common/FormFields';
+import { FieldLabel } from '../../common/Typography.tsx';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -241,15 +242,7 @@ const EntityTypeDetail: React.FC<{
       <VStack align="stretch" spacing={5}>
         <VStack align="stretch" spacing={3}>
           <FormControl>
-            <FormLabel
-              color="gray.500"
-              fontSize="10px"
-              fontWeight="black"
-              textTransform="uppercase"
-              mb={1}
-            >
-              ID
-            </FormLabel>
+            <FieldLabel>ID</FieldLabel>
             <Text fontSize="xs" fontFamily="mono" color="gray.400">
               {entityType.id}
             </Text>
@@ -258,15 +251,7 @@ const EntityTypeDetail: React.FC<{
           <form.Field name="displayName">
             {(field) => (
               <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Display Name
-                </FormLabel>
+                <FieldLabel>Display Name</FieldLabel>
                 <Input
                   size="sm"
                   bg="gray.950"
@@ -284,15 +269,7 @@ const EntityTypeDetail: React.FC<{
             <form.Field name="category">
               {(field) => (
                 <FormControl flex={1}>
-                  <FormLabel
-                    color="gray.500"
-                    fontSize="10px"
-                    fontWeight="black"
-                    textTransform="uppercase"
-                    mb={1}
-                  >
-                    Category
-                  </FormLabel>
+                  <FieldLabel>Category</FieldLabel>
                   <Select
                     size="sm"
                     bg="gray.950"
@@ -314,15 +291,7 @@ const EntityTypeDetail: React.FC<{
             <form.Field name="group">
               {(field) => (
                 <FormControl flex={1}>
-                  <FormLabel
-                    color="gray.500"
-                    fontSize="10px"
-                    fontWeight="black"
-                    textTransform="uppercase"
-                    mb={1}
-                  >
-                    Group
-                  </FormLabel>
+                  <FieldLabel>Group</FieldLabel>
                   <Input
                     size="sm"
                     bg="gray.950"
@@ -351,15 +320,7 @@ const EntityTypeDetail: React.FC<{
           <form.Field name="description">
             {(field) => (
               <FormControl>
-                <FormLabel
-                  color="gray.500"
-                  fontSize="10px"
-                  fontWeight="black"
-                  textTransform="uppercase"
-                  mb={1}
-                >
-                  Description
-                </FormLabel>
+                <FieldLabel>Description</FieldLabel>
                 <Input
                   size="sm"
                   bg="gray.950"
@@ -378,15 +339,7 @@ const EntityTypeDetail: React.FC<{
             <form.Field name="icon">
               {(field) => (
                 <FormControl flex={1}>
-                  <FormLabel
-                    color="gray.500"
-                    fontSize="10px"
-                    fontWeight="black"
-                    textTransform="uppercase"
-                    mb={1}
-                  >
-                    Icon
-                  </FormLabel>
+                  <FieldLabel>Icon</FieldLabel>
                   <IconPicker
                     value={field.state.value}
                     onChange={(v) => field.handleChange(v ?? '')}
@@ -397,15 +350,7 @@ const EntityTypeDetail: React.FC<{
             <form.Field name="placeholderColor">
               {(field) => (
                 <FormControl flex={1}>
-                  <FormLabel
-                    color="gray.500"
-                    fontSize="10px"
-                    fontWeight="black"
-                    textTransform="uppercase"
-                    mb={1}
-                  >
-                    Color
-                  </FormLabel>
+                  <FieldLabel>Color</FieldLabel>
                   <ColorPicker value={field.state.value} onChange={(c) => field.handleChange(c)} />
                 </FormControl>
               )}
@@ -416,9 +361,7 @@ const EntityTypeDetail: React.FC<{
         <Divider borderColor="#071018" />
 
         <VStack align="stretch" spacing={3}>
-          <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-            Size (px)
-          </Text>
+          <SectionLabel textStyle="fieldLabel">Size (px)</SectionLabel>
           <HStack spacing={2}>
             <Text fontSize="xs" color="gray.400" flexShrink={0}>
               W
@@ -548,9 +491,7 @@ const EntitySpriteEditor: React.FC<{
 }) => {
   return (
     <VStack align="stretch" spacing={3}>
-      <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-        Sprite
-      </Text>
+      <SectionLabel textStyle="fieldLabel">Sprite</SectionLabel>
       {spritePath ? (
         <VStack align="stretch" spacing={2}>
           {isLoaded && (

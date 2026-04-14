@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { VStack, HStack, Text, Box, Select } from '@chakra-ui/react';
 import { PropertyForm, propertyDefinitionsToSchema } from '../common/PropertyForm';
+import { SectionLabel } from '../common/Typography.tsx';
 import { useEditorStore } from '../../store/useEditorStore';
 import { PropertyDefinition, PropertyValue, TileDefinition, Tileset } from '../../types/schema';
 import { TileCollisionEditor } from './TileCollisionEditor';
@@ -74,15 +75,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
   return (
     <VStack align="stretch" spacing={6} p={6}>
       <VStack align="start" spacing={1} mb={2}>
-        <Text
-          fontSize="xs"
-          fontWeight="black"
-          color="gray.500"
-          textTransform="uppercase"
-          letterSpacing="widest"
-        >
-          Tile Properties
-        </Text>
+        <SectionLabel textStyle="panelLabel">Tile Properties</SectionLabel>
       </VStack>
 
       {selectedIndex === null ? (
@@ -97,9 +90,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
             <Text fontSize="2xl" fontWeight="black" color="white">
               #{selectedIndex}
             </Text>
-            <Text fontSize="xs" color="gray.500" textTransform="uppercase">
-              Atlas Index
-            </Text>
+            <SectionLabel fontWeight="normal">Atlas Index</SectionLabel>
           </VStack>
 
           <PropertyForm
@@ -147,7 +138,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                         rounded="full"
                         bg={options.find((o) => o.id === terrainValue)?.color || 'transparent'}
                         borderWidth={1}
-                        borderColor="gray.700"
+                        borderColor="editorBorderLight"
                       />
                       <Select
                         size="sm"
@@ -209,9 +200,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
           />
 
           <VStack align="start" spacing={1}>
-            <Text fontSize="xs" fontWeight="black" color="gray.500" textTransform="uppercase">
-              Metadata
-            </Text>
+            <SectionLabel>Metadata</SectionLabel>
             <Text fontSize="10px" color="gray.600">
               Project-level metadata fields can be assigned per tile.
             </Text>

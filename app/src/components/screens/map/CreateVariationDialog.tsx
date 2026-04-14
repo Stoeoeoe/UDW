@@ -6,7 +6,6 @@ import {
   Select,
   Button,
   FormControl,
-  FormLabel,
   FormHelperText,
   Switch,
   useToast,
@@ -16,6 +15,7 @@ import {
 import { useEditorStore } from '../../../store/useEditorStore';
 import { Variation } from '../../../types/schema';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
+import { FormLabel } from '../../common/FormLabel';
 // Helper to compute depth within the component
 const getVariationDepth = (id: string, variations: Variation[]): number => {
   let depth = 0;

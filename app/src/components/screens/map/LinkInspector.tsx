@@ -7,7 +7,6 @@ import {
   Select,
   Button,
   FormControl,
-  FormLabel,
   NumberInput,
   NumberInputField,
   Divider,
@@ -21,27 +20,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { InspectorPanel, InspectorEmptyState } from '../common';
 import { LocationLink } from '../../../types/schema';
 import { MapPreviewPicker } from '../../common/MapPreviewPicker';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Row helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <FormLabel
-    color="gray.500"
-    fontSize="10px"
-    fontWeight="black"
-    textTransform="uppercase"
-    letterSpacing="wide"
-    mb={1}
-  >
-    {children}
-  </FormLabel>
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main inspector
-// ─────────────────────────────────────────────────────────────────────────────
+import { FieldLabel, SectionLabel } from '../../common/Typography.tsx';
 
 export const LinkInspector: React.FC = () => {
   const currentMap = useEditorStore((s) => s.currentMap);
@@ -131,9 +110,7 @@ export const LinkInspector: React.FC = () => {
 
         {/* Source */}
         <VStack align="stretch" spacing={3}>
-          <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-            Source
-          </Text>
+          <SectionLabel textStyle="fieldLabel">Source</SectionLabel>
 
           <FormControl>
             <FieldLabel>Tile Position</FieldLabel>
@@ -244,9 +221,7 @@ export const LinkInspector: React.FC = () => {
 
         {/* Target */}
         <VStack align="stretch" spacing={3}>
-          <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-            Target
-          </Text>
+          <SectionLabel textStyle="fieldLabel">Target</SectionLabel>
 
           <FormControl>
             <FieldLabel>Map</FieldLabel>
@@ -418,9 +393,7 @@ export const LinkInspector: React.FC = () => {
 
         {/* Behaviour */}
         <VStack align="stretch" spacing={3}>
-          <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-            Behaviour
-          </Text>
+          <SectionLabel textStyle="fieldLabel">Behaviour</SectionLabel>
 
           <FormControl>
             <FieldLabel>Direction</FieldLabel>
@@ -473,9 +446,7 @@ export const LinkInspector: React.FC = () => {
           <>
             <Divider borderColor="#071018" />
             <VStack align="stretch" spacing={2}>
-              <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-                Linked From
-              </Text>
+              <SectionLabel textStyle="fieldLabel">Linked From</SectionLabel>
               {incomingLinks.map(({ map: srcMap, link: inLink }) => (
                 <HStack
                   key={`${srcMap.id}:${inLink.id}`}

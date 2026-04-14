@@ -5,7 +5,6 @@ import {
   Box,
   Text,
   Button,
-  IconButton,
   Spacer,
   Divider,
   Input,
@@ -14,6 +13,8 @@ import {
 import { AddIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset, WangSet } from '../../types/schema';
+import { GhostIconButton } from '../common/IconButtons';
+import { CaptionText, SectionLabel } from '../common/Typography.tsx';
 
 interface WangEditorProps {
   tileset: Tileset;
@@ -64,22 +65,12 @@ export const WangEditor: React.FC<WangEditorProps> = ({ tileset }) => {
       {/* Set Selection */}
       <Box px={4} py={3} bg="whiteAlpha.50">
         <HStack mb={2}>
-          <Text fontSize="10px" fontWeight="black" color="gray.500" textTransform="uppercase">
-            Sets
-          </Text>
+          <SectionLabel textStyle="fieldLabel">Sets</SectionLabel>
           <Spacer />
-          <IconButton
-            aria-label="Add Set"
-            icon={<AddIcon />}
-            size="xs"
-            variant="ghost"
-            onClick={handleAddSet}
-          />
+          <GhostIconButton aria-label="Add Set" icon={<AddIcon />} onClick={handleAddSet} />
         </HStack>
         {wangSets.length === 0 ? (
-          <Text fontSize="10px" color="gray.600" fontStyle="italic">
-            No terrain sets
-          </Text>
+          <CaptionText fontStyle="italic">No terrain sets</CaptionText>
         ) : (
           <VStack align="stretch" spacing={1}>
             {wangSets.map((set, idx) => (
@@ -101,21 +92,17 @@ export const WangEditor: React.FC<WangEditorProps> = ({ tileset }) => {
         )}
       </Box>
 
-      <Divider borderColor="gray.800" />
+      <Divider borderColor="editorBorderSubtle" />
 
       {/* Color Management */}
       {activeSet && (
         <Box px={4} py={3}>
           <HStack mb={2}>
-            <Text fontSize="10px" fontWeight="black" color="gray.500" textTransform="uppercase">
-              Terrain Colors
-            </Text>
+            <SectionLabel textStyle="fieldLabel">Terrain Colors</SectionLabel>
             <Spacer />
-            <IconButton
+            <GhostIconButton
               aria-label="Add Color"
               icon={<AddIcon />}
-              size="xs"
-              variant="ghost"
               onClick={() => handleAddColor(activeSetIndex!)}
             />
           </HStack>
@@ -129,7 +116,7 @@ export const WangEditor: React.FC<WangEditorProps> = ({ tileset }) => {
                 py={1}
                 rounded="md"
                 border="1px"
-                borderColor="gray.800"
+                borderColor="editorBorderSubtle"
               >
                 <HStack spacing={2}>
                   <Input

@@ -2,8 +2,6 @@ import React from 'react';
 import {
   Box,
   FormControl,
-  FormLabel,
-  Heading,
   Input,
   NumberInput,
   NumberInputField,
@@ -18,6 +16,8 @@ import type { PropertyValue, WorldMapMetadata } from '../../../types/schema';
 import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { EditorModal } from '../../common/EditorModal';
 import { EntityFormDialog } from '../common/EntityFormDialog';
+import { FormLabel } from '../../common/FormLabel';
+import { SectionLabel } from '../../common/Typography.tsx';
 
 interface MetadataDialogProps {
   isOpen: boolean;
@@ -136,9 +136,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
       p={4}
     >
       <Box>
-        <Heading size="xs" color="white" textTransform="uppercase" letterSpacing="widest">
-          World
-        </Heading>
+        <SectionLabel textStyle="panelLabel">World</SectionLabel>
         <Text fontSize="xs" color="gray.500" mt={1}>
           Control whether this map appears in the world overview and where it is placed.
         </Text>

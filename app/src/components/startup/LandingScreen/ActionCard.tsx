@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Heading, Text } from '@chakra-ui/react';
+import { Heading, Text } from '@chakra-ui/react';
+import { EditorCard } from '../../common/Surfaces';
 
 interface ActionCardProps {
   onClick: () => void;
@@ -16,14 +17,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   description,
   hoverColor,
 }) => (
-  <Box
+  <EditorCard
     p={8}
-    bg="gray.900"
-    border="1px"
-    borderColor="gray.800"
     rounded="xl"
     cursor="pointer"
-    _hover={{ borderColor: hoverColor, transform: 'translateY(-4px)', bg: 'gray.800' }}
+    _hover={{ borderColor: hoverColor, transform: 'translateY(-4px)', bg: 'editorHoverBg' }}
     transition="all 0.2s"
     onClick={onClick}
   >
@@ -36,5 +34,5 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     <Text color="gray.500" fontSize="sm">
       {description}
     </Text>
-  </Box>
+  </EditorCard>
 );

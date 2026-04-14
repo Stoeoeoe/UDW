@@ -23,6 +23,34 @@ const inputFieldStyle = {
 
 export const theme = extendTheme({
   config,
+  semanticTokens: {
+    colors: {
+      editorAppBg: {
+        default: 'gray.900',
+      },
+      editorChromeBg: {
+        default: 'gray.900',
+      },
+      editorPanelBg: {
+        default: 'gray.950',
+      },
+      editorCanvasBg: {
+        default: 'gray.800',
+      },
+      editorBorderSubtle: {
+        default: 'gray.800',
+      },
+      editorBorderLight: {
+        default: 'gray.700',
+      },
+      editorHoverBg: {
+        default: 'gray.800',
+      },
+      editorMutedText: {
+        default: 'gray.500',
+      },
+    },
+  },
   colors: {
     // Semantic editor colors - centralized color tokens
     editor: {
@@ -34,10 +62,43 @@ export const theme = extendTheme({
       inputBorder: '#0b1116',
     },
   },
+  textStyles: {
+    sectionLabel: {
+      fontSize: 'xs',
+      fontWeight: 'black',
+      color: 'gray.500',
+      textTransform: 'uppercase',
+    },
+    inspectorSectionLabel: {
+      fontSize: '10px',
+      fontWeight: 'black',
+      color: 'gray.500',
+      textTransform: 'uppercase',
+      letterSpacing: 'widest',
+    },
+    mutedFieldLabel: {
+      fontSize: 'xs',
+      color: 'gray.400',
+      textTransform: 'uppercase',
+    },
+    panelLabel: {
+      fontSize: '9px',
+      fontWeight: 'black',
+      color: 'gray.500',
+      textTransform: 'uppercase',
+      letterSpacing: 'widest',
+    },
+    fieldLabel: {
+      fontSize: '10px',
+      fontWeight: 'black',
+      color: 'gray.500',
+      textTransform: 'uppercase',
+    },
+  },
   styles: {
     global: {
       body: {
-        bg: 'gray.900',
+        bg: 'editorAppBg',
         color: 'gray.200',
       },
     },
@@ -118,7 +179,7 @@ export const theme = extendTheme({
           color: 'gray.400',
           _hover: {
             color: 'white',
-            bg: 'gray.800',
+            bg: 'editorHoverBg',
           },
         },
         solid: (props: StyleFunctionProps) => ({
@@ -134,7 +195,7 @@ export const theme = extendTheme({
     },
     Divider: {
       baseStyle: {
-        borderColor: 'gray.800',
+        borderColor: 'editorBorderSubtle',
       },
     },
     Heading: {

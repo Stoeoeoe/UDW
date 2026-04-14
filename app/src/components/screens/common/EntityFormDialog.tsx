@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, VStack, Text, HStack, Button, Divider } from '@chakra-ui/react';
+import { EditorCard } from '../../common/Surfaces';
 
 export interface EntityFormDialogProps {
   title: string;
@@ -19,7 +20,7 @@ export interface EntityFormDialogProps {
 /**
  * EntityFormDialog – Unified shell for every modal form in the editor.
  *
- * - Consistent card: gray.900 background, gray.800 border, rounded-xl
+ * - Consistent shared card surface
  * - Title + optional description header
  * - Scrollable content area (opt-in via `scrollable`)
  * - Footer: Cancel (ghost) + Submit (blue), or a single Close when onSubmit is omitted
@@ -37,10 +38,7 @@ export const EntityFormDialog: React.FC<EntityFormDialogProps> = ({
   scrollable = false,
 }) => {
   return (
-    <Box
-      bg="gray.900"
-      border="1px"
-      borderColor="gray.800"
+    <EditorCard
       borderRadius="xl"
       minW={minWidth}
       overflow="hidden"
@@ -87,7 +85,7 @@ export const EntityFormDialog: React.FC<EntityFormDialogProps> = ({
           </Button>
         )}
       </HStack>
-    </Box>
+    </EditorCard>
   );
 };
 
