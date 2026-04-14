@@ -7,6 +7,7 @@ import { useMapRenderer } from './useMapRenderer';
 import { useMapTools } from './useMapTools';
 import { ZoomControls } from '../../common/ZoomControls';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
+import { Map3DLayerView } from './Map3DLayerView';
 
 export const MapViewportPixi: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,6 +28,7 @@ export const MapViewportPixi: React.FC = () => {
   const activeTool = useEditorStore((state) => state.activeTool);
   const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
   const showTerrainOverlay = useEditorStore((state) => state.showTerrainOverlay);
+  const show3DLayerView = useEditorStore((state) => state.show3DLayerView);
 
   // Initialize Pixi Application
   useEffect(() => {
@@ -452,6 +454,12 @@ export const MapViewportPixi: React.FC = () => {
   return (
     <Box w="full" h="full" position="relative" overflow="hidden">
       <Box ref={containerRef} w="full" h="full" cursor={getCursor()} />
+
+      {show3DLayerView && (
+        <Box position="absolute" inset={0} zIndex={10}>
+          <Map3DLayerView />
+        </Box>
+      )}
 
       <ZoomControls
         zoomPercent={zoomLevel * 100}

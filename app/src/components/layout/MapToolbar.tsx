@@ -14,6 +14,7 @@ import {
   FiRefreshCw,
   FiRotateCcw,
   FiRotateCw,
+  FiBox,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import {
@@ -142,6 +143,8 @@ export const MapToolbarActions: React.FC = () => {
   const setShowCollisionOverlay = useEditorStore((state) => state.setShowCollisionOverlay);
   const showTerrainOverlay = useEditorStore((state) => state.showTerrainOverlay);
   const setShowTerrainOverlay = useEditorStore((state) => state.setShowTerrainOverlay);
+  const show3DLayerView = useEditorStore((state) => state.show3DLayerView);
+  const setShow3DLayerView = useEditorStore((state) => state.setShow3DLayerView);
   const reloadTerrainLayers = useEditorStore((state) => state.reloadTerrainLayers);
   const { canUndo, canRedo } = useEditorHistory((state) => ({
     canUndo: state.pastStates.length > 0,
@@ -209,10 +212,32 @@ export const MapToolbarActions: React.FC = () => {
           size="xs"
           variant={showTerrainOverlay ? 'solid' : 'outline'}
           colorScheme="green"
-          onClick={() => setShowTerrainOverlay(!showTerrainOverlay)}
+          onClick={() => {
+            setShowTerrainOverlay(!showTerrainOverlay);
+            if (!showTerrainOverlay) setShow3DLayerView(false);
+          }}
           aria-label="Toggle terrain overlay"
         >
           <FiLayers />
+        </Button>
+      </Tooltip>
+
+      <Tooltip label={show3DLayerView ? 'Exit 3D layer view' : 'Show 3D layer view'} fontSize="xs">
+        <Button
+          size="xs"
+          variant={show3DLayerView ? 'solid' : 'outline'}
+          colorScheme="purple"
+          onClick={() => {
+            const next = !show3DLayerView;
+            setShow3DLayerView(next);
+            if (next) {
+              setShowCollisionOverlay(false);
+              setShowTerrainOverlay(false);
+            }
+          }}
+          aria-label="Toggle 3D layer view"
+        >
+          <FiBox />
         </Button>
       </Tooltip>
     </HStack>
