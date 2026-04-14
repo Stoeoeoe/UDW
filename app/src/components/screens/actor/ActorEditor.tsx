@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useForm } from '@tanstack/react-form';
 import {
-  Box,
   Button,
   Divider,
   FormControl,
@@ -9,16 +9,19 @@ import {
   Text,
   useDisclosure,
   VStack,
+  HStack,
 } from '@chakra-ui/react';
-import { DeleteIcon } from '@chakra-ui/icons';
+import { DeleteIcon, CheckIcon } from '@chakra-ui/icons';
 import { IconPicker } from '../common/FormFields';
-import * as GiIcons from 'react-icons/gi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
-import { EditorModal } from '../../common/EditorModal';
-import { CreateActorDialog } from './CreateActorDialog';
+import { DetailPanel } from '../../common/DetailPanel';
+import { GameIcon } from '../../common/GameIcon';
+import { useFilteredList } from '../../../hooks/useFilteredList';
+import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { FormLabelUppercase } from '../../common/FormLabel';
 import { GiPerson } from 'react-icons/gi';
 
 export const ActorEditor: React.FC = () => {
@@ -27,7 +30,9 @@ export const ActorEditor: React.FC = () => {
   const setSelectedActor = useEditorStore((state) => state.setSelectedActor);
   const updateActor = useEditorStore((state) => state.updateActor);
   const deleteActor = useEditorStore((state) => state.deleteActor);
+  const addActor = useEditorStore((state) => state.addActor);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [newActorIcon, setNewActorIcon] = useState('GiPerson');
   const [search, setSearch] = React.useState('');
 
   const selectedActor = actors.find((a) => a.id === selectedActorId);
@@ -38,37 +43,12 @@ export const ActorEditor: React.FC = () => {
         id: actor.id,
         label: actor.name,
         sublabel: actor.id,
-        icon: (
-          <Box
-            w="24px"
-            h="24px"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize="24px"
-          >
-            {(() => {
-              const name = actor.icon;
-              if (!name) return '👤';
-              const Comp = (GiIcons as Record<string, React.FC<{ size?: number }>>)[name];
-              if (Comp) return <Comp size={24} />;
-              return name;
-            })()}
-          </Box>
-        ),
+        icon: <GameIcon iconName={actor.icon} size={24} fallback={<GiPerson />} />,
       })),
     [actors],
   );
 
-  const filteredActorItems = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return actorItems;
-    return actorItems.filter((item) => {
-      const hitLabel = item.label.toLowerCase().includes(query);
-      const hitSublabel = item.sublabel?.toLowerCase().includes(query);
-      return hitLabel || Boolean(hitSublabel);
-    });
-  }, [actorItems, search]);
+  const filteredActorItems = useFilteredList(actorItems, search);
 
   const deleteActorById = async (id: string, name: string) => {
     if (!confirm(`Delete actor "${name}"?`)) return;
@@ -122,24 +102,14 @@ export const ActorEditor: React.FC = () => {
     );
 
   const centerContent = selectedActor ? (
-    <Box h="full" overflowY="auto" p={6}>
-      <Box
-        w="80%"
-        maxW="900px"
-        mx="auto"
-        bg="editor.panelBg"
-        border="1px"
-        borderColor="whiteAlpha.100"
-        borderRadius="lg"
-        overflow="hidden"
-      >
-        <ActorDetail
-          actor={selectedActor}
-          onUpdate={updateActor}
-          onDelete={async () => deleteActorById(selectedActor.id, selectedActor.name)}
-        />
-      </Box>
-    </Box>
+    <DetailPanel key={selectedActor.id}>
+      <ActorDetail
+        key={selectedActor.id}
+        actor={selectedActor}
+        onUpdate={updateActor}
+        onDelete={async () => deleteActorById(selectedActor.id, selectedActor.name)}
+      />
+    </DetailPanel>
   ) : (
     content
   );
@@ -156,9 +126,24 @@ export const ActorEditor: React.FC = () => {
         leftPanelDefaultSize={18}
       />
 
-      <EditorModal isOpen={isOpen} onClose={onClose}>
-        <CreateActorDialog onClose={onClose} />
-      </EditorModal>
+      <CreateItemDialog
+        isOpen={isOpen}
+        title="New Actor"
+        itemType="Actor"
+        existingIds={actors.map((a) => a.id)}
+        onClose={onClose}
+        onSubmit={async ({ id, name }) => {
+          await addActor({ id, name, icon: newActorIcon, emotions: [] });
+          setNewActorIcon('GiPerson');
+          onClose();
+        }}
+        additionalFields={
+          <FormControl>
+            <FormLabelUppercase mb={1}>Icon</FormLabelUppercase>
+            <IconPicker value={newActorIcon} onChange={(v) => setNewActorIcon(v ?? '')} />
+          </FormControl>
+        }
+      />
     </>
   );
 };
@@ -167,72 +152,122 @@ const ActorDetail: React.FC<{
   actor: { id: string; name: string; icon: string };
   onUpdate: (id: string, updates: Partial<{ name: string; icon: string }>) => void;
   onDelete: () => void;
-}> = ({ actor, onUpdate, onDelete }) => (
-  <Box p={6}>
-    <VStack align="stretch" spacing={5}>
-      <VStack align="stretch" spacing={3}>
-        <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            ID
-          </FormLabel>
-          <Text fontSize="xs" fontFamily="mono" color="gray.400">
-            {actor.id}
-          </Text>
-        </FormControl>
+}> = ({ actor, onUpdate, onDelete }) => {
+  const form = useForm({
+    defaultValues: {
+      name: actor.name,
+      icon: actor.icon,
+    },
+    onSubmit: async ({ value }) => {
+      onUpdate(actor.id, value);
+    },
+  });
 
-        <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Name
-          </FormLabel>
-          <Input
-            size="sm"
-            bg="gray.950"
-            color="white"
-            value={actor.name}
-            onChange={(e) => onUpdate(actor.id, { name: e.target.value })}
-          />
-        </FormControl>
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <VStack align="stretch" spacing={5}>
+        <VStack align="stretch" spacing={3}>
+          <FormControl>
+            <FormLabel
+              color="gray.500"
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              mb={1}
+            >
+              ID
+            </FormLabel>
+            <Text fontSize="xs" fontFamily="mono" color="gray.400">
+              {actor.id}
+            </Text>
+          </FormControl>
 
-        <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
+          <form.Field name="name">
+            {(field) => (
+              <FormControl>
+                <FormLabel
+                  color="gray.500"
+                  fontSize="10px"
+                  fontWeight="black"
+                  textTransform="uppercase"
+                  mb={1}
+                >
+                  Name
+                </FormLabel>
+                <Input
+                  size="sm"
+                  bg="gray.950"
+                  color="white"
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+              </FormControl>
+            )}
+          </form.Field>
+
+          <form.Field name="icon">
+            {(field) => (
+              <FormControl>
+                <FormLabel
+                  color="gray.500"
+                  fontSize="10px"
+                  fontWeight="black"
+                  textTransform="uppercase"
+                  mb={1}
+                >
+                  Icon
+                </FormLabel>
+                <IconPicker
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v ?? '')}
+                />
+              </FormControl>
+            )}
+          </form.Field>
+        </VStack>
+
+        <Divider borderColor="#071018" />
+
+        <HStack justify="space-between">
+          <Button
+            size="xs"
+            colorScheme="red"
+            variant="outline"
+            leftIcon={<DeleteIcon fontSize="10px" />}
+            onClick={onDelete}
           >
-            Icon
-          </FormLabel>
-          <IconPicker value={actor.icon} onChange={(v) => onUpdate(actor.id, { icon: v ?? '' })} />
-        </FormControl>
+            Delete Actor
+          </Button>
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
+          >
+            {([canSubmit, isSubmitting, isDirty]) => (
+              <Button
+                size="xs"
+                colorScheme="blue"
+                type="submit"
+                disabled={!canSubmit}
+                isLoading={isSubmitting}
+                opacity={isDirty ? 1 : 0.5}
+                leftIcon={<CheckIcon fontSize="10px" />}
+              >
+                Save Changes
+              </Button>
+            )}
+          </form.Subscribe>
+        </HStack>
       </VStack>
-
-      <Divider borderColor="#071018" />
-
-      <Button
-        size="xs"
-        colorScheme="red"
-        variant="outline"
-        leftIcon={<DeleteIcon fontSize="10px" />}
-        onClick={onDelete}
-        alignSelf="flex-start"
-      >
-        Delete Actor
-      </Button>
-    </VStack>
-  </Box>
-);
+    </form>
+  );
+};
 
 export default ActorEditor;

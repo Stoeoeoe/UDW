@@ -11,7 +11,7 @@ import {
   VariableEditor,
   SettingsEditor,
 } from './components/screens';
-import MapSettingsEditor from './components/screens/settings/MapSettingsEditor';
+import { MapSettingsEditor } from './components/screens/settings/MapSettingsEditor';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 

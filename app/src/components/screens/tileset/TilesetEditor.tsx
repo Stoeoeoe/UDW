@@ -8,9 +8,8 @@ import { TilesetCanvas } from '../../tileset/TilesetCanvas';
 import { TilesetInspector } from '../../tileset/TilesetInspector';
 import { TilesetTerrainPanel } from '../../tileset/TilesetTerrainPanel';
 import TilesetMetadataDialog from '../../tileset/TilesetMetadataDialog';
-import TilesetCreator from '../../dialogs/TilesetCreator';
+import { CreateTilesetDialog } from './CreateTilesetDialog';
 import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
-import { EditorModal } from '../../common/EditorModal';
 import { useTileSelection } from '../../../hooks/useTileSelection';
 
 /**
@@ -178,9 +177,7 @@ export const TilesetEditor: React.FC = () => {
           rightPanelDefaultSize={22}
         />
 
-        <EditorModal isOpen={isCreatorOpen} onClose={onCreatorClose}>
-          <TilesetCreator onCreate={onCreatorClose} onCancel={onCreatorClose} />
-        </EditorModal>
+        <CreateTilesetDialog isOpen={isCreatorOpen} onClose={onCreatorClose} />
       </>
     );
   }
@@ -200,9 +197,7 @@ export const TilesetEditor: React.FC = () => {
           }
           leftPanel={leftPanel}
         />
-        <EditorModal isOpen={isCreatorOpen} onClose={onCreatorClose}>
-          <TilesetCreator onCreate={onCreatorClose} onCancel={onCreatorClose} />
-        </EditorModal>
+        <CreateTilesetDialog isOpen={isCreatorOpen} onClose={onCreatorClose} />
       </>
     );
   }
@@ -239,9 +234,7 @@ export const TilesetEditor: React.FC = () => {
         rightPanelDefaultSize={22}
       />
 
-      <EditorModal isOpen={isCreatorOpen} onClose={onCreatorClose}>
-        <TilesetCreator onCreate={onCreatorClose} onCancel={onCreatorClose} />
-      </EditorModal>
+      <CreateTilesetDialog isOpen={isCreatorOpen} onClose={onCreatorClose} />
 
       <TilesetMetadataDialog isOpen={isMetaOpen} onClose={onMetaClose} tileset={activeTileset} />
     </>

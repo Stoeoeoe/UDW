@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { Box, HStack, Text, Input, Select, FormControl, FormLabel, Flex } from '@chakra-ui/react';
+import React, { useMemo } from 'react';
+import { Box, HStack, Select, FormControl, Flex, VStack, Input } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType, EntityCategory } from '../../../types/schema';
-import { EntityFormDialog } from '../common';
+import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { IconPicker } from '../common/FormFields';
+import { FormLabel, FormLabelUppercase } from '../../common/FormLabel';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -28,33 +29,25 @@ const DEFAULT_COLORS = [
 
 interface CreateEntityTypeDialogProps {
   onClose: () => void;
+  isOpen?: boolean;
 }
 
-export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ onClose }) => {
+export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
+  onClose,
+  isOpen,
+}) => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const addEntityType = useEditorStore((state) => state.addEntityType);
 
-  const [name, setName] = useState('');
-  const [customId, setCustomId] = useState('');
-  const [category, setCategory] = useState<EntityCategory>('object');
-  const [icon, setIcon] = useState('GiYinYang');
-  const [group, setGroup] = useState('');
-  const [color, setColor] = useState(DEFAULT_COLORS[0]);
-  const [description, setDescription] = useState('');
+  const [category, setCategory] = React.useState<EntityCategory>('object');
+  const [icon, setIcon] = React.useState('GiYinYang');
+  const [group, setGroup] = React.useState('');
+  const [color, setColor] = React.useState(DEFAULT_COLORS[0]);
+  const [description, setDescription] = React.useState('');
 
-  const derivedId = useMemo(() => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s_-]/g, '')
-      .replace(/\s+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '');
-  }, [name]);
-
-  const id = customId.trim() || derivedId;
-
-  const isDuplicate = entityTypes.some((et) => et.id === id);
-  const isValid = id.length > 0 && !isDuplicate;
+  const existingIds = useMemo(() => {
+    return entityTypes.map((et) => et.id);
+  }, [entityTypes]);
 
   // Gather existing groups for autocomplete hints
   const existingGroups = useMemo(() => {
@@ -65,12 +58,10 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
     return Array.from(groups).sort();
   }, [entityTypes]);
 
-  const handleCreate = async () => {
-    if (!isValid) return;
-
+  const handleCreate = async (data: { id: string; name: string }) => {
     const newEntityType: EntityType = {
-      id,
-      displayName: name.trim(),
+      id: data.id,
+      displayName: data.name,
       category,
       icon,
       group: group.trim() || undefined,
@@ -84,67 +75,12 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
     onClose();
   };
 
-  return (
-    <EntityFormDialog
-      title="New Entity Type"
-      onCancel={onClose}
-      onSubmit={handleCreate}
-      submitLabel="Create Entity Type"
-      isSubmitDisabled={!isValid}
-      minWidth="420px"
-    >
-      {/* Name */}
-      <FormControl isRequired>
-        <FormLabel fontSize="xs" color="gray.400">
-          Display Name
-        </FormLabel>
-        <Input
-          size="sm"
-          bg="gray.800"
-          color="white"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Treasure Chest"
-          autoFocus
-        />
-      </FormControl>
-
-      {/* ID (editable, auto-derived from name) */}
-      <FormControl>
-        <FormLabel fontSize="xs" color="gray.400">
-          ID
-        </FormLabel>
-        <Input
-          size="sm"
-          bg="gray.800"
-          color="white"
-          fontFamily="mono"
-          value={customId}
-          onChange={(e) => setCustomId(e.target.value)}
-          placeholder={derivedId || 'auto-generated from name'}
-          isInvalid={isDuplicate}
-        />
-        {isDuplicate && (
-          <Text fontSize="10px" color="red.400" mt={1}>
-            ID already exists
-          </Text>
-        )}
-        {!customId && derivedId && (
-          <Text fontSize="10px" color="gray.600" mt={1}>
-            Will use:{' '}
-            <Box as="span" fontFamily="mono">
-              {derivedId}
-            </Box>
-          </Text>
-        )}
-      </FormControl>
-
+  const additionalFields = (
+    <VStack spacing={4} align="stretch" mt={3}>
       {/* Category & Group */}
       <HStack spacing={4} align="start">
         <FormControl flex={1}>
-          <FormLabel fontSize="xs" color="gray.400">
-            Category
-          </FormLabel>
+          <FormLabel>Category</FormLabel>
           <Select
             size="sm"
             bg="#0a0a0b"
@@ -162,9 +98,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
         </FormControl>
 
         <FormControl flex={1}>
-          <FormLabel fontSize="xs" color="gray.400">
-            Group
-          </FormLabel>
+          <FormLabel>Group</FormLabel>
           <Input
             size="sm"
             bg="#0a0a0b"
@@ -188,22 +122,12 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
       {/* Icon & Color */}
       <HStack spacing={4} align="start">
         <FormControl>
-          <FormLabel
-            color="gray.500"
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            mb={1}
-          >
-            Icon
-          </FormLabel>
+          <FormLabelUppercase mb={1}>Icon</FormLabelUppercase>
           <IconPicker value={icon} onChange={(v) => setIcon(v ?? '')} />
         </FormControl>
 
         <FormControl w="100px" flexShrink={0}>
-          <FormLabel fontSize="xs" color="gray.400">
-            Color
-          </FormLabel>
+          <FormLabel>Color</FormLabel>
           <Flex gap={1} flexWrap="wrap">
             {DEFAULT_COLORS.map((c) => (
               <Box
@@ -226,9 +150,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
 
       {/* Description */}
       <FormControl>
-        <FormLabel fontSize="xs" color="gray.400">
-          Description
-        </FormLabel>
+        <FormLabel>Description</FormLabel>
         <Input
           size="sm"
           bg="gray.800"
@@ -238,6 +160,18 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({ 
           placeholder="Brief description (optional)"
         />
       </FormControl>
-    </EntityFormDialog>
+    </VStack>
+  );
+
+  return (
+    <CreateItemDialog
+      isOpen={isOpen}
+      title="New Entity Type"
+      itemType="Entity Type"
+      existingIds={existingIds}
+      onSubmit={handleCreate}
+      onClose={onClose}
+      additionalFields={additionalFields}
+    />
   );
 };

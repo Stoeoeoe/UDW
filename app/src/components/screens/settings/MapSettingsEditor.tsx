@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useForm } from '@tanstack/react-form';
 import {
   Badge,
   Box,
@@ -39,22 +40,6 @@ interface MapSettingsEditorProps {
   initialTab?: MapSettingsTab;
 }
 
-type TerrainDraft = {
-  id: string;
-  displayName: string;
-  color: string;
-};
-
-type LayerDraft = {
-  id: string;
-  name: string;
-  type: LayerType;
-  zIndex: number;
-  color: string;
-  icon: string;
-  description: string;
-};
-
 type MetadataDraft = {
   key: string;
   label: string;
@@ -67,38 +52,7 @@ type MetadataDraft = {
   defaultBoolean: boolean;
 };
 
-const EMPTY_TERRAIN: TerrainDraft = {
-  id: '',
-  displayName: '',
-  color: '#3182ce',
-};
-
-const EMPTY_LAYER: LayerDraft = {
-  id: '',
-  name: '',
-  type: 'tile',
-  zIndex: 0,
-  color: '#3182ce',
-  icon: '',
-  description: '',
-};
-
 const METADATA_TYPES: PropertyType[] = ['string', 'int', 'float', 'boolean', 'enum'];
-
-const LAYER_TYPE_OPTIONS: { value: LayerType; label: string }[] = [
-  { value: 'terrain', label: 'Terrain' },
-  { value: 'tile', label: 'Tile' },
-  { value: 'entity', label: 'Entity' },
-];
-
-const AVAILABLE_ICONS = [
-  { value: '', label: 'None' },
-  { value: 'tree', label: 'Tree' },
-  { value: 'building', label: 'Building' },
-  { value: 'water', label: 'Water' },
-  { value: 'ground', label: 'Ground' },
-  { value: 'overlay', label: 'Overlay' },
-];
 
 const layerIconComponents: Record<string, React.FC<{ size?: number }>> = {
   tree: BsTree,
@@ -170,15 +124,604 @@ const emptyMetadataDraft = (): MetadataDraft => ({
 
 const normalizeMetadataKey = (value: string): string => value.replace(/[^a-zA-Z0-9_]/g, '');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TerrainDialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TerrainDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  editingId: string | null;
+}> = ({ isOpen, onClose, editingId }) => {
+  const terrainTypes = useEditorStore((s) => s.terrainTypes);
+  const addTerrainType = useEditorStore((s) => s.addTerrainType);
+  const updateTerrainType = useEditorStore((s) => s.updateTerrainType);
+  const deleteTerrainType = useEditorStore((s) => s.deleteTerrainType);
+  const toast = useToast();
+
+  const existing = terrainTypes.find((t) => t.id === editingId);
+  const form = useForm({
+    defaultValues: existing
+      ? { id: existing.id, displayName: existing.displayName, color: existing.color }
+      : { id: `terrain_${Date.now()}`, displayName: 'New Terrain', color: '#3182ce' },
+    onSubmit: async ({ value }) => {
+      const nextId = value.id.trim();
+      const nextName = value.displayName.trim();
+      if (!nextId || !nextName) return;
+
+      if (terrainTypes.some((t) => t.id === nextId) && (!editingId || editingId !== nextId)) {
+        toast({ title: 'Terrain ID already exists', status: 'warning', duration: 1500 });
+        return;
+      }
+
+      if (!editingId) {
+        await addTerrainType({ id: nextId, displayName: nextName, color: value.color });
+        toast({ title: 'Terrain created', status: 'success', duration: 1200 });
+      } else if (editingId !== nextId) {
+        await deleteTerrainType(editingId);
+        await addTerrainType({ id: nextId, displayName: nextName, color: value.color });
+        toast({ title: 'Terrain updated', status: 'success', duration: 1200 });
+      } else {
+        await updateTerrainType(editingId, { displayName: nextName, color: value.color });
+        toast({ title: 'Terrain updated', status: 'success', duration: 1200 });
+      }
+      onClose();
+    },
+  });
+
+  return (
+    <EditorModal isOpen={isOpen} onClose={onClose} size="sm">
+      <form.Subscribe selector={(s) => !s.canSubmit}>
+        {(isDisabled) => (
+          <EntityFormDialog
+            title={editingId ? 'Edit Terrain' : 'Create Terrain'}
+            onCancel={onClose}
+            onSubmit={() => void form.handleSubmit()}
+            submitLabel={editingId ? 'Save Terrain' : 'Create Terrain'}
+            isSubmitDisabled={isDisabled}
+            minWidth="420px"
+          >
+            <form.Field name="id">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>ID</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+            <form.Field name="displayName">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Display Name</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+            <form.Field name="color">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Color</FormLabel>
+                  <Input
+                    type="color"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    h="9"
+                    p={0}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+          </EntityFormDialog>
+        )}
+      </form.Subscribe>
+    </EditorModal>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LayerDefinitionDialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+const LAYER_TYPE_OPTIONS: { value: LayerType; label: string }[] = [
+  { value: 'terrain', label: 'Terrain' },
+  { value: 'tile', label: 'Tile' },
+  { value: 'entity', label: 'Entity' },
+];
+
+const AVAILABLE_ICONS = [
+  { value: '', label: 'None' },
+  { value: 'tree', label: 'Tree' },
+  { value: 'building', label: 'Building' },
+  { value: 'water', label: 'Water' },
+  { value: 'ground', label: 'Ground' },
+  { value: 'overlay', label: 'Overlay' },
+];
+
+const LayerDefinitionDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  editingId: string | null;
+  nextZIndex: number;
+}> = ({ isOpen, onClose, editingId, nextZIndex }) => {
+  const layerDefinitions = useEditorStore((s) => s.layerDefinitions);
+  const addLayerDefinition = useEditorStore((s) => s.addLayerDefinition);
+  const updateLayerDefinition = useEditorStore((s) => s.updateLayerDefinition);
+  const deleteLayerDefinition = useEditorStore((s) => s.deleteLayerDefinition);
+  const toast = useToast();
+
+  const existing = layerDefinitions.find((l) => l.id === editingId);
+  const form = useForm({
+    defaultValues: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          type: existing.type as LayerType,
+          zIndex: existing.zIndex,
+          color: existing.color,
+          icon: existing.icon || '',
+          description: existing.description || '',
+        }
+      : {
+          id: `layer_${Date.now()}`,
+          name: 'New Layer',
+          type: 'tile' as LayerType,
+          zIndex: nextZIndex,
+          color: '#3182ce',
+          icon: '',
+          description: '',
+        },
+    onSubmit: async ({ value }) => {
+      const nextId = value.id.trim();
+      const nextName = value.name.trim();
+      if (!nextId || !nextName) return;
+
+      if (layerDefinitions.some((l) => l.id === nextId) && (!editingId || editingId !== nextId)) {
+        toast({ title: 'Layer ID already exists', status: 'warning', duration: 1500 });
+        return;
+      }
+
+      const payload = {
+        name: nextName,
+        type: value.type,
+        zIndex: value.zIndex,
+        color: value.color,
+        icon: value.icon || undefined,
+        description: value.description.trim() || undefined,
+      };
+
+      if (!editingId) {
+        await addLayerDefinition({ id: nextId, ...payload });
+        toast({ title: 'Layer definition created', status: 'success', duration: 1200 });
+      } else if (editingId !== nextId) {
+        await deleteLayerDefinition(editingId);
+        await addLayerDefinition({ id: nextId, ...payload });
+        toast({ title: 'Layer definition updated', status: 'success', duration: 1200 });
+      } else {
+        await updateLayerDefinition(editingId, payload);
+        toast({ title: 'Layer definition updated', status: 'success', duration: 1200 });
+      }
+      onClose();
+    },
+  });
+
+  return (
+    <EditorModal isOpen={isOpen} onClose={onClose} size="sm">
+      <form.Subscribe selector={(s) => !s.canSubmit}>
+        {(isDisabled) => (
+          <EntityFormDialog
+            title={editingId ? 'Edit Layer Definition' : 'Create Layer Definition'}
+            onCancel={onClose}
+            onSubmit={() => void form.handleSubmit()}
+            submitLabel={editingId ? 'Save Layer' : 'Create Layer'}
+            isSubmitDisabled={isDisabled}
+            minWidth="460px"
+          >
+            <form.Field name="id">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>ID</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+            <form.Field name="name">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Name</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+            <HStack spacing={3} align="start">
+              <form.Field name="type">
+                {(field) => (
+                  <FormControl>
+                    <FormLabel>Type</FormLabel>
+                    <Select
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value as LayerType)}
+                      onBlur={field.handleBlur}
+                    >
+                      {LAYER_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </form.Field>
+              <form.Field name="icon">
+                {(field) => (
+                  <FormControl>
+                    <FormLabel>Icon</FormLabel>
+                    <Select
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    >
+                      {AVAILABLE_ICONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </form.Field>
+            </HStack>
+            <HStack spacing={3} align="start">
+              <form.Field name="zIndex">
+                {(field) => (
+                  <FormControl>
+                    <FormLabel>Z-Index</FormLabel>
+                    <NumberInput
+                      value={field.state.value}
+                      onChange={(_, v) => field.handleChange(Number.isNaN(v) ? 0 : Math.round(v))}
+                    >
+                      <NumberInputField onBlur={field.handleBlur} />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </FormControl>
+                )}
+              </form.Field>
+              <form.Field name="color">
+                {(field) => (
+                  <FormControl>
+                    <FormLabel>Color</FormLabel>
+                    <Input
+                      type="color"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      h="9"
+                      p={0}
+                    />
+                  </FormControl>
+                )}
+              </form.Field>
+            </HStack>
+            <form.Field name="description">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Description</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="Optional"
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+          </EntityFormDialog>
+        )}
+      </form.Subscribe>
+    </EditorModal>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MetadataDefinitionDialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MetadataDefinitionDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  editingKey: string | null;
+  kind: 'tile' | 'location';
+}> = ({ isOpen, onClose, editingKey, kind }) => {
+  const tileMetadataDefinitions = useEditorStore((s) => s.tileMetadataDefinitions);
+  const setTileMetadataDefinitions = useEditorStore((s) => s.setTileMetadataDefinitions);
+  const locationMetadataDefinitions = useEditorStore((s) => s.locationMetadataDefinitions);
+  const setLocationMetadataDefinitions = useEditorStore((s) => s.setLocationMetadataDefinitions);
+  const toast = useToast();
+
+  const definitions = kind === 'tile' ? tileMetadataDefinitions : locationMetadataDefinitions;
+  const setDefinitions =
+    kind === 'tile' ? setTileMetadataDefinitions : setLocationMetadataDefinitions;
+
+  const existing = definitions.find((d) => d.key === editingKey);
+  const form = useForm({
+    defaultValues: existing ? metadataDraftFromDefinition(existing) : emptyMetadataDraft(),
+    onSubmit: async ({ value }) => {
+      const key = normalizeMetadataKey(value.key.trim());
+      const label = value.label.trim();
+      if (!key || !label) return;
+
+      if (definitions.some((d) => d.key === key) && (!editingKey || editingKey !== key)) {
+        toast({ title: 'Metadata key already exists', status: 'warning', duration: 1500 });
+        return;
+      }
+
+      if (value.type === 'enum' && value.enumOptions.length === 0) {
+        toast({ title: 'Enum metadata requires options', status: 'warning', duration: 1500 });
+        return;
+      }
+
+      const nextDefinition: PropertyDefinition = {
+        key,
+        label,
+        type: value.type,
+        required: value.required,
+        description: value.description.trim() || undefined,
+        defaultValue: toDefaultValue(value),
+        constraints: value.type === 'enum' ? { options: value.enumOptions } : undefined,
+      };
+
+      if (!editingKey) {
+        await setDefinitions([...definitions, nextDefinition]);
+        toast({ title: 'Metadata field created', status: 'success', duration: 1200 });
+      } else {
+        await setDefinitions(
+          definitions.map((d) =>
+            d.key === editingKey ? { ...nextDefinition, key: editingKey } : d,
+          ),
+        );
+        toast({ title: 'Metadata field updated', status: 'success', duration: 1200 });
+      }
+      onClose();
+    },
+  });
+
+  return (
+    <EditorModal isOpen={isOpen} onClose={onClose} size="sm">
+      <form.Subscribe selector={(s) => !s.canSubmit}>
+        {(isDisabled) => (
+          <EntityFormDialog
+            title={editingKey ? 'Edit Metadata Field' : 'Create Metadata Field'}
+            onCancel={onClose}
+            onSubmit={() => void form.handleSubmit()}
+            submitLabel={editingKey ? 'Save Metadata' : 'Create Metadata'}
+            isSubmitDisabled={isDisabled}
+            minWidth="520px"
+            scrollable
+          >
+            <form.Field name="key">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Key</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(normalizeMetadataKey(e.target.value))}
+                    onBlur={field.handleBlur}
+                    isReadOnly={Boolean(editingKey)}
+                  />
+                  {editingKey && (
+                    <Text mt={1} fontSize="xs" color="gray.600">
+                      Keys are locked after creation to avoid breaking existing tile assignments.
+                    </Text>
+                  )}
+                </FormControl>
+              )}
+            </form.Field>
+
+            <form.Field name="label">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Label</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+
+            <HStack spacing={3} align="start">
+              <form.Field name="type">
+                {(field) => (
+                  <FormControl>
+                    <FormLabel>Type</FormLabel>
+                    <Select
+                      value={field.state.value}
+                      onChange={(e) => {
+                        const nextType = e.target.value as PropertyType;
+                        field.handleChange(nextType);
+                        if (nextType !== 'string' && nextType !== 'enum')
+                          form.setFieldValue('defaultString', '');
+                        if (!['int', 'float', 'number'].includes(nextType))
+                          form.setFieldValue('defaultNumber', 0);
+                        if (nextType !== 'boolean') form.setFieldValue('defaultBoolean', false);
+                        if (nextType !== 'enum') form.setFieldValue('enumOptions', []);
+                      }}
+                      onBlur={field.handleBlur}
+                    >
+                      {METADATA_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </form.Field>
+              <form.Field name="required">
+                {(field) => (
+                  <FormControl>
+                    <FormLabel>Required</FormLabel>
+                    <Switch
+                      size="sm"
+                      isChecked={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.checked)}
+                    />
+                  </FormControl>
+                )}
+              </form.Field>
+            </HStack>
+
+            <form.Subscribe
+              selector={(s) => ({ type: s.values.type, enumOptions: s.values.enumOptions })}
+            >
+              {({ type, enumOptions }) =>
+                type === 'enum' ? (
+                  <FormControl>
+                    <FormLabel>Enum Options</FormLabel>
+                    <VStack spacing={1} align="stretch">
+                      {enumOptions.map((opt, idx) => (
+                        <HStack key={idx} spacing={1}>
+                          <Input
+                            value={opt}
+                            onChange={(e) => {
+                              const next = [...enumOptions];
+                              next[idx] = e.target.value;
+                              form.setFieldValue('enumOptions', next);
+                            }}
+                          />
+                          <IconButton
+                            aria-label="Remove option"
+                            icon={<DeleteIcon fontSize="8px" />}
+                            size="sm"
+                            variant="ghost"
+                            color="gray.600"
+                            _hover={{ color: 'red.300' }}
+                            onClick={() =>
+                              form.setFieldValue(
+                                'enumOptions',
+                                enumOptions.filter((_, i) => i !== idx),
+                              )
+                            }
+                          />
+                        </HStack>
+                      ))}
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="gray.500"
+                        leftIcon={<AddIcon fontSize="8px" />}
+                        onClick={() => form.setFieldValue('enumOptions', [...enumOptions, ''])}
+                      >
+                        Add Option
+                      </Button>
+                    </VStack>
+                  </FormControl>
+                ) : null
+              }
+            </form.Subscribe>
+
+            <form.Subscribe selector={(s) => s.values.type}>
+              {(type) => (
+                <>
+                  {(type === 'string' || type === 'enum') && (
+                    <form.Field name="defaultString">
+                      {(field) => (
+                        <FormControl>
+                          <FormLabel>Default Value</FormLabel>
+                          <Input
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                        </FormControl>
+                      )}
+                    </form.Field>
+                  )}
+                  {(type === 'int' || type === 'float' || type === 'number') && (
+                    <form.Field name="defaultNumber">
+                      {(field) => (
+                        <FormControl>
+                          <FormLabel>Default Value</FormLabel>
+                          <NumberInput
+                            value={field.state.value}
+                            onChange={(_, v) => field.handleChange(Number.isNaN(v) ? 0 : v)}
+                          >
+                            <NumberInputField onBlur={field.handleBlur} />
+                            <NumberInputStepper>
+                              <NumberIncrementStepper />
+                              <NumberDecrementStepper />
+                            </NumberInputStepper>
+                          </NumberInput>
+                        </FormControl>
+                      )}
+                    </form.Field>
+                  )}
+                  {type === 'boolean' && (
+                    <form.Field name="defaultBoolean">
+                      {(field) => (
+                        <FormControl>
+                          <FormLabel>Default Value</FormLabel>
+                          <Switch
+                            isChecked={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.checked)}
+                          />
+                        </FormControl>
+                      )}
+                    </form.Field>
+                  )}
+                </>
+              )}
+            </form.Subscribe>
+
+            <form.Field name="description">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>Description</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="Optional"
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+          </EntityFormDialog>
+        )}
+      </form.Subscribe>
+    </EditorModal>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MapSettingsEditor (main)
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab = 'terrain' }) => {
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
-  const addTerrainType = useEditorStore((state) => state.addTerrainType);
-  const updateTerrainType = useEditorStore((state) => state.updateTerrainType);
   const deleteTerrainType = useEditorStore((state) => state.deleteTerrainType);
 
   const layerDefinitions = useEditorStore((state) => state.layerDefinitions);
-  const addLayerDefinition = useEditorStore((state) => state.addLayerDefinition);
-  const updateLayerDefinition = useEditorStore((state) => state.updateLayerDefinition);
   const deleteLayerDefinition = useEditorStore((state) => state.deleteLayerDefinition);
 
   const tileMetadataDefinitions = useEditorStore((state) => state.tileMetadataDefinitions);
@@ -197,15 +740,13 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
 
   const terrainDialog = useDisclosure();
   const [editingTerrainId, setEditingTerrainId] = useState<string | null>(null);
-  const [terrainDraft, setTerrainDraft] = useState<TerrainDraft>(EMPTY_TERRAIN);
 
   const layerDialog = useDisclosure();
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
-  const [layerDraft, setLayerDraft] = useState<LayerDraft>(EMPTY_LAYER);
 
   const metadataDialog = useDisclosure();
   const [editingMetadataKey, setEditingMetadataKey] = useState<string | null>(null);
-  const [metadataDraft, setMetadataDraft] = useState<MetadataDraft>(emptyMetadataDraft);
+  const [metadataKind, setMetadataKind] = useState<'tile' | 'location'>('tile');
 
   const sortedLayers = useMemo(
     () => [...layerDefinitions].sort((a, b) => a.zIndex - b.zIndex),
@@ -287,56 +828,6 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
     ),
   }));
 
-  const openCreateTerrain = () => {
-    setEditingTerrainId(null);
-    setTerrainDraft({
-      ...EMPTY_TERRAIN,
-      id: `terrain_${Date.now()}`,
-      displayName: 'New Terrain',
-    });
-    terrainDialog.onOpen();
-  };
-
-  const openEditTerrain = (id: string) => {
-    const terrain = terrainTypes.find((entry) => entry.id === id);
-    if (!terrain) return;
-
-    setEditingTerrainId(id);
-    setTerrainDraft({ id: terrain.id, displayName: terrain.displayName, color: terrain.color });
-    terrainDialog.onOpen();
-  };
-
-  const saveTerrain = async () => {
-    const nextId = terrainDraft.id.trim();
-    const nextName = terrainDraft.displayName.trim();
-    if (!nextId || !nextName) return;
-
-    if (
-      terrainTypes.some((entry) => entry.id === nextId) &&
-      (!editingTerrainId || editingTerrainId !== nextId)
-    ) {
-      toast({ title: 'Terrain ID already exists', status: 'warning', duration: 1500 });
-      return;
-    }
-
-    if (!editingTerrainId) {
-      await addTerrainType({ id: nextId, displayName: nextName, color: terrainDraft.color });
-      toast({ title: 'Terrain created', status: 'success', duration: 1200 });
-    } else if (editingTerrainId !== nextId) {
-      await deleteTerrainType(editingTerrainId);
-      await addTerrainType({ id: nextId, displayName: nextName, color: terrainDraft.color });
-      toast({ title: 'Terrain updated', status: 'success', duration: 1200 });
-    } else {
-      await updateTerrainType(editingTerrainId, {
-        displayName: nextName,
-        color: terrainDraft.color,
-      });
-      toast({ title: 'Terrain updated', status: 'success', duration: 1200 });
-    }
-
-    terrainDialog.onClose();
-  };
-
   const deleteTerrain = async (id: string) => {
     const terrain = terrainTypes.find((entry) => entry.id === id);
     if (!terrain) return;
@@ -345,169 +836,12 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
     toast({ title: 'Terrain deleted', status: 'info', duration: 1200 });
   };
 
-  const openCreateLayer = () => {
-    const nextZ = sortedLayers.length > 0 ? sortedLayers[sortedLayers.length - 1].zIndex + 1 : 0;
-    setEditingLayerId(null);
-    setLayerDraft({
-      ...EMPTY_LAYER,
-      id: `layer_${Date.now()}`,
-      name: 'New Layer',
-      zIndex: nextZ,
-    });
-    layerDialog.onOpen();
-  };
-
-  const openEditLayer = (id: string) => {
-    const layer = layerDefinitions.find((entry) => entry.id === id);
-    if (!layer) return;
-
-    setEditingLayerId(id);
-    setLayerDraft({
-      id: layer.id,
-      name: layer.name,
-      type: layer.type,
-      zIndex: layer.zIndex,
-      color: layer.color,
-      icon: layer.icon || '',
-      description: layer.description || '',
-    });
-    layerDialog.onOpen();
-  };
-
-  const saveLayer = async () => {
-    const nextId = layerDraft.id.trim();
-    const nextName = layerDraft.name.trim();
-    if (!nextId || !nextName) return;
-
-    if (
-      layerDefinitions.some((entry) => entry.id === nextId) &&
-      (!editingLayerId || editingLayerId !== nextId)
-    ) {
-      toast({ title: 'Layer ID already exists', status: 'warning', duration: 1500 });
-      return;
-    }
-
-    const payload = {
-      name: nextName,
-      type: layerDraft.type,
-      zIndex: layerDraft.zIndex,
-      color: layerDraft.color,
-      icon: layerDraft.icon || undefined,
-      description: layerDraft.description.trim() || undefined,
-    };
-
-    if (!editingLayerId) {
-      await addLayerDefinition({ id: nextId, ...payload });
-      toast({ title: 'Layer definition created', status: 'success', duration: 1200 });
-    } else if (editingLayerId !== nextId) {
-      await deleteLayerDefinition(editingLayerId);
-      await addLayerDefinition({ id: nextId, ...payload });
-      toast({ title: 'Layer definition updated', status: 'success', duration: 1200 });
-    } else {
-      await updateLayerDefinition(editingLayerId, payload);
-      toast({ title: 'Layer definition updated', status: 'success', duration: 1200 });
-    }
-
-    layerDialog.onClose();
-  };
-
   const deleteLayer = async (id: string) => {
     const layer = layerDefinitions.find((entry) => entry.id === id);
     if (!layer) return;
     if (!confirm(`Delete layer definition "${layer.name}"?`)) return;
     await deleteLayerDefinition(id);
     toast({ title: 'Layer definition deleted', status: 'info', duration: 1200 });
-  };
-
-  const openCreateMetadata = () => {
-    setEditingMetadataKey(null);
-    setMetadataDraft(emptyMetadataDraft());
-    metadataDialog.onOpen();
-  };
-
-  const openCreateLocation = () => {
-    setEditingMetadataKey(null);
-    setMetadataDraft(emptyMetadataDraft());
-    metadataDialog.onOpen();
-  };
-
-  const openEditMetadata = (key: string) => {
-    const definition = tileMetadataDefinitions.find((entry) => entry.key === key);
-    if (!definition) return;
-
-    setEditingMetadataKey(key);
-    setMetadataDraft(metadataDraftFromDefinition(definition));
-    metadataDialog.onOpen();
-  };
-
-  const openEditLocation = (key: string) => {
-    const definition = locationMetadataDefinitions.find((entry) => entry.key === key);
-    if (!definition) return;
-
-    setEditingMetadataKey(key);
-    setMetadataDraft(metadataDraftFromDefinition(definition));
-    metadataDialog.onOpen();
-  };
-
-  const saveMetadata = async () => {
-    const key = normalizeMetadataKey(metadataDraft.key.trim());
-    const label = metadataDraft.label.trim();
-    if (!key || !label) return;
-
-    if (
-      tileMetadataDefinitions.some((entry) => entry.key === key) &&
-      (!editingMetadataKey || editingMetadataKey !== key)
-    ) {
-      toast({ title: 'Metadata key already exists', status: 'warning', duration: 1500 });
-      return;
-    }
-
-    const options = metadataDraft.enumOptions;
-
-    if (metadataDraft.type === 'enum' && options.length === 0) {
-      toast({ title: 'Enum metadata requires options', status: 'warning', duration: 1500 });
-      return;
-    }
-
-    const nextDefinition: PropertyDefinition = {
-      key,
-      label,
-      type: metadataDraft.type,
-      required: metadataDraft.required,
-      description: metadataDraft.description.trim() || undefined,
-      defaultValue: toDefaultValue(metadataDraft),
-      constraints: metadataDraft.type === 'enum' ? { options } : undefined,
-    };
-
-    if (!editingMetadataKey) {
-      if (activeTab === 'metadata') {
-        await setTileMetadataDefinitions([...tileMetadataDefinitions, nextDefinition]);
-      } else {
-        await setLocationMetadataDefinitions([...locationMetadataDefinitions, nextDefinition]);
-      }
-      toast({ title: 'Metadata field created', status: 'success', duration: 1200 });
-    } else {
-      if (activeTab === 'metadata') {
-        await setTileMetadataDefinitions(
-          tileMetadataDefinitions.map((entry) =>
-            entry.key === editingMetadataKey
-              ? { ...nextDefinition, key: editingMetadataKey }
-              : entry,
-          ),
-        );
-      } else {
-        await setLocationMetadataDefinitions(
-          locationMetadataDefinitions.map((entry) =>
-            entry.key === editingMetadataKey
-              ? { ...nextDefinition, key: editingMetadataKey }
-              : entry,
-          ),
-        );
-      }
-      toast({ title: 'Metadata field updated', status: 'success', duration: 1200 });
-    }
-
-    metadataDialog.onClose();
   };
 
   const deleteMetadata = async (key: string) => {
@@ -536,8 +870,14 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         description="Used by tileset terrain painting and autotile generation."
         items={terrainItems}
         addLabel="Add Terrain"
-        onAdd={openCreateTerrain}
-        onOpenItem={openEditTerrain}
+        onAdd={() => {
+          setEditingTerrainId(null);
+          terrainDialog.onOpen();
+        }}
+        onOpenItem={(id) => {
+          setEditingTerrainId(id);
+          terrainDialog.onOpen();
+        }}
         onDeleteItem={(id) => {
           void deleteTerrain(id);
         }}
@@ -551,8 +891,16 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         description="Project-level metadata schema for tile properties."
         items={metadataItems}
         addLabel="Add Metadata Field"
-        onAdd={openCreateMetadata}
-        onOpenItem={openEditMetadata}
+        onAdd={() => {
+          setEditingMetadataKey(null);
+          setMetadataKind('tile');
+          metadataDialog.onOpen();
+        }}
+        onOpenItem={(id) => {
+          setEditingMetadataKey(id);
+          setMetadataKind('tile');
+          metadataDialog.onOpen();
+        }}
         onDeleteItem={(id) => {
           void deleteMetadata(id);
         }}
@@ -566,8 +914,16 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         description="Project-level metadata schema for maps/locations."
         items={locationItems}
         addLabel="Add Location Metadata"
-        onAdd={openCreateLocation}
-        onOpenItem={openEditLocation}
+        onAdd={() => {
+          setEditingMetadataKey(null);
+          setMetadataKind('location');
+          metadataDialog.onOpen();
+        }}
+        onOpenItem={(id) => {
+          setEditingMetadataKey(id);
+          setMetadataKind('location');
+          metadataDialog.onOpen();
+        }}
         onDeleteItem={(id) => {
           void deleteMetadata(id);
         }}
@@ -581,8 +937,14 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         description="Template layers automatically used by maps in this project."
         items={layerItems}
         addLabel="Add Layer"
-        onAdd={openCreateLayer}
-        onOpenItem={openEditLayer}
+        onAdd={() => {
+          setEditingLayerId(null);
+          layerDialog.onOpen();
+        }}
+        onOpenItem={(id) => {
+          setEditingLayerId(id);
+          layerDialog.onOpen();
+        }}
         onDeleteItem={(id) => {
           void deleteLayer(id);
         }}
@@ -591,6 +953,9 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         emptyDescription="Create layer templates that determine map layer structure."
       />
     );
+
+  const nextLayerZIndex =
+    sortedLayers.length > 0 ? sortedLayers[sortedLayers.length - 1].zIndex + 1 : 0;
 
   return (
     <>
@@ -611,324 +976,28 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         mainContent={mainContent}
       />
 
-      <EditorModal isOpen={terrainDialog.isOpen} onClose={terrainDialog.onClose} size="sm">
-        <EntityFormDialog
-          title={editingTerrainId ? 'Edit Terrain' : 'Create Terrain'}
-          onCancel={terrainDialog.onClose}
-          onSubmit={() => {
-            void saveTerrain();
-          }}
-          submitLabel={editingTerrainId ? 'Save Terrain' : 'Create Terrain'}
-          isSubmitDisabled={!terrainDraft.id.trim() || !terrainDraft.displayName.trim()}
-          minWidth="420px"
-        >
-          <FormControl>
-            <FormLabel>ID</FormLabel>
-            <Input
-              value={terrainDraft.id}
-              onChange={(e) => setTerrainDraft((p) => ({ ...p, id: e.target.value }))}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Display Name</FormLabel>
-            <Input
-              value={terrainDraft.displayName}
-              onChange={(e) => setTerrainDraft((p) => ({ ...p, displayName: e.target.value }))}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Color</FormLabel>
-            <Input
-              type="color"
-              value={terrainDraft.color}
-              onChange={(e) => setTerrainDraft((p) => ({ ...p, color: e.target.value }))}
-              h="9"
-              p={0}
-            />
-          </FormControl>
-        </EntityFormDialog>
-      </EditorModal>
+      <TerrainDialog
+        key={editingTerrainId ?? 'new-terrain'}
+        isOpen={terrainDialog.isOpen}
+        onClose={terrainDialog.onClose}
+        editingId={editingTerrainId}
+      />
 
-      <EditorModal isOpen={layerDialog.isOpen} onClose={layerDialog.onClose} size="sm">
-        <EntityFormDialog
-          title={editingLayerId ? 'Edit Layer Definition' : 'Create Layer Definition'}
-          onCancel={layerDialog.onClose}
-          onSubmit={() => {
-            void saveLayer();
-          }}
-          submitLabel={editingLayerId ? 'Save Layer' : 'Create Layer'}
-          isSubmitDisabled={!layerDraft.id.trim() || !layerDraft.name.trim()}
-          minWidth="460px"
-        >
-          <FormControl>
-            <FormLabel>ID</FormLabel>
-            <Input
-              value={layerDraft.id}
-              onChange={(e) => setLayerDraft((p) => ({ ...p, id: e.target.value }))}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Name</FormLabel>
-            <Input
-              value={layerDraft.name}
-              onChange={(e) => setLayerDraft((p) => ({ ...p, name: e.target.value }))}
-            />
-          </FormControl>
-          <HStack spacing={3} align="start">
-            <FormControl>
-              <FormLabel>Type</FormLabel>
-              <Select
-                value={layerDraft.type}
-                onChange={(e) =>
-                  setLayerDraft((p) => ({ ...p, type: e.target.value as LayerType }))
-                }
-              >
-                {LAYER_TYPE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Icon</FormLabel>
-              <Select
-                value={layerDraft.icon}
-                onChange={(e) => setLayerDraft((p) => ({ ...p, icon: e.target.value }))}
-              >
-                {AVAILABLE_ICONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-          </HStack>
-          <HStack spacing={3} align="start">
-            <FormControl>
-              <FormLabel>Z-Index</FormLabel>
-              <NumberInput
-                value={layerDraft.zIndex}
-                onChange={(_, v) =>
-                  setLayerDraft((p) => ({ ...p, zIndex: Number.isNaN(v) ? 0 : Math.round(v) }))
-                }
-              >
-                <NumberInputField />
-                <NumberInputStepper>
-                  <NumberIncrementStepper />
-                  <NumberDecrementStepper />
-                </NumberInputStepper>
-              </NumberInput>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Color</FormLabel>
-              <Input
-                type="color"
-                value={layerDraft.color}
-                onChange={(e) => setLayerDraft((p) => ({ ...p, color: e.target.value }))}
-                h="9"
-                p={0}
-              />
-            </FormControl>
-          </HStack>
-          <FormControl>
-            <FormLabel>Description</FormLabel>
-            <Input
-              value={layerDraft.description}
-              onChange={(e) => setLayerDraft((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Optional"
-            />
-          </FormControl>
-        </EntityFormDialog>
-      </EditorModal>
+      <LayerDefinitionDialog
+        key={editingLayerId ?? 'new-layer'}
+        isOpen={layerDialog.isOpen}
+        onClose={layerDialog.onClose}
+        editingId={editingLayerId}
+        nextZIndex={nextLayerZIndex}
+      />
 
-      <EditorModal isOpen={metadataDialog.isOpen} onClose={metadataDialog.onClose} size="sm">
-        <EntityFormDialog
-          title={editingMetadataKey ? 'Edit Metadata Field' : 'Create Metadata Field'}
-          onCancel={metadataDialog.onClose}
-          onSubmit={() => {
-            void saveMetadata();
-          }}
-          submitLabel={editingMetadataKey ? 'Save Metadata' : 'Create Metadata'}
-          isSubmitDisabled={
-            !metadataDraft.label.trim() || !normalizeMetadataKey(metadataDraft.key.trim())
-          }
-          minWidth="520px"
-        >
-          <FormControl>
-            <FormLabel>Key</FormLabel>
-            <Input
-              value={metadataDraft.key}
-              onChange={(event) =>
-                setMetadataDraft((prev) => ({
-                  ...prev,
-                  key: normalizeMetadataKey(event.target.value),
-                }))
-              }
-              isReadOnly={Boolean(editingMetadataKey)}
-            />
-            {editingMetadataKey && (
-              <Text mt={1} fontSize="xs" color="gray.600">
-                Keys are locked after creation to avoid breaking existing tile assignments.
-              </Text>
-            )}
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Label</FormLabel>
-            <Input
-              value={metadataDraft.label}
-              onChange={(event) =>
-                setMetadataDraft((prev) => ({ ...prev, label: event.target.value }))
-              }
-            />
-          </FormControl>
-
-          <HStack spacing={3} align="start">
-            <FormControl>
-              <FormLabel>Type</FormLabel>
-              <Select
-                value={metadataDraft.type}
-                onChange={(event) => {
-                  const nextType = event.target.value as PropertyType;
-                  setMetadataDraft((prev) => ({
-                    ...prev,
-                    type: nextType,
-                    defaultString:
-                      nextType === 'string' || nextType === 'enum' ? '' : prev.defaultString,
-                    defaultNumber:
-                      nextType === 'int' || nextType === 'float' || nextType === 'number'
-                        ? 0
-                        : prev.defaultNumber,
-                    defaultBoolean: nextType === 'boolean' ? false : prev.defaultBoolean,
-                    enumOptions: nextType === 'enum' ? prev.enumOptions : [],
-                  }));
-                }}
-              >
-                {METADATA_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Required</FormLabel>
-              <Switch
-                size="sm"
-                isChecked={metadataDraft.required}
-                onChange={(event) =>
-                  setMetadataDraft((prev) => ({ ...prev, required: event.target.checked }))
-                }
-              />
-            </FormControl>
-          </HStack>
-
-          {metadataDraft.type === 'enum' && (
-            <FormControl>
-              <FormLabel>Enum Options</FormLabel>
-              <VStack spacing={1} align="stretch">
-                {metadataDraft.enumOptions.map((opt, idx) => (
-                  <HStack key={idx} spacing={1}>
-                    <Input
-                      value={opt}
-                      onChange={(e) => {
-                        const next = [...metadataDraft.enumOptions];
-                        next[idx] = e.target.value;
-                        setMetadataDraft((prev) => ({ ...prev, enumOptions: next }));
-                      }}
-                    />
-                    <IconButton
-                      aria-label="Remove option"
-                      icon={<DeleteIcon fontSize="8px" />}
-                      size="sm"
-                      variant="ghost"
-                      color="gray.600"
-                      _hover={{ color: 'red.300' }}
-                      onClick={() =>
-                        setMetadataDraft((prev) => ({
-                          ...prev,
-                          enumOptions: prev.enumOptions.filter((_, i) => i !== idx),
-                        }))
-                      }
-                    />
-                  </HStack>
-                ))}
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  color="gray.500"
-                  _hover={{ color: 'white' }}
-                  leftIcon={<AddIcon fontSize="8px" />}
-                  onClick={() =>
-                    setMetadataDraft((prev) => ({
-                      ...prev,
-                      enumOptions: [...prev.enumOptions, `option_${prev.enumOptions.length + 1}`],
-                    }))
-                  }
-                >
-                  Add Option
-                </Button>
-              </VStack>
-            </FormControl>
-          )}
-
-          <FormControl>
-            <FormLabel>Default Value</FormLabel>
-            {(metadataDraft.type === 'int' ||
-              metadataDraft.type === 'float' ||
-              metadataDraft.type === 'number') && (
-              <NumberInput
-                value={metadataDraft.defaultNumber}
-                step={metadataDraft.type === 'int' ? 1 : 0.01}
-                precision={metadataDraft.type === 'int' ? 0 : 2}
-                onChange={(_, valueAsNumber) =>
-                  setMetadataDraft((prev) => ({
-                    ...prev,
-                    defaultNumber: Number.isNaN(valueAsNumber) ? 0 : valueAsNumber,
-                  }))
-                }
-              >
-                <NumberInputField />
-                <NumberInputStepper>
-                  <NumberIncrementStepper />
-                  <NumberDecrementStepper />
-                </NumberInputStepper>
-              </NumberInput>
-            )}
-            {(metadataDraft.type === 'string' || metadataDraft.type === 'enum') && (
-              <Input
-                value={metadataDraft.defaultString}
-                onChange={(event) =>
-                  setMetadataDraft((prev) => ({ ...prev, defaultString: event.target.value }))
-                }
-              />
-            )}
-            {metadataDraft.type === 'boolean' && (
-              <Switch
-                size="sm"
-                isChecked={metadataDraft.defaultBoolean}
-                onChange={(event) =>
-                  setMetadataDraft((prev) => ({ ...prev, defaultBoolean: event.target.checked }))
-                }
-              />
-            )}
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Description</FormLabel>
-            <Input
-              value={metadataDraft.description}
-              onChange={(event) =>
-                setMetadataDraft((prev) => ({ ...prev, description: event.target.value }))
-              }
-              placeholder="Optional"
-            />
-          </FormControl>
-        </EntityFormDialog>
-      </EditorModal>
+      <MetadataDefinitionDialog
+        key={editingMetadataKey ?? `new-${metadataKind}`}
+        isOpen={metadataDialog.isOpen}
+        onClose={metadataDialog.onClose}
+        editingKey={editingMetadataKey}
+        kind={metadataKind}
+      />
     </>
   );
 };
-
-export default MapSettingsEditor;

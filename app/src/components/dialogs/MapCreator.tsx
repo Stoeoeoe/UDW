@@ -87,9 +87,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
 
         <VStack spacing={4}>
           <FormControl isRequired>
-            <FormLabel color="gray.400" fontSize="xs" fontWeight="black" textTransform="uppercase">
-              Map Name
-            </FormLabel>
+            <FormLabel>Map Name</FormLabel>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -102,14 +100,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
 
           <HStack spacing={4} w="full">
             <FormControl isRequired>
-              <FormLabel
-                color="gray.400"
-                fontSize="xs"
-                fontWeight="black"
-                textTransform="uppercase"
-              >
-                Width (Tiles)
-              </FormLabel>
+              <FormLabel>Width (Tiles)</FormLabel>
               <NumberInput
                 value={width}
                 min={1}
@@ -126,14 +117,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
             </FormControl>
 
             <FormControl isRequired>
-              <FormLabel
-                color="gray.400"
-                fontSize="xs"
-                fontWeight="black"
-                textTransform="uppercase"
-              >
-                Height (Tiles)
-              </FormLabel>
+              <FormLabel>Height (Tiles)</FormLabel>
               <NumberInput
                 value={height}
                 min={1}
@@ -151,9 +135,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
           </HStack>
 
           <FormControl isRequired>
-            <FormLabel color="gray.400" fontSize="xs" fontWeight="black" textTransform="uppercase">
-              Base Tileset
-            </FormLabel>
+            <FormLabel>Base Tileset</FormLabel>
             <Select
               value={tilesetId}
               onChange={(e) => setTilesetId(e.target.value)}

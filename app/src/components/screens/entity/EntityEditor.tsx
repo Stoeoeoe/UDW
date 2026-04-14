@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
+import { useForm } from '@tanstack/react-form';
 import {
   VStack,
   HStack,
@@ -8,7 +9,6 @@ import {
   Select,
   FormControl,
   FormLabel,
-  Circle,
   Button,
   IconButton,
   useDisclosure,
@@ -17,7 +17,7 @@ import {
   NumberInputField,
   Tooltip,
 } from '@chakra-ui/react';
-import { DeleteIcon, RepeatIcon } from '@chakra-ui/icons';
+import { DeleteIcon, RepeatIcon, CheckIcon } from '@chakra-ui/icons';
 import { fileSystem } from '../../../lib/fileSystem';
 
 async function loadSpriteBlob(path: string): Promise<Blob> {
@@ -29,13 +29,14 @@ async function loadSpriteBlob(path: string): Promise<Blob> {
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
-import { EntityType, PropertyDefinition, EntityCategory } from '../../../types/schema';
-import { EditorModal } from '../../common/EditorModal';
+import { DetailPanel } from '../../common/DetailPanel';
+import { GameIcon } from '../../common/GameIcon';
+import { useFilteredList } from '../../../hooks/useFilteredList';
+import { EntityType, EntityCategory } from '../../../types/schema';
 import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { IconPicker, ColorPicker } from '../common/FormFields';
-import * as GiIcons from 'react-icons/gi';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'object', label: 'Object', icon: '📦' },
@@ -45,18 +46,6 @@ const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
   { value: 'decoration', label: 'Decoration', icon: '🌿' },
 ];
 
-type EditableEntityTypeKey = keyof Pick<
-  EntityType,
-  | 'displayName'
-  | 'category'
-  | 'group'
-  | 'icon'
-  | 'placeholderColor'
-  | 'description'
-  | 'defaultSize'
-  | 'sprite'
->;
-
 export const EntityEditor: React.FC = () => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
@@ -64,7 +53,7 @@ export const EntityEditor: React.FC = () => {
   const updateEntityType = useEditorStore((state) => state.updateEntityType);
   const deleteEntityType = useEditorStore((state) => state.deleteEntityType);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = React.useState('');
 
   const selectedType = entityTypes.find((t) => t.id === selectedEntityTypeId);
 
@@ -74,49 +63,12 @@ export const EntityEditor: React.FC = () => {
         id: type.id,
         label: type.displayName,
         sublabel: type.group ? `${type.group} • ${type.category}` : type.category.toUpperCase(),
-        icon: (
-          <Box
-            w="24px"
-            h="24px"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize="24px"
-          >
-            {(() => {
-              const name = type.icon;
-              if (!name) return 'GiYinYang';
-              const Comp = (GiIcons as Record<string, React.FC<{ size?: number }>>)[name];
-              if (Comp) return <Comp size={24} />;
-              return name;
-            })()}
-          </Box>
-        ),
+        icon: <GameIcon iconName={type.icon} size={24} fallback="GiBox" />,
       })),
     [entityTypes],
   );
 
-  const filteredEntityItems = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return entityItems;
-    return entityItems.filter((item) => {
-      const hitLabel = item.label.toLowerCase().includes(query);
-      const hitSublabel = item.sublabel?.toLowerCase().includes(query);
-      return hitLabel || Boolean(hitSublabel);
-    });
-  }, [entityItems, search]);
-
-  const handlePropertyChange = (key: EditableEntityTypeKey, value: unknown) => {
-    if (selectedEntityTypeId && selectedType) {
-      updateEntityType(selectedEntityTypeId, { [key]: value } as Partial<EntityType>);
-    }
-  };
-
-  const handlePropertiesChange = (properties: PropertyDefinition[]) => {
-    if (selectedEntityTypeId) {
-      updateEntityType(selectedEntityTypeId, { properties });
-    }
-  };
+  const filteredEntityItems = useFilteredList(entityItems, search);
 
   const deleteEntityTypeById = async (id: string, displayName: string) => {
     if (!confirm(`Delete entity type "${displayName}"?`)) return;
@@ -146,6 +98,9 @@ export const EntityEditor: React.FC = () => {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search entity types..."
+          bg="#0a0a0b"
+          borderColor="#333"
+          color="gray.100"
         />
       }
       onDeleteItem={async (item) => {
@@ -160,7 +115,7 @@ export const EntityEditor: React.FC = () => {
   const emptyContent =
     entityTypes.length === 0 ? (
       <EmptyScreen
-        icon="🎯"
+        icon={<GameIcon iconName="GiBox" size={48} />}
         title="No Entity Types"
         description="Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements."
         buttonLabel="Create First Entity"
@@ -168,33 +123,22 @@ export const EntityEditor: React.FC = () => {
       />
     ) : (
       <EmptyScreen
-        icon="🎯"
+        icon={<GameIcon iconName="GiBox" size={48} />}
         title="No Entity Type Selected"
         description="Select an entity type from the list to edit its data and property schema."
       />
     );
 
   const centerContent = selectedType ? (
-    <Box h="full" overflowY="auto" p={6}>
-      <Box
-        w="80%"
-        maxW="900px"
-        mx="auto"
-        bg="editor.panelBg"
-        border="1px"
-        borderColor="whiteAlpha.100"
-        borderRadius="lg"
-        overflow="hidden"
-      >
-        <EntityTypeDetail
-          selectedType={selectedType}
-          existingGroups={existingGroups}
-          onPropertyChange={handlePropertyChange}
-          onPropertiesChange={handlePropertiesChange}
-          onDelete={async () => deleteEntityTypeById(selectedType.id, selectedType.displayName)}
-        />
-      </Box>
-    </Box>
+    <DetailPanel key={selectedType.id} maxWidth="900px">
+      <EntityTypeDetail
+        key={selectedType.id}
+        entityType={selectedType}
+        existingGroups={existingGroups}
+        onUpdate={updateEntityType}
+        onDelete={async () => deleteEntityTypeById(selectedType.id, selectedType.displayName)}
+      />
+    </DetailPanel>
   ) : (
     emptyContent
   );
@@ -211,213 +155,397 @@ export const EntityEditor: React.FC = () => {
         leftPanelDefaultSize={18}
       />
 
-      <EditorModal isOpen={isOpen} onClose={onClose}>
-        <CreateEntityTypeDialog onClose={onClose} />
-      </EditorModal>
+      <CreateEntityTypeDialog isOpen={isOpen} onClose={onClose} />
     </>
   );
 };
 
 const EntityTypeDetail: React.FC<{
-  selectedType: EntityType;
+  entityType: EntityType;
   existingGroups: string[];
-  onPropertyChange: (key: EditableEntityTypeKey, value: unknown) => void;
-  onPropertiesChange: (properties: PropertyDefinition[]) => void;
+  onUpdate: (id: string, updates: Partial<EntityType>) => void;
   onDelete: () => void;
-}> = ({ selectedType, existingGroups, onPropertyChange, onPropertiesChange, onDelete }) => (
-  <Box p={6}>
-    <VStack align="stretch" spacing={5}>
-      <VStack align="stretch" spacing={3}>
-        <FormControl>
-          <FormLabel>ID</FormLabel>
-          <Text fontSize="xs" fontFamily="mono" color="gray.400">
-            {selectedType.id}
-          </Text>
-        </FormControl>
+}> = ({ entityType, existingGroups, onUpdate, onDelete }) => {
+  const form = useForm({
+    defaultValues: {
+      displayName: entityType.displayName,
+      category: entityType.category,
+      group: entityType.group,
+      description: entityType.description,
+      icon: entityType.icon,
+      placeholderColor: entityType.placeholderColor,
+      defaultSize: entityType.defaultSize,
+      sprite: entityType.sprite,
+      properties: entityType.properties,
+    },
+    onSubmit: async ({ value }) => {
+      onUpdate(entityType.id, {
+        displayName: value.displayName,
+        category: value.category,
+        group: value.group,
+        description: value.description,
+        icon: value.icon,
+        placeholderColor: value.placeholderColor,
+        defaultSize: value.defaultSize,
+        sprite: value.sprite,
+        properties: value.properties,
+      });
+    },
+  });
 
-        <FormControl>
-          <FormLabel>Display Name</FormLabel>
-          <Input
-            value={selectedType.displayName}
-            onChange={(e) => onPropertyChange('displayName', e.target.value)}
-          />
-        </FormControl>
-
-        <HStack spacing={3}>
-          <FormControl flex={1}>
-            <FormLabel>Category</FormLabel>
-            <Select
-              value={selectedType.category}
-              onChange={(e) => onPropertyChange('category', e.target.value)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.icon} {c.label}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl flex={1}>
-            <FormLabel>Group</FormLabel>
-            <Input
-              value={selectedType.group ?? ''}
-              onChange={(e) => onPropertyChange('group', e.target.value || undefined)}
-              placeholder="Ungrouped"
-              list="entity-groups"
-            />
-            {existingGroups.length > 0 && (
-              <datalist id="entity-groups">
-                {existingGroups.map((g) => (
-                  <option key={g} value={g} />
-                ))}
-              </datalist>
-            )}
-          </FormControl>
-        </HStack>
-
-        <FormControl>
-          <FormLabel>Description</FormLabel>
-          <Input
-            value={selectedType.description ?? ''}
-            onChange={(e) => onPropertyChange('description', e.target.value || undefined)}
-            placeholder="Optional"
-          />
-        </FormControl>
-
-        <HStack spacing={3}>
-          <FormControl flex={1}>
-            <FormLabel>Icon</FormLabel>
-            <IconPicker value={selectedType.icon} onChange={(v) => onPropertyChange('icon', v)} />
-          </FormControl>
-          <FormControl flex={1}>
-            <FormLabel>Color</FormLabel>
-            <ColorPicker
-              value={selectedType.placeholderColor}
-              onChange={(c) => onPropertyChange('placeholderColor', c)}
-            />
-          </FormControl>
-        </HStack>
-      </VStack>
-
-      <Divider />
-
-      <VStack align="stretch" spacing={3}>
-        <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
-          Size (px)
-        </Text>
-        <HStack spacing={2}>
-          <Text fontSize="xs" color="gray.400" flexShrink={0}>
-            W
-          </Text>
-          <NumberInput
-            min={1}
-            value={selectedType.defaultSize?.[0] ?? 16}
-            precision={0}
-            onChange={(_, val) => {
-              if (!isNaN(val))
-                onPropertyChange('defaultSize', [
-                  Math.round(val),
-                  selectedType.defaultSize?.[1] ?? 16,
-                ]);
-            }}
-            flex={1}
-          >
-            <NumberInputField />
-          </NumberInput>
-          <Text fontSize="xs" color="gray.400" flexShrink={0}>
-            H
-          </Text>
-          <NumberInput
-            min={1}
-            value={selectedType.defaultSize?.[1] ?? 16}
-            precision={0}
-            onChange={(_, val) => {
-              if (!isNaN(val))
-                onPropertyChange('defaultSize', [
-                  selectedType.defaultSize?.[0] ?? 16,
-                  Math.round(val),
-                ]);
-            }}
-            flex={1}
-          >
-            <NumberInputField />
-          </NumberInput>
-        </HStack>
-      </VStack>
-
-      <Divider />
-
-      <EntitySpriteEditor
-        spritePath={selectedType.sprite?.path}
-        onPathChange={(path) => onPropertyChange('sprite', path ? { path } : undefined)}
-        onSizeChange={(size) => onPropertyChange('defaultSize', size)}
-      />
-
-      <Divider />
-
-      <PropertyDefinitionEditor
-        properties={selectedType.properties}
-        onChange={onPropertiesChange}
-      />
-
-      <Divider />
-
-      <Box>
-        <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase" mb={2}>
-          Actions
-        </Text>
-        <Button
-          size="xs"
-          colorScheme="red"
-          variant="outline"
-          leftIcon={<DeleteIcon fontSize="10px" />}
-          onClick={onDelete}
-        >
-          Delete Entity Type
-        </Button>
-      </Box>
-    </VStack>
-  </Box>
-);
-
-const EntitySpriteEditor: React.FC<{
-  spritePath: string | undefined;
-  onPathChange: (path: string | undefined) => void;
-  onSizeChange: (size: [number, number]) => void;
-}> = ({ spritePath, onPathChange, onSizeChange }) => {
-  const [loading, setLoading] = useState(false);
+  const [spritePath, setSpritePath] = React.useState(entityType.sprite?.path);
+  const [spriteLoading, setSpriteLoading] = React.useState(false);
   const loadSprite = useEditorStore((state) => state.loadSprite);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
   const isLoaded = spritePath ? loadedSprites.has(spritePath) : false;
 
   const loadImageFromPath = async (path: string, blobHint?: Blob) => {
-    setLoading(true);
+    setSpriteLoading(true);
     try {
       const blob = blobHint ?? (await loadSpriteBlob(path));
       await loadSprite(path, blob);
       const img = useEditorStore.getState().loadedSprites.get(path);
-      if (img) onSizeChange([img.naturalWidth, img.naturalHeight]);
+      if (img) {
+        form.setFieldValue('defaultSize', [img.naturalWidth, img.naturalHeight]);
+      }
     } catch (e) {
       console.error('Failed to load sprite:', e);
     } finally {
-      setLoading(false);
+      setSpriteLoading(false);
     }
   };
 
-  const handlePick = async () => {
+  const handlePickSprite = async () => {
     try {
       const absolutePath = await fileSystem.selectAsset();
       if (!absolutePath) return;
       const blob = await fileSystem.readFileAsBlob(absolutePath);
       const filename = absolutePath.replace(/\\/g, '/').split('/').pop() || 'sprite.png';
       const relativePath = await fileSystem.saveAsset(filename, blob);
-      onPathChange(relativePath);
+      setSpritePath(relativePath);
+      form.setFieldValue('sprite', { path: relativePath });
       await loadImageFromPath(relativePath, blob);
     } catch (e) {
       console.error('Failed to pick sprite:', e);
     }
   };
 
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <VStack align="stretch" spacing={5}>
+        <VStack align="stretch" spacing={3}>
+          <FormControl>
+            <FormLabel
+              color="gray.500"
+              fontSize="10px"
+              fontWeight="black"
+              textTransform="uppercase"
+              mb={1}
+            >
+              ID
+            </FormLabel>
+            <Text fontSize="xs" fontFamily="mono" color="gray.400">
+              {entityType.id}
+            </Text>
+          </FormControl>
+
+          <form.Field name="displayName">
+            {(field) => (
+              <FormControl>
+                <FormLabel
+                  color="gray.500"
+                  fontSize="10px"
+                  fontWeight="black"
+                  textTransform="uppercase"
+                  mb={1}
+                >
+                  Display Name
+                </FormLabel>
+                <Input
+                  size="sm"
+                  bg="gray.950"
+                  color="white"
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+              </FormControl>
+            )}
+          </form.Field>
+
+          <HStack spacing={3}>
+            <form.Field name="category">
+              {(field) => (
+                <FormControl flex={1}>
+                  <FormLabel
+                    color="gray.500"
+                    fontSize="10px"
+                    fontWeight="black"
+                    textTransform="uppercase"
+                    mb={1}
+                  >
+                    Category
+                  </FormLabel>
+                  <Select
+                    size="sm"
+                    bg="gray.950"
+                    color="white"
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value as EntityCategory)}
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.icon} {c.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </form.Field>
+            <form.Field name="group">
+              {(field) => (
+                <FormControl flex={1}>
+                  <FormLabel
+                    color="gray.500"
+                    fontSize="10px"
+                    fontWeight="black"
+                    textTransform="uppercase"
+                    mb={1}
+                  >
+                    Group
+                  </FormLabel>
+                  <Input
+                    size="sm"
+                    bg="gray.950"
+                    color="white"
+                    name={field.name}
+                    value={field.state.value ?? ''}
+                    onBlur={field.handleBlur}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value ? e.target.value : undefined)
+                    }
+                    placeholder="Ungrouped"
+                    list="entity-groups"
+                  />
+                  {existingGroups.length > 0 && (
+                    <datalist id="entity-groups">
+                      {existingGroups.map((g) => (
+                        <option key={g} value={g} />
+                      ))}
+                    </datalist>
+                  )}
+                </FormControl>
+              )}
+            </form.Field>
+          </HStack>
+
+          <form.Field name="description">
+            {(field) => (
+              <FormControl>
+                <FormLabel
+                  color="gray.500"
+                  fontSize="10px"
+                  fontWeight="black"
+                  textTransform="uppercase"
+                  mb={1}
+                >
+                  Description
+                </FormLabel>
+                <Input
+                  size="sm"
+                  bg="gray.950"
+                  color="white"
+                  name={field.name}
+                  value={field.state.value ?? ''}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value ? e.target.value : undefined)}
+                  placeholder="Optional"
+                />
+              </FormControl>
+            )}
+          </form.Field>
+
+          <HStack spacing={3}>
+            <form.Field name="icon">
+              {(field) => (
+                <FormControl flex={1}>
+                  <FormLabel
+                    color="gray.500"
+                    fontSize="10px"
+                    fontWeight="black"
+                    textTransform="uppercase"
+                    mb={1}
+                  >
+                    Icon
+                  </FormLabel>
+                  <IconPicker
+                    value={field.state.value}
+                    onChange={(v) => field.handleChange(v ?? '')}
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+            <form.Field name="placeholderColor">
+              {(field) => (
+                <FormControl flex={1}>
+                  <FormLabel
+                    color="gray.500"
+                    fontSize="10px"
+                    fontWeight="black"
+                    textTransform="uppercase"
+                    mb={1}
+                  >
+                    Color
+                  </FormLabel>
+                  <ColorPicker value={field.state.value} onChange={(c) => field.handleChange(c)} />
+                </FormControl>
+              )}
+            </form.Field>
+          </HStack>
+        </VStack>
+
+        <Divider borderColor="#071018" />
+
+        <VStack align="stretch" spacing={3}>
+          <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
+            Size (px)
+          </Text>
+          <HStack spacing={2}>
+            <Text fontSize="xs" color="gray.400" flexShrink={0}>
+              W
+            </Text>
+            <form.Field name="defaultSize">
+              {(field) => (
+                <NumberInput
+                  min={1}
+                  value={field.state.value?.[0] ?? 16}
+                  precision={0}
+                  onChange={(_, val) => {
+                    if (!isNaN(val))
+                      field.handleChange([Math.round(val), field.state.value?.[1] ?? 16]);
+                  }}
+                  flex={1}
+                >
+                  <NumberInputField bg="gray.950" color="white" />
+                </NumberInput>
+              )}
+            </form.Field>
+            <Text fontSize="xs" color="gray.400" flexShrink={0}>
+              H
+            </Text>
+            <form.Field name="defaultSize">
+              {(field) => (
+                <NumberInput
+                  min={1}
+                  value={field.state.value?.[1] ?? 16}
+                  precision={0}
+                  onChange={(_, val) => {
+                    if (!isNaN(val))
+                      field.handleChange([field.state.value?.[0] ?? 16, Math.round(val)]);
+                  }}
+                  flex={1}
+                >
+                  <NumberInputField bg="gray.950" color="white" />
+                </NumberInput>
+              )}
+            </form.Field>
+          </HStack>
+        </VStack>
+
+        <Divider borderColor="#071018" />
+
+        <form.Field name="sprite">
+          {(field) => (
+            <EntitySpriteEditor
+              spritePath={spritePath}
+              isLoaded={isLoaded}
+              loadedSprites={loadedSprites}
+              spriteLoading={spriteLoading}
+              onPathChange={(path) => {
+                setSpritePath(path);
+                field.handleChange(path ? { path } : undefined);
+              }}
+              onLoadImage={(path, blob) => loadImageFromPath(path, blob)}
+              onPickSprite={handlePickSprite}
+            />
+          )}
+        </form.Field>
+
+        <Divider borderColor="#071018" />
+
+        <form.Field name="properties">
+          {(field) => (
+            <PropertyDefinitionEditor
+              properties={field.state.value ?? {}}
+              onChange={(properties) => {
+                field.handleChange(properties);
+              }}
+            />
+          )}
+        </form.Field>
+
+        <Divider borderColor="#071018" />
+
+        <HStack justify="space-between">
+          <Button
+            size="xs"
+            colorScheme="red"
+            variant="outline"
+            leftIcon={<DeleteIcon fontSize="10px" />}
+            onClick={onDelete}
+          >
+            Delete Entity Type
+          </Button>
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
+          >
+            {([canSubmit, isSubmitting, isDirty]) => (
+              <Button
+                size="xs"
+                colorScheme="blue"
+                type="submit"
+                disabled={!canSubmit}
+                isLoading={isSubmitting}
+                opacity={isDirty ? 1 : 0.5}
+                leftIcon={<CheckIcon fontSize="10px" />}
+              >
+                Save Changes
+              </Button>
+            )}
+          </form.Subscribe>
+        </HStack>
+      </VStack>
+    </form>
+  );
+};
+
+const EntitySpriteEditor: React.FC<{
+  spritePath: string | undefined;
+  isLoaded: boolean;
+  loadedSprites: Map<string, HTMLImageElement>;
+  spriteLoading: boolean;
+  onPathChange: (path: string | undefined) => void;
+  onLoadImage: (path: string, blob?: Blob) => Promise<void>;
+  onPickSprite: () => Promise<void>;
+}> = ({
+  spritePath,
+  isLoaded,
+  loadedSprites,
+  spriteLoading,
+  onPathChange,
+  onLoadImage,
+  onPickSprite,
+}) => {
   return (
     <VStack align="stretch" spacing={3}>
       <Text color="gray.500" fontSize="10px" fontWeight="black" textTransform="uppercase">
@@ -466,11 +594,11 @@ const EntitySpriteEditor: React.FC<{
                 size="xs"
                 variant="outline"
                 colorScheme="blue"
-                isLoading={loading}
-                onClick={() => void loadImageFromPath(spritePath)}
+                isLoading={spriteLoading}
+                onClick={() => onLoadImage(spritePath)}
               />
             </Tooltip>
-            <Button size="xs" variant="ghost" color="gray.400" onClick={handlePick}>
+            <Button size="xs" variant="ghost" color="gray.400" onClick={onPickSprite}>
               Change
             </Button>
             <Button
@@ -488,8 +616,8 @@ const EntitySpriteEditor: React.FC<{
           size="xs"
           variant="outline"
           colorScheme="gray"
-          onClick={handlePick}
-          isLoading={loading}
+          onClick={onPickSprite}
+          isLoading={spriteLoading}
         >
           Pick Image…
         </Button>

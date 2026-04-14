@@ -105,7 +105,7 @@ export const LayersPanel: React.FC = () => {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [editingLayer, setEditingLayer] = useState<Layer | null>(null);
-  const [formData, setFormData] = useState<LayerFormData>({
+  const [modalInitialData, setModalInitialData] = useState<LayerFormData>({
     name: '',
     kind: 'visual',
     zOrder: 0,
@@ -167,7 +167,7 @@ export const LayersPanel: React.FC = () => {
       ? categoryConfig.kinds.filter((k) => !categoryConfig.systemKinds?.includes(k))
       : [];
     const defaultKind = addableKinds.length > 0 ? addableKinds[0] : 'visual';
-    setFormData({
+    setModalInitialData({
       name: '',
       kind: defaultKind,
       zOrder: currentMap.layers.length,
@@ -179,7 +179,7 @@ export const LayersPanel: React.FC = () => {
   const handleOpenEditModal = (layer: Layer) => {
     setEditingLayer(layer);
     setAddingToCategory(null);
-    setFormData({
+    setModalInitialData({
       name: layer.name,
       kind: layer.kind,
       zOrder: layer.zOrder,
@@ -188,8 +188,8 @@ export const LayersPanel: React.FC = () => {
     onOpen();
   };
 
-  const handleSave = () => {
-    if (!formData.name.trim()) {
+  const handleSave = (data: LayerFormData) => {
+    if (!data.name.trim()) {
       toast({
         title: 'Please enter a layer name',
         status: 'warning',
@@ -200,32 +200,32 @@ export const LayersPanel: React.FC = () => {
 
     if (editingLayer) {
       updateLayer(editingLayer.id, {
-        name: formData.name,
-        kind: formData.kind,
-        zOrder: formData.zOrder,
-        icon: formData.icon || undefined,
+        name: data.name,
+        kind: data.kind,
+        zOrder: data.zOrder,
+        icon: data.icon || undefined,
       });
       toast({ title: 'Layer updated', status: 'success', duration: 1500 });
     } else {
       const id = `layer-${Date.now()}`;
       const base: Layer = {
         id,
-        name: formData.name,
-        kind: formData.kind,
+        name: data.name,
+        kind: data.kind,
         visible: true,
         locked: false,
         opacity: 1,
-        zOrder: formData.zOrder,
-        icon: formData.icon || undefined,
+        zOrder: data.zOrder,
+        icon: data.icon || undefined,
       };
 
-      if (formData.kind === 'entity') {
+      if (data.kind === 'entity') {
         base.entities = [];
       } else {
         base.data = Array(currentMap.height)
           .fill(null)
           .map(() => Array(currentMap.width).fill(null));
-        if (formData.kind === 'terrain') {
+        if (data.kind === 'terrain') {
           base.terrainData = Array(currentMap.height)
             .fill(null)
             .map(() => Array(currentMap.width).fill(null));
@@ -344,11 +344,11 @@ export const LayersPanel: React.FC = () => {
 
       {/* Add/Edit Layer Modal */}
       <LayerModal
+        key={editingLayer?.id ?? 'new'}
         isOpen={isOpen}
         onClose={onClose}
         onSave={handleSave}
-        formData={formData}
-        setFormData={setFormData}
+        initialData={modalInitialData}
         isEditing={!!editingLayer}
         lockedKinds={
           addingToCategory

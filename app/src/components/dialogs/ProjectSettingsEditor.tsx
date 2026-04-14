@@ -97,9 +97,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
           {/* Left Column: Core Info */}
           <VStack spacing={4} align="stretch">
             <FormControl isInvalid={!!errors.name}>
-              <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                Project Name
-              </FormLabel>
+              <FormLabel>Project Name</FormLabel>
               <Input
                 bg="gray.950"
                 borderColor="gray.700"
@@ -111,9 +109,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.id}>
-              <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                Project ID
-              </FormLabel>
+              <FormLabel>Project ID</FormLabel>
               <Input
                 bg="gray.950"
                 borderColor="gray.700"
@@ -126,14 +122,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
             </FormControl>
             <SimpleGrid columns={2} spacing={4}>
               <FormControl isInvalid={!!errors.tileSize}>
-                <FormLabel
-                  color="gray.400"
-                  fontSize="xs"
-                  textTransform="uppercase"
-                  fontWeight="bold"
-                >
-                  Tile Size (px)
-                </FormLabel>
+                <FormLabel>Tile Size (px)</FormLabel>
                 <Input
                   bg="gray.950"
                   borderColor="gray.700"
@@ -146,14 +135,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               </FormControl>
 
               <FormControl isReadOnly>
-                <FormLabel
-                  color="gray.400"
-                  fontSize="xs"
-                  textTransform="uppercase"
-                  fontWeight="bold"
-                >
-                  Version
-                </FormLabel>
+                <FormLabel>Version</FormLabel>
                 <Input
                   bg="gray.800"
                   borderColor="gray.700"
@@ -165,14 +147,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
 
             <SimpleGrid columns={2} spacing={4}>
               <FormControl isInvalid={!!errors.defaultMapWidth}>
-                <FormLabel
-                  color="gray.400"
-                  fontSize="xs"
-                  textTransform="uppercase"
-                  fontWeight="bold"
-                >
-                  Default Width
-                </FormLabel>
+                <FormLabel>Default Width</FormLabel>
                 <Input
                   bg="gray.950"
                   borderColor="gray.700"
@@ -185,14 +160,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               </FormControl>
 
               <FormControl isInvalid={!!errors.defaultMapHeight}>
-                <FormLabel
-                  color="gray.400"
-                  fontSize="xs"
-                  textTransform="uppercase"
-                  fontWeight="bold"
-                >
-                  Default Height
-                </FormLabel>
+                <FormLabel>Default Height</FormLabel>
                 <Input
                   bg="gray.950"
                   borderColor="gray.700"
@@ -209,9 +177,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
           {/* Right Column: Metadata */}
           <VStack spacing={4} align="stretch">
             <FormControl isInvalid={!!errors.metadata?.author}>
-              <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                Author
-              </FormLabel>
+              <FormLabel>Author</FormLabel>
               <Input bg="gray.950" borderColor="gray.700" {...register('metadata.author')} />
               <FormErrorMessage>{errors.metadata?.author?.message}</FormErrorMessage>
             </FormControl>
@@ -222,9 +188,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               display="flex"
               flexDirection="column"
             >
-              <FormLabel color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                Description
-              </FormLabel>
+              <FormLabel>Description</FormLabel>
               <Textarea
                 flex={1}
                 bg="gray.950"

@@ -46,6 +46,8 @@
     "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@pixelation/aseprite": "^1.2.6",
+    "@tanstack/react-form": "^1.29.0",
+    "@tanstack/react-form-devtools": "^0.2.21",
     "@types/three": "^0.183.1",
     "@uiw/react-codemirror": "^4.25.9",
     "@xyflow/react": "^12.10.2",
