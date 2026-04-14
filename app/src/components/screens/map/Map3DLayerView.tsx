@@ -1,18 +1,20 @@
 /**
- * Map3DLayerView
+ * Map3DLayerView — Three.js based 3D layer stack visualiser.
  *
- * A simple pseudo-3D visualisation of map layers stacked along the Z axis.
- * Uses Canvas 2D with a manual projection — no extra dependencies.
+ * Each visual/terrain layer is baked into an offscreen Canvas texture,
+ * then displayed as a flat PlaneGeometry mesh stacked along the Y axis.
  *
  * Controls:
- *   Left-drag   — orbit (tilt up/down, rotate left/right)
- *   Scroll      — zoom in/out
+ *   Left-drag   — orbit (OrbitControls-style)
+ *   Scroll      — zoom
  *   Right-drag  — pan
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
 import {
   Box,
   HStack,
+  IconButton,
   Slider,
   SliderFilledTrack,
   SliderThumb,
@@ -21,402 +23,469 @@ import {
   Tooltip,
   VStack,
 } from '@chakra-ui/react';
+import { FiRefreshCw } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
-import type { Layer } from '../../../types/schema';
+import { resolveTileAt } from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
+import type { Layer } from '../../../types/schema';
 
-// ─── Projection helpers ────────────────────────────────────────────────────────
+// ─── Tile texture baking ───────────────────────────────────────────────────────
 
-interface Camera {
-  rotX: number; // tilt (radians) — how much the view is tilted back
-  rotY: number; // spin (radians) — rotation around vertical axis
-  zoom: number; // scale factor
-  panX: number; // screen-space pan
-  panY: number; // screen-space pan
+/**
+ * Paint one layer's worth of tiles onto an offscreen canvas and return it.
+ * Returns null if the layer has no tiles at all.
+ */
+function bakeLayerCanvas(
+  layer: Layer,
+  mapW: number,
+  mapH: number,
+  tileSize: number,
+  currentMap: NonNullable<ReturnType<typeof useEditorStore.getState>['currentMap']>,
+  tilesets: ReturnType<typeof useEditorStore.getState>['tilesets'],
+  loadedSprites: ReturnType<typeof useEditorStore.getState>['loadedSprites'],
+  activeVariationId: string | null,
+): HTMLCanvasElement | null {
+  const pw = mapW * tileSize;
+  const ph = mapH * tileSize;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = pw;
+  canvas.height = ph;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  // Transparent background — empty tiles show through to layers below
+  ctx.clearRect(0, 0, pw, ph);
+
+  let hasTile = false;
+
+  for (let y = 0; y < mapH; y++) {
+    for (let x = 0; x < mapW; x++) {
+      const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
+      if (!tileRef) continue;
+
+      const [tsId, indexStr] = tileRef.split(':');
+      const index = parseInt(indexStr, 10);
+      const tileset = tilesets.get(tsId);
+      if (!tileset) continue;
+
+      // Resolve variation tileset suffix
+      const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
+      let effectiveTileset = tileset;
+      if (variation?.tilesetSuffix) {
+        const suffixed = tilesets.get(`${tsId}${variation.tilesetSuffix}`);
+        if (suffixed) effectiveTileset = suffixed;
+      }
+
+      const img = loadedSprites.get(effectiveTileset.spriteSheet);
+      if (!img) continue;
+
+      const cols = effectiveTileset.columns;
+      const sx = (index % cols) * tileSize;
+      const sy = Math.floor(index / cols) * tileSize;
+
+      ctx.drawImage(
+        img,
+        sx,
+        sy,
+        tileSize,
+        tileSize,
+        x * tileSize,
+        y * tileSize,
+        tileSize,
+        tileSize,
+      );
+      hasTile = true;
+    }
+  }
+
+  return hasTile ? canvas : canvas; // always return so even empty layers are visible as dark planes
 }
 
-/** Project a 3D point [x,y,z] to 2D screen coords given a camera */
-function project(
-  x: number,
-  y: number,
-  z: number,
-  cam: Camera,
-  cx: number,
-  cy: number,
-): [number, number] {
-  // Rotate around Y axis (spin)
-  const cosY = Math.cos(cam.rotY);
-  const sinY = Math.sin(cam.rotY);
-  const rx = x * cosY - z * sinY;
-  const rz = x * sinY + z * cosY;
+// ─── Layer colour palette (for the legend + wireframe tint) ───────────────────
 
-  // Rotate around X axis (tilt)
-  const cosX = Math.cos(cam.rotX);
-  const sinX = Math.sin(cam.rotX);
-  const ry2 = y * cosX - rz * sinX;
-  // rz2 = y * sinX + rz * cosX;  // depth — not needed for ortho
-
-  return [cx + rx * cam.zoom + cam.panX, cy + ry2 * cam.zoom + cam.panY];
-}
-
-// ─── Layer colour palette ──────────────────────────────────────────────────────
-
-const LAYER_COLORS = [
-  '#3b82f6', // blue-500
-  '#22c55e', // green-500
-  '#f59e0b', // amber-500
-  '#ef4444', // red-500
-  '#a855f7', // purple-500
-  '#06b6d4', // cyan-500
-  '#f97316', // orange-500
-  '#ec4899', // pink-500
-  '#14b8a6', // teal-500
-  '#84cc16', // lime-500
+const LAYER_COLORS_HEX = [
+  0x3b82f6, 0x22c55e, 0xf59e0b, 0xef4444, 0xa855f7, 0x06b6d4, 0xf97316, 0xec4899, 0x14b8a6,
+  0x84cc16,
 ];
 
-function layerColor(index: number, alpha: number): string {
-  const hex = LAYER_COLORS[index % LAYER_COLORS.length];
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+const LAYER_COLORS_CSS = [
+  '#3b82f6',
+  '#22c55e',
+  '#f59e0b',
+  '#ef4444',
+  '#a855f7',
+  '#06b6d4',
+  '#f97316',
+  '#ec4899',
+  '#14b8a6',
+  '#84cc16',
+];
+
+// ─── Three.js scene helpers ────────────────────────────────────────────────────
+
+interface SceneState {
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  // Orbit state
+  isDragging: boolean;
+  dragButton: number;
+  lastX: number;
+  lastY: number;
+  spherical: { theta: number; phi: number; radius: number };
+  target: THREE.Vector3;
+  rafId: number;
 }
 
-// ─── Draw a single layer plane ─────────────────────────────────────────────────
+function createScene(canvas: HTMLCanvasElement, w: number, h: number): SceneState {
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+    premultipliedAlpha: false,
+  });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(w, h, false);
+  renderer.setClearColor(0x0a0a0b);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-function drawLayerPlane(
-  ctx: CanvasRenderingContext2D,
-  layer: Layer,
-  colorIndex: number,
-  mapW: number,
-  mapH: number,
-  zPos: number,
-  cam: Camera,
-  cx: number,
-  cy: number,
-  tileSize: number,
-) {
-  // Four corners of the map rectangle in 3D space
-  // Centre the map at origin so rotation looks nice
-  const hw = (mapW * tileSize) / 2;
-  const hh = (mapH * tileSize) / 2;
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x0a0a0b, 800, 2000);
 
-  const corners3D: [number, number, number][] = [
-    [-hw, -hh, zPos],
-    [hw, -hh, zPos],
-    [hw, hh, zPos],
-    [-hw, hh, zPos],
-  ];
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 3000);
 
-  const pts = corners3D.map(([x, y, z]) => project(x, y, z, cam, cx, cy));
-
-  // Fill face
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.closePath();
-  ctx.fillStyle = layerColor(colorIndex, 0.18);
-  ctx.fill();
-
-  // Border
-  ctx.strokeStyle = layerColor(colorIndex, 0.85);
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Draw tile grid lines (every tile) — very faint
-  ctx.strokeStyle = layerColor(colorIndex, 0.08);
-  ctx.lineWidth = 0.5;
-
-  for (let gx = 0; gx <= mapW; gx++) {
-    const wx = -hw + gx * tileSize;
-    const top = project(wx, -hh, zPos, cam, cx, cy);
-    const bot = project(wx, hh, zPos, cam, cx, cy);
-    ctx.beginPath();
-    ctx.moveTo(top[0], top[1]);
-    ctx.lineTo(bot[0], bot[1]);
-    ctx.stroke();
-  }
-  for (let gy = 0; gy <= mapH; gy++) {
-    const wy = -hh + gy * tileSize;
-    const left = project(-hw, wy, zPos, cam, cx, cy);
-    const right = project(hw, wy, zPos, cam, cx, cy);
-    ctx.beginPath();
-    ctx.moveTo(left[0], left[1]);
-    ctx.lineTo(right[0], right[1]);
-    ctx.stroke();
-  }
-
-  // Label — positioned at the top-left corner of the plane
-  const labelPt = project(-hw - 4, -hh, zPos, cam, cx, cy);
-  ctx.save();
-  ctx.font = 'bold 11px system-ui, sans-serif';
-  ctx.fillStyle = layerColor(colorIndex, 1);
-  ctx.textAlign = 'right';
-  ctx.shadowColor = 'rgba(0,0,0,0.8)';
-  ctx.shadowBlur = 4;
-  ctx.fillText(layer.name, labelPt[0], labelPt[1] + 4);
-  ctx.restore();
+  return {
+    renderer,
+    scene,
+    camera,
+    isDragging: false,
+    dragButton: -1,
+    lastX: 0,
+    lastY: 0,
+    spherical: { theta: 0.5, phi: 1.0, radius: 400 },
+    target: new THREE.Vector3(0, 0, 0),
+    rafId: 0,
+  };
 }
 
-// ─── Draw vertical connectors (thin lines at corners) ─────────────────────────
-
-function drawVerticalConnectors(
-  ctx: CanvasRenderingContext2D,
-  layers: { layer: Layer; zPos: number; colorIndex: number }[],
-  mapW: number,
-  mapH: number,
-  cam: Camera,
-  cx: number,
-  cy: number,
-  tileSize: number,
-) {
-  if (layers.length < 2) return;
-  const hw = (mapW * tileSize) / 2;
-  const hh = (mapH * tileSize) / 2;
-  const corners2D: [number, number][] = [
-    [-hw, -hh],
-    [hw, -hh],
-    [hw, hh],
-    [-hw, hh],
-  ];
-
-  const minZ = layers[0].zPos;
-  const maxZ = layers[layers.length - 1].zPos;
-
-  ctx.setLineDash([3, 5]);
-  ctx.lineWidth = 0.8;
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-
-  for (const [cx2D, cy2D] of corners2D) {
-    const top = project(cx2D, cy2D, maxZ, cam, cx, cy);
-    const bot = project(cx2D, cy2D, minZ, cam, cx, cy);
-    ctx.beginPath();
-    ctx.moveTo(top[0], top[1]);
-    ctx.lineTo(bot[0], bot[1]);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
+function updateCamera(state: SceneState) {
+  const { theta, phi, radius } = state.spherical;
+  const sinPhi = Math.sin(phi);
+  state.camera.position.set(
+    state.target.x + radius * sinPhi * Math.sin(theta),
+    state.target.y + radius * Math.cos(phi),
+    state.target.z + radius * sinPhi * Math.cos(theta),
+  );
+  state.camera.lookAt(state.target);
 }
 
-// ─── Render loop ───────────────────────────────────────────────────────────────
+// ─── Build / rebuild Three scene meshes ───────────────────────────────────────
 
-function render(
-  canvas: HTMLCanvasElement,
+function buildLayerMeshes(
+  scene: THREE.Scene,
   layers: Layer[],
   mapW: number,
   mapH: number,
   tileSize: number,
-  cam: Camera,
   layerGap: number,
-) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  const dpr = window.devicePixelRatio || 1;
-  // canvas.width/height are physical pixels; divide by dpr to get logical (CSS) pixels
-  const width = canvas.width / dpr;
-  const height = canvas.height / dpr;
-
-  if (width === 0 || height === 0) return;
-
-  // Reset transform to identity then scale once for DPR
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, width, height);
-
-  // Background
-  ctx.fillStyle = '#0a0a0b';
-  ctx.fillRect(0, 0, width, height);
-
-  // Only show visual + terrain layers (data layers have no visual representation)
+  currentMap: NonNullable<ReturnType<typeof useEditorStore.getState>['currentMap']>,
+  tilesets: ReturnType<typeof useEditorStore.getState>['tilesets'],
+  loadedSprites: ReturnType<typeof useEditorStore.getState>['loadedSprites'],
+  activeVariationId: string | null,
+): THREE.Mesh[] {
   const visibleLayers = layers
     .filter((l) => l.kind === 'visual' || l.kind === 'terrain')
     .sort((a, b) => a.zOrder - b.zOrder);
 
-  if (visibleLayers.length === 0) {
-    ctx.font = '13px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.textAlign = 'center';
-    ctx.fillText('No visual or terrain layers to display', width / 2, height / 2);
-    return;
-  }
+  const pw = mapW * tileSize;
+  const ph = mapH * tileSize;
 
-  const cx = width / 2;
-  const cy = height / 2;
+  const meshes: THREE.Mesh[] = [];
 
-  // Distribute layers evenly along Z based on their zOrder
-  const zMin = visibleLayers[0].zOrder;
-  const zMax = visibleLayers[visibleLayers.length - 1].zOrder;
-  const zRange = zMax - zMin || 1;
+  visibleLayers.forEach((layer, i) => {
+    const yPos = i * layerGap;
 
-  const layerEntries = visibleLayers.map((layer, i) => ({
-    layer,
-    zPos: -((layer.zOrder - zMin) / zRange) * (visibleLayers.length - 1) * layerGap,
-    colorIndex: i,
-  }));
-
-  // Draw back-to-front so closer layers paint on top
-  // In our coordinate system, more negative zPos = further away (higher layers are further)
-  const sorted = [...layerEntries].sort((a, b) => a.zPos - b.zPos);
-
-  drawVerticalConnectors(ctx, sorted, mapW, mapH, cam, cx, cy, tileSize);
-
-  for (const entry of sorted) {
-    drawLayerPlane(
-      ctx,
-      entry.layer,
-      entry.colorIndex,
+    // Bake tile canvas → Three.js texture
+    const baked = bakeLayerCanvas(
+      layer,
       mapW,
       mapH,
-      entry.zPos,
-      cam,
-      cx,
-      cy,
       tileSize,
+      currentMap,
+      tilesets,
+      loadedSprites,
+      activeVariationId,
     );
-  }
+    const tex = baked ? new THREE.CanvasTexture(baked) : null;
+    if (tex) {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.flipY = true; // Canvas is top-left origin; Three.js UV is bottom-left — flip to correct
+    }
 
-  // HUD — controls hint
-  ctx.font = '10px system-ui, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.textAlign = 'left';
-  ctx.fillText('Drag to orbit  •  Scroll to zoom  •  Right-drag to pan', 12, height - 12);
+    // Plane mesh — PlaneGeometry is in XZ by default, rotate to lie flat (XY in world space = horizontal)
+    const geo = new THREE.PlaneGeometry(pw, ph);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      color: tex ? 0xffffff : LAYER_COLORS_HEX[i % LAYER_COLORS_HEX.length],
+      transparent: true,
+      opacity: tex ? 1.0 : 0.3,
+      alphaTest: 0.01, // discard fully-transparent pixels so they don't occlude lower layers
+      depthWrite: false, // transparent planes must not write to depth buffer
+      side: THREE.DoubleSide,
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    // PlaneGeometry faces +Z; rotate so it faces up (+Y)
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(0, yPos, 0);
+    scene.add(mesh);
+    meshes.push(mesh);
+
+    // Thin border wireframe
+    const borderGeo = new THREE.EdgesGeometry(geo);
+    const borderMat = new THREE.LineBasicMaterial({
+      color: LAYER_COLORS_HEX[i % LAYER_COLORS_HEX.length],
+      transparent: true,
+      opacity: 0.6,
+    });
+    const border = new THREE.LineSegments(borderGeo, borderMat);
+    mesh.add(border);
+
+    // Vertical dashed connector lines at all 4 corners (if not first layer)
+    if (i > 0) {
+      const hx = pw / 2;
+      const hz = ph / 2;
+      const corners: [number, number][] = [
+        [-hx, -hz],
+        [hx, -hz],
+        [hx, hz],
+        [-hx, hz],
+      ];
+      for (const [cx, cz] of corners) {
+        const points = [new THREE.Vector3(cx, yPos, cz), new THREE.Vector3(cx, 0, cz)];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: 0x222233,
+          transparent: true,
+          opacity: 0.5,
+        });
+        scene.add(new THREE.Line(lineGeo, lineMat));
+      }
+    }
+  });
+
+  return meshes;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-const DEFAULT_CAM: Camera = { rotX: 0.55, rotY: 0.4, zoom: 1, panX: 0, panY: 0 };
-
 export const Map3DLayerView: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const camRef = useRef<Camera>({ ...DEFAULT_CAM });
-  const dragRef = useRef<{
-    type: 'orbit' | 'pan';
-    startX: number;
-    startY: number;
-    camSnap: Camera;
-  } | null>(null);
+  const sceneRef = useRef<SceneState | null>(null);
+  const meshesRef = useRef<THREE.Mesh[]>([]);
 
   const currentMap = useEditorStore((state) => state.currentMap);
+  const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
+  const tilesets = useEditorStore((state) => state.tilesets);
+  const loadedSprites = useEditorStore((state) => state.loadedSprites);
 
-  const [layerGap, setLayerGap] = useState(60);
+  const [layerGap, setLayerGap] = useState(40);
 
-  // Layers and dimensions live on the map itself; resolveMapContext only gives metadata overrides
   const layers = currentMap?.layers ?? [];
   const mapW = currentMap?.width ?? 0;
   const mapH = currentMap?.height ?? 0;
 
-  // draw() reads canvas dimensions at call time — always up to date
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !currentMap) return;
-    render(canvas, layers, mapW, mapH, projectTileSize, camRef.current, layerGap);
-  }, [currentMap, layers, mapW, mapH, projectTileSize, layerGap]);
+  // ── Init / teardown Three scene ───────────────────────────────────────────────
 
-  // Keep a stable ref so the ResizeObserver can call the latest draw without re-subscribing
-  const drawRef = useRef(draw);
   useEffect(() => {
-    drawRef.current = draw;
-  }, [draw]);
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-  // Resize observer — sets canvas backing-store size then immediately redraws
+    const { clientWidth: w, clientHeight: h } = container;
+    const state = createScene(canvas, w || 800, h || 600);
+    sceneRef.current = state;
+
+    // Initial camera position centred over the layer stack
+    updateCamera(state);
+
+    // Render loop
+    const loop = () => {
+      state.rafId = requestAnimationFrame(loop);
+      state.renderer.render(state.scene, state.camera);
+    };
+    loop();
+
+    return () => {
+      cancelAnimationFrame(state.rafId);
+      state.renderer.dispose();
+      sceneRef.current = null;
+    };
+  }, []);
+
+  // ── Resize handling ───────────────────────────────────────────────────────────
+
   useEffect(() => {
     const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) return;
+    if (!container) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        // Size the backing store to physical pixels; CSS size is set by the element itself
-        canvas.width = Math.round(width * dpr);
-        canvas.height = Math.round(height * dpr);
-        drawRef.current();
-      }
+    const ro = new ResizeObserver(() => {
+      const state = sceneRef.current;
+      if (!state) return;
+      const { clientWidth: w, clientHeight: h } = container;
+      state.renderer.setSize(w, h, false);
+      state.camera.aspect = w / h;
+      state.camera.updateProjectionMatrix();
     });
     ro.observe(container);
     return () => ro.disconnect();
   }, []);
 
-  // Redraw whenever data / camera-related state changes (but NOT on every mouse move — that calls draw() directly)
-  useEffect(() => {
-    draw();
-  }, [draw]);
+  // ── Rebuild meshes when map data / gap changes ────────────────────────────────
 
-  // ── Mouse controls ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const state = sceneRef.current;
+    if (!state || !currentMap) return;
+
+    // Dispose old meshes
+    for (const mesh of meshesRef.current) {
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+      state.scene.remove(mesh);
+    }
+    // Remove all connector lines too
+    const toRemove = state.scene.children.filter(
+      (c) => c instanceof THREE.Line || c instanceof THREE.LineSegments,
+    );
+    for (const obj of toRemove) state.scene.remove(obj);
+
+    meshesRef.current = buildLayerMeshes(
+      state.scene,
+      layers,
+      mapW,
+      mapH,
+      projectTileSize,
+      layerGap,
+      currentMap,
+      tilesets,
+      loadedSprites,
+      activeVariationId,
+    );
+
+    // Centre the camera target on the middle of the stack
+    const visCount = layers.filter((l) => l.kind === 'visual' || l.kind === 'terrain').length;
+    state.target.set(0, ((visCount - 1) * layerGap) / 2, 0);
+    state.spherical.radius = Math.max(mapW, mapH) * projectTileSize * 0.9;
+    updateCamera(state);
+  }, [
+    currentMap,
+    layers,
+    mapW,
+    mapH,
+    projectTileSize,
+    layerGap,
+    tilesets,
+    loadedSprites,
+    activeVariationId,
+  ]);
+
+  // ── Mouse orbit / pan / zoom ──────────────────────────────────────────────────
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
+    const state = sceneRef.current;
+    if (!state) return;
     e.preventDefault();
-    dragRef.current = {
-      type: e.button === 2 ? 'pan' : 'orbit',
-      startX: e.clientX,
-      startY: e.clientY,
-      camSnap: { ...camRef.current },
-    };
+    state.isDragging = true;
+    state.dragButton = e.button;
+    state.lastX = e.clientX;
+    state.lastY = e.clientY;
   }, []);
 
-  const onMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      const dx = e.clientX - drag.startX;
-      const dy = e.clientY - drag.startY;
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    const state = sceneRef.current;
+    if (!state?.isDragging) return;
 
-      if (drag.type === 'orbit') {
-        camRef.current = {
-          ...drag.camSnap,
-          rotY: drag.camSnap.rotY + dx * 0.008,
-          rotX: Math.max(0.05, Math.min(Math.PI / 2 - 0.05, drag.camSnap.rotX + dy * 0.008)),
-        };
-      } else {
-        camRef.current = {
-          ...drag.camSnap,
-          panX: drag.camSnap.panX + dx,
-          panY: drag.camSnap.panY + dy,
-        };
-      }
-      draw();
-    },
-    [draw],
-  );
+    const dx = e.clientX - state.lastX;
+    const dy = e.clientY - state.lastY;
+    state.lastX = e.clientX;
+    state.lastY = e.clientY;
+
+    if (state.dragButton === 0) {
+      // Orbit
+      state.spherical.theta -= dx * 0.005;
+      state.spherical.phi = Math.max(
+        0.05,
+        Math.min(Math.PI - 0.05, state.spherical.phi + dy * 0.005),
+      );
+    } else if (state.dragButton === 2) {
+      // Pan — move target in screen-parallel plane
+      const panSpeed = state.spherical.radius * 0.001;
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3();
+      state.camera.getWorldDirection(up);
+      right.crossVectors(up, state.camera.up).normalize();
+      const camUp = new THREE.Vector3().crossVectors(right, up).normalize();
+      state.target.addScaledVector(right, -dx * panSpeed);
+      state.target.addScaledVector(camUp, dy * panSpeed);
+    }
+    updateCamera(state);
+  }, []);
 
   const onMouseUp = useCallback(() => {
-    dragRef.current = null;
+    const state = sceneRef.current;
+    if (state) state.isDragging = false;
   }, []);
-
-  const onWheel = useCallback(
-    (e: React.WheelEvent) => {
-      e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      camRef.current = {
-        ...camRef.current,
-        zoom: Math.max(0.1, Math.min(10, camRef.current.zoom * factor)),
-      };
-      draw();
-    },
-    [draw],
-  );
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
 
-  // ── Keyboard reset ────────────────────────────────────────────────────────────
+  // Wheel must be a native non-passive listener — React attaches passive by default,
+  // which makes preventDefault() throw and also can't stop page scroll.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const state = sceneRef.current;
+      if (!state) return;
+      const factor = e.deltaY > 0 ? 1.1 : 0.9;
+      state.spherical.radius = Math.max(10, Math.min(2000, state.spherical.radius * factor));
+      updateCamera(state);
+    };
+    canvas.addEventListener('wheel', handler, { passive: false });
+    return () => canvas.removeEventListener('wheel', handler);
+  }, []);
+
+  // ── Camera reset ──────────────────────────────────────────────────────────────
+
+  const resetCamera = useCallback(() => {
+    const state = sceneRef.current;
+    if (!state) return;
+    const visCount = layers.filter((l) => l.kind === 'visual' || l.kind === 'terrain').length;
+    state.target.set(0, ((visCount - 1) * layerGap) / 2, 0);
+    state.spherical = {
+      theta: 0.5,
+      phi: 1.0,
+      radius: Math.max(mapW, mapH) * projectTileSize * 0.9,
+    };
+    updateCamera(state);
+  }, [layers, layerGap, mapW, mapH, projectTileSize]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'r' || e.key === 'R') {
-        camRef.current = { ...DEFAULT_CAM };
-        drawRef.current();
-      }
+      if (e.key === 'r' || e.key === 'R') resetCamera();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [resetCamera]);
 
-  // ── Layer legend ──────────────────────────────────────────────────────────────
+  // ── Legend data ───────────────────────────────────────────────────────────────
 
   const visibleLayers = layers
     .filter((l) => l.kind === 'visual' || l.kind === 'terrain')
@@ -424,7 +493,7 @@ export const Map3DLayerView: React.FC = () => {
 
   return (
     <Box w="full" h="full" position="relative" overflow="hidden" bg="#0a0a0b">
-      {/* Canvas */}
+      {/* Three.js canvas — fills container */}
       <Box ref={containerRef} w="full" h="full">
         <canvas
           ref={canvasRef}
@@ -433,7 +502,6 @@ export const Map3DLayerView: React.FC = () => {
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
-          onWheel={onWheel}
           onContextMenu={onContextMenu}
         />
       </Box>
@@ -452,7 +520,6 @@ export const Map3DLayerView: React.FC = () => {
         backdropFilter="blur(4px)"
       >
         <VStack spacing={3} align="stretch">
-          {/* Layer gap slider */}
           <Box>
             <HStack justify="space-between" mb={1}>
               <Text
@@ -468,14 +535,7 @@ export const Map3DLayerView: React.FC = () => {
                 {layerGap}
               </Text>
             </HStack>
-            <Slider
-              min={10}
-              max={200}
-              step={5}
-              value={layerGap}
-              onChange={(v) => setLayerGap(v)}
-              size="sm"
-            >
+            <Slider min={5} max={150} step={5} value={layerGap} onChange={setLayerGap} size="sm">
               <SliderTrack bg="gray.700">
                 <SliderFilledTrack bg="blue.500" />
               </SliderTrack>
@@ -483,7 +543,6 @@ export const Map3DLayerView: React.FC = () => {
             </Slider>
           </Box>
 
-          {/* Layer legend */}
           {visibleLayers.length > 0 && (
             <VStack spacing={1} align="stretch">
               <Text
@@ -494,7 +553,7 @@ export const Map3DLayerView: React.FC = () => {
                 color="gray.500"
                 mb={0.5}
               >
-                Layers
+                Layers (bottom → top)
               </Text>
               {visibleLayers.map((layer, i) => (
                 <HStack key={layer.id} spacing={2}>
@@ -503,16 +562,10 @@ export const Map3DLayerView: React.FC = () => {
                     h="10px"
                     borderRadius="2px"
                     flexShrink={0}
-                    style={{ background: layerColor(i, 0.9) }}
+                    style={{ background: LAYER_COLORS_CSS[i % LAYER_COLORS_CSS.length] }}
                   />
                   <Tooltip label={`zOrder: ${layer.zOrder}`} fontSize="xs" placement="left">
-                    <Text
-                      fontSize="10px"
-                      color="gray.300"
-                      noOfLines={1}
-                      title={layer.name}
-                      cursor="default"
-                    >
+                    <Text fontSize="10px" color="gray.300" noOfLines={1} cursor="default">
                       {layer.name}
                     </Text>
                   </Tooltip>
@@ -521,9 +574,16 @@ export const Map3DLayerView: React.FC = () => {
             </VStack>
           )}
 
-          <Text fontSize="9px" color="gray.600" textAlign="center">
-            R to reset view
-          </Text>
+          <Tooltip label="Reset camera (R)" fontSize="xs" placement="left">
+            <IconButton
+              aria-label="Reset camera"
+              icon={<FiRefreshCw />}
+              size="xs"
+              variant="ghost"
+              w="full"
+              onClick={resetCamera}
+            />
+          </Tooltip>
         </VStack>
       </Box>
     </Box>
