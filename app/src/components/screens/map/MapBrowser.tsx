@@ -14,6 +14,7 @@ import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { EditorModal } from '../../common/EditorModal';
+import { EntityFormDialog } from '../common/EntityFormDialog';
 import { VariationManager } from './VariationManager';
 import { LayersPanel } from './LayersPanel';
 import { MetadataDialog } from './MetadataDialog';
@@ -57,35 +58,53 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
     window.addEventListener('openMetadataDialog', handler as EventListener);
     return () => window.removeEventListener('openMetadataDialog', handler as EventListener);
   }, [onMetadataOpen]);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [mapsCollapsed, setMapsCollapsed] = useState(false);
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
 
-  const handleDeleteMap = async (mapId: string, mapName: string) => {
-    if (confirmDeleteId === mapId) {
-      // Second click = confirm
-      try {
-        await deleteMap(mapId);
-        toast({
-          title: `Map "${mapName}" deleted`,
-          status: 'info',
-          duration: 2000,
-        });
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Unknown error';
-        toast({
-          title: 'Failed to delete map',
-          description: message,
-          status: 'error',
-          duration: 3000,
-        });
-      }
-      setConfirmDeleteId(null);
-    } else {
-      // First click = arm
-      setConfirmDeleteId(mapId);
-      // Auto-disarm after 3 seconds
-      setTimeout(() => setConfirmDeleteId(null), 3000);
+  const pendingDeleteMap = maps.find((m) => m.id === pendingDeleteId) ?? null;
+
+  // Count location links in OTHER maps that target the map being deleted
+  const affectedLinkCount = pendingDeleteId
+    ? maps
+        .filter((m) => m.id !== pendingDeleteId)
+        .reduce(
+          (sum, m) =>
+            sum + (m.locationLinks ?? []).filter((l) => l.targetMapId === pendingDeleteId).length,
+          0,
+        )
+    : 0;
+
+  const requestDeleteMap = (mapId: string) => {
+    setPendingDeleteId(mapId);
+    onDeleteOpen();
+  };
+
+  const confirmDeleteMap = async () => {
+    if (!pendingDeleteId || !pendingDeleteMap) return;
+    onDeleteClose();
+    try {
+      await deleteMap(pendingDeleteId);
+      toast({
+        title: `Map "${pendingDeleteMap.name}" deleted`,
+        status: 'info',
+        duration: 2000,
+      });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      toast({
+        title: 'Failed to delete map',
+        description: message,
+        status: 'error',
+        duration: 3000,
+      });
     }
+    setPendingDeleteId(null);
+  };
+
+  const cancelDeleteMap = () => {
+    onDeleteClose();
+    setPendingDeleteId(null);
   };
 
   return (
@@ -148,7 +167,6 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
               )}
               {maps.map((map) => {
                 const isActive = currentMap?.id === map.id;
-                const isConfirmingDelete = confirmDeleteId === map.id;
                 const variationCount = map.variations?.length || 0;
 
                 return (
@@ -204,7 +222,6 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // load the map if not active, then open metadata for base
                           if (currentMap?.id !== map.id) loadMap(map.id);
                           setMetadataInitialTab('base');
                           onMetadataOpen();
@@ -218,19 +235,15 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
                       icon={<DeleteIcon fontSize="10px" />}
                       size="xs"
                       variant="ghost"
-                      color={isConfirmingDelete ? 'red.300' : 'gray.600'}
-                      bg={isConfirmingDelete ? 'red.900' : 'transparent'}
-                      opacity={isConfirmingDelete ? 1 : 0}
+                      color="gray.600"
+                      opacity={0}
                       _groupHover={{ opacity: 1 }}
-                      _hover={{
-                        color: 'red.300',
-                        bg: 'red.900',
-                      }}
+                      _hover={{ color: 'red.300', bg: 'red.900' }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteMap(map.id, map.name);
+                        requestDeleteMap(map.id);
                       }}
-                      title={isConfirmingDelete ? 'Click again to confirm' : 'Delete map'}
+                      title="Delete map"
                     />
                   </HStack>
                 );
@@ -270,6 +283,25 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
         onClose={onMetadataClose}
         initialTab={metadataInitialTab}
       />
+
+      {/* Delete Map Confirmation Dialog */}
+      <EditorModal isOpen={isDeleteOpen} onClose={cancelDeleteMap} size="sm">
+        <EntityFormDialog
+          title="Delete Map"
+          description={
+            pendingDeleteMap
+              ? affectedLinkCount > 0
+                ? `Delete "${pendingDeleteMap.name}"? This will also remove ${affectedLinkCount} location link${affectedLinkCount !== 1 ? 's' : ''} in other maps that point to it.`
+                : `Are you sure you want to delete "${pendingDeleteMap.name}"? This cannot be undone.`
+              : undefined
+          }
+          onCancel={cancelDeleteMap}
+          onSubmit={confirmDeleteMap}
+          submitLabel="Delete"
+        >
+          <></>
+        </EntityFormDialog>
+      </EditorModal>
     </Flex>
   );
 };
