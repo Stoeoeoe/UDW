@@ -195,7 +195,7 @@ function buildLayerMeshes(
   activeVariationId: string | null,
 ): THREE.Mesh[] {
   const visibleLayers = layers
-    .filter((l) => l.kind === 'visual' || l.kind === 'terrain')
+    .filter((l) => (l.kind === 'visual' || l.kind === 'terrain') && l.visible !== false)
     .sort((a, b) => a.zOrder - b.zOrder);
 
   const pw = mapW * tileSize;
@@ -488,7 +488,7 @@ export const Map3DLayerView: React.FC = () => {
   // ── Legend data ───────────────────────────────────────────────────────────────
 
   const visibleLayers = layers
-    .filter((l) => l.kind === 'visual' || l.kind === 'terrain')
+    .filter((l) => (l.kind === 'visual' || l.kind === 'terrain') && l.visible !== false)
     .sort((a, b) => a.zOrder - b.zOrder);
 
   return (
