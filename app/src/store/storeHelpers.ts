@@ -163,6 +163,21 @@ export function ensureLocationLinkLayer(map: GameMap): GameMap {
   return { ...map, layers: [...map.layers, linkLayer] };
 }
 
+export function ensureAnchorLayer(map: GameMap): GameMap {
+  const hasAnchorLayer = map.layers.some((l) => l.kind === 'anchor');
+  if (hasAnchorLayer) return map;
+  const anchorLayer: Layer = {
+    id: 'anchors',
+    name: 'Anchors',
+    kind: 'anchor',
+    visible: true,
+    locked: false,
+    opacity: 1,
+    zOrder: 9998,
+  };
+  return { ...map, layers: [...map.layers, anchorLayer] };
+}
+
 export function createDefaultLayer(width: number, height: number): Layer {
   return {
     id: 'ground',
@@ -187,6 +202,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   navigation: 'stamp',
   metadata: 'stamp',
   entity: 'entitySelect',
+  anchor: 'anchorSelect',
   locationlink: 'linkSelect',
 };
 
@@ -197,13 +213,17 @@ export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   navigation: ['stamp', 'erase', 'fill', 'select'],
   metadata: ['stamp', 'erase', 'fill', 'select'],
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
-  locationlink: ['linkSelect', 'linkDelete'],
+  anchor: ['anchorSelect', 'anchorDelete'],
+  locationlink: ['linkPlace', 'linkSelect', 'linkDelete'],
 };
 
 export function getPreferredSelectedLayerId(map: GameMap | null): string | null {
   if (!map) return null;
   const firstNonLink = map.layers.find((layer) => layer.kind !== 'locationlink');
-  return firstNonLink?.id ?? map.layers[0]?.id ?? null;
+  const firstNonSystem = map.layers.find(
+    (layer) => layer.kind !== 'locationlink' && layer.kind !== 'anchor',
+  );
+  return firstNonSystem?.id ?? firstNonLink?.id ?? map.layers[0]?.id ?? null;
 }
 
 export function syncToolStateForSelectedLayer(
@@ -214,6 +234,7 @@ export function syncToolStateForSelectedLayer(
     selectedTerrainId: string | null;
     terrainTypes: Array<{ id: string }>;
     selectedLinkId: string | null;
+    selectedAnchorId: string | null;
     selectedEntityId: string | null;
     selectedEntityIds: Set<string>;
   },
@@ -234,6 +255,7 @@ export function syncToolStateForSelectedLayer(
   }
 
   if (layer.kind !== 'locationlink') state.selectedLinkId = null;
+  if (layer.kind !== 'anchor') state.selectedAnchorId = null;
   if (layer.kind !== 'entity') {
     state.selectedEntityId = null;
     state.selectedEntityIds = new Set();

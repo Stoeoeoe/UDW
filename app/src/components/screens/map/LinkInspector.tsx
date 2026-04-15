@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiLink } from 'react-icons/fi';
 import {
   VStack,
   HStack,
@@ -10,54 +11,87 @@ import {
   NumberInput,
   NumberInputField,
   Divider,
-  IconButton,
-  Tooltip,
   Badge,
-  Flex,
   Box,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { InspectorPanel, InspectorEmptyState } from '../common';
 import { LocationLink } from '../../../types/schema';
 import { MapPreviewPicker } from '../../common/MapPreviewPicker';
+import { CardinalDirectionPicker } from '../../common/CardinalDirectionPicker';
 import { FieldLabel, SectionLabel } from '../../common/Typography.tsx';
+import { getIncomingLinksForLink, resolveLinkTarget } from '../../../lib/locationLinkUtils';
+
+const Vector2Field: React.FC<{
+  value: [number, number];
+  onChange: (value: [number, number]) => void;
+  step?: number;
+}> = ({ value, onChange, step = 1 }) => (
+  <HStack spacing={2}>
+    <Text fontSize="xs" color="gray.400" flexShrink={0}>
+      X
+    </Text>
+    <NumberInput
+      size="xs"
+      value={value[0]}
+      precision={step < 1 ? 2 : 0}
+      step={step}
+      onChange={(_, next) => {
+        if (!isNaN(next)) onChange([next, value[1]]);
+      }}
+      flex={1}
+    >
+      <NumberInputField
+        bg="#0a0a0b"
+        borderColor="#1a1a2e"
+        color="white"
+        fontFamily="mono"
+        _hover={{ bg: '#071018' }}
+      />
+    </NumberInput>
+    <Text fontSize="xs" color="gray.400" flexShrink={0}>
+      Y
+    </Text>
+    <NumberInput
+      size="xs"
+      value={value[1]}
+      precision={step < 1 ? 2 : 0}
+      step={step}
+      onChange={(_, next) => {
+        if (!isNaN(next)) onChange([value[0], next]);
+      }}
+      flex={1}
+    >
+      <NumberInputField
+        bg="#0a0a0b"
+        borderColor="#1a1a2e"
+        color="white"
+        fontFamily="mono"
+        _hover={{ bg: '#071018' }}
+      />
+    </NumberInput>
+  </HStack>
+);
 
 export const LinkInspector: React.FC = () => {
   const currentMap = useEditorStore((s) => s.currentMap);
   const maps = useEditorStore((s) => s.maps);
+  const projectTileSize = useEditorStore((s) => s.project?.tileSize ?? 16);
   const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
-  const pickingLinkTargetForLinkId = useEditorStore((s) => s.pickingLinkTargetForLinkId);
+  const selectAnchor = useEditorStore((s) => s.selectAnchor);
+  const selectLayer = useEditorStore((s) => s.selectLayer);
   const updateLocationLink = useEditorStore((s) => s.updateLocationLink);
-  const startPickingLinkTarget = useEditorStore((s) => s.startPickingLinkTarget);
-  const cancelPickingLinkTarget = useEditorStore((s) => s.cancelPickingLinkTarget);
   const loadMap = useEditorStore((s) => s.loadMap);
-  const createBidirectionalCounterpart = useEditorStore((s) => s.createBidirectionalCounterpart);
+  const updateMapAnchor = useEditorStore((s) => s.updateMapAnchor);
+  const createTargetAnchorForLink = useEditorStore((s) => s.createTargetAnchorForLink);
 
   const link = currentMap?.locationLinks?.find((l) => l.id === selectedLinkId);
-
-  // Links from other maps that target this map at or near this link's target position
-  const incomingLinks = React.useMemo(() => {
-    if (!currentMap) return [];
-    const results: {
-      map: (typeof maps)[0];
-      link: NonNullable<(typeof maps)[0]['locationLinks']>[0];
-    }[] = [];
-    for (const m of maps) {
-      if (m.id === currentMap.id) continue;
-      for (const l of m.locationLinks ?? []) {
-        if (l.targetMapId === currentMap.id) {
-          results.push({ map: m, link: l });
-        }
-      }
-    }
-    return results;
-  }, [maps, currentMap]);
 
   if (!link) {
     return (
       <InspectorPanel title="Link">
         <InspectorEmptyState
-          icon="🔗"
+          icon={FiLink}
           message="No Link Selected"
           hint="Click a link on the map or in the Links list"
         />
@@ -68,9 +102,67 @@ export const LinkInspector: React.FC = () => {
   const targetMap = maps.find((m) => m.id === link.targetMapId);
   const isSameMap = !link.targetMapId || link.targetMapId === currentMap?.id;
   const isBroken = !isSameMap && !targetMap;
-  const isPickingTarget = pickingLinkTargetForLinkId === link.id;
+  const resolvedTarget = resolveLinkTarget(link, currentMap, maps);
+  const landingMap = resolvedTarget.targetMap;
+  const targetLink = resolvedTarget.targetLink;
+  const landingAnchor = resolvedTarget.anchor;
+  const effectiveTargetPosition = resolvedTarget.position;
+  const effectiveFacing = resolvedTarget.facing;
+  const previewTargetPosition: [number, number] = [
+    Math.floor(effectiveTargetPosition[0] / projectTileSize),
+    Math.floor(effectiveTargetPosition[1] / projectTileSize),
+  ];
+  const previewAnchorPosition: [number, number] | null = landingAnchor
+    ? [
+        Math.floor(landingAnchor.position[0] / projectTileSize),
+        Math.floor(landingAnchor.position[1] / projectTileSize),
+      ]
+    : null;
+  const targetableLinks = (landingMap?.locationLinks ?? []).filter(
+    (candidate) => candidate.id !== link.id,
+  );
+  const incomingLinks = currentMap ? getIncomingLinksForLink(link, currentMap, maps) : [];
 
   const update = (updates: Partial<LocationLink>) => updateLocationLink(link.id, updates);
+
+  const updateLandingPosition = (position: [number, number]) => {
+    if (landingAnchor && landingMap) {
+      updateMapAnchor(landingMap.id, landingAnchor.id, { position });
+      return;
+    }
+
+    update({ targetPosition: position });
+  };
+
+  const updateLandingFacing = (facing: [number, number]) => {
+    if (landingAnchor && landingMap) {
+      updateMapAnchor(landingMap.id, landingAnchor.id, { facing });
+      return;
+    }
+
+    update({ targetFacing: facing });
+  };
+
+  const openAnchorOnMap = (mapId: string, anchorId: string) => {
+    const targetMapForSelection = maps.find((map) => map.id === mapId);
+    if (!targetMapForSelection) return;
+    const applySelection = () => {
+      const latestMap = useEditorStore.getState().maps.find((map) => map.id === mapId);
+      const anchorLayer = latestMap?.layers.find((layer) => layer.kind === 'anchor');
+      if (anchorLayer) {
+        selectLayer(anchorLayer.id);
+      }
+      selectAnchor(anchorId);
+    };
+
+    if (mapId !== currentMap?.id) {
+      loadMap(mapId);
+      window.requestAnimationFrame(applySelection);
+      return;
+    }
+
+    applySelection();
+  };
 
   return (
     <InspectorPanel title="Location Link">
@@ -113,7 +205,7 @@ export const LinkInspector: React.FC = () => {
           <SectionLabel textStyle="fieldLabel">Source</SectionLabel>
 
           <FormControl>
-            <FieldLabel>Tile Position</FieldLabel>
+            <FieldLabel>Pixel Position</FieldLabel>
             <HStack spacing={2}>
               <Text fontSize="xs" color="gray.400" flexShrink={0}>
                 X
@@ -122,7 +214,7 @@ export const LinkInspector: React.FC = () => {
                 size="xs"
                 value={link.sourcePosition[0]}
                 min={0}
-                max={(currentMap?.width ?? 999) - 1}
+                max={(currentMap?.width ?? 999) * projectTileSize}
                 precision={0}
                 onChange={(_, val) => {
                   if (!isNaN(val))
@@ -165,7 +257,7 @@ export const LinkInspector: React.FC = () => {
           </FormControl>
 
           <FormControl>
-            <FieldLabel>Trigger Size (tiles)</FieldLabel>
+            <FieldLabel>Trigger Size (px)</FieldLabel>
             <HStack spacing={2}>
               <Text fontSize="xs" color="gray.400" flexShrink={0}>
                 W
@@ -174,7 +266,7 @@ export const LinkInspector: React.FC = () => {
                 size="xs"
                 value={link.triggerSize[0]}
                 min={1}
-                max={16}
+                max={(currentMap?.width ?? 64) * projectTileSize}
                 precision={0}
                 onChange={(_, val) => {
                   if (!isNaN(val))
@@ -217,8 +309,6 @@ export const LinkInspector: React.FC = () => {
           </FormControl>
         </VStack>
 
-        <Divider borderColor="#071018" />
-
         {/* Target */}
         <VStack align="stretch" spacing={3}>
           <SectionLabel textStyle="fieldLabel">Target</SectionLabel>
@@ -231,7 +321,13 @@ export const LinkInspector: React.FC = () => {
               bg="#0a0a0b"
               borderColor="#1a1a2e"
               color="white"
-              onChange={(e) => update({ targetMapId: e.target.value })}
+              onChange={(e) =>
+                update({
+                  targetMapId: e.target.value,
+                  targetLinkId: undefined,
+                  targetAnchorId: undefined,
+                })
+              }
             >
               <option value="">— Same map —</option>
               {maps
@@ -251,7 +347,7 @@ export const LinkInspector: React.FC = () => {
                 w="full"
                 onClick={() => loadMap(targetMap.id)}
               >
-                → Go to '<i>{targetMap.name}</i>'
+                → Open {targetMap.name}
               </Button>
             )}
             {isBroken && (
@@ -262,113 +358,130 @@ export const LinkInspector: React.FC = () => {
           </FormControl>
 
           <FormControl>
-            <FieldLabel>Entry Position</FieldLabel>
+            <FieldLabel>Target Link</FieldLabel>
+            <Select
+              size="xs"
+              value={link.targetLinkId ?? ''}
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              onChange={(e) =>
+                update({
+                  targetLinkId: e.target.value || undefined,
+                  targetPosition: effectiveTargetPosition,
+                  targetFacing: effectiveFacing,
+                })
+              }
+            >
+              <option value="">Custom arrival position</option>
+              {targetableLinks.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.label || candidate.id}
+                </option>
+              ))}
+            </Select>
+            <Text fontSize="10px" color="gray.500" mt={1}>
+              Prefer targeting a link. Its visible arrival anchor defines where actors land.
+            </Text>
+            {(targetLink || landingAnchor) && (
+              <VStack align="stretch" spacing={2} mt={2}>
+                <HStack spacing={2}>
+                  {targetLink && (
+                    <Badge colorScheme="green" fontSize="9px">
+                      → {targetLink.label || targetLink.id}
+                    </Badge>
+                  )}
+                  {landingAnchor && (
+                    <Badge colorScheme="orange" fontSize="9px">
+                      @{landingAnchor.name}
+                    </Badge>
+                  )}
+                </HStack>
+                {landingAnchor && landingMap && (
+                  <HStack spacing={2}>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      colorScheme="orange"
+                      onClick={() => openAnchorOnMap(landingMap.id, landingAnchor.id)}
+                    >
+                      Open target anchor
+                    </Button>
+                    <Text fontSize="10px" color="gray.500">
+                      {landingMap.name}
+                    </Text>
+                  </HStack>
+                )}
+              </VStack>
+            )}
+            {!landingAnchor && landingMap && (
+              <Button
+                size="xs"
+                mt={2}
+                variant="outline"
+                colorScheme="orange"
+                onClick={async () => {
+                  const anchorId = await createTargetAnchorForLink(link.id);
+                  if (anchorId && landingMap) {
+                    openAnchorOnMap(landingMap.id, anchorId);
+                  }
+                }}
+              >
+                Create target anchor
+              </Button>
+            )}
+          </FormControl>
 
-            {/* Cross-map: show visual map picker */}
-            {!isSameMap && targetMap ? (
+          <FormControl>
+            <FieldLabel>Custom Arrival Position</FieldLabel>
+
+            {landingMap ? (
               <Box mt={1}>
                 <Text fontSize="10px" color="gray.500" mb={2}>
-                  Click a tile on {targetMap.name} to set the entry point.
+                  {targetLink
+                    ? `This is only used if ${targetLink.label || targetLink.id} has no anchor.`
+                    : `Click a tile on ${landingMap.name} to place the landing point.`}
                 </Text>
                 <MapPreviewPicker
-                  mapId={link.targetMapId}
-                  selectedPosition={link.targetPosition}
-                  onSelect={(x, y) => update({ targetPosition: [x, y] })}
+                  mapId={landingMap.id}
+                  onSelect={(x, y) =>
+                    updateLandingPosition([x * projectTileSize, y * projectTileSize])
+                  }
                   width={240}
                   height={180}
                   interactive={true}
+                  overlays={[
+                    ...(previewAnchorPosition && landingAnchor
+                      ? [
+                          {
+                            kind: 'anchor' as const,
+                            position: previewAnchorPosition,
+                            facing: landingAnchor.facing ?? effectiveFacing,
+                            color: 'rgba(246, 173, 85, 0.95)',
+                          },
+                        ]
+                      : []),
+                    {
+                      kind: 'arrival',
+                      position: previewTargetPosition,
+                      facing: effectiveFacing,
+                      color: 'rgba(34, 211, 238, 0.95)',
+                    },
+                  ]}
                 />
                 <Text fontSize="10px" color="cyan.400" fontFamily="mono" mt={1}>
-                  ({link.targetPosition[0]}, {link.targetPosition[1]})
+                  ({effectiveTargetPosition[0]}, {effectiveTargetPosition[1]})
                 </Text>
               </Box>
             ) : (
-              /* Same-map or broken: show coordinate inputs + tile picker */
-              <>
-                {isPickingTarget ? (
-                  <Flex
-                    align="center"
-                    justify="space-between"
-                    px={2}
-                    py={1}
-                    bg="blue.900"
-                    borderRadius="md"
-                    border="1px"
-                    borderColor="blue.700"
-                    mb={1}
-                  >
-                    <Text fontSize="10px" color="blue.200">
-                      Click a tile to set entry point
-                    </Text>
-                    <Text
-                      fontSize="10px"
-                      color="blue.400"
-                      cursor="pointer"
-                      _hover={{ color: 'blue.300' }}
-                      onClick={cancelPickingLinkTarget}
-                    >
-                      Cancel
-                    </Text>
-                  </Flex>
-                ) : (
-                  <HStack spacing={2} mb={1}>
-                    <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                      X
-                    </Text>
-                    <NumberInput
-                      size="xs"
-                      value={link.targetPosition[0]}
-                      precision={0}
-                      onChange={(_, val) => {
-                        if (!isNaN(val))
-                          update({ targetPosition: [Math.round(val), link.targetPosition[1]] });
-                      }}
-                      flex={1}
-                    >
-                      <NumberInputField
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        fontFamily="mono"
-                        _hover={{ bg: '#071018' }}
-                      />
-                    </NumberInput>
-                    <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                      Y
-                    </Text>
-                    <NumberInput
-                      size="xs"
-                      value={link.targetPosition[1]}
-                      precision={0}
-                      onChange={(_, val) => {
-                        if (!isNaN(val))
-                          update({ targetPosition: [link.targetPosition[0], Math.round(val)] });
-                      }}
-                      flex={1}
-                    >
-                      <NumberInputField
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        fontFamily="mono"
-                        _hover={{ bg: '#071018' }}
-                      />
-                    </NumberInput>
-                    <Tooltip label="Pick tile on map" placement="top" hasArrow>
-                      <IconButton
-                        aria-label="Pick entry tile"
-                        icon={<Text fontSize="10px">🎯</Text>}
-                        size="xs"
-                        variant="ghost"
-                        color="gray.400"
-                        _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-                        onClick={() => startPickingLinkTarget(link.id)}
-                      />
-                    </Tooltip>
-                  </HStack>
-                )}
-              </>
+              <Text fontSize="10px" color="red.400" mt={1}>
+                Target map not found. Manual coordinates below will be preserved until it returns.
+              </Text>
             )}
+
+            <Box mt={landingMap ? 3 : 2}>
+              <Vector2Field value={effectiveTargetPosition} onChange={updateLandingPosition} />
+            </Box>
 
             {/* Status badge */}
             <Box mt={1}>
@@ -395,58 +508,28 @@ export const LinkInspector: React.FC = () => {
         <VStack align="stretch" spacing={3}>
           <SectionLabel textStyle="fieldLabel">Behaviour</SectionLabel>
 
-          <FormControl>
-            <FieldLabel>Direction</FieldLabel>
-            <Select
-              size="xs"
-              value={link.direction}
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
-              onChange={(e) => update({ direction: e.target.value as LocationLink['direction'] })}
-            >
-              <option value="one-way">One-way →</option>
-              <option value="bidirectional">Bidirectional ↔</option>
-            </Select>
-          </FormControl>
+          <Text fontSize="10px" color="gray.500">
+            This editor currently configures a one-way link. Create a second link if you want a
+            return path.
+          </Text>
 
-          {/* Bidirectional cross-map: show counterpart status */}
-          {link.direction === 'bidirectional' && !isSameMap && targetMap && (
-            <Box>
-              {link.targetLinkId ? (
-                <HStack spacing={2}>
-                  <Badge colorScheme="green" fontSize="9px">
-                    ↔ Counterpart exists
-                  </Badge>
-                  <Text fontSize="10px" color="gray.600" fontFamily="mono">
-                    {link.targetLinkId}
-                  </Text>
-                </HStack>
-              ) : (
-                <VStack align="stretch" spacing={1}>
-                  <Text fontSize="10px" color="yellow.600">
-                    No return link on {targetMap.name} yet.
-                  </Text>
-                  <Button
-                    size="xs"
-                    colorScheme="yellow"
-                    variant="outline"
-                    onClick={() => createBidirectionalCounterpart(link.id)}
-                  >
-                    ↔ Create counterpart on {targetMap.name}
-                  </Button>
-                </VStack>
-              )}
-            </Box>
-          )}
+          <FormControl>
+            <FieldLabel>Arrival Facing</FieldLabel>
+            <CardinalDirectionPicker value={effectiveFacing} onChange={updateLandingFacing} />
+            <Text fontSize="10px" color="gray.500" mt={1}>
+              {landingAnchor
+                ? `Stored on anchor ${landingAnchor.name}.`
+                : 'Stored directly on this link.'}
+            </Text>
+          </FormControl>
         </VStack>
 
-        {/* Incoming links — other maps linking to this map */}
+        {/* Incoming links — other links pointing at this link */}
         {incomingLinks.length > 0 && (
           <>
             <Divider borderColor="#071018" />
             <VStack align="stretch" spacing={2}>
-              <SectionLabel textStyle="fieldLabel">Linked From</SectionLabel>
+              <SectionLabel textStyle="fieldLabel">Incoming Links</SectionLabel>
               {incomingLinks.map(({ map: srcMap, link: inLink }) => (
                 <HStack
                   key={`${srcMap.id}:${inLink.id}`}

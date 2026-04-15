@@ -100,6 +100,7 @@ function syncEditorSelectionsWithMap(): void {
       state.selectedLayerId = null;
       state.selectedEntityId = null;
       state.selectedLinkId = null;
+      state.selectedAnchorId = null;
       state.activeVariationId = null;
       return;
     }
@@ -121,6 +122,13 @@ function syncEditorSelectionsWithMap(): void {
     if (state.selectedLinkId) {
       const hasLink = currentMap.locationLinks?.some((l) => l.id === state.selectedLinkId) ?? false;
       if (!hasLink) state.selectedLinkId = null;
+    }
+
+    if (state.selectedAnchorId) {
+      const hasAnchor = currentMap.spatialPrimitives?.anchors?.some(
+        (anchor) => anchor.id === state.selectedAnchorId,
+      );
+      if (!hasAnchor) state.selectedAnchorId = null;
     }
 
     if (state.selectedEntityId) {
@@ -256,6 +264,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.tilesets = new globalThis.Map();
                   state.loadedSprites = new globalThis.Map();
                   state.selectedLayerId = null;
+                  state.selectedAnchorId = null;
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
                   state.activeVariationId = null;
@@ -291,6 +300,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.loadedSprites = new globalThis.Map();
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
+                  state.selectedAnchorId = null;
                   state.entityTypes = [];
                   state.tileMetadataDefinitions = [];
                   state.locationMetadataDefinitions = [];

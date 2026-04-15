@@ -17,6 +17,7 @@ import {
   BsLock,
   BsLink45Deg,
   BsPeople,
+  BsGeoAlt,
 } from 'react-icons/bs';
 
 /** Layer type icon component */
@@ -33,6 +34,8 @@ export const LayerTypeIcon: React.FC<{ kind: LayerKind }> = ({ kind }) => {
       return <BsInfoCircle {...iconProps} />;
     case 'entity':
       return <BsPeople {...iconProps} />;
+    case 'anchor':
+      return <BsGeoAlt {...iconProps} />;
     case 'locationlink':
       return <BsLink45Deg {...iconProps} />;
     default:
@@ -100,7 +103,7 @@ export const LayerItem: React.FC<LayerItemProps> = ({
   onDragEnd,
   dragNodeRef,
 }) => {
-  const isSystemLayer = layer.kind === 'locationlink';
+  const isSystemLayer = layer.kind === 'locationlink' || layer.kind === 'anchor';
   const layerIcon = layer.icon || definition?.icon;
   const iconColor = definition?.color;
 

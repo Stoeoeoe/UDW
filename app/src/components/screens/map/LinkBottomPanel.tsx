@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Flex, HStack, VStack, Text, Badge, IconButton, Tooltip } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
+import { getDefaultLinkTargetPosition, resolveLinkTarget } from '../../../lib/locationLinkUtils';
 import { useEditorStore } from '../../../store/useEditorStore';
 import PanelHeader from '../../common/PanelHeader';
 
@@ -10,6 +11,7 @@ import PanelHeader from '../../common/PanelHeader';
  */
 export const LinkBottomPanel: React.FC = () => {
   const currentMap = useEditorStore((s) => s.currentMap);
+  const projectTileSize = useEditorStore((s) => s.project?.tileSize ?? 16);
   const maps = useEditorStore((s) => s.maps);
   const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
   const selectLink = useEditorStore((s) => s.selectLink);
@@ -22,12 +24,14 @@ export const LinkBottomPanel: React.FC = () => {
     // Place a link at center of current map (user can reposition after)
     const cx = Math.floor((currentMap?.width ?? 2) / 2);
     const cy = Math.floor((currentMap?.height ?? 2) / 2);
+    const sourcePosition: [number, number] = [cx * projectTileSize, cy * projectTileSize];
+    const triggerSize: [number, number] = [projectTileSize, projectTileSize];
     addLocationLink({
       id: `link-${Date.now()}`,
-      sourcePosition: [cx, cy],
-      triggerSize: [1, 1],
+      sourcePosition,
+      triggerSize,
       targetMapId: '',
-      targetPosition: [0, 0],
+      targetPosition: getDefaultLinkTargetPosition(sourcePosition, triggerSize, projectTileSize),
       direction: 'one-way',
     });
   };
@@ -64,6 +68,16 @@ export const LinkBottomPanel: React.FC = () => {
               const targetMap = maps.find((m) => m.id === link.targetMapId);
               const isSameMap = !link.targetMapId || link.targetMapId === currentMap?.id;
               const isBroken = !isSameMap && !targetMap;
+              const resolvedTarget = resolveLinkTarget(link, currentMap, maps);
+              const targetLabel = isBroken
+                ? '⚠ broken'
+                : isSameMap
+                  ? resolvedTarget.anchor
+                    ? `@ ${resolvedTarget.anchor.name}`
+                    : 'same map'
+                  : resolvedTarget.anchor
+                    ? `${targetMap?.name} @ ${resolvedTarget.anchor.name}`
+                    : `→ ${targetMap?.name}`;
 
               return (
                 <Flex
@@ -106,22 +120,23 @@ export const LinkBottomPanel: React.FC = () => {
 
                     <Text fontSize="10px" color="gray.500" fontFamily="mono">
                       ({link.sourcePosition[0]}, {link.sourcePosition[1]})
-                      {link.triggerSize[0] > 1 || link.triggerSize[1] > 1
-                        ? ` ${link.triggerSize[0]}×${link.triggerSize[1]}`
+                      {link.triggerSize[0] > projectTileSize ||
+                      link.triggerSize[1] > projectTileSize
+                        ? ` ${link.triggerSize[0]}×${link.triggerSize[1]} px`
                         : ''}
                     </Text>
 
                     {isBroken ? (
                       <Badge colorScheme="red" fontSize="9px">
-                        ⚠ broken
+                        {targetLabel}
                       </Badge>
                     ) : isSameMap ? (
                       <Badge colorScheme="red" fontSize="9px">
-                        same map
+                        {targetLabel}
                       </Badge>
                     ) : (
                       <Badge colorScheme="cyan" fontSize="9px" noOfLines={1} maxW="120px">
-                        → {targetMap?.name}
+                        {targetLabel}
                       </Badge>
                     )}
                   </VStack>

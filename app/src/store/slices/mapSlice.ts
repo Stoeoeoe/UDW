@@ -295,10 +295,12 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
     set((state) => {
       if (!state.currentMap) return;
       const anchors = ensureAnchorCollection(state.currentMap);
-      anchors.push(castDraft({
-        ...anchor,
-        facing: normalizeFacingVector(anchor.facing ?? DEFAULT_LINK_FACING),
-      }));
+      anchors.push(
+        castDraft({
+          ...anchor,
+          facing: normalizeFacingVector(anchor.facing ?? DEFAULT_LINK_FACING),
+        }),
+      );
       state.selectedAnchorId = anchor.id;
       state.selectedLinkId = null;
       state.selectedEntityId = null;
@@ -431,8 +433,8 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
       if (link) {
         link.targetMapId = mapId;
         const anchor =
-          (!mapId || mapId === state.currentMap.id)
-            ? getLinkOwnedAnchor(
+          !mapId || mapId === state.currentMap.id
+            ? (getLinkOwnedAnchor(
                 state.currentMap.locationLinks.find((item) => item.id === link.targetLinkId),
                 state.currentMap,
               ) ??
@@ -440,7 +442,7 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
                 ? state.currentMap.spatialPrimitives?.anchors?.find(
                     (item) => item.id === link.targetAnchorId,
                   )
-                : undefined)
+                : undefined))
             : undefined;
 
         if (anchor) {

@@ -95,6 +95,7 @@
             "metadata",
             "entity",
             "terrain",
+            "anchor",
             "locationlink"
           ]
         },
@@ -243,20 +244,32 @@
         "label": { "type": "string" },
         "sourcePosition": {
           "type": "array",
-          "items": { "type": "integer" },
+          "description": "Absolute pixel coordinates [x, y].",
+          "items": { "type": "number" },
           "minItems": 2,
           "maxItems": 2
         },
         "triggerSize": {
           "type": "array",
-          "items": { "type": "integer", "minimum": 1 },
+          "description": "Width/height in pixels.",
+          "items": { "type": "number", "minimum": 0 },
           "minItems": 2,
           "maxItems": 2
         },
+        "anchorId": { "type": "string" },
         "targetMapId": { "type": "string" },
         "targetPosition": {
           "type": "array",
-          "items": { "type": "integer" },
+          "description": "Absolute pixel coordinates [x, y] on target map when no targetAnchorId is used.",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "targetAnchorId": { "type": "string" },
+        "targetFacing": {
+          "type": "array",
+          "description": "Normalized facing vector [x, y] used when no target anchor is selected.",
+          "items": { "type": "number" },
           "minItems": 2,
           "maxItems": 2
         },
@@ -330,7 +343,15 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "position": {
+          "description": "Absolute pixel coordinates [x, y].",
           "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "facing": {
+          "type": "array",
+          "description": "Normalized facing vector [x, y].",
           "items": { "type": "number" },
           "minItems": 2,
           "maxItems": 2

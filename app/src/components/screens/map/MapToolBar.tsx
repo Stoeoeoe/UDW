@@ -15,6 +15,7 @@ import {
   FiGrid,
   FiMaximize,
   FiLink,
+  FiMapPin,
 } from 'react-icons/fi';
 import Toolbar, { ToolItem, ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -51,6 +52,11 @@ const TOOLS_BY_KIND: Partial<Record<LayerKind, ToolItem[]>> = {
     { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
     { id: 'entitySelect', icon: FiMove, label: 'Move Entity (M)', group: 'entities' },
     { id: 'entityDelete', icon: FiTrash2, label: 'Delete Entity (X)', group: 'entities' },
+  ],
+  anchor: [
+    { id: 'anchorPlace', icon: FiMapPin, label: 'Place Anchor (N)', group: 'anchors' },
+    { id: 'anchorSelect', icon: FiMove, label: 'Move Anchor (M)', group: 'anchors' },
+    { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor (X)', group: 'anchors' },
   ],
   locationlink: [
     { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
@@ -91,6 +97,7 @@ export const MapToolbar: React.FC = () => {
 
   const showSnapToggle =
     (selectedLayer?.kind === 'entity' && ['entitySelect', 'entityPlace'].includes(activeTool)) ||
+    (selectedLayer?.kind === 'anchor' && ['anchorSelect', 'anchorPlace'].includes(activeTool)) ||
     (selectedLayer?.kind === 'locationlink' && ['linkSelect', 'linkPlace'].includes(activeTool));
 
   return (

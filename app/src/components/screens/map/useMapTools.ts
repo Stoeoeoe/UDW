@@ -70,7 +70,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const dragLinkOffsetRef = useRef<{ x: number; y: number } | null>(null);
   const dragLinkEndRef = useRef<'source' | 'target'>('source'); // Which end is being dragged
   const draggingLinkHandleRef = useRef<string | null>(null); // e.g., 'nw','ne','sw','se','left','right','top','bottom'
-  const dragLinkInitialRef = useRef<{ sx: number; sy: number; tw: number; th: number } | null>(null);
+  const dragLinkInitialRef = useRef<{ sx: number; sy: number; tw: number; th: number } | null>(
+    null,
+  );
   const isShiftHeldRef = useRef(false);
   const terrainGridRef = useRef<Map<string, string | null>>(new Map());
   const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null);
@@ -226,7 +228,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const [sx, sy] = link.sourcePosition; // pixels
         const [tw, th] = link.triggerSize; // pixels
         const expand = link.id === selectedLinkId ? HANDLE_SIZE : 0;
-        return worldX >= sx - expand && worldX < sx + tw + expand && worldY >= sy - expand && worldY < sy + th + expand;
+        return (
+          worldX >= sx - expand &&
+          worldX < sx + tw + expand &&
+          worldY >= sy - expand &&
+          worldY < sy + th + expand
+        );
       });
       if (sourceHit) return { link: sourceHit, end: 'source' };
 
@@ -272,29 +279,39 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
       if (!tile && !worldPos) return;
       const { x: tx, y: ty } = tile ?? { x: 0, y: 0 };
-      const inBounds = !!worldPos && worldPos.x >= 0 && worldPos.x < currentMap.width * projectTileSize && worldPos.y >= 0 && worldPos.y < currentMap.height * projectTileSize;
+      const inBounds =
+        !!worldPos &&
+        worldPos.x >= 0 &&
+        worldPos.x < currentMap.width * projectTileSize &&
+        worldPos.y >= 0 &&
+        worldPos.y < currentMap.height * projectTileSize;
 
       // ── Target-picking mode (🎯 pick entry tile for a link) ────────────────
       const { pickingLinkTargetForLinkId, commitLinkTarget } = useEditorStore.getState();
       if (e.button === 0 && pickingLinkTargetForLinkId) {
-        if (inBounds && worldPos) commitLinkTarget(pickingLinkTargetForLinkId, currentMap.id, [Math.round(worldPos.x), Math.round(worldPos.y)]);
+        if (inBounds && worldPos)
+          commitLinkTarget(pickingLinkTargetForLinkId, currentMap.id, [
+            Math.round(worldPos.x),
+            Math.round(worldPos.y),
+          ]);
         e.stopPropagation();
         return;
       }
 
       // ── Global Select (V) — works across ALL layers ─────────────────────────
-        if (activeTool === 'select' && e.button === 0) {
+      if (activeTool === 'select' && e.button === 0) {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
         if (!worldPos) return;
 
         // 1. Hit-test links first (they're on top visually)
-        const hitLinkResult = inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
+        const hitLinkResult =
+          inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
         if (hitLinkResult) {
           const { link: hitLink, end: hitEnd } = hitLinkResult;
-            // Check for resize-handle hit (allow starting resize even if not already selected)
-            const store = useEditorStore.getState();
-            const alreadySelected = store.selectedLinkId === hitLink.id;
-            if (worldPos) {
+          // Check for resize-handle hit (allow starting resize even if not already selected)
+          const store = useEditorStore.getState();
+          const alreadySelected = store.selectedLinkId === hitLink.id;
+          if (worldPos) {
             const [sx, sy] = hitLink.sourcePosition; // pixels
             const [tw, th] = hitLink.triggerSize; // pixels
             const handleSize = 5; // must match renderer
@@ -305,10 +322,30 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             handles.sw = { x: sx - handleSize, y: sy + th, w: handleSize, h: handleSize };
             handles.se = { x: sx + tw, y: sy + th, w: handleSize, h: handleSize };
             // Edges — fully outside the rect
-            handles.left = { x: sx - handleSize, y: sy + th / 2 - handleSize / 2, w: handleSize, h: handleSize };
-            handles.right = { x: sx + tw, y: sy + th / 2 - handleSize / 2, w: handleSize, h: handleSize };
-            handles.top = { x: sx + tw / 2 - handleSize / 2, y: sy - handleSize, w: handleSize, h: handleSize };
-            handles.bottom = { x: sx + tw / 2 - handleSize / 2, y: sy + th, w: handleSize, h: handleSize };
+            handles.left = {
+              x: sx - handleSize,
+              y: sy + th / 2 - handleSize / 2,
+              w: handleSize,
+              h: handleSize,
+            };
+            handles.right = {
+              x: sx + tw,
+              y: sy + th / 2 - handleSize / 2,
+              w: handleSize,
+              h: handleSize,
+            };
+            handles.top = {
+              x: sx + tw / 2 - handleSize / 2,
+              y: sy - handleSize,
+              w: handleSize,
+              h: handleSize,
+            };
+            handles.bottom = {
+              x: sx + tw / 2 - handleSize / 2,
+              y: sy + th,
+              w: handleSize,
+              h: handleSize,
+            };
 
             const wx = worldPos.x;
             const wy = worldPos.y;
@@ -408,8 +445,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const position: [number, number] =
           snapMode === 'grid'
             ? [
-                Math.floor(worldPos.x / projectTileSize) * projectTileSize,
-                Math.floor(worldPos.y / projectTileSize) * projectTileSize,
+                Math.floor(worldPos.x / projectTileSize) * projectTileSize + projectTileSize / 2,
+                Math.floor(worldPos.y / projectTileSize) * projectTileSize + projectTileSize / 2,
               ]
             : [Math.round(worldPos.x), Math.round(worldPos.y)];
         addAnchor({
@@ -477,7 +514,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       }
 
       if (activeTool === 'linkSelect' && e.button === 0) {
-        const hitLinkResult = inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
+        const hitLinkResult =
+          inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
         if (hitLinkResult) {
           const { link: hitLink, end: hitEnd } = hitLinkResult;
           useEditorStore.getState().selectLink(hitLink.id);
@@ -540,7 +578,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       }
 
       if (activeTool === 'linkDelete' && e.button === 0) {
-        const hitLinkResult = inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
+        const hitLinkResult =
+          inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
         if (hitLinkResult) useEditorStore.getState().removeLocationLink(hitLinkResult.link.id);
         return;
       }
@@ -821,10 +860,20 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       }
 
       // Drag link source/target move or resize in global select or linkSelect
-      if (e.buttons === 1 && (activeTool === 'select' || activeTool === 'linkSelect') && draggingLinkRef.current && worldPos) {
+      if (
+        e.buttons === 1 &&
+        (activeTool === 'select' || activeTool === 'linkSelect') &&
+        draggingLinkRef.current &&
+        worldPos
+      ) {
         const wx = worldPos.x;
         const wy = worldPos.y;
-        if (wx >= 0 && wx < currentMap.width * projectTileSize && wy >= 0 && wy < currentMap.height * projectTileSize) {
+        if (
+          wx >= 0 &&
+          wx < currentMap.width * projectTileSize &&
+          wy >= 0 &&
+          wy < currentMap.height * projectTileSize
+        ) {
           // If a resize handle is active, perform resize logic
           if (draggingLinkHandleRef.current && dragLinkInitialRef.current) {
             const handle = draggingLinkHandleRef.current;
@@ -886,34 +935,62 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             if (ntw < minSize) ntw = minSize;
             if (nth < minSize) nth = minSize;
 
-            useEditorStore.getState().updateLocationLink(draggingLinkRef.current, {
-              sourcePosition: [Math.round(nsx), Math.round(nsy)],
-              triggerSize: [Math.round(ntw), Math.round(nth)],
-            }, true);
+            useEditorStore.getState().updateLocationLink(
+              draggingLinkRef.current,
+              {
+                sourcePosition: [Math.round(nsx), Math.round(nsy)],
+                triggerSize: [Math.round(ntw), Math.round(nth)],
+              },
+              true,
+            );
           } else {
-            // Regular move of one end — always pixel-perfect (no snapping)
+            // Regular move of one end — snap based on entitySnapMode
+            const { entitySnapMode: snapMode } = useEditorStore.getState();
             const offset = dragLinkOffsetRef.current ?? { x: 0, y: 0 };
-            const pos: [number, number] = [Math.round(wx - offset.x), Math.round(wy - offset.y)];
+            const rawX = wx - offset.x;
+            const rawY = wy - offset.y;
+            const snapToTileEdge = (v: number) =>
+              Math.floor(v / projectTileSize) * projectTileSize;
+            const snapToTileCenter = (v: number) =>
+              Math.floor(v / projectTileSize) * projectTileSize + projectTileSize / 2;
+            // source snaps to tile edge (top-left of trigger area); target snaps to tile center
+            const sourcePos: [number, number] =
+              snapMode === 'grid'
+                ? [snapToTileEdge(rawX), snapToTileEdge(rawY)]
+                : [Math.round(rawX), Math.round(rawY)];
+            const targetPos: [number, number] =
+              snapMode === 'grid'
+                ? [snapToTileCenter(rawX), snapToTileCenter(rawY)]
+                : [Math.round(rawX), Math.round(rawY)];
             if (dragLinkEndRef.current === 'target') {
               const store = useEditorStore.getState();
               const draggingLink = currentMap.locationLinks?.find(
                 (link) => link.id === draggingLinkRef.current,
               );
               if (draggingLink?.targetAnchorId) {
-                store.updateMapAnchor(currentMap.id, draggingLink.targetAnchorId, { position: pos }, true);
+                store.updateMapAnchor(
+                  currentMap.id,
+                  draggingLink.targetAnchorId,
+                  { position: targetPos },
+                  true,
+                );
               } else {
                 store.updateLocationLink(
                   draggingLinkRef.current,
                   {
-                    targetPosition: pos,
+                    targetPosition: targetPos,
                   },
                   true,
                 );
               }
             } else {
-              useEditorStore.getState().updateLocationLink(draggingLinkRef.current, {
-                sourcePosition: pos,
-              }, true);
+              useEditorStore.getState().updateLocationLink(
+                draggingLinkRef.current,
+                {
+                  sourcePosition: sourcePos,
+                },
+                true,
+              );
             }
           }
         }
@@ -957,8 +1034,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const position: [number, number] =
           snapMode === 'grid'
             ? [
-                Math.floor(rawX / projectTileSize) * projectTileSize,
-                Math.floor(rawY / projectTileSize) * projectTileSize,
+                Math.floor(rawX / projectTileSize) * projectTileSize + projectTileSize / 2,
+                Math.floor(rawY / projectTileSize) * projectTileSize + projectTileSize / 2,
               ]
             : [Math.round(rawX), Math.round(rawY)];
         updateAnchor(draggingAnchorRef.current, { position }, true);

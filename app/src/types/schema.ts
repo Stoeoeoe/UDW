@@ -124,14 +124,21 @@ export interface Map {
 export interface LocationLink {
   id: string;
   label?: string;
-  // Source: tile position on this map where the link is triggered
-  sourcePosition: [number, number]; // Tile coordinates [x, y]
-  // Trigger area around the source tile
-  triggerSize: [number, number]; // Width/height in tiles (default [1, 1])
-  // Target: where this link leads
+  // Source trigger rectangle origin on this map.
+  sourcePosition: [number, number]; // Pixel coordinates [x, y]
+  // Trigger area around the source position.
+  triggerSize: [number, number]; // Width/height in pixels (default [tileSize, tileSize])
+  // Local arrival anchor owned by this link. Other links can target this link and inherit this anchor.
+  anchorId?: string;
+  // Target map. Empty string means this map.
   targetMapId: string; // Empty string = same map
-  targetPosition: [number, number]; // Tile coordinates [x, y] on target map
-  // Optionally reference a named entry on the target map by link id for bidirectional sync
+  // Manual fallback landing position on the target map.
+  targetPosition: [number, number]; // Pixel coordinates [x, y] on target map
+  // Optional named anchor on the target map. When present, its position/facing win.
+  targetAnchorId?: string;
+  // Facing vector used when no target anchor is selected.
+  targetFacing?: [number, number];
+  // Optional target link on the destination map. When present, its arrival anchor wins.
   targetLinkId?: string;
   direction: 'one-way' | 'bidirectional';
   tags?: string[];
@@ -165,6 +172,7 @@ export type LayerKind =
   | 'metadata' // Data-only, invisible
   | 'entity' // Layer that contains entities (EntityInstance[])
   | 'terrain' // Terrain-painted layer (autotiled)
+  | 'anchor' // Named anchor markers for arrivals / NPC goals / scripts
   | 'locationlink'; // Map transition links (doors, exits, portals)
 
 export type PropertyValue =
@@ -223,7 +231,8 @@ export interface Area {
 export interface Anchor {
   id: string;
   name: string;
-  position: [number, number]; // Tile coordinates
+  position: [number, number]; // Pixel coordinates [x, y]
+  facing?: [number, number]; // Normalized facing vector
   rotation?: number; // Degrees
   tags: string[];
 }

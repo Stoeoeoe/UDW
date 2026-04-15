@@ -4,6 +4,8 @@ import {
   FiEdit2,
   FiTrash2,
   FiUser,
+  FiMapPin,
+  FiLink,
   FiShuffle,
   FiDroplet,
   FiGrid,
@@ -74,8 +76,13 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     },
   ],
   locationlink: [
+    { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
     { id: 'linkSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'links' },
     { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
+  ],
+  anchor: [
+    { id: 'anchorSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'anchors' },
+    { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor (X)', group: 'anchors' },
   ],
 };
 
@@ -97,8 +104,9 @@ export const MapToolbar: React.FC = () => {
     : FALLBACK_TOOLS;
 
   const showSnapToggle =
-    selectedLayer?.kind === 'entity' &&
-    (activeTool === 'entityPlace' || activeTool === 'entitySelect');
+    selectedLayer?.kind === 'entity' ||
+    selectedLayer?.kind === 'anchor' ||
+    selectedLayer?.kind === 'locationlink';
 
   return (
     <HStack spacing={4}>
@@ -114,7 +122,7 @@ export const MapToolbar: React.FC = () => {
             <Button
               bg={entitySnapMode === 'grid' ? 'purple.600' : 'transparent'}
               color={entitySnapMode === 'grid' ? 'white' : 'gray.400'}
-              borderColor="gray.700"
+              borderColor="editorBorderLight"
               _hover={{ bg: entitySnapMode === 'grid' ? 'purple.500' : 'gray.800' }}
               onClick={() => setEntitySnapMode('grid')}
             >
@@ -125,7 +133,7 @@ export const MapToolbar: React.FC = () => {
             <Button
               bg={entitySnapMode === 'pixel' ? 'purple.600' : 'transparent'}
               color={entitySnapMode === 'pixel' ? 'white' : 'gray.400'}
-              borderColor="gray.700"
+              borderColor="editorBorderLight"
               _hover={{ bg: entitySnapMode === 'pixel' ? 'purple.500' : 'gray.800' }}
               onClick={() => setEntitySnapMode('pixel')}
             >

@@ -8,9 +8,11 @@ import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { LinkInspector } from './LinkInspector';
+import { AnchorInspector } from './AnchorInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
+import { AnchorBottomPanel } from './AnchorBottomPanel';
 import { LinkBottomPanel } from './LinkBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
 import { EditorModal } from '../../common/EditorModal';
@@ -22,17 +24,21 @@ import { MapWorldView } from './MapWorldView.tsx';
  * Right panel — always shows the inspector for whatever is *selected*.
  * Selection takes priority over layer context:
  *   selectedLink    → LinkInspector
+ *   selectedAnchor  → AnchorInspector
  *   selectedEntity  → PropertiesPanel
  *   nothing         → ToolPropertiesPanel (tile/terrain tools)
  */
 const MapRightPanel: React.FC = () => {
   const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
+  const selectedAnchorId = useEditorStore((s) => s.selectedAnchorId);
   const selectedEntityId = useEditorStore((s) => s.selectedEntityId);
 
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="auto">
       {selectedLinkId ? (
         <LinkInspector />
+      ) : selectedAnchorId ? (
+        <AnchorInspector />
       ) : selectedEntityId ? (
         <PropertiesPanel />
       ) : (
@@ -205,6 +211,8 @@ export const MapEditor: React.FC = () => {
         bottomPanel={
           activeView === 'world' ? undefined : selectedLayerKind === 'entity' ? (
             <EntityBottomPalette />
+          ) : selectedLayerKind === 'anchor' ? (
+            <AnchorBottomPanel />
           ) : selectedLayerKind === 'locationlink' ? (
             <LinkBottomPanel />
           ) : selectedLayerKind === 'terrain' ? null : (

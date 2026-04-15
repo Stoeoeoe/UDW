@@ -23,6 +23,7 @@ export function kindToCategory(kind: LayerKind): LayerCategory {
       return 'collision';
     case 'entity':
       return 'entities';
+    case 'anchor':
     case 'locationlink':
     case 'navigation':
     case 'metadata':
@@ -54,8 +55,8 @@ export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
   {
     id: 'other',
     label: 'Other',
-    kinds: ['navigation', 'metadata', 'locationlink'],
-    systemKinds: ['locationlink'],
+    kinds: ['navigation', 'metadata', 'anchor', 'locationlink'],
+    systemKinds: ['anchor', 'locationlink'],
     color: 'gray.700',
   },
 ];

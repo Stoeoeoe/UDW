@@ -18,7 +18,29 @@ interface MapPreviewPickerProps {
   height?: number;
   /** Whether clicking is enabled */
   interactive?: boolean;
+  /** Optional non-tile overlays such as trigger areas or arrival markers */
+  overlays?: MapPreviewOverlay[];
 }
+
+export type MapPreviewOverlay =
+  | {
+      kind: 'trigger';
+      position: [number, number];
+      size?: [number, number];
+      color?: string;
+    }
+  | {
+      kind: 'anchor';
+      position: [number, number];
+      facing?: [number, number];
+      color?: string;
+    }
+  | {
+      kind: 'arrival';
+      position: [number, number];
+      facing?: [number, number];
+      color?: string;
+    };
 
 // Native canvas resolution per tile — drawn at this size, then CSS-scaled
 const NATIVE_TILE_PX = 16;
@@ -32,6 +54,7 @@ function renderToCanvas(
   sprites: Map<string, HTMLImageElement>,
   hovered: [number, number] | null,
   selectedPosition: [number, number] | null | undefined,
+  overlays: MapPreviewOverlay[] | undefined,
   tileSize: number,
 ) {
   const ts = NATIVE_TILE_PX;
@@ -119,6 +142,95 @@ function renderToCanvas(
     ctx.stroke();
   }
 
+  if (overlays?.length) {
+    const drawArrivalArrow = (
+      position: [number, number],
+      facing: [number, number],
+      color: string,
+    ) => {
+      const centerX = position[0] * ts + ts / 2;
+      const centerY = position[1] * ts + ts / 2;
+      const [dx, dy] = facing;
+      const length = Math.sqrt(dx * dx + dy * dy) || 1;
+      const normX = dx / length;
+      const normY = dy / length;
+      const arrowLength = ts * 0.65;
+      const endX = centerX + normX * arrowLength;
+      const endY = centerY + normY * arrowLength;
+      const wingScale = ts * 0.18;
+      const perpX = -normY;
+      const perpY = normX;
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, ts * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - normX * ts * 0.25 + perpX * wingScale,
+        endY - normY * ts * 0.25 + perpY * wingScale,
+      );
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - normX * ts * 0.25 - perpX * wingScale,
+        endY - normY * ts * 0.25 - perpY * wingScale,
+      );
+      ctx.stroke();
+    };
+
+    for (const overlay of overlays) {
+      if (overlay.kind === 'trigger') {
+        const [x, y] = overlay.position;
+        const [w, h] = overlay.size ?? [1, 1];
+        const color = overlay.color ?? 'rgba(245, 158, 11, 0.95)';
+
+        ctx.fillStyle = color.replace('0.95', '0.20');
+        ctx.fillRect(x * ts, y * ts, w * ts, h * ts);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x * ts + 0.75, y * ts + 0.75, w * ts - 1.5, h * ts - 1.5);
+      }
+
+      if (overlay.kind === 'anchor') {
+        const [ax, ay] = overlay.position;
+        const centerX = ax * ts + ts / 2;
+        const centerY = ay * ts + ts / 2;
+        const color = overlay.color ?? 'rgba(246, 173, 85, 0.95)';
+        const markerSize = ts * 0.18;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, markerSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(centerX - ts * 0.35, centerY);
+        ctx.lineTo(centerX + ts * 0.35, centerY);
+        ctx.moveTo(centerX, centerY - ts * 0.35);
+        ctx.lineTo(centerX, centerY + ts * 0.35);
+        ctx.stroke();
+        drawArrivalArrow(overlay.position, overlay.facing ?? [0, 1], color);
+      }
+
+      if (overlay.kind === 'arrival') {
+        drawArrivalArrow(
+          overlay.position,
+          overlay.facing ?? [0, 1],
+          overlay.color ?? 'rgba(34, 211, 238, 0.95)',
+        );
+      }
+    }
+  }
+
   // Hover tile
   if (hovered) {
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -135,6 +247,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   width = 480,
   height = 320,
   interactive = true,
+  overlays,
 }) => {
   const { tileSize } = useProject();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -191,9 +304,18 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
     if (!canvasRef.current || !map) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-    renderToCanvas(ctx, map, tilesets, loadedSprites, hovered, selectedPosition, tileSize);
+    renderToCanvas(
+      ctx,
+      map,
+      tilesets,
+      loadedSprites,
+      hovered,
+      selectedPosition,
+      overlays,
+      tileSize,
+    );
     setIsLoading(false);
-  }, [map, tilesets, loadedSprites, hovered, selectedPosition, tileSize]);
+  }, [map, tilesets, loadedSprites, hovered, selectedPosition, overlays, tileSize]);
 
   useEffect(() => {
     draw();
@@ -267,6 +389,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   const handleWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
       e.preventDefault();
+      e.stopPropagation();
       if (!map || !containerRef.current) return;
 
       const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
@@ -332,9 +455,11 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onWheelCapture={handleWheel}
         onWheel={handleWheel}
         onContextMenu={(e) => e.preventDefault()}
         userSelect="none"
+        overscrollBehavior="contain"
       >
         {isLoading && (
           <Flex position="absolute" inset={0} align="center" justify="center" zIndex={2}>

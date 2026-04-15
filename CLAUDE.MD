@@ -1,5 +1,9 @@
 # Guidelines
 
+- If you want to compile/build, always first cd into the `app` directory. This is where all the code is. In the root fodler, we have the following important folders: /docs, /schemas and /app. In general, try to avoid that and instead use tools/LSP plugins if you have any.
+- The program you are working on is to build 2D top-down retro-style games.
+- Do not use inline styling if you can avoid it. Use components in /components/common, e.g. for typography, toolbars, headers, labels etc.
+- Whenever possible work with theme.ts to see what colors we have at our disposal.
 - The editor is separated in a number of "modules" or "screens":
   - Project
   - Maps

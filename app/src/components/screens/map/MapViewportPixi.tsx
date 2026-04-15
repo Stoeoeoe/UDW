@@ -23,6 +23,7 @@ export const MapViewportPixi: React.FC = () => {
   const mapId = useEditorStore((state) => state.currentMap?.id);
   const mapWidth = useEditorStore((state) => state.currentMap?.width);
   const mapHeight = useEditorStore((state) => state.currentMap?.height);
+  const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
   const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const activeTool = useEditorStore((state) => state.activeTool);
@@ -204,22 +205,44 @@ export const MapViewportPixi: React.FC = () => {
 
     // Subscribe to relevant state changes
     const unsubscribe = useEditorStore.subscribe((state, prevState) => {
-      // Re-render tiles when map data or variation changes
-      if (
-        state.currentMap !== prevState.currentMap ||
-        state.activeVariationId !== prevState.activeVariationId
-      ) {
-        renderTiles();
-        renderEntities();
-        renderGrid();
-        renderCollisionOverlay();
-        renderTerrainOverlay();
-        renderLocationLinks();
+      const mapChanged = state.currentMap !== prevState.currentMap;
+      const variationChanged = state.activeVariationId !== prevState.activeVariationId;
+
+      if (mapChanged || variationChanged) {
+        // Check which sub-parts of the map changed to avoid unnecessary redraws
+        const linksChanged =
+          state.currentMap?.locationLinks !== prevState.currentMap?.locationLinks;
+        // Detect whether any tile layer DATA changed (not just entity positions)
+        const tileDataChanged =
+          variationChanged ||
+          state.currentMap?.layers?.some((layer, i) => {
+            const prev = prevState.currentMap?.layers?.[i];
+            return layer.data !== prev?.data || layer.id !== prev?.id || layer.kind !== prev?.kind || layer.visible !== prev?.visible;
+          }) ||
+          state.currentMap?.layers?.length !== prevState.currentMap?.layers?.length ||
+          state.currentMap?.width !== prevState.currentMap?.width ||
+          state.currentMap?.height !== prevState.currentMap?.height;
+
+        if (linksChanged && !tileDataChanged) {
+          // Only links changed (e.g. link drag) — skip expensive tile/entity redraws
+          renderLocationLinks();
+        } else if (tileDataChanged) {
+          renderTiles();
+          renderEntities();
+          renderGrid();
+          renderCollisionOverlay();
+          renderTerrainOverlay();
+          renderLocationLinks();
+        } else {
+          // Only entities or other map data changed — skip tile/grid redraws
+          renderEntities();
+          renderLocationLinks();
+        }
       }
-      // Re-render location links when links, selection, or other-map links change
+      // Re-render location links when selection or other-map links change
       if (
-        state.currentMap?.locationLinks !== prevState.currentMap?.locationLinks ||
         state.selectedLinkId !== prevState.selectedLinkId ||
+        state.selectedAnchorId !== prevState.selectedAnchorId ||
         state.maps !== prevState.maps
       ) {
         renderLocationLinks();
@@ -250,13 +273,16 @@ export const MapViewportPixi: React.FC = () => {
         const prevLinks = prevState.currentMap?.locationLinks ?? [];
         const isOverLink = (tile: { x: number; y: number } | null) =>
           tile !== null &&
-          links.some(
-            (l) =>
-              tile.x >= l.sourcePosition[0] &&
-              tile.x < l.sourcePosition[0] + l.triggerSize[0] &&
-              tile.y >= l.sourcePosition[1] &&
-              tile.y < l.sourcePosition[1] + l.triggerSize[1],
-          );
+          links.some((l) => {
+            const px = tile.x * projectTileSize;
+            const py = tile.y * projectTileSize;
+            return (
+              px >= l.sourcePosition[0] &&
+              px < l.sourcePosition[0] + l.triggerSize[0] &&
+              py >= l.sourcePosition[1] &&
+              py < l.sourcePosition[1] + l.triggerSize[1]
+            );
+          });
         const wasOver = isOverLink(prevState.hoveredTile);
         const nowOver = isOverLink(state.hoveredTile);
         if (wasOver !== nowOver || (nowOver && links !== prevLinks)) {
@@ -305,6 +331,16 @@ export const MapViewportPixi: React.FC = () => {
     renderTerrainOverlay,
   ]);
 
+  useEffect(() => {
+    if (!viewport || !mapId || !selectedAnchorId) return;
+    const currentMap = useEditorStore.getState().currentMap;
+    const anchor = currentMap?.spatialPrimitives?.anchors?.find(
+      (item) => item.id === selectedAnchorId,
+    );
+    if (!anchor) return;
+    viewport.moveCenter(anchor.position[0], anchor.position[1]);
+  }, [viewport, mapId, selectedAnchorId]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -351,7 +387,9 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'n' || e.key === 'N') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind !== 'locationlink') {
+        if (layer?.kind === 'locationlink') {
+          useEditorStore.getState().setActiveTool('linkPlace');
+        } else {
           useEditorStore.getState().setActiveTool('entityPlace');
         }
       }
@@ -360,6 +398,8 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'locationlink') {
           useEditorStore.getState().setActiveTool('linkSelect');
+        } else if (layer?.kind === 'anchor') {
+          useEditorStore.getState().setActiveTool('anchorSelect');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
         }
@@ -369,6 +409,8 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'locationlink') {
           useEditorStore.getState().setActiveTool('linkDelete');
+        } else if (layer?.kind === 'anchor') {
+          useEditorStore.getState().setActiveTool('anchorDelete');
         } else {
           useEditorStore.getState().setActiveTool('entityDelete');
         }

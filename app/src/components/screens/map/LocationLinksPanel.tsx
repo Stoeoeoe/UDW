@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Flex, Text, VStack, HStack, IconButton, Badge, Tooltip } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
+import { resolveLinkTarget } from '../../../lib/locationLinkUtils';
 import { useEditorStore } from '../../../store/useEditorStore';
 
 /**
@@ -105,8 +106,17 @@ export const LocationLinksPanel: React.FC = () => {
             const targetMap = maps.find((m) => m.id === link.targetMapId);
             const isSameMap = !link.targetMapId || link.targetMapId === currentMap?.id;
             const isBroken = !isSameMap && !targetMap;
+            const resolvedTarget = resolveLinkTarget(link, currentMap, maps);
             const dirIcon = link.direction === 'bidirectional' ? '↔' : '→';
-            const targetLabel = isSameMap ? 'same map' : isBroken ? '⚠ missing' : targetMap!.name;
+            const targetLabel = isSameMap
+              ? resolvedTarget.anchor
+                ? `anchor: ${resolvedTarget.anchor.name}`
+                : 'same map'
+              : isBroken
+                ? '⚠ missing'
+                : resolvedTarget.anchor
+                  ? `${targetMap!.name} @ ${resolvedTarget.anchor.name}`
+                  : targetMap!.name;
 
             return (
               <HStack

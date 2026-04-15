@@ -9,6 +9,7 @@ import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { getIconTexture } from '../../../lib/iconRaster';
+import { resolveLinkTarget } from '../../../lib/locationLinkUtils';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
 
 interface UseMapRendererProps {
@@ -472,6 +473,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     entityContainer.removeChildren();
 
+    const entityLayerVisible = currentMap.layers.some(
+      (l) => l.kind === 'entity' && l.visible !== false,
+    );
+    if (!entityLayerVisible) return;
+
     const resolvedEntities = resolveEntities(currentMap, activeVariationId);
     resolvedEntities.forEach((entity) => {
       const type = entityTypes.find((t) => t.id === entity.typeId);
@@ -622,38 +628,46 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render location links overlay
   const renderLocationLinks = useCallback(() => {
     const g = locationLinksGraphicsRef.current;
-    const { currentMap, selectedLinkId, hoveredTile, maps } = useEditorStore.getState();
+    const { currentMap, selectedAnchorId, selectedLinkId, hoveredTile, maps } =
+      useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!g || !currentMap) return;
 
     g.clear();
 
-    const links = currentMap.locationLinks ?? [];
-    if (links.length === 0) return;
+    const linkLayerVisible = currentMap.layers.some(
+      (l) => l.kind === 'locationlink' && l.visible !== false,
+    );
+    const anchorLayerVisible = currentMap.layers.some(
+      (l) => l.kind === 'anchor' && l.visible !== false,
+    );
+
+    const links = linkLayerVisible ? (currentMap.locationLinks ?? []) : [];
 
     for (const link of links) {
-      const [sx, sy] = link.sourcePosition;
-      const [tw, th] = link.triggerSize;
+      const [sx, sy] = link.sourcePosition; // pixels
+      const [tw, th] = link.triggerSize; // pixels
       const isSameMap = !link.targetMapId || link.targetMapId === currentMap.id;
       const isSelected = link.id === selectedLinkId;
+      const resolvedTarget = resolveLinkTarget(link, currentMap, maps);
 
       // Hovered: cursor is within this link's trigger area
       const isHovered =
         hoveredTile !== null &&
-        hoveredTile.x >= sx &&
-        hoveredTile.x < sx + tw &&
-        hoveredTile.y >= sy &&
-        hoveredTile.y < sy + th;
+        hoveredTile.x * tileSize >= sx &&
+        hoveredTile.x * tileSize < sx + tw &&
+        hoveredTile.y * tileSize >= sy &&
+        hoveredTile.y * tileSize < sy + th;
 
       // Color: red = same-map, cyan = cross-map
       const color = isSameMap ? 0xff4444 : 0x4fd1c5;
       const darkColor = isSameMap ? 0x3a1010 : 0x1a4a44;
       const selectColor = 0xffffff;
 
-      const px = sx * tileSize;
-      const py = sy * tileSize;
-      const pw = tw * tileSize;
-      const ph = th * tileSize;
+      const px = sx;
+      const py = sy;
+      const pw = tw;
+      const ph = th;
 
       // Trigger area fill
       g.rect(px, py, pw, ph);
@@ -667,35 +681,71 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         alpha: isSelected ? 1 : isHovered ? 0.95 : 0.75,
       });
 
+      // Draw resize handles on source area when selected (only source is resizable)
+      // Handles are placed fully OUTSIDE the trigger rect so they don't block drag-move
+      if (isSelected) {
+        const handleSize = 5; // fixed pixel size — small and unobtrusive
+        const handles = [
+          [px - handleSize, py - handleSize], // nw
+          [px + pw, py - handleSize], // ne
+          [px - handleSize, py + ph], // sw
+          [px + pw, py + ph], // se
+          [px - handleSize, py + ph / 2 - handleSize / 2], // left
+          [px + pw, py + ph / 2 - handleSize / 2], // right
+          [px + pw / 2 - handleSize / 2, py - handleSize], // top
+          [px + pw / 2 - handleSize / 2, py + ph], // bottom
+        ];
+        for (const [hx, hy] of handles) {
+          g.rect(hx, hy, handleSize, handleSize);
+          g.fill({ color: 0xffffff, alpha: 1 });
+          g.rect(hx, hy, handleSize, handleSize);
+          g.stroke({ width: 1, color: 0x111111, alpha: 0.95 });
+        }
+      }
+
       const cx = px + pw / 2;
       const cy = py + ph / 2;
 
-      // Same-map: draw arrow all the way to target tile + target indicator
+      // Same-map: draw arrow to a pixel target and draw a point indicator (targets are points)
       if (isSameMap) {
-        const [ttx, tty] = link.targetPosition;
-        const targetCx = ttx * tileSize + tileSize / 2;
-        const targetCy = tty * tileSize + tileSize / 2;
+        const [ttx, tty] = resolvedTarget.position;
+        const targetCx = ttx;
+        const targetCy = tty;
         const dx = targetCx - cx;
         const dy = targetCy - cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist > tileSize * 0.5) {
+        const targetRadius = Math.max(4, Math.floor(tileSize * 0.25));
+
+        if (dist > targetRadius + 2) {
           const arrowAlpha = isSelected ? 0.7 : 0.35;
           const arrowColor = isSelected ? selectColor : color;
           const arrowWidth = isSelected ? 1.5 : 1;
 
-          // Shorten slightly so the line ends at the border of target tile, not center
+          // Find where the line exits the source rect border
           const nx = dx / dist;
           const ny = dy / dist;
-          const endX = targetCx - nx * (tileSize * 0.5);
-          const endY = targetCy - ny * (tileSize * 0.5);
+          // Clip to rect edges: find the smallest t where the ray hits px/py/px+pw/py+ph
+          let startX = cx;
+          let startY = cy;
+          if (Math.abs(nx) > 1e-6 || Math.abs(ny) > 1e-6) {
+            const tx1 = nx > 0 ? (px + pw - cx) / nx : nx < 0 ? (px - cx) / nx : Infinity;
+            const ty1 = ny > 0 ? (py + ph - cy) / ny : ny < 0 ? (py - cy) / ny : Infinity;
+            const tEdge = Math.min(tx1, ty1);
+            startX = cx + nx * tEdge;
+            startY = cy + ny * tEdge;
+          }
 
-          g.moveTo(cx, cy);
+          // Shorten so the line ends slightly before the target point
+          const endX = targetCx - nx * (targetRadius + 1);
+          const endY = targetCy - ny * (targetRadius + 1);
+
+          g.moveTo(startX, startY);
           g.lineTo(endX, endY);
           g.stroke({ width: arrowWidth, color: arrowColor, alpha: arrowAlpha });
 
           // Arrowhead at end
-          const headLen = tileSize * 0.35;
+          const headLen = Math.max(6, tileSize * 0.25);
           const headAngle = Math.PI / 5;
           const angle = Math.atan2(dy, dx);
           g.moveTo(endX, endY);
@@ -711,11 +761,32 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
           g.stroke({ width: arrowWidth, color: arrowColor, alpha: arrowAlpha });
         }
 
-        // Target tile box
-        const tpx = ttx * tileSize;
-        const tpy = tty * tileSize;
-        g.rect(tpx + 1, tpy + 1, tileSize - 2, tileSize - 2);
-        g.stroke({ width: 1, color, alpha: isSelected ? 0.6 : 0.3 });
+        // Draw target point indicator
+        g.circle(targetCx, targetCy, Math.max(3, Math.floor(targetRadius * 0.6)));
+        g.fill({ color: isSelected ? selectColor : color, alpha: isSelected ? 1 : 0.9 });
+        g.stroke({ width: 1, color: darkColor, alpha: 0.6 });
+
+        const [fx, fy] = resolvedTarget.facing;
+        const facingLength = Math.max(10, tileSize * 0.85);
+        const facingEndX = targetCx + fx * facingLength;
+        const facingEndY = targetCy + fy * facingLength;
+        g.moveTo(targetCx, targetCy);
+        g.lineTo(facingEndX, facingEndY);
+        g.stroke({ width: 1, color: isSelected ? selectColor : color, alpha: 0.75 });
+
+        const facingAngle = Math.atan2(fy, fx);
+        const headLength = Math.max(5, tileSize * 0.22);
+        g.moveTo(facingEndX, facingEndY);
+        g.lineTo(
+          facingEndX - headLength * Math.cos(facingAngle - Math.PI / 6),
+          facingEndY - headLength * Math.sin(facingAngle - Math.PI / 6),
+        );
+        g.moveTo(facingEndX, facingEndY);
+        g.lineTo(
+          facingEndX - headLength * Math.cos(facingAngle + Math.PI / 6),
+          facingEndY - headLength * Math.sin(facingAngle + Math.PI / 6),
+        );
+        g.stroke({ width: 1, color: isSelected ? selectColor : color, alpha: 0.75 });
       }
       // Cross-map: no arrow — just a small exit icon (diagonal arrow at corner of trigger box)
       else {
@@ -741,6 +812,58 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       }
     }
 
+    const anchors = anchorLayerVisible ? (currentMap.spatialPrimitives?.anchors ?? []) : [];
+    for (const anchor of anchors) {
+      const isSelected = anchor.id === selectedAnchorId;
+      const [ax, ay] = anchor.position;
+      const [fx, fy] = anchor.facing ?? [0, 1];
+      const baseColor = 0xf6ad55;
+      const selectedColor = 0xffffff;
+      const markerSize = Math.max(5, Math.floor(tileSize * 0.3));
+
+      g.circle(ax, ay, markerSize);
+      g.fill({ color: isSelected ? selectedColor : baseColor, alpha: isSelected ? 0.95 : 0.85 });
+      g.stroke({ width: 1, color: 0x111111, alpha: 0.7 });
+
+      g.moveTo(ax - markerSize - 2, ay);
+      g.lineTo(ax + markerSize + 2, ay);
+      g.moveTo(ax, ay - markerSize - 2);
+      g.lineTo(ax, ay + markerSize + 2);
+      g.stroke({
+        width: isSelected ? 2 : 1,
+        color: isSelected ? selectedColor : baseColor,
+        alpha: 0.7,
+      });
+
+      const facingLength = Math.max(12, tileSize * 0.8);
+      const endX = ax + fx * facingLength;
+      const endY = ay + fy * facingLength;
+      const angle = Math.atan2(fy, fx);
+      const headLength = Math.max(5, tileSize * 0.22);
+      g.moveTo(ax, ay);
+      g.lineTo(endX, endY);
+      g.stroke({
+        width: isSelected ? 2 : 1,
+        color: isSelected ? selectedColor : baseColor,
+        alpha: 0.8,
+      });
+      g.moveTo(endX, endY);
+      g.lineTo(
+        endX - headLength * Math.cos(angle - Math.PI / 6),
+        endY - headLength * Math.sin(angle - Math.PI / 6),
+      );
+      g.moveTo(endX, endY);
+      g.lineTo(
+        endX - headLength * Math.cos(angle + Math.PI / 6),
+        endY - headLength * Math.sin(angle + Math.PI / 6),
+      );
+      g.stroke({
+        width: isSelected ? 2 : 1,
+        color: isSelected ? selectedColor : baseColor,
+        alpha: 0.8,
+      });
+    }
+
     // ── Incoming link targets ─────────────────────────────────────────────
     // Draw a dashed arrival indicator for every link on another map that targets this map.
     const incomingColor = 0x4fd1c5; // cyan — always external
@@ -749,9 +872,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       for (const inLink of otherMap.locationLinks ?? []) {
         if (inLink.targetMapId !== currentMap.id) continue;
 
-        const [tx, ty] = inLink.targetPosition;
-        const ipx = tx * tileSize;
-        const ipy = ty * tileSize;
+        const incomingTarget = resolveLinkTarget(inLink, currentMap, maps);
+        const [tx, ty] = incomingTarget.position;
+        const ipx = tx;
+        const ipy = ty;
 
         // Dashed border (simulate with 8 short segments around the tile)
         const dash = tileSize / 6;
@@ -780,18 +904,27 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
           }
         }
 
-        // Arrival arrow (↓ pointing into the tile from above)
-        const acx = ipx + tileSize / 2;
-        const acy = ipy + tileSize * 0.25;
-        const arrowH = tileSize * 0.35;
-        g.moveTo(acx, ipy);
-        g.lineTo(acx, acy);
+        const [fx, fy] = incomingTarget.facing;
+        const acx = ipx;
+        const acy = ipy;
+        const arrowH = Math.max(10, tileSize * 0.7);
+        const arrowEndX = acx + fx * arrowH;
+        const arrowEndY = acy + fy * arrowH;
+        g.moveTo(acx, acy);
+        g.lineTo(arrowEndX, arrowEndY);
         g.stroke({ width: 1, color: incomingColor, alpha: 0.5 });
+        const angle = Math.atan2(fy, fx);
         const headW = tileSize * 0.2;
-        g.moveTo(acx, acy);
-        g.lineTo(acx - headW, acy - arrowH * 0.5);
-        g.moveTo(acx, acy);
-        g.lineTo(acx + headW, acy - arrowH * 0.5);
+        g.moveTo(arrowEndX, arrowEndY);
+        g.lineTo(
+          arrowEndX - headW * Math.cos(angle - Math.PI / 6),
+          arrowEndY - headW * Math.sin(angle - Math.PI / 6),
+        );
+        g.moveTo(arrowEndX, arrowEndY);
+        g.lineTo(
+          arrowEndX - headW * Math.cos(angle + Math.PI / 6),
+          arrowEndY - headW * Math.sin(angle + Math.PI / 6),
+        );
         g.stroke({ width: 1, color: incomingColor, alpha: 0.5 });
 
         // Source map label (tiny, top-left of tile)
@@ -813,6 +946,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     // No tile hover for tools that operate on objects rather than tiles
     const noTileHoverTools = [
+      'anchorPlace',
+      'anchorSelect',
+      'anchorDelete',
       'entitySelect',
       'entityPlace',
       'entityDelete',
@@ -854,6 +990,9 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     previewContainer.removeChildren();
 
     if (
+      activeTool === 'anchorPlace' ||
+      activeTool === 'anchorSelect' ||
+      activeTool === 'anchorDelete' ||
       activeTool === 'entityPlace' ||
       activeTool === 'entitySelect' ||
       activeTool === 'entityDelete'

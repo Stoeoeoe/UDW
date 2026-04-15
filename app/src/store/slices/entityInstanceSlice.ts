@@ -128,7 +128,10 @@ export const createEntityInstanceSlice: ImmerStateCreator<EntityInstanceSlice> =
   selectEntity: (id) =>
     set((state) => {
       state.selectedEntityId = id;
-      if (id !== null) state.selectedLinkId = null;
+      if (id !== null) {
+        state.selectedLinkId = null;
+        state.selectedAnchorId = null;
+      }
     }),
 
   setSelectedEntityType: (id) =>

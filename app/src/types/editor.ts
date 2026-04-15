@@ -131,6 +131,7 @@ export interface EditorState {
 
   // Location link selection/editing state
   selectedLinkId: string | null; // Currently selected link (shown in inspector)
+  selectedAnchorId: string | null; // Currently selected anchor
   pickingLinkTargetForLinkId: string | null; // One-shot mode: pick target tile on any map
   pendingNewLinkId: string | null; // Set immediately after link placement to trigger setup dialog
 
@@ -165,9 +166,11 @@ export type ToolType =
   | 'linkPlace' // Place a new location link (click source tile)
   | 'linkSelect' // Select / move location links
   | 'linkDelete' // Delete location links
+  | 'anchorSelect'
   | 'pathDraw' // Phase 2
   | 'areaDraw' // Phase 2
-  | 'anchorPlace'; // Phase 2
+  | 'anchorPlace'
+  | 'anchorDelete';
 
 export interface ValidationError {
   severity: 'error' | 'warning';
