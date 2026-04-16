@@ -753,11 +753,15 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       const endRow = Math.max(s.row, e.row);
 
       ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.scale(effectiveZoom, effectiveZoom);
-      ctx.translate(-camera.x, -camera.y);
-      const sheetX = -sprite.width / 2;
-      const sheetY = -sprite.height / 2;
+      const sheetX = mode === 'interactive' ? -sprite.width / 2 : 0;
+      const sheetY = mode === 'interactive' ? -sprite.height / 2 : 0;
+      if (mode === 'interactive') {
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.scale(effectiveZoom, effectiveZoom);
+        ctx.translate(-camera.x, -camera.y);
+      } else {
+        ctx.scale(effectiveZoom, effectiveZoom);
+      }
       ctx.strokeStyle = 'rgba(66, 153, 225, 0.9)';
       ctx.lineWidth = 2 / effectiveZoom;
       ctx.fillStyle = 'rgba(66,153,225,0.15)';
