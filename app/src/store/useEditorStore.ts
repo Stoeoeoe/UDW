@@ -19,6 +19,8 @@ import {
 } from './storeHelpers';
 import { loadProjectResources, loadSprite } from './projectLoader';
 import { createActorSlice, ActorSlice } from './slices/actorSlice';
+import { createItemSlice, ItemSlice } from './slices/itemSlice';
+import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
 import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
 import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice';
 import { createLayerDefinitionSlice, LayerDefinitionSlice } from './slices/layerDefinitionSlice';
@@ -42,6 +44,8 @@ import { createLayerSlice, LayerSlice } from './slices/layerSlice';
 export interface EditorStore
   extends
     ActorSlice,
+    ItemSlice,
+    ItemClassSlice,
     TerrainSlice,
     EntityTypeSlice,
     LayerDefinitionSlice,
@@ -220,6 +224,8 @@ export const useEditorStore = create<EditorStore>()(
         immer((set, get) => ({
           // ── Slices ────────────────────────────────────────────────────────
           ...createActorSlice(set, get, {} as never),
+          ...createItemSlice(set, get, {} as never),
+          ...createItemClassSlice(set, get, {} as never),
           ...createTerrainSlice(set, get, {} as never),
           ...createEntityTypeSlice(set, get, {} as never),
           ...createLayerDefinitionSlice(set, get, {} as never),

@@ -228,7 +228,7 @@ export const ToolPropertiesPanel: React.FC = () => {
         {/* Brush Size */}
         {showBrushSize && (
           <>
-            <Divider borderColor="gray.700" />
+            <Divider borderColor="editorBorderLight" />
             <Box>
               <HStack justify="space-between" mb={2}>
                 <Text fontSize="xs" color="gray.400" fontWeight="medium">

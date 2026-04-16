@@ -7,10 +7,11 @@ import {
   FcGrid,
   FcElectronics,
   FcBusinessman,
+  FcShop,
   FcComments,
   FcCommandLine,
-  FcMindMap,
   FcSettings,
+  FcDatabase,
 } from 'react-icons/fc';
 import { EditorMode } from '../../types/editor';
 import { CaptionText } from '../common/Typography.tsx';
@@ -106,6 +107,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
         onClick={onModeChange}
       />
       <NavIcon
+        icon={FcShop}
+        label="Items"
+        mode="items"
+        active={activeMode === 'items'}
+        onClick={onModeChange}
+      />
+      <NavIcon
         icon={FcComments}
         label="Dialog"
         mode="dialogues"
@@ -120,10 +128,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
         onClick={onModeChange}
       />
       <NavIcon
-        icon={FcMindMap}
-        label="MapCfg"
-        mode="mapConfig"
-        active={activeMode === 'mapConfig' || activeMode === 'layers' || activeMode === 'terrain'}
+        icon={FcDatabase}
+        label="Config"
+        mode="config"
+        active={activeMode === 'config' || activeMode === 'layers' || activeMode === 'terrain'}
         onClick={onModeChange}
       />
       <Spacer />

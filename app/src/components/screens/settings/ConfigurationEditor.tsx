@@ -24,7 +24,14 @@ import {
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { BsTree, BsBuilding, BsWater, BsLayersHalf, BsStack } from 'react-icons/bs';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { LayerType, PropertyDefinition, PropertyType, PropertyValue } from '../../../types/schema';
+import {
+  ItemClass,
+  LayerType,
+  PropertyDefinition,
+  PropertyType,
+  PropertyValue,
+} from '../../../types/schema';
+import { PropertyDefinitionEditor } from '../entity/PropertyDefinitionEditor';
 import { FormLabel } from '../../common/FormLabel';
 import {
   DialogListItem,
@@ -33,11 +40,12 @@ import {
   TopTabbedEditorLayout,
 } from '../common';
 import { EditorModal } from '../../common/EditorModal';
+import { FiLayers, FiMap, FiTag } from 'react-icons/fi';
 
-type MapSettingsTab = 'terrain' | 'metadata' | 'layers' | 'locations';
+type ConfigurationTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses';
 
-interface MapSettingsEditorProps {
-  initialTab?: MapSettingsTab;
+interface ConfigurationEditorProps {
+  initialTab?: ConfigurationTab;
 }
 
 type MetadataDraft = {
@@ -714,10 +722,12 @@ const MetadataDefinitionDialog: React.FC<{
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MapSettingsEditor (main)
+// Configuration Editor (main)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab = 'terrain' }) => {
+export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
+  initialTab = 'terrain',
+}) => {
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const deleteTerrainType = useEditorStore((state) => state.deleteTerrainType);
 
@@ -731,7 +741,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
     (state) => state.setLocationMetadataDefinitions,
   );
 
-  const [activeTab, setActiveTab] = useState<MapSettingsTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<ConfigurationTab>(initialTab);
   const toast = useToast();
 
   useEffect(() => {
@@ -747,6 +757,11 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
   const metadataDialog = useDisclosure();
   const [editingMetadataKey, setEditingMetadataKey] = useState<string | null>(null);
   const [metadataKind, setMetadataKind] = useState<'tile' | 'location'>('tile');
+
+  const itemClasses = useEditorStore((state) => state.itemClasses);
+  const deleteItemClass = useEditorStore((state) => state.deleteItemClass);
+  const itemClassDialog = useDisclosure();
+  const [editingItemClassId, setEditingItemClassId] = useState<string | null>(null);
 
   const sortedLayers = useMemo(
     () => [...layerDefinitions].sort((a, b) => a.zIndex - b.zIndex),
@@ -828,6 +843,30 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
     ),
   }));
 
+  const itemClassItems: DialogListItem[] = itemClasses.map((cls) => ({
+    id: cls.id,
+    title: cls.name,
+    subtitle: cls.id,
+    badge: (
+      <Badge fontSize="9px" colorScheme="green" variant="subtle">
+        {cls.properties.length} prop{cls.properties.length !== 1 ? 's' : ''}
+      </Badge>
+    ),
+    meta: cls.description ? (
+      <Text fontSize="10px" color="gray.500" noOfLines={1}>
+        {cls.description}
+      </Text>
+    ) : undefined,
+  }));
+
+  const deleteItemClassById = async (id: string) => {
+    const cls = itemClasses.find((c) => c.id === id);
+    if (!cls) return;
+    if (!confirm(`Delete item class "${cls.name}"?`)) return;
+    await deleteItemClass(id);
+    toast({ title: 'Item class deleted', status: 'info', duration: 1200 });
+  };
+
   const deleteTerrain = async (id: string) => {
     const terrain = terrainTypes.find((entry) => entry.id === id);
     if (!terrain) return;
@@ -881,7 +920,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         onDeleteItem={(id) => {
           void deleteTerrain(id);
         }}
-        emptyIcon="🟦"
+        emptyIcon={<FiMap />}
         emptyTitle="No terrain types"
         emptyDescription="Create terrain definitions to enable terrain painting and transitions."
       />
@@ -904,7 +943,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         onDeleteItem={(id) => {
           void deleteMetadata(id);
         }}
-        emptyIcon="🏷️"
+        emptyIcon={<FiTag />}
         emptyTitle="No metadata fields"
         emptyDescription="Define metadata schema fields that can be assigned per tile."
       />
@@ -927,9 +966,30 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         onDeleteItem={(id) => {
           void deleteMetadata(id);
         }}
-        emptyIcon="📍"
+        emptyIcon={<FiMap />}
         emptyTitle="No location metadata"
         emptyDescription="Define map/location metadata fields (e.g., music, indoors/outdoors)."
+      />
+    ) : activeTab === 'itemclasses' ? (
+      <DialogListWorkspace
+        title="Item Classes"
+        description="Reusable templates that add extra property definitions to items."
+        items={itemClassItems}
+        addLabel="Add Item Class"
+        onAdd={() => {
+          setEditingItemClassId(null);
+          itemClassDialog.onOpen();
+        }}
+        onOpenItem={(id) => {
+          setEditingItemClassId(id);
+          itemClassDialog.onOpen();
+        }}
+        onDeleteItem={(id) => {
+          void deleteItemClassById(id);
+        }}
+        emptyIcon={<FiTag />}
+        emptyTitle="No item classes"
+        emptyDescription="Create item class templates to add extra typed properties to items (e.g. Seed, Weapon)."
       />
     ) : (
       <DialogListWorkspace
@@ -948,7 +1008,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         onDeleteItem={(id) => {
           void deleteLayer(id);
         }}
-        emptyIcon="🧱"
+        emptyIcon={<FiLayers />}
         emptyTitle="No layer definitions"
         emptyDescription="Create layer templates that determine map layer structure."
       />
@@ -960,7 +1020,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
   return (
     <>
       <TopTabbedEditorLayout
-        title="Map Config"
+        title="Configuration"
         tabs={[
           { id: 'terrain', label: 'Terrain', badge: terrainTypes.length },
           { id: 'metadata', label: 'Tile Metadata', badge: tileMetadataDefinitions.length },
@@ -970,6 +1030,7 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
             label: 'Location Metadata',
             badge: locationMetadataDefinitions.length,
           },
+          { id: 'itemclasses', label: 'Item Classes', badge: itemClasses.length },
         ]}
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
@@ -998,6 +1059,169 @@ export const MapSettingsEditor: React.FC<MapSettingsEditorProps> = ({ initialTab
         editingKey={editingMetadataKey}
         kind={metadataKind}
       />
+
+      <ItemClassDialogModal
+        key={editingItemClassId ?? 'new-item-class'}
+        isOpen={itemClassDialog.isOpen}
+        onClose={itemClassDialog.onClose}
+        editingId={editingItemClassId}
+      />
     </>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ItemClassDialogModal
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ItemClassDialogModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  editingId: string | null;
+}> = ({ isOpen, onClose, editingId }) => {
+  const itemClasses = useEditorStore((s) => s.itemClasses);
+  const addItemClass = useEditorStore((s) => s.addItemClass);
+  const updateItemClass = useEditorStore((s) => s.updateItemClass);
+  const deleteItemClass = useEditorStore((s) => s.deleteItemClass);
+  const toast = useToast();
+
+  const existing = itemClasses.find((c) => c.id === editingId);
+
+  const form = useForm({
+    defaultValues: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          description: existing.description ?? '',
+          properties: existing.properties,
+        }
+      : {
+          id: `itemclass_${Date.now()}`,
+          name: 'New Item Class',
+          description: '',
+          properties: [] as ItemClass['properties'],
+        },
+    onSubmit: async ({ value }) => {
+      const nextId = value.id.trim();
+      const nextName = value.name.trim();
+      if (!nextId || !nextName) return;
+
+      if (itemClasses.some((c) => c.id === nextId) && (!editingId || editingId !== nextId)) {
+        toast({ title: 'Item class ID already exists', status: 'warning', duration: 1500 });
+        return;
+      }
+
+      if (editingId) {
+        await updateItemClass(editingId, {
+          name: nextName,
+          description: value.description || undefined,
+          properties: value.properties,
+        });
+        toast({ title: 'Item class updated', status: 'success', duration: 1200 });
+      } else {
+        await addItemClass({
+          id: nextId,
+          name: nextName,
+          description: value.description || undefined,
+          properties: value.properties,
+        });
+        toast({ title: 'Item class created', status: 'success', duration: 1200 });
+      }
+      onClose();
+    },
+  });
+
+  return (
+    <EditorModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingId ? 'Edit Item Class' : 'New Item Class'}
+      size="xl"
+    >
+      <EntityFormDialog
+        title={editingId ? 'Edit Item Class' : 'New Item Class'}
+        onCancel={onClose}
+        onSubmit={() => form.handleSubmit()}
+        submitLabel={editingId ? 'Save Changes' : 'Create'}
+        scrollable
+      >
+        <VStack spacing={4} align="stretch">
+          {!editingId && (
+            <form.Field name="id">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>ID</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value.replace(/[^a-z0-9_-]/g, ''))}
+                    onBlur={field.handleBlur}
+                    placeholder="seed, weapon, equipment…"
+                    fontFamily="mono"
+                    size="sm"
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+          )}
+
+          <form.Field name="name">
+            {(field) => (
+              <FormControl>
+                <FormLabel>Name</FormLabel>
+                <Input
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  placeholder="Seed, Weapon…"
+                  size="sm"
+                />
+              </FormControl>
+            )}
+          </form.Field>
+
+          <form.Field name="description">
+            {(field) => (
+              <FormControl>
+                <FormLabel>Description</FormLabel>
+                <Input
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  placeholder="Optional"
+                  size="sm"
+                />
+              </FormControl>
+            )}
+          </form.Field>
+
+          <form.Field name="properties">
+            {(field) => (
+              <PropertyDefinitionEditor
+                properties={field.state.value}
+                onChange={(props) => field.handleChange(props)}
+              />
+            )}
+          </form.Field>
+
+          {editingId && (
+            <Button
+              size="sm"
+              colorScheme="red"
+              variant="outline"
+              leftIcon={<DeleteIcon />}
+              alignSelf="flex-start"
+              onClick={async () => {
+                if (!confirm(`Delete item class "${existing?.name}"?`)) return;
+                await deleteItemClass(editingId);
+                toast({ title: 'Item class deleted', status: 'info', duration: 1200 });
+                onClose();
+              }}
+            >
+              Delete Class
+            </Button>
+          )}
+        </VStack>
+      </EntityFormDialog>
+    </EditorModal>
   );
 };

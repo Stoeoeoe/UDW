@@ -8,6 +8,7 @@ import {
   Actor,
   DialogueDocument,
   DialogueIndex,
+  Item,
   Map as GameMap,
   Project,
   Tileset,
@@ -238,6 +239,33 @@ export class FileSystemManager {
     return this.loadAllActors();
   }
 
+  /**
+   * Load all items from items/ directory.
+   */
+  async loadAllItems(): Promise<Item[]> {
+    if (this.isElectron()) {
+      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
+        projectPath: this.projectPath,
+        subDir: 'items',
+      })) as Item[];
+    } else {
+      if (!this.projectRoot) throw new Error('No project open.');
+      const items: Item[] = [];
+      try {
+        const dir = await this.projectRoot.getDirectoryHandle('items', { create: false });
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.item.json')) {
+            const file = await (entry as FileSystemFileHandle).getFile();
+            items.push(JSON.parse(await file.text()));
+          }
+        }
+      } catch {
+        // items/ directory may not exist yet
+      }
+      return items;
+    }
+  }
+
   async readDialogueIndex(): Promise<DialogueIndex | null> {
     const index = await this.readJson('dialogues', 'dialogues.index.json');
     return (index as DialogueIndex | null) ?? null;
@@ -257,7 +285,7 @@ export class FileSystemManager {
    * Save a JSON file (Map, Tileset, or Project)
    */
   async saveJson(
-    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | '',
+    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | 'items' | '',
     filename: string,
     data: unknown,
   ): Promise<void> {
@@ -279,7 +307,7 @@ export class FileSystemManager {
    * Delete a JSON file
    */
   async deleteJson(
-    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | '',
+    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | 'items' | '',
     filename: string,
   ): Promise<void> {
     if (this.isElectron()) {

@@ -357,64 +357,51 @@ export const LinkInspector: React.FC = () => {
             )}
           </FormControl>
 
+          {/* Arrival Anchor — direct targetAnchorId selection */}
           <FormControl>
-            <FieldLabel>Target Link</FieldLabel>
+            <FieldLabel>Arrival Anchor</FieldLabel>
             <Select
               size="xs"
-              value={link.targetLinkId ?? ''}
+              value={link.targetAnchorId ?? ''}
               bg="#0a0a0b"
               borderColor="#1a1a2e"
               color="white"
+              isDisabled={!landingMap}
               onChange={(e) =>
                 update({
-                  targetLinkId: e.target.value || undefined,
-                  targetPosition: effectiveTargetPosition,
-                  targetFacing: effectiveFacing,
+                  targetAnchorId: e.target.value || undefined,
                 })
               }
             >
-              <option value="">Custom arrival position</option>
-              {targetableLinks.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.label || candidate.id}
+              <option value="">— None (use position below) —</option>
+              {(landingMap?.spatialPrimitives?.anchors ?? []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
                 </option>
               ))}
             </Select>
             <Text fontSize="10px" color="gray.500" mt={1}>
-              Prefer targeting a link. Its visible arrival anchor defines where actors land.
+              Anchor on {landingMap?.name ?? 'target map'} that sets the arrival position and
+              facing. Takes priority over the position below.
             </Text>
-            {(targetLink || landingAnchor) && (
-              <VStack align="stretch" spacing={2} mt={2}>
-                <HStack spacing={2}>
-                  {targetLink && (
-                    <Badge colorScheme="green" fontSize="9px">
-                      → {targetLink.label || targetLink.id}
-                    </Badge>
-                  )}
-                  {landingAnchor && (
-                    <Badge colorScheme="orange" fontSize="9px">
-                      @{landingAnchor.name}
-                    </Badge>
-                  )}
-                </HStack>
-                {landingAnchor && landingMap && (
-                  <HStack spacing={2}>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      colorScheme="orange"
-                      onClick={() => openAnchorOnMap(landingMap.id, landingAnchor.id)}
-                    >
-                      Open target anchor
-                    </Button>
-                    <Text fontSize="10px" color="gray.500">
-                      {landingMap.name}
-                    </Text>
-                  </HStack>
+            {landingAnchor && !targetLink && (
+              <HStack spacing={2} mt={2}>
+                <Badge colorScheme="orange" fontSize="9px">
+                  @{landingAnchor.name}
+                </Badge>
+                {landingMap && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="orange"
+                    onClick={() => openAnchorOnMap(landingMap.id, landingAnchor.id)}
+                  >
+                    Open anchor
+                  </Button>
                 )}
-              </VStack>
+              </HStack>
             )}
-            {!landingAnchor && landingMap && (
+            {!link.targetAnchorId && landingMap && (
               <Button
                 size="xs"
                 mt={2}
@@ -427,19 +414,78 @@ export const LinkInspector: React.FC = () => {
                   }
                 }}
               >
-                Create target anchor
+                Create &amp; assign arrival anchor
               </Button>
             )}
           </FormControl>
 
+          {/* Paired Link — targetLinkId for bidirectional pairing */}
           <FormControl>
-            <FieldLabel>Custom Arrival Position</FieldLabel>
+            <FieldLabel>Paired Link</FieldLabel>
+            <Select
+              size="xs"
+              value={link.targetLinkId ?? ''}
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              isDisabled={!landingMap}
+              onChange={(e) =>
+                update({
+                  targetLinkId: e.target.value || undefined,
+                })
+              }
+            >
+              <option value="">— None —</option>
+              {targetableLinks.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.label || candidate.id}
+                </option>
+              ))}
+            </Select>
+            <Text fontSize="10px" color="gray.500" mt={1}>
+              Optional. When set, this link uses the paired link's arrival anchor. Overrides the
+              anchor above.
+            </Text>
+            {targetLink && (
+              <VStack align="stretch" spacing={2} mt={2}>
+                <HStack spacing={2}>
+                  <Badge colorScheme="green" fontSize="9px">
+                    → {targetLink.label || targetLink.id}
+                  </Badge>
+                  {landingAnchor && (
+                    <Badge colorScheme="orange" fontSize="9px">
+                      via @{landingAnchor.name}
+                    </Badge>
+                  )}
+                  {!landingAnchor && (
+                    <Badge colorScheme="yellow" fontSize="9px">
+                      no anchor on paired link
+                    </Badge>
+                  )}
+                </HStack>
+                {landingAnchor && landingMap && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="orange"
+                    alignSelf="flex-start"
+                    onClick={() => openAnchorOnMap(landingMap.id, landingAnchor.id)}
+                  >
+                    Open anchor
+                  </Button>
+                )}
+              </VStack>
+            )}
+          </FormControl>
+
+          <FormControl>
+            <FieldLabel>Fallback Arrival Position</FieldLabel>
 
             {landingMap ? (
               <Box mt={1}>
                 <Text fontSize="10px" color="gray.500" mb={2}>
-                  {targetLink
-                    ? `This is only used if ${targetLink.label || targetLink.id} has no anchor.`
+                  {landingAnchor
+                    ? `Ignored — anchor "${landingAnchor.name}" takes priority.`
                     : `Click a tile on ${landingMap.name} to place the landing point.`}
                 </Text>
                 <MapPreviewPicker
@@ -449,7 +495,7 @@ export const LinkInspector: React.FC = () => {
                   }
                   width={240}
                   height={180}
-                  interactive={true}
+                  interactive={!landingAnchor}
                   overlays={[
                     ...(previewAnchorPosition && landingAnchor
                       ? [
@@ -465,7 +511,9 @@ export const LinkInspector: React.FC = () => {
                       kind: 'arrival',
                       position: previewTargetPosition,
                       facing: effectiveFacing,
-                      color: 'rgba(34, 211, 238, 0.95)',
+                      color: landingAnchor
+                        ? 'rgba(34, 211, 238, 0.35)'
+                        : 'rgba(34, 211, 238, 0.95)',
                     },
                   ]}
                 />
@@ -480,7 +528,10 @@ export const LinkInspector: React.FC = () => {
             )}
 
             <Box mt={landingMap ? 3 : 2}>
-              <Vector2Field value={effectiveTargetPosition} onChange={updateLandingPosition} />
+              <Vector2Field
+                value={link.targetPosition}
+                onChange={(position) => update({ targetPosition: position })}
+              />
             </Box>
 
             {/* Status badge */}
@@ -490,7 +541,7 @@ export const LinkInspector: React.FC = () => {
                   ⚠ Target map not found
                 </Badge>
               ) : isSameMap ? (
-                <Badge colorScheme="red" fontSize="9px">
+                <Badge colorScheme="yellow" fontSize="9px">
                   Same map
                 </Badge>
               ) : (

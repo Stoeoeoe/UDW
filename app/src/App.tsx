@@ -10,8 +10,9 @@ import {
   DialogueEditor,
   VariableEditor,
   SettingsEditor,
+  ItemEditor,
 } from './components/screens';
-import { MapSettingsEditor } from './components/screens/settings/MapSettingsEditor';
+import { ConfigurationEditor } from './components/screens/settings/ConfigurationEditor';
 import { LandingScreen } from './components/startup/LandingScreen';
 import { useEditorStore } from './store/useEditorStore';
 
@@ -36,18 +37,20 @@ function App() {
         return <EntityEditor />;
       case 'actors':
         return <ActorEditor />;
+      case 'items':
+        return <ItemEditor />;
       case 'dialogues':
         return <DialogueEditor />;
       case 'scripting':
         return <VariableEditor />;
       case 'settings':
         return <SettingsEditor />;
-      case 'mapConfig':
-        return <MapSettingsEditor />;
+      case 'config':
+        return <ConfigurationEditor />;
       case 'terrain':
-        return <MapSettingsEditor initialTab="terrain" />;
+        return <ConfigurationEditor initialTab="terrain" />;
       case 'layers':
-        return <MapSettingsEditor initialTab="layers" />;
+        return <ConfigurationEditor initialTab="layers" />;
       default:
         return null;
     }

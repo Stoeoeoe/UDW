@@ -123,6 +123,19 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
     state.actors = castDraft(actors);
   });
 
+  // 1.81 Item classes (project-level, stored on project)
+  if (proj?.itemClasses?.length) {
+    set((state) => {
+      state.itemClasses = castDraft(proj.itemClasses!);
+    });
+  }
+
+  // 1.82 Items
+  const items = await fileSystem.loadAllItems();
+  set((state) => {
+    state.items = castDraft(items);
+  });
+
   // 1.85 Dialogue index + documents
   const loadedDialogueIndex: DialogueIndex = (await fileSystem.readDialogueIndex()) ?? {
     version: 1,

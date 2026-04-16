@@ -18,6 +18,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       mx="auto"
       bg="editor.panelBg"
       border="1px"
+      padding={5}
       borderColor="whiteAlpha.100"
       borderRadius="lg"
       overflow="hidden"

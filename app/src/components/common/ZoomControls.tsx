@@ -24,7 +24,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       p={1}
       rounded="lg"
       border="1px"
-      borderColor="gray.700"
+      borderColor="editorBorderLight"
       spacing={1}
     >
       <IconButton

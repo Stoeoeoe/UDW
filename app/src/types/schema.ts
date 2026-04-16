@@ -13,6 +13,8 @@ export interface Project {
   };
   // Optional project-level terrain types for autotiling and labeling
   terrainTypes?: { id: string; displayName: string; color: string }[];
+  // Project-level item class definitions (templates with extra property schemas)
+  itemClasses?: ItemClass[];
   // Default layer definitions for maps
   layerDefinitions?: LayerDefinition[];
   // Project-level entity type definitions
@@ -358,6 +360,28 @@ export interface ScriptContextType {
   description?: string;
   fields: GameVariable[];
   functions: ScriptFunction[];
+}
+
+// Item Definitions
+
+/** A reusable template that adds extra property definitions to items of a given class. */
+export interface ItemClass {
+  id: string; // Unique identifier (kebab-case)
+  name: string; // Display name (e.g. "Seed", "Weapon", "Equipment")
+  description?: string;
+  properties: PropertyDefinition[]; // Extra properties for items of this class
+}
+
+export interface Item {
+  id: string; // Unique identifier (kebab-case)
+  name: string; // Display name
+  category: string; // Category grouping (e.g. "Consumable", "Weapon")
+  icon: string; // Relative path to icon image (from project assets)
+  description: string; // Long description shown to the player
+  maxStackSize: number; // Maximum stack size in inventory (default 99)
+  pickupSound?: string; // Relative path to pickup audio clip (optional)
+  classId?: string; // Optional reference to an ItemClass id
+  classProperties?: PropertyValues; // Values for the extra properties defined by the assigned ItemClass
 }
 
 // Actor Definitions

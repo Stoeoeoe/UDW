@@ -29,7 +29,7 @@ interface DialogListWorkspaceProps {
   addLabel?: string;
   onOpenItem?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
-  emptyIcon?: string;
+  emptyIcon?: string | React.ReactNode;
   emptyTitle?: string;
   emptyDescription?: string;
   maxWidth?: string;

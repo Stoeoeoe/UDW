@@ -189,9 +189,10 @@ export type EditorMode =
   | 'tilesets'
   | 'entities'
   | 'actors'
+  | 'items'
   | 'dialogues'
   | 'scripting'
   | 'settings'
-  | 'mapConfig'
+  | 'config'
   | 'terrain'
   | 'layers';
