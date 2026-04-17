@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "map.schema.json",
   "title": "Map",
-  "description": "A map file (.map.json). Layer tile data may be dense (2D array) or sparse (object with 'sparse: true'). Terrain data uses a palette index when 'terrainPalette' is present.",
+  "description": "A map file (.vmap). Layer tile data may be dense (2D array) or sparse (object with 'sparse: true'). Terrain data uses a palette index when 'terrainPalette' is present.",
   "type": "object",
   "required": [
     "version",
@@ -96,7 +96,8 @@
             "entity",
             "terrain",
             "anchor",
-            "locationlink"
+            "locationlink",
+            "trigger"
           ]
         },
         "visible": { "type": "boolean" },
@@ -110,7 +111,7 @@
         "icon": { "type": "string" },
         "definitionId": {
           "type": "string",
-          "description": "Reference to a LayerDefinition in project.json."
+          "description": "Reference to a LayerDefinition in project"
         },
         "data": {
           "description": "Encoded tile IDs, row-major [y][x]. Either a dense 2D array of integers/nulls or a sparse encoding object.",
@@ -242,6 +243,10 @@
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string" },
+        "triggerId": {
+          "type": "string",
+          "description": "References a MapTrigger on this map (preferred source)."
+        },
         "sourcePosition": {
           "type": "array",
           "description": "Absolute pixel coordinates [x, y].",
@@ -290,7 +295,56 @@
       "properties": {
         "paths": { "type": "array", "items": { "$ref": "#/$defs/Path" } },
         "areas": { "type": "array", "items": { "$ref": "#/$defs/Area" } },
-        "anchors": { "type": "array", "items": { "$ref": "#/$defs/Anchor" } }
+        "anchors": { "type": "array", "items": { "$ref": "#/$defs/Anchor" } },
+        "triggers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/MapTrigger" }
+        }
+      }
+    },
+    "MapTrigger": {
+      "type": "object",
+      "required": ["id", "type", "shape", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["locationLinkTrigger"]
+        },
+        "shape": {
+          "type": "string",
+          "enum": ["rectangle", "polygon"]
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y]. Top-left for rectangle, first vertex for polygon.",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "size": {
+          "type": "array",
+          "description": "Pixel [width, height]. Only for rectangle shape.",
+          "items": { "type": "number", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "points": {
+          "type": "array",
+          "description": "Absolute pixel vertices. Only for polygon shape.",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
       }
     },
     "Path": {

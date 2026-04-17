@@ -2,9 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "tileset.schema.json",
   "title": "Tileset",
-  "description": "A tileset file (.tileset.json) defining a sprite sheet and per-tile metadata.",
+  "description": "A tileset file (.vts) defining a sprite sheet and per-tile metadata.",
   "type": "object",
-  "required": ["version", "id", "name", "spriteSheet", "columns", "tileCount", "tiles"],
+  "required": [
+    "version",
+    "id",
+    "name",
+    "spriteSheet",
+    "columns",
+    "tileCount",
+    "tiles"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {

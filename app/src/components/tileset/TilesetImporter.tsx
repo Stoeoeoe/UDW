@@ -49,7 +49,7 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
       const blob = await fileSystem.readFileAsBlob(rawPath);
 
       // Extract filename from path
-      const name = rawPath.split(/[\\/]/).pop() || 'tileset';
+      const name = rawPath.split(/[\\/]/).pop() || 'vts';
       const resolved = await resolveSpriteAsset(rawPath, blob);
       const url = URL.createObjectURL(resolved.imageBlob);
 

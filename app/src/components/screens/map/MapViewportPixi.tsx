@@ -183,6 +183,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderTriggers,
     renderLocationLinks,
     renderHover,
     renderPreview,
@@ -199,6 +200,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderTriggers();
     renderLocationLinks();
     renderHover();
     renderPreview();
@@ -217,25 +219,38 @@ export const MapViewportPixi: React.FC = () => {
           variationChanged ||
           state.currentMap?.layers?.some((layer, i) => {
             const prev = prevState.currentMap?.layers?.[i];
-            return layer.data !== prev?.data || layer.id !== prev?.id || layer.kind !== prev?.kind || layer.visible !== prev?.visible;
+            return (
+              layer.data !== prev?.data ||
+              layer.id !== prev?.id ||
+              layer.kind !== prev?.kind ||
+              layer.visible !== prev?.visible
+            );
           }) ||
           state.currentMap?.layers?.length !== prevState.currentMap?.layers?.length ||
           state.currentMap?.width !== prevState.currentMap?.width ||
           state.currentMap?.height !== prevState.currentMap?.height;
 
-        if (linksChanged && !tileDataChanged) {
+        const triggersChanged =
+          state.currentMap?.spatialPrimitives?.triggers !==
+          prevState.currentMap?.spatialPrimitives?.triggers;
+
+        if (linksChanged && !tileDataChanged && !triggersChanged) {
           // Only links changed (e.g. link drag) — skip expensive tile/entity redraws
           renderLocationLinks();
+        } else if (triggersChanged && !tileDataChanged && !linksChanged) {
+          renderTriggers();
         } else if (tileDataChanged) {
           renderTiles();
           renderEntities();
           renderGrid();
           renderCollisionOverlay();
           renderTerrainOverlay();
+          renderTriggers();
           renderLocationLinks();
         } else {
           // Only entities or other map data changed — skip tile/grid redraws
           renderEntities();
+          renderTriggers();
           renderLocationLinks();
         }
       }
@@ -246,6 +261,10 @@ export const MapViewportPixi: React.FC = () => {
         state.maps !== prevState.maps
       ) {
         renderLocationLinks();
+      }
+      // Re-render triggers when selection changes
+      if (state.selectedTriggerId !== prevState.selectedTriggerId) {
+        renderTriggers();
       }
       // Re-render entities when selection changes
       if (state.selectedEntityId !== prevState.selectedEntityId) {
@@ -289,6 +308,14 @@ export const MapViewportPixi: React.FC = () => {
           renderLocationLinks();
         }
       }
+      // Re-render trigger preview while drawing a trigger
+      if (
+        (state.drawPreview !== prevState.drawPreview &&
+          (state.activeTool === 'triggerPlace' || prevState.activeTool === 'triggerPlace')) ||
+        state.polygonPreviewPoints !== prevState.polygonPreviewPoints
+      ) {
+        renderTriggers();
+      }
       // Re-render preview on tool/tile selection/brush size/draw mode change
       if (
         state.activeTool !== prevState.activeTool ||
@@ -310,6 +337,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderTriggers,
     renderLocationLinks,
     renderHover,
     renderPreview,
@@ -353,7 +381,7 @@ export const MapViewportPixi: React.FC = () => {
       )
         return;
 
-      // Delete selected entity or link with Backspace or Delete
+      // Delete selected entity, link, or trigger with Backspace or Delete
       if (e.key === 'Backspace' || e.key === 'Delete') {
         const {
           selectedEntityId,
@@ -362,7 +390,16 @@ export const MapViewportPixi: React.FC = () => {
           selectedLinkId,
           removeLocationLink,
           selectLink,
+          selectedTriggerId,
+          removeTrigger,
+          selectTrigger,
         } = useEditorStore.getState();
+        if (selectedTriggerId) {
+          e.preventDefault();
+          removeTrigger(selectedTriggerId);
+          selectTrigger(null);
+          return;
+        }
         if (selectedLinkId) {
           e.preventDefault();
           removeLocationLink(selectedLinkId);
@@ -373,6 +410,17 @@ export const MapViewportPixi: React.FC = () => {
           e.preventDefault();
           removeEntity(selectedEntityId);
           selectEntity(null);
+          return;
+        }
+      }
+
+      // Escape cancels polygon pen drawing
+      if (e.key === 'Escape') {
+        const { activeTool, setPolygonPreviewPoints } = useEditorStore.getState();
+        if (activeTool === 'triggerPolygon') {
+          setPolygonPreviewPoints(null);
+          useEditorStore.getState().setActiveTool('triggerSelect');
+          e.preventDefault();
           return;
         }
       }
@@ -389,6 +437,8 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'locationlink') {
           useEditorStore.getState().setActiveTool('linkPlace');
+        } else if (layer?.kind === 'trigger') {
+          useEditorStore.getState().setActiveTool('triggerPlace');
         } else {
           useEditorStore.getState().setActiveTool('entityPlace');
         }
@@ -400,6 +450,8 @@ export const MapViewportPixi: React.FC = () => {
           useEditorStore.getState().setActiveTool('linkSelect');
         } else if (layer?.kind === 'anchor') {
           useEditorStore.getState().setActiveTool('anchorSelect');
+        } else if (layer?.kind === 'trigger') {
+          useEditorStore.getState().setActiveTool('triggerSelect');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
         }
@@ -411,6 +463,8 @@ export const MapViewportPixi: React.FC = () => {
           useEditorStore.getState().setActiveTool('linkDelete');
         } else if (layer?.kind === 'anchor') {
           useEditorStore.getState().setActiveTool('anchorDelete');
+        } else if (layer?.kind === 'trigger') {
+          useEditorStore.getState().setActiveTool('triggerDelete');
         } else {
           useEditorStore.getState().setActiveTool('entityDelete');
         }

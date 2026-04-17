@@ -36,6 +36,7 @@ import {
   LocationLinkSlice,
 } from './slices/mapSlice';
 import { createLayerSlice, LayerSlice } from './slices/layerSlice';
+import { createTriggerSlice, TriggerSlice } from './slices/triggerSlice';
 
 // ============================================================================
 // Store interface
@@ -56,7 +57,8 @@ export interface EditorStore
     EntityInstanceSlice,
     MapSlice,
     LocationLinkSlice,
-    LayerSlice {
+    LayerSlice,
+    TriggerSlice {
   // Fields from EditorState not owned by any slice
   project: Project | null;
   projectPath: string | null;
@@ -105,6 +107,7 @@ function syncEditorSelectionsWithMap(): void {
       state.selectedEntityId = null;
       state.selectedLinkId = null;
       state.selectedAnchorId = null;
+      state.selectedTriggerId = null;
       state.activeVariationId = null;
       return;
     }
@@ -133,6 +136,13 @@ function syncEditorSelectionsWithMap(): void {
         (anchor) => anchor.id === state.selectedAnchorId,
       );
       if (!hasAnchor) state.selectedAnchorId = null;
+    }
+
+    if (state.selectedTriggerId) {
+      const hasTrigger = currentMap.spatialPrimitives?.triggers?.some(
+        (t) => t.id === state.selectedTriggerId,
+      );
+      if (!hasTrigger) state.selectedTriggerId = null;
     }
 
     if (state.selectedEntityId) {
@@ -237,6 +247,7 @@ export const useEditorStore = create<EditorStore>()(
           ...createMapSlice(set, get, {} as never),
           ...createLocationLinkSlice(set, get, {} as never),
           ...createLayerSlice(set, get, {} as never),
+          ...createTriggerSlice(set, get, {} as never),
 
           // ── Initial state not owned by slices ─────────────────────────────
           project: null,
@@ -331,7 +342,7 @@ export const useEditorStore = create<EditorStore>()(
           loadSprite: (path, blob) => loadSprite(path, blob, set),
 
           updateProject: async (project) => {
-            await fileSystem.saveJson('', `${project.id}.project.json`, {
+            await fileSystem.saveJson('', `${project.id}.vproj`, {
               $schema: '../schemas/project.schema.json',
               ...project,
             });

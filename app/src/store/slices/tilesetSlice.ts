@@ -17,7 +17,7 @@ type ImmerStateCreator<T> = StateCreator<
 async function saveTilesetFile(tileset: Tileset): Promise<void> {
   const snapshot = serializeTileset(JSON.parse(JSON.stringify(tileset)) as Tileset);
   useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('tilesets', `${tileset.id}.tileset.json`, snapshot);
+  await fileSystem.saveJson('tilesets', `${tileset.id}.vts`, snapshot);
   useSaveStore.getState().setStatus('saved');
   setTimeout(() => {
     if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
@@ -192,7 +192,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
     });
 
     useSaveStore.getState().setStatus('saving');
-    await fileSystem.deleteJson('tilesets', `${id}.tileset.json`);
+    await fileSystem.deleteJson('tilesets', `${id}.vts`);
     useSaveStore.getState().setStatus('saved');
     setTimeout(() => {
       if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');

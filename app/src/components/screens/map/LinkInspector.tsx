@@ -202,110 +202,50 @@ export const LinkInspector: React.FC = () => {
 
         {/* Source */}
         <VStack align="stretch" spacing={3}>
-          <SectionLabel textStyle="fieldLabel">Source</SectionLabel>
+          <SectionLabel textStyle="fieldLabel">Source Trigger</SectionLabel>
 
           <FormControl>
-            <FieldLabel>Pixel Position</FieldLabel>
-            <HStack spacing={2}>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                X
+            <FieldLabel>Trigger Zone</FieldLabel>
+            <Select
+              size="xs"
+              value={link.triggerId ?? ''}
+              bg="#0a0a0b"
+              borderColor="#1a1a2e"
+              color="white"
+              onChange={(e) => update({ triggerId: e.target.value || undefined })}
+            >
+              <option value="">— None (legacy position) —</option>
+              {(currentMap?.spatialPrimitives?.triggers ?? []).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label || t.id}
+                </option>
+              ))}
+            </Select>
+            {link.triggerId ? (
+              (() => {
+                const t = currentMap?.spatialPrimitives?.triggers?.find(
+                  (tr) => tr.id === link.triggerId,
+                );
+                return t ? (
+                  <Text fontSize="10px" color="purple.300" mt={1} fontFamily="mono">
+                    {t.shape} · ({t.position[0]}, {t.position[1]})
+                    {t.shape === 'rectangle' && t.size
+                      ? ` ${t.size[0]}×${t.size[1]}px`
+                      : t.points
+                        ? ` ${t.points.length} pts`
+                        : ''}
+                  </Text>
+                ) : (
+                  <Text fontSize="10px" color="red.400" mt={1}>
+                    ⚠ Trigger not found
+                  </Text>
+                );
+              })()
+            ) : (
+              <Text fontSize="10px" color="gray.600" mt={1}>
+                No trigger assigned. Create a trigger on the Triggers layer and assign it here.
               </Text>
-              <NumberInput
-                size="xs"
-                value={link.sourcePosition[0]}
-                min={0}
-                max={(currentMap?.width ?? 999) * projectTileSize}
-                precision={0}
-                onChange={(_, val) => {
-                  if (!isNaN(val))
-                    update({ sourcePosition: [Math.round(val), link.sourcePosition[1]] });
-                }}
-                flex={1}
-              >
-                <NumberInputField
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  _hover={{ bg: '#071018' }}
-                />
-              </NumberInput>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                Y
-              </Text>
-              <NumberInput
-                size="xs"
-                value={link.sourcePosition[1]}
-                min={0}
-                max={(currentMap?.height ?? 999) - 1}
-                precision={0}
-                onChange={(_, val) => {
-                  if (!isNaN(val))
-                    update({ sourcePosition: [link.sourcePosition[0], Math.round(val)] });
-                }}
-                flex={1}
-              >
-                <NumberInputField
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  _hover={{ bg: '#071018' }}
-                />
-              </NumberInput>
-            </HStack>
-          </FormControl>
-
-          <FormControl>
-            <FieldLabel>Trigger Size (px)</FieldLabel>
-            <HStack spacing={2}>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                W
-              </Text>
-              <NumberInput
-                size="xs"
-                value={link.triggerSize[0]}
-                min={1}
-                max={(currentMap?.width ?? 64) * projectTileSize}
-                precision={0}
-                onChange={(_, val) => {
-                  if (!isNaN(val))
-                    update({ triggerSize: [Math.max(1, Math.round(val)), link.triggerSize[1]] });
-                }}
-                flex={1}
-              >
-                <NumberInputField
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  _hover={{ bg: '#071018' }}
-                />
-              </NumberInput>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                H
-              </Text>
-              <NumberInput
-                size="xs"
-                value={link.triggerSize[1]}
-                min={1}
-                max={16}
-                precision={0}
-                onChange={(_, val) => {
-                  if (!isNaN(val))
-                    update({ triggerSize: [link.triggerSize[0], Math.max(1, Math.round(val))] });
-                }}
-                flex={1}
-              >
-                <NumberInputField
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  _hover={{ bg: '#071018' }}
-                />
-              </NumberInput>
-            </HStack>
+            )}
           </FormControl>
         </VStack>
 

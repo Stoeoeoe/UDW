@@ -115,7 +115,7 @@ export const LandingScreen: React.FC = () => {
               onClick={handleOpenProject}
               icon="📂"
               title="Open Project"
-              description="Select a project.json file to open an existing project."
+              description="Select a .vproj file to open an existing project."
               hoverColor="blue.500"
             />
 

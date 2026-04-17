@@ -9,11 +9,13 @@ import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { LinkInspector } from './LinkInspector';
 import { AnchorInspector } from './AnchorInspector';
+import { TriggerInspector } from './TriggerInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
 import { AnchorBottomPanel } from './AnchorBottomPanel';
 import { LinkBottomPanel } from './LinkBottomPanel';
+import { TriggerBottomPanel } from './TriggerBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
 import { EditorModal } from '../../common/EditorModal';
 import { resolveMapContext } from '../../../lib/mapUtils';
@@ -31,6 +33,7 @@ import { MapWorldView } from './MapWorldView.tsx';
 const MapRightPanel: React.FC = () => {
   const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
   const selectedAnchorId = useEditorStore((s) => s.selectedAnchorId);
+  const selectedTriggerId = useEditorStore((s) => s.selectedTriggerId);
   const selectedEntityId = useEditorStore((s) => s.selectedEntityId);
 
   return (
@@ -39,6 +42,8 @@ const MapRightPanel: React.FC = () => {
         <LinkInspector />
       ) : selectedAnchorId ? (
         <AnchorInspector />
+      ) : selectedTriggerId ? (
+        <TriggerInspector />
       ) : selectedEntityId ? (
         <PropertiesPanel />
       ) : (
@@ -128,7 +133,6 @@ export const MapEditor: React.FC = () => {
       const includedCount = maps.filter((map) => map.metadata?.world?.included).length;
       return (
         <ResizableEditorLayout
-          editorName="Maps"
           header={{
             title: activeView === 'world' ? 'World' : 'Maps',
             subtitle:
@@ -215,6 +219,8 @@ export const MapEditor: React.FC = () => {
             <AnchorBottomPanel />
           ) : selectedLayerKind === 'locationlink' ? (
             <LinkBottomPanel />
+          ) : selectedLayerKind === 'trigger' ? (
+            <TriggerBottomPanel />
           ) : selectedLayerKind === 'terrain' ? null : (
             <TilesetPalette enableMultiSelect={true} />
           )

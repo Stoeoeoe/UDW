@@ -17,6 +17,7 @@ import {
   FiRotateCcw,
   FiRotateCw,
   FiBox,
+  FiPenTool,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import {
@@ -84,6 +85,12 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     { id: 'anchorSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'anchors' },
     { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor (X)', group: 'anchors' },
   ],
+  trigger: [
+    { id: 'triggerPlace', icon: FiMaximize, label: 'Draw Rectangle (N)', group: 'triggers' },
+    { id: 'triggerPolygon', icon: FiPenTool, label: 'Draw Polygon', group: 'triggers' },
+    { id: 'triggerSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'triggers' },
+    { id: 'triggerDelete', icon: FiTrash2, label: 'Delete Trigger (X)', group: 'triggers' },
+  ],
 };
 
 const FALLBACK_TOOLS: ToolItem[] = [
@@ -106,7 +113,8 @@ export const MapToolbar: React.FC = () => {
   const showSnapToggle =
     selectedLayer?.kind === 'entity' ||
     selectedLayer?.kind === 'anchor' ||
-    selectedLayer?.kind === 'locationlink';
+    selectedLayer?.kind === 'locationlink' ||
+    selectedLayer?.kind === 'trigger';
 
   return (
     <HStack spacing={4}>

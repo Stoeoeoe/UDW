@@ -62,7 +62,7 @@ export class FileSystemManager {
   }
 
   /**
-   * Open a project by selecting project.json (Electron) or a folder (Web fallback)
+   * Open a project by selecting .vproj (Electron)
    */
   async openProject(): Promise<{ project: Project; path: string }> {
     if (this.isElectron()) {
@@ -79,23 +79,18 @@ export class FileSystemManager {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
       this.projectRoot = handle;
 
-      // Find any file matching '*.project.json' in the root directory.
+      // Find any file matching '*.vproj' in the root directory.
       let projectFile: FileSystemFileHandle | null = null;
       for await (const entry of handle.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.project.json')) {
+        if (entry.kind === 'file' && entry.name.endsWith('.vproj')) {
           projectFile = entry as FileSystemFileHandle;
           break;
         }
       }
 
-      if (!projectFile) {
-        // Fallback to 'project.json' for older projects
-        projectFile = await handle.getFileHandle('project.json');
-      }
-
-      const file = await projectFile.getFile();
-      const text = await file.text();
-      const project = JSON.parse(text) as Project;
+      const file = await projectFile?.getFile();
+      const text = await file?.text();
+      const project = JSON.parse(text || '{}') as Project;
       return { project, path: handle.name };
     }
   }
@@ -127,7 +122,7 @@ export class FileSystemManager {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
       this.projectRoot = handle;
 
-      await this.writeJSONWeb(handle, `${projectConfig.id}.project.json`, projectConfig);
+      await this.writeJSONWeb(handle, `${projectConfig.id}.vproj`, projectConfig);
       await handle.getDirectoryHandle('maps', { create: true });
       await handle.getDirectoryHandle('tilesets', { create: true });
       await handle.getDirectoryHandle('actors', { create: true });
@@ -153,7 +148,7 @@ export class FileSystemManager {
       const maps: GameMap[] = [];
       const dir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
       for await (const entry of dir.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.map.json')) {
+        if (entry.kind === 'file' && entry.name.endsWith('.vmap')) {
           const file = await (entry as FileSystemFileHandle).getFile();
           const mapData = JSON.parse(await file.text());
           maps.push(deserializeMap(migrateMapToEncodedData(mapData)));
@@ -177,7 +172,7 @@ export class FileSystemManager {
       const tilesets: Tileset[] = [];
       const dir = await this.projectRoot.getDirectoryHandle('tilesets', { create: false });
       for await (const entry of dir.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.tileset.json')) {
+        if (entry.kind === 'file' && entry.name.endsWith('.vts')) {
           const file = await (entry as FileSystemFileHandle).getFile();
           tilesets.push(JSON.parse(await file.text()));
         }
@@ -254,7 +249,7 @@ export class FileSystemManager {
       try {
         const dir = await this.projectRoot.getDirectoryHandle('items', { create: false });
         for await (const entry of dir.values()) {
-          if (entry.kind === 'file' && entry.name.endsWith('.item.json')) {
+          if (entry.kind === 'file' && entry.name.endsWith('.vitm')) {
             const file = await (entry as FileSystemFileHandle).getFile();
             items.push(JSON.parse(await file.text()));
           }

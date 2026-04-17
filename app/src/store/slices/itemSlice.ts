@@ -34,7 +34,7 @@ export const createItemSlice: ImmerStateCreator<ItemSlice> = (set, get) => ({
     set((state) => {
       state.items.push(castDraft(item));
     });
-    await fileSystem.saveJson('items', `${item.id}.item.json`, {
+    await fileSystem.saveJson('items', `${item.id}.vitm`, {
       $schema: '../../schemas/item.schema.json',
       ...item,
     });
@@ -51,7 +51,7 @@ export const createItemSlice: ImmerStateCreator<ItemSlice> = (set, get) => ({
     });
     const item = updatedItem ?? get().items.find((entry) => entry.id === id);
     if (item) {
-      await fileSystem.saveJson('items', `${item.id}.item.json`, {
+      await fileSystem.saveJson('items', `${item.id}.vitm`, {
         $schema: '../../schemas/item.schema.json',
         ...item,
       });
@@ -63,6 +63,6 @@ export const createItemSlice: ImmerStateCreator<ItemSlice> = (set, get) => ({
       state.items = state.items.filter((i) => i.id !== id);
       if (state.selectedItemId === id) state.selectedItemId = null;
     });
-    await fileSystem.deleteJson('items', `${id}.item.json`);
+    await fileSystem.deleteJson('items', `${id}.vitm`);
   },
 });

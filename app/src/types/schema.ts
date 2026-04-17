@@ -126,9 +126,10 @@ export interface Map {
 export interface LocationLink {
   id: string;
   label?: string;
-  // Source trigger rectangle origin on this map.
+  // Source trigger — references a MapTrigger on this map (preferred)
+  triggerId?: string;
+  // Legacy source fields (kept for backward-compat; ignored when triggerId is set)
   sourcePosition: [number, number]; // Pixel coordinates [x, y]
-  // Trigger area around the source position.
   triggerSize: [number, number]; // Width/height in pixels (default [tileSize, tileSize])
   // Local arrival anchor owned by this link. Other links can target this link and inherit this anchor.
   anchorId?: string;
@@ -175,7 +176,8 @@ export type LayerKind =
   | 'entity' // Layer that contains entities (EntityInstance[])
   | 'terrain' // Terrain-painted layer (autotiled)
   | 'anchor' // Named anchor markers for arrivals / NPC goals / scripts
-  | 'locationlink'; // Map transition links (doors, exits, portals)
+  | 'locationlink' // Map transition links (doors, exits, portals)
+  | 'trigger'; // Map trigger zones (fires game events on enter/exit)
 
 export type PropertyValue =
   | string
@@ -210,6 +212,27 @@ export interface SpatialPrimitives {
   paths?: Path[];
   areas?: Area[];
   anchors?: Anchor[];
+  triggers?: MapTrigger[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Map Triggers — collision-less zones that fire game events
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TriggerType = 'locationLinkTrigger';
+
+export type TriggerShape = 'rectangle' | 'polygon';
+
+export interface MapTrigger {
+  id: string;
+  label?: string;
+  type: TriggerType;
+  shape: TriggerShape;
+  // Rectangle: [x, y] origin + width/height via size.  Polygon: list of absolute pixel vertices.
+  position: [number, number]; // Pixel coords [x, y] — top-left for rect, first vertex for polygon
+  size?: [number, number]; // Pixel [width, height] — only for rectangle shape
+  points?: [number, number][]; // Absolute pixel vertices — only for polygon shape
+  tags?: string[];
 }
 
 export interface Path {

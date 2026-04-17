@@ -54,8 +54,7 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
 
     // Watch tileset JSON changes
     try {
-      const tilesGlob =
-        path.join(projectPath, 'tilesets').replace(/\\/g, '/') + '/**/*.tileset.json';
+      const tilesGlob = path.join(projectPath, 'tilesets').replace(/\\/g, '/') + '/**/*.vts';
       const wTiles = chokidar.watch(tilesGlob, {
         ignoreInitial: true,
         awaitWriteFinish: { stabilityThreshold: 200 },
@@ -93,16 +92,16 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
   ipcMain.handle('app:open-project', async () => {
     if (!win) return null;
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'Select .project.json',
-      filters: [{ name: 'Project File', extensions: ['json'] }],
+      title: 'Select .vproj',
+      filters: [{ name: 'Project File', extensions: ['vproj'] }],
       properties: ['openFile'],
     });
 
     if (canceled || filePaths.length === 0) return null;
 
     const filePath = filePaths[0];
-    if (!filePath.endsWith('.project.json')) {
-      throw new Error('Please select the .project.json file.');
+    if (!filePath.endsWith('.vproj')) {
+      throw new Error('Please select the .vproj file.');
     }
 
     const content = await fs.readFile(filePath, 'utf-8');
@@ -116,9 +115,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
 
   ipcMain.handle('app:load-project-by-path', async (_event, projectPath) => {
     try {
-      // Prefer any file ending with '.project.json' inside the folder.
+      // Prefer any file ending with '.vproj' inside the folder.
       const files = await fs.readdir(projectPath);
-      const projFile = files.find((f) => f.endsWith('.project.json')) || 'project.json';
+      const projFile = files.find((f) => f.endsWith('.vproj')) || 'project.vproj';
       const filePath = path.join(projectPath, projFile);
       const content = await fs.readFile(filePath, 'utf-8');
       const project = JSON.parse(content);
@@ -148,9 +147,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     await fs.mkdir(path.join(projectPath, 'dialogues'), { recursive: true });
     await fs.mkdir(path.join(projectPath, 'assets'), { recursive: true });
 
-    // 2. Write <id>.project.json
+    // 2. Write <id>.vproj
     await fs.writeFile(
-      path.join(projectPath, `${projectConfig.id}.project.json`),
+      path.join(projectPath, `${projectConfig.id}.vproj`),
       JSON.stringify(projectConfig, null, 2),
     );
 
@@ -161,12 +160,13 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
   });
 
   ipcMain.handle('app:fs-read-dir', async (_event, { projectPath, subDir }) => {
+    const fileExtensions = ['vproj', 'vmap', 'vts', 'vitm', 'json']; // Add other relevant extensions as needed
     const dirPath = path.join(projectPath, subDir);
     try {
       const files = await fs.readdir(dirPath);
       const results = [];
       for (const file of files) {
-        if (file.endsWith('.json')) {
+        if (fileExtensions.some((ext) => file.endsWith(`.${ext}`))) {
           const content = await fs.readFile(path.join(dirPath, file), 'utf-8');
           results.push(JSON.parse(content));
         }

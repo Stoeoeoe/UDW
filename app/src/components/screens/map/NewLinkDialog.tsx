@@ -60,12 +60,9 @@ const NewLinkDialogForm: React.FC<{
   const form = useForm({
     defaultValues: {
       label: link.label ?? '',
-      sourcePosition: [
-        Math.floor(link.sourcePosition[0] / projectTileSize),
-        Math.floor(link.sourcePosition[1] / projectTileSize),
-      ] as [number, number],
+      triggerId: link.triggerId ?? '',
       targetMapId: link.targetMapId ?? '',
-      targetLinkId: link.targetLinkId ?? '',
+      targetAnchorId: link.targetAnchorId ?? '',
       // Present targetPosition as tile coords for the map picker
       targetPosition: (link.targetPosition
         ? [
@@ -77,12 +74,9 @@ const NewLinkDialogForm: React.FC<{
     },
     onSubmit: async ({ value }) => {
       const updates: Partial<LocationLink> = {
-        sourcePosition: [
-          value.sourcePosition[0] * projectTileSize,
-          value.sourcePosition[1] * projectTileSize,
-        ],
+        triggerId: value.triggerId || undefined,
         targetMapId: value.targetMapId,
-        targetLinkId: value.targetLinkId || undefined,
+        targetAnchorId: value.targetAnchorId || undefined,
         // Convert picked tile coords back to pixel coords when saving
         targetPosition: [
           value.targetPosition[0] * projectTileSize,
@@ -94,7 +88,7 @@ const NewLinkDialogForm: React.FC<{
       updateLocationLink(linkId, updates);
 
       const isCrossMapCustomArrival =
-        !!value.targetMapId && value.targetMapId !== currentMap?.id && !value.targetLinkId;
+        !!value.targetMapId && value.targetMapId !== currentMap?.id && !value.targetAnchorId;
       if (isCrossMapCustomArrival) {
         await createTargetAnchorForLink(linkId);
       }
@@ -120,58 +114,34 @@ const NewLinkDialogForm: React.FC<{
         <ModalBody overflowY="auto">
           <VStack spacing={4} align="stretch">
             <Text fontSize="xs" color="gray.500">
-              Placed at ({link.sourcePosition[0]}, {link.sourcePosition[1]}). Configure below or
-              skip to set it up later in the inspector.
-            </Text>
-            <Text fontSize="10px" color="gray.500">
-              This dialog creates a one-way link. Add a second link later if you also want a return
-              path.
+              Configure this link or skip — you can always edit it later in the inspector.
             </Text>
 
             <Divider borderColor="whiteAlpha.100" />
 
-            <form.Field name="sourcePosition">
+            {/* Source trigger */}
+            <form.Field name="triggerId">
               {(field) => (
-                <Box>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="bold"
-                    textTransform="uppercase"
-                    color="gray.500"
-                    letterSpacing="wide"
-                    mb={2}
+                <FormControl>
+                  <FieldLabel>Source Trigger</FieldLabel>
+                  <Select
+                    size="sm"
+                    bg="gray.800"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
                   >
-                    From
+                    <option value="">— None —</option>
+                    {(currentMap?.spatialPrimitives?.triggers ?? []).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label || t.id}
+                      </option>
+                    ))}
+                  </Select>
+                  <Text fontSize="10px" color="gray.500" mt={1}>
+                    The trigger zone on this map that activates this transition.
                   </Text>
-                  <Text fontSize="10px" color="gray.600" mb={3}>
-                    Pick the source trigger tile. The dialog keeps it one tile wide for now.
-                  </Text>
-                  <Box display="flex" justifyContent="center">
-                    <MapPreviewPicker
-                      mapId={currentMap!.id}
-                      onSelect={(x, y) => field.handleChange([x, y])}
-                      width={520}
-                      height={220}
-                      interactive={true}
-                      overlays={[
-                        {
-                          kind: 'trigger',
-                          position: field.state.value,
-                          size: [1, 1],
-                          color: 'rgba(245, 158, 11, 0.95)',
-                        },
-                      ]}
-                    />
-                  </Box>
-                  <HStack mt={2} justify="center">
-                    <Text fontSize="10px" color="gray.500">
-                      Trigger tile
-                    </Text>
-                    <Text fontSize="10px" color="orange.300" fontFamily="mono">
-                      ({field.state.value[0]}, {field.state.value[1]})
-                    </Text>
-                  </HStack>
-                </Box>
+                </FormControl>
               )}
             </form.Field>
 
@@ -202,6 +172,8 @@ const NewLinkDialogForm: React.FC<{
               )}
             </form.Field>
 
+            <Divider borderColor="whiteAlpha.100" />
+
             {/* Target map selector */}
             <form.Field name="targetMapId">
               {(field) => (
@@ -213,9 +185,8 @@ const NewLinkDialogForm: React.FC<{
                     value={field.state.value}
                     onChange={(e) => {
                       field.handleChange(e.target.value);
-                      // reset target position when map changes
                       form.setFieldValue('targetPosition', [0, 0]);
-                      form.setFieldValue('targetLinkId', '');
+                      form.setFieldValue('targetAnchorId', '');
                     }}
                     onBlur={field.handleBlur}
                   >
@@ -233,7 +204,7 @@ const NewLinkDialogForm: React.FC<{
                       return (
                         <HStack mt={1}>
                           {isSameMap ? (
-                            <Badge colorScheme="red" fontSize="9px">
+                            <Badge colorScheme="yellow" fontSize="9px">
                               Same map
                             </Badge>
                           ) : selectedTarget ? (
@@ -249,18 +220,16 @@ const NewLinkDialogForm: React.FC<{
               )}
             </form.Field>
 
+            {/* Arrival Anchor */}
             <form.Subscribe selector={(s) => s.values.targetMapId}>
               {(targetMapId) => {
                 const targetMap = maps.find((m) => m.id === targetMapId) ?? currentMap;
-                const availableLinks = (targetMap?.locationLinks ?? []).filter(
-                  (candidate) => candidate.id !== link.id,
-                );
-
+                const anchors = targetMap?.spatialPrimitives?.anchors ?? [];
                 return (
-                  <form.Field name="targetLinkId">
+                  <form.Field name="targetAnchorId">
                     {(field) => (
                       <FormControl>
-                        <FieldLabel>Target Link</FieldLabel>
+                        <FieldLabel>Arrival Anchor</FieldLabel>
                         <Select
                           size="sm"
                           bg="gray.800"
@@ -268,16 +237,15 @@ const NewLinkDialogForm: React.FC<{
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
                         >
-                          <option value="">Custom arrival position</option>
-                          {availableLinks.map((candidate) => (
-                            <option key={candidate.id} value={candidate.id}>
-                              {candidate.label || candidate.id}
+                          <option value="">— None (use position below) —</option>
+                          {anchors.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
                             </option>
                           ))}
                         </Select>
                         <Text fontSize="10px" color="gray.500" mt={1}>
-                          Prefer targeting another link. Its visible arrival anchor defines where
-                          actors land.
+                          Anchor on the target map that sets where actors arrive.
                         </Text>
                       </FormControl>
                     )}
@@ -299,12 +267,13 @@ const NewLinkDialogForm: React.FC<{
               )}
             </form.Field>
 
-            {/* Map preview picker */}
+            {/* Arrival position picker */}
             <form.Subscribe selector={(s) => s.values}>
               {(values) => {
                 const isSameMap = !values.targetMapId || values.targetMapId === currentMap?.id;
                 const selectedTarget = maps.find((m) => m.id === values.targetMapId);
                 const isCrossMap = !isSameMap && !!selectedTarget;
+                const hasAnchor = !!values.targetAnchorId;
 
                 if (!currentMap && !selectedTarget) return null;
 
@@ -320,12 +289,12 @@ const NewLinkDialogForm: React.FC<{
                         letterSpacing="wide"
                         mb={2}
                       >
-                        To
+                        Fallback Arrival Position
                       </Text>
                       <Text fontSize="10px" color="gray.600" mb={3}>
-                        {values.targetLinkId
-                          ? 'Used only if the target link has no arrival anchor.'
-                          : `Pick the arrival tile on ${isCrossMap ? selectedTarget!.name : 'this map'}.`}
+                        {hasAnchor
+                          ? 'Used only if the selected anchor is removed.'
+                          : `Click a tile on ${isCrossMap ? selectedTarget!.name : 'this map'} to set the arrival point.`}
                       </Text>
                       <Box display="flex" justifyContent="center">
                         <MapPreviewPicker
@@ -333,13 +302,15 @@ const NewLinkDialogForm: React.FC<{
                           onSelect={(x, y) => form.setFieldValue('targetPosition', [x, y])}
                           width={520}
                           height={220}
-                          interactive={true}
+                          interactive={!hasAnchor}
                           overlays={[
                             {
                               kind: 'arrival',
                               position: values.targetPosition,
                               facing: values.targetFacing,
-                              color: 'rgba(34, 211, 238, 0.95)',
+                              color: hasAnchor
+                                ? 'rgba(34, 211, 238, 0.3)'
+                                : 'rgba(34, 211, 238, 0.95)',
                             },
                           ]}
                         />

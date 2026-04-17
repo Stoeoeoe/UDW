@@ -175,6 +175,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const collisionGraphicsRef = useRef<Graphics | null>(null);
   const terrainOverlayGraphicsRef = useRef<Graphics | null>(null);
   const locationLinksGraphicsRef = useRef<Graphics | null>(null);
+  const triggerGraphicsRef = useRef<Graphics | null>(null);
   const hoverGraphicsRef = useRef<Graphics | null>(null);
   const selectionGraphicsRef = useRef<Graphics | null>(null);
   const previewContainerRef = useRef<Container | null>(null);
@@ -226,6 +227,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     locationLinksGraphics.zIndex = 2.9;
     locationLinksGraphicsRef.current = locationLinksGraphics;
     container.addChild(locationLinksGraphics);
+
+    // Trigger zones overlay (z: 2.85 — below links, above terrain)
+    const triggerGraphics = new Graphics();
+    triggerGraphics.zIndex = 2.85;
+    triggerGraphicsRef.current = triggerGraphics;
+    container.addChild(triggerGraphics);
 
     // Hover highlight (z: 3)
     const hoverGraphics = new Graphics();
@@ -955,6 +962,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       'linkPlace',
       'linkSelect',
       'linkDelete',
+      'triggerPlace',
+      'triggerPolygon',
+      'triggerSelect',
+      'triggerDelete',
       'select',
     ];
     if (noTileHoverTools.includes(activeTool)) return;
@@ -1524,6 +1535,138 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     }
   }, [getTileTexture, projectTileSize]);
 
+  // Render trigger zones overlay
+  const renderTriggers = useCallback(() => {
+    const g = triggerGraphicsRef.current;
+    const { currentMap, selectedTriggerId, activeTool, drawPreview, polygonPreviewPoints } =
+      useEditorStore.getState();
+    if (!g) return;
+    g.clear();
+    if (!currentMap) return;
+
+    const triggerLayer = currentMap.layers.find((l) => l.kind === 'trigger');
+    if (!triggerLayer?.visible) return;
+
+    const tileSize = projectTileSize;
+
+    // Draw placement preview while dragging to place a new rectangle trigger
+    if (
+      activeTool === 'triggerPlace' &&
+      drawPreview?.isDrawing &&
+      drawPreview.start &&
+      drawPreview.end
+    ) {
+      const sx = drawPreview.start.x * tileSize;
+      const sy = drawPreview.start.y * tileSize;
+      const ex = (drawPreview.end.x + 1) * tileSize;
+      const ey = (drawPreview.end.y + 1) * tileSize;
+      const px = Math.min(sx, ex);
+      const py = Math.min(sy, ey);
+      const pw = Math.abs(ex - sx);
+      const ph = Math.abs(ey - sy);
+      g.rect(px, py, pw, ph);
+      g.fill({ color: 0xa855f7, alpha: 0.2 });
+      g.rect(px, py, pw, ph);
+      g.stroke({ width: 2, color: 0xa855f7, alpha: 0.8 });
+    }
+
+    // Draw WIP polygon while in pen mode
+    if (
+      activeTool === 'triggerPolygon' &&
+      polygonPreviewPoints &&
+      polygonPreviewPoints.length >= 1
+    ) {
+      const pts = polygonPreviewPoints;
+      const CLOSE_DIST = tileSize * 0.75;
+
+      // Draw edges so far
+      if (pts.length >= 2) {
+        g.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.stroke({ width: 2, color: 0xa855f7, alpha: 0.7 });
+      }
+
+      // Draw vertex dots
+      for (let i = 0; i < pts.length; i++) {
+        const isFirst = i === 0;
+        g.circle(pts[i][0], pts[i][1], isFirst && pts.length >= 3 ? 5 : 3);
+        g.fill({ color: isFirst ? 0x22d3ee : 0xa855f7, alpha: 0.9 });
+        if (isFirst && pts.length >= 3) {
+          // Show close-zone ring
+          g.circle(pts[0][0], pts[0][1], CLOSE_DIST);
+          g.stroke({ width: 1, color: 0x22d3ee, alpha: 0.3 });
+        }
+      }
+    }
+
+    const triggers = currentMap.spatialPrimitives?.triggers ?? [];
+    const HANDLE_SIZE = 6;
+
+    for (const trigger of triggers) {
+      const isSelected = trigger.id === selectedTriggerId;
+      const color = 0xa855f7; // purple-500
+      const alpha = isSelected ? 0.25 : 0.12;
+      const strokeAlpha = isSelected ? 0.9 : 0.5;
+      const strokeWidth = isSelected ? 2 : 1;
+
+      if (trigger.shape === 'rectangle' && trigger.size) {
+        const [tx, ty] = trigger.position;
+        const [tw, th] = trigger.size;
+
+        // Fill
+        g.rect(tx, ty, tw, th);
+        g.fill({ color, alpha });
+
+        // Stroke
+        g.rect(tx, ty, tw, th);
+        g.stroke({ width: strokeWidth, color, alpha: strokeAlpha });
+
+        // Label
+        const cx = tx + tw / 2;
+        const cy = ty + th / 2;
+
+        // Center dot
+        g.circle(cx, cy, 3);
+        g.fill({ color, alpha: 0.8 });
+
+        // Resize handles (selected only)
+        if (isSelected) {
+          const handlePositions = [
+            [tx - HANDLE_SIZE, ty - HANDLE_SIZE],
+            [tx + tw, ty - HANDLE_SIZE],
+            [tx - HANDLE_SIZE, ty + th],
+            [tx + tw, ty + th],
+            [tx - HANDLE_SIZE, ty + th / 2 - HANDLE_SIZE / 2],
+            [tx + tw, ty + th / 2 - HANDLE_SIZE / 2],
+            [tx + tw / 2 - HANDLE_SIZE / 2, ty - HANDLE_SIZE],
+            [tx + tw / 2 - HANDLE_SIZE / 2, ty + th],
+          ];
+          for (const [hx, hy] of handlePositions) {
+            g.rect(hx, hy, HANDLE_SIZE, HANDLE_SIZE);
+            g.fill({ color: 0xffffff, alpha: 0.9 });
+            g.stroke({ width: 1, color: 0x000000, alpha: 0.4 });
+          }
+        }
+      } else if (trigger.shape === 'polygon' && trigger.points && trigger.points.length >= 3) {
+        const pts = trigger.points;
+        g.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.closePath();
+        g.fill({ color, alpha });
+        g.stroke({ width: strokeWidth, color, alpha: strokeAlpha });
+
+        // Vertex handles (selected only)
+        if (isSelected) {
+          for (const [px, py] of pts) {
+            g.circle(px, py, HANDLE_SIZE / 2 + 1);
+            g.fill({ color: 0xffffff, alpha: 0.9 });
+            g.stroke({ width: 1, color: 0x000000, alpha: 0.4 });
+          }
+        }
+      }
+    }
+  }, [projectTileSize]);
+
   // Main render function
   const render = useCallback(() => {
     renderTiles();
@@ -1531,6 +1674,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderTriggers();
     renderLocationLinks();
     renderHover();
     renderPreview();
@@ -1540,6 +1684,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderTriggers,
     renderLocationLinks,
     renderHover,
     renderPreview,
@@ -1552,6 +1697,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderTriggers,
     renderLocationLinks,
     renderHover,
     renderPreview,

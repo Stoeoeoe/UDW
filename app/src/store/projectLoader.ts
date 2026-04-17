@@ -187,7 +187,7 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       () =>
         set((state) => {
           state.currentMap = castDraft(enrichedMaps[0]);
-          state.currentMapPath = `maps/${enrichedMaps[0].id}.map.json`;
+          state.currentMapPath = `maps/${enrichedMaps[0].id}.vmap`;
           state.selectedLayerId = getPreferredSelectedLayerId(enrichedMaps[0]);
           syncToolStateForSelectedLayer(state, { forceDefault: true });
         }),

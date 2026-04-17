@@ -35,7 +35,7 @@ content={selectedItem ? (
 
 ### TopTabbedEditorLayout + DialogListWorkspace — tabbed list + modal CRUD
 
-Use when items are simple enough that create/edit fits in a modal, or when one screen manages multiple categories of items. Good for: MapSettingsEditor, VariableEditor.
+Use when items are simple enough that create/edit fits in a modal, or when one screen manages multiple categories of items. Good for: ConfigurationEditor, VariableEditor.
 
 ```
 TopTabbedEditorLayout

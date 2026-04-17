@@ -67,7 +67,7 @@ describe('tileset save scheduling', () => {
     const calls = vi.mocked(fs.fileSystem.saveJson).mock.calls;
     const last = calls[calls.length - 1];
     expect(last[0]).toBe('tilesets');
-    expect(last[1]).toBe('ts1.tileset.json');
+    expect(last[1]).toBe('ts1.vts');
     // payload snapshot should contain the tiles array with updated collision
     expect(last[2]).toBeTruthy();
     expect(last[2].tiles[0].collision.type).toBe('full');

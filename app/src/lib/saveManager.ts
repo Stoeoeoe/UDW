@@ -93,7 +93,7 @@ export async function saveMapImmediate(map: GameMap): Promise<void> {
   store.setPendingMapSave(false);
 
   try {
-    await fileSystem.saveJson('maps', `${map.id}.map.json`, {
+    await fileSystem.saveJson('maps', `${map.id}.vmap`, {
       $schema: '../../schemas/map.schema.json',
       ...serializeMap(map),
     });
@@ -130,7 +130,7 @@ export async function saveProjectImmediate(project: Project): Promise<void> {
   store.setPendingProjectSave(false);
 
   try {
-    await fileSystem.saveJson('', `${project.id}.project.json`, {
+    await fileSystem.saveJson('', `${project.id}.vproj`, {
       $schema: '../schemas/project.schema.json',
       ...project,
     });

@@ -110,16 +110,16 @@ export interface EditorState {
   actors: Actor[];
   selectedActorId: string | null;
 
-  // Dialogue database (stored separately from project.json)
+  // Dialogue database (stored separately from project)
   dialogueIndex: DialogueIndex | null;
   dialogues: globalThis.Map<string, DialogueDocument>;
   selectedDialogueId: string | null;
   selectedDialogueNodeId: string | null;
 
-  // Game variable registry (persisted in project.json)
+  // Game variable registry (persisted in project)
   gameVariables: GameVariable[];
 
-  // Scripting primitives (persisted in project.json)
+  // Scripting primitives (persisted in project)
   scriptTables: ScriptTable[];
   scriptFunctions: ScriptFunction[];
   scriptNamespaces: ScriptNamespace[];
@@ -134,6 +134,9 @@ export interface EditorState {
   selectedAnchorId: string | null; // Currently selected anchor
   pickingLinkTargetForLinkId: string | null; // One-shot mode: pick target tile on any map
   pendingNewLinkId: string | null; // Set immediately after link placement to trigger setup dialog
+
+  // Trigger selection/editing state
+  selectedTriggerId: string | null; // Currently selected trigger zone
 
   // Validation
   validationErrors: ValidationError[];
@@ -170,7 +173,11 @@ export type ToolType =
   | 'pathDraw' // Phase 2
   | 'areaDraw' // Phase 2
   | 'anchorPlace'
-  | 'anchorDelete';
+  | 'anchorDelete'
+  | 'triggerPlace' // Place a new trigger zone (drag to size, rectangle)
+  | 'triggerPolygon' // Draw a polygon trigger by clicking vertices
+  | 'triggerSelect' // Select / move / resize triggers
+  | 'triggerDelete'; // Delete triggers
 
 export interface ValidationError {
   severity: 'error' | 'warning';

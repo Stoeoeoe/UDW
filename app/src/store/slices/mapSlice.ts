@@ -17,6 +17,7 @@ import {
   createDefaultLayer,
   ensureAnchorLayer,
   ensureLocationLinkLayer,
+  ensureTriggerLayer,
   getPreferredSelectedLayerId,
   syncToolStateForSelectedLayer,
   withHistorySuppressed,
@@ -44,7 +45,7 @@ function upsertMapInState(state: { maps: unknown[]; currentMap: unknown }, updat
 }
 
 async function persistMap(map: GameMap) {
-  await fileSystem.saveJson('maps', `${map.id}.map.json`, {
+  await fileSystem.saveJson('maps', `${map.id}.vmap`, {
     $schema: '../../schemas/map.schema.json',
     ...serializeMap(map),
   });
@@ -86,9 +87,11 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
             return;
           }
           const withDefs = addMissingDefinitionLayers(map, state.layerDefinitions);
-          const enrichedMap = ensureAnchorLayer(ensureLocationLinkLayer(withDefs));
+          const enrichedMap = ensureTriggerLayer(
+            ensureAnchorLayer(ensureLocationLinkLayer(withDefs)),
+          );
           state.currentMap = castDraft(enrichedMap);
-          state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
+          state.currentMapPath = `maps/${enrichedMap.id}.vmap`;
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
           if (enrichedMap && state.mapCameras?.[enrichedMap.id]) {
@@ -117,9 +120,9 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
             state.mapCameras[state.currentMap.id] = { ...state.camera };
           }
 
-          const enrichedMap = ensureAnchorLayer(ensureLocationLinkLayer(map));
+          const enrichedMap = ensureTriggerLayer(ensureAnchorLayer(ensureLocationLinkLayer(map)));
           state.currentMap = castDraft(enrichedMap);
-          state.currentMapPath = `maps/${enrichedMap.id}.map.json`;
+          state.currentMapPath = `maps/${enrichedMap.id}.vmap`;
           state.activeVariationId = null;
           state.selectedEntityId = null;
           state.selectedEntityIds = new Set();
@@ -154,9 +157,9 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
       layers: baseLayers,
       entities: [],
     };
-    const newMap = ensureAnchorLayer(ensureLocationLinkLayer(rawMap));
+    const newMap = ensureTriggerLayer(ensureAnchorLayer(ensureLocationLinkLayer(rawMap)));
 
-    await fileSystem.saveJson('maps', `${id}.map.json`, {
+    await fileSystem.saveJson('maps', `${id}.vmap`, {
       $schema: '../../schemas/map.schema.json',
       ...serializeMap(newMap),
     });
@@ -166,7 +169,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
         set((state) => {
           state.maps.push(castDraft(newMap));
           state.currentMap = castDraft(newMap);
-          state.currentMapPath = `maps/${newMap.id}.map.json`;
+          state.currentMapPath = `maps/${newMap.id}.vmap`;
           state.activeVariationId = null;
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
@@ -210,7 +213,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
         return (original.locationLinks?.length ?? 0) !== (m.locationLinks?.length ?? 0);
       });
 
-    await fileSystem.deleteJson('maps', `${mapId}.map.json`);
+    await fileSystem.deleteJson('maps', `${mapId}.vmap`);
     for (const updated of affectedMaps) {
       await persistMap(updated);
     }
@@ -232,7 +235,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
           if (state.currentMap?.id === mapId) {
             if (state.maps.length > 0) {
               state.currentMap = castDraft(state.maps[0]);
-              state.currentMapPath = `maps/${state.maps[0].id}.map.json`;
+              state.currentMapPath = `maps/${state.maps[0].id}.vmap`;
               state.activeVariationId = null;
               state.selectedLayerId = getPreferredSelectedLayerId(state.maps[0]);
               syncToolStateForSelectedLayer(state, { forceDefault: true });

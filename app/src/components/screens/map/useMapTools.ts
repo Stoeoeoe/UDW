@@ -16,6 +16,7 @@ import { getDefaultLinkTargetPosition, resolveLinkTarget } from '../../../lib/lo
 import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
 import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
 import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
+import { MapTrigger } from '../../../types/schema';
 
 interface UseMapToolsProps {
   viewport: Viewport | null;
@@ -50,8 +51,13 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const updateAnchor = useEditorStore((state) => state.updateAnchor);
   const removeAnchor = useEditorStore((state) => state.removeAnchor);
   const selectAnchor = useEditorStore((state) => state.selectAnchor);
+  const addTrigger = useEditorStore((state) => state.addTrigger);
+  const updateTrigger = useEditorStore((state) => state.updateTrigger);
+  const removeTrigger = useEditorStore((state) => state.removeTrigger);
+  const selectTrigger = useEditorStore((state) => state.selectTrigger);
   const setHoveredTile = useEditorStore((state) => state.setHoveredTile);
   const setDrawPreview = useEditorStore((state) => state.setDrawPreview);
+  const setPolygonPreviewPoints = useEditorStore((state) => state.setPolygonPreviewPoints);
   const setSelectedTile = useEditorStore((state) => state.setSelectedTile);
   const setSelectedTiles = useEditorStore((state) => state.setSelectedTiles);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
@@ -73,6 +79,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const dragLinkInitialRef = useRef<{ sx: number; sy: number; tw: number; th: number } | null>(
     null,
   );
+  const draggingTriggerRef = useRef<string | null>(null);
+  const dragTriggerOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingTriggerHandleRef = useRef<string | null>(null);
+  const dragTriggerInitialRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const draggingVertexIndexRef = useRef<number | null>(null); // polygon vertex drag
+  const triggerPlaceStartRef = useRef<{ x: number; y: number } | null>(null);
+  // Polygon pen-draw state: list of vertices placed so far
+  const polygonDrawPointsRef = useRef<[number, number][] | null>(null);
   const isShiftHeldRef = useRef(false);
   const terrainGridRef = useRef<Map<string, string | null>>(new Map());
   const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null);
@@ -269,6 +283,109 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     [currentMap, projectTileSize],
   );
 
+  // Returns { trigger, handle } where handle is 'body' | 'nw'|'ne'|'sw'|'se'|'left'|'right'|'top'|'bottom'
+  // Point-in-polygon using ray casting
+  const pointInPolygon = useCallback(
+    (px: number, py: number, points: [number, number][]): boolean => {
+      let inside = false;
+      for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const [xi, yi] = points[i];
+        const [xj, yj] = points[j];
+        const intersect = yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    },
+    [],
+  );
+
+  const hitTestTrigger = useCallback(
+    (worldX: number, worldY: number): { trigger: MapTrigger; handle: string } | undefined => {
+      const triggers = currentMap?.spatialPrimitives?.triggers ?? [];
+      const selectedTriggerId = useEditorStore.getState().selectedTriggerId;
+      const HANDLE_RADIUS = 5;
+      const HANDLE_SIZE = 6;
+
+      for (const trigger of [...triggers].reverse()) {
+        if (trigger.shape === 'rectangle' && trigger.size) {
+          const [tx, ty] = trigger.position;
+          const [tw, th] = trigger.size;
+          const expand = trigger.id === selectedTriggerId ? HANDLE_SIZE : 0;
+
+          // Check resize handles first (selected only)
+          if (trigger.id === selectedTriggerId) {
+            const handles: Record<string, { x: number; y: number; w: number; h: number }> = {
+              nw: { x: tx - HANDLE_SIZE, y: ty - HANDLE_SIZE, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              ne: { x: tx + tw, y: ty - HANDLE_SIZE, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              sw: { x: tx - HANDLE_SIZE, y: ty + th, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              se: { x: tx + tw, y: ty + th, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              left: {
+                x: tx - HANDLE_SIZE,
+                y: ty + th / 2 - HANDLE_SIZE / 2,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+              right: {
+                x: tx + tw,
+                y: ty + th / 2 - HANDLE_SIZE / 2,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+              top: {
+                x: tx + tw / 2 - HANDLE_SIZE / 2,
+                y: ty - HANDLE_SIZE,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+              bottom: {
+                x: tx + tw / 2 - HANDLE_SIZE / 2,
+                y: ty + th,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+            };
+            for (const [name, r] of Object.entries(handles)) {
+              if (worldX >= r.x && worldX <= r.x + r.w && worldY >= r.y && worldY <= r.y + r.h) {
+                return { trigger, handle: name };
+              }
+            }
+          }
+
+          // Body hit
+          if (
+            worldX >= tx - expand &&
+            worldX < tx + tw + expand &&
+            worldY >= ty - expand &&
+            worldY < ty + th + expand
+          ) {
+            return { trigger, handle: 'body' };
+          }
+        } else if (trigger.shape === 'polygon' && trigger.points && trigger.points.length >= 3) {
+          const pts = trigger.points;
+
+          // Check vertex handles first (selected only)
+          if (trigger.id === selectedTriggerId) {
+            for (let i = 0; i < pts.length; i++) {
+              const [px, py] = pts[i];
+              const dx = worldX - px;
+              const dy = worldY - py;
+              if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 2) {
+                return { trigger, handle: `vertex-${i}` };
+              }
+            }
+          }
+
+          // Body hit via point-in-polygon
+          if (pointInPolygon(worldX, worldY, pts)) {
+            return { trigger, handle: 'body' };
+          }
+        }
+      }
+      return undefined;
+    },
+    [currentMap, pointInPolygon],
+  );
+
   // Handle pointer down
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
@@ -289,11 +406,17 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       // ── Target-picking mode (🎯 pick entry tile for a link) ────────────────
       const { pickingLinkTargetForLinkId, commitLinkTarget } = useEditorStore.getState();
       if (e.button === 0 && pickingLinkTargetForLinkId) {
-        if (inBounds && worldPos)
-          commitLinkTarget(pickingLinkTargetForLinkId, currentMap.id, [
-            Math.round(worldPos.x),
-            Math.round(worldPos.y),
-          ]);
+        if (inBounds && worldPos) {
+          const snapMode = useEditorStore.getState().entitySnapMode;
+          const targetPosition: [number, number] =
+            snapMode === 'grid'
+              ? [
+                  Math.floor(worldPos.x / projectTileSize) * projectTileSize,
+                  Math.floor(worldPos.y / projectTileSize) * projectTileSize,
+                ]
+              : [Math.round(worldPos.x), Math.round(worldPos.y)];
+          commitLinkTarget(pickingLinkTargetForLinkId, currentMap.id, targetPosition);
+        }
         e.stopPropagation();
         return;
       }
@@ -445,8 +568,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const position: [number, number] =
           snapMode === 'grid'
             ? [
-                Math.floor(worldPos.x / projectTileSize) * projectTileSize + projectTileSize / 2,
-                Math.floor(worldPos.y / projectTileSize) * projectTileSize + projectTileSize / 2,
+                Math.floor(worldPos.x / projectTileSize) * projectTileSize,
+                Math.floor(worldPos.y / projectTileSize) * projectTileSize,
               ]
             : [Math.round(worldPos.x), Math.round(worldPos.y)];
         addAnchor({
@@ -581,6 +704,114 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const hitLinkResult =
           inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
         if (hitLinkResult) useEditorStore.getState().removeLocationLink(hitLinkResult.link.id);
+        return;
+      }
+
+      // ── Trigger tools ───────────────────────────────────────────────────────
+      if (activeTool === 'triggerPlace' && e.button === 0 && inBounds && worldPos) {
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        const snappedX =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.x / projectTileSize) * projectTileSize
+            : Math.round(worldPos.x);
+        const snappedY =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.y / projectTileSize) * projectTileSize
+            : Math.round(worldPos.y);
+        triggerPlaceStartRef.current = { x: snappedX, y: snappedY };
+        startHistoryBatch();
+        return;
+      }
+
+      // Polygon pen tool — each left-click adds a vertex; close when near the start
+      if (activeTool === 'triggerPolygon' && e.button === 0 && inBounds && worldPos) {
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        const snappedX =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.x / projectTileSize) * projectTileSize
+            : Math.round(worldPos.x);
+        const snappedY =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.y / projectTileSize) * projectTileSize
+            : Math.round(worldPos.y);
+        const pts = polygonDrawPointsRef.current ?? [];
+        const CLOSE_DIST = projectTileSize * 0.75;
+        if (pts.length >= 3) {
+          const [fx, fy] = pts[0];
+          const dx = snappedX - fx;
+          const dy = snappedY - fy;
+          if (Math.sqrt(dx * dx + dy * dy) <= CLOSE_DIST) {
+            // Close the polygon — create the trigger
+            const minX = Math.min(...pts.map(([x]) => x));
+            const minY = Math.min(...pts.map(([, y]) => y));
+            addTrigger({
+              id: `trigger-${Date.now()}`,
+              type: 'locationLinkTrigger',
+              shape: 'polygon',
+              position: [minX, minY],
+              points: pts,
+              tags: [],
+            });
+            polygonDrawPointsRef.current = null;
+            setPolygonPreviewPoints(null);
+            useEditorStore.getState().setActiveTool('triggerSelect');
+            return;
+          }
+        }
+        const newPts: [number, number][] = [...pts, [snappedX, snappedY]];
+        polygonDrawPointsRef.current = newPts;
+        setPolygonPreviewPoints(newPts);
+        return;
+      }
+
+      // Polygon pen tool — right-click removes the last vertex
+      if (activeTool === 'triggerPolygon' && e.button === 2 && polygonDrawPointsRef.current) {
+        const pts = polygonDrawPointsRef.current;
+        if (pts.length <= 1) {
+          polygonDrawPointsRef.current = null;
+          setPolygonPreviewPoints(null);
+        } else {
+          const newPts: [number, number][] = pts.slice(0, -1);
+          polygonDrawPointsRef.current = newPts;
+          setPolygonPreviewPoints(newPts);
+        }
+        e.preventDefault();
+        return;
+      }
+
+      if (activeTool === 'triggerSelect' && e.button === 0) {
+        const hit = inBounds && worldPos ? hitTestTrigger(worldPos.x, worldPos.y) : undefined;
+        if (hit) {
+          selectTrigger(hit.trigger.id);
+          startHistoryBatch();
+          if (hit.handle.startsWith('vertex-')) {
+            // Polygon vertex drag
+            draggingVertexIndexRef.current = parseInt(hit.handle.replace('vertex-', ''), 10);
+            draggingTriggerRef.current = hit.trigger.id;
+          } else if (hit.handle !== 'body') {
+            // Rectangle resize handle
+            const [tx, ty] = hit.trigger.position;
+            const [tw, th] = hit.trigger.size ?? [projectTileSize, projectTileSize];
+            draggingTriggerHandleRef.current = hit.handle;
+            dragTriggerInitialRef.current = { x: tx, y: ty, w: tw, h: th };
+          } else {
+            // Body drag
+            const [tx, ty] = hit.trigger.position;
+            draggingTriggerRef.current = hit.trigger.id;
+            dragTriggerOffsetRef.current = {
+              x: worldPos!.x - tx,
+              y: worldPos!.y - ty,
+            };
+          }
+        } else {
+          selectTrigger(null);
+        }
+        return;
+      }
+
+      if (activeTool === 'triggerDelete' && e.button === 0) {
+        const hit = inBounds && worldPos ? hitTestTrigger(worldPos.x, worldPos.y) : undefined;
+        if (hit) removeTrigger(hit.trigger.id);
         return;
       }
 
@@ -797,9 +1028,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       getPattern,
       placeEntity,
       setDrawPreview,
+      setPolygonPreviewPoints,
       hitTestEntity,
       hitTestLink,
+      hitTestTrigger,
       startHistoryBatch,
+      selectTrigger,
+      removeTrigger,
+      addTrigger,
     ],
   );
 
@@ -949,18 +1185,16 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             const offset = dragLinkOffsetRef.current ?? { x: 0, y: 0 };
             const rawX = wx - offset.x;
             const rawY = wy - offset.y;
-            const snapToTileEdge = (v: number) =>
-              Math.floor(v / projectTileSize) * projectTileSize;
-            const snapToTileCenter = (v: number) =>
-              Math.floor(v / projectTileSize) * projectTileSize + projectTileSize / 2;
-            // source snaps to tile edge (top-left of trigger area); target snaps to tile center
+            const snapToTileEdge = (v: number) => Math.floor(v / projectTileSize) * projectTileSize;
+            // source and target both snap to the tile origin so stored pixel positions
+            // match the map model and inspector pickers.
             const sourcePos: [number, number] =
               snapMode === 'grid'
                 ? [snapToTileEdge(rawX), snapToTileEdge(rawY)]
                 : [Math.round(rawX), Math.round(rawY)];
             const targetPos: [number, number] =
               snapMode === 'grid'
-                ? [snapToTileCenter(rawX), snapToTileCenter(rawY)]
+                ? [snapToTileEdge(rawX), snapToTileEdge(rawY)]
                 : [Math.round(rawX), Math.round(rawY)];
             if (dragLinkEndRef.current === 'target') {
               const store = useEditorStore.getState();
@@ -1034,11 +1268,187 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         const position: [number, number] =
           snapMode === 'grid'
             ? [
-                Math.floor(rawX / projectTileSize) * projectTileSize + projectTileSize / 2,
-                Math.floor(rawY / projectTileSize) * projectTileSize + projectTileSize / 2,
+                Math.floor(rawX / projectTileSize) * projectTileSize,
+                Math.floor(rawY / projectTileSize) * projectTileSize,
               ]
             : [Math.round(rawX), Math.round(rawY)];
         updateAnchor(draggingAnchorRef.current, { position }, true);
+      }
+
+      // Drag polygon vertex
+      if (
+        e.buttons === 1 &&
+        activeTool === 'triggerSelect' &&
+        draggingTriggerRef.current &&
+        draggingVertexIndexRef.current !== null &&
+        worldPos
+      ) {
+        const triggerId = draggingTriggerRef.current;
+        const vertIdx = draggingVertexIndexRef.current;
+        const trigger = currentMap?.spatialPrimitives?.triggers?.find((t) => t.id === triggerId);
+        if (trigger?.shape === 'polygon' && trigger.points) {
+          const { entitySnapMode: snapMode } = useEditorStore.getState();
+          let nx = worldPos.x;
+          let ny = worldPos.y;
+          if (snapMode === 'grid') {
+            nx = Math.floor(nx / projectTileSize) * projectTileSize;
+            ny = Math.floor(ny / projectTileSize) * projectTileSize;
+          } else {
+            nx = Math.round(nx);
+            ny = Math.round(ny);
+          }
+          const newPoints: [number, number][] = trigger.points.map((p, i) =>
+            i === vertIdx ? [nx, ny] : p,
+          );
+          updateTrigger(triggerId, { points: newPoints }, true);
+        }
+        return;
+      }
+
+      // Drag trigger body
+      if (
+        e.buttons === 1 &&
+        activeTool === 'triggerSelect' &&
+        draggingTriggerRef.current &&
+        draggingVertexIndexRef.current === null &&
+        worldPos
+      ) {
+        const triggerId = draggingTriggerRef.current;
+        const trigger = currentMap?.spatialPrimitives?.triggers?.find((t) => t.id === triggerId);
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        if (trigger?.shape === 'polygon' && trigger.points) {
+          // Translate all polygon points by delta
+          const offset = dragTriggerOffsetRef.current ?? { x: 0, y: 0 };
+          const rawX = worldPos.x - offset.x;
+          const rawY = worldPos.y - offset.y;
+          const snappedX =
+            snapMode === 'grid'
+              ? Math.floor(rawX / projectTileSize) * projectTileSize
+              : Math.round(rawX);
+          const snappedY =
+            snapMode === 'grid'
+              ? Math.floor(rawY / projectTileSize) * projectTileSize
+              : Math.round(rawY);
+          const [origX, origY] = trigger.position;
+          const dx = snappedX - origX;
+          const dy = snappedY - origY;
+          if (dx !== 0 || dy !== 0) {
+            const newPoints: [number, number][] = trigger.points.map(([px, py]) => [
+              px + dx,
+              py + dy,
+            ]);
+            updateTrigger(triggerId, { position: [snappedX, snappedY], points: newPoints }, true);
+          }
+        } else {
+          const offset = dragTriggerOffsetRef.current ?? { x: 0, y: 0 };
+          const rawX = worldPos.x - offset.x;
+          const rawY = worldPos.y - offset.y;
+          const snappedX =
+            snapMode === 'grid'
+              ? Math.floor(rawX / projectTileSize) * projectTileSize
+              : Math.round(rawX);
+          const snappedY =
+            snapMode === 'grid'
+              ? Math.floor(rawY / projectTileSize) * projectTileSize
+              : Math.round(rawY);
+          updateTrigger(triggerId, { position: [snappedX, snappedY] }, true);
+        }
+      }
+
+      // Resize trigger via handle (rectangles only)
+      if (
+        e.buttons === 1 &&
+        activeTool === 'triggerSelect' &&
+        draggingTriggerHandleRef.current &&
+        dragTriggerInitialRef.current &&
+        worldPos
+      ) {
+        const selectedId = useEditorStore.getState().selectedTriggerId;
+        if (!selectedId) return;
+        const init = dragTriggerInitialRef.current;
+        const handle = draggingTriggerHandleRef.current;
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        const px =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.x / projectTileSize) * projectTileSize
+            : Math.round(worldPos.x);
+        const py =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.y / projectTileSize) * projectTileSize
+            : Math.round(worldPos.y);
+        const MIN = 1;
+
+        let nx = init.x,
+          ny = init.y,
+          nw = init.w,
+          nh = init.h;
+        switch (handle) {
+          case 'nw':
+            nx = px;
+            ny = py;
+            nw = init.x + init.w - px;
+            nh = init.y + init.h - py;
+            break;
+          case 'ne':
+            ny = py;
+            nw = px - init.x;
+            nh = init.y + init.h - py;
+            break;
+          case 'sw':
+            nx = px;
+            nw = init.x + init.w - px;
+            nh = py - init.y;
+            break;
+          case 'se':
+            nw = px - init.x;
+            nh = py - init.y;
+            break;
+          case 'left':
+            nx = px;
+            nw = init.x + init.w - px;
+            break;
+          case 'right':
+            nw = px - init.x;
+            break;
+          case 'top':
+            ny = py;
+            nh = init.y + init.h - py;
+            break;
+          case 'bottom':
+            nh = py - init.y;
+            break;
+        }
+        if (nw < MIN) nw = MIN;
+        if (nh < MIN) nh = MIN;
+        updateTrigger(
+          selectedId,
+          { position: [Math.round(nx), Math.round(ny)], size: [Math.round(nw), Math.round(nh)] },
+          true,
+        );
+      }
+
+      // triggerPlace drag — show draw preview
+      if (
+        e.buttons === 1 &&
+        activeTool === 'triggerPlace' &&
+        triggerPlaceStartRef.current &&
+        worldPos
+      ) {
+        const start = triggerPlaceStartRef.current;
+        const snappedX = Math.floor(worldPos.x / projectTileSize) * projectTileSize;
+        const snappedY = Math.floor(worldPos.y / projectTileSize) * projectTileSize;
+        setDrawPreview({
+          isDrawing: true,
+          start: {
+            x: Math.floor(start.x / projectTileSize),
+            y: Math.floor(start.y / projectTileSize),
+          },
+          end: {
+            x: Math.floor(snappedX / projectTileSize),
+            y: Math.floor(snappedY / projectTileSize),
+          },
+          mode: 'draw',
+        });
       }
 
       // Paint/erase while dragging in point mode - use applyShape for proper brush/stencil support
@@ -1097,12 +1507,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       activeTilesetId,
       selectedTerrainId,
       projectTileSize,
+      currentMap,
       screenToTile,
       setHoveredTile,
       setDrawPreview,
       applyShape,
       applyTerrainShape,
       moveEntity,
+      updateTrigger,
     ],
   );
 
@@ -1339,6 +1751,46 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       dragLinkOffsetRef.current = null;
       draggingLinkHandleRef.current = null;
       dragLinkInitialRef.current = null;
+
+      // Finalize triggerPlace drag → create the trigger
+      if (activeTool === 'triggerPlace' && triggerPlaceStartRef.current) {
+        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        const start = triggerPlaceStartRef.current;
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        const snapFn = (v: number) =>
+          snapMode === 'grid' ? Math.floor(v / projectTileSize) * projectTileSize : Math.round(v);
+        const endX = worldPos ? snapFn(worldPos.x) : start.x;
+        const endY = worldPos ? snapFn(worldPos.y) : start.y;
+        const x = Math.min(start.x, endX);
+        const y = Math.min(start.y, endY);
+        const w = Math.max(projectTileSize, Math.abs(endX - start.x) + projectTileSize);
+        const h = Math.max(projectTileSize, Math.abs(endY - start.y) + projectTileSize);
+        addTrigger({
+          id: `trigger-${Date.now()}`,
+          type: 'locationLinkTrigger',
+          shape: 'rectangle',
+          position: [x, y],
+          size: [w, h],
+          tags: [],
+        });
+        useEditorStore.getState().setActiveTool('triggerSelect');
+        triggerPlaceStartRef.current = null;
+        setDrawPreview({ isDrawing: false, start: null, end: null });
+        finishHistoryBatch();
+        return;
+      }
+      triggerPlaceStartRef.current = null;
+
+      // Flush trigger drag/resize save
+      if (draggingTriggerRef.current || draggingTriggerHandleRef.current) {
+        const { currentMap: map } = useEditorStore.getState();
+        if (map) saveMapDebounced(map);
+      }
+      draggingTriggerRef.current = null;
+      dragTriggerOffsetRef.current = null;
+      draggingTriggerHandleRef.current = null;
+      dragTriggerInitialRef.current = null;
+      draggingVertexIndexRef.current = null;
       // Clear any custom cursor left by handle hover
       try {
         const viewEl = viewport?.options.events?.domElement as HTMLElement | undefined;
@@ -1361,11 +1813,15 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       applyShape,
       applyTerrainShape,
       setDrawPreview,
+      setPolygonPreviewPoints,
       setActiveTileset,
       setSelectedTile,
       setSelectedTiles,
       setSampledPattern,
       finishHistoryBatch,
+      addTrigger,
+      projectTileSize,
+      viewport,
     ],
   );
 

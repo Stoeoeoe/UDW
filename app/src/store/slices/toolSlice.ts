@@ -26,6 +26,7 @@ export interface ToolSlice {
     end: { x: number; y: number } | null;
     mode?: 'draw' | 'select';
   };
+  polygonPreviewPoints: [number, number][] | null; // WIP polygon vertices for triggerPolygon tool
   tilesetToolMode: 'select' | 'terrain';
   entitySnapMode: 'grid' | 'pixel';
   showCollisionOverlay: boolean;
@@ -55,6 +56,7 @@ export interface ToolSlice {
     end: { x: number; y: number } | null;
     mode?: 'draw' | 'select';
   }) => void;
+  setPolygonPreviewPoints: (points: [number, number][] | null) => void;
   setTilesetToolMode: (mode: 'select' | 'terrain') => void;
   setCamera: (camera: Partial<EditorState['camera']>) => void;
   resetCamera: () => void;
@@ -70,6 +72,7 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   brushSize: 1,
   hoveredTile: null,
   drawPreview: { isDrawing: false, start: null, end: null },
+  polygonPreviewPoints: null,
   tilesetToolMode: 'select',
   entitySnapMode: 'grid',
   showCollisionOverlay: false,
@@ -83,6 +86,9 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
 
   setActiveTool: (tool) =>
     set((state) => {
+      if (state.activeTool === 'triggerPolygon' && tool !== 'triggerPolygon') {
+        state.polygonPreviewPoints = null;
+      }
       state.activeTool = tool;
       if (tool === 'stamp' && !state.selectedLayerId && state.currentMap) {
         state.selectedLayerId = state.currentMap.layers[0]?.id || null;
@@ -153,6 +159,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   setDrawPreview: (preview) =>
     set((state) => {
       state.drawPreview = preview;
+    }),
+  setPolygonPreviewPoints: (points) =>
+    set((state) => {
+      state.polygonPreviewPoints = points;
     }),
   setHoveredTile: (pos) =>
     set((state) => {

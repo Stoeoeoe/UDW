@@ -178,6 +178,21 @@ export function ensureAnchorLayer(map: GameMap): GameMap {
   return { ...map, layers: [...map.layers, anchorLayer] };
 }
 
+export function ensureTriggerLayer(map: GameMap): GameMap {
+  const hasTriggerLayer = map.layers.some((l) => l.kind === 'trigger');
+  if (hasTriggerLayer) return map;
+  const triggerLayer: Layer = {
+    id: 'triggers',
+    name: 'Triggers',
+    kind: 'trigger',
+    visible: true,
+    locked: false,
+    opacity: 1,
+    zOrder: 9997,
+  };
+  return { ...map, layers: [...map.layers, triggerLayer] };
+}
+
 export function createDefaultLayer(width: number, height: number): Layer {
   return {
     id: 'ground',
@@ -204,6 +219,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   entity: 'entitySelect',
   anchor: 'anchorSelect',
   locationlink: 'linkSelect',
+  trigger: 'triggerSelect',
 };
 
 export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
@@ -215,14 +231,14 @@ export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
   anchor: ['anchorSelect', 'anchorDelete'],
   locationlink: ['linkPlace', 'linkSelect', 'linkDelete'],
+  trigger: ['triggerPlace', 'triggerPolygon', 'triggerSelect', 'triggerDelete'],
 };
 
 export function getPreferredSelectedLayerId(map: GameMap | null): string | null {
   if (!map) return null;
+  const SYSTEM_KINDS = new Set(['locationlink', 'anchor', 'trigger']);
+  const firstNonSystem = map.layers.find((layer) => !SYSTEM_KINDS.has(layer.kind));
   const firstNonLink = map.layers.find((layer) => layer.kind !== 'locationlink');
-  const firstNonSystem = map.layers.find(
-    (layer) => layer.kind !== 'locationlink' && layer.kind !== 'anchor',
-  );
   return firstNonSystem?.id ?? firstNonLink?.id ?? map.layers[0]?.id ?? null;
 }
 
@@ -237,6 +253,7 @@ export function syncToolStateForSelectedLayer(
     selectedAnchorId: string | null;
     selectedEntityId: string | null;
     selectedEntityIds: Set<string>;
+    selectedTriggerId: string | null;
   },
   options: { forceDefault?: boolean } = {},
 ): void {
@@ -256,6 +273,7 @@ export function syncToolStateForSelectedLayer(
 
   if (layer.kind !== 'locationlink') state.selectedLinkId = null;
   if (layer.kind !== 'anchor') state.selectedAnchorId = null;
+  if (layer.kind !== 'trigger') state.selectedTriggerId = null;
   if (layer.kind !== 'entity') {
     state.selectedEntityId = null;
     state.selectedEntityIds = new Set();
@@ -379,7 +397,7 @@ export function applyEntityPatch(
 
 export async function persistProject(project: Project): Promise<void> {
   useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('', `${project.id}.project.json`, {
+  await fileSystem.saveJson('', `${project.id}.vproj`, {
     $schema: '../schemas/project.schema.json',
     ...project,
   });

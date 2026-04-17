@@ -128,8 +128,8 @@ export const DialogueEditor: React.FC = () => {
     }
 
     const dirtyIds = Array.from(dirtyDialogueIdsRef.current);
-
-    await fileSystem.saveJson('dialogues', 'dialogues.index.json', {
+    // TODO: Rename extension
+    await fileSystem.saveJson('dialogues', 'dialogues.index.vproj', {
       $schema: '../../schemas/dialogue-index.schema.json',
       ...dialogueIndexRef.current,
     });
