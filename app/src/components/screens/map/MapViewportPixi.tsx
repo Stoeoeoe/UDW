@@ -25,6 +25,7 @@ export const MapViewportPixi: React.FC = () => {
   const mapHeight = useEditorStore((state) => state.currentMap?.height);
   const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
   const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
+  const camera = useEditorStore((s) => s.camera);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const activeTool = useEditorStore((state) => state.activeTool);
   const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
@@ -141,14 +142,55 @@ export const MapViewportPixi: React.FC = () => {
         .decelerate({ friction: 0.95 })
         .clampZoom({ minScale: 0.25, maxScale: 8 });
 
-      // Center on load
-      newViewport.moveCenter(worldWidth / 2, worldHeight / 2);
-      newViewport.setZoom(1.5);
-      setZoomLevel(1.5);
+      // Apply stored camera when available, otherwise center on load.
 
-      // Track zoom changes
+      if (camera && typeof camera.zoom === 'number') {
+        try {
+          newViewport.setZoom(camera.zoom);
+        } catch {}
+      } else {
+        newViewport.setZoom(1.5);
+      }
+
+      if (camera && typeof camera.x === 'number' && typeof camera.y === 'number') {
+        try {
+          newViewport.moveCenter(camera.x, camera.y);
+        } catch {
+          newViewport.moveCenter(worldWidth / 2, worldHeight / 2);
+        }
+      } else {
+        newViewport.moveCenter(worldWidth / 2, worldHeight / 2);
+      }
+
+      // (No clamping - allow free panning)
+      setZoomLevel(newViewport.scale.x ?? 1.5);
+
+      // Track zoom and movement changes; clamp after each change and persist.
       newViewport.on('zoomed', () => {
         setZoomLevel(newViewport.scale.x);
+        requestAnimationFrame(() => {
+          try {
+            useEditorStore.getState().setCamera({
+              x: newViewport.center.x,
+              y: newViewport.center.y,
+              zoom: newViewport.scale.x,
+            });
+          } catch {
+            /* ignore */
+          }
+        });
+      });
+
+      newViewport.on('moved', () => {
+        requestAnimationFrame(() => {
+          try {
+            useEditorStore
+              .getState()
+              .setCamera({ x: newViewport.center.x, y: newViewport.center.y });
+          } catch {
+            /* ignore */
+          }
+        });
       });
 
       app.stage.addChild(newViewport);

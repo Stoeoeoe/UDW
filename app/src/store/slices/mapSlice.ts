@@ -11,6 +11,7 @@ import {
   createDefaultLayer,
   ensureNavigationLayer,
   getPreferredSelectedLayerId,
+  choosePreferredSelectedLayerId,
   syncToolStateForSelectedLayer,
   withHistorySuppressed,
 } from '../storeHelpers';
@@ -84,12 +85,20 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
           if (enrichedMap && state.mapCameras?.[enrichedMap.id]) {
             state.camera = { ...state.mapCameras[enrichedMap.id] };
           }
-          if (
-            !state.selectedLayerId ||
-            !enrichedMap.layers.find((l) => l.id === state.selectedLayerId)
-          ) {
-            state.selectedLayerId = getPreferredSelectedLayerId(enrichedMap);
-          }
+
+          const prevSelectedLayerId = state.selectedLayerId;
+          const prevSelectedLayer = state.currentMap?.layers.find(
+            (l) => l.id === prevSelectedLayerId,
+          );
+          const prevSelectedLayerName = prevSelectedLayer?.name ?? null;
+          const prevLayerKind = prevSelectedLayer?.kind ?? null;
+
+          state.selectedLayerId = choosePreferredSelectedLayerId(
+            enrichedMap,
+            prevSelectedLayerId ?? null,
+            prevSelectedLayerName,
+            prevLayerKind ?? null,
+          );
           syncToolStateForSelectedLayer(state, { forceDefault: true });
         }),
       { clearHistory: true },
@@ -121,7 +130,19 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
             ? { ...state.mapCameras[mapId] }
             : { x: 0, y: 0, zoom: 1.5 };
 
-          state.selectedLayerId = getPreferredSelectedLayerId(enrichedMap);
+          const prevSelectedLayerId = state.selectedLayerId;
+          const prevSelectedLayer = state.currentMap?.layers.find(
+            (l) => l.id === prevSelectedLayerId,
+          );
+          const prevSelectedLayerName = prevSelectedLayer?.name ?? null;
+          const prevLayerKind = prevSelectedLayer?.kind ?? null;
+
+          state.selectedLayerId = choosePreferredSelectedLayerId(
+            enrichedMap,
+            prevSelectedLayerId ?? null,
+            prevSelectedLayerName,
+            prevLayerKind ?? null,
+          );
           syncToolStateForSelectedLayer(state, { forceDefault: true });
         }),
       { clearHistory: true },

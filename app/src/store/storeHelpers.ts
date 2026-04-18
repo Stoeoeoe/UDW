@@ -208,6 +208,41 @@ export function getPreferredSelectedLayerId(map: GameMap | null): string | null 
   return firstNonNav?.id ?? map.layers[0]?.id ?? null;
 }
 
+/**
+ * Choose a preferred layer id for a newly-loaded map, attempting to preserve
+ * the user's previous selection by id, then by name, then by kind, falling
+ * back to the regular preferred layer.
+ */
+export function choosePreferredSelectedLayerId(
+  map: GameMap | null,
+  prevSelectedLayerId: string | null,
+  prevSelectedLayerName: string | null,
+  prevLayerKind: Layer['kind'] | null,
+): string | null {
+  if (!map) return null;
+
+  // 1) Try same id
+  if (prevSelectedLayerId) {
+    const sameId = map.layers.find((l) => l.id === prevSelectedLayerId);
+    if (sameId) return sameId.id;
+  }
+
+  // 2) Try same name
+  if (prevSelectedLayerName) {
+    const sameName = map.layers.find((l) => l.name === prevSelectedLayerName);
+    if (sameName) return sameName.id;
+  }
+
+  // 3) Try same kind (first match)
+  if (prevLayerKind) {
+    const sameKind = map.layers.find((l) => l.kind === prevLayerKind);
+    if (sameKind) return sameKind.id;
+  }
+
+  // 4) Fallback
+  return getPreferredSelectedLayerId(map);
+}
+
 export function syncToolStateForSelectedLayer(
   state: {
     currentMap: GameMap | null;
