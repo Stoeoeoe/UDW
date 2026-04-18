@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { ProjectSettingsEditor } from '../dialogs/ProjectSettingsEditor';
 import { Project } from '../../types/schema';
 import { EditorCard, SurfaceSectionHeader } from '../common/Surfaces';
+import { Image } from '@chakra-ui/react';
 
 export const ProjectPanel: React.FC = () => {
   const project = useEditorStore((state) => state.project);
@@ -53,21 +54,22 @@ export const ProjectPanel: React.FC = () => {
           {/* High-Contrast Header */}
           <VStack align="start" spacing={3}>
             <HStack spacing={4}>
-              <Flex
-                w="14"
-                h="14"
-                bg="blue.600"
-                rounded="2xl"
-                align="center"
-                justify="center"
-                shadow="0 0 30px rgba(49, 130, 206, 0.4)"
-                border="1px"
-                borderColor="blue.400"
-              >
-                <Text fontSize="3xl">🚀</Text>
-              </Flex>
+              <Image
+                src="vulcanus-project-icon.png"
+                alt="Project Icon"
+                boxSize="6"
+                width={128}
+                height={128}
+                borderRadius={20}
+              />
               <VStack align="start" spacing={0}>
-                <Heading size="2xl" color="white" fontWeight="900" letterSpacing="tight">
+                <Heading
+                  size="2xl"
+                  color="white"
+                  fontWeight="900"
+                  letterSpacing="tight"
+                  marginBottom={1}
+                >
                   {project.name}
                 </Heading>
                 <Text color="gray.400" fontSize="lg" fontWeight="medium">
