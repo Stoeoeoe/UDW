@@ -146,11 +146,16 @@ namespace Core.Tile.Editor.Vulcan
 
                     if (mapPrefab == null) unresolvedMapPrefabs++;
 
+                    // Prefer the LocationData sub-asset baked into the map import over any manually assigned reference.
+                    var subAssetLocation = AssetDatabase.LoadAllAssetsAtPath(mapAssetPath)
+                        .OfType<LocationData>()
+                        .FirstOrDefault();
+
                     result.Add(new VulcanWorldCatalog.MapBinding
                     {
                         mapId        = mapId,
                         mapPrefab    = mapPrefab,
-                        locationData = oldBinding?.locationData ?? mappedLocation
+                        locationData = subAssetLocation ?? oldBinding?.locationData ?? mappedLocation
                     });
                     existingByMapId.Remove(mapId);
                 }

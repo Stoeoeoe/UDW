@@ -8,7 +8,6 @@ using Core.Tile;
 using Core.Tile.Vulcan;
 using Core.TimeAndWeather;
 using DG.Tweening;
-using Input;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -28,8 +27,7 @@ namespace Core.Location
         [SerializeField] ScreenFader _fader;
         [SerializeField] MainCharacter _mainCharacterPrefab;
 
-        [Header("Vulcan")]
-        [SerializeField] VulcanWorldCatalog _vulcanWorldCatalog;
+        [Header("Vulcan")] [SerializeField] VulcanWorldCatalog _vulcanWorldCatalog;
 
         [Header("Fallback spawn (editor / first run)")] [SerializeField]
         string _defaultSpawnKey = "Default";
@@ -80,14 +78,11 @@ namespace Core.Location
         IEnumerator Start()
         {
             var location = ResolveInitialLocation();
-            if (location == null)
-            {
-                Debug.LogError("[LevelManager] Could not resolve an initial location from loaded scenes.");
-                yield break;
-            }
-
             SetCurrentLocation(location);
-            yield return EnterLocationRoutine(location, isInitialLoad: true);
+            // If transition context already has a target (e.g. editor preview), prefer it for the initial load
+            var initialEntryKey = _transitionContext != null && _transitionContext.HasTarget ? _transitionContext.TargetEntryKey : null;
+            var initialFacing = _transitionContext != null ? _transitionContext.FacingDirection : Vector2.zero;
+            yield return EnterLocationRoutine(location, isInitialLoad: true, initialEntryKey, initialFacing);
         }
 
         LocationData ResolveInitialLocation()
@@ -95,21 +90,24 @@ namespace Core.Location
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 var scene = SceneManager.GetSceneAt(i);
-
                 if (_locationById.TryGetValue(scene.name, out var mappedLocation))
                     return mappedLocation;
-
-                var fallbackLocation = _allLocations
-                    .FirstOrDefault(l => l.sceneReference.Name == scene.name);
-
-                if (fallbackLocation != null)
-                    return fallbackLocation;
             }
 
-            return null;
+            // No registered LocationData found — this is a manual test scene.
+            // Create a transient runtime-only LocationData so the rest of the pipeline works.
+            var activeScene = SceneManager.GetActiveScene();
+            Debug.LogWarning(
+                $"[LevelManager] No LocationData found for scene '{activeScene.name}'. Running in test mode with a transient location.");
+            var testLocation = ScriptableObject.CreateInstance<LocationData>();
+            testLocation.id = activeScene.name;
+            testLocation.label = activeScene.name;
+            return testLocation;
         }
 
-        IEnumerator EnterLocationRoutine(LocationData locationData, bool isInitialLoad)
+        // Now accepts an explicit entryKey and facingDirection so callers can tell the loader
+        // which entry to place the player at. If entryKey is null/empty, falls back to _transitionContext.
+        IEnumerator EnterLocationRoutine(LocationData locationData, bool isInitialLoad, string entryKey = null, Vector2 facingDirection = default)
         {
             SceneReady = false;
 
@@ -118,7 +116,7 @@ namespace Core.Location
 
             // Spawn and place character
             var character = SpawnOrFindPlayer();
-            PlaceCharacterAtSpawn(character);
+            PlaceCharacterAtSpawn(character, entryKey, facingDirection);
 
             // Ensure character runtime initialization
             character.EnsureRuntimeInitialized();
@@ -138,24 +136,35 @@ namespace Core.Location
 
         public void LoadLocation(LocationData location, string entryKey, Vector2 facingDirection)
         {
-            _transitionContext.Set(entryKey, facingDirection);
-            StartCoroutine(LoadRoutine(location.sceneReference.Name, location));
+            _transitionContext?.Set(entryKey, facingDirection);
+            StartCoroutine(LoadRoutine(location.id, location, entryKey, facingDirection));
+        }
+
+        public bool TransitionWithinCurrentLocation(string entryKey, Vector2 facingDirection)
+        {
+            if (string.IsNullOrWhiteSpace(entryKey))
+                return false;
+
+            var character = SpawnOrFindPlayer();
+            if (!character)
+                return false;
+
+            _transitionContext?.Set(entryKey, facingDirection);
+            var placed = TryPlaceCharacterAtEntry(character, entryKey, ResolveFacingDirection(facingDirection));
+            _transitionContext?.Clear();
+
+            if (!placed)
+            {
+                Debug.LogWarning($"[LevelManager] Could not resolve local transition target '{entryKey}' in '{CurrentLocationData?.id}'.");
+                return false;
+            }
+
+            character.EnsureRuntimeInitialized();
+            return true;
         }
 
         public LocationData GetLocationDataById(string id) =>
             _locationById.GetValueOrDefault(id);
-
-        public bool TryResolveMapPrefab(LocationData locationData, out GameObject mapPrefab)
-        {
-            mapPrefab = locationData != null ? locationData.tiledMapPrefab : null;
-            if (mapPrefab != null)
-                return true;
-
-            if (_vulcanWorldCatalog != null)
-                return _vulcanWorldCatalog.TryGetMapPrefabForLocation(locationData, out mapPrefab);
-
-            return false;
-        }
 
         public void RegisterLifecycle(ILocationLifecycle component)
         {
@@ -172,7 +181,7 @@ namespace Core.Location
 
         // - Scene load routine ------------------------------------------------------
 
-        IEnumerator LoadRoutine(string sceneName, LocationData locationData)
+        IEnumerator LoadRoutine(string sceneName, LocationData locationData, string entryKey = null, Vector2 facingDirection = default)
         {
             SceneReady = false;
             MainCharacter.CurrentMainCharacter.Freeze();
@@ -193,7 +202,7 @@ namespace Core.Location
             yield return null; // Allow new scene's OnEnable to fire so components can register
 
             SetCurrentLocation(locationData);
-            yield return EnterLocationRoutine(locationData, isInitialLoad: false);
+            yield return EnterLocationRoutine(locationData, isInitialLoad: false, entryKey, facingDirection);
         }
 
         void SetCurrentLocation(LocationData locationData)
@@ -218,7 +227,10 @@ namespace Core.Location
             return character;
         }
 
-        void PlaceCharacterAtSpawn(MainCharacter character)
+        // Tries to place the character at the specified entryKey (which may be a location-link key
+        // or a spawnpoint key). If entryKey is null/blank, falls back to the transition context
+        // and then to default spawn rules.
+        void PlaceCharacterAtSpawn(MainCharacter character, string entryKey = null, Vector2 facingDirection = default)
         {
             if (!character)
             {
@@ -226,24 +238,18 @@ namespace Core.Location
                 return;
             }
 
-            if (_transitionContext is { HasTarget: true })
-            {
-                var links = FindObjectsByType<ILocationLink>(FindObjectsSortMode.None);
-                var link = Array.Find(links, l => l.Key == _transitionContext.TargetEntryKey);
-                if (link != null)
-                {
-                    character.transform.position = link.transform.position + link.ExitSpawnOffset;
-                    var facing = link.ExitFacingDirection != Vector2.zero
-                        ? link.ExitFacingDirection
-                        : _transitionContext.FacingDirection;
-                    character.Orientation.ForceDirection(facing);
-                    return;
-                }
-            }
+            // Prefer explicit entryKey provided to the loader; otherwise fall back to transition context
+            var effectiveEntryKey = !string.IsNullOrWhiteSpace(entryKey) ? entryKey
+                : (_transitionContext != null && _transitionContext.HasTarget ? _transitionContext.TargetEntryKey : null);
+            var resolvedFacing = ResolveFacingDirection(facingDirection);
 
+            if (TryPlaceCharacterAtEntry(character, effectiveEntryKey, resolvedFacing))
+                return;
+
+            // If no link found, try spawn points (may be multiple) matching the entry key, then default, then first
             var spawnPoints = FindObjectsByType<SpawnPoint>(FindObjectsSortMode.None);
-            var target = _transitionContext is { HasTarget: true }
-                ? Array.Find(spawnPoints, sp => sp.Key == _transitionContext.TargetEntryKey)
+            var target = !string.IsNullOrWhiteSpace(effectiveEntryKey)
+                ? Array.Find(spawnPoints, sp => string.Equals(sp.Key, effectiveEntryKey, StringComparison.OrdinalIgnoreCase))
                 : null;
             target ??= Array.Find(spawnPoints, sp => sp.Key == _defaultSpawnKey);
             target ??= spawnPoints.FirstOrDefault();
@@ -254,9 +260,19 @@ namespace Core.Location
                 return;
             }
 
-            var spawnFacing = _transitionContext != null ? _transitionContext.FacingDirection : Vector2.down;
-            target.SpawnCharacter(character, spawnFacing);
+            target.SpawnCharacter(character, resolvedFacing);
         }
+
+        bool TryPlaceCharacterAtEntry(MainCharacter character, string entryKey, Vector2 facingDirection)
+        {
+            if (string.IsNullOrWhiteSpace(entryKey))
+                return false;
+
+            return MapManager.Instance != null && MapManager.Instance.TryPlaceCharacterAtEntry(character, entryKey, facingDirection);
+        }
+
+        Vector2 ResolveFacingDirection(Vector2 facingDirection) =>
+            facingDirection != Vector2.zero ? facingDirection : (_transitionContext != null ? _transitionContext.FacingDirection : Vector2.down);
 
 
         // - Fade --------------------------------------------------------------------

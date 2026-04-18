@@ -75,6 +75,7 @@ namespace Core.Tile.Vulcan
         [Header("Mappings")]
         [SerializeField] private GameObject locationLinkPrefab;
         [SerializeField] private EntityPrefabMapping[] entityPrefabMappings = Array.Empty<EntityPrefabMapping>();
+        [SerializeField] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
         [SerializeField] private MapLocationMapping[] locationMappings = Array.Empty<MapLocationMapping>();
 
         [Header("Importer Diagnostics")]
@@ -91,6 +92,7 @@ namespace Core.Tile.Vulcan
         public PropertyDefinition[] TileMetadataDefinitions => tileMetadataDefinitions;
         public GameObject LocationLinkPrefab => locationLinkPrefab;
         public EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
+        public ItemClassMapping[] ItemClassMappings => itemClassMappings;
         public MapLocationMapping[] LocationMappings => locationMappings;
         public string[] MappingWarnings => mappingWarnings;
 
@@ -120,12 +122,22 @@ namespace Core.Tile.Vulcan
             GameObject linkPrefab,
             EntityPrefabMapping[] entityMappings,
             MapLocationMapping[] mapLocations,
+            ItemClassMapping[] itemMappings,
             string[] warnings)
         {
             locationLinkPrefab = linkPrefab;
             entityPrefabMappings = entityMappings ?? Array.Empty<EntityPrefabMapping>();
+            itemClassMappings = itemMappings ?? Array.Empty<ItemClassMapping>();
             locationMappings = mapLocations ?? Array.Empty<MapLocationMapping>();
             mappingWarnings = warnings ?? Array.Empty<string>();
+        }
+
+        [Serializable]
+        public class ItemClassMapping
+        {
+            public string classId;
+            public string className;
+            public string[] candidateTypeNames = Array.Empty<string>();
         }
 
         public bool TryMapTerrainId(string terrainId, out TerrainType terrainType)

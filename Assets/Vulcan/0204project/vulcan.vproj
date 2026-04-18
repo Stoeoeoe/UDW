@@ -65,6 +65,18 @@
         16,
         16
       ]
+    },
+    {
+      "id": "hello_world",
+      "displayName": "hello world",
+      "category": "object",
+      "icon": "GiYinYang",
+      "placeholderColor": "#3182ce",
+      "properties": [],
+      "defaultSize": [
+        1,
+        1
+      ]
     }
   ],
   "gameVariables": [
@@ -89,8 +101,8 @@
       "fields": [
         {
           "key": "id",
-          "type": "string",
-          "defaultValue": "123"
+          "type": "number",
+          "defaultValue": 0
         },
         {
           "key": "name",
@@ -107,6 +119,12 @@
       "params": [],
       "returnType": "table",
       "returnTableId": "tbl_1775752095272"
+    },
+    {
+      "id": "fn_1776021729333",
+      "name": "newFunction",
+      "params": [],
+      "returnType": "void"
     }
   ],
   "scriptNamespaces": [
@@ -148,11 +166,11 @@
   ],
   "layerDefinitions": [
     {
-      "id": "layer-1775893653381",
-      "name": "New Layer",
-      "type": "tile",
-      "color": "#3182ce",
-      "zIndex": 0
+      "id": "terrain",
+      "name": "Terrain",
+      "type": "terrain",
+      "zIndex": 0,
+      "color": "#983a3a"
     }
   ],
   "tileMetadataDefinitions": [
@@ -162,6 +180,43 @@
       "type": "boolean",
       "defaultValue": false,
       "required": false
+    }
+  ],
+  "locationMetadataDefinitions": [
+    {
+      "key": "musicCue",
+      "label": "Music Cue",
+      "type": "string",
+      "required": false,
+      "defaultValue": ""
+    },
+    {
+      "key": "locationType",
+      "label": "Location Type",
+      "type": "enum",
+      "required": false,
+      "defaultValue": "",
+      "constraints": {
+        "options": [
+          "Indoor",
+          "Outdoor"
+        ]
+      }
+    }
+  ],
+  "itemClasses": [
+    {
+      "id": "seeds",
+      "name": "Seed",
+      "properties": [
+        {
+          "key": "numberOfDays",
+          "label": "Number of days",
+          "type": "int",
+          "defaultValue": 0,
+          "required": true
+        }
+      ]
     }
   ]
 }

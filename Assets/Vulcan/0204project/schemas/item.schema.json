@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "item.schema.json",
+  "title": "Item",
+  "description": "An item definition (*.item.json).",
+  "type": "object",
+  "required": ["id", "name", "category", "icon", "description", "maxStackSize"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this item (kebab-case).",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name shown in the editor and game."
+    },
+    "category": {
+      "type": "string",
+      "description": "Category grouping for this item (e.g. 'Consumable', 'Weapon', 'Tool')."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Relative path to the icon image asset (from project root)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Long description shown to the player in the inventory UI."
+    },
+    "maxStackSize": {
+      "type": "integer",
+      "description": "Maximum number of this item that can occupy a single inventory slot.",
+      "minimum": 1,
+      "default": 99
+    },
+    "pickupSound": {
+      "type": "string",
+      "description": "Relative path to the audio clip played when the item is picked up. Optional — falls back to the ItemManager default."
+    },
+    "classId": {
+      "type": "string",
+      "description": "Optional reference to a project-level ItemClass definition (e.g. 'seed', 'weapon'). Drives extra typed properties on this item."
+    },
+    "classProperties": {
+      "type": "object",
+      "description": "Values for the extra properties defined by the assigned ItemClass.",
+      "additionalProperties": true
+    }
+  }
+}

@@ -12,7 +12,6 @@ using Plants;
 using Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 namespace Core.Tile
@@ -27,7 +26,6 @@ namespace Core.Tile
         private const float InteractionDistance = 0.55f;
 
         private VulcanImportedMap _currentMap;
-        private GameObject _spawnedMapInstance;
         private Tilemap _terrainTilemap;
         private Tilemap _farmlandTilemap;
         private Tilemap _plowedTilemap;
@@ -237,6 +235,31 @@ namespace Core.Tile
         {
             var cellPosition = new Vector3Int(coordinates.x, coordinates.y, 0);
             return _terrainTilemap.CellToWorld(cellPosition) + _terrainTilemap.cellSize / 2;
+        }
+
+        public bool TryGetAnchor(string anchorId, out VulcanMapAnchor anchor)
+        {
+            anchor = null;
+            if (string.IsNullOrWhiteSpace(anchorId))
+                return false;
+
+            var anchors = FindObjectsByType<VulcanMapAnchor>(FindObjectsSortMode.None);
+            anchor = Array.Find(anchors, candidate => string.Equals(candidate.AnchorId, anchorId, StringComparison.OrdinalIgnoreCase));
+            return anchor != null;
+        }
+
+        public bool TryPlaceCharacterAtEntry(GameCharacter character, string entryKey, Vector2 facingDirection)
+        {
+            if (character == null || !TryGetAnchor(entryKey, out var anchor))
+                return false;
+
+            character.transform.position = anchor.transform.position;
+
+            var resolvedFacing = anchor.FacingDirection != Vector2.zero
+                ? anchor.FacingDirection
+                : (facingDirection != Vector2.zero ? facingDirection : Vector2.down);
+            character.Orientation.ForceDirection(resolvedFacing);
+            return true;
         }
 
         #endregion
@@ -517,28 +540,11 @@ namespace Core.Tile
 
         private void EnsureLocationMapInstance(LocationData location)
         {
-            if (_spawnedMapInstance != null)
-            {
-                Destroy(_spawnedMapInstance);
-                _spawnedMapInstance = null;
-            }
-
-            GameObject mapPrefab = null;
-            if (LevelManager.Instance != null)
-                LevelManager.Instance.TryResolveMapPrefab(location, out mapPrefab);
-            else
-                mapPrefab = location != null ? location.tiledMapPrefab : null;
-
-            if (mapPrefab == null)
+            // Scene was generated with the map prefab already placed inside it — no need to spawn.
+            if (FindFirstObjectByType<VulcanImportedMap>() != null)
                 return;
 
-            // If map data is already present in the scene, don't spawn a duplicate.
-            if (FindFirstObjectByType<VulcanImportedMap>() != null || FindFirstObjectByType<Tilemap>() != null)
-                return;
-
-            _spawnedMapInstance = Instantiate(mapPrefab);
-            _spawnedMapInstance.name = mapPrefab.name;
-            SceneManager.MoveGameObjectToScene(_spawnedMapInstance, SceneManager.GetActiveScene());
+            Debug.LogWarning($"[MapManager] No VulcanImportedMap found in scene for location '{location?.id}'. Scene may be missing its map prefab.");
         }
 
         #endregion

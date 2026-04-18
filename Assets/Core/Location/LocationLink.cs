@@ -1,7 +1,7 @@
 using Character;
 using Core.Tile.Vulcan;
-using EditorUI.Attributes;
 using PixelCrushers;
+using System;
 using UnityEngine;
 
 namespace Core.Location
@@ -16,19 +16,12 @@ namespace Core.Location
         [SerializeField] private string targetLocationId;
         [SerializeField] private string targetEntryKey;
         [SerializeField] private LocationLinkType linkType;
-        [Dial(45)] [SerializeField] private Vector2 previewFacingDirection;
 
         public LocationData TargetLocation  => targetLocation;
         public string TargetLocationId => targetLocationId;
         public string TargetEntryKey => targetEntryKey;
 
         public override bool RequiresButtonPress => linkType == LocationLinkType.Door;
-
-        private void OnValidate()
-        {
-            if (previewFacingDirection != Vector2.zero)
-                exitFacingDirection = previewFacingDirection;
-        }
 
         public override void ApplyVulcanData(VulcanLocationLinkData data, VulcanWorldCatalog catalog)
         {
@@ -43,36 +36,64 @@ namespace Core.Location
 
             var suggestedFacing = data.SuggestedExitFacingDirection;
             if (suggestedFacing != Vector2.zero)
-            {
                 exitFacingDirection = suggestedFacing;
-                previewFacingDirection = suggestedFacing;
-            }
         }
 
 
         protected override void Interact(GameCharacter instigator)
         {
-            var resolvedTarget = targetLocation;
-            if (!resolvedTarget && !string.IsNullOrWhiteSpace(targetLocationId))
-                resolvedTarget = LevelManager.Instance.GetLocationDataById(targetLocationId);
-
-            if (!resolvedTarget)
+            var levelManager = LevelManager.Instance;
+            if (!levelManager)
             {
-                Debug.LogWarning($"[LocationLink] {gameObject.name} has no target LocationData assigned.");
+                Debug.LogWarning($"[LocationLink] {gameObject.name} has no LevelManager available.");
                 return;
             }
 
             var entryKey = string.IsNullOrWhiteSpace(targetEntryKey)
                 ? targetLocationId
                 : targetEntryKey;
+            var transitionFacing = exitFacingDirection != Vector2.zero ? exitFacingDirection : instigator.Orientation.FacingDirection;
 
-            LevelManager.Instance.LoadLocation(resolvedTarget, entryKey, instigator.Orientation.FacingDirection);
+            if (TargetsCurrentLocation(levelManager))
+            {
+                if (!levelManager.TransitionWithinCurrentLocation(entryKey, transitionFacing))
+                    Debug.LogWarning($"[LocationLink] {gameObject.name} could not resolve local target '{entryKey}'.");
+                return;
+            }
+
+            var resolvedTarget = targetLocation;
+            if (!resolvedTarget && !string.IsNullOrWhiteSpace(targetLocationId))
+                resolvedTarget = levelManager.GetLocationDataById(targetLocationId);
+
+            if (!resolvedTarget)
+            {
+                Debug.LogWarning($"[LocationLink] {gameObject.name} could not resolve target location '{targetLocationId}'.");
+                return;
+            }
+
+            levelManager.LoadLocation(resolvedTarget, entryKey, transitionFacing);
+        }
+
+        private bool TargetsCurrentLocation(LevelManager levelManager)
+        {
+            var currentLocation = levelManager.CurrentLocationData;
+            if (currentLocation == null)
+                return false;
+
+            if (targetLocation != null)
+                return targetLocation == currentLocation;
+
+            return string.IsNullOrWhiteSpace(targetLocationId) ||
+                   string.Equals(targetLocationId, currentLocation.id, StringComparison.OrdinalIgnoreCase);
         }
 
         private void OnDrawGizmos()
         {
             Gizmos.color = Color.green;
-            var facing = previewFacingDirection != Vector2.zero ? previewFacingDirection : exitFacingDirection;
+            var facing = exitFacingDirection;
+            if (facing == Vector2.zero)
+                return;
+
             var position = transform.position + (Vector3)(facing.normalized * 0.5f);
             MoreGizmos.DrawArrow(position, facing.normalized, 0.25f);
         }

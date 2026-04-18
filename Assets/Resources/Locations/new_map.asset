@@ -10,13 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8504c6c9aab64da6a9f15cde1799e928, type: 3}
-  m_Name: IndoorTest2
+  m_Name: new_map
   m_EditorClassIdentifier: Assembly-CSharp::Core.Common.LocationData
-  id: IndoorTest2
-  sceneReference:
-    asset: {fileID: 102900000, guid: 87f856962dfdc054b9adff86d8e27c56, type: 3}
-    guid: 87f856962dfdc054b9adff86d8e27c56
-  tiledMapPrefab: {fileID: -7984079580274187724, guid: c390bdb8e0c73904abd13cb534416c5b,
-    type: 3}
-  label: IndoorTest2
+  id: new_map
+  label: Indoor Test
   locationType: 0

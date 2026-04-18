@@ -19,7 +19,7 @@ MonoBehaviour:
   <Description>k__BackingField: 
   <MaxStackSize>k__BackingField: 99
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
-  <PickupSound>k__BackingField: {fileID: 8300000, guid: 995dd144cd94b2f4badbd49d935da73f,
+  <PickupSound>k__BackingField: {fileID: 8300000, guid: 59a2ea91da9a6e04a8192fa7e4f59c3f,
     type: 3}
   placeableOnTerrainTypes: 01000000
   plantData: {fileID: 11400000, guid: 9c87864bb7deaf14494c7822d7b9fed4, type: 2}

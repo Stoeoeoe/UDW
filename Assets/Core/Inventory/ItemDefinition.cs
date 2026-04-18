@@ -11,6 +11,7 @@ namespace Core.Inventory
     {
         [field: SerializeField] public string ItemId      { get; private set; }
         [field: SerializeField] public string ItemName    { get; private set; }
+        [field: SerializeField] public string Category    { get; private set; }
         [field: SerializeField] public Sprite Icon        { get; private set; }
         [field: SerializeField] public string Description { get; private set; }
         [field: SerializeField] public int    MaxStackSize { get; private set; } = 99;

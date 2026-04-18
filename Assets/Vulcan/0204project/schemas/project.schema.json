@@ -70,6 +70,11 @@
       "description": "Project-level tile metadata definitions shared across all tilesets.",
       "items": { "$ref": "#/$defs/PropertyDefinition" }
     },
+    "locationMetadataDefinitions": {
+      "type": "array",
+      "description": "Project-level location metadata definitions shared by maps (map-level properties).",
+      "items": { "$ref": "#/$defs/PropertyDefinition" }
+    },
     "gameVariables": {
       "type": "array",
       "description": "Named variables exposed to the Lua sandbox at runtime.",
@@ -94,6 +99,11 @@
       "type": "array",
       "description": "Context types defining the shape of 'self' for script execution contexts.",
       "items": { "$ref": "#/$defs/ScriptContextType" }
+    },
+    "itemClasses": {
+      "type": "array",
+      "description": "Project-level item class definitions that add extra typed property schemas to items.",
+      "items": { "$ref": "#/$defs/ItemClass" }
     }
   },
   "$defs": {
@@ -422,6 +432,31 @@
         "functions": {
           "type": "array",
           "items": { "$ref": "#/$defs/ScriptFunction" }
+        }
+      }
+    },
+    "ItemClass": {
+      "type": "object",
+      "required": ["id", "name", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier (kebab-case, e.g. 'seed', 'weapon').",
+          "pattern": "^[a-z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name shown in the editor (e.g. 'Seed', 'Weapon')."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of what this item class represents."
+        },
+        "properties": {
+          "type": "array",
+          "description": "Extra typed property definitions added to items assigned to this class.",
+          "items": { "$ref": "#/$defs/PropertyDefinition" }
         }
       }
     }

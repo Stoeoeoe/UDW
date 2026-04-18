@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/item.schema.json",
+  "id": "gugu",
+  "name": "gaga",
+  "category": "",
+  "icon": "",
+  "description": "",
+  "maxStackSize": 99,
+  "classId": "seeds",
+  "classProperties": {
+    "numberOfDays": 1
+  }
+}
