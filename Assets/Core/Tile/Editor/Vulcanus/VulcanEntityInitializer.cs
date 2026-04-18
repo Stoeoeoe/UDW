@@ -3,18 +3,18 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Core.Location;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace Core.Tile.Editor.Vulcan
+namespace Core.Tile.Editor.Vulcanus
 {
     /// <summary>
-    /// Applies Vulcan entity and location-link data to prefab instances at import time.
+    /// Applies Vulcanus entity and location-link data to prefab instances at import time.
     /// No runtime reflection — everything is resolved and serialized during map import.
     /// </summary>
-    internal static class VulcanEntityInitializer
+    internal static class VulcanusEntityInitializer
     {
         private const BindingFlags MemberFlags =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -25,15 +25,15 @@ namespace Core.Tile.Editor.Vulcan
         /// Tries every known init method on each MonoBehaviour of the instance,
         /// then applies JSON properties by name matching.
         /// </summary>
-        public static void InitializeEntity(GameObject instance, VulcanEntityInstanceData data)
+        public static void InitializeEntity(GameObject instance, VulcanusEntityInstanceData data)
         {
             var behaviours = instance.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
             foreach (var behaviour in behaviours)
             {
                 if (behaviour == null) continue;
-                TryInvokeInitMethod(behaviour, "ApplyVulcanEntityData", data);
-                TryInvokeInitMethod(behaviour, "InitializeFromVulcan", data);
-                TryInvokeInitMethod(behaviour, "ConfigureFromVulcan", data);
+                TryInvokeInitMethod(behaviour, "ApplyVulcanusEntityData", data);
+                TryInvokeInitMethod(behaviour, "InitializeFromVulcanus", data);
+                TryInvokeInitMethod(behaviour, "ConfigureFromVulcanus", data);
                 ApplyJsonProperties(behaviour, data.propertiesJson);
             }
 
@@ -42,23 +42,23 @@ namespace Core.Tile.Editor.Vulcan
 
         // ── Location link prefabs ─────────────────────────────────────────────────
 
-        public static void InitializeLocationLink(GameObject instance, VulcanLocationLinkData data, VulcanWorldCatalog catalog)
+        public static void InitializeLocationLink(GameObject instance, VulcanusLocationLinkData data, VulcanusWorldCatalog catalog)
         {
             var link = instance.GetComponent<ILocationLink>();
             if (link != null)
-                link.ApplyVulcanData(data, catalog);
+                link.ApplyVulcanusData(data, catalog);
 
             EditorUtility.SetDirty(instance);
         }
 
         // ── Init method dispatch ──────────────────────────────────────────────────
 
-        private static void TryInvokeInitMethod(object target, string methodName, VulcanEntityInstanceData data)
+        private static void TryInvokeInitMethod(object target, string methodName, VulcanusEntityInstanceData data)
         {
             var type = target.GetType();
 
             var byData = type.GetMethod(methodName, MemberFlags, null,
-                new[] { typeof(VulcanEntityInstanceData) }, null);
+                new[] { typeof(VulcanusEntityInstanceData) }, null);
             if (byData != null)
             {
                 byData.Invoke(target, new object[] { data });

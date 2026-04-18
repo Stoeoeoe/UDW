@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Core.Location;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using Core.Inventory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,10 +14,10 @@ using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Core.Tile.Editor.Vulcan
+namespace Core.Tile.Editor.Vulcanus
 {
     [ScriptedImporter(2, new[] { "vproj", "vts", "vmap", "vitm" }, 6100)]
-    public class VulcanJsonImporter : ScriptedImporter
+    public class VulcanusJsonImporter : ScriptedImporter
     {
         private const float DefaultOverlayAlpha = 0.5f;
 
@@ -52,7 +52,7 @@ namespace Core.Tile.Editor.Vulcan
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[VulcanJsonImporter] Failed importing '{ctx.assetPath}'.\n{ex}");
+                Debug.LogError($"[VulcanusJsonImporter] Failed importing '{ctx.assetPath}'.\n{ex}");
                 ImportAsText(ctx);
             }
         }
@@ -71,7 +71,7 @@ namespace Core.Tile.Editor.Vulcan
         {
             var dto = LoadDto<ProjectDto>(ctx.assetPath);
 
-            var terrainDefs = dto.TerrainTypes.Select(t => new VulcanProject.TerrainDefinition
+            var terrainDefs = dto.TerrainTypes.Select(t => new VulcanusProject.TerrainDefinition
             {
                 id = t.Id,
                 displayName = t.DisplayName ?? t.Id,
@@ -79,7 +79,7 @@ namespace Core.Tile.Editor.Vulcan
                 mappedTerrainType = MapTerrainIdToTerrainType(t.Id, null)
             }).ToArray();
 
-            var layerDefs = dto.LayerDefinitions.Select(l => new VulcanProject.LayerDefinition
+            var layerDefs = dto.LayerDefinitions.Select(l => new VulcanusProject.LayerDefinition
             {
                 id = l.Id,
                 name = l.Name,
@@ -88,7 +88,7 @@ namespace Core.Tile.Editor.Vulcan
                 zIndex = l.ZIndex
             }).ToArray();
 
-            var entityDefs = dto.EntityTypes.Select(e => new VulcanProject.EntityTypeDefinition
+            var entityDefs = dto.EntityTypes.Select(e => new VulcanusProject.EntityTypeDefinition
             {
                 id = e.Id,
                 displayName = e.DisplayName,
@@ -96,24 +96,24 @@ namespace Core.Tile.Editor.Vulcan
                 group = e.Group
             }).ToArray();
 
-            var metadataDefs = dto.TileMetadataDefinitions?.Select(d => new VulcanProject.PropertyDefinition
+            var metadataDefs = dto.TileMetadataDefinitions?.Select(d => new VulcanusProject.PropertyDefinition
             {
                 key = d.Key,
                 label = d.Label,
                 type = d.Type,
                 defaultValue = d.DefaultValue?.ToString(Newtonsoft.Json.Formatting.None),
                 required = d.Required
-            }).ToArray() ?? Array.Empty<VulcanProject.PropertyDefinition>();
+            }).ToArray() ?? Array.Empty<VulcanusProject.PropertyDefinition>();
 
-            var previousProject = AssetDatabase.LoadAssetAtPath<VulcanProject>(ctx.assetPath);
-            var catalog = VulcanProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
+            var previousProject = AssetDatabase.LoadAssetAtPath<VulcanusProject>(ctx.assetPath);
+            var catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
 
             var warnings = new List<string>();
             var existingEntityMappings = catalog != null ? catalog.EntityPrefabMappings : previousProject?.EntityPrefabMappings;
-            var entityMappings = VulcanEditorUtils.BuildEntityMappings(entityDefs, existingEntityMappings, warnings);
+            var entityMappings = VulcanusEditorUtils.BuildEntityMappings(entityDefs, existingEntityMappings, warnings);
 
             var locationMappings = (catalog != null ? catalog.LocationMappings : previousProject?.LocationMappings)
-                                   ?? Array.Empty<VulcanProject.MapLocationMapping>();
+                                   ?? Array.Empty<VulcanusProject.MapLocationMapping>();
             var locationLinkPrefab = catalog != null
                 ? catalog.LocationLinkPrefab
                 : previousProject != null ? previousProject.LocationLinkPrefab : null;
@@ -121,7 +121,7 @@ namespace Core.Tile.Editor.Vulcan
             if (catalog != null)
                 AddDependency(ctx, AssetDatabase.GetAssetPath(catalog));
 
-            var project = ScriptableObject.CreateInstance<VulcanProject>();
+            var project = ScriptableObject.CreateInstance<VulcanusProject>();
             project.name = GetBaseName(ctx.assetPath);
             project.Configure(
                 dto.Version ?? "1.0",
@@ -135,11 +135,11 @@ namespace Core.Tile.Editor.Vulcan
                 metadataDefs);
 
             // Build item-class mappings from project DTO (classId -> CLR type name candidates)
-            VulcanProject.ItemClassMapping[] itemMappings = Array.Empty<VulcanProject.ItemClassMapping>();
+            VulcanusProject.ItemClassMapping[] itemMappings = Array.Empty<VulcanusProject.ItemClassMapping>();
             if (dto.ItemClasses != null && dto.ItemClasses.Count > 0)
             {
                 itemMappings = dto.ItemClasses
-                    .Select(ic => new VulcanProject.ItemClassMapping
+                    .Select(ic => new VulcanusProject.ItemClassMapping
                     {
                         classId = ic.Id,
                         className = ic.ClassName,
@@ -163,12 +163,12 @@ namespace Core.Tile.Editor.Vulcan
             var dto = LoadDto<TilesetDto>(ctx.assetPath);
 
             var projectAssetPath = FindProjectAssetPath(ctx.assetPath);
-            VulcanProject project = null;
+            VulcanusProject project = null;
             var tileSize = 16;
             if (!string.IsNullOrEmpty(projectAssetPath))
             {
                 AddDependency(ctx, projectAssetPath);
-                project = AssetDatabase.LoadAssetAtPath<VulcanProject>(projectAssetPath);
+                project = AssetDatabase.LoadAssetAtPath<VulcanusProject>(projectAssetPath);
                 tileSize = project != null ? Mathf.Max(1, project.TileSize) : GetProjectTileSize(projectAssetPath);
             }
 
@@ -185,10 +185,10 @@ namespace Core.Tile.Editor.Vulcan
                 ? AssetDatabase.LoadAssetAtPath<Texture2D>(spriteSheetAssetPath)
                 : null;
 
-            var tiles = new VulcanTile[tileCount];
+            var tiles = new VulcanusTile[tileCount];
             for (var i = 0; i < tileCount; i++)
             {
-                var tile = ScriptableObject.CreateInstance<VulcanTile>();
+                var tile = ScriptableObject.CreateInstance<VulcanusTile>();
                 tile.name = $"tile_{i:D4}";
 
                 dto.Tiles.TryGetValue(i.ToString(), out var meta);
@@ -196,16 +196,16 @@ namespace Core.Tile.Editor.Vulcan
                 var tags = meta?.Tags?.ToArray() ?? Array.Empty<string>();
                 var collisionKind = ParseCollisionKind(meta?.Collision);
                 var tileId = !string.IsNullOrEmpty(meta?.Id) ? meta.Id : $"{tilesetId}_{i}";
-                Core.Tile.Vulcan.VulcanTile.VulcanTileProperty[] metaProps = null;
+                Core.Tile.Vulcanus.VulcanusTile.VulcanusTileProperty[] metaProps = null;
                 if (meta?.Properties != null && meta.Properties.Count > 0)
                 {
-                    var list = new List<Core.Tile.Vulcan.VulcanTile.VulcanTileProperty>();
+                    var list = new List<Core.Tile.Vulcanus.VulcanusTile.VulcanusTileProperty>();
                     for (int p = 0; p < meta.Properties.Count; p++)
                     {
                         var pi = meta.Properties[p];
                         if (pi == null) continue;
 
-                        // Attempt to apply the property directly to the VulcanTile instance
+                        // Attempt to apply the property directly to the VulcanusTile instance
                         // if a matching field/property (case-insensitive) exists. If applied,
                         // do not store in the fallback Properties bag.
                         var applied = TryApplyPropertyToObject(tile, pi.Key, pi.Value);
@@ -213,7 +213,7 @@ namespace Core.Tile.Editor.Vulcan
                             continue;
 
                         // Fallback: store as JSON string in the serializable property bag.
-                        var vp = new Core.Tile.Vulcan.VulcanTile.VulcanTileProperty
+                        var vp = new Core.Tile.Vulcanus.VulcanusTile.VulcanusTileProperty
                         {
                             key = pi?.Key,
                             jsonValue = pi?.Value != null ? pi.Value.ToString(Newtonsoft.Json.Formatting.None) : null
@@ -238,7 +238,7 @@ namespace Core.Tile.Editor.Vulcan
                 ctx.AddObjectToAsset($"tile_{i}", tile);
             }
 
-            var tileset = ScriptableObject.CreateInstance<VulcanTilesetAsset>();
+            var tileset = ScriptableObject.CreateInstance<VulcanusTilesetAsset>();
             tileset.name = displayName;
             tileset.Configure(tilesetId, displayName, texture, columns, tileCount, tileSize, tiles);
 
@@ -253,15 +253,15 @@ namespace Core.Tile.Editor.Vulcan
             var dto = LoadDto<MapDto>(ctx.assetPath);
 
             var projectAssetPath = FindProjectAssetPath(ctx.assetPath);
-            VulcanProject project = null;
-            VulcanWorldCatalog catalog = null;
+            VulcanusProject project = null;
+            VulcanusWorldCatalog catalog = null;
             var tileSize = 16;
             if (!string.IsNullOrEmpty(projectAssetPath))
             {
                 AddDependency(ctx, projectAssetPath);
-                project = AssetDatabase.LoadAssetAtPath<VulcanProject>(projectAssetPath);
+                project = AssetDatabase.LoadAssetAtPath<VulcanusProject>(projectAssetPath);
                 tileSize = project != null ? Mathf.Max(1, project.TileSize) : GetProjectTileSize(projectAssetPath);
-                catalog = VulcanProjectRegistry.FindWorldCatalogForProject(projectAssetPath);
+                catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(projectAssetPath);
             }
 
             var mapId = !string.IsNullOrEmpty(dto.Id) ? dto.Id : GetBaseName(ctx.assetPath);
@@ -269,14 +269,14 @@ namespace Core.Tile.Editor.Vulcan
             var width = Math.Max(1, dto.Width);
             var height = Math.Max(1, dto.Height);
 
-            var tilesetsByIndex = new List<VulcanTilesetAsset>();
+            var tilesetsByIndex = new List<VulcanusTilesetAsset>();
             foreach (var refId in dto.TilesetRefs)
             {
                 var tilesetAssetPath = FindTilesetById(ctx.assetPath, refId, projectAssetPath);
                 if (!string.IsNullOrEmpty(tilesetAssetPath))
                 {
                     AddDependency(ctx, tilesetAssetPath);
-                    tilesetsByIndex.Add(AssetDatabase.LoadAssetAtPath<VulcanTilesetAsset>(tilesetAssetPath));
+                    tilesetsByIndex.Add(AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(tilesetAssetPath));
                 }
                 else
                 {
@@ -285,7 +285,7 @@ namespace Core.Tile.Editor.Vulcan
             }
 
             var mapRoot = new GameObject(string.IsNullOrEmpty(mapName) ? mapId : mapName);
-            var mapComponent = mapRoot.AddComponent<VulcanImportedMap>();
+            var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
 
             var gridGo = new GameObject("Grid");
             gridGo.transform.SetParent(mapRoot.transform, false);
@@ -295,7 +295,7 @@ namespace Core.Tile.Editor.Vulcan
 
             Tilemap terrainTilemap = null;
             Tilemap farmlandTilemap = null;
-            var terrainCells = new List<VulcanImportedMap.TerrainCell>();
+            var terrainCells = new List<VulcanusImportedMap.TerrainCell>();
 
             foreach (var layer in dto.Layers)
             {
@@ -366,7 +366,7 @@ namespace Core.Tile.Editor.Vulcan
 
             var projectAssetPath = FindProjectAssetPath(ctx.assetPath);
             ProjectDto projectDto = null;
-            VulcanProject projectAsset = null;
+            VulcanusProject projectAsset = null;
             if (!string.IsNullOrEmpty(projectAssetPath))
             {
                 try
@@ -378,7 +378,7 @@ namespace Core.Tile.Editor.Vulcan
 
                 try
                 {
-                    projectAsset = AssetDatabase.LoadAssetAtPath<VulcanProject>(projectAssetPath);
+                    projectAsset = AssetDatabase.LoadAssetAtPath<VulcanusProject>(projectAssetPath);
                 }
                 catch { projectAsset = null; }
             }
@@ -417,7 +417,7 @@ namespace Core.Tile.Editor.Vulcan
 
             if (itemType == null || !typeof(ItemDefinition).IsAssignableFrom(itemType) || itemType.IsAbstract)
             {
-                Debug.LogError($"[VulcanJsonImporter] Could not resolve ItemDefinition class '{classDto?.ClassName}' for item '{dto.Id}'. Importing as text fallback.");
+                Debug.LogError($"[VulcanusJsonImporter] Could not resolve ItemDefinition class '{classDto?.ClassName}' for item '{dto.Id}'. Importing as text fallback.");
                 ImportAsText(ctx);
                 return;
             }
@@ -467,8 +467,8 @@ namespace Core.Tile.Editor.Vulcan
         private static void ExtractTerrainCells(
             LayerDto layer,
             int mapHeight,
-            List<VulcanImportedMap.TerrainCell> terrainCells,
-            VulcanProject project)
+            List<VulcanusImportedMap.TerrainCell> terrainCells,
+            VulcanusProject project)
         {
             if (layer.TerrainData == null)
                 return;
@@ -486,7 +486,7 @@ namespace Core.Tile.Editor.Vulcan
                     if (string.IsNullOrEmpty(terrainId))
                         continue;
 
-                    terrainCells.Add(new VulcanImportedMap.TerrainCell
+                    terrainCells.Add(new VulcanusImportedMap.TerrainCell
                     {
                         x = x,
                         y = mapHeight - 1 - y,
@@ -517,7 +517,7 @@ namespace Core.Tile.Editor.Vulcan
             Tilemap tilemap,
             JToken dataToken,
             int mapHeight,
-            IList<VulcanTilesetAsset> tilesetsByIndex)
+            IList<VulcanusTilesetAsset> tilesetsByIndex)
         {
             if (dataToken is JArray rows)
             {
@@ -561,7 +561,7 @@ namespace Core.Tile.Editor.Vulcan
             }
         }
 
-        private static VulcanTile ResolveTile(int encodedTile, IList<VulcanTilesetAsset> tilesetsByIndex)
+        private static VulcanusTile ResolveTile(int encodedTile, IList<VulcanusTilesetAsset> tilesetsByIndex)
         {
             if (encodedTile < 0)
                 return null;
@@ -577,13 +577,13 @@ namespace Core.Tile.Editor.Vulcan
 
         // ── Entity / location-link spawning ───────────────────────────────────
 
-        private static IReadOnlyDictionary<string, VulcanMapAnchor> SpawnAnchors(
+        private static IReadOnlyDictionary<string, VulcanusMapAnchor> SpawnAnchors(
             Transform mapRoot,
             IReadOnlyList<AnchorDto> anchors,
             int mapHeight,
             int tileSize)
         {
-            var result = new Dictionary<string, VulcanMapAnchor>(StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, VulcanusMapAnchor>(StringComparer.OrdinalIgnoreCase);
             if (anchors == null || anchors.Count == 0)
                 return result;
 
@@ -605,7 +605,7 @@ namespace Core.Tile.Editor.Vulcan
                 else if (facing != Vector2.zero)
                     go.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(facing.y, facing.x) * Mathf.Rad2Deg - 90f);
 
-                var anchor = go.AddComponent<VulcanMapAnchor>();
+                var anchor = go.AddComponent<VulcanusMapAnchor>();
                 anchor.Configure(dto.Id, dto.Name, facing, dto.Tags?.ToArray() ?? Array.Empty<string>());
                 result[dto.Id] = anchor;
             }
@@ -617,10 +617,10 @@ namespace Core.Tile.Editor.Vulcan
             Transform mapRoot,
             IReadOnlyList<LocationLinkDto> links,
             IReadOnlyList<MapTriggerDto> triggers,
-            IReadOnlyDictionary<string, VulcanMapAnchor> anchorsById,
+            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
             int mapHeight,
             int tileSize,
-            VulcanWorldCatalog catalog,
+            VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
             var hasLegacyLinks = links != null && links.Any(link => !string.IsNullOrWhiteSpace(link?.SourceAnchorId) || link?.SourcePosition != null);
@@ -672,16 +672,16 @@ namespace Core.Tile.Editor.Vulcan
             Transform parent,
             MapTriggerDto trigger,
             LocationLinkDto link,
-            IReadOnlyDictionary<string, VulcanMapAnchor> anchorsById,
+            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
             int mapHeight,
             int tileSize,
-            VulcanWorldCatalog catalog,
+            VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
             var go = CreateTriggerRoot(parent, trigger, link, catalog, ctx);
             go.transform.localPosition = ReadTriggerPosition(trigger, mapHeight, tileSize);
 
-            var triggerComponent = go.GetComponent<VulcanMapTrigger>() ?? go.AddComponent<VulcanMapTrigger>();
+            var triggerComponent = go.GetComponent<VulcanusMapTrigger>() ?? go.AddComponent<VulcanusMapTrigger>();
             triggerComponent.Configure(trigger.Id, trigger.Label, trigger.Type, trigger.Shape, trigger.Tags?.ToArray() ?? Array.Empty<string>());
 
             ApplyTriggerGeometry(go, trigger, tileSize);
@@ -694,7 +694,7 @@ namespace Core.Tile.Editor.Vulcan
             Transform parent,
             MapTriggerDto trigger,
             LocationLinkDto link,
-            VulcanWorldCatalog catalog,
+            VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
             if (link != null)
@@ -711,7 +711,7 @@ namespace Core.Tile.Editor.Vulcan
 
                 var placeholder = new GameObject(BuildLocationLinkObjectName("LocationLink", link, trigger));
                 placeholder.transform.SetParent(parent, false);
-                Debug.LogWarning($"[VulcanImporter] No locationLinkPrefab assigned in VulcanWorldCatalog. Link '{link.Id ?? trigger.Id}' placed as trigger-only.");
+                Debug.LogWarning($"[VulcanusImporter] No locationLinkPrefab assigned in VulcanusWorldCatalog. Link '{link.Id ?? trigger.Id}' placed as trigger-only.");
                 return placeholder;
             }
 
@@ -735,25 +735,25 @@ namespace Core.Tile.Editor.Vulcan
             GameObject instance,
             LocationLinkDto dto,
             MapTriggerDto trigger,
-            IReadOnlyDictionary<string, VulcanMapAnchor> anchorsById,
-            VulcanWorldCatalog catalog)
+            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
+            VulcanusWorldCatalog catalog)
         {
             if (instance.GetComponent<ILocationLink>() == null)
             {
-                Debug.LogWarning($"[VulcanImporter] Trigger '{trigger.Id}' references link '{dto.Id}', but the instantiated object has no ILocationLink component.");
+                Debug.LogWarning($"[VulcanusImporter] Trigger '{trigger.Id}' references link '{dto.Id}', but the instantiated object has no ILocationLink component.");
                 return;
             }
 
             var data = BuildLocationLinkData(dto, trigger, anchorsById);
-            VulcanEntityInitializer.InitializeLocationLink(instance, data, catalog);
+            VulcanusEntityInitializer.InitializeLocationLink(instance, data, catalog);
         }
 
-        private static VulcanLocationLinkData BuildLocationLinkData(
+        private static VulcanusLocationLinkData BuildLocationLinkData(
             LocationLinkDto dto,
             MapTriggerDto trigger,
-            IReadOnlyDictionary<string, VulcanMapAnchor> anchorsById)
+            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById)
         {
-            var data = new VulcanLocationLinkData
+            var data = new VulcanusLocationLinkData
             {
                 id = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
                 label = dto.Label ?? string.Empty,
@@ -789,10 +789,10 @@ namespace Core.Tile.Editor.Vulcan
         private static void CreateLegacyLocationLink(
             Transform parent,
             LocationLinkDto dto,
-            IReadOnlyDictionary<string, VulcanMapAnchor> anchorsById,
+            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
             int mapHeight,
             int tileSize,
-            VulcanWorldCatalog catalog,
+            VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
             if (dto == null)
@@ -834,7 +834,7 @@ namespace Core.Tile.Editor.Vulcan
 
         private static List<float> ReadAnchorPixelPosition(
             string anchorId,
-            IReadOnlyDictionary<string, VulcanMapAnchor> anchorsById,
+            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
             int mapHeight,
             int tileSize)
         {
@@ -871,7 +871,7 @@ namespace Core.Tile.Editor.Vulcan
             string groupName,
             int mapHeight,
             int tileSize,
-            VulcanWorldCatalog catalog,
+            VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
             if (entities == null || entities.Count == 0)
@@ -889,13 +889,13 @@ namespace Core.Tile.Editor.Vulcan
             EntityInstanceDto dto,
             int mapHeight,
             int tileSize,
-            VulcanWorldCatalog catalog,
+            VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
             var px = dto.Position != null && dto.Position.Count > 0 ? dto.Position[0] : 0f;
             var py = dto.Position != null && dto.Position.Count > 1 ? dto.Position[1] : 0f;
 
-            var entityData = new VulcanEntityInstanceData
+            var entityData = new VulcanusEntityInstanceData
             {
                 id = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
                 typeId = dto.TypeId ?? string.Empty,
@@ -920,7 +920,7 @@ namespace Core.Tile.Editor.Vulcan
                 instance.name = $"{prefab.name}_{entityData.id}";
                 instance.transform.localPosition = worldPos;
                 instance.transform.localRotation = worldRot;
-                VulcanEntityInitializer.InitializeEntity(instance, entityData);
+                VulcanusEntityInitializer.InitializeEntity(instance, entityData);
                 return;
             }
 
@@ -928,7 +928,7 @@ namespace Core.Tile.Editor.Vulcan
             placeholder.transform.SetParent(parent, false);
             placeholder.transform.localPosition = worldPos;
             placeholder.transform.localRotation = worldRot;
-            Debug.LogWarning($"[VulcanImporter] No prefab mapped for entity type '{entityData.typeId}' (id: {entityData.id}). Assign it in VulcanWorldCatalog.");
+            Debug.LogWarning($"[VulcanusImporter] No prefab mapped for entity type '{entityData.typeId}' (id: {entityData.id}). Assign it in VulcanusWorldCatalog.");
         }
 
         // ── Tilemap helpers ───────────────────────────────────────────────────
@@ -977,14 +977,14 @@ namespace Core.Tile.Editor.Vulcan
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[VulcanJsonImporter] Failed to add BoxCollider2D to '{go.name}': {ex.Message}");
+                    Debug.LogWarning($"[VulcanusJsonImporter] Failed to add BoxCollider2D to '{go.name}': {ex.Message}");
                     return;
                 }
             }
 
             if (box == null)
             {
-                Debug.LogWarning($"[VulcanJsonImporter] BoxCollider2D is unavailable on '{go.name}'. Skipping trigger setup.");
+                Debug.LogWarning($"[VulcanusJsonImporter] BoxCollider2D is unavailable on '{go.name}'. Skipping trigger setup.");
                 return;
             }
 
@@ -1000,7 +1000,7 @@ namespace Core.Tile.Editor.Vulcan
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VulcanJsonImporter] Error configuring BoxCollider2D on '{go.name}': {ex.Message}");
+                Debug.LogWarning($"[VulcanusJsonImporter] Error configuring BoxCollider2D on '{go.name}': {ex.Message}");
             }
         }
 
@@ -1019,7 +1019,7 @@ namespace Core.Tile.Editor.Vulcan
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[VulcanJsonImporter] Failed to add PolygonCollider2D to '{go.name}': {ex.Message}");
+                    Debug.LogWarning($"[VulcanusJsonImporter] Failed to add PolygonCollider2D to '{go.name}': {ex.Message}");
                     return;
                 }
             }
@@ -1031,7 +1031,7 @@ namespace Core.Tile.Editor.Vulcan
             var points = trigger.Points;
             if (points == null || points.Count < 3)
             {
-                Debug.LogWarning($"[VulcanJsonImporter] Trigger '{trigger.Id}' is polygonal but has fewer than three points.");
+                Debug.LogWarning($"[VulcanusJsonImporter] Trigger '{trigger.Id}' is polygonal but has fewer than three points.");
                 return;
             }
 
@@ -1085,15 +1085,15 @@ namespace Core.Tile.Editor.Vulcan
             return meta.TerrainCorners.FirstOrDefault(c => !string.IsNullOrEmpty(c));
         }
 
-        private static VulcanCollisionKind ParseCollisionKind(CollisionDto collision)
+        private static VulcanusCollisionKind ParseCollisionKind(CollisionDto collision)
         {
-            if (collision == null) return VulcanCollisionKind.None;
-            if (collision.Type.Equals("full", StringComparison.OrdinalIgnoreCase)) return VulcanCollisionKind.Full;
-            if (collision.Type.Equals("complex", StringComparison.OrdinalIgnoreCase)) return VulcanCollisionKind.Complex;
-            return VulcanCollisionKind.None;
+            if (collision == null) return VulcanusCollisionKind.None;
+            if (collision.Type.Equals("full", StringComparison.OrdinalIgnoreCase)) return VulcanusCollisionKind.Full;
+            if (collision.Type.Equals("complex", StringComparison.OrdinalIgnoreCase)) return VulcanusCollisionKind.Complex;
+            return VulcanusCollisionKind.None;
         }
 
-        private static TerrainType MapTerrainIdToTerrainType(string terrainId, VulcanProject project)
+        private static TerrainType MapTerrainIdToTerrainType(string terrainId, VulcanusProject project)
         {
             if (project != null && project.TryMapTerrainId(terrainId, out var mapped)) return mapped;
             if (string.IsNullOrWhiteSpace(terrainId)) return TerrainType.Invalid;
@@ -1168,7 +1168,7 @@ namespace Core.Tile.Editor.Vulcan
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VulcanJsonImporter] Could not read tileSize from '{projectAssetPath}': {ex.Message}");
+                Debug.LogWarning($"[VulcanusJsonImporter] Could not read tileSize from '{projectAssetPath}': {ex.Message}");
                 return 16;
             }
         }
@@ -1418,14 +1418,14 @@ namespace Core.Tile.Editor.Vulcan
         }
     }
 
-    internal static class VulcanProjectRegistry
+    internal static class VulcanusProjectRegistry
     {
         /// <summary>
-        /// Loads the VulcanWorldCatalog for a project.json by convention:
+        /// Loads the VulcanusWorldCatalog for a project.json by convention:
         /// reads the project id, then loads &lt;id&gt;.project.world.asset from the same directory.
         /// Safe to call inside ScriptedImporter — no AssetDatabase.FindAssets.
         /// </summary>
-        public static VulcanWorldCatalog FindWorldCatalogForProject(string projectAssetPath)
+        public static VulcanusWorldCatalog FindWorldCatalogForProject(string projectAssetPath)
         {
             if (string.IsNullOrWhiteSpace(projectAssetPath)) return null;
 
@@ -1433,7 +1433,7 @@ namespace Core.Tile.Editor.Vulcan
             try
             {
                 var dto = JsonConvert.DeserializeObject<ProjectDto>(
-                    File.ReadAllText(VulcanJsonImporter.ToAbsolutePath(projectAssetPath)));
+                    File.ReadAllText(VulcanusJsonImporter.ToAbsolutePath(projectAssetPath)));
                 projectId = dto?.Id;
             }
             catch { return null; }
@@ -1442,7 +1442,7 @@ namespace Core.Tile.Editor.Vulcan
 
             var dir = Path.GetDirectoryName(projectAssetPath)?.Replace('\\', '/');
             var catalogAssetPath = $"{dir}/{projectId}.project.world.asset";
-            return AssetDatabase.LoadAssetAtPath<VulcanWorldCatalog>(catalogAssetPath);
+            return AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>(catalogAssetPath);
         }
     }
 }

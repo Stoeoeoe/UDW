@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    public class VulcanImportedMap : MonoBehaviour
+    public class VulcanusImportedMap : MonoBehaviour
     {
         [System.Serializable]
         public struct TerrainCell

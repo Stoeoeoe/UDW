@@ -5,7 +5,7 @@ using Character;
 using Core.Events;
 using Core.Items;
 using Core.Location;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using JetBrains.Annotations;
 using MoreMountains.Tools;
 using Plants;
@@ -25,7 +25,7 @@ namespace Core.Tile
 
         private const float InteractionDistance = 0.55f;
 
-        private VulcanImportedMap _currentMap;
+        private VulcanusImportedMap _currentMap;
         private Tilemap _terrainTilemap;
         private Tilemap _farmlandTilemap;
         private Tilemap _plowedTilemap;
@@ -237,13 +237,13 @@ namespace Core.Tile
             return _terrainTilemap.CellToWorld(cellPosition) + _terrainTilemap.cellSize / 2;
         }
 
-        public bool TryGetAnchor(string anchorId, out VulcanMapAnchor anchor)
+        public bool TryGetAnchor(string anchorId, out VulcanusMapAnchor anchor)
         {
             anchor = null;
             if (string.IsNullOrWhiteSpace(anchorId))
                 return false;
 
-            var anchors = FindObjectsByType<VulcanMapAnchor>(FindObjectsSortMode.None);
+            var anchors = FindObjectsByType<VulcanusMapAnchor>(FindObjectsSortMode.None);
             anchor = Array.Find(anchors, candidate => string.Equals(candidate.AnchorId, anchorId, StringComparison.OrdinalIgnoreCase));
             return anchor != null;
         }
@@ -379,7 +379,7 @@ namespace Core.Tile
 
         private bool LoadTilemapReferences()
         {
-            _currentMap = FindFirstObjectByType<VulcanImportedMap>();
+            _currentMap = FindFirstObjectByType<VulcanusImportedMap>();
             if (_currentMap != null)
             {
                 _terrainTilemap = _currentMap.TerrainTilemap;
@@ -473,7 +473,7 @@ namespace Core.Tile
                 for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
                 {
                     var cell = new Vector3Int(x, y, 0);
-                    var tile = tilemap.GetTile(cell) as VulcanTile;
+                    var tile = tilemap.GetTile(cell) as VulcanusTile;
                     if (tile == null) continue;
 
                     var coords = new Vector2Int(x, y);
@@ -509,7 +509,7 @@ namespace Core.Tile
                 for (int y = cellBounds.yMin; y < cellBounds.yMax; y++)
                 {
                     var cell = new Vector3Int(x, y, 0);
-                    var tile = tilemap.GetTile(cell) as VulcanTile;
+                    var tile = tilemap.GetTile(cell) as VulcanusTile;
                     if (tile == null) continue;
 
                     var coords = new Vector2Int(x, y);
@@ -532,8 +532,8 @@ namespace Core.Tile
             if (_currentMap != null && _currentMap.TryGetTerrainType(coordinates, out var terrainFromMap))
                 return terrainFromMap;
 
-            if (tileBase is VulcanTile vulcanTile)
-                return vulcanTile.TerrainType;
+            if (tileBase is VulcanusTile VulcanusTile)
+                return VulcanusTile.TerrainType;
 
             return TerrainType.Invalid;
         }
@@ -541,10 +541,10 @@ namespace Core.Tile
         private void EnsureLocationMapInstance(LocationData location)
         {
             // Scene was generated with the map prefab already placed inside it — no need to spawn.
-            if (FindFirstObjectByType<VulcanImportedMap>() != null)
+            if (FindFirstObjectByType<VulcanusImportedMap>() != null)
                 return;
 
-            Debug.LogWarning($"[MapManager] No VulcanImportedMap found in scene for location '{location?.id}'. Scene may be missing its map prefab.");
+            Debug.LogWarning($"[MapManager] No VulcanusImportedMap found in scene for location '{location?.id}'. Scene may be missing its map prefab.");
         }
 
         #endregion

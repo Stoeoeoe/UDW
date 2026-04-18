@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using Core.Location;
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    [CreateAssetMenu(fileName = "VulcanProject", menuName = "Game/Vulcan/Project")]
-    public class VulcanProject : ScriptableObject
+    [CreateAssetMenu(fileName = "VulcanusProject", menuName = "Game/Vulcanus/Project")]
+    public class VulcanusProject : ScriptableObject
     {
         [System.Serializable]
         public struct TerrainDefinition

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Core.Tile.Editor.Vulcan
+namespace Core.Tile.Editor.Vulcanus
 {
     // ── Project ───────────────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ namespace Core.Tile.Editor.Vulcan
         [JsonProperty("position")] public List<float> Position { get; set; }
         [JsonProperty("rotation")] public float Rotation { get; set; }
 
-        // Kept as raw token — reflected into MonoBehaviour fields by VulcanEntityInitializer.
+        // Kept as raw token — reflected into MonoBehaviour fields by VulcanusEntityInitializer.
         [JsonProperty("properties")] public Newtonsoft.Json.Linq.JToken Properties { get; set; }
     }
 

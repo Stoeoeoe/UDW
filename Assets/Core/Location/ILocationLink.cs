@@ -1,4 +1,4 @@
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using Interaction;
 using UnityEngine;
 
@@ -13,6 +13,6 @@ namespace Core.Location
 
         public Vector2 ExitFacingDirection => exitFacingDirection;
 
-        public abstract void ApplyVulcanData(VulcanLocationLinkData data, VulcanWorldCatalog catalog);
+        public abstract void ApplyVulcanusData(VulcanusLocationLinkData data, VulcanusWorldCatalog catalog);
     }
 }

@@ -1,9 +1,9 @@
 using System;
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    public class VulcanMapTrigger : MonoBehaviour
+    public class VulcanusMapTrigger : MonoBehaviour
     {
         [SerializeField] private string triggerId;
         [SerializeField] private string label;

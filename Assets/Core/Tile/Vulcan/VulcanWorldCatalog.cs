@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using Core.Location;
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    [CreateAssetMenu(fileName = "VulcanWorldCatalog", menuName = "Game/Vulcan/World Catalog")]
-    public class VulcanWorldCatalog : ScriptableObject
+    [CreateAssetMenu(fileName = "VulcanusWorldCatalog", menuName = "Game/Vulcanus/World Catalog")]
+    public class VulcanusWorldCatalog : ScriptableObject
     {
         [Serializable]
         public class MapBinding
@@ -17,12 +17,12 @@ namespace Core.Tile.Vulcan
         }
 
         [Header("Source")]
-        [SerializeField] private VulcanProject project;
+        [SerializeField] private VulcanusProject project;
 
         [Header("Mappings")]
         [SerializeField] private GameObject locationLinkPrefab;
-        [SerializeField] private VulcanProject.EntityPrefabMapping[] entityPrefabMappings = Array.Empty<VulcanProject.EntityPrefabMapping>();
-        [SerializeField] private VulcanProject.MapLocationMapping[] locationMappings = Array.Empty<VulcanProject.MapLocationMapping>();
+        [SerializeField] private VulcanusProject.EntityPrefabMapping[] entityPrefabMappings = Array.Empty<VulcanusProject.EntityPrefabMapping>();
+        [SerializeField] private VulcanusProject.MapLocationMapping[] locationMappings = Array.Empty<VulcanusProject.MapLocationMapping>();
 
         [Header("Map Prefabs")]
         [SerializeField] private MapBinding[] mapBindings = Array.Empty<MapBinding>();
@@ -30,21 +30,21 @@ namespace Core.Tile.Vulcan
         private Dictionary<string, MapBinding> _bindingByMapId;
         private Dictionary<string, MapBinding> _bindingByLocationId;
 
-        public VulcanProject Project => project;
+        public VulcanusProject Project => project;
         public GameObject LocationLinkPrefab => locationLinkPrefab;
-        public VulcanProject.EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
-        public VulcanProject.MapLocationMapping[] LocationMappings => locationMappings;
+        public VulcanusProject.EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
+        public VulcanusProject.MapLocationMapping[] LocationMappings => locationMappings;
         public MapBinding[] MapBindings => mapBindings;
 
         public void ApplySyncData(
             GameObject linkPrefab,
-            VulcanProject.EntityPrefabMapping[] entityMappings,
-            VulcanProject.MapLocationMapping[] locations,
+            VulcanusProject.EntityPrefabMapping[] entityMappings,
+            VulcanusProject.MapLocationMapping[] locations,
             MapBinding[] bindings)
         {
             locationLinkPrefab = linkPrefab;
-            entityPrefabMappings = entityMappings ?? Array.Empty<VulcanProject.EntityPrefabMapping>();
-            locationMappings = locations ?? Array.Empty<VulcanProject.MapLocationMapping>();
+            entityPrefabMappings = entityMappings ?? Array.Empty<VulcanusProject.EntityPrefabMapping>();
+            locationMappings = locations ?? Array.Empty<VulcanusProject.MapLocationMapping>();
             mapBindings = bindings ?? Array.Empty<MapBinding>();
             RebuildCaches();
         }

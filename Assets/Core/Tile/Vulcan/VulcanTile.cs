@@ -2,9 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    public enum VulcanCollisionKind
+    public enum VulcanusCollisionKind
     {
         None,
         Full,
@@ -12,7 +12,7 @@ namespace Core.Tile.Vulcan
     }
 
     [Serializable]
-    public class VulcanTile : UnityEngine.Tilemaps.Tile
+    public class VulcanusTile : UnityEngine.Tilemaps.Tile
     {
         public const string IsFarmablePropertyKey = "IsFarmable";
         [SerializeField] private string tileId;
@@ -20,25 +20,25 @@ namespace Core.Tile.Vulcan
         [SerializeField] private string terrainId;
         [SerializeField] private TerrainType terrainType = TerrainType.Invalid;
         [SerializeField] private string[] tags = Array.Empty<string>();
-        [SerializeField] private VulcanCollisionKind collisionKind;
+        [SerializeField] private VulcanusCollisionKind collisionKind;
         [SerializeField] private bool isFarmable;
         [Serializable]
-        public class VulcanTileProperty
+        public class VulcanusTileProperty
         {
             public string key;
             public string jsonValue;
         }
 
-        [SerializeField] private VulcanTileProperty[] properties = Array.Empty<VulcanTileProperty>();
+        [SerializeField] private VulcanusTileProperty[] properties = Array.Empty<VulcanusTileProperty>();
 
         public string TileId => tileId;
         public int TileIndex => tileIndex;
         public string TerrainId => terrainId;
         public TerrainType TerrainType => terrainType;
         public string[] Tags => tags;
-        public VulcanCollisionKind CollisionKind => collisionKind;
+        public VulcanusCollisionKind CollisionKind => collisionKind;
         public bool IsFarmable => isFarmable;
-        public VulcanTileProperty[] Properties => properties;
+        public VulcanusTileProperty[] Properties => properties;
 
         public void Configure(
             int index,
@@ -46,8 +46,8 @@ namespace Core.Tile.Vulcan
             string terrain,
             TerrainType mappedTerrain,
             string[] tagValues,
-            VulcanCollisionKind collision,
-            VulcanTileProperty[] metaProperties = null)
+            VulcanusCollisionKind collision,
+            VulcanusTileProperty[] metaProperties = null)
         {
             tileIndex = index;
             tileId = id;
@@ -55,8 +55,8 @@ namespace Core.Tile.Vulcan
             terrainType = mappedTerrain;
             tags = tagValues ?? Array.Empty<string>();
             collisionKind = collision;
-            properties = metaProperties ?? Array.Empty<VulcanTileProperty>();
-            colliderType = collision == VulcanCollisionKind.None ? UnityEngine.Tilemaps.Tile.ColliderType.None : UnityEngine.Tilemaps.Tile.ColliderType.Grid;
+            properties = metaProperties ?? Array.Empty<VulcanusTileProperty>();
+            colliderType = collision == VulcanusCollisionKind.None ? UnityEngine.Tilemaps.Tile.ColliderType.None : UnityEngine.Tilemaps.Tile.ColliderType.Grid;
         }
 
         public bool TryGetProperty(string key, out string jsonValue)

@@ -1,5 +1,5 @@
 using Character;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using PixelCrushers;
 using System;
 using UnityEngine;
@@ -23,7 +23,7 @@ namespace Core.Location
 
         public override bool RequiresButtonPress => linkType == LocationLinkType.Door;
 
-        public override void ApplyVulcanData(VulcanLocationLinkData data, VulcanWorldCatalog catalog)
+        public override void ApplyVulcanusData(VulcanusLocationLinkData data, VulcanusWorldCatalog catalog)
         {
             Key = data.id;
             targetLocationId = data.targetMapId;

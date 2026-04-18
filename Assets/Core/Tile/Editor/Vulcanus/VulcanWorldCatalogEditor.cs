@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Core.Location;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using UnityEditor;
 using UnityEngine;
 
-namespace Core.Tile.Editor.Vulcan
+namespace Core.Tile.Editor.Vulcanus
 {
-    [CustomEditor(typeof(VulcanWorldCatalog))]
-    public class VulcanWorldCatalogEditor : UnityEditor.Editor
+    [CustomEditor(typeof(VulcanusWorldCatalog))]
+    public class VulcanusWorldCatalogEditor : UnityEditor.Editor
     {
         private SerializedProperty _project;
         private SerializedProperty _locationLinkPrefab;
@@ -64,16 +64,16 @@ namespace Core.Tile.Editor.Vulcan
         {
             serializedObject.ApplyModifiedProperties();
 
-            var catalog = target as VulcanWorldCatalog;
+            var catalog = target as VulcanusWorldCatalog;
             if (catalog == null) return;
 
             var project = catalog.Project;
-            if (project == null) { _lastSyncSummary = "Assign a VulcanProject first."; return; }
+            if (project == null) { _lastSyncSummary = "Assign a VulcanusProject first."; return; }
 
             var warnings = new List<string>();
             var unresolved = 0;
 
-            var entityMappings = VulcanEditorUtils.BuildEntityMappings(
+            var entityMappings = VulcanusEditorUtils.BuildEntityMappings(
                 project.EntityTypes,
                 catalog.EntityPrefabMappings,
                 warnings,
@@ -84,7 +84,7 @@ namespace Core.Tile.Editor.Vulcan
                                        out var discoveredMapCount, out var unresolvedMapPrefabs);
             var locationMappings = BuildLocationMappings(mapBindings, catalog.LocationMappings);
 
-            Undo.RecordObject(catalog, "Sync Vulcan World Catalog From Project");
+            Undo.RecordObject(catalog, "Sync Vulcanus World Catalog From Project");
             catalog.ApplySyncData(catalog.LocationLinkPrefab, entityMappings, locationMappings, mapBindings);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
@@ -99,10 +99,10 @@ namespace Core.Tile.Editor.Vulcan
 
         // ── Map binding helpers ───────────────────────────────────────────────
 
-        private static VulcanWorldCatalog.MapBinding[] BuildMapBindings(
-            VulcanProject project,
-            VulcanWorldCatalog.MapBinding[] existingBindings,
-            VulcanProject.MapLocationMapping[] existingLocationMappings,
+        private static VulcanusWorldCatalog.MapBinding[] BuildMapBindings(
+            VulcanusProject project,
+            VulcanusWorldCatalog.MapBinding[] existingBindings,
+            VulcanusProject.MapLocationMapping[] existingLocationMappings,
             out int discoveredMapCount,
             out int unresolvedMapPrefabs)
         {
@@ -115,9 +115,9 @@ namespace Core.Tile.Editor.Vulcan
                 m => m.mapId,
                 m => m.locationData);
 
-            var result = new List<VulcanWorldCatalog.MapBinding>();
+            var result = new List<VulcanusWorldCatalog.MapBinding>();
             var projectAssetPath = AssetDatabase.GetAssetPath(project);
-            var projectRoot = Path.GetDirectoryName(VulcanJsonImporter.ToAbsolutePath(projectAssetPath));
+            var projectRoot = Path.GetDirectoryName(VulcanusJsonImporter.ToAbsolutePath(projectAssetPath));
 
             if (!string.IsNullOrWhiteSpace(projectRoot) && Directory.Exists(projectRoot))
             {
@@ -126,11 +126,11 @@ namespace Core.Tile.Editor.Vulcan
 
                 foreach (var mapJsonAbsolute in mapFiles)
                 {
-                    if (!VulcanJsonImporter.TryAbsoluteToAssetPath(mapJsonAbsolute, out var mapAssetPath))
+                    if (!VulcanusJsonImporter.TryAbsoluteToAssetPath(mapJsonAbsolute, out var mapAssetPath))
                         continue;
 
                     var mapPrefab   = AssetDatabase.LoadAssetAtPath<GameObject>(mapAssetPath);
-                    var importedMap = mapPrefab != null ? mapPrefab.GetComponent<VulcanImportedMap>() : null;
+                    var importedMap = mapPrefab != null ? mapPrefab.GetComponent<VulcanusImportedMap>() : null;
 
                     var fileName = Path.GetFileName(mapJsonAbsolute);
                     var mapId = importedMap != null && !string.IsNullOrWhiteSpace(importedMap.MapId)
@@ -151,7 +151,7 @@ namespace Core.Tile.Editor.Vulcan
                         .OfType<LocationData>()
                         .FirstOrDefault();
 
-                    result.Add(new VulcanWorldCatalog.MapBinding
+                    result.Add(new VulcanusWorldCatalog.MapBinding
                     {
                         mapId        = mapId,
                         mapPrefab    = mapPrefab,
@@ -169,16 +169,16 @@ namespace Core.Tile.Editor.Vulcan
             return result.ToArray();
         }
 
-        private static VulcanProject.MapLocationMapping[] BuildLocationMappings(
-            VulcanWorldCatalog.MapBinding[] mapBindings,
-            VulcanProject.MapLocationMapping[] existing)
+        private static VulcanusProject.MapLocationMapping[] BuildLocationMappings(
+            VulcanusWorldCatalog.MapBinding[] mapBindings,
+            VulcanusProject.MapLocationMapping[] existing)
         {
             var byMapId = Index(existing, m => m.mapId);
 
-            foreach (var binding in mapBindings ?? Array.Empty<VulcanWorldCatalog.MapBinding>())
+            foreach (var binding in mapBindings ?? Array.Empty<VulcanusWorldCatalog.MapBinding>())
             {
                 if (binding == null || string.IsNullOrWhiteSpace(binding.mapId)) continue;
-                byMapId[binding.mapId] = new VulcanProject.MapLocationMapping
+                byMapId[binding.mapId] = new VulcanusProject.MapLocationMapping
                 {
                     mapId        = binding.mapId,
                     locationData = binding.locationData

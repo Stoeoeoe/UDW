@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    [CreateAssetMenu(fileName = "VulcanTileset", menuName = "Game/Vulcan/Tileset")]
-    public class VulcanTilesetAsset : ScriptableObject
+    [CreateAssetMenu(fileName = "VulcanusTileset", menuName = "Game/Vulcanus/Tileset")]
+    public class VulcanusTilesetAsset : ScriptableObject
     {
         [SerializeField] private string tilesetId;
         [SerializeField] private string displayName;
@@ -11,7 +11,7 @@ namespace Core.Tile.Vulcan
         [SerializeField] private int columns;
         [SerializeField] private int tileCount;
         [SerializeField] private int tileSize;
-        [SerializeField] private VulcanTile[] tiles;
+        [SerializeField] private VulcanusTile[] tiles;
 
         public string TilesetId => tilesetId;
         public string DisplayName => displayName;
@@ -19,7 +19,7 @@ namespace Core.Tile.Vulcan
         public int Columns => columns;
         public int TileCount => tileCount;
         public int TileSize => tileSize;
-        public VulcanTile[] Tiles => tiles;
+        public VulcanusTile[] Tiles => tiles;
 
         public void Configure(
             string id,
@@ -28,7 +28,7 @@ namespace Core.Tile.Vulcan
             int setColumns,
             int count,
             int size,
-            VulcanTile[] setTiles)
+            VulcanusTile[] setTiles)
         {
             tilesetId = id;
             displayName = name;
@@ -39,7 +39,7 @@ namespace Core.Tile.Vulcan
             tiles = setTiles;
         }
 
-        public bool TryGetTile(int tileIndex, out VulcanTile tile)
+        public bool TryGetTile(int tileIndex, out VulcanusTile tile)
         {
             tile = null;
 

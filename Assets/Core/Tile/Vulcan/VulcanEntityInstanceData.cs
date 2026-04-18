@@ -1,10 +1,10 @@
 using System;
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
     [Serializable]
-    public struct VulcanEntityInstanceData
+    public struct VulcanusEntityInstanceData
     {
         public string id;
         public string typeId;

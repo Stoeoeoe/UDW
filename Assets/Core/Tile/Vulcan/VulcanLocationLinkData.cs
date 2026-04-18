@@ -1,10 +1,10 @@
 using System;
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
     [Serializable]
-    public struct VulcanLocationLinkData
+    public struct VulcanusLocationLinkData
     {
         public string id;
         public string label;

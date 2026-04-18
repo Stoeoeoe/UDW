@@ -2,9 +2,9 @@ using System;
 using PixelCrushers;
 using UnityEngine;
 
-namespace Core.Tile.Vulcan
+namespace Core.Tile.Vulcanus
 {
-    public class VulcanMapAnchor : MonoBehaviour
+    public class VulcanusMapAnchor : MonoBehaviour
     {
         [SerializeField] private string anchorId;
         [SerializeField] private string anchorName;

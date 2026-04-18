@@ -5,7 +5,7 @@ using System.Linq;
 using Character;
 using Core.Events;
 using Core.Tile;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
 using DG.Tweening;
 using UnityEngine;
@@ -27,7 +27,7 @@ namespace Core.Location
         [SerializeField] ScreenFader _fader;
         [SerializeField] MainCharacter _mainCharacterPrefab;
 
-        [Header("Vulcan")] [SerializeField] VulcanWorldCatalog _vulcanWorldCatalog;
+        [Header("Vulcanus")] [SerializeField] VulcanusWorldCatalog _VulcanusWorldCatalog;
 
         [Header("Fallback spawn (editor / first run)")] [SerializeField]
         string _defaultSpawnKey = "Default";
@@ -53,9 +53,9 @@ namespace Core.Location
             base.OnAwake();
             _allLocations = Resources.LoadAll<LocationData>("Locations").ToList();
 
-            if (_vulcanWorldCatalog != null)
+            if (_VulcanusWorldCatalog != null)
             {
-                var mappedLocations = _vulcanWorldCatalog.GetMappedLocations();
+                var mappedLocations = _VulcanusWorldCatalog.GetMappedLocations();
                 for (int i = 0; i < mappedLocations.Length; i++)
                 {
                     var location = mappedLocations[i];

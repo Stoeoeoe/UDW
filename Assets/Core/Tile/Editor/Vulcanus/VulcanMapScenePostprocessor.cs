@@ -4,14 +4,14 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Core.Tile.Editor.Vulcan
+namespace Core.Tile.Editor.Vulcanus
 {
     /// <summary>
     /// After a .vmap is imported, ensures a corresponding scene exists containing the map
     /// prefab and is registered in Build Settings. The scene is created exactly once and never
     /// touched again — the map prefab is the authoritative source of content.
     /// </summary>
-    internal class VulcanMapScenePostprocessor : AssetPostprocessor
+    internal class VulcanusMapScenePostprocessor : AssetPostprocessor
     {
         private const string SceneOutputFolder = "Assets/Scenes/Maps";
 
@@ -36,7 +36,7 @@ namespace Core.Tile.Editor.Vulcan
                 if (mapPrefab == null)
                     continue;
 
-                // Name is set to mapId/mapName during import by VulcanJsonImporter.
+                // Name is set to mapId/mapName during import by VulcanusJsonImporter.
                 var mapId = mapPrefab.name.Replace(".vmap", "");
                 var scenePath = $"{SceneOutputFolder}/{mapId}.unity";
 
@@ -60,11 +60,11 @@ namespace Core.Tile.Editor.Vulcan
 
                 scenesAdded |= EnsureInBuildSettings(scenePath);
 
-                Debug.Log($"[VulcanMapScenePostprocessor] Created scene '{scenePath}' for map '{mapId}'.");
+                Debug.Log($"[VulcanusMapScenePostprocessor] Created scene '{scenePath}' for map '{mapId}'.");
             }
 
             if (scenesAdded)
-                Debug.Log("[VulcanMapScenePostprocessor] Build Settings updated with new map scenes.");
+                Debug.Log("[VulcanusMapScenePostprocessor] Build Settings updated with new map scenes.");
         }
 
         private static bool EnsureInBuildSettings(string scenePath)

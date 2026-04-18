@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Core.Tile.Vulcan;
+using Core.Tile.Vulcanus;
 using UnityEditor;
 using UnityEngine;
 
-namespace Core.Tile.Editor.Vulcan
+namespace Core.Tile.Editor.Vulcanus
 {
     /// <summary>
-    /// Shared editor utilities used by both VulcanJsonImporter and VulcanWorldCatalogEditor.
+    /// Shared editor utilities used by both VulcanusJsonImporter and VulcanusWorldCatalogEditor.
     /// </summary>
-    internal static class VulcanEditorUtils
+    internal static class VulcanusEditorUtils
     {
         // ── Entity mapping ────────────────────────────────────────────────────
 
@@ -19,23 +19,23 @@ namespace Core.Tile.Editor.Vulcan
         /// preserving any prefab assignments that already exist in <paramref name="existingMappings"/>.
         /// Missing prefabs are appended to <paramref name="warnings"/>.
         /// </summary>
-        public static VulcanProject.EntityPrefabMapping[] BuildEntityMappings(
-            VulcanProject.EntityTypeDefinition[] entityTypes,
-            VulcanProject.EntityPrefabMapping[]  existingMappings,
+        public static VulcanusProject.EntityPrefabMapping[] BuildEntityMappings(
+            VulcanusProject.EntityTypeDefinition[] entityTypes,
+            VulcanusProject.EntityPrefabMapping[]  existingMappings,
             List<string>                         warnings,
             bool                                 autoAssignSingleMatch = false,
             Action<int> reportUnresolved = null)
         {
             var existingByType = IndexByTypeId(existingMappings);
-            var result = new List<VulcanProject.EntityPrefabMapping>();
+            var result = new List<VulcanusProject.EntityPrefabMapping>();
             var unresolved = 0;
 
-            foreach (var type in entityTypes ?? Array.Empty<VulcanProject.EntityTypeDefinition>())
+            foreach (var type in entityTypes ?? Array.Empty<VulcanusProject.EntityTypeDefinition>())
             {
                 if (string.IsNullOrWhiteSpace(type.id)) continue;
 
                 existingByType.TryGetValue(type.id, out var old);
-                var mapping = new VulcanProject.EntityPrefabMapping
+                var mapping = new VulcanusProject.EntityPrefabMapping
                 {
                     entityTypeId      = type.id,
                     entityDisplayName = string.IsNullOrWhiteSpace(type.displayName) ? type.id : type.displayName,
@@ -58,7 +58,7 @@ namespace Core.Tile.Editor.Vulcan
                 if (mapping.prefab == null)
                 {
                     unresolved++;
-                    warnings?.Add($"No prefab mapped for entity type '{type.id}'. Assign it in a VulcanWorldCatalog asset.");
+                    warnings?.Add($"No prefab mapped for entity type '{type.id}'. Assign it in a VulcanusWorldCatalog asset.");
                 }
 
                 result.Add(mapping);
@@ -129,10 +129,10 @@ namespace Core.Tile.Editor.Vulcan
                 ? string.Empty
                 : new string(value.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
 
-        private static Dictionary<string, VulcanProject.EntityPrefabMapping> IndexByTypeId(
-            VulcanProject.EntityPrefabMapping[] mappings)
+        private static Dictionary<string, VulcanusProject.EntityPrefabMapping> IndexByTypeId(
+            VulcanusProject.EntityPrefabMapping[] mappings)
         {
-            var dict = new Dictionary<string, VulcanProject.EntityPrefabMapping>(StringComparer.OrdinalIgnoreCase);
+            var dict = new Dictionary<string, VulcanusProject.EntityPrefabMapping>(StringComparer.OrdinalIgnoreCase);
             if (mappings == null) return dict;
             foreach (var m in mappings)
                 if (m != null && !string.IsNullOrWhiteSpace(m.entityTypeId))
