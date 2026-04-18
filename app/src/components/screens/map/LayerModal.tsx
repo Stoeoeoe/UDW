@@ -14,7 +14,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { LayerKind } from '../../../types/schema';
+import { LayerKind, SortingLayer } from '../../../types/schema';
 import { LAYER_ICONS } from './layerConstants';
 import { FieldLabel } from '../../common/Typography.tsx';
 
@@ -23,7 +23,18 @@ export interface LayerFormData {
   kind: LayerKind;
   zOrder: number;
   icon: string;
+  sortingLayer: SortingLayer;
 }
+
+const SORTING_LAYER_OPTIONS: { value: SortingLayer; label: string; description: string }[] = [
+  { value: 'ground', label: 'Ground', description: 'Flat, sorted by z-order (floors, paths)' },
+  {
+    value: 'objects',
+    label: 'Objects (Y-sorted)',
+    description: 'Per-tile depth by pivot Y (trees, pillars, props)',
+  },
+  { value: 'above', label: 'Above', description: 'Always on top (roofs, canopy)' },
+];
 
 export interface LayerModalProps {
   isOpen: boolean;
@@ -134,6 +145,31 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                     />
                     <Text fontSize="10px" color="gray.500" mt={1}>
                       Lower values render first (behind higher values)
+                    </Text>
+                  </FormControl>
+                )}
+              </form.Field>
+
+              <form.Field name="sortingLayer">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Sorting Layer</FieldLabel>
+                    <Select
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value as SortingLayer)}
+                      onBlur={field.handleBlur}
+                      size="sm"
+                      bg="gray.800"
+                    >
+                      {SORTING_LAYER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                    <Text fontSize="10px" color="gray.500" mt={1}>
+                      {SORTING_LAYER_OPTIONS.find((o) => o.value === field.state.value)
+                        ?.description ?? ''}
                     </Text>
                   </FormControl>
                 )}

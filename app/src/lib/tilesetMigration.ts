@@ -18,6 +18,7 @@ function isTrivialTileDefinition(index: number, def: TileDefinition): boolean {
   const hasProperties = def.properties && def.properties.length > 0;
   const hasTerrain = def.terrain !== undefined;
   const hasProbability = def.probability !== undefined && def.probability !== 1;
+  const hasPivotY = def.pivotY !== undefined && def.pivotY !== 1;
   const hasTerrainCorners =
     def.terrainCorners && def.terrainCorners.some((c, i) => c !== DEFAULT_TERRAIN_CORNERS[i]);
 
@@ -28,6 +29,7 @@ function isTrivialTileDefinition(index: number, def: TileDefinition): boolean {
     !hasProperties &&
     !hasTerrain &&
     !hasProbability &&
+    !hasPivotY &&
     !hasTerrainCorners
   );
 }
@@ -44,6 +46,7 @@ function stripTileDefaults(index: number, def: TileDefinition): TileDefinition |
   if (def.terrain !== undefined) stripped.terrain = def.terrain;
   if (def.probability !== undefined && def.probability !== 1)
     stripped.probability = def.probability;
+  if (def.pivotY !== undefined && def.pivotY !== 1) stripped.pivotY = def.pivotY;
   if (def.terrainCorners && def.terrainCorners.some((c, i) => c !== DEFAULT_TERRAIN_CORNERS[i]))
     stripped.terrainCorners = def.terrainCorners;
 

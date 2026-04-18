@@ -63,6 +63,11 @@ export interface TileDefinition {
   properties?: PropertyInstance[];
   terrain?: string; // Optional terrain id referencing a WangColor or terrain set
   probability?: number; // Optional placement probability weight for random tile selection (relative weight)
+  // Tile-heights from this tile to the ground contact. Used on Y-sorted layers:
+  // depth = worldY + pivotY * tileSize. Default 1.0 (this tile IS the ground tile).
+  // For tiles above the ground (e.g. tree crown 3 rows up): set pivotY = 3.0 so
+  // sort depth = this tile's worldY + 3*tileSize = the actual ground line.
+  pivotY?: number;
   // Optional per-corner terrain assignments for corner-based Wang tiles
   // Order: [top-left, top-right, bottom-left, bottom-right]
   terrainCorners?: (string | null)[];
@@ -143,6 +148,10 @@ export interface Layer {
   locked: boolean; // Prevent editing
   opacity: number; // 0.0 to 1.0
   zOrder: number; // Rendering order
+  // Sorting layer governs how this layer's tiles are sorted at runtime.
+  // 'ground' and 'above' use the layer's fixed zOrder; 'objects' is
+  // Y-sorted per tile (depth = worldY + pivotY * tileSize). Default 'ground'.
+  sortingLayer?: SortingLayer;
   icon?: string; // Optional icon identifier
   // For tile-like layers this holds encoded tile IDs, row-major [y][x]
   data?: (number | null)[][]; // Encoded tile IDs (tiles only)
@@ -155,6 +164,8 @@ export interface Layer {
   entities?: EntityInstance[];
   definitionId?: string; // Reference to LayerDefinition (if from project template)
 }
+
+export type SortingLayer = 'ground' | 'objects' | 'above';
 
 export type LayerKind =
   | 'visual' // Rendered tiles

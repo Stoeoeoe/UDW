@@ -36,6 +36,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
   const setTileCornerTerrain = useEditorStore((state) => state.setTileCornerTerrain);
   const showTilesetCollisionOverlay = useEditorStore((state) => state.showTilesetCollisionOverlay);
+  const showTilesetSortPivotOverlay = useEditorStore((state) => state.showTilesetSortPivotOverlay);
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{
@@ -742,6 +743,30 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       }
     }
 
+    if (showTilesetSortPivotOverlay && mode === 'interactive') {
+      const fontSizePx = Math.max(6, tileSize * 0.35);
+      ctx.font = `bold ${fontSizePx}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let idx = 0; idx < tileset.tileCount; idx++) {
+        const tileDef = tileset.tiles?.[idx];
+        const pivotY = tileDef?.pivotY ?? 1;
+
+        const col = idx % tileset.columns;
+        const row = Math.floor(idx / tileset.columns);
+        const cx = sheetX + col * tileSize + tileSize / 2;
+        const cy = sheetY + row * tileSize + tileSize / 2;
+
+        const label = pivotY.toFixed(2);
+        ctx.lineWidth = 3 / effectiveZoom;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.strokeText(label, cx, cy);
+        ctx.fillStyle = 'rgba(0, 229, 255, 1)';
+        ctx.fillText(label, cx, cy);
+      }
+    }
+
     ctx.restore();
     // Draw selection rectangle if dragging
     if (isSelecting && selectionStart && selectionEnd) {
@@ -787,6 +812,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     selectionStart,
     selectionEnd,
     showTilesetCollisionOverlay,
+    showTilesetSortPivotOverlay,
   ]);
 
   const handleClick = (e: React.MouseEvent) => {

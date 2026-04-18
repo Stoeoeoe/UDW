@@ -8,6 +8,7 @@ import { useMapTools } from './useMapTools';
 import { ZoomControls } from '../../common/ZoomControls';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { Map3DLayerView } from './Map3DLayerView';
+import { MapTestModeView } from './MapTestModeView';
 
 export const MapViewportPixi: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +32,12 @@ export const MapViewportPixi: React.FC = () => {
   const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
   const showTerrainOverlay = useEditorStore((state) => state.showTerrainOverlay);
   const show3DLayerView = useEditorStore((state) => state.show3DLayerView);
+  const showMapTestMode = useEditorStore((state) => state.showMapTestMode);
+  const initialCameraRef = useRef(camera);
+
+  useEffect(() => {
+    initialCameraRef.current = camera;
+  }, [camera]);
 
   // Initialize Pixi Application
   useEffect(() => {
@@ -125,6 +132,7 @@ export const MapViewportPixi: React.FC = () => {
 
     const worldWidth = mapWidth * projectTileSize;
     const worldHeight = mapHeight * projectTileSize;
+    const initialCamera = initialCameraRef.current;
 
     try {
       const newViewport = new Viewport({
@@ -144,17 +152,23 @@ export const MapViewportPixi: React.FC = () => {
 
       // Apply stored camera when available, otherwise center on load.
 
-      if (camera && typeof camera.zoom === 'number') {
+      if (initialCamera && typeof initialCamera.zoom === 'number') {
         try {
-          newViewport.setZoom(camera.zoom);
-        } catch {}
+          newViewport.setZoom(initialCamera.zoom);
+        } catch {
+          newViewport.setZoom(1.5);
+        }
       } else {
         newViewport.setZoom(1.5);
       }
 
-      if (camera && typeof camera.x === 'number' && typeof camera.y === 'number') {
+      if (
+        initialCamera &&
+        typeof initialCamera.x === 'number' &&
+        typeof initialCamera.y === 'number'
+      ) {
         try {
-          newViewport.moveCenter(camera.x, camera.y);
+          newViewport.moveCenter(initialCamera.x, initialCamera.y);
         } catch {
           newViewport.moveCenter(worldWidth / 2, worldHeight / 2);
         }
@@ -413,6 +427,10 @@ export const MapViewportPixi: React.FC = () => {
       )
         return;
 
+      if (useEditorStore.getState().showMapTestMode) {
+        return;
+      }
+
       // Delete selected anchor, entity, link, or trigger with Backspace or Delete
       if (e.key === 'Backspace' || e.key === 'Delete') {
         const {
@@ -536,6 +554,9 @@ export const MapViewportPixi: React.FC = () => {
 
   // Cursor based on tool
   const getCursor = () => {
+    if (showMapTestMode) {
+      return 'default';
+    }
     if (
       activeTool === 'stamp' ||
       activeTool === 'random' ||
@@ -593,12 +614,20 @@ export const MapViewportPixi: React.FC = () => {
         </Box>
       )}
 
-      <ZoomControls
-        zoomPercent={zoomLevel * 100}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onReset={handleZoomReset}
-      />
+      {showMapTestMode && (
+        <Box position="absolute" inset={0} zIndex={10}>
+          <MapTestModeView />
+        </Box>
+      )}
+
+      {!showMapTestMode && (
+        <ZoomControls
+          zoomPercent={zoomLevel * 100}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onReset={handleZoomReset}
+        />
+      )}
 
       <Box
         position="absolute"

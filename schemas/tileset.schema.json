@@ -86,6 +86,11 @@
           "description": "Relative weight for random tile selection. Default is 1.",
           "exclusiveMinimum": 0
         },
+        "pivotY": {
+          "type": "number",
+          "description": "Tile-heights from this tile to the ground contact. depth = worldY + pivotY*tileSize. Default 1.0 (ground tile). Crown 3 rows above ground: pivotY=3.0.",
+          "minimum": 0
+        },
         "terrainCorners": {
           "type": "array",
           "description": "Per-corner terrain IDs for corner-based Wang tiles: [top-left, top-right, bottom-left, bottom-right].",

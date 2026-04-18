@@ -92,6 +92,7 @@ export const LayersPanel: React.FC = () => {
     kind: 'visual',
     zOrder: 0,
     icon: '',
+    sortingLayer: 'ground',
   });
 
   // Which category add-button was clicked (pre-fills the modal kind)
@@ -154,6 +155,7 @@ export const LayersPanel: React.FC = () => {
       kind: defaultKind,
       zOrder: currentMap.layers.length,
       icon: '',
+      sortingLayer: 'ground',
     });
     onOpen();
   };
@@ -166,6 +168,7 @@ export const LayersPanel: React.FC = () => {
       kind: layer.kind,
       zOrder: layer.zOrder,
       icon: layer.icon || '',
+      sortingLayer: layer.sortingLayer ?? 'ground',
     });
     onOpen();
   };
@@ -186,6 +189,7 @@ export const LayersPanel: React.FC = () => {
         kind: data.kind,
         zOrder: data.zOrder,
         icon: data.icon || undefined,
+        sortingLayer: data.sortingLayer,
       });
       toast({ title: 'Layer updated', status: 'success', duration: 1500 });
     } else {
@@ -199,6 +203,7 @@ export const LayersPanel: React.FC = () => {
         opacity: 1,
         zOrder: data.zOrder,
         icon: data.icon || undefined,
+        sortingLayer: data.sortingLayer,
       };
 
       if (data.kind === 'entity') {

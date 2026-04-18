@@ -25,82 +25,9 @@ import {
 } from '@chakra-ui/react';
 import { FiRefreshCw } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { resolveTileAt } from '../../../lib/mapUtils';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import type { Layer } from '../../../types/schema';
-
-// ─── Tile texture baking ───────────────────────────────────────────────────────
-
-/**
- * Paint one layer's worth of tiles onto an offscreen canvas and return it.
- * Returns null if the layer has no tiles at all.
- */
-function bakeLayerCanvas(
-  layer: Layer,
-  mapW: number,
-  mapH: number,
-  tileSize: number,
-  currentMap: NonNullable<ReturnType<typeof useEditorStore.getState>['currentMap']>,
-  tilesets: ReturnType<typeof useEditorStore.getState>['tilesets'],
-  loadedSprites: ReturnType<typeof useEditorStore.getState>['loadedSprites'],
-  activeVariationId: string | null,
-): HTMLCanvasElement | null {
-  const pw = mapW * tileSize;
-  const ph = mapH * tileSize;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = pw;
-  canvas.height = ph;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-
-  // Transparent background — empty tiles show through to layers below
-  ctx.clearRect(0, 0, pw, ph);
-
-  let hasTile = false;
-
-  for (let y = 0; y < mapH; y++) {
-    for (let x = 0; x < mapW; x++) {
-      const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
-      if (!tileRef) continue;
-
-      const [tsId, indexStr] = tileRef.split(':');
-      const index = parseInt(indexStr, 10);
-      const tileset = tilesets.get(tsId);
-      if (!tileset) continue;
-
-      // Resolve variation tileset suffix
-      const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
-      let effectiveTileset = tileset;
-      if (variation?.tilesetSuffix) {
-        const suffixed = tilesets.get(`${tsId}${variation.tilesetSuffix}`);
-        if (suffixed) effectiveTileset = suffixed;
-      }
-
-      const img = loadedSprites.get(effectiveTileset.spriteSheet);
-      if (!img) continue;
-
-      const cols = effectiveTileset.columns;
-      const sx = (index % cols) * tileSize;
-      const sy = Math.floor(index / cols) * tileSize;
-
-      ctx.drawImage(
-        img,
-        sx,
-        sy,
-        tileSize,
-        tileSize,
-        x * tileSize,
-        y * tileSize,
-        tileSize,
-        tileSize,
-      );
-      hasTile = true;
-    }
-  }
-
-  return hasTile ? canvas : canvas; // always return so even empty layers are visible as dark planes
-}
+import { bakeLayerCanvas, configurePixelArtTexture, getRenderableMapLayers } from './mapThreeUtils';
 
 // ─── Layer colour palette (for the legend + wireframe tint) ───────────────────
 
@@ -194,9 +121,7 @@ function buildLayerMeshes(
   loadedSprites: ReturnType<typeof useEditorStore.getState>['loadedSprites'],
   activeVariationId: string | null,
 ): THREE.Mesh[] {
-  const visibleLayers = layers
-    .filter((l) => (l.kind === 'visual' || l.kind === 'terrain') && l.visible !== false)
-    .sort((a, b) => a.zOrder - b.zOrder);
+  const visibleLayers = getRenderableMapLayers(layers);
 
   const pw = mapW * tileSize;
   const ph = mapH * tileSize;
@@ -219,10 +144,7 @@ function buildLayerMeshes(
     );
     const tex = baked ? new THREE.CanvasTexture(baked) : null;
     if (tex) {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.magFilter = THREE.NearestFilter;
-      tex.minFilter = THREE.NearestFilter;
-      tex.flipY = true; // Canvas is top-left origin; Three.js UV is bottom-left — flip to correct
+      configurePixelArtTexture(tex);
     }
 
     // Plane mesh — PlaneGeometry is in XZ by default, rotate to lie flat (XY in world space = horizontal)
@@ -487,9 +409,7 @@ export const Map3DLayerView: React.FC = () => {
 
   // ── Legend data ───────────────────────────────────────────────────────────────
 
-  const visibleLayers = layers
-    .filter((l) => (l.kind === 'visual' || l.kind === 'terrain') && l.visible !== false)
-    .sort((a, b) => a.zOrder - b.zOrder);
+  const visibleLayers = getRenderableMapLayers(layers);
 
   return (
     <Box w="full" h="full" position="relative" overflow="hidden" bg="#0a0a0b">

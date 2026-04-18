@@ -162,7 +162,7 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
               y,
               createTileRef(tilesetId, idx),
             );
-        } else if (mode === 'stamp' && tilesetId) {
+        } else if (mode === 'stamp' && (tilesetId || pattern)) {
           if (pattern && pattern.patternW > 0 && pattern.patternH > 0) {
             const tileIdx = samplePatternAt(
               {
@@ -177,7 +177,7 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
               x,
               y,
             );
-            if (tileIdx !== null)
+            if (tileIdx !== null && tilesetId)
               setTileInState(
                 currentMap,
                 activeVariationId,
@@ -186,6 +186,9 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
                 y,
                 createTileRef(tilesetId, tileIdx),
               );
+            else if (tileIdx === null) {
+              setTileInState(currentMap, activeVariationId, layerId, x, y, null);
+            }
           } else if (tileIndex !== undefined && tileIndex !== null) {
             setTileInState(
               currentMap,

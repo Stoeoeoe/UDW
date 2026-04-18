@@ -1,5 +1,18 @@
 import React, { useMemo } from 'react';
-import { VStack, HStack, Text, Box, Select } from '@chakra-ui/react';
+import {
+  VStack,
+  HStack,
+  Text,
+  Box,
+  Select,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  FormControl,
+} from '@chakra-ui/react';
+import { FormLabel } from '../common/FormLabel';
 import { PropertyForm, propertyDefinitionsToSchema } from '../common/PropertyForm';
 import { SectionLabel } from '../common/Typography.tsx';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -12,6 +25,76 @@ interface TilesetInspectorProps {
   tileset: Tileset;
   selectedIndex?: number | null;
 }
+
+interface PivotYFieldProps {
+  tilesetId: string;
+  tileIndex: number;
+  currentPivotY: number | undefined;
+  currentTileDef: TileDefinition;
+  updateTileDef: (tilesetId: string, index: number, definition: TileDefinition) => void;
+}
+
+const PivotYField: React.FC<PivotYFieldProps> = ({
+  tilesetId,
+  tileIndex,
+  currentPivotY,
+  currentTileDef,
+  updateTileDef,
+}) => {
+  const [text, setText] = React.useState(() => (currentPivotY ?? 1).toFixed(2));
+  const tileDefRef = React.useRef(currentTileDef);
+  tileDefRef.current = currentTileDef;
+
+  const numericRegex = /^-?\d+(?:\.\d+)?$/;
+
+  const handleChange = (str: string) => {
+    setText(str);
+    if (!numericRegex.test(str)) return;
+    const numeric = parseFloat(str);
+    const clamped = Math.max(0, numeric);
+    if (clamped === (tileDefRef.current.pivotY ?? 1)) return;
+    updateTileDef(tilesetId, tileIndex, {
+      ...tileDefRef.current,
+      pivotY: clamped,
+    });
+  };
+
+  const handleBlur = () => {
+    const numeric = parseFloat(text);
+    const clamped = Number.isFinite(numeric) ? Math.max(0, numeric) : 1;
+    setText(clamped.toFixed(2));
+    if (clamped === (tileDefRef.current.pivotY ?? 1)) return;
+    updateTileDef(tilesetId, tileIndex, {
+      ...tileDefRef.current,
+      pivotY: clamped,
+    });
+  };
+
+  return (
+    <FormControl>
+      <FormLabel>Sort Pivot Y</FormLabel>
+      <NumberInput
+        value={text}
+        min={0}
+        step={0.5}
+        precision={2}
+        onChange={handleChange}
+        onBlur={handleBlur}
+      >
+        <NumberInputField />
+        <NumberInputStepper>
+          <NumberIncrementStepper />
+          <NumberDecrementStepper />
+        </NumberInputStepper>
+      </NumberInput>
+      <Text fontSize="9px" color="gray.500" mt={2}>
+        Tile-heights from this tile to the ground contact point. 1.0 = ground tile (bottom of
+        sprite). For tiles above the ground (e.g. tree crown 3 rows up): set to 3.0 so the sort
+        depth lands at the actual ground line.
+      </Text>
+    </FormControl>
+  );
+};
 
 export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
   tileset,
@@ -183,6 +266,15 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                   terrain: v == null ? undefined : String(v),
                 });
             }}
+          />
+
+          <PivotYField
+            key={`pivotY-${tileset.id}-${selectedIndex}`}
+            tilesetId={tileset.id}
+            tileIndex={selectedIndex}
+            currentPivotY={selectedTileDef.pivotY}
+            currentTileDef={selectedTileDef}
+            updateTileDef={updateTileDef}
           />
 
           <TileCollisionEditor

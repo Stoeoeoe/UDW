@@ -105,6 +105,11 @@
           "maximum": 1
         },
         "zOrder": { "type": "integer" },
+        "sortingLayer": {
+          "type": "string",
+          "enum": ["ground", "objects", "above"],
+          "description": "Sorting bucket at runtime. 'ground' and 'above' use fixed zOrder; 'objects' is Y-sorted per tile (depth = worldY + pivotY*tileSize). Default 'ground'."
+        },
         "icon": { "type": "string" },
         "definitionId": {
           "type": "string",

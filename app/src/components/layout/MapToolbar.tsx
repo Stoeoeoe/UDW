@@ -17,6 +17,7 @@ import {
   FiRotateCw,
   FiBox,
   FiPenTool,
+  FiPlay,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import {
@@ -143,6 +144,8 @@ export const MapToolbarActions: React.FC = () => {
   const setShowTerrainOverlay = useEditorStore((state) => state.setShowTerrainOverlay);
   const show3DLayerView = useEditorStore((state) => state.show3DLayerView);
   const setShow3DLayerView = useEditorStore((state) => state.setShow3DLayerView);
+  const showMapTestMode = useEditorStore((state) => state.showMapTestMode);
+  const setShowMapTestMode = useEditorStore((state) => state.setShowMapTestMode);
   const reloadTerrainLayers = useEditorStore((state) => state.reloadTerrainLayers);
   const { canUndo, canRedo } = useEditorHistory((state) => ({
     canUndo: state.pastStates.length > 0,
@@ -213,6 +216,7 @@ export const MapToolbarActions: React.FC = () => {
           onClick={() => {
             setShowTerrainOverlay(!showTerrainOverlay);
             if (!showTerrainOverlay) setShow3DLayerView(false);
+            if (!showTerrainOverlay) setShowMapTestMode(false);
           }}
           aria-label="Toggle terrain overlay"
         >
@@ -229,6 +233,7 @@ export const MapToolbarActions: React.FC = () => {
             const next = !show3DLayerView;
             setShow3DLayerView(next);
             if (next) {
+              setShowMapTestMode(false);
               setShowCollisionOverlay(false);
               setShowTerrainOverlay(false);
             }
@@ -236,6 +241,26 @@ export const MapToolbarActions: React.FC = () => {
           aria-label="Toggle 3D layer view"
         >
           <FiBox />
+        </Button>
+      </Tooltip>
+
+      <Tooltip label={showMapTestMode ? 'Exit map test mode' : 'Enter map test mode'} fontSize="xs">
+        <Button
+          size="xs"
+          variant={showMapTestMode ? 'solid' : 'outline'}
+          colorScheme="teal"
+          onClick={() => {
+            const next = !showMapTestMode;
+            setShowMapTestMode(next);
+            if (next) {
+              setShow3DLayerView(false);
+              setShowCollisionOverlay(false);
+              setShowTerrainOverlay(false);
+            }
+          }}
+          aria-label="Toggle map test mode"
+        >
+          <FiPlay />
         </Button>
       </Tooltip>
     </HStack>

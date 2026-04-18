@@ -31,8 +31,10 @@ export interface ToolSlice {
   entitySnapMode: 'grid' | 'pixel';
   showCollisionOverlay: boolean;
   showTilesetCollisionOverlay: boolean;
+  showTilesetSortPivotOverlay: boolean;
   showTerrainOverlay: boolean;
   show3DLayerView: boolean;
+  showMapTestMode: boolean;
   timePreviewEnabled: boolean;
   timeOfDay: number;
   camera: EditorState['camera'];
@@ -43,8 +45,10 @@ export interface ToolSlice {
   setEntitySnapMode: (mode: 'grid' | 'pixel') => void;
   setShowCollisionOverlay: (enabled: boolean) => void;
   setShowTilesetCollisionOverlay: (enabled: boolean) => void;
+  setShowTilesetSortPivotOverlay: (enabled: boolean) => void;
   setShowTerrainOverlay: (enabled: boolean) => void;
   setShow3DLayerView: (enabled: boolean) => void;
+  setShowMapTestMode: (enabled: boolean) => void;
   reloadTerrainLayers: () => void;
   setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
   setBrushSize: (size: number) => void;
@@ -77,8 +81,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   entitySnapMode: 'grid',
   showCollisionOverlay: false,
   showTilesetCollisionOverlay: false,
+  showTilesetSortPivotOverlay: false,
   showTerrainOverlay: false,
   show3DLayerView: false,
+  showMapTestMode: false,
   timePreviewEnabled: false,
   timeOfDay: 0.5,
   camera: { x: 0, y: 0, zoom: 1.5 },
@@ -110,6 +116,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
     set((state) => {
       state.showTilesetCollisionOverlay = enabled;
     }),
+  setShowTilesetSortPivotOverlay: (enabled) =>
+    set((state) => {
+      state.showTilesetSortPivotOverlay = enabled;
+    }),
   setShowTerrainOverlay: (enabled) =>
     set((state) => {
       state.showTerrainOverlay = enabled;
@@ -117,6 +127,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   setShow3DLayerView: (enabled) =>
     set((state) => {
       state.show3DLayerView = enabled;
+    }),
+  setShowMapTestMode: (enabled) =>
+    set((state) => {
+      state.showMapTestMode = enabled;
     }),
 
   reloadTerrainLayers: () =>

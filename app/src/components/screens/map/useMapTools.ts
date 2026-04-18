@@ -668,7 +668,10 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                     ? selectedTileIndices
                     : undefined,
               });
-            } else if ((activeTool === 'stamp' || activeTool === 'fill') && activeTilesetId) {
+            } else if (
+              (activeTool === 'stamp' || activeTool === 'fill') &&
+              (activeTilesetId || patternData)
+            ) {
               // Stamp/fill flood fill - supports stencil patterns
               bucketFillAdvanced(selectedLayerId, tx, ty, {
                 mode: 'stamp',
@@ -1090,7 +1093,10 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       ) {
         const { x: tx, y: ty } = tile;
         if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-          if ((activeTool === 'stamp' || activeTool === 'random') && activeTilesetId) {
+          if (
+            (activeTool === 'stamp' && (activeTilesetId || sampledPattern)) ||
+            (activeTool === 'random' && activeTilesetId)
+          ) {
             applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'paint');
           } else if (activeTool === 'erase') {
             applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'erase');
@@ -1182,6 +1188,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             } else {
               // Right-clicked an empty tile — sample an "empty" pattern (null)
               // Keep the active tool the same; stamping this pattern will erase
+              setSelectedTile(null);
+              setSelectedTiles([]);
               const pattern = [[null]] as (number | null)[][];
               setSampledPattern({
                 tilesetId: activeTilesetId ?? '',
@@ -1189,8 +1197,6 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 width: 1,
                 height: 1,
               });
-              setSelectedTile(null);
-              setSelectedTiles([]);
             }
 
             isSamplingRef.current = false;
@@ -1237,14 +1243,6 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           if (firstTilesetId) {
             // Set the active tileset
             setActiveTileset(firstTilesetId);
-
-            // Store the sampled pattern for stamping
-            setSampledPattern({
-              tilesetId: firstTilesetId,
-              pattern,
-              width,
-              height,
-            });
 
             // Check if tiles form a contiguous rectangle in the tileset
             // Only highlight in tileset palette if they do
@@ -1300,16 +1298,25 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 // the sampledPattern will still be used for stamping
               }
             }
+
+            // Store the sampled pattern for stamping after any tileset selection updates,
+            // because selection changes clear sampledPattern.
+            setSampledPattern({
+              tilesetId: firstTilesetId,
+              pattern,
+              width,
+              height,
+            });
           } else {
             // Sampled region contained no tiles — store an all-null sampled pattern
+            setSelectedTile(null);
+            setSelectedTiles([]);
             setSampledPattern({
               tilesetId: activeTilesetId ?? '',
               pattern,
               width,
               height,
             });
-            setSelectedTile(null);
-            setSelectedTiles([]);
           }
         }
 

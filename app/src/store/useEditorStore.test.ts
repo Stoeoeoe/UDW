@@ -97,6 +97,26 @@ describe('useEditorStore', () => {
     expect(useEditorStore.getState().selectedTileIndex).toBe(5);
   });
 
+  it('should keep a sampled pattern when it is set after clearing tile selection', () => {
+    const { setSelectedTile, setSelectedTiles, setSampledPattern } = useEditorStore.getState();
+
+    setSelectedTile(5);
+    setSelectedTiles([]);
+    setSampledPattern({
+      tilesetId: 'village',
+      pattern: [[null]],
+      width: 1,
+      height: 1,
+    });
+
+    expect(useEditorStore.getState().sampledPattern).toEqual({
+      tilesetId: 'village',
+      pattern: [[null]],
+      width: 1,
+      height: 1,
+    });
+  });
+
   describe('Map & Variation Logic', () => {
     const mockMap = {
       version: 1,
@@ -195,6 +215,30 @@ describe('useEditorStore', () => {
       expect(
         useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1],
       ).toBeNull();
+    });
+
+    it('should treat an all-null sampled pattern as erase during stamp flood fill', () => {
+      const { paintTile, bucketFillAdvanced } = useEditorStore.getState();
+
+      paintTile('ground', 0, 0, 'village', 1);
+      paintTile('ground', 1, 0, 'village', 1);
+      paintTile('ground', 0, 1, 'village', 1);
+      paintTile('ground', 1, 1, 'village', 1);
+
+      bucketFillAdvanced('ground', 0, 0, {
+        mode: 'stamp',
+        pattern: {
+          pattern: [[null]],
+          patternW: 1,
+          patternH: 1,
+        },
+      });
+
+      const state = useEditorStore.getState();
+      expect(state.currentMap?.layers[0].data[0][0]).toBeNull();
+      expect(state.currentMap?.layers[0].data[0][1]).toBeNull();
+      expect(state.currentMap?.layers[0].data[1][0]).toBeNull();
+      expect(state.currentMap?.layers[0].data[1][1]).toBeNull();
     });
 
     it('should select the terrain tool when a terrain layer is auto-selected', () => {

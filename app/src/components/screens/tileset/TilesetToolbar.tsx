@@ -1,6 +1,6 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiShield } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiShield, FiArrowDown } from 'react-icons/fi';
 import Toolbar, { ToolItem, ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 
@@ -11,6 +11,10 @@ export const TilesetToolbar: React.FC = () => {
   const showTilesetCollisionOverlay = useEditorStore((state) => state.showTilesetCollisionOverlay);
   const setShowTilesetCollisionOverlay = useEditorStore(
     (state) => state.setShowTilesetCollisionOverlay,
+  );
+  const showTilesetSortPivotOverlay = useEditorStore((state) => state.showTilesetSortPivotOverlay);
+  const setShowTilesetSortPivotOverlay = useEditorStore(
+    (state) => state.setShowTilesetSortPivotOverlay,
   );
 
   const TOOLS: ToolItem[] = [
@@ -38,6 +42,15 @@ export const TilesetToolbar: React.FC = () => {
           colorScheme="orange"
           isActive={showTilesetCollisionOverlay}
           onClick={() => setShowTilesetCollisionOverlay(!showTilesetCollisionOverlay)}
+        />
+        <ToolbarToggleButton
+          label={
+            showTilesetSortPivotOverlay ? 'Hide sort pivot overlay' : 'Show sort pivot overlay'
+          }
+          icon={<FiArrowDown />}
+          colorScheme="cyan"
+          isActive={showTilesetSortPivotOverlay}
+          onClick={() => setShowTilesetSortPivotOverlay(!showTilesetSortPivotOverlay)}
         />
       </ToolbarShell>
     </HStack>
