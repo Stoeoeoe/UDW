@@ -132,7 +132,6 @@ export interface EditorState {
   // Location link selection/editing state
   selectedLinkId: string | null; // Currently selected link (shown in inspector)
   selectedAnchorId: string | null; // Currently selected anchor
-  pickingLinkTargetForLinkId: string | null; // One-shot mode: pick target tile on any map
   pendingNewLinkId: string | null; // Set immediately after link placement to trigger setup dialog
 
   // Trigger selection/editing state

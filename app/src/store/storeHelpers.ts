@@ -148,49 +148,23 @@ export function createLayersFromDefinitions(
     }));
 }
 
-export function ensureLocationLinkLayer(map: GameMap): GameMap {
-  const hasLinkLayer = map.layers.some((l) => l.kind === 'locationlink');
-  if (hasLinkLayer) return map;
-  const linkLayer: Layer = {
-    id: 'location-links',
-    name: 'Location Links',
-    kind: 'locationlink',
+/**
+ * Ensures a single 'navigation' layer exists on the map. Used as the
+ * host layer for anchors, triggers, and location links.
+ */
+export function ensureNavigationLayer(map: GameMap): GameMap {
+  const hasNavLayer = map.layers.some((l) => l.kind === 'navigation');
+  if (hasNavLayer) return map;
+  const navLayer: Layer = {
+    id: 'navigation',
+    name: 'Navigation',
+    kind: 'navigation',
     visible: true,
     locked: false,
     opacity: 1,
     zOrder: 9999,
   };
-  return { ...map, layers: [...map.layers, linkLayer] };
-}
-
-export function ensureAnchorLayer(map: GameMap): GameMap {
-  const hasAnchorLayer = map.layers.some((l) => l.kind === 'anchor');
-  if (hasAnchorLayer) return map;
-  const anchorLayer: Layer = {
-    id: 'anchors',
-    name: 'Anchors',
-    kind: 'anchor',
-    visible: true,
-    locked: false,
-    opacity: 1,
-    zOrder: 9998,
-  };
-  return { ...map, layers: [...map.layers, anchorLayer] };
-}
-
-export function ensureTriggerLayer(map: GameMap): GameMap {
-  const hasTriggerLayer = map.layers.some((l) => l.kind === 'trigger');
-  if (hasTriggerLayer) return map;
-  const triggerLayer: Layer = {
-    id: 'triggers',
-    name: 'Triggers',
-    kind: 'trigger',
-    visible: true,
-    locked: false,
-    opacity: 1,
-    zOrder: 9997,
-  };
-  return { ...map, layers: [...map.layers, triggerLayer] };
+  return { ...map, layers: [...map.layers, navLayer] };
 }
 
 export function createDefaultLayer(width: number, height: number): Layer {
@@ -214,32 +188,35 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   terrain: 'terrain',
   visual: 'stamp',
   collision: 'stamp',
-  navigation: 'stamp',
+  navigation: 'anchorSelect',
   metadata: 'stamp',
   entity: 'entitySelect',
-  anchor: 'anchorSelect',
-  locationlink: 'linkSelect',
-  trigger: 'triggerSelect',
 };
 
 export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   terrain: ['terrain', 'erase'],
   visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
   collision: ['stamp', 'erase', 'fill', 'select'],
-  navigation: ['stamp', 'erase', 'fill', 'select'],
+  navigation: [
+    'anchorPlace',
+    'anchorSelect',
+    'anchorDelete',
+    'triggerPlace',
+    'triggerPolygon',
+    'triggerSelect',
+    'triggerDelete',
+    'linkPlace',
+    'linkSelect',
+    'linkDelete',
+  ],
   metadata: ['stamp', 'erase', 'fill', 'select'],
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
-  anchor: ['anchorSelect', 'anchorDelete'],
-  locationlink: ['linkPlace', 'linkSelect', 'linkDelete'],
-  trigger: ['triggerPlace', 'triggerPolygon', 'triggerSelect', 'triggerDelete'],
 };
 
 export function getPreferredSelectedLayerId(map: GameMap | null): string | null {
   if (!map) return null;
-  const SYSTEM_KINDS = new Set(['locationlink', 'anchor', 'trigger']);
-  const firstNonSystem = map.layers.find((layer) => !SYSTEM_KINDS.has(layer.kind));
-  const firstNonLink = map.layers.find((layer) => layer.kind !== 'locationlink');
-  return firstNonSystem?.id ?? firstNonLink?.id ?? map.layers[0]?.id ?? null;
+  const firstNonNav = map.layers.find((layer) => layer.kind !== 'navigation');
+  return firstNonNav?.id ?? map.layers[0]?.id ?? null;
 }
 
 export function syncToolStateForSelectedLayer(
@@ -271,9 +248,11 @@ export function syncToolStateForSelectedLayer(
     state.selectedTerrainId = state.terrainTypes[0].id;
   }
 
-  if (layer.kind !== 'locationlink') state.selectedLinkId = null;
-  if (layer.kind !== 'anchor') state.selectedAnchorId = null;
-  if (layer.kind !== 'trigger') state.selectedTriggerId = null;
+  if (layer.kind !== 'navigation') {
+    state.selectedLinkId = null;
+    state.selectedAnchorId = null;
+    state.selectedTriggerId = null;
+  }
   if (layer.kind !== 'entity') {
     state.selectedEntityId = null;
     state.selectedEntityIds = new Set();

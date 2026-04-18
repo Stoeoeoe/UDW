@@ -4,10 +4,6 @@ import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { resolveLinkTarget } from '../../../lib/locationLinkUtils';
 import { useEditorStore } from '../../../store/useEditorStore';
 
-/**
- * Simple navigation list of location links for the left sidebar.
- * No inline editing — selection drives the right-panel inspector.
- */
 export const LocationLinksPanel: React.FC = () => {
   const currentMap = useEditorStore((s) => s.currentMap);
   const maps = useEditorStore((s) => s.maps);
@@ -19,24 +15,24 @@ export const LocationLinksPanel: React.FC = () => {
   const removeLocationLink = useEditorStore((s) => s.removeLocationLink);
 
   const links = currentMap?.locationLinks ?? [];
-  const linkLayer = currentMap?.layers.find((l) => l.kind === 'locationlink');
-  const isLinkLayerSelected = linkLayer && selectedLayerId === linkLayer.id;
+  const navLayer = currentMap?.layers.find((l) => l.kind === 'navigation');
+  const isNavLayerSelected = navLayer && selectedLayerId === navLayer.id;
 
-  const activateLinkLayer = () => {
-    if (linkLayer) {
-      selectLayer(linkLayer.id);
+  const activateNavLayer = () => {
+    if (navLayer) {
+      selectLayer(navLayer.id);
       setActiveTool('linkSelect');
     }
   };
 
   const handleSelectLink = (id: string) => {
-    activateLinkLayer();
+    activateNavLayer();
     selectLink(id);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
-    activateLinkLayer();
+    activateNavLayer();
     setActiveTool('linkPlace');
     selectLink(null);
   };
@@ -50,7 +46,6 @@ export const LocationLinksPanel: React.FC = () => {
 
   return (
     <Box borderTop="1px" borderColor="editor.border">
-      {/* Section header */}
       <Flex
         align="center"
         px="2"
@@ -58,10 +53,10 @@ export const LocationLinksPanel: React.FC = () => {
         bg="editor.headerBg"
         _hover={{ bg: 'whiteAlpha.50' }}
         cursor="pointer"
-        onClick={activateLinkLayer}
+        onClick={activateNavLayer}
         userSelect="none"
         borderBottom="1px"
-        borderColor={isLinkLayerSelected ? 'cyan.700' : 'editor.border'}
+        borderColor={isNavLayerSelected ? 'cyan.700' : 'editor.border'}
       >
         <Box w="6px" h="6px" borderRadius="full" bg="cyan.500" mr="2" flexShrink={0} />
         <Text
@@ -70,7 +65,7 @@ export const LocationLinksPanel: React.FC = () => {
           fontWeight="black"
           textTransform="uppercase"
           letterSpacing="widest"
-          color={isLinkLayerSelected ? 'cyan.400' : 'gray.500'}
+          color={isNavLayerSelected ? 'cyan.400' : 'gray.500'}
         >
           Links
         </Text>
@@ -92,31 +87,26 @@ export const LocationLinksPanel: React.FC = () => {
         </Tooltip>
       </Flex>
 
-      {/* Link list */}
       {links.length === 0 ? (
         <Box px={4} py={2}>
           <Text fontSize="10px" color="gray.700" fontStyle="italic">
-            No links — click + to place one
+            No links — click a trigger with the Link tool
           </Text>
         </Box>
       ) : (
         <VStack spacing={0} align="stretch">
           {links.map((link) => {
             const isSelected = selectedLinkId === link.id;
-            const targetMap = maps.find((m) => m.id === link.targetMapId);
-            const isSameMap = !link.targetMapId || link.targetMapId === currentMap?.id;
-            const isBroken = !isSameMap && !targetMap;
-            const resolvedTarget = resolveLinkTarget(link, currentMap, maps);
-            const dirIcon = link.direction === 'bidirectional' ? '↔' : '→';
-            const targetLabel = isSameMap
-              ? resolvedTarget.anchor
-                ? `anchor: ${resolvedTarget.anchor.name}`
-                : 'same map'
-              : isBroken
-                ? '⚠ missing'
-                : resolvedTarget.anchor
-                  ? `${targetMap!.name} @ ${resolvedTarget.anchor.name}`
-                  : targetMap!.name;
+            const { targetMap, anchor } = resolveLinkTarget(link, maps);
+            const trigger = currentMap?.spatialPrimitives?.triggers?.find(
+              (t) => t.id === link.triggerId,
+            );
+            const isBroken = !targetMap || !anchor || !trigger;
+            const targetLabel = !targetMap
+              ? '⚠ no map'
+              : !anchor
+                ? `${targetMap.name} @ ⚠ no anchor`
+                : `${targetMap.name} @ ${anchor.name}`;
 
             return (
               <HStack
@@ -133,15 +123,14 @@ export const LocationLinksPanel: React.FC = () => {
                 role="group"
                 transition="all 0.1s"
               >
-                {/* Direction color dot */}
                 <Text
                   fontSize="10px"
                   fontFamily="mono"
-                  color={isBroken ? 'red.400' : isSameMap ? 'purple.300' : 'cyan.300'}
+                  color={isBroken ? 'red.400' : 'cyan.300'}
                   mr={1.5}
                   flexShrink={0}
                 >
-                  {dirIcon}
+                  →
                 </Text>
 
                 <VStack align="start" spacing={0} flex={1} minW={0}>
@@ -158,15 +147,12 @@ export const LocationLinksPanel: React.FC = () => {
                     )}
                   </Text>
                   <HStack spacing={1}>
-                    <Text fontSize="10px" color="gray.600" fontFamily="mono">
-                      ({link.sourcePosition[0]},{link.sourcePosition[1]})
-                    </Text>
-                    <Text fontSize="10px" color="gray.600">
-                      {dirIcon}
+                    <Text fontSize="10px" color="gray.600" noOfLines={1} maxW="120px">
+                      via {trigger?.label || trigger?.id || '⚠ no trigger'}
                     </Text>
                     <Badge
                       fontSize="9px"
-                      colorScheme={isBroken ? 'red' : isSameMap ? 'purple' : 'cyan'}
+                      colorScheme={isBroken ? 'red' : 'cyan'}
                       variant="subtle"
                       px={1}
                     >

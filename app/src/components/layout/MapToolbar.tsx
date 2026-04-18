@@ -4,7 +4,6 @@ import {
   FiEdit2,
   FiTrash2,
   FiUser,
-  FiMapPin,
   FiLink,
   FiShuffle,
   FiDroplet,
@@ -48,9 +47,16 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     { id: 'fill', icon: FiDroplet, label: 'Fill (G)', group: 'collision' },
   ],
   navigation: [
-    { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'navigation' },
-    { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'navigation' },
-    { id: 'fill', icon: FiDroplet, label: 'Fill (G)', group: 'navigation' },
+    { id: 'triggerPlace', icon: FiMaximize, label: 'Draw Trigger (T)', group: 'triggers' },
+    { id: 'triggerPolygon', icon: FiPenTool, label: 'Draw Polygon Trigger', group: 'triggers' },
+    { id: 'triggerSelect', icon: FiMousePointer, label: 'Select Trigger', group: 'triggers' },
+    { id: 'triggerDelete', icon: FiTrash2, label: 'Delete Trigger', group: 'triggers' },
+    { id: 'anchorPlace', icon: FiUser, label: 'Place Anchor (A)', group: 'anchors' },
+    { id: 'anchorSelect', icon: FiMousePointer, label: 'Select Anchor', group: 'anchors' },
+    { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor', group: 'anchors' },
+    { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
+    { id: 'linkSelect', icon: FiMousePointer, label: 'Select Link (M)', group: 'links' },
+    { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
   ],
   metadata: [
     { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'metadata' },
@@ -76,21 +82,6 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
       group: 'entities',
     },
   ],
-  locationlink: [
-    { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
-    { id: 'linkSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'links' },
-    { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
-  ],
-  anchor: [
-    { id: 'anchorSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'anchors' },
-    { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor (X)', group: 'anchors' },
-  ],
-  trigger: [
-    { id: 'triggerPlace', icon: FiMaximize, label: 'Draw Rectangle (N)', group: 'triggers' },
-    { id: 'triggerPolygon', icon: FiPenTool, label: 'Draw Polygon', group: 'triggers' },
-    { id: 'triggerSelect', icon: FiMousePointer, label: 'Select / Move (M)', group: 'triggers' },
-    { id: 'triggerDelete', icon: FiTrash2, label: 'Delete Trigger (X)', group: 'triggers' },
-  ],
 };
 
 const FALLBACK_TOOLS: ToolItem[] = [
@@ -110,11 +101,7 @@ export const MapToolbar: React.FC = () => {
     ? (TOOLS_BY_KIND[selectedLayer.kind] ?? FALLBACK_TOOLS)
     : FALLBACK_TOOLS;
 
-  const showSnapToggle =
-    selectedLayer?.kind === 'entity' ||
-    selectedLayer?.kind === 'anchor' ||
-    selectedLayer?.kind === 'locationlink' ||
-    selectedLayer?.kind === 'trigger';
+  const showSnapToggle = selectedLayer?.kind === 'entity' || selectedLayer?.kind === 'navigation';
 
   return (
     <HStack spacing={4}>

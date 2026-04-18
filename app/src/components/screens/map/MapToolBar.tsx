@@ -40,9 +40,15 @@ const TOOLS_BY_KIND: Partial<Record<LayerKind, ToolItem[]>> = {
     { id: 'fill', icon: FiDroplet, label: 'Fill (G)', group: 'collision' },
   ],
   navigation: [
-    { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'navigation' },
-    { id: 'erase', icon: FiSlash, label: 'Erase (E)', group: 'navigation' },
-    { id: 'fill', icon: FiDroplet, label: 'Fill (G)', group: 'navigation' },
+    { id: 'triggerPlace', icon: FiMaximize, label: 'Draw Trigger (T)', group: 'triggers' },
+    { id: 'triggerSelect', icon: FiMove, label: 'Select Trigger', group: 'triggers' },
+    { id: 'triggerDelete', icon: FiTrash2, label: 'Delete Trigger', group: 'triggers' },
+    { id: 'anchorPlace', icon: FiMapPin, label: 'Place Anchor (A)', group: 'anchors' },
+    { id: 'anchorSelect', icon: FiMove, label: 'Select Anchor', group: 'anchors' },
+    { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor', group: 'anchors' },
+    { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
+    { id: 'linkSelect', icon: FiMove, label: 'Select Link (M)', group: 'links' },
+    { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
   ],
   metadata: [
     { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'metadata' },
@@ -52,16 +58,6 @@ const TOOLS_BY_KIND: Partial<Record<LayerKind, ToolItem[]>> = {
     { id: 'entityPlace', icon: FiUser, label: 'Place Entity (N)', group: 'entities' },
     { id: 'entitySelect', icon: FiMove, label: 'Move Entity (M)', group: 'entities' },
     { id: 'entityDelete', icon: FiTrash2, label: 'Delete Entity (X)', group: 'entities' },
-  ],
-  anchor: [
-    { id: 'anchorPlace', icon: FiMapPin, label: 'Place Anchor (N)', group: 'anchors' },
-    { id: 'anchorSelect', icon: FiMove, label: 'Move Anchor (M)', group: 'anchors' },
-    { id: 'anchorDelete', icon: FiTrash2, label: 'Delete Anchor (X)', group: 'anchors' },
-  ],
-  locationlink: [
-    { id: 'linkPlace', icon: FiLink, label: 'Place Link (N)', group: 'links' },
-    { id: 'linkSelect', icon: FiMove, label: 'Select / Move (M)', group: 'links' },
-    { id: 'linkDelete', icon: FiTrash2, label: 'Delete Link (X)', group: 'links' },
   ],
 };
 
@@ -97,8 +93,15 @@ export const MapToolbar: React.FC = () => {
 
   const showSnapToggle =
     (selectedLayer?.kind === 'entity' && ['entitySelect', 'entityPlace'].includes(activeTool)) ||
-    (selectedLayer?.kind === 'anchor' && ['anchorSelect', 'anchorPlace'].includes(activeTool)) ||
-    (selectedLayer?.kind === 'locationlink' && ['linkSelect', 'linkPlace'].includes(activeTool));
+    (selectedLayer?.kind === 'navigation' &&
+      [
+        'anchorSelect',
+        'anchorPlace',
+        'linkSelect',
+        'linkPlace',
+        'triggerSelect',
+        'triggerPlace',
+      ].includes(activeTool));
 
   return (
     <HStack spacing={2}>

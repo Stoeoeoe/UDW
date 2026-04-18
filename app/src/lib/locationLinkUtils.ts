@@ -1,25 +1,13 @@
-import type { Anchor, LocationLink, Map as GameMap } from '../types/schema';
+import type { Anchor, LocationLink, MapTrigger, Map as GameMap } from '../types/schema';
 
 export const DEFAULT_LINK_FACING: [number, number] = [0, 1];
 
-export function normalizeFacingVector(facing?: [number, number] | null): [number, number] {
-  if (!facing) return DEFAULT_LINK_FACING;
-
-  const [x, y] = facing;
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    return DEFAULT_LINK_FACING;
-  }
-
-  const length = Math.hypot(x, y);
-  if (length < 0.0001) {
-    return DEFAULT_LINK_FACING;
-  }
-
-  return [Number((x / length).toFixed(4)), Number((y / length).toFixed(4))];
-}
-
 export function getMapAnchors(map?: GameMap | null): Anchor[] {
   return map?.spatialPrimitives?.anchors ?? [];
+}
+
+export function getMapTriggers(map?: GameMap | null): MapTrigger[] {
+  return map?.spatialPrimitives?.triggers ?? [];
 }
 
 export function getAnchorById(
@@ -30,6 +18,14 @@ export function getAnchorById(
   return getMapAnchors(map).find((anchor) => anchor.id === anchorId);
 }
 
+export function getTriggerById(
+  map: GameMap | null | undefined,
+  triggerId: string | undefined,
+): MapTrigger | undefined {
+  if (!map || !triggerId) return undefined;
+  return getMapTriggers(map).find((trigger) => trigger.id === triggerId);
+}
+
 export function getLinkById(
   map: GameMap | null | undefined,
   linkId: string | undefined,
@@ -38,80 +34,37 @@ export function getLinkById(
   return map.locationLinks?.find((link) => link.id === linkId);
 }
 
-export function getLinkOwnedAnchor(
-  link: LocationLink | undefined,
-  map: GameMap | null | undefined,
-): Anchor | undefined {
-  if (!link) return undefined;
-  return getAnchorById(map, link.anchorId);
+export function getLinkTargetMap(link: LocationLink, maps: GameMap[]): GameMap | undefined {
+  return maps.find((map) => map.id === link.targetMapId);
 }
 
-export function getLinkTargetMap(
-  link: LocationLink,
-  currentMap: GameMap | null | undefined,
-  maps: GameMap[],
-): GameMap | undefined {
-  if (!link.targetMapId || link.targetMapId === currentMap?.id) {
-    return currentMap ?? undefined;
+/**
+ * Computes the center of a trigger's footprint in pixel coords — used to
+ * place connector lines and sidebar tooltips.
+ */
+export function getTriggerCenter(trigger: MapTrigger): [number, number] {
+  if (trigger.shape === 'polygon' && trigger.points && trigger.points.length > 0) {
+    let sx = 0;
+    let sy = 0;
+    for (const [x, y] of trigger.points) {
+      sx += x;
+      sy += y;
+    }
+    return [sx / trigger.points.length, sy / trigger.points.length];
   }
-
-  return maps.find((map) => map.id === link.targetMapId);
+  const [x, y] = trigger.position;
+  const [w, h] = trigger.size ?? [0, 0];
+  return [x + w / 2, y + h / 2];
 }
 
 export function resolveLinkTarget(
   link: LocationLink,
-  currentMap: GameMap | null | undefined,
   maps: GameMap[],
 ): {
   targetMap: GameMap | undefined;
-  targetLink: LocationLink | undefined;
   anchor: Anchor | undefined;
-  usesAnchor: boolean;
-  position: [number, number];
-  facing: [number, number];
 } {
-  const targetMap = getLinkTargetMap(link, currentMap, maps);
-  const targetLink = getLinkById(targetMap, link.targetLinkId);
-  const anchor =
-    getLinkOwnedAnchor(targetLink, targetMap) ?? getAnchorById(targetMap, link.targetAnchorId);
-
-  return {
-    targetMap,
-    targetLink,
-    anchor,
-    usesAnchor: !!anchor,
-    position: anchor?.position ?? link.targetPosition,
-    facing: normalizeFacingVector(anchor?.facing ?? link.targetFacing),
-  };
-}
-
-export function getIncomingLinksForLink(
-  targetLink: LocationLink,
-  currentMap: GameMap | null | undefined,
-  maps: GameMap[],
-): Array<{ map: GameMap; link: LocationLink }> {
-  if (!currentMap) return [];
-
-  const results: Array<{ map: GameMap; link: LocationLink }> = [];
-  for (const map of maps) {
-    for (const link of map.locationLinks ?? []) {
-      const pointsToMap = (link.targetMapId || currentMap.id) === currentMap.id;
-      if (!pointsToMap) continue;
-      if (link.targetLinkId === targetLink.id) {
-        results.push({ map, link });
-      }
-    }
-  }
-
-  return results;
-}
-
-export function getDefaultLinkTargetPosition(
-  sourcePosition: [number, number],
-  triggerSize: [number, number],
-  tileSize: number,
-): [number, number] {
-  const centerX = Math.round(sourcePosition[0] + triggerSize[0] / 2);
-  const belowY = Math.round(sourcePosition[1] + triggerSize[1] + tileSize);
-  return [centerX, belowY];
+  const targetMap = getLinkTargetMap(link, maps);
+  const anchor = getAnchorById(targetMap, link.targetAnchorId);
+  return { targetMap, anchor };
 }

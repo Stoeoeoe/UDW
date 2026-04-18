@@ -13,9 +13,7 @@ import { TriggerInspector } from './TriggerInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { MapBrowser } from './MapBrowser';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
-import { AnchorBottomPanel } from './AnchorBottomPanel';
-import { LinkBottomPanel } from './LinkBottomPanel';
-import { TriggerBottomPanel } from './TriggerBottomPanel';
+import { NavigationBottomPanel } from './NavigationBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
 import { EditorModal } from '../../common/EditorModal';
 import { resolveMapContext } from '../../../lib/mapUtils';
@@ -215,12 +213,8 @@ export const MapEditor: React.FC = () => {
         bottomPanel={
           activeView === 'world' ? undefined : selectedLayerKind === 'entity' ? (
             <EntityBottomPalette />
-          ) : selectedLayerKind === 'anchor' ? (
-            <AnchorBottomPanel />
-          ) : selectedLayerKind === 'locationlink' ? (
-            <LinkBottomPanel />
-          ) : selectedLayerKind === 'trigger' ? (
-            <TriggerBottomPanel />
+          ) : selectedLayerKind === 'navigation' ? (
+            <NavigationBottomPanel />
           ) : selectedLayerKind === 'terrain' ? null : (
             <TilesetPalette enableMultiSelect={true} />
           )

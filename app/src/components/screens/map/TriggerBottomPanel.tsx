@@ -28,7 +28,7 @@ export const TriggerBottomPanel: React.FC = () => {
   const handleAdd = () => {
     const cx = Math.floor((currentMap?.width ?? 2) / 2) * projectTileSize;
     const cy = Math.floor((currentMap?.height ?? 2) / 2) * projectTileSize;
-    const triggerLayer = currentMap?.layers.find((l) => l.kind === 'trigger');
+    const triggerLayer = currentMap?.layers.find((l) => l.kind === 'navigation');
     if (triggerLayer) selectLayer(triggerLayer.id);
     addTrigger({
       id: `trigger-${Date.now()}`,
@@ -98,7 +98,7 @@ export const TriggerBottomPanel: React.FC = () => {
                     bg: isSelected ? 'purple.900' : 'whiteAlpha.100',
                   }}
                   onClick={() => {
-                    const triggerLayer = currentMap?.layers.find((l) => l.kind === 'trigger');
+                    const triggerLayer = currentMap?.layers.find((l) => l.kind === 'navigation');
                     if (triggerLayer) selectLayer(triggerLayer.id);
                     selectTrigger(isSelected ? null : trigger.id);
                   }}

@@ -18,7 +18,7 @@ export const AnchorBottomPanel: React.FC = () => {
   const handleAdd = () => {
     const cx = Math.floor((currentMap?.width ?? 2) / 2) * projectTileSize;
     const cy = Math.floor((currentMap?.height ?? 2) / 2) * projectTileSize;
-    const anchorLayer = currentMap?.layers.find((layer) => layer.kind === 'anchor');
+    const anchorLayer = currentMap?.layers.find((layer) => layer.kind === 'navigation');
     if (anchorLayer) {
       selectLayer(anchorLayer.id);
     }
@@ -79,7 +79,9 @@ export const AnchorBottomPanel: React.FC = () => {
                     bg: isSelected ? 'orange.900' : 'whiteAlpha.100',
                   }}
                   onClick={() => {
-                    const anchorLayer = currentMap?.layers.find((layer) => layer.kind === 'anchor');
+                    const anchorLayer = currentMap?.layers.find(
+                      (layer) => layer.kind === 'navigation',
+                    );
                     if (anchorLayer) {
                       selectLayer(anchorLayer.id);
                     }

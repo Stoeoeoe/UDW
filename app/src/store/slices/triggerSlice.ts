@@ -2,7 +2,7 @@ import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { MapTrigger } from '../../types/schema';
 import { saveMapDebounced } from '../../lib/saveManager';
-import { ensureTriggerLayer } from '../storeHelpers';
+import { ensureNavigationLayer } from '../storeHelpers';
 import type { EditorStore } from '../useEditorStore';
 
 type ImmerStateCreator<T> = StateCreator<
@@ -35,12 +35,13 @@ export const createTriggerSlice: ImmerStateCreator<TriggerSlice> = (set, get) =>
   addTrigger: (trigger) => {
     set((state) => {
       if (!state.currentMap) return;
-      // Ensure the trigger layer exists
-      const withLayer = ensureTriggerLayer(state.currentMap);
+      const withLayer = ensureNavigationLayer(state.currentMap);
       state.currentMap = castDraft(withLayer);
       const triggers = ensureTriggerCollection(state.currentMap);
       triggers.push(castDraft(trigger));
       state.selectedTriggerId = trigger.id;
+      state.selectedLinkId = null;
+      state.selectedAnchorId = null;
     });
     const map = get().currentMap;
     if (map) saveMapDebounced(map);
@@ -64,6 +65,11 @@ export const createTriggerSlice: ImmerStateCreator<TriggerSlice> = (set, get) =>
       if (!state.currentMap?.spatialPrimitives?.triggers) return;
       state.currentMap.spatialPrimitives.triggers =
         state.currentMap.spatialPrimitives.triggers.filter((t) => t.id !== id);
+      if (state.currentMap.locationLinks) {
+        state.currentMap.locationLinks = state.currentMap.locationLinks.filter(
+          (l) => l.triggerId !== id,
+        );
+      }
       if (state.selectedTriggerId === id) state.selectedTriggerId = null;
     });
     const map = get().currentMap;
@@ -73,6 +79,10 @@ export const createTriggerSlice: ImmerStateCreator<TriggerSlice> = (set, get) =>
   selectTrigger: (id) => {
     set((state) => {
       state.selectedTriggerId = id;
+      if (id !== null) {
+        state.selectedLinkId = null;
+        state.selectedAnchorId = null;
+      }
     });
   },
 });

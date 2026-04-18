@@ -1,23 +1,15 @@
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
-import { Anchor, Map as GameMap } from '../../types/schema';
+import { Anchor, Map as GameMap, LocationLink } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { serializeMap } from '../../lib/mapMigration';
-import {
-  DEFAULT_LINK_FACING,
-  getDefaultLinkTargetPosition,
-  getLinkOwnedAnchor,
-  normalizeFacingVector,
-  resolveLinkTarget,
-} from '../../lib/locationLinkUtils';
+import { DEFAULT_LINK_FACING } from '../../lib/locationLinkUtils';
 import { saveMapDebounced } from '../../lib/saveManager';
 import {
   addMissingDefinitionLayers,
   createLayersFromDefinitions,
   createDefaultLayer,
-  ensureAnchorLayer,
-  ensureLocationLinkLayer,
-  ensureTriggerLayer,
+  ensureNavigationLayer,
   getPreferredSelectedLayerId,
   syncToolStateForSelectedLayer,
   withHistorySuppressed,
@@ -31,24 +23,20 @@ type ImmerStateCreator<T> = StateCreator<
   T
 >;
 
-function upsertMapInState(state: { maps: unknown[]; currentMap: unknown }, updatedMap: GameMap) {
-  const maps = state.maps as GameMap[];
-  const mapIndex = maps.findIndex((map) => map.id === updatedMap.id);
-  if (mapIndex !== -1) {
-    maps[mapIndex] = castDraft(updatedMap);
-  }
-
-  const currentMap = state.currentMap as GameMap | null;
-  if (currentMap?.id === updatedMap.id) {
-    state.currentMap = castDraft(updatedMap);
-  }
-}
-
 async function persistMap(map: GameMap) {
   await fileSystem.saveJson('maps', `${map.id}.vmap`, {
     $schema: '../../schemas/map.schema.json',
     ...serializeMap(map),
   });
+}
+
+function normalizeFacing(facing?: [number, number] | null): [number, number] {
+  if (!facing) return DEFAULT_LINK_FACING;
+  const [x, y] = facing;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return DEFAULT_LINK_FACING;
+  const len = Math.hypot(x, y);
+  if (len < 0.0001) return DEFAULT_LINK_FACING;
+  return [Number((x / len).toFixed(4)), Number((y / len).toFixed(4))];
 }
 
 function ensureAnchorCollection(map: GameMap): Anchor[] {
@@ -87,13 +75,12 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
             return;
           }
           const withDefs = addMissingDefinitionLayers(map, state.layerDefinitions);
-          const enrichedMap = ensureTriggerLayer(
-            ensureAnchorLayer(ensureLocationLinkLayer(withDefs)),
-          );
+          const enrichedMap = ensureNavigationLayer(withDefs);
           state.currentMap = castDraft(enrichedMap);
           state.currentMapPath = `maps/${enrichedMap.id}.vmap`;
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
+          state.selectedTriggerId = null;
           if (enrichedMap && state.mapCameras?.[enrichedMap.id]) {
             state.camera = { ...state.mapCameras[enrichedMap.id] };
           }
@@ -120,7 +107,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
             state.mapCameras[state.currentMap.id] = { ...state.camera };
           }
 
-          const enrichedMap = ensureTriggerLayer(ensureAnchorLayer(ensureLocationLinkLayer(map)));
+          const enrichedMap = ensureNavigationLayer(map);
           state.currentMap = castDraft(enrichedMap);
           state.currentMapPath = `maps/${enrichedMap.id}.vmap`;
           state.activeVariationId = null;
@@ -128,6 +115,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
           state.selectedEntityIds = new Set();
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
+          state.selectedTriggerId = null;
 
           state.camera = state.mapCameras?.[mapId]
             ? { ...state.mapCameras[mapId] }
@@ -157,7 +145,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
       layers: baseLayers,
       entities: [],
     };
-    const newMap = ensureTriggerLayer(ensureAnchorLayer(ensureLocationLinkLayer(rawMap)));
+    const newMap = ensureNavigationLayer(rawMap);
 
     await fileSystem.saveJson('maps', `${id}.vmap`, {
       $schema: '../../schemas/map.schema.json',
@@ -200,8 +188,8 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
     }),
 
   deleteMap: async (mapId) => {
-    // Find maps that have location links targeting the deleted map so we can
-    // remove those links and persist the updated files before wiping the map.
+    // Remove links pointing to the deleted map from all other maps, persist,
+    // and update state.
     const affectedMaps: GameMap[] = get()
       .maps.filter((m) => m.id !== mapId)
       .map((m) => ({
@@ -221,7 +209,6 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
     withHistorySuppressed(
       () =>
         set((state) => {
-          // Apply cascaded link removals
           for (const updated of affectedMaps) {
             const idx = state.maps.findIndex((m) => m.id === updated.id);
             if (idx !== -1) state.maps[idx] = castDraft(updated);
@@ -253,30 +240,22 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
 });
 
 // ============================================================================
-// Location link actions (collocated with map slice — they operate on currentMap)
+// Location link + anchor actions
 // ============================================================================
 
 export interface LocationLinkSlice {
   selectedLinkId: string | null;
   selectedAnchorId: string | null;
-  pickingLinkTargetForLinkId: string | null;
   pendingNewLinkId: string | null;
 
   addAnchor: (anchor: Anchor) => void;
   updateAnchor: (id: string, updates: Partial<Anchor>, skipSave?: boolean) => void;
   removeAnchor: (id: string) => void;
   selectAnchor: (id: string | null) => void;
-  addLocationLink: (link: import('../../types/schema').LocationLink) => void;
-  updateLocationLink: (
-    id: string,
-    updates: Partial<import('../../types/schema').LocationLink>,
-    skipSave?: boolean,
-  ) => void;
+  addLocationLink: (link: LocationLink) => void;
+  updateLocationLink: (id: string, updates: Partial<LocationLink>, skipSave?: boolean) => void;
   removeLocationLink: (id: string) => void;
   selectLink: (id: string | null) => void;
-  startPickingLinkTarget: (linkId: string) => void;
-  cancelPickingLinkTarget: () => void;
-  commitLinkTarget: (linkId: string, mapId: string, position: [number, number]) => void;
   clearPendingNewLink: () => void;
   updateMapAnchor: (
     mapId: string,
@@ -284,14 +263,24 @@ export interface LocationLinkSlice {
     updates: Partial<Anchor>,
     skipSave?: boolean,
   ) => void;
-  createTargetAnchorForLink: (linkId: string) => Promise<string | null>;
-  createBidirectionalCounterpart: (sourceLinkId: string) => Promise<void>;
+}
+
+function upsertMapInState(state: { maps: unknown[]; currentMap: unknown }, updatedMap: GameMap) {
+  const maps = state.maps as GameMap[];
+  const mapIndex = maps.findIndex((map) => map.id === updatedMap.id);
+  if (mapIndex !== -1) {
+    maps[mapIndex] = castDraft(updatedMap);
+  }
+
+  const currentMap = state.currentMap as GameMap | null;
+  if (currentMap?.id === updatedMap.id) {
+    state.currentMap = castDraft(updatedMap);
+  }
 }
 
 export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (set, get) => ({
   selectedLinkId: null,
   selectedAnchorId: null,
-  pickingLinkTargetForLinkId: null,
   pendingNewLinkId: null,
 
   addAnchor: (anchor) => {
@@ -301,7 +290,7 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
       anchors.push(
         castDraft({
           ...anchor,
-          facing: normalizeFacingVector(anchor.facing ?? DEFAULT_LINK_FACING),
+          facing: normalizeFacing(anchor.facing ?? DEFAULT_LINK_FACING),
         }),
       );
       state.selectedAnchorId = anchor.id;
@@ -315,7 +304,7 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
   updateAnchor: (id, updates, skipSave = false) => {
     const normalizedUpdates = { ...updates };
     if (normalizedUpdates.facing) {
-      normalizedUpdates.facing = normalizeFacingVector(normalizedUpdates.facing);
+      normalizedUpdates.facing = normalizeFacing(normalizedUpdates.facing);
     }
 
     set((state) => {
@@ -337,17 +326,32 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
       if (!state.currentMap) return;
       const anchors = ensureAnchorCollection(state.currentMap);
       state.currentMap.spatialPrimitives!.anchors = anchors.filter((anchor) => anchor.id !== id);
+      // Drop links that lose their target anchor.
       if (state.currentMap.locationLinks) {
-        state.currentMap.locationLinks = state.currentMap.locationLinks.map((link) => ({
-          ...link,
-          anchorId: link.anchorId === id ? undefined : link.anchorId,
-          targetAnchorId: link.targetAnchorId === id ? undefined : link.targetAnchorId,
-        }));
+        state.currentMap.locationLinks = state.currentMap.locationLinks.filter(
+          (link) => link.targetAnchorId !== id,
+        );
       }
       if (state.selectedAnchorId === id) state.selectedAnchorId = null;
     });
-    const { currentMap } = get();
-    if (currentMap) saveMapDebounced(currentMap);
+    // Cascade: drop links in other maps whose targetAnchorId references this anchor on this map.
+    const { currentMap, maps } = get();
+    if (currentMap) {
+      for (const otherMap of maps) {
+        if (otherMap.id === currentMap.id) continue;
+        const filtered = (otherMap.locationLinks ?? []).filter(
+          (link) => !(link.targetMapId === currentMap.id && link.targetAnchorId === id),
+        );
+        if (filtered.length !== (otherMap.locationLinks?.length ?? 0)) {
+          const updated: GameMap = { ...otherMap, locationLinks: filtered };
+          set((state) => {
+            upsertMapInState(state, updated);
+          });
+          saveMapDebounced(updated);
+        }
+      }
+      saveMapDebounced(currentMap);
+    }
   },
 
   selectAnchor: (id) =>
@@ -360,39 +364,23 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
     }),
 
   addLocationLink: (link) => {
-    const projectTileSize = get().project?.tileSize ?? 16;
-    const targetPosition =
-      link.targetPosition ??
-      getDefaultLinkTargetPosition(link.sourcePosition, link.triggerSize, projectTileSize);
-    const targetFacing = normalizeFacingVector(link.targetFacing ?? DEFAULT_LINK_FACING);
-    const normalizedLink = {
-      ...link,
-      targetPosition,
-      targetFacing,
-    };
-
     set((state) => {
       if (!state.currentMap) return;
       if (!state.currentMap.locationLinks) state.currentMap.locationLinks = [];
-      state.currentMap.locationLinks.push(castDraft(normalizedLink));
-      state.selectedLinkId = normalizedLink.id;
+      state.currentMap.locationLinks.push(castDraft(link));
+      state.selectedLinkId = link.id;
       state.selectedAnchorId = null;
-      state.pendingNewLinkId = normalizedLink.id;
+      state.pendingNewLinkId = link.id;
     });
     const { currentMap } = get();
     if (currentMap) saveMapDebounced(currentMap);
   },
 
   updateLocationLink: (id, updates, skipSave = false) => {
-    const normalizedUpdates = { ...updates };
-    if (normalizedUpdates.targetFacing) {
-      normalizedUpdates.targetFacing = normalizeFacingVector(normalizedUpdates.targetFacing);
-    }
-
     set((state) => {
       if (!state.currentMap?.locationLinks) return;
       const link = state.currentMap.locationLinks.find((l) => l.id === id);
-      if (link) Object.assign(link, normalizedUpdates);
+      if (link) Object.assign(link, updates);
     });
     if (!skipSave) {
       const { currentMap } = get();
@@ -419,47 +407,6 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
       }
     }),
 
-  startPickingLinkTarget: (linkId) =>
-    set((state) => {
-      state.pickingLinkTargetForLinkId = linkId;
-    }),
-
-  cancelPickingLinkTarget: () =>
-    set((state) => {
-      state.pickingLinkTargetForLinkId = null;
-    }),
-
-  commitLinkTarget: (linkId, mapId, position) => {
-    set((state) => {
-      if (!state.currentMap?.locationLinks) return;
-      const link = state.currentMap.locationLinks.find((l) => l.id === linkId);
-      if (link) {
-        link.targetMapId = mapId;
-        const anchor =
-          !mapId || mapId === state.currentMap.id
-            ? (getLinkOwnedAnchor(
-                state.currentMap.locationLinks.find((item) => item.id === link.targetLinkId),
-                state.currentMap,
-              ) ??
-              (link.targetAnchorId
-                ? state.currentMap.spatialPrimitives?.anchors?.find(
-                    (item) => item.id === link.targetAnchorId,
-                  )
-                : undefined))
-            : undefined;
-
-        if (anchor) {
-          anchor.position = position;
-        } else {
-          link.targetPosition = position;
-        }
-      }
-      state.pickingLinkTargetForLinkId = null;
-    });
-    const { currentMap } = get();
-    if (currentMap) saveMapDebounced(currentMap);
-  },
-
   clearPendingNewLink: () =>
     set((state) => {
       state.pendingNewLinkId = null;
@@ -468,7 +415,7 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
   updateMapAnchor: (mapId, anchorId, updates, skipSave = false) => {
     const normalizedUpdates = { ...updates };
     if (normalizedUpdates.facing) {
-      normalizedUpdates.facing = normalizeFacingVector(normalizedUpdates.facing);
+      normalizedUpdates.facing = normalizeFacing(normalizedUpdates.facing);
     }
 
     let updatedMap: GameMap | null = null;
@@ -496,136 +443,5 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
     if (!skipSave && updatedMap) {
       saveMapDebounced(updatedMap);
     }
-  },
-
-  createTargetAnchorForLink: async (linkId) => {
-    const state = get();
-    const sourceMap = state.currentMap;
-    if (!sourceMap) return null;
-
-    const link = sourceMap.locationLinks?.find((item) => item.id === linkId);
-    if (!link) return null;
-
-    const resolvedTarget = resolveLinkTarget(link, sourceMap, state.maps);
-    if (link.targetMapId && !resolvedTarget.targetMap) {
-      return null;
-    }
-
-    const targetMap = resolvedTarget.targetMap ?? sourceMap;
-    const anchorId = `anchor-${Date.now()}`;
-    const baseName = (link.label?.trim() || 'Arrival').replace(/\s+/g, ' ');
-    const newAnchor: Anchor = {
-      id: anchorId,
-      name: `${baseName} Anchor`,
-      position: resolvedTarget.position,
-      facing: resolvedTarget.facing,
-      tags: ['link-arrival'],
-    };
-
-    if (targetMap.id === sourceMap.id) {
-      const combinedMap: GameMap = {
-        ...sourceMap,
-        spatialPrimitives: {
-          ...(sourceMap.spatialPrimitives ?? {}),
-          anchors: [...(sourceMap.spatialPrimitives?.anchors ?? []), newAnchor],
-        },
-        locationLinks: (sourceMap.locationLinks ?? []).map((item) =>
-          item.id === linkId
-            ? {
-                ...item,
-                targetAnchorId: anchorId,
-                targetPosition: resolvedTarget.position,
-                targetFacing: resolvedTarget.facing,
-              }
-            : item,
-        ),
-      };
-
-      await persistMap(combinedMap);
-      set((draft) => {
-        upsertMapInState(draft, combinedMap);
-      });
-      return anchorId;
-    }
-
-    const updatedTargetMap: GameMap = {
-      ...targetMap,
-      spatialPrimitives: {
-        ...(targetMap.spatialPrimitives ?? {}),
-        anchors: [...(targetMap.spatialPrimitives?.anchors ?? []), newAnchor],
-      },
-    };
-
-    const updatedSourceMap: GameMap = {
-      ...sourceMap,
-      locationLinks: (sourceMap.locationLinks ?? []).map((item) =>
-        item.id === linkId
-          ? {
-              ...item,
-              targetAnchorId: anchorId,
-              targetPosition: resolvedTarget.position,
-              targetFacing: resolvedTarget.facing,
-            }
-          : item,
-      ),
-    };
-
-    await persistMap(updatedTargetMap);
-    await persistMap(updatedSourceMap);
-
-    set((draft) => {
-      upsertMapInState(draft, updatedTargetMap);
-      upsertMapInState(draft, updatedSourceMap);
-    });
-
-    return anchorId;
-  },
-
-  createBidirectionalCounterpart: async (sourceLinkId) => {
-    const state = get();
-    const sourceMap = state.currentMap;
-    if (!sourceMap) return;
-
-    const sourceLink = sourceMap.locationLinks?.find((l) => l.id === sourceLinkId);
-    if (!sourceLink || !sourceLink.targetMapId) return;
-
-    const targetMap = state.maps.find((m) => m.id === sourceLink.targetMapId);
-    if (!targetMap) return;
-
-    const resolvedTarget = resolveLinkTarget(sourceLink, sourceMap, state.maps);
-
-    const counterpartId = `link-${Date.now()}`;
-    const counterpart: import('../../types/schema').LocationLink = {
-      id: counterpartId,
-      label: sourceLink.label ? `↩ ${sourceLink.label}` : undefined,
-      sourcePosition: resolvedTarget.position,
-      triggerSize: sourceLink.triggerSize,
-      targetMapId: sourceMap.id,
-      targetPosition: sourceLink.sourcePosition,
-      targetFacing: normalizeFacingVector(sourceLink.targetFacing ?? DEFAULT_LINK_FACING),
-      targetLinkId: sourceLinkId,
-      direction: 'bidirectional',
-    };
-
-    const updatedTargetMap: GameMap = {
-      ...targetMap,
-      locationLinks: [...(targetMap.locationLinks ?? []), counterpart],
-    };
-    const updatedSourceMap: GameMap = {
-      ...sourceMap,
-      locationLinks: sourceMap.locationLinks!.map((l) =>
-        l.id === sourceLinkId
-          ? { ...l, direction: 'bidirectional' as const, targetLinkId: counterpartId }
-          : l,
-      ),
-    };
-
-    await persistMap(updatedTargetMap);
-    await persistMap(updatedSourceMap);
-
-    set((s) => {
-      upsertMapInState(s, updatedTargetMap);
-      upsertMapInState(s, updatedSourceMap);
-    });
   },
 });

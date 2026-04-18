@@ -126,24 +126,12 @@ export interface Map {
 export interface LocationLink {
   id: string;
   label?: string;
-  // Source trigger — references a MapTrigger on this map (preferred)
-  triggerId?: string;
-  // Legacy source fields (kept for backward-compat; ignored when triggerId is set)
-  sourcePosition: [number, number]; // Pixel coordinates [x, y]
-  triggerSize: [number, number]; // Width/height in pixels (default [tileSize, tileSize])
-  // Local arrival anchor owned by this link. Other links can target this link and inherit this anchor.
-  anchorId?: string;
-  // Target map. Empty string means this map.
-  targetMapId: string; // Empty string = same map
-  // Manual fallback landing position on the target map.
-  targetPosition: [number, number]; // Pixel coordinates [x, y] on target map
-  // Optional named anchor on the target map. When present, its position/facing win.
-  targetAnchorId?: string;
-  // Facing vector used when no target anchor is selected.
-  targetFacing?: [number, number];
-  // Optional target link on the destination map. When present, its arrival anchor wins.
-  targetLinkId?: string;
-  direction: 'one-way' | 'bidirectional';
+  // Source trigger — references a MapTrigger on this map.
+  triggerId: string;
+  // Target map id.
+  targetMapId: string;
+  // Arrival anchor on the target map. Its position/facing define the landing.
+  targetAnchorId: string;
   tags?: string[];
 }
 
@@ -171,13 +159,10 @@ export interface Layer {
 export type LayerKind =
   | 'visual' // Rendered tiles
   | 'collision' // Collision data
-  | 'navigation' // Pathfinding hints
+  | 'navigation' // Combined layer for anchors, triggers, and location links
   | 'metadata' // Data-only, invisible
   | 'entity' // Layer that contains entities (EntityInstance[])
-  | 'terrain' // Terrain-painted layer (autotiled)
-  | 'anchor' // Named anchor markers for arrivals / NPC goals / scripts
-  | 'locationlink' // Map transition links (doors, exits, portals)
-  | 'trigger'; // Map trigger zones (fires game events on enter/exit)
+  | 'terrain'; // Terrain-painted layer (autotiled)
 
 export type PropertyValue =
   | string

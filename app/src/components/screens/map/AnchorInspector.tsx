@@ -1,7 +1,5 @@
 import React from 'react';
 import {
-  Badge,
-  Box,
   Button,
   FormControl,
   HStack,
@@ -16,7 +14,6 @@ import { FiMapPin } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { InspectorEmptyState, InspectorPanel } from '../common';
 import { FieldLabel, SectionLabel } from '../../common/Typography.tsx';
-import { getIncomingLinksForLink } from '../../../lib/locationLinkUtils';
 
 const FACING_PRESETS: Array<{ label: string; value: [number, number] }> = [
   { label: 'Up', value: [0, -1] },
@@ -27,10 +24,8 @@ const FACING_PRESETS: Array<{ label: string; value: [number, number] }> = [
 
 export const AnchorInspector: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
-  const maps = useEditorStore((state) => state.maps);
   const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
   const updateAnchor = useEditorStore((state) => state.updateAnchor);
-  const loadMap = useEditorStore((state) => state.loadMap);
 
   const anchor = currentMap?.spatialPrimitives?.anchors?.find(
     (item) => item.id === selectedAnchorId,
@@ -48,10 +43,6 @@ export const AnchorInspector: React.FC = () => {
     );
   }
 
-  const linkedFrom = (currentMap.locationLinks ?? []).filter((link) => link.anchorId === anchor.id);
-  const incomingLinks = linkedFrom.flatMap((link) =>
-    getIncomingLinksForLink(link, currentMap, maps),
-  );
   const facing = anchor.facing ?? [0, 1];
 
   return (
@@ -196,56 +187,6 @@ export const AnchorInspector: React.FC = () => {
             ))}
           </Wrap>
         </VStack>
-
-        <VStack align="stretch" spacing={2}>
-          <SectionLabel textStyle="fieldLabel">Used By</SectionLabel>
-          {linkedFrom.length === 0 ? (
-            <Text fontSize="10px" color="gray.600">
-              No local links use this anchor yet.
-            </Text>
-          ) : (
-            linkedFrom.map((link) => (
-              <Badge key={link.id} colorScheme="cyan" fontSize="9px" w="fit-content">
-                {link.label || link.id}
-              </Badge>
-            ))
-          )}
-        </VStack>
-
-        {incomingLinks.length > 0 && (
-          <VStack align="stretch" spacing={2}>
-            <SectionLabel textStyle="fieldLabel">Incoming Links</SectionLabel>
-            {incomingLinks.map(({ map, link }) => (
-              <HStack
-                key={`${map.id}:${link.id}`}
-                spacing={2}
-                px={2}
-                py={1.5}
-                bg="whiteAlpha.50"
-                borderRadius="md"
-                border="1px"
-                borderColor="cyan.900"
-              >
-                <Box flex={1} minW={0}>
-                  <Text fontSize="xs" color="cyan.200" noOfLines={1}>
-                    {link.label || link.id}
-                  </Text>
-                  <Text fontSize="10px" color="gray.500">
-                    {map.name}
-                  </Text>
-                </Box>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  colorScheme="cyan"
-                  onClick={() => loadMap(map.id)}
-                >
-                  Open
-                </Button>
-              </HStack>
-            ))}
-          </VStack>
-        )}
       </VStack>
     </InspectorPanel>
   );

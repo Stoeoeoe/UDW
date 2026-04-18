@@ -9,7 +9,7 @@ import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { getIconTexture } from '../../../lib/iconRaster';
-import { resolveLinkTarget } from '../../../lib/locationLinkUtils';
+import { resolveLinkTarget, getTriggerCenter } from '../../../lib/locationLinkUtils';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
 
 interface UseMapRendererProps {
@@ -635,191 +635,105 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render location links overlay
   const renderLocationLinks = useCallback(() => {
     const g = locationLinksGraphicsRef.current;
-    const { currentMap, selectedAnchorId, selectedLinkId, hoveredTile, maps } =
-      useEditorStore.getState();
+    const { currentMap, selectedAnchorId, selectedLinkId, maps } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!g || !currentMap) return;
 
     g.clear();
 
-    const linkLayerVisible = currentMap.layers.some(
-      (l) => l.kind === 'locationlink' && l.visible !== false,
-    );
-    const anchorLayerVisible = currentMap.layers.some(
-      (l) => l.kind === 'anchor' && l.visible !== false,
+    const navLayerVisible = currentMap.layers.some(
+      (l) => l.kind === 'navigation' && l.visible !== false,
     );
 
-    const links = linkLayerVisible ? (currentMap.locationLinks ?? []) : [];
+    const links = navLayerVisible ? (currentMap.locationLinks ?? []) : [];
 
     for (const link of links) {
-      const [sx, sy] = link.sourcePosition; // pixels
-      const [tw, th] = link.triggerSize; // pixels
-      const isSameMap = !link.targetMapId || link.targetMapId === currentMap.id;
       const isSelected = link.id === selectedLinkId;
-      const resolvedTarget = resolveLinkTarget(link, currentMap, maps);
+      const trigger = currentMap.spatialPrimitives?.triggers?.find((t) => t.id === link.triggerId);
+      if (!trigger) continue;
+      const [cx, cy] = getTriggerCenter(trigger);
 
-      // Hovered: cursor is within this link's trigger area
-      const isHovered =
-        hoveredTile !== null &&
-        hoveredTile.x * tileSize >= sx &&
-        hoveredTile.x * tileSize < sx + tw &&
-        hoveredTile.y * tileSize >= sy &&
-        hoveredTile.y * tileSize < sy + th;
-
-      // Color: red = same-map, cyan = cross-map
+      const { targetMap, anchor } = resolveLinkTarget(link, maps);
+      const isSameMap = link.targetMapId === currentMap.id;
       const color = isSameMap ? 0xff4444 : 0x4fd1c5;
-      const darkColor = isSameMap ? 0x3a1010 : 0x1a4a44;
       const selectColor = 0xffffff;
+      const lineColor = isSelected ? selectColor : color;
 
-      const px = sx;
-      const py = sy;
-      const pw = tw;
-      const ph = th;
-
-      // Trigger area fill
-      g.rect(px, py, pw, ph);
-      g.fill({ color: isSelected ? 0x2a1a3a : darkColor, alpha: isSelected ? 0.55 : 0.35 });
-
-      // Trigger area border — white when selected, colored otherwise
-      g.rect(px, py, pw, ph);
-      g.stroke({
-        width: isSelected ? 2 : isHovered ? 1.5 : 1,
-        color: isSelected ? selectColor : color,
-        alpha: isSelected ? 1 : isHovered ? 0.95 : 0.75,
-      });
-
-      // Draw resize handles on source area when selected (only source is resizable)
-      // Handles are placed fully OUTSIDE the trigger rect so they don't block drag-move
-      if (isSelected) {
-        const handleSize = 5; // fixed pixel size — small and unobtrusive
-        const handles = [
-          [px - handleSize, py - handleSize], // nw
-          [px + pw, py - handleSize], // ne
-          [px - handleSize, py + ph], // sw
-          [px + pw, py + ph], // se
-          [px - handleSize, py + ph / 2 - handleSize / 2], // left
-          [px + pw, py + ph / 2 - handleSize / 2], // right
-          [px + pw / 2 - handleSize / 2, py - handleSize], // top
-          [px + pw / 2 - handleSize / 2, py + ph], // bottom
-        ];
-        for (const [hx, hy] of handles) {
-          g.rect(hx, hy, handleSize, handleSize);
-          g.fill({ color: 0xffffff, alpha: 1 });
-          g.rect(hx, hy, handleSize, handleSize);
-          g.stroke({ width: 1, color: 0x111111, alpha: 0.95 });
-        }
-      }
-
-      const cx = px + pw / 2;
-      const cy = py + ph / 2;
-
-      // Same-map: draw arrow to a pixel target and draw a point indicator (targets are points)
-      if (isSameMap) {
-        const [ttx, tty] = resolvedTarget.position;
-        const targetCx = ttx;
-        const targetCy = tty;
-        const dx = targetCx - cx;
-        const dy = targetCy - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        const targetRadius = Math.max(4, Math.floor(tileSize * 0.25));
-
-        if (dist > targetRadius + 2) {
-          const arrowAlpha = isSelected ? 0.7 : 0.35;
-          const arrowColor = isSelected ? selectColor : color;
-          const arrowWidth = isSelected ? 1.5 : 1;
-
-          // Find where the line exits the source rect border
+      if (isSameMap && anchor) {
+        const [ax, ay] = anchor.position;
+        const dx = ax - cx;
+        const dy = ay - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 2) {
           const nx = dx / dist;
           const ny = dy / dist;
-          // Clip to rect edges: find the smallest t where the ray hits px/py/px+pw/py+ph
-          let startX = cx;
-          let startY = cy;
-          if (Math.abs(nx) > 1e-6 || Math.abs(ny) > 1e-6) {
-            const tx1 = nx > 0 ? (px + pw - cx) / nx : nx < 0 ? (px - cx) / nx : Infinity;
-            const ty1 = ny > 0 ? (py + ph - cy) / ny : ny < 0 ? (py - cy) / ny : Infinity;
-            const tEdge = Math.min(tx1, ty1);
-            startX = cx + nx * tEdge;
-            startY = cy + ny * tEdge;
-          }
-
-          // Shorten so the line ends slightly before the target point
-          const endX = targetCx - nx * (targetRadius + 1);
-          const endY = targetCy - ny * (targetRadius + 1);
-
-          g.moveTo(startX, startY);
+          const endX = ax - nx * Math.max(6, tileSize * 0.3);
+          const endY = ay - ny * Math.max(6, tileSize * 0.3);
+          g.moveTo(cx, cy);
           g.lineTo(endX, endY);
-          g.stroke({ width: arrowWidth, color: arrowColor, alpha: arrowAlpha });
+          g.stroke({
+            width: isSelected ? 2 : 1,
+            color: lineColor,
+            alpha: isSelected ? 0.9 : 0.55,
+          });
 
-          // Arrowhead at end
           const headLen = Math.max(6, tileSize * 0.25);
-          const headAngle = Math.PI / 5;
           const angle = Math.atan2(dy, dx);
           g.moveTo(endX, endY);
           g.lineTo(
-            endX - headLen * Math.cos(angle - headAngle),
-            endY - headLen * Math.sin(angle - headAngle),
+            endX - headLen * Math.cos(angle - Math.PI / 5),
+            endY - headLen * Math.sin(angle - Math.PI / 5),
           );
           g.moveTo(endX, endY);
           g.lineTo(
-            endX - headLen * Math.cos(angle + headAngle),
-            endY - headLen * Math.sin(angle + headAngle),
+            endX - headLen * Math.cos(angle + Math.PI / 5),
+            endY - headLen * Math.sin(angle + Math.PI / 5),
           );
-          g.stroke({ width: arrowWidth, color: arrowColor, alpha: arrowAlpha });
+          g.stroke({
+            width: isSelected ? 2 : 1,
+            color: lineColor,
+            alpha: isSelected ? 0.9 : 0.55,
+          });
         }
 
-        // Draw target point indicator
-        g.circle(targetCx, targetCy, Math.max(3, Math.floor(targetRadius * 0.6)));
-        g.fill({ color: isSelected ? selectColor : color, alpha: isSelected ? 1 : 0.9 });
-        g.stroke({ width: 1, color: darkColor, alpha: 0.6 });
-
-        const [fx, fy] = resolvedTarget.facing;
-        const facingLength = Math.max(10, tileSize * 0.85);
-        const facingEndX = targetCx + fx * facingLength;
-        const facingEndY = targetCy + fy * facingLength;
-        g.moveTo(targetCx, targetCy);
-        g.lineTo(facingEndX, facingEndY);
-        g.stroke({ width: 1, color: isSelected ? selectColor : color, alpha: 0.75 });
-
-        const facingAngle = Math.atan2(fy, fx);
-        const headLength = Math.max(5, tileSize * 0.22);
-        g.moveTo(facingEndX, facingEndY);
-        g.lineTo(
-          facingEndX - headLength * Math.cos(facingAngle - Math.PI / 6),
-          facingEndY - headLength * Math.sin(facingAngle - Math.PI / 6),
-        );
-        g.moveTo(facingEndX, facingEndY);
-        g.lineTo(
-          facingEndX - headLength * Math.cos(facingAngle + Math.PI / 6),
-          facingEndY - headLength * Math.sin(facingAngle + Math.PI / 6),
-        );
-        g.stroke({ width: 1, color: isSelected ? selectColor : color, alpha: 0.75 });
-      }
-      // Cross-map: no arrow — just a small exit icon (diagonal arrow at corner of trigger box)
-      else {
-        const iconSize = Math.min(pw, ph, tileSize) * 0.4;
-        const iconX = px + pw - iconSize * 0.3;
-        const iconY = py + iconSize * 0.3;
-        const alpha = isSelected ? 0.9 : 0.5;
-        // Small ↗ arrow in top-right corner of trigger
-        g.moveTo(iconX - iconSize, iconY + iconSize);
+        const mx = (cx + ax) / 2;
+        const my = (cy + ay) / 2;
+        g.circle(mx, my, Math.max(4, tileSize * 0.18));
+        g.fill({ color: lineColor, alpha: isSelected ? 0.95 : 0.7 });
+        g.stroke({ width: 1, color: 0x111111, alpha: 0.6 });
+      } else if (!isSameMap && targetMap) {
+        const iconSize = tileSize * 0.45;
+        const iconX = cx + iconSize * 0.6;
+        const iconY = cy - iconSize * 0.6;
+        const alpha = isSelected ? 0.95 : 0.65;
+        g.moveTo(cx, cy);
         g.lineTo(iconX, iconY);
-        g.stroke({ width: isSelected ? 1.5 : 1, color, alpha });
+        g.stroke({ width: isSelected ? 2 : 1, color: lineColor, alpha });
+        const headLen = iconSize * 0.5;
+        const angle = Math.atan2(iconY - cy, iconX - cx);
         g.moveTo(iconX, iconY);
-        g.lineTo(iconX - iconSize * 0.55, iconY);
+        g.lineTo(
+          iconX - headLen * Math.cos(angle - Math.PI / 5),
+          iconY - headLen * Math.sin(angle - Math.PI / 5),
+        );
         g.moveTo(iconX, iconY);
-        g.lineTo(iconX, iconY + iconSize * 0.55);
-        g.stroke({ width: isSelected ? 1.5 : 1, color, alpha });
-      }
+        g.lineTo(
+          iconX - headLen * Math.cos(angle + Math.PI / 5),
+          iconY - headLen * Math.sin(angle + Math.PI / 5),
+        );
+        g.stroke({ width: isSelected ? 2 : 1, color: lineColor, alpha });
 
-      // Bidirectional dot at center
-      if (link.direction === 'bidirectional') {
-        g.circle(cx, cy, 3);
-        g.fill({ color: isSelected ? selectColor : color, alpha: isSelected ? 0.9 : 0.5 });
+        g.circle(cx, cy, Math.max(4, tileSize * 0.2));
+        g.fill({ color: lineColor, alpha: isSelected ? 0.9 : 0.6 });
+        g.stroke({ width: 1, color: 0x111111, alpha: 0.5 });
+      } else {
+        g.circle(cx, cy, Math.max(4, tileSize * 0.2));
+        g.fill({ color: 0xff4444, alpha: 0.6 });
+        g.stroke({ width: 1, color: 0x111111, alpha: 0.5 });
       }
     }
 
-    const anchors = anchorLayerVisible ? (currentMap.spatialPrimitives?.anchors ?? []) : [];
+    const anchors = navLayerVisible ? (currentMap.spatialPrimitives?.anchors ?? []) : [];
     for (const anchor of anchors) {
       const isSelected = anchor.id === selectedAnchorId;
       const [ax, ay] = anchor.position;
@@ -871,73 +785,23 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       });
     }
 
-    // ── Incoming link targets ─────────────────────────────────────────────
-    // Draw a dashed arrival indicator for every link on another map that targets this map.
-    const incomingColor = 0x4fd1c5; // cyan — always external
-    for (const otherMap of maps) {
-      if (otherMap.id === currentMap.id) continue;
-      for (const inLink of otherMap.locationLinks ?? []) {
-        if (inLink.targetMapId !== currentMap.id) continue;
-
-        const incomingTarget = resolveLinkTarget(inLink, currentMap, maps);
-        const [tx, ty] = incomingTarget.position;
-        const ipx = tx;
-        const ipy = ty;
-
-        // Dashed border (simulate with 8 short segments around the tile)
-        const dash = tileSize / 6;
-        const gap = dash;
-        const corners = [
-          [ipx, ipy, ipx + tileSize, ipy], // top
-          [ipx + tileSize, ipy, ipx + tileSize, ipy + tileSize], // right
-          [ipx + tileSize, ipy + tileSize, ipx, ipy + tileSize], // bottom
-          [ipx, ipy + tileSize, ipx, ipy], // left
-        ];
-        for (const [x1, y1, x2, y2] of corners) {
-          const len = Math.hypot(x2 - x1, y2 - y1);
-          const nx = (x2 - x1) / len;
-          const ny = (y2 - y1) / len;
-          let d = 0;
-          let drawing = true;
-          while (d < len) {
-            const segEnd = Math.min(d + (drawing ? dash : gap), len);
-            if (drawing) {
-              g.moveTo(x1 + nx * d, y1 + ny * d);
-              g.lineTo(x1 + nx * segEnd, y1 + ny * segEnd);
-              g.stroke({ width: 1, color: incomingColor, alpha: 0.6 });
-            }
-            d = segEnd;
-            drawing = !drawing;
+    // Highlight anchors targeted by cross-map incoming links with a subtle cyan ring
+    if (navLayerVisible) {
+      const incomingColor = 0x4fd1c5;
+      const incomingAnchorIds = new Set<string>();
+      for (const otherMap of maps) {
+        if (otherMap.id === currentMap.id) continue;
+        for (const inLink of otherMap.locationLinks ?? []) {
+          if (inLink.targetMapId === currentMap.id && inLink.targetAnchorId) {
+            incomingAnchorIds.add(inLink.targetAnchorId);
           }
         }
-
-        const [fx, fy] = incomingTarget.facing;
-        const acx = ipx;
-        const acy = ipy;
-        const arrowH = Math.max(10, tileSize * 0.7);
-        const arrowEndX = acx + fx * arrowH;
-        const arrowEndY = acy + fy * arrowH;
-        g.moveTo(acx, acy);
-        g.lineTo(arrowEndX, arrowEndY);
+      }
+      for (const anchor of currentMap.spatialPrimitives?.anchors ?? []) {
+        if (!incomingAnchorIds.has(anchor.id)) continue;
+        const [ax, ay] = anchor.position;
+        g.circle(ax, ay, Math.max(10, tileSize * 0.55));
         g.stroke({ width: 1, color: incomingColor, alpha: 0.5 });
-        const angle = Math.atan2(fy, fx);
-        const headW = tileSize * 0.2;
-        g.moveTo(arrowEndX, arrowEndY);
-        g.lineTo(
-          arrowEndX - headW * Math.cos(angle - Math.PI / 6),
-          arrowEndY - headW * Math.sin(angle - Math.PI / 6),
-        );
-        g.moveTo(arrowEndX, arrowEndY);
-        g.lineTo(
-          arrowEndX - headW * Math.cos(angle + Math.PI / 6),
-          arrowEndY - headW * Math.sin(angle + Math.PI / 6),
-        );
-        g.stroke({ width: 1, color: incomingColor, alpha: 0.5 });
-
-        // Source map label (tiny, top-left of tile)
-        // We can't render BitmapText here easily, so just a dot to keep it light
-        g.circle(ipx + 3, ipy + 3, 2);
-        g.fill({ color: incomingColor, alpha: 0.8 });
       }
     }
   }, [projectTileSize]);
@@ -1544,8 +1408,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     g.clear();
     if (!currentMap) return;
 
-    const triggerLayer = currentMap.layers.find((l) => l.kind === 'trigger');
-    if (!triggerLayer?.visible) return;
+    const navLayer = currentMap.layers.find((l) => l.kind === 'navigation');
+    if (!navLayer?.visible) return;
 
     const tileSize = projectTileSize;
 

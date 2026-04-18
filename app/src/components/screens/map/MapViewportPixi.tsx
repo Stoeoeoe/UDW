@@ -286,27 +286,6 @@ export const MapViewportPixi: React.FC = () => {
       if (state.hoveredTile !== prevState.hoveredTile) {
         renderHover();
         renderPreview();
-        // Only re-render links when the hover enters or leaves a link trigger area
-        // (avoids a full Pixi draw pass on every mouse move pixel)
-        const links = state.currentMap?.locationLinks ?? [];
-        const prevLinks = prevState.currentMap?.locationLinks ?? [];
-        const isOverLink = (tile: { x: number; y: number } | null) =>
-          tile !== null &&
-          links.some((l) => {
-            const px = tile.x * projectTileSize;
-            const py = tile.y * projectTileSize;
-            return (
-              px >= l.sourcePosition[0] &&
-              px < l.sourcePosition[0] + l.triggerSize[0] &&
-              py >= l.sourcePosition[1] &&
-              py < l.sourcePosition[1] + l.triggerSize[1]
-            );
-          });
-        const wasOver = isOverLink(prevState.hoveredTile);
-        const nowOver = isOverLink(state.hoveredTile);
-        if (wasOver !== nowOver || (nowOver && links !== prevLinks)) {
-          renderLocationLinks();
-        }
       }
       // Re-render trigger preview while drawing a trigger
       if (
@@ -435,23 +414,24 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'n' || e.key === 'N') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind === 'locationlink') {
+        if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('linkPlace');
-        } else if (layer?.kind === 'trigger') {
-          useEditorStore.getState().setActiveTool('triggerPlace');
         } else {
           useEditorStore.getState().setActiveTool('entityPlace');
+        }
+      }
+      if (e.key === 'a' || e.key === 'A') {
+        const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
+        const layer = cm?.layers.find((l) => l.id === selectedLayerId);
+        if (layer?.kind === 'navigation') {
+          useEditorStore.getState().setActiveTool('anchorPlace');
         }
       }
       if (e.key === 'm' || e.key === 'M') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind === 'locationlink') {
+        if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('linkSelect');
-        } else if (layer?.kind === 'anchor') {
-          useEditorStore.getState().setActiveTool('anchorSelect');
-        } else if (layer?.kind === 'trigger') {
-          useEditorStore.getState().setActiveTool('triggerSelect');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
         }
@@ -459,12 +439,8 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'x' || e.key === 'X') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind === 'locationlink') {
+        if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('linkDelete');
-        } else if (layer?.kind === 'anchor') {
-          useEditorStore.getState().setActiveTool('anchorDelete');
-        } else if (layer?.kind === 'trigger') {
-          useEditorStore.getState().setActiveTool('triggerDelete');
         } else {
           useEditorStore.getState().setActiveTool('entityDelete');
         }
