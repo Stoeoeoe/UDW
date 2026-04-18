@@ -306,6 +306,13 @@ export const MapViewportPixi: React.FC = () => {
       ) {
         renderPreview();
       }
+      // Re-render triggers when entering/leaving linkPlace (drives the link-source highlight)
+      if (
+        state.activeTool !== prevState.activeTool &&
+        (state.activeTool === 'linkPlace' || prevState.activeTool === 'linkPlace')
+      ) {
+        renderTriggers();
+      }
     });
 
     return unsubscribe;
@@ -339,14 +346,18 @@ export const MapViewportPixi: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (!viewport || !mapId || !selectedAnchorId) return;
+    if (!isReady || !viewport || !mapId || !selectedAnchorId) return;
     const currentMap = useEditorStore.getState().currentMap;
     const anchor = currentMap?.spatialPrimitives?.anchors?.find(
       (item) => item.id === selectedAnchorId,
     );
     if (!anchor) return;
-    viewport.moveCenter(anchor.position[0], anchor.position[1]);
-  }, [viewport, mapId, selectedAnchorId]);
+    try {
+      viewport.moveCenter(anchor.position[0], anchor.position[1]);
+    } catch {
+      // Viewport may still be initializing after a map load — ignore and let a later render center it.
+    }
+  }, [isReady, viewport, mapId, selectedAnchorId]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -360,7 +371,7 @@ export const MapViewportPixi: React.FC = () => {
       )
         return;
 
-      // Delete selected entity, link, or trigger with Backspace or Delete
+      // Delete selected anchor, entity, link, or trigger with Backspace or Delete
       if (e.key === 'Backspace' || e.key === 'Delete') {
         const {
           selectedEntityId,
@@ -372,6 +383,9 @@ export const MapViewportPixi: React.FC = () => {
           selectedTriggerId,
           removeTrigger,
           selectTrigger,
+          selectedAnchorId: anchorId,
+          removeAnchor,
+          selectAnchor,
         } = useEditorStore.getState();
         if (selectedTriggerId) {
           e.preventDefault();
@@ -383,6 +397,12 @@ export const MapViewportPixi: React.FC = () => {
           e.preventDefault();
           removeLocationLink(selectedLinkId);
           selectLink(null);
+          return;
+        }
+        if (anchorId) {
+          e.preventDefault();
+          removeAnchor(anchorId);
+          selectAnchor(null);
           return;
         }
         if (selectedEntityId) {
@@ -398,7 +418,7 @@ export const MapViewportPixi: React.FC = () => {
         const { activeTool, setPolygonPreviewPoints } = useEditorStore.getState();
         if (activeTool === 'triggerPolygon') {
           setPolygonPreviewPoints(null);
-          useEditorStore.getState().setActiveTool('triggerSelect');
+          useEditorStore.getState().setActiveTool('select');
           e.preventDefault();
           return;
         }
@@ -431,7 +451,7 @@ export const MapViewportPixi: React.FC = () => {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'navigation') {
-          useEditorStore.getState().setActiveTool('linkSelect');
+          useEditorStore.getState().setActiveTool('select');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
         }
@@ -439,9 +459,7 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'x' || e.key === 'X') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind === 'navigation') {
-          useEditorStore.getState().setActiveTool('linkDelete');
-        } else {
+        if (layer?.kind !== 'navigation') {
           useEditorStore.getState().setActiveTool('entityDelete');
         }
       }

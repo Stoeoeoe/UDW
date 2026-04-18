@@ -156,7 +156,7 @@ export type ToolIcon = {
 };
 
 export type ToolType =
-  | 'select' // Global select — works across all layers
+  | 'select' // Global select — works across all layers (anchors, triggers, links, entities)
   | 'stamp'
   | 'random'
   | 'erase'
@@ -165,18 +165,10 @@ export type ToolType =
   | 'entitySelect' // Select & move entities
   | 'entityPlace'
   | 'entityDelete' // Delete entities
-  | 'linkPlace' // Place a new location link (click source tile)
-  | 'linkSelect' // Select / move location links
-  | 'linkDelete' // Delete location links
-  | 'anchorSelect'
-  | 'pathDraw' // Phase 2
-  | 'areaDraw' // Phase 2
+  | 'linkPlace' // Link creation tool — click a highlighted trigger to start a link
   | 'anchorPlace'
-  | 'anchorDelete'
   | 'triggerPlace' // Place a new trigger zone (drag to size, rectangle)
-  | 'triggerPolygon' // Draw a polygon trigger by clicking vertices
-  | 'triggerSelect' // Select / move / resize triggers
-  | 'triggerDelete'; // Delete triggers
+  | 'triggerPolygon'; // Draw a polygon trigger by clicking vertices
 
 export interface ValidationError {
   severity: 'error' | 'warning';

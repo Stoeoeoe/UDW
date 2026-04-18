@@ -38,7 +38,7 @@ export const TriggerBottomPanel: React.FC = () => {
       size: [projectTileSize * 2, projectTileSize * 2],
       tags: [],
     });
-    setActiveTool('triggerSelect');
+    setActiveTool('select');
   };
 
   return (

@@ -818,18 +818,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     // No tile hover for tools that operate on objects rather than tiles
     const noTileHoverTools = [
       'anchorPlace',
-      'anchorSelect',
-      'anchorDelete',
       'entitySelect',
       'entityPlace',
       'entityDelete',
       'linkPlace',
-      'linkSelect',
-      'linkDelete',
       'triggerPlace',
       'triggerPolygon',
-      'triggerSelect',
-      'triggerDelete',
       'select',
     ];
     if (noTileHoverTools.includes(activeTool)) return;
@@ -866,8 +860,6 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     if (
       activeTool === 'anchorPlace' ||
-      activeTool === 'anchorSelect' ||
-      activeTool === 'anchorDelete' ||
       activeTool === 'entityPlace' ||
       activeTool === 'entitySelect' ||
       activeTool === 'entityDelete'
@@ -1466,12 +1458,13 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const triggers = currentMap.spatialPrimitives?.triggers ?? [];
     const HANDLE_SIZE = 6;
 
+    const linkMode = activeTool === 'linkPlace';
     for (const trigger of triggers) {
       const isSelected = trigger.id === selectedTriggerId;
-      const color = 0xa855f7; // purple-500
-      const alpha = isSelected ? 0.25 : 0.12;
-      const strokeAlpha = isSelected ? 0.9 : 0.5;
-      const strokeWidth = isSelected ? 2 : 1;
+      const color = linkMode ? 0x22d3ee : 0xa855f7; // cyan when picking link source, purple otherwise
+      const alpha = linkMode ? 0.28 : isSelected ? 0.25 : 0.12;
+      const strokeAlpha = linkMode ? 1.0 : isSelected ? 0.9 : 0.5;
+      const strokeWidth = linkMode ? 3 : isSelected ? 2 : 1;
 
       if (trigger.shape === 'rectangle' && trigger.size) {
         const [tx, ty] = trigger.position;

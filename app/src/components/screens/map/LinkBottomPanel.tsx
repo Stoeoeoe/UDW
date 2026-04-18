@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, Flex, HStack, VStack, Text, Badge, IconButton } from '@chakra-ui/react';
-import { DeleteIcon } from '@chakra-ui/icons';
+import { Box, Flex, HStack, VStack, Text, Badge, IconButton, Tooltip } from '@chakra-ui/react';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { resolveLinkTarget } from '../../../lib/locationLinkUtils';
 import { useEditorStore } from '../../../store/useEditorStore';
 import PanelHeader from '../../common/PanelHeader';
@@ -11,12 +11,45 @@ export const LinkBottomPanel: React.FC = () => {
   const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
   const selectLink = useEditorStore((s) => s.selectLink);
   const removeLocationLink = useEditorStore((s) => s.removeLocationLink);
+  const selectLayer = useEditorStore((s) => s.selectLayer);
+  const setActiveTool = useEditorStore((s) => s.setActiveTool);
 
   const links = currentMap?.locationLinks ?? [];
+  const hasTriggers = (currentMap?.spatialPrimitives?.triggers?.length ?? 0) > 0;
+
+  const handleAdd = () => {
+    const navLayer = currentMap?.layers.find((layer) => layer.kind === 'navigation');
+    if (navLayer) selectLayer(navLayer.id);
+    setActiveTool('linkPlace');
+  };
 
   return (
     <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
-      <PanelHeader title="Location Links" />
+      <PanelHeader
+        title="Location Links"
+        actions={
+          <Tooltip
+            label={
+              hasTriggers
+                ? 'New Link — click a highlighted trigger'
+                : 'Create a trigger first, then a link'
+            }
+            placement="top"
+            hasArrow
+          >
+            <IconButton
+              aria-label="Add Link"
+              icon={<AddIcon fontSize="10px" />}
+              size="md"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              isDisabled={!hasTriggers}
+              onClick={handleAdd}
+            />
+          </Tooltip>
+        }
+      />
 
       {links.length === 0 ? (
         <Flex flex={1} align="center" justify="center" direction="column" gap={2} color="gray.600">

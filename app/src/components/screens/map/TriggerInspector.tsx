@@ -11,6 +11,7 @@ import {
   NumberInputField,
   Divider,
   Badge,
+  Button,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { InspectorPanel, InspectorEmptyState } from '../common';
@@ -28,10 +29,44 @@ const TRIGGER_TYPES: { value: TriggerType; label: string; description: string }[
 const TriggerInspectorContent: React.FC<{ trigger: MapTrigger }> = ({ trigger }) => {
   const updateTrigger = useEditorStore((s) => s.updateTrigger);
   const projectTileSize = useEditorStore((s) => s.project?.tileSize ?? 16);
+  const currentMap = useEditorStore((s) => s.currentMap);
+  const maps = useEditorStore((s) => s.maps);
+  const updateLocationLink = useEditorStore((s) => s.updateLocationLink);
+  const removeLocationLink = useEditorStore((s) => s.removeLocationLink);
+  const selectLink = useEditorStore((s) => s.selectLink);
+  const selectTrigger = useEditorStore((s) => s.selectTrigger);
+  const loadMap = useEditorStore((s) => s.loadMap);
+  const selectLayer = useEditorStore((s) => s.selectLayer);
+  const selectAnchor = useEditorStore((s) => s.selectAnchor);
 
   const update = (updates: Partial<MapTrigger>) => updateTrigger(trigger.id, updates);
 
   const typeInfo = TRIGGER_TYPES.find((t) => t.value === trigger.type);
+
+  const link = currentMap?.locationLinks?.find((l) => l.triggerId === trigger.id);
+  const targetMap = link ? maps.find((m) => m.id === link.targetMapId) : undefined;
+  const targetAnchor = targetMap?.spatialPrimitives?.anchors?.find(
+    (a) => a.id === link?.targetAnchorId,
+  );
+
+  const jumpToTarget = () => {
+    if (!link || !targetMap) return;
+    const applySelection = () => {
+      const store = useEditorStore.getState();
+      const latest = store.maps.find((m) => m.id === link.targetMapId);
+      const navLayer = latest?.layers.find((layer) => layer.kind === 'navigation');
+      if (navLayer) store.selectLayer(navLayer.id);
+      store.selectAnchor(link.targetAnchorId);
+    };
+    if (link.targetMapId !== currentMap?.id) {
+      loadMap(link.targetMapId);
+      Promise.resolve().then(applySelection);
+    } else {
+      const navLayer = currentMap?.layers.find((layer) => layer.kind === 'navigation');
+      if (navLayer) selectLayer(navLayer.id);
+      selectAnchor(link.targetAnchorId);
+    }
+  };
 
   return (
     <VStack align="stretch" spacing={5}>
@@ -257,6 +292,127 @@ const TriggerInspectorContent: React.FC<{ trigger: MapTrigger }> = ({ trigger })
           </VStack>
         )}
       </VStack>
+
+      {link && (
+        <>
+          <Divider borderColor="#071018" />
+          <VStack align="stretch" spacing={3}>
+            <HStack justify="space-between" align="center">
+              <SectionLabel>Connected Link</SectionLabel>
+              <Badge colorScheme="cyan" fontSize="9px">
+                {link.id}
+              </Badge>
+            </HStack>
+
+            <FormControl>
+              <FieldLabel>Label</FieldLabel>
+              <Input
+                size="xs"
+                variant="filled"
+                bg="#0a0a0b"
+                color="white"
+                placeholder="e.g. Front Door"
+                value={link.label ?? ''}
+                onChange={(e) =>
+                  updateLocationLink(link.id, { label: e.target.value || undefined })
+                }
+                _hover={{ bg: '#071018' }}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FieldLabel>Target Map</FieldLabel>
+              <Select
+                size="xs"
+                value={link.targetMapId}
+                bg="#0a0a0b"
+                borderColor="#1a1a2e"
+                color="white"
+                onChange={(e) =>
+                  updateLocationLink(link.id, {
+                    targetMapId: e.target.value,
+                    targetAnchorId: '',
+                  })
+                }
+              >
+                <option value="" disabled>
+                  — Select a map —
+                </option>
+                {maps.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                    {m.id === currentMap?.id ? ' (same map)' : ''}
+                  </option>
+                ))}
+              </Select>
+              {!targetMap && (
+                <Text fontSize="10px" color="red.400" mt={1}>
+                  ⚠ Target map not found
+                </Text>
+              )}
+            </FormControl>
+
+            <FormControl>
+              <FieldLabel>Arrival Anchor</FieldLabel>
+              <Select
+                size="xs"
+                value={link.targetAnchorId}
+                bg="#0a0a0b"
+                borderColor="#1a1a2e"
+                color="white"
+                isDisabled={!targetMap}
+                onChange={(e) => updateLocationLink(link.id, { targetAnchorId: e.target.value })}
+              >
+                <option value="" disabled>
+                  — Select an anchor —
+                </option>
+                {(targetMap?.spatialPrimitives?.anchors ?? []).map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+              {targetMap && !targetAnchor && (
+                <Text fontSize="10px" color="red.400" mt={1}>
+                  ⚠ No anchor selected — link has no arrival point.
+                </Text>
+              )}
+            </FormControl>
+
+            <HStack spacing={2}>
+              <Button
+                size="xs"
+                variant="outline"
+                colorScheme="cyan"
+                flex={1}
+                isDisabled={!targetMap || !targetAnchor}
+                onClick={jumpToTarget}
+              >
+                → Jump to target
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                colorScheme="cyan"
+                onClick={() => {
+                  selectTrigger(null);
+                  selectLink(link.id);
+                }}
+              >
+                Open link
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                colorScheme="red"
+                onClick={() => removeLocationLink(link.id)}
+              >
+                Unlink
+              </Button>
+            </HStack>
+          </VStack>
+        </>
+      )}
     </VStack>
   );
 };

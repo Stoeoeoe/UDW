@@ -21,7 +21,7 @@ export const LocationLinksPanel: React.FC = () => {
   const activateNavLayer = () => {
     if (navLayer) {
       selectLayer(navLayer.id);
-      setActiveTool('linkSelect');
+      setActiveTool('select');
     }
   };
 

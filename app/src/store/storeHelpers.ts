@@ -188,7 +188,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   terrain: 'terrain',
   visual: 'stamp',
   collision: 'stamp',
-  navigation: 'anchorSelect',
+  navigation: 'select',
   metadata: 'stamp',
   entity: 'entitySelect',
 };
@@ -197,18 +197,7 @@ export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   terrain: ['terrain', 'erase'],
   visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
   collision: ['stamp', 'erase', 'fill', 'select'],
-  navigation: [
-    'anchorPlace',
-    'anchorSelect',
-    'anchorDelete',
-    'triggerPlace',
-    'triggerPolygon',
-    'triggerSelect',
-    'triggerDelete',
-    'linkPlace',
-    'linkSelect',
-    'linkDelete',
-  ],
+  navigation: ['select', 'anchorPlace', 'triggerPlace', 'triggerPolygon', 'linkPlace'],
   metadata: ['stamp', 'erase', 'fill', 'select'],
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
 };

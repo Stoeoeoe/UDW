@@ -49,11 +49,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const selectEntity = useEditorStore((state) => state.selectEntity);
   const addAnchor = useEditorStore((state) => state.addAnchor);
   const updateAnchor = useEditorStore((state) => state.updateAnchor);
-  const removeAnchor = useEditorStore((state) => state.removeAnchor);
   const selectAnchor = useEditorStore((state) => state.selectAnchor);
   const addTrigger = useEditorStore((state) => state.addTrigger);
   const updateTrigger = useEditorStore((state) => state.updateTrigger);
-  const removeTrigger = useEditorStore((state) => state.removeTrigger);
   const selectTrigger = useEditorStore((state) => state.selectTrigger);
   const setHoveredTile = useEditorStore((state) => state.setHoveredTile);
   const setDrawPreview = useEditorStore((state) => state.setDrawPreview);
@@ -384,22 +382,22 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
       // ── Global Select (V) — works across ALL layers ─────────────────────────
       if (activeTool === 'select' && e.button === 0) {
-        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
         if (!worldPos) return;
 
         // 1. Hit-test links (click on midpoint marker between trigger & anchor)
-        const hitLink = inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
+        const hitLink = inBounds ? hitTestLink(worldPos.x, worldPos.y) : undefined;
         if (hitLink) {
           const navLayer = currentMap.layers.find((l) => l.kind === 'navigation');
           if (navLayer) useEditorStore.getState().selectLayer(navLayer.id);
           useEditorStore.getState().selectLink(hitLink.id);
           useEditorStore.getState().selectEntity(null);
+          selectAnchor(null);
+          selectTrigger(null);
           return;
         }
 
-        // 2. Hit-test triggers
-        const hitTriggerResult =
-          inBounds && worldPos ? hitTestTrigger(worldPos.x, worldPos.y) : undefined;
+        // 2. Hit-test triggers (includes handles/vertices for selected trigger)
+        const hitTriggerResult = inBounds ? hitTestTrigger(worldPos.x, worldPos.y) : undefined;
         if (hitTriggerResult) {
           const navLayer = currentMap.layers.find((l) => l.kind === 'navigation');
           if (navLayer) useEditorStore.getState().selectLayer(navLayer.id);
@@ -407,6 +405,26 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           selectEntity(null);
           useEditorStore.getState().selectLink(null);
           selectAnchor(null);
+          startHistoryBatch();
+          if (hitTriggerResult.handle.startsWith('vertex-')) {
+            draggingVertexIndexRef.current = parseInt(
+              hitTriggerResult.handle.replace('vertex-', ''),
+              10,
+            );
+            draggingTriggerRef.current = hitTriggerResult.trigger.id;
+          } else if (hitTriggerResult.handle !== 'body') {
+            const [tx, ty] = hitTriggerResult.trigger.position;
+            const [tw, th] = hitTriggerResult.trigger.size ?? [projectTileSize, projectTileSize];
+            draggingTriggerHandleRef.current = hitTriggerResult.handle;
+            dragTriggerInitialRef.current = { x: tx, y: ty, w: tw, h: th };
+          } else {
+            const [tx, ty] = hitTriggerResult.trigger.position;
+            draggingTriggerRef.current = hitTriggerResult.trigger.id;
+            dragTriggerOffsetRef.current = {
+              x: worldPos.x - tx,
+              y: worldPos.y - ty,
+            };
+          }
           return;
         }
 
@@ -418,6 +436,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           selectAnchor(hitAnchor.id);
           selectEntity(null);
           useEditorStore.getState().selectLink(null);
+          selectTrigger(null);
           startHistoryBatch();
           draggingAnchorRef.current = hitAnchor.id;
           dragAnchorOffsetRef.current = {
@@ -436,6 +455,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           if (ownerLayer) useEditorStore.getState().selectLayer(ownerLayer.id);
           selectEntity(hitEntity.id);
           useEditorStore.getState().selectLink(null);
+          selectAnchor(null);
+          selectTrigger(null);
           startHistoryBatch();
           draggingEntityRef.current = hitEntity.id;
           dragOffsetRef.current = {
@@ -471,36 +492,11 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           facing: [0, 1],
           tags: [],
         });
-        useEditorStore.getState().setActiveTool('anchorSelect');
+        useEditorStore.getState().setActiveTool('select');
         return;
       }
 
-      if (activeTool === 'anchorSelect' && e.button === 0) {
-        const hitAnchor = inBounds && worldPos ? hitTestAnchor(worldPos.x, worldPos.y) : undefined;
-        if (hitAnchor) {
-          selectAnchor(hitAnchor.id);
-          startHistoryBatch();
-          draggingAnchorRef.current = hitAnchor.id;
-          dragAnchorOffsetRef.current = {
-            x: worldPos!.x - hitAnchor.position[0],
-            y: worldPos!.y - hitAnchor.position[1],
-          };
-        } else {
-          selectAnchor(null);
-          draggingAnchorRef.current = null;
-        }
-        return;
-      }
-
-      if (activeTool === 'anchorDelete' && e.button === 0) {
-        const hitAnchor = inBounds && worldPos ? hitTestAnchor(worldPos.x, worldPos.y) : undefined;
-        if (hitAnchor) removeAnchor(hitAnchor.id);
-        return;
-      }
-
-      // ── Link tools ─────────────────────────────────────────────────────────
-      // Click on a trigger to start a new link from it; inspector/dialog picks
-      // the target map + anchor.
+      // ── Link tool — click a highlighted trigger to start a link ─────────────
       if (activeTool === 'linkPlace' && e.button === 0 && inBounds && worldPos) {
         const hit = hitTestTrigger(worldPos.x, worldPos.y);
         if (!hit) return;
@@ -512,23 +508,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           targetAnchorId: '',
         };
         addLocationLink(newLink);
-        useEditorStore.getState().setActiveTool('linkSelect');
-        return;
-      }
-
-      if (activeTool === 'linkSelect' && e.button === 0) {
-        const hitLink = inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
-        if (hitLink) {
-          useEditorStore.getState().selectLink(hitLink.id);
-        } else {
-          useEditorStore.getState().selectLink(null);
-        }
-        return;
-      }
-
-      if (activeTool === 'linkDelete' && e.button === 0) {
-        const hitLink = inBounds && worldPos ? hitTestLink(worldPos.x, worldPos.y) : undefined;
-        if (hitLink) useEditorStore.getState().removeLocationLink(hitLink.id);
+        useEditorStore.getState().setActiveTool('select');
         return;
       }
 
@@ -579,7 +559,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             });
             polygonDrawPointsRef.current = null;
             setPolygonPreviewPoints(null);
-            useEditorStore.getState().setActiveTool('triggerSelect');
+            useEditorStore.getState().setActiveTool('select');
             return;
           }
         }
@@ -601,42 +581,6 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           setPolygonPreviewPoints(newPts);
         }
         e.preventDefault();
-        return;
-      }
-
-      if (activeTool === 'triggerSelect' && e.button === 0) {
-        const hit = inBounds && worldPos ? hitTestTrigger(worldPos.x, worldPos.y) : undefined;
-        if (hit) {
-          selectTrigger(hit.trigger.id);
-          startHistoryBatch();
-          if (hit.handle.startsWith('vertex-')) {
-            // Polygon vertex drag
-            draggingVertexIndexRef.current = parseInt(hit.handle.replace('vertex-', ''), 10);
-            draggingTriggerRef.current = hit.trigger.id;
-          } else if (hit.handle !== 'body') {
-            // Rectangle resize handle
-            const [tx, ty] = hit.trigger.position;
-            const [tw, th] = hit.trigger.size ?? [projectTileSize, projectTileSize];
-            draggingTriggerHandleRef.current = hit.handle;
-            dragTriggerInitialRef.current = { x: tx, y: ty, w: tw, h: th };
-          } else {
-            // Body drag
-            const [tx, ty] = hit.trigger.position;
-            draggingTriggerRef.current = hit.trigger.id;
-            dragTriggerOffsetRef.current = {
-              x: worldPos!.x - tx,
-              y: worldPos!.y - ty,
-            };
-          }
-        } else {
-          selectTrigger(null);
-        }
-        return;
-      }
-
-      if (activeTool === 'triggerDelete' && e.button === 0) {
-        const hit = inBounds && worldPos ? hitTestTrigger(worldPos.x, worldPos.y) : undefined;
-        if (hit) removeTrigger(hit.trigger.id);
         return;
       }
 
@@ -859,7 +803,6 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       hitTestTrigger,
       startHistoryBatch,
       selectTrigger,
-      removeTrigger,
       addTrigger,
     ],
   );
@@ -945,12 +888,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
       }
 
-      if (
-        e.buttons === 1 &&
-        (activeTool === 'anchorSelect' || activeTool === 'select') &&
-        draggingAnchorRef.current &&
-        worldPos
-      ) {
+      if (e.buttons === 1 && activeTool === 'select' && draggingAnchorRef.current && worldPos) {
         const offset = dragAnchorOffsetRef.current ?? { x: 0, y: 0 };
         const { entitySnapMode: snapMode } = useEditorStore.getState();
         const rawX = worldPos.x - offset.x;
@@ -968,7 +906,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       // Drag polygon vertex
       if (
         e.buttons === 1 &&
-        activeTool === 'triggerSelect' &&
+        activeTool === 'select' &&
         draggingTriggerRef.current &&
         draggingVertexIndexRef.current !== null &&
         worldPos
@@ -998,7 +936,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       // Drag trigger body
       if (
         e.buttons === 1 &&
-        activeTool === 'triggerSelect' &&
+        activeTool === 'select' &&
         draggingTriggerRef.current &&
         draggingVertexIndexRef.current === null &&
         worldPos
@@ -1048,7 +986,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       // Resize trigger via handle (rectangles only)
       if (
         e.buttons === 1 &&
-        activeTool === 'triggerSelect' &&
+        activeTool === 'select' &&
         draggingTriggerHandleRef.current &&
         dragTriggerInitialRef.current &&
         worldPos
@@ -1454,7 +1392,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           size: [w, h],
           tags: [],
         });
-        useEditorStore.getState().setActiveTool('triggerSelect');
+        useEditorStore.getState().setActiveTool('select');
         triggerPlaceStartRef.current = null;
         setDrawPreview({ isDrawing: false, start: null, end: null });
         finishHistoryBatch();
@@ -1506,13 +1444,48 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     ],
   );
 
+  // Double-click a connected trigger → jump to the linked target anchor
+  const handleDoubleClick = useCallback(
+    (e: MouseEvent) => {
+      if (!viewport) return;
+      const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+      if (!worldPos) return;
+      const hit = hitTestTrigger(worldPos.x, worldPos.y);
+      if (!hit) return;
+
+      const { currentMap: cm, maps: allMaps } = useEditorStore.getState();
+      const link = cm?.locationLinks?.find((l) => l.triggerId === hit.trigger.id);
+      if (!link) return;
+      const targetMap = allMaps.find((m) => m.id === link.targetMapId);
+      if (!targetMap) return;
+
+      const applySelection = () => {
+        const store = useEditorStore.getState();
+        const latestMap = store.maps.find((m) => m.id === link.targetMapId);
+        const navLayer = latestMap?.layers.find((layer) => layer.kind === 'navigation');
+        if (navLayer) store.selectLayer(navLayer.id);
+        store.selectAnchor(link.targetAnchorId);
+      };
+
+      if (link.targetMapId !== cm?.id) {
+        Promise.resolve(useEditorStore.getState().loadMap(link.targetMapId)).then(applySelection);
+      } else {
+        applySelection();
+      }
+      e.preventDefault();
+    },
+    [viewport, hitTestTrigger],
+  );
+
   // Keep latest handler refs so stable wrapper closures always call the current version
   const handlePointerDownRef = useRef(handlePointerDown);
   const handlePointerMoveRef = useRef(handlePointerMove);
   const handlePointerUpRef = useRef(handlePointerUp);
+  const handleDoubleClickRef = useRef(handleDoubleClick);
   handlePointerDownRef.current = handlePointerDown;
   handlePointerMoveRef.current = handlePointerMove;
   handlePointerUpRef.current = handlePointerUp;
+  handleDoubleClickRef.current = handleDoubleClick;
 
   // Set up event listeners — only re-fires when viewport changes, not on every state update
   useEffect(() => {
@@ -1524,6 +1497,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     const onDown = (e: PointerEvent) => handlePointerDownRef.current(e);
     const onMove = (e: PointerEvent) => handlePointerMoveRef.current(e);
     const onUp = (e: PointerEvent) => handlePointerUpRef.current(e);
+    const onDblClick = (e: MouseEvent) => handleDoubleClickRef.current(e);
     const preventContextMenu = (e: Event) => {
       e.preventDefault();
     };
@@ -1531,12 +1505,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     view.addEventListener('pointerdown', onDown);
     view.addEventListener('pointermove', onMove);
     view.addEventListener('pointerup', onUp);
+    view.addEventListener('dblclick', onDblClick);
     view.addEventListener('contextmenu', preventContextMenu);
 
     return () => {
       view.removeEventListener('pointerdown', onDown);
       view.removeEventListener('pointermove', onMove);
       view.removeEventListener('pointerup', onUp);
+      view.removeEventListener('dblclick', onDblClick);
       view.removeEventListener('contextmenu', preventContextMenu);
     };
   }, [viewport]);
