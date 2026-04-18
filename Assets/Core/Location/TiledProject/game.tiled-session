@@ -22,12 +22,16 @@
             "expandedObjectLayers": [
                 5
             ],
-            "scale": 5.5,
+            "scale": 3,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 169.36363636363637,
-                "y": 80.0909090909091
+                "x": 224.83333333333331,
+                "y": 100.66666666666664
             }
+        },
+        "IndoorTileset.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "OutdoorsTilemap.tsx": {
             "dynamicWrapping": false,
@@ -49,7 +53,7 @@
             "scale": 2,
             "selectedLayer": 4,
             "viewCenter": {
-                "x": 520.25,
+                "x": 519,
                 "y": 280.25
             }
         },
@@ -73,14 +77,12 @@
     "openFiles": [
         "IndoorTileset.tsx",
         "IndoorTest2.tmx",
-        "SmallMap.tmx",
         "SmallMap.tmx"
     ],
     "project": "game.tiled-project",
     "property.type": "FacingDirections",
     "recentFiles": [
         "IndoorTileset.tsx",
-        "SmallMap.tmx",
         "SmallMap.tmx",
         "IndoorTest2.tmx",
         "OutdoorsTilemap2.tsx",

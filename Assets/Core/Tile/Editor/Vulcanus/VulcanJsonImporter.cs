@@ -697,26 +697,28 @@ namespace Core.Tile.Editor.Vulcanus
             VulcanusWorldCatalog catalog,
             AssetImportContext ctx)
         {
+            // Always construct a simple GameObject for triggers and location-links.
+            var name = !string.IsNullOrWhiteSpace(trigger?.Label) ? trigger.Label : (link?.Id ?? trigger?.Id ?? "Link");
+            var go = new GameObject(BuildLocationLinkObjectName("LocationLink", link, trigger));
+            go.transform.SetParent(parent, false);
+
+            // If this trigger references a location link, add a concrete LocationLink component so
+            // it can be initialized via InitializeLocationLink. We deliberately avoid prefab mapping
+            // and construct the link object on the fly.
             if (link != null)
             {
-                GameObject linkPrefab = null;
-                catalog?.TryGetLocationLinkPrefab(out linkPrefab);
-                if (linkPrefab != null)
+                try
                 {
-                    AddDependency(ctx, AssetDatabase.GetAssetPath(linkPrefab));
-                    var instance = (GameObject)PrefabUtility.InstantiatePrefab(linkPrefab, parent);
-                    instance.name = BuildLocationLinkObjectName(linkPrefab.name, link, trigger);
-                    return instance;
+                    // Add the concrete LocationLink MonoBehaviour if not already present.
+                    if (go.GetComponent<Core.Location.LocationLink>() == null)
+                        go.AddComponent<Core.Location.LocationLink>();
                 }
-
-                var placeholder = new GameObject(BuildLocationLinkObjectName("LocationLink", link, trigger));
-                placeholder.transform.SetParent(parent, false);
-                Debug.LogWarning($"[VulcanusImporter] No locationLinkPrefab assigned in VulcanusWorldCatalog. Link '{link.Id ?? trigger.Id}' placed as trigger-only.");
-                return placeholder;
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[VulcanusJsonImporter] Failed to add LocationLink component to '{go.name}': {ex.Message}");
+                }
             }
 
-            var go = new GameObject(string.IsNullOrWhiteSpace(trigger.Label) ? trigger.Id : trigger.Label);
-            go.transform.SetParent(parent, false);
             return go;
         }
 
@@ -1048,13 +1050,19 @@ namespace Core.Tile.Editor.Vulcanus
 
             polygon.isTrigger = true;
             polygon.points = colliderPoints;
+            // Ensure a well-defined offset (points are already translated relative to the trigger's Position)
+            polygon.offset = Vector2.zero;
+
+            // Add editor-only trigger visualizer if available, same as box collider path
+            TryAddTriggerDebugger(go);
         }
 
         private static void TryAddTriggerDebugger(GameObject go)
         {
             try
             {
-                var dbgType = ResolveTypeByName("Core.Tile.TriggerDebugger");
+                // Try both legacy and current namespaces for TriggerDebugger
+                var dbgType = ResolveTypeByName("Core.Tile.Vulcan.TriggerDebugger") ?? ResolveTypeByName("Core.Tile.TriggerDebugger");
                 if (dbgType != null && go.GetComponent(dbgType) == null)
                     go.AddComponent(dbgType);
             }

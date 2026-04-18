@@ -242,6 +242,8 @@ namespace Core.TimeAndWeather
         {
             currentDaysSinceStart++;
             currentHoursInDay = startOfDay;
+            currentMinutesInHour = 0;
+            TimeSinceLastUpdate = 0f;
             if (!currentSeasonData)
             {
                 StartSeason(startingSeason);

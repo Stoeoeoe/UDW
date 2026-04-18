@@ -42,12 +42,16 @@ namespace Core
             if (!_inventoryInitialized)
             {
                 var inventory = SlotInventory.FindInventory("MainInventory", "Player1");
-                if (inventory != null)
+                if (inventory == null)
+                {
+                    Debug.LogWarning("[PlayerStateManager] MainInventory not found yet. Starting loadout initialization will retry on the next character initialization.");
+                }
+                else
                 {
                     foreach (var tool in _startingTools)  inventory.AddItem(tool, 1);
                     foreach (var item in _startingItems)  inventory.AddItem(item, 1);
+                    _inventoryInitialized = true;
                 }
-                _inventoryInitialized = true;
             }
 
             character.InitializeStamina(_currentStamina);

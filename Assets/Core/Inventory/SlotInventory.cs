@@ -45,35 +45,43 @@ namespace Core.Inventory
         {
             if (item == null || quantity <= 0) return false;
 
+            var updatedContent = (ItemStack[])Content.Clone();
+            var remaining = quantity;
+
             // Try to stack onto existing slots first
             if (item.MaxStackSize > 1)
             {
-                for (int i = 0; i < Content.Length; i++)
+                for (int i = 0; i < updatedContent.Length && remaining > 0; i++)
                 {
-                    if (Content[i].Item == item && Content[i].Quantity < item.MaxStackSize)
+                    if (updatedContent[i].Item == item && updatedContent[i].Quantity < item.MaxStackSize)
                     {
-                        int space = item.MaxStackSize - Content[i].Quantity;
-                        int toAdd = Mathf.Min(space, quantity);
-                        Content[i] = new ItemStack(item, Content[i].Quantity + toAdd);
-                        quantity -= toAdd;
-                        InventoryChangedEvent.Trigger(this);
-                        if (quantity <= 0) return true;
+                        int space = item.MaxStackSize - updatedContent[i].Quantity;
+                        int toAdd = Mathf.Min(space, remaining);
+                        updatedContent[i] = new ItemStack(item, updatedContent[i].Quantity + toAdd);
+                        remaining -= toAdd;
                     }
                 }
             }
 
-            // Find empty slot
-            for (int i = 0; i < Content.Length; i++)
+            // Fill empty slots, splitting across multiple slots when needed.
+            for (int i = 0; i < updatedContent.Length && remaining > 0; i++)
             {
-                if (Content[i].IsEmpty)
+                if (updatedContent[i].IsEmpty)
                 {
-                    Content[i] = new ItemStack(item, quantity);
-                    InventoryChangedEvent.Trigger(this);
-                    return true;
+                    int toAdd = item.MaxStackSize > 1
+                        ? Mathf.Min(item.MaxStackSize, remaining)
+                        : 1;
+                    updatedContent[i] = new ItemStack(item, toAdd);
+                    remaining -= toAdd;
                 }
             }
 
-            return false; // Inventory full
+            if (remaining > 0)
+                return false; // Inventory full
+
+            Content = updatedContent;
+            InventoryChangedEvent.Trigger(this);
+            return true;
         }
 
         /// <summary>Removes items from a specific slot index.</summary>

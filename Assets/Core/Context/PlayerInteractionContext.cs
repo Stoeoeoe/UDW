@@ -29,33 +29,29 @@ namespace Core.Context
         private void UpdateContextSnapshot()
         {
             var character = MainCharacter.CurrentMainCharacter;
-            // e.g. during scene transitions, the character reference may be null. In that case, we want to reset the snapshot to empty.
-            if (!character)
-            {
-                CurrentSnapshot = null;
-                return;
-            }
+            // e.g. during scene transitions, the character reference may be null. In that case, reset to an empty snapshot
+            // instead of null so listeners can handle the cleared state safely.
+            var snapshot = !character
+                ? PlayerInteractionContextSnapshot.Empty()
+                : PlayerInteractionContextSnapshot.Create(
+                    LevelManager.Instance.SceneReady,
+                    character,
+                    character.CurrentInteractable,
+                    PointerManager.Instance.CurrentTileDataUnderPointer,
+                    PointerManager.Instance.CurrentInteractableUnderPointer,
+                    character.CurrentTileData,
+                    character.CurrentTool,
+                    character.CurrentlyHeldItem,
+                    character.ConditionState,
+                    character.MovementState,
+                    UrDialogueManager.Instance.CurrentConversation,
+                    (UrTimeManager.Instance)?.CurrentTime
+                );
 
-
-            var snapshot = PlayerInteractionContextSnapshot.Create(
-                LevelManager.Instance.SceneReady,
-                character,
-                character?.CurrentInteractable,
-                PointerManager.Instance.CurrentTileDataUnderPointer,
-                PointerManager.Instance.CurrentInteractableUnderPointer,
-                character?.CurrentTileData,
-                character?.CurrentTool,
-                character?.CurrentlyHeldItem,
-                character?.ConditionState,
-                character?.MovementState,
-                UrDialogueManager.Instance.CurrentConversation,
-                (UrTimeManager.Instance)?.CurrentTime
-            );
-
-            if (CurrentSnapshot != null && CurrentSnapshot == snapshot)
+            if (CurrentSnapshot == snapshot)
                 return;
 
-            if (CurrentSnapshot != null && snapshot.Mode != CurrentSnapshot.Mode)
+            if (snapshot.Mode != CurrentSnapshot.Mode)
             {
                 OnModeChanged?.Invoke(snapshot.Mode);
             }

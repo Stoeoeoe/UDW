@@ -2302,6 +2302,42 @@
         ],
         "tags": [],
         "label": "External Trigger"
+      },
+      {
+        "id": "trigger-1776497212328",
+        "type": "locationLinkTrigger",
+        "shape": "polygon",
+        "position": [
+          96,
+          112
+        ],
+        "points": [
+          [
+            112,
+            144
+          ],
+          [
+            96,
+            160
+          ],
+          [
+            128,
+            176
+          ],
+          [
+            176,
+            144
+          ],
+          [
+            128,
+            112
+          ],
+          [
+            112,
+            128
+          ]
+        ],
+        "tags": []
       }
     ]
   },
@@ -2326,6 +2362,13 @@
       "targetMapId": "map-1",
       "targetAnchorId": "anchor-1776461296590",
       "label": "Link to Map 1"
+    },
+    {
+      "id": "link-1776497301976",
+      "triggerId": "trigger-1776497212328",
+      "targetMapId": "map-1",
+      "targetAnchorId": "anchor-1776461296590",
+      "label": "dadsa"
     }
   ]
 }
