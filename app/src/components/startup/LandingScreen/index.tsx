@@ -105,7 +105,7 @@ export const LandingScreen: React.FC = () => {
       <VStack spacing={12} maxW="container.md" textAlign="center" w="full" px={4}>
         <Box>
           <Heading size="2xl" color="white" mb={2}>
-            Vulcan Editor
+            Vulcanus Editor
           </Heading>
         </Box>
 
@@ -155,7 +155,7 @@ export const LandingScreen: React.FC = () => {
         </VStack>
 
         <Text fontSize="xs" color="gray.700">
-          Vulcan Editor v1.0.0
+          Vulcanus Editor v1.0.0
         </Text>
       </VStack>
 
