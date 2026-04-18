@@ -73,7 +73,6 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private PropertyDefinition[] tileMetadataDefinitions = Array.Empty<PropertyDefinition>();
 
         [Header("Mappings")]
-        [SerializeField] private GameObject locationLinkPrefab;
         [SerializeField] private EntityPrefabMapping[] entityPrefabMappings = Array.Empty<EntityPrefabMapping>();
         [SerializeField] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
         [SerializeField] private MapLocationMapping[] locationMappings = Array.Empty<MapLocationMapping>();
@@ -90,7 +89,6 @@ namespace Core.Tile.Vulcanus
         public LayerDefinition[] LayerDefinitions => layerDefinitions;
         public EntityTypeDefinition[] EntityTypes => entityTypes;
         public PropertyDefinition[] TileMetadataDefinitions => tileMetadataDefinitions;
-        public GameObject LocationLinkPrefab => locationLinkPrefab;
         public EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
         public ItemClassMapping[] ItemClassMappings => itemClassMappings;
         public MapLocationMapping[] LocationMappings => locationMappings;
@@ -119,13 +117,11 @@ namespace Core.Tile.Vulcanus
         }
 
         public void SetMappings(
-            GameObject linkPrefab,
             EntityPrefabMapping[] entityMappings,
             MapLocationMapping[] mapLocations,
             ItemClassMapping[] itemMappings,
             string[] warnings)
         {
-            locationLinkPrefab = linkPrefab;
             entityPrefabMappings = entityMappings ?? Array.Empty<EntityPrefabMapping>();
             itemClassMappings = itemMappings ?? Array.Empty<ItemClassMapping>();
             locationMappings = mapLocations ?? Array.Empty<MapLocationMapping>();
@@ -201,12 +197,6 @@ namespace Core.Tile.Vulcanus
             }
 
             return false;
-        }
-
-        public bool TryGetLocationLinkPrefab(out GameObject prefab)
-        {
-            prefab = locationLinkPrefab;
-            return prefab != null;
         }
     }
 }

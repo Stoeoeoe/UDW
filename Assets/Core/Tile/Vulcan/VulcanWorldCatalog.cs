@@ -20,7 +20,6 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private VulcanusProject project;
 
         [Header("Mappings")]
-        [SerializeField] private GameObject locationLinkPrefab;
         [SerializeField] private VulcanusProject.EntityPrefabMapping[] entityPrefabMappings = Array.Empty<VulcanusProject.EntityPrefabMapping>();
         [SerializeField] private VulcanusProject.MapLocationMapping[] locationMappings = Array.Empty<VulcanusProject.MapLocationMapping>();
 
@@ -31,18 +30,15 @@ namespace Core.Tile.Vulcanus
         private Dictionary<string, MapBinding> _bindingByLocationId;
 
         public VulcanusProject Project => project;
-        public GameObject LocationLinkPrefab => locationLinkPrefab;
         public VulcanusProject.EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
         public VulcanusProject.MapLocationMapping[] LocationMappings => locationMappings;
         public MapBinding[] MapBindings => mapBindings;
 
         public void ApplySyncData(
-            GameObject linkPrefab,
             VulcanusProject.EntityPrefabMapping[] entityMappings,
             VulcanusProject.MapLocationMapping[] locations,
             MapBinding[] bindings)
         {
-            locationLinkPrefab = linkPrefab;
             entityPrefabMappings = entityMappings ?? Array.Empty<VulcanusProject.EntityPrefabMapping>();
             locationMappings = locations ?? Array.Empty<VulcanusProject.MapLocationMapping>();
             mapBindings = bindings ?? Array.Empty<MapBinding>();
@@ -68,11 +64,6 @@ namespace Core.Tile.Vulcanus
             return false;
         }
 
-        public bool TryGetLocationLinkPrefab(out GameObject prefab)
-        {
-            prefab = locationLinkPrefab;
-            return prefab != null;
-        }
 
         public bool TryGetLocationDataByMapId(string mapId, out LocationData locationData)
         {

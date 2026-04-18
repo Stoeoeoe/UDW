@@ -42,6 +42,7 @@ namespace Core.Tile.Editor.Vulcanus
                     ImportMap(ctx);
                     return;
                 }
+
                 if (ctx.assetPath.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase))
                 {
                     ImportItem(ctx);
@@ -109,14 +110,12 @@ namespace Core.Tile.Editor.Vulcanus
             var catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
 
             var warnings = new List<string>();
-            var existingEntityMappings = catalog != null ? catalog.EntityPrefabMappings : previousProject?.EntityPrefabMappings;
+            var existingEntityMappings =
+                catalog != null ? catalog.EntityPrefabMappings : previousProject?.EntityPrefabMappings;
             var entityMappings = VulcanusEditorUtils.BuildEntityMappings(entityDefs, existingEntityMappings, warnings);
 
             var locationMappings = (catalog != null ? catalog.LocationMappings : previousProject?.LocationMappings)
                                    ?? Array.Empty<VulcanusProject.MapLocationMapping>();
-            var locationLinkPrefab = catalog != null
-                ? catalog.LocationLinkPrefab
-                : previousProject != null ? previousProject.LocationLinkPrefab : null;
 
             if (catalog != null)
                 AddDependency(ctx, AssetDatabase.GetAssetPath(catalog));
@@ -143,14 +142,16 @@ namespace Core.Tile.Editor.Vulcanus
                     {
                         classId = ic.Id,
                         className = ic.ClassName,
-                        candidateTypeNames = ic.Extra?.ContainsKey("candidates") == true && ic.Extra["candidates"] is JArray arr
+                        candidateTypeNames = ic.Extra?.ContainsKey("candidates") == true &&
+                                             ic.Extra["candidates"] is JArray arr
                             ? arr.Select(t => t.ToString()).ToArray()
                             : Array.Empty<string>()
                     })
                     .ToArray();
             }
 
-            project.SetMappings(locationLinkPrefab, entityMappings, locationMappings, itemMappings, warnings.ToArray());
+
+            project.SetMappings(entityMappings, locationMappings, itemMappings, warnings.ToArray());
 
             ctx.AddObjectToAsset("project", project);
             ctx.SetMainObject(project);
@@ -233,7 +234,8 @@ namespace Core.Tile.Editor.Vulcanus
                     tile.sprite = sprite;
                 }
 
-                tile.Configure(i, tileId, terrainId, MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind, metaProps);
+                tile.Configure(i, tileId, terrainId, MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind,
+                    metaProps);
                 tiles[i] = tile;
                 ctx.AddObjectToAsset($"tile_{i}", tile);
             }
@@ -303,7 +305,8 @@ namespace Core.Tile.Editor.Vulcanus
 
                 if (layer.Data == null)
                 {
-                    SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog, ctx);
+                    SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize,
+                        catalog, ctx);
                     continue;
                 }
 
@@ -312,17 +315,30 @@ namespace Core.Tile.Editor.Vulcanus
 
                 var isTerrain = layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
                 if (terrainTilemap == null && isTerrain) terrainTilemap = tilemap;
-                if (farmlandTilemap == null && layer.Name.Equals("FarmLand", StringComparison.OrdinalIgnoreCase)) farmlandTilemap = tilemap;
+                if (farmlandTilemap == null && layer.Name.Equals("FarmLand", StringComparison.OrdinalIgnoreCase))
+                    farmlandTilemap = tilemap;
 
                 if (isTerrain) ExtractTerrainCells(layer, height, terrainCells, project);
 
-                SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog, ctx);
+                SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog,
+                    ctx);
             }
 
             SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, ctx);
 
-            var anchorsById = SpawnAnchors(mapRoot.transform, dto.SpatialPrimitives?.Anchors, height, tileSize);
-            SpawnTriggers(mapRoot.transform, dto.LocationLinks, dto.SpatialPrimitives?.Triggers, anchorsById, height, tileSize, catalog, ctx);
+            var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(
+                mapRoot.transform,
+                dto.SpatialPrimitives?.Anchors,
+                height,
+                tileSize);
+            VulcanusMapTriggerImporter.SpawnTriggers(
+                mapRoot.transform,
+                dto.LocationLinks,
+                dto.SpatialPrimitives?.Triggers,
+                anchorsById,
+                height,
+                tileSize,
+                catalog);
 
             var plowedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Plowed", 10, DefaultOverlayAlpha);
             var irrigatedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Irrigated", 11, DefaultOverlayAlpha);
@@ -374,13 +390,19 @@ namespace Core.Tile.Editor.Vulcanus
                     AddDependency(ctx, projectAssetPath);
                     projectDto = LoadDto<ProjectDto>(projectAssetPath);
                 }
-                catch { /* best-effort */ }
+                catch
+                {
+                    /* best-effort */
+                }
 
                 try
                 {
                     projectAsset = AssetDatabase.LoadAssetAtPath<VulcanusProject>(projectAssetPath);
                 }
-                catch { projectAsset = null; }
+                catch
+                {
+                    projectAsset = null;
+                }
             }
 
             ItemClassDto classDto = null;
@@ -388,13 +410,19 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 if (projectAsset != null && projectAsset.ItemClassMappings != null)
                 {
-                    var mapping = projectAsset.ItemClassMappings.FirstOrDefault(x => string.Equals(x.classId, dto.ClassId, StringComparison.OrdinalIgnoreCase));
+                    var mapping = projectAsset.ItemClassMappings.FirstOrDefault(x =>
+                        string.Equals(x.classId, dto.ClassId, StringComparison.OrdinalIgnoreCase));
                     if (mapping != null)
-                        classDto = new ItemClassDto { Id = mapping.classId, ClassName = mapping.className, Extra = new Dictionary<string, JToken>() };
+                        classDto = new ItemClassDto
+                        {
+                            Id = mapping.classId, ClassName = mapping.className,
+                            Extra = new Dictionary<string, JToken>()
+                        };
                 }
 
                 if (classDto == null && projectDto?.ItemClasses != null)
-                    classDto = projectDto.ItemClasses.FirstOrDefault(c => string.Equals(c.Id, dto.ClassId, StringComparison.OrdinalIgnoreCase));
+                    classDto = projectDto.ItemClasses.FirstOrDefault(c =>
+                        string.Equals(c.Id, dto.ClassId, StringComparison.OrdinalIgnoreCase));
             }
 
             Type itemType = null;
@@ -403,7 +431,8 @@ namespace Core.Tile.Editor.Vulcanus
 
             if (itemType == null && projectAsset != null && projectAsset.ItemClassMappings != null)
             {
-                var mapping = projectAsset.ItemClassMappings.FirstOrDefault(x => string.Equals(x.classId, dto.ClassId, StringComparison.OrdinalIgnoreCase));
+                var mapping = projectAsset.ItemClassMappings.FirstOrDefault(x =>
+                    string.Equals(x.classId, dto.ClassId, StringComparison.OrdinalIgnoreCase));
                 if (mapping != null && mapping.candidateTypeNames != null)
                 {
                     foreach (var candidate in mapping.candidateTypeNames)
@@ -417,7 +446,8 @@ namespace Core.Tile.Editor.Vulcanus
 
             if (itemType == null || !typeof(ItemDefinition).IsAssignableFrom(itemType) || itemType.IsAbstract)
             {
-                Debug.LogError($"[VulcanusJsonImporter] Could not resolve ItemDefinition class '{classDto?.ClassName}' for item '{dto.Id}'. Importing as text fallback.");
+                Debug.LogError(
+                    $"[VulcanusJsonImporter] Could not resolve ItemDefinition class '{classDto?.ClassName}' for item '{dto.Id}'. Importing as text fallback.");
                 ImportAsText(ctx);
                 return;
             }
@@ -577,296 +607,6 @@ namespace Core.Tile.Editor.Vulcanus
 
         // ── Entity / location-link spawning ───────────────────────────────────
 
-        private static IReadOnlyDictionary<string, VulcanusMapAnchor> SpawnAnchors(
-            Transform mapRoot,
-            IReadOnlyList<AnchorDto> anchors,
-            int mapHeight,
-            int tileSize)
-        {
-            var result = new Dictionary<string, VulcanusMapAnchor>(StringComparer.OrdinalIgnoreCase);
-            if (anchors == null || anchors.Count == 0)
-                return result;
-
-            var group = new GameObject("Anchors");
-            group.transform.SetParent(mapRoot, false);
-
-            foreach (var dto in anchors)
-            {
-                if (dto == null || string.IsNullOrWhiteSpace(dto.Id) || dto.Position == null || dto.Position.Count < 2)
-                    continue;
-
-                var go = new GameObject(string.IsNullOrWhiteSpace(dto.Name) ? dto.Id : dto.Name);
-                go.transform.SetParent(group.transform, false);
-                go.transform.localPosition = PixelToLocalPosition(dto.Position[0], dto.Position[1], mapHeight, tileSize);
-
-                var facing = ReadFacing(dto.Facing);
-                if (Mathf.Abs(dto.Rotation) > float.Epsilon)
-                    go.transform.localRotation = Quaternion.Euler(0f, 0f, -dto.Rotation);
-                else if (facing != Vector2.zero)
-                    go.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(facing.y, facing.x) * Mathf.Rad2Deg - 90f);
-
-                var anchor = go.AddComponent<VulcanusMapAnchor>();
-                anchor.Configure(dto.Id, dto.Name, facing, dto.Tags?.ToArray() ?? Array.Empty<string>());
-                result[dto.Id] = anchor;
-            }
-
-            return result;
-        }
-
-        private static void SpawnTriggers(
-            Transform mapRoot,
-            IReadOnlyList<LocationLinkDto> links,
-            IReadOnlyList<MapTriggerDto> triggers,
-            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
-            int mapHeight,
-            int tileSize,
-            VulcanusWorldCatalog catalog,
-            AssetImportContext ctx)
-        {
-            var hasLegacyLinks = links != null && links.Any(link => !string.IsNullOrWhiteSpace(link?.SourceAnchorId) || link?.SourcePosition != null);
-            var hasTriggers = triggers != null && triggers.Count > 0;
-            if (!hasTriggers && !hasLegacyLinks)
-                return;
-
-            var group = new GameObject("Triggers");
-            group.transform.SetParent(mapRoot, false);
-
-            var linksByTriggerId = new Dictionary<string, LocationLinkDto>(StringComparer.OrdinalIgnoreCase);
-            if (links != null)
-            {
-                foreach (var link in links)
-                {
-                    if (link == null || string.IsNullOrWhiteSpace(link.TriggerId) || linksByTriggerId.ContainsKey(link.TriggerId))
-                        continue;
-
-                    linksByTriggerId.Add(link.TriggerId, link);
-                }
-            }
-
-            if (triggers != null)
-            {
-                for (var i = 0; i < triggers.Count; i++)
-                {
-                    var trigger = triggers[i];
-                    if (trigger == null || string.IsNullOrWhiteSpace(trigger.Id))
-                        continue;
-
-                    linksByTriggerId.TryGetValue(trigger.Id, out var linkDto);
-                    CreateTriggerObject(group.transform, trigger, linkDto, anchorsById, mapHeight, tileSize, catalog, ctx);
-                }
-            }
-
-            if (links == null)
-                return;
-
-            foreach (var dto in links)
-            {
-                if (!string.IsNullOrWhiteSpace(dto?.TriggerId) && hasTriggers)
-                    continue;
-
-                CreateLegacyLocationLink(group.transform, dto, anchorsById, mapHeight, tileSize, catalog, ctx);
-            }
-        }
-
-        private static void CreateTriggerObject(
-            Transform parent,
-            MapTriggerDto trigger,
-            LocationLinkDto link,
-            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
-            int mapHeight,
-            int tileSize,
-            VulcanusWorldCatalog catalog,
-            AssetImportContext ctx)
-        {
-            var go = CreateTriggerRoot(parent, trigger, link, catalog, ctx);
-            go.transform.localPosition = ReadTriggerPosition(trigger, mapHeight, tileSize);
-
-            var triggerComponent = go.GetComponent<VulcanusMapTrigger>() ?? go.AddComponent<VulcanusMapTrigger>();
-            triggerComponent.Configure(trigger.Id, trigger.Label, trigger.Type, trigger.Shape, trigger.Tags?.ToArray() ?? Array.Empty<string>());
-
-            ApplyTriggerGeometry(go, trigger, tileSize);
-
-            if (link != null)
-                InitializeLocationLink(go, link, trigger, anchorsById, catalog);
-        }
-
-        private static GameObject CreateTriggerRoot(
-            Transform parent,
-            MapTriggerDto trigger,
-            LocationLinkDto link,
-            VulcanusWorldCatalog catalog,
-            AssetImportContext ctx)
-        {
-            // Always construct a simple GameObject for triggers and location-links.
-            var name = !string.IsNullOrWhiteSpace(trigger?.Label) ? trigger.Label : (link?.Id ?? trigger?.Id ?? "Link");
-            var go = new GameObject(BuildLocationLinkObjectName("LocationLink", link, trigger));
-            go.transform.SetParent(parent, false);
-
-            // If this trigger references a location link, add a concrete LocationLink component so
-            // it can be initialized via InitializeLocationLink. We deliberately avoid prefab mapping
-            // and construct the link object on the fly.
-            if (link != null)
-            {
-                try
-                {
-                    // Add the concrete LocationLink MonoBehaviour if not already present.
-                    if (go.GetComponent<Core.Location.LocationLink>() == null)
-                        go.AddComponent<Core.Location.LocationLink>();
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[VulcanusJsonImporter] Failed to add LocationLink component to '{go.name}': {ex.Message}");
-                }
-            }
-
-            return go;
-        }
-
-        private static string BuildLocationLinkObjectName(string prefix, LocationLinkDto link, MapTriggerDto trigger)
-        {
-            var id = link?.Id ?? trigger?.Id ?? "Link";
-            var label = !string.IsNullOrWhiteSpace(link?.Label)
-                ? link.Label
-                : !string.IsNullOrWhiteSpace(trigger?.Label)
-                    ? trigger.Label
-                    : id;
-            return $"{prefix}_{label}_{id}";
-        }
-
-        private static void InitializeLocationLink(
-            GameObject instance,
-            LocationLinkDto dto,
-            MapTriggerDto trigger,
-            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
-            VulcanusWorldCatalog catalog)
-        {
-            if (instance.GetComponent<ILocationLink>() == null)
-            {
-                Debug.LogWarning($"[VulcanusImporter] Trigger '{trigger.Id}' references link '{dto.Id}', but the instantiated object has no ILocationLink component.");
-                return;
-            }
-
-            var data = BuildLocationLinkData(dto, trigger, anchorsById);
-            VulcanusEntityInitializer.InitializeLocationLink(instance, data, catalog);
-        }
-
-        private static VulcanusLocationLinkData BuildLocationLinkData(
-            LocationLinkDto dto,
-            MapTriggerDto trigger,
-            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById)
-        {
-            var data = new VulcanusLocationLinkData
-            {
-                id = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
-                label = dto.Label ?? string.Empty,
-                sourcePosition = ReadTriggerPixelPosition(trigger),
-                triggerSize = ReadTriggerPixelSize(trigger),
-                targetMapId = dto.TargetMapId ?? string.Empty,
-                targetPosition = dto.TargetPosition != null && dto.TargetPosition.Count >= 2
-                    ? new Vector2(dto.TargetPosition[0], dto.TargetPosition[1])
-                    : Vector2.zero,
-                targetLinkId = !string.IsNullOrWhiteSpace(dto.TargetAnchorId)
-                    ? dto.TargetAnchorId
-                    : dto.TargetLinkId ?? string.Empty,
-                direction = dto.Direction ?? string.Empty
-            };
-
-            if (anchorsById != null && !string.IsNullOrWhiteSpace(dto.TargetAnchorId) &&
-                anchorsById.TryGetValue(dto.TargetAnchorId, out var anchor) && anchor != null && anchor.FacingDirection != Vector2.zero)
-            {
-                data.targetFacing = anchor.FacingDirection;
-                data.hasTargetFacing = true;
-                return data;
-            }
-
-            if (dto.TargetFacing != null && dto.TargetFacing.Count >= 2)
-            {
-                data.targetFacing = new Vector2(dto.TargetFacing[0], -dto.TargetFacing[1]);
-                data.hasTargetFacing = data.targetFacing != Vector2.zero;
-            }
-
-            return data;
-        }
-
-        private static void CreateLegacyLocationLink(
-            Transform parent,
-            LocationLinkDto dto,
-            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
-            int mapHeight,
-            int tileSize,
-            VulcanusWorldCatalog catalog,
-            AssetImportContext ctx)
-        {
-            if (dto == null)
-                return;
-
-            var trigger = new MapTriggerDto
-            {
-                Id = string.IsNullOrWhiteSpace(dto.TriggerId) ? dto.Id : dto.TriggerId,
-                Label = dto.Label,
-                Type = "locationLinkTrigger",
-                Shape = "rectangle",
-                Position = dto.SourcePosition ?? ReadAnchorPixelPosition(dto.SourceAnchorId, anchorsById, mapHeight, tileSize),
-                Size = dto.TriggerSize ?? new List<float> { 1f, 1f },
-                Tags = dto.Tags ?? new List<string>()
-            };
-
-            CreateTriggerObject(parent, trigger, dto, anchorsById, mapHeight, tileSize, catalog, ctx);
-        }
-
-        private static Vector3 ReadTriggerPosition(MapTriggerDto dto, int mapHeight, int tileSize)
-        {
-            var position = ReadTriggerPixelPosition(dto);
-            return PixelToLocalPosition(position.x, position.y, mapHeight, tileSize);
-        }
-
-        private static Vector2 ReadTriggerPixelPosition(MapTriggerDto dto)
-        {
-            var x = dto?.Position != null && dto.Position.Count > 0 ? dto.Position[0] : 0f;
-            var y = dto?.Position != null && dto.Position.Count > 1 ? dto.Position[1] : 0f;
-            return new Vector2(x, y);
-        }
-
-        private static Vector2 ReadTriggerPixelSize(MapTriggerDto dto)
-        {
-            var width = dto?.Size != null && dto.Size.Count > 0 ? dto.Size[0] : 1f;
-            var height = dto?.Size != null && dto.Size.Count > 1 ? dto.Size[1] : 1f;
-            return new Vector2(width, height);
-        }
-
-        private static List<float> ReadAnchorPixelPosition(
-            string anchorId,
-            IReadOnlyDictionary<string, VulcanusMapAnchor> anchorsById,
-            int mapHeight,
-            int tileSize)
-        {
-            if (anchorsById == null || string.IsNullOrWhiteSpace(anchorId) || !anchorsById.TryGetValue(anchorId, out var anchor) || anchor == null)
-                return new List<float> { 0f, 0f };
-
-            var ts = Mathf.Max(1, tileSize);
-            var position = anchor.transform.localPosition;
-            return new List<float>
-            {
-                position.x * ts,
-                mapHeight * ts - position.y * ts
-            };
-        }
-
-        private static Vector2 ReadFacing(IReadOnlyList<float> facing)
-        {
-            if (facing == null || facing.Count < 2)
-                return Vector2.zero;
-
-            var value = new Vector2(facing[0], -facing[1]);
-            return value == Vector2.zero ? Vector2.zero : value.normalized;
-        }
-
-        private static Vector3 PixelToLocalPosition(float pixelX, float pixelY, int mapHeight, int tileSize)
-        {
-            var ts = Mathf.Max(1, tileSize);
-            return new Vector3(pixelX / ts, (mapHeight * ts - pixelY) / ts, 0f);
-        }
-
         private static void SpawnEntities(
             Transform mapRoot,
             IReadOnlyList<EntityInstanceDto> entities,
@@ -930,7 +670,8 @@ namespace Core.Tile.Editor.Vulcanus
             placeholder.transform.SetParent(parent, false);
             placeholder.transform.localPosition = worldPos;
             placeholder.transform.localRotation = worldRot;
-            Debug.LogWarning($"[VulcanusImporter] No prefab mapped for entity type '{entityData.typeId}' (id: {entityData.id}). Assign it in VulcanusWorldCatalog.");
+            Debug.LogWarning(
+                $"[VulcanusImporter] No prefab mapped for entity type '{entityData.typeId}' (id: {entityData.id}). Assign it in VulcanusWorldCatalog.");
         }
 
         // ── Tilemap helpers ───────────────────────────────────────────────────
@@ -950,119 +691,13 @@ namespace Core.Tile.Editor.Vulcanus
             return tilemap;
         }
 
-        private static void ApplyTriggerGeometry(GameObject go, MapTriggerDto trigger, int tileSize)
-        {
-            if (go == null || trigger == null)
-                return;
-
-            if (trigger.Shape.Equals("polygon", StringComparison.OrdinalIgnoreCase))
-            {
-                EnsurePolygonTriggerCollider(go, trigger, tileSize);
-                return;
-            }
-
-            EnsureTriggerCollider(go, ReadTriggerPixelSize(trigger), tileSize);
-        }
-
-        private static void EnsureTriggerCollider(GameObject go, Vector2 triggerSizePixels, int tileSize)
-        {
-            var polygon = go.GetComponent<PolygonCollider2D>();
-            if (polygon != null)
-                UnityEngine.Object.DestroyImmediate(polygon);
-
-            var box = go.GetComponent<BoxCollider2D>();
-            if (box == null)
-            {
-                try
-                {
-                    box = go.AddComponent<BoxCollider2D>();
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[VulcanusJsonImporter] Failed to add BoxCollider2D to '{go.name}': {ex.Message}");
-                    return;
-                }
-            }
-
-            if (box == null)
-            {
-                Debug.LogWarning($"[VulcanusJsonImporter] BoxCollider2D is unavailable on '{go.name}'. Skipping trigger setup.");
-                return;
-            }
-
-            try
-            {
-                box.isTrigger = true;
-                var worldWidth = Mathf.Max(0.001f, triggerSizePixels.x / Mathf.Max(1, tileSize));
-                var worldHeight = Mathf.Max(0.001f, triggerSizePixels.y / Mathf.Max(1, tileSize));
-                box.offset = new Vector2(worldWidth * 0.5f, -worldHeight * 0.5f);
-                box.size = new Vector2(worldWidth, worldHeight);
-
-                TryAddTriggerDebugger(go);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[VulcanusJsonImporter] Error configuring BoxCollider2D on '{go.name}': {ex.Message}");
-            }
-        }
-
-        private static void EnsurePolygonTriggerCollider(GameObject go, MapTriggerDto trigger, int tileSize)
-        {
-            var box = go.GetComponent<BoxCollider2D>();
-            if (box != null)
-                UnityEngine.Object.DestroyImmediate(box);
-
-            var polygon = go.GetComponent<PolygonCollider2D>();
-            if (polygon == null)
-            {
-                try
-                {
-                    polygon = go.AddComponent<PolygonCollider2D>();
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[VulcanusJsonImporter] Failed to add PolygonCollider2D to '{go.name}': {ex.Message}");
-                    return;
-                }
-            }
-
-            if (polygon == null)
-                return;
-
-            var ts = Mathf.Max(1, tileSize);
-            var points = trigger.Points;
-            if (points == null || points.Count < 3)
-            {
-                Debug.LogWarning($"[VulcanusJsonImporter] Trigger '{trigger.Id}' is polygonal but has fewer than three points.");
-                return;
-            }
-
-            var origin = ReadTriggerPixelPosition(trigger);
-            var colliderPoints = new Vector2[points.Count];
-            for (var i = 0; i < points.Count; i++)
-            {
-                var point = points[i];
-                if (point == null || point.Count < 2)
-                    continue;
-
-                colliderPoints[i] = new Vector2((point[0] - origin.x) / ts, -(point[1] - origin.y) / ts);
-            }
-
-            polygon.isTrigger = true;
-            polygon.points = colliderPoints;
-            // Ensure a well-defined offset (points are already translated relative to the trigger's Position)
-            polygon.offset = Vector2.zero;
-
-            // Add editor-only trigger visualizer if available, same as box collider path
-            TryAddTriggerDebugger(go);
-        }
-
         private static void TryAddTriggerDebugger(GameObject go)
         {
             try
             {
                 // Try both legacy and current namespaces for TriggerDebugger
-                var dbgType = ResolveTypeByName("Core.Tile.Vulcan.TriggerDebugger") ?? ResolveTypeByName("Core.Tile.TriggerDebugger");
+                var dbgType = ResolveTypeByName("Core.Tile.Vulcan.TriggerDebugger") ??
+                              ResolveTypeByName("Core.Tile.TriggerDebugger");
                 if (dbgType != null && go.GetComponent(dbgType) == null)
                     go.AddComponent(dbgType);
             }
@@ -1082,7 +717,8 @@ namespace Core.Tile.Editor.Vulcanus
             var y = texture.height - ((tileIndex / columns + 1) * tileSize);
             if (x < 0 || y < 0 || x + tileSize > texture.width || y + tileSize > texture.height) return null;
 
-            return Sprite.Create(texture, new Rect(x, y, tileSize, tileSize), new Vector2(0.5f, 0.5f), tileSize, 0, SpriteMeshType.FullRect);
+            return Sprite.Create(texture, new Rect(x, y, tileSize, tileSize), new Vector2(0.5f, 0.5f), tileSize, 0,
+                SpriteMeshType.FullRect);
         }
 
         // ── Tile meta helpers ─────────────────────────────────────────────────
@@ -1097,7 +733,8 @@ namespace Core.Tile.Editor.Vulcanus
         {
             if (collision == null) return VulcanusCollisionKind.None;
             if (collision.Type.Equals("full", StringComparison.OrdinalIgnoreCase)) return VulcanusCollisionKind.Full;
-            if (collision.Type.Equals("complex", StringComparison.OrdinalIgnoreCase)) return VulcanusCollisionKind.Complex;
+            if (collision.Type.Equals("complex", StringComparison.OrdinalIgnoreCase))
+                return VulcanusCollisionKind.Complex;
             return VulcanusCollisionKind.None;
         }
 
@@ -1124,8 +761,18 @@ namespace Core.Tile.Editor.Vulcanus
         {
             value = 0;
             if (token == null || token.Type == JTokenType.Null) return false;
-            if (token.Type == JTokenType.Integer) { value = token.Value<int>(); return true; }
-            if (token.Type == JTokenType.Float) { value = Mathf.RoundToInt(token.Value<float>()); return true; }
+            if (token.Type == JTokenType.Integer)
+            {
+                value = token.Value<int>();
+                return true;
+            }
+
+            if (token.Type == JTokenType.Float)
+            {
+                value = Mathf.RoundToInt(token.Value<float>());
+                return true;
+            }
+
             if (token.Type != JTokenType.String) return false;
             return int.TryParse(token.Value<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
         }
@@ -1164,6 +811,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                 directory = Path.GetDirectoryName(directory);
             }
+
             return null;
         }
 
@@ -1176,7 +824,8 @@ namespace Core.Tile.Editor.Vulcanus
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VulcanusJsonImporter] Could not read tileSize from '{projectAssetPath}': {ex.Message}");
+                Debug.LogWarning(
+                    $"[VulcanusJsonImporter] Could not read tileSize from '{projectAssetPath}': {ex.Message}");
                 return 16;
             }
         }
@@ -1194,7 +843,8 @@ namespace Core.Tile.Editor.Vulcanus
             if (File.Exists(canonical) && TryAbsoluteToAssetPath(canonical, out var canonicalAssetPath))
                 return canonicalAssetPath;
 
-            foreach (var filePath in Directory.GetFiles(projectRoot, "*.vts", SearchOption.AllDirectories).OrderBy(p => p))
+            foreach (var filePath in Directory.GetFiles(projectRoot, "*.vts", SearchOption.AllDirectories)
+                         .OrderBy(p => p))
             {
                 try
                 {
@@ -1202,22 +852,29 @@ namespace Core.Tile.Editor.Vulcanus
                     if (!string.Equals(dto.Id, tilesetId, StringComparison.OrdinalIgnoreCase)) continue;
                     if (TryAbsoluteToAssetPath(filePath, out var path)) return path;
                 }
-                catch { /* ignore malformed tileset candidates */ }
+                catch
+                {
+                    /* ignore malformed tileset candidates */
+                }
             }
+
             return null;
         }
 
-        private static string ResolveAssetReferencePath(string ownerAssetPath, string relativePath, string projectAssetPath)
+        private static string ResolveAssetReferencePath(string ownerAssetPath, string relativePath,
+            string projectAssetPath)
         {
             if (string.IsNullOrWhiteSpace(relativePath)) return null;
             if (TryResolveRelative(ownerAssetPath, relativePath, out var byOwner)) return byOwner;
-            if (!string.IsNullOrEmpty(projectAssetPath) && TryResolveRelative(projectAssetPath, relativePath, out var byProject)) return byProject;
+            if (!string.IsNullOrEmpty(projectAssetPath) &&
+                TryResolveRelative(projectAssetPath, relativePath, out var byProject)) return byProject;
 
             if (!string.IsNullOrEmpty(projectAssetPath))
             {
                 var projectRoot = Path.GetDirectoryName(ToAbsolutePath(projectAssetPath));
                 var targetFileName = Path.GetFileName(relativePath);
-                if (!string.IsNullOrWhiteSpace(projectRoot) && !string.IsNullOrWhiteSpace(targetFileName) && Directory.Exists(projectRoot))
+                if (!string.IsNullOrWhiteSpace(projectRoot) && !string.IsNullOrWhiteSpace(targetFileName) &&
+                    Directory.Exists(projectRoot))
                 {
                     var candidate = Directory
                         .GetFiles(projectRoot, targetFileName, SearchOption.AllDirectories)
@@ -1228,6 +885,7 @@ namespace Core.Tile.Editor.Vulcanus
                         return fallbackPath;
                 }
             }
+
             return null;
         }
 
@@ -1295,7 +953,9 @@ namespace Core.Tile.Editor.Vulcanus
 
             if (field == null && prop == null && backingField == null) return false;
 
-            Type targetType = field != null ? field.FieldType : (backingField != null ? backingField.FieldType : prop.PropertyType);
+            Type targetType = field != null
+                ? field.FieldType
+                : (backingField != null ? backingField.FieldType : prop.PropertyType);
 
             object value = null;
             try
@@ -1375,9 +1035,13 @@ namespace Core.Tile.Editor.Vulcanus
                     var converted = ConvertIfNeeded(value, targetType);
                     prop.SetValue(target, converted);
                 }
+
                 return true;
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
         private static object ConvertIfNeeded(object value, Type targetType)
@@ -1389,9 +1053,13 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 if (targetType.IsEnum && value is string s)
                     return Enum.Parse(targetType, s, true);
-                return Convert.ChangeType(value, Nullable.GetUnderlyingType(targetType) ?? targetType, CultureInfo.InvariantCulture);
+                return Convert.ChangeType(value, Nullable.GetUnderlyingType(targetType) ?? targetType,
+                    CultureInfo.InvariantCulture);
             }
-            catch { return value; }
+            catch
+            {
+                return value;
+            }
         }
 
         private static Type ResolveTypeByName(string fullName)
@@ -1408,7 +1076,9 @@ namespace Core.Tile.Editor.Vulcanus
                     t = asm.GetType(fullName, false, true);
                     if (t != null) return t;
                 }
-                catch { }
+                catch
+                {
+                }
             }
 
             // Fallback: search by type name (not full name)
@@ -1417,11 +1087,15 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 try
                 {
-                    var found = asm.GetTypes().FirstOrDefault(x => string.Equals(x.Name, shortName, StringComparison.OrdinalIgnoreCase));
+                    var found = asm.GetTypes().FirstOrDefault(x =>
+                        string.Equals(x.Name, shortName, StringComparison.OrdinalIgnoreCase));
                     if (found != null) return found;
                 }
-                catch { }
+                catch
+                {
+                }
             }
+
             return null;
         }
     }
@@ -1444,7 +1118,10 @@ namespace Core.Tile.Editor.Vulcanus
                     File.ReadAllText(VulcanusJsonImporter.ToAbsolutePath(projectAssetPath)));
                 projectId = dto?.Id;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
 
             if (string.IsNullOrWhiteSpace(projectId)) return null;
 
