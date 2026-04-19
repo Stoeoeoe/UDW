@@ -9,6 +9,7 @@ import {
   Modal,
   ModalOverlay,
   ModalContent,
+  Image,
   useToast,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -18,7 +19,6 @@ import { Project } from '../../../types/schema';
 import { recentProjects, RecentProject } from '../../../lib/recentProjects';
 import { ActionCard } from './ActionCard';
 import { RecentProjectItem } from './RecentProjectItem';
-import { FiFolder, FiPlus } from 'react-icons/fi';
 import { FcFolder, FcPlus } from 'react-icons/fc';
 
 export const LandingScreen: React.FC = () => {
@@ -104,32 +104,20 @@ export const LandingScreen: React.FC = () => {
       alignItems="center"
       justifyContent="center"
     >
-      <VStack spacing={12} maxW="container.md" textAlign="center" w="full" px={4}>
+      <VStack spacing={10} maxW="container.md" textAlign="center" w="full" px={4}>
         <Box>
           <Heading size="2xl" color="white" mb={2}>
             Vulcanus Editor
           </Heading>
         </Box>
-
+        <Image
+          src="vulcanus-project-icon.png"
+          width={256}
+          height={256}
+          alt="Project Icon"
+          sx={{ imageRendering: 'pixelated' }}
+        />
         <VStack spacing={8} w="full">
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
-            <ActionCard
-              onClick={handleOpenProject}
-              icon={<FcFolder />}
-              title="Open Project"
-              description="Select a .vproj file to open an existing project."
-              hoverColor="blue.500"
-            />
-
-            <ActionCard
-              onClick={onOpen}
-              icon={<FcPlus />}
-              title="New Project"
-              description="Start from scratch and create a new project directory."
-              hoverColor="green.500"
-            />
-          </SimpleGrid>
-
           {recents.length > 0 && (
             <VStack align="stretch" w="full" spacing={3}>
               <Text
@@ -154,11 +142,25 @@ export const LandingScreen: React.FC = () => {
               </VStack>
             </VStack>
           )}
-        </VStack>
 
-        <Text fontSize="xs" color="gray.700">
-          Vulcanus Editor v1.0.0
-        </Text>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
+            <ActionCard
+              onClick={handleOpenProject}
+              icon={<FcFolder />}
+              title="Open Project"
+              description="Select a .vproj file to open an existing project."
+              hoverColor="blue.500"
+            />
+
+            <ActionCard
+              onClick={onOpen}
+              icon={<FcPlus />}
+              title="New Project"
+              description="Start from scratch and create a new project directory."
+              hoverColor="green.500"
+            />
+          </SimpleGrid>
+        </VStack>
       </VStack>
 
       {/* New Project Dialog */}
