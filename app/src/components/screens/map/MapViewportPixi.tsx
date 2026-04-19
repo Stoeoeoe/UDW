@@ -120,21 +120,49 @@ export const MapViewportPixi: React.FC = () => {
       return;
     }
 
-    // Remove old viewport if exists
-    if (viewportRef.current) {
-      try {
-        app.stage.removeChild(viewportRef.current);
-        viewportRef.current.destroy();
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-      viewportRef.current = null;
-      setViewport(null);
-    }
-
     const worldWidth = mapWidth * projectTileSize;
     const worldHeight = mapHeight * projectTileSize;
     const initialCamera = initialCameraRef.current;
+
+    const applyCamera = (vp: Viewport) => {
+      const hasSavedCamera =
+        initialCamera &&
+        typeof initialCamera.x === 'number' &&
+        typeof initialCamera.y === 'number' &&
+        (initialCamera.x !== 0 || initialCamera.y !== 0);
+
+      try {
+        vp.setZoom(
+          initialCamera && typeof initialCamera.zoom === 'number' ? initialCamera.zoom : 1.5,
+        );
+      } catch {
+        vp.setZoom(1.5);
+      }
+
+      try {
+        vp.moveCenter(
+          hasSavedCamera ? initialCamera.x : worldWidth / 2,
+          hasSavedCamera ? initialCamera.y : worldHeight / 2,
+        );
+      } catch {
+        vp.moveCenter(worldWidth / 2, worldHeight / 2);
+      }
+
+      setZoomLevel(vp.scale.x ?? 1.5);
+    };
+
+    // Reuse existing viewport if one already exists — avoids destroy/recreate flicker.
+    // Just update the world bounds and reapply the camera for the new map.
+    if (viewportRef.current) {
+      try {
+        viewportRef.current.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
+        applyCamera(viewportRef.current);
+        // viewport state is unchanged so no setViewport/setIsReady flip needed
+        return;
+      } catch (e) {
+        // Fall through to full recreate if resize fails
+      }
+    }
 
     try {
       const newViewport = new Viewport({
@@ -152,38 +180,8 @@ export const MapViewportPixi: React.FC = () => {
         .decelerate({ friction: 0.95 })
         .clampZoom({ minScale: 0.25, maxScale: 8 });
 
-      // Apply stored camera when available, otherwise center on load.
+      applyCamera(newViewport);
 
-      if (initialCamera && typeof initialCamera.zoom === 'number') {
-        try {
-          newViewport.setZoom(initialCamera.zoom);
-        } catch {
-          newViewport.setZoom(1.5);
-        }
-      } else {
-        newViewport.setZoom(1.5);
-      }
-
-      const hasSavedCamera =
-        initialCamera &&
-        typeof initialCamera.x === 'number' &&
-        typeof initialCamera.y === 'number' &&
-        (initialCamera.x !== 0 || initialCamera.y !== 0);
-
-      if (hasSavedCamera) {
-        try {
-          newViewport.moveCenter(initialCamera.x, initialCamera.y);
-        } catch {
-          newViewport.moveCenter(worldWidth / 2, worldHeight / 2);
-        }
-      } else {
-        newViewport.moveCenter(worldWidth / 2, worldHeight / 2);
-      }
-
-      // (No clamping - allow free panning)
-      setZoomLevel(newViewport.scale.x ?? 1.5);
-
-      // Track zoom and movement changes; clamp after each change and persist.
       newViewport.on('zoomed', () => {
         setZoomLevel(newViewport.scale.x);
         requestAnimationFrame(() => {
@@ -212,8 +210,8 @@ export const MapViewportPixi: React.FC = () => {
       });
 
       app.stage.addChild(newViewport);
-      viewportRef.current = newViewport; // Store ref for cleanup
-      setViewport(newViewport); // Trigger React update
+      viewportRef.current = newViewport;
+      setViewport(newViewport);
       setIsReady(true);
     } catch (e) {
       console.error('Failed to create viewport:', e);
@@ -613,7 +611,14 @@ export const MapViewportPixi: React.FC = () => {
 
   return (
     <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">
-      <Box ref={containerRef} w="full" h="full" cursor={getCursor()} />
+      <Box
+        ref={containerRef}
+        w="full"
+        h="full"
+        cursor={getCursor()}
+        opacity={isReady ? 1 : 0}
+        //transition="opacity 0.08s ease-in"
+      />
 
       {show3DLayerView && (
         <Box position="absolute" inset={0} zIndex={10}>

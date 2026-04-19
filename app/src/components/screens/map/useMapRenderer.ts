@@ -255,15 +255,24 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     viewport.addChild(container);
 
-    // Capture ref value for cleanup
-    const cache = textureCache.current;
-
     return () => {
       viewport.removeChild(container);
       container.destroy({ children: true });
-      cache.clear();
+      // Texture cache is intentionally NOT cleared here — textures are reusable
+      // across map switches as long as the underlying sprite sheets haven't changed.
     };
   }, [viewport]);
+
+  // Invalidate texture cache when sprite sheets are reloaded (tileset edits, project load).
+  // This is a separate concern from viewport lifecycle — loadedSprites changes rarely.
+  useEffect(() => {
+    return useEditorStore.subscribe(
+      (state) => state.loadedSprites,
+      () => {
+        textureCache.current.clear();
+      },
+    );
+  }, []);
 
   // Render collision overlay from visual layers
   const renderCollisionOverlay = useCallback(() => {
