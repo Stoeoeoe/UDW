@@ -36,7 +36,7 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
   }
 
   return (
-    <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
+    <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
       {/* Header Row */}
       <PanelHeader
         left={
@@ -44,9 +44,9 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
             <Select
               size="xs"
               variant="filled"
-              bg="editor.viewportBg"
-              borderColor="editor.inputBorder"
-              _hover={{ bg: 'editor.border' }}
+              bg="editorCanvasBg"
+              borderColor="editorFieldBorder"
+              _hover={{ bg: 'editorShellBorder' }}
               value={activeTilesetId || ''}
               onChange={(e) => setActiveTileset(e.target.value)}
               color="blue.300"
@@ -112,7 +112,7 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
       />
 
       {/* Scrollable Canvas */}
-      <Box flex={1} overflow="auto" bg="editor.viewportBg">
+      <Box flex={1} overflow="auto" bg="editorCanvasBg">
         {currentTileset ? (
           <Box p={2}>
             <TilesetCanvas

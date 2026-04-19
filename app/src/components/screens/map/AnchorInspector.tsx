@@ -1,19 +1,16 @@
 import React from 'react';
-import {
-  Button,
-  FormControl,
-  HStack,
-  Input,
-  NumberInput,
-  NumberInputField,
-  Text,
-  VStack,
-  Wrap,
-} from '@chakra-ui/react';
+import { Button, Wrap } from '@chakra-ui/react';
 import { FiMapPin } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { InspectorEmptyState, InspectorPanel } from '../common';
-import { FieldLabel, SectionLabel } from '../../common/Typography.tsx';
+import {
+  CompactInput,
+  Field,
+  FieldStack,
+  InlineNumberPair,
+  InspectorSection,
+  ReadOnlyIdField,
+} from '../../common/Fields';
 
 const FACING_PRESETS: Array<{ label: string; value: [number, number] }> = [
   { label: 'Up', value: [0, -1] },
@@ -47,147 +44,56 @@ export const AnchorInspector: React.FC = () => {
 
   return (
     <InspectorPanel title="Anchor">
-      <VStack align="stretch" spacing={5}>
-        <VStack align="stretch" spacing={3}>
-          <FormControl>
-            <FieldLabel>ID</FieldLabel>
-            <Input
-              size="xs"
-              variant="filled"
-              bg="#0a0a0b"
-              value={anchor.id}
-              isReadOnly
-              fontFamily="mono"
-              color="gray.500"
-              _hover={{ bg: '#071018' }}
-            />
-          </FormControl>
+      <FieldStack spacing={5}>
+        <InspectorSection>
+          <FieldStack>
+            <Field label="ID">
+              <ReadOnlyIdField value={anchor.id} />
+            </Field>
 
-          <FormControl>
-            <FieldLabel>Name</FieldLabel>
-            <Input
-              size="xs"
-              variant="filled"
-              bg="#0a0a0b"
-              color="white"
-              value={anchor.name}
-              onChange={(event) => updateAnchor(anchor.id, { name: event.target.value })}
-              _hover={{ bg: '#071018' }}
-            />
-          </FormControl>
-        </VStack>
-
-        <VStack align="stretch" spacing={3}>
-          <SectionLabel textStyle="fieldLabel">Position</SectionLabel>
-          <HStack spacing={2}>
-            <Text fontSize="xs" color="gray.400" flexShrink={0}>
-              X
-            </Text>
-            <NumberInput
-              size="xs"
-              value={anchor.position[0]}
-              precision={0}
-              min={0}
-              onChange={(_, value) => {
-                if (!isNaN(value))
-                  updateAnchor(anchor.id, { position: [Math.round(value), anchor.position[1]] });
-              }}
-              flex={1}
-            >
-              <NumberInputField
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
+            <Field label="Name">
+              <CompactInput
+                value={anchor.name}
+                onChange={(event) => updateAnchor(anchor.id, { name: event.target.value })}
               />
-            </NumberInput>
-            <Text fontSize="xs" color="gray.400" flexShrink={0}>
-              Y
-            </Text>
-            <NumberInput
-              size="xs"
-              value={anchor.position[1]}
-              precision={0}
-              min={0}
-              onChange={(_, value) => {
-                if (!isNaN(value))
-                  updateAnchor(anchor.id, { position: [anchor.position[0], Math.round(value)] });
-              }}
-              flex={1}
-            >
-              <NumberInputField
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
-              />
-            </NumberInput>
-          </HStack>
-        </VStack>
+            </Field>
+          </FieldStack>
+        </InspectorSection>
 
-        <VStack align="stretch" spacing={3}>
-          <SectionLabel textStyle="fieldLabel">Facing</SectionLabel>
-          <HStack spacing={2}>
-            <Text fontSize="xs" color="gray.400" flexShrink={0}>
-              X
-            </Text>
-            <NumberInput
-              size="xs"
-              value={facing[0]}
-              step={0.1}
+        <InspectorSection title="Position">
+          <InlineNumberPair
+            labels={['X', 'Y']}
+            values={[anchor.position[0], anchor.position[1]]}
+            min={0}
+            onChange={(position) => updateAnchor(anchor.id, { position })}
+          />
+        </InspectorSection>
+
+        <InspectorSection title="Facing">
+          <FieldStack>
+            <InlineNumberPair
+              labels={['X', 'Y']}
+              values={[facing[0], facing[1]]}
               precision={2}
-              onChange={(_, value) => {
-                if (!isNaN(value)) updateAnchor(anchor.id, { facing: [value, facing[1]] });
-              }}
-              flex={1}
-            >
-              <NumberInputField
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
-              />
-            </NumberInput>
-            <Text fontSize="xs" color="gray.400" flexShrink={0}>
-              Y
-            </Text>
-            <NumberInput
-              size="xs"
-              value={facing[1]}
               step={0.1}
-              precision={2}
-              onChange={(_, value) => {
-                if (!isNaN(value)) updateAnchor(anchor.id, { facing: [facing[0], value] });
-              }}
-              flex={1}
-            >
-              <NumberInputField
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
-              />
-            </NumberInput>
-          </HStack>
-          <Wrap spacing={1}>
-            {FACING_PRESETS.map((preset) => (
-              <Button
-                key={preset.label}
-                size="xs"
-                variant="outline"
-                colorScheme="cyan"
-                onClick={() => updateAnchor(anchor.id, { facing: preset.value })}
-              >
-                {preset.label}
-              </Button>
-            ))}
-          </Wrap>
-        </VStack>
-      </VStack>
+              onChange={(nextFacing) => updateAnchor(anchor.id, { facing: nextFacing })}
+            />
+            <Wrap spacing={1}>
+              {FACING_PRESETS.map((preset) => (
+                <Button
+                  key={preset.label}
+                  size="xs"
+                  variant="outline"
+                  colorScheme="cyan"
+                  onClick={() => updateAnchor(anchor.id, { facing: preset.value })}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </Wrap>
+          </FieldStack>
+        </InspectorSection>
+      </FieldStack>
     </InspectorPanel>
   );
 };

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { HStack, Tooltip, Box, type HStackProps, type IconButtonProps } from '@chakra-ui/react';
+import { HStack, Tooltip, Box, type StackProps, type IconButtonProps } from '@chakra-ui/react';
 import { IconType } from 'react-icons';
 import { GhostIconButton } from './IconButtons.tsx';
 
@@ -15,10 +15,10 @@ export interface ToolbarProps {
   activeId?: string | null;
   onActivate?: (id: string) => void;
   size?: 'sm' | 'md' | 'lg';
-  shellProps?: HStackProps;
+  shellProps?: StackProps;
 }
 
-export const ToolbarShell: React.FC<HStackProps> = ({ children, spacing = '1', ...props }) => (
+export const ToolbarShell: React.FC<StackProps> = ({ children, spacing = '1', ...props }) => (
   <HStack
     bg="editorChromeBg"
     p="1"

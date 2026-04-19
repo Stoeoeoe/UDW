@@ -5,8 +5,6 @@ import {
   FormControl,
   HStack,
   Input,
-  NumberInput,
-  NumberInputField,
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
@@ -17,6 +15,7 @@ import {
 import { PropertyDefinition, PropertyValue, TileDefinition, Tileset } from '../../types/schema';
 import { PropertyForm, PropertySchema } from '../common/PropertyForm';
 import { useEditorStore } from '../../store/useEditorStore';
+import { CompactNumberInput } from '../common/Fields';
 import { FieldLabel, SectionLabel } from '../common/Typography.tsx';
 
 interface TilesetMetadataEntryInspectorProps {
@@ -61,8 +60,7 @@ function buildSingleFieldSchema(definition: PropertyDefinition): PropertySchema[
           const numericValue = Number(value);
           const safeValue = Number.isFinite(numericValue) ? Math.round(numericValue) : 0;
           return (
-            <NumberInput
-              size="sm"
+            <CompactNumberInput
               value={safeValue}
               step={1}
               precision={0}
@@ -72,12 +70,11 @@ function buildSingleFieldSchema(definition: PropertyDefinition): PropertySchema[
                 onChange(Number.isNaN(num) ? 0 : Math.round(num));
               }}
             >
-              <NumberInputField bg="#05060a" borderColor="#0b1116" color="white" />
               <NumberInputStepper>
                 <NumberIncrementStepper />
                 <NumberDecrementStepper />
               </NumberInputStepper>
-            </NumberInput>
+            </CompactNumberInput>
           );
         },
       },
@@ -213,7 +210,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
     <VStack align="stretch" spacing={5} p={6}>
       <VStack align="start" spacing={1}>
         <SectionLabel>Metadata Entry</SectionLabel>
-        <Text fontSize="2xl" fontWeight="black" color="white" lineHeight={1.2}>
+        <Text fontSize="2xl" fontWeight="black" color="editorText" lineHeight={1.2}>
           {metadataDefinition.label}
         </Text>
         <Text fontSize="10px" color="gray.600" fontFamily="mono">
@@ -225,9 +222,6 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
         <FieldLabel>Label</FieldLabel>
         <Input
           size="xs"
-          variant="filled"
-          bg="#0a0a0b"
-          color="white"
           value={metadataDefinition.label}
           onChange={(event) => {
             void saveDefinition({ label: event.target.value || metadataDefinition.key });
@@ -239,14 +233,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
       <HStack spacing={3}>
         <FormControl>
           <FieldLabel>Type</FieldLabel>
-          <Input
-            size="xs"
-            variant="filled"
-            bg="#0a0a0b"
-            color="gray.300"
-            value={metadataDefinition.type}
-            isReadOnly
-          />
+          <Input size="xs" variant="readOnly" value={metadataDefinition.type} isReadOnly />
         </FormControl>
 
         <FormControl>
@@ -267,9 +254,6 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
           <FieldLabel>Enum Options</FieldLabel>
           <Input
             size="xs"
-            variant="filled"
-            bg="#0a0a0b"
-            color="white"
             placeholder="comma,separated,values"
             value={(metadataDefinition.constraints?.options || []).join(', ')}
             onChange={(event) => {
@@ -293,9 +277,6 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
         <FieldLabel>Description</FieldLabel>
         <Input
           size="xs"
-          variant="filled"
-          bg="#0a0a0b"
-          color="white"
           value={metadataDefinition.description || ''}
           onChange={(event) => {
             void saveDefinition({ description: event.target.value || undefined });
@@ -304,7 +285,7 @@ export const TilesetMetadataEntryInspector: React.FC<TilesetMetadataEntryInspect
         />
       </FormControl>
 
-      <Box borderTop="1px" borderColor="#071018" pt={4}>
+      <Box borderTop="1px" borderColor="editorShellBorder" pt={4}>
         <SectionLabel mb={2}>Tile Assignment</SectionLabel>
 
         {selectedTileIndex === null ? (

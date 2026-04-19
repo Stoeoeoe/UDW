@@ -661,7 +661,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               // Random flood fill - each tile gets a random selection
               bucketFillAdvanced(selectedLayerId, tx, ty, {
                 mode: 'random',
-                tilesetId: activeTilesetId,
+                tilesetId: activeTilesetId ?? undefined,
                 tileIndex: selectedTileIndex ?? undefined,
                 tileIndices:
                   selectedTileIndices && selectedTileIndices.length > 0
@@ -675,7 +675,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               // Stamp/fill flood fill - supports stencil patterns
               bucketFillAdvanced(selectedLayerId, tx, ty, {
                 mode: 'stamp',
-                tilesetId: activeTilesetId,
+                tilesetId: activeTilesetId ?? undefined,
                 tileIndex: selectedTileIndex ?? undefined,
                 pattern: patternData ?? undefined,
               });

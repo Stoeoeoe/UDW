@@ -49,6 +49,7 @@ export const TilesetEditor: React.FC = () => {
       items={tilesetItems}
       selectedId={activeTilesetId}
       onSelect={handleSelectTileset}
+      enableSearch={true}
       autoSelectFirst={true}
       emptyMessage="No tilesets imported"
       onAdd={onCreatorOpen}

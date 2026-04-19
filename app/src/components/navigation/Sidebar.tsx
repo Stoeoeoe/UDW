@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
     <VStack
       spacing={0}
       h="full"
-      bg="editorPanelBg"
+      bg="editorSidebarBg"
       borderRight="1px"
       borderColor="editorBorderSubtle"
       w="16"

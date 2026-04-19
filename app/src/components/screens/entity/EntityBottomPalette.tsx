@@ -72,7 +72,7 @@ export const EntityBottomPalette: React.FC = () => {
   }
 
   return (
-    <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
+    <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
       {/* Header row with group dropdown */}
       <PanelHeader
         left={
@@ -80,9 +80,9 @@ export const EntityBottomPalette: React.FC = () => {
             <Select
               size="xs"
               variant="filled"
-              bg="editor.viewportBg"
-              borderColor="editor.inputBorder"
-              _hover={{ bg: 'editor.border' }}
+              bg="editorCanvasBg"
+              borderColor="editorFieldBorder"
+              _hover={{ bg: 'editorShellBorder' }}
               value={effectiveGroup}
               onChange={(e) => handleGroupChange(e.target.value)}
               color="blue.300"

@@ -5,6 +5,7 @@ import { ZoomControls } from '../common/ZoomControls';
 import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
 import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
+import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
 import { useProject } from '../../hooks/useProject';
 
 interface TilesetCanvasProps {
@@ -491,7 +492,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     // Match central viewport background used in MapViewport / ViewportShell
-    ctx.fillStyle = mode === 'interactive' ? '#0a0a0b' : 'transparent';
+    ctx.fillStyle = mode === 'interactive' ? EDITOR_CANVAS_HEX : 'transparent';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.imageSmoothingEnabled = false;
@@ -861,7 +862,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   };
 
   return (
-    <Box w="full" h="full" position="relative" overflow="hidden">
+    <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}

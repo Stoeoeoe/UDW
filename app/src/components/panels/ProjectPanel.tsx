@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Heading, VStack, HStack, Flex, Text, useToast } from '@chakra-ui/react';
+import { Box, Heading, VStack, HStack, Text, useToast } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ProjectSettingsEditor } from '../dialogs/ProjectSettingsEditor';
 import { Project } from '../../types/schema';
@@ -38,11 +38,10 @@ export const ProjectPanel: React.FC = () => {
       {/* Focused Ambient Glow */}
       <Box
         position="absolute"
-        top="-5%"
         left="25%"
         w="1000px"
-        h="500px"
-        bg="blue.800"
+        h="800px"
+        bg="blue.200"
         filter="blur(120px)"
         opacity="0.2"
         zIndex="0"

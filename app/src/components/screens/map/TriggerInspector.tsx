@@ -1,22 +1,18 @@
 import React from 'react';
+import { Badge, Button, HStack, Text } from '@chakra-ui/react';
 import { FiZap } from 'react-icons/fi';
-import {
-  VStack,
-  HStack,
-  Text,
-  Input,
-  Select,
-  FormControl,
-  NumberInput,
-  NumberInputField,
-  Divider,
-  Badge,
-  Button,
-} from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { InspectorPanel, InspectorEmptyState } from '../common';
 import { MapTrigger, TriggerShape, TriggerType } from '../../../types/schema';
-import { FieldLabel, SectionLabel } from '../../common/Typography.tsx';
+import {
+  CompactInput,
+  CompactSelect,
+  Field,
+  FieldStack,
+  InlineNumberPair,
+  InspectorSection,
+  ReadOnlyIdField,
+} from '../../common/Fields';
 
 const TRIGGER_TYPES: { value: TriggerType; label: string; description: string }[] = [
   {
@@ -42,378 +38,246 @@ const TriggerInspectorContent: React.FC<{ trigger: MapTrigger }> = ({ trigger })
   const update = (updates: Partial<MapTrigger>) => updateTrigger(trigger.id, updates);
 
   const typeInfo = TRIGGER_TYPES.find((t) => t.value === trigger.type);
-
-  const link = currentMap?.locationLinks?.find((l) => l.triggerId === trigger.id);
-  const targetMap = link ? maps.find((m) => m.id === link.targetMapId) : undefined;
+  const link = currentMap?.locationLinks?.find((entry) => entry.triggerId === trigger.id);
+  const targetMap = link ? maps.find((map) => map.id === link.targetMapId) : undefined;
   const targetAnchor = targetMap?.spatialPrimitives?.anchors?.find(
-    (a) => a.id === link?.targetAnchorId,
+    (anchor) => anchor.id === link?.targetAnchorId,
   );
 
   const jumpToTarget = () => {
     if (!link || !targetMap) return;
+
     const applySelection = () => {
       const store = useEditorStore.getState();
-      const latest = store.maps.find((m) => m.id === link.targetMapId);
+      const latest = store.maps.find((map) => map.id === link.targetMapId);
       const navLayer = latest?.layers.find((layer) => layer.kind === 'navigation');
-      if (navLayer) store.selectLayer(navLayer.id);
+      if (navLayer) {
+        store.selectLayer(navLayer.id);
+      }
       store.selectAnchor(link.targetAnchorId);
     };
+
     if (link.targetMapId !== currentMap?.id) {
       loadMap(link.targetMapId);
       Promise.resolve().then(applySelection);
-    } else {
-      const navLayer = currentMap?.layers.find((layer) => layer.kind === 'navigation');
-      if (navLayer) selectLayer(navLayer.id);
-      selectAnchor(link.targetAnchorId);
+      return;
     }
+
+    const navLayer = currentMap?.layers.find((layer) => layer.kind === 'navigation');
+    if (navLayer) {
+      selectLayer(navLayer.id);
+    }
+    selectAnchor(link.targetAnchorId);
   };
 
   return (
-    <VStack align="stretch" spacing={5}>
-      {/* Identity */}
-      <VStack align="stretch" spacing={3}>
-        <FormControl>
-          <FieldLabel>ID</FieldLabel>
-          <Input
-            size="xs"
-            variant="filled"
-            bg="#0a0a0b"
-            value={trigger.id}
-            isReadOnly
-            fontFamily="mono"
-            color="gray.500"
-            _hover={{ bg: '#071018' }}
-          />
-        </FormControl>
+    <FieldStack spacing={5}>
+      <InspectorSection>
+        <FieldStack>
+          <Field label="ID">
+            <ReadOnlyIdField value={trigger.id} />
+          </Field>
 
-        <FormControl>
-          <FieldLabel>Label</FieldLabel>
-          <Input
-            size="xs"
-            variant="filled"
-            bg="#0a0a0b"
-            color="white"
-            placeholder="e.g. Cave Entrance"
-            value={trigger.label ?? ''}
-            onChange={(e) => update({ label: e.target.value || undefined })}
-            _hover={{ bg: '#071018' }}
-          />
-        </FormControl>
-      </VStack>
+          <Field label="Label">
+            <CompactInput
+              placeholder="e.g. Cave Entrance"
+              value={trigger.label ?? ''}
+              onChange={(event) => update({ label: event.target.value || undefined })}
+            />
+          </Field>
+        </FieldStack>
+      </InspectorSection>
 
-      <Divider borderColor="#071018" />
-
-      {/* Type */}
-      <VStack align="stretch" spacing={3}>
-        <SectionLabel>Type</SectionLabel>
-
-        <FormControl>
-          <FieldLabel>Trigger Type</FieldLabel>
-          <Select
-            size="xs"
+      <InspectorSection title="Type">
+        <Field label="Trigger Type" helperText={typeInfo?.description}>
+          <CompactSelect
             value={trigger.type}
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            onChange={(e) => update({ type: e.target.value as TriggerType })}
+            onChange={(event) => update({ type: event.target.value as TriggerType })}
           >
-            {TRIGGER_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            {TRIGGER_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
               </option>
             ))}
-          </Select>
-          {typeInfo && (
-            <Text fontSize="10px" color="gray.500" mt={1}>
-              {typeInfo.description}
-            </Text>
-          )}
-        </FormControl>
-      </VStack>
+          </CompactSelect>
+        </Field>
+      </InspectorSection>
 
-      <Divider borderColor="#071018" />
-
-      {/* Shape */}
-      <VStack align="stretch" spacing={3}>
-        <SectionLabel>Shape</SectionLabel>
-
-        <FormControl>
-          <FieldLabel>Shape Type</FieldLabel>
-          <Select
-            size="xs"
+      <InspectorSection title="Shape">
+        <Field label="Shape Type">
+          <CompactSelect
             value={trigger.shape}
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
-            onChange={(e) => {
-              const shape = e.target.value as TriggerShape;
+            onChange={(event) => {
+              const shape = event.target.value as TriggerShape;
               if (shape === 'rectangle') {
                 update({ shape, size: [projectTileSize, projectTileSize], points: undefined });
-              } else {
-                // Convert rectangle corners to polygon vertices
-                const [x, y] = trigger.position;
-                const [w, h] = trigger.size ?? [projectTileSize, projectTileSize];
-                update({
-                  shape,
-                  points: [
-                    [x, y],
-                    [x + w, y],
-                    [x + w, y + h],
-                    [x, y + h],
-                  ],
-                  size: undefined,
-                });
+                return;
               }
+
+              const [x, y] = trigger.position;
+              const [w, h] = trigger.size ?? [projectTileSize, projectTileSize];
+              update({
+                shape,
+                points: [
+                  [x, y],
+                  [x + w, y],
+                  [x + w, y + h],
+                  [x, y + h],
+                ],
+                size: undefined,
+              });
             }}
           >
             <option value="rectangle">Rectangle</option>
             <option value="polygon">Polygon</option>
-          </Select>
-        </FormControl>
+          </CompactSelect>
+        </Field>
 
-        <FormControl>
-          <FieldLabel>Position (px)</FieldLabel>
-          <HStack spacing={2}>
-            <Text fontSize="xs" color="gray.400" flexShrink={0}>
-              X
-            </Text>
-            <NumberInput
-              size="xs"
-              value={trigger.position[0]}
-              precision={0}
-              onChange={(_, v) => {
-                if (!isNaN(v)) update({ position: [Math.round(v), trigger.position[1]] });
-              }}
-              flex={1}
-            >
-              <NumberInputField
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
-              />
-            </NumberInput>
-            <Text fontSize="xs" color="gray.400" flexShrink={0}>
-              Y
-            </Text>
-            <NumberInput
-              size="xs"
-              value={trigger.position[1]}
-              precision={0}
-              onChange={(_, v) => {
-                if (!isNaN(v)) update({ position: [trigger.position[0], Math.round(v)] });
-              }}
-              flex={1}
-            >
-              <NumberInputField
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                fontFamily="mono"
-                _hover={{ bg: '#071018' }}
-              />
-            </NumberInput>
+        <Field label="Position (px)">
+          <InlineNumberPair
+            labels={['X', 'Y']}
+            values={[trigger.position[0], trigger.position[1]]}
+            onChange={(position) => update({ position })}
+          />
+        </Field>
+
+        {trigger.shape === 'rectangle' ? (
+          <Field label="Size (px)">
+            <InlineNumberPair
+              labels={['W', 'H']}
+              values={[trigger.size?.[0] ?? projectTileSize, trigger.size?.[1] ?? projectTileSize]}
+              min={1}
+              onChange={([width, height]) =>
+                update({
+                  size: [Math.max(1, width), Math.max(1, height)],
+                })
+              }
+            />
+          </Field>
+        ) : null}
+
+        {trigger.shape === 'polygon' && trigger.points ? (
+          <Field
+            label={`Vertices (${trigger.points.length})`}
+            helperText="Drag vertices on the canvas to reposition them."
+          >
+            <FieldStack spacing={2}>
+              {trigger.points.map(([x, y], index) => (
+                <HStack key={`${x}-${y}-${index}`} spacing={2}>
+                  <Badge colorScheme="purple" fontSize="9px">
+                    {index}
+                  </Badge>
+                  <Text textStyle="monoMeta">
+                    ({x}, {y})
+                  </Text>
+                </HStack>
+              ))}
+            </FieldStack>
+          </Field>
+        ) : null}
+      </InspectorSection>
+
+      {link ? (
+        <InspectorSection title="Connected Link">
+          <HStack justify="space-between" align="center">
+            <Text textStyle="helperText">Linked location transition</Text>
+            <Badge colorScheme="cyan" fontSize="9px">
+              {link.id}
+            </Badge>
           </HStack>
-        </FormControl>
 
-        {trigger.shape === 'rectangle' && (
-          <FormControl>
-            <FieldLabel>Size (px)</FieldLabel>
-            <HStack spacing={2}>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                W
-              </Text>
-              <NumberInput
-                size="xs"
-                value={trigger.size?.[0] ?? projectTileSize}
-                min={1}
-                precision={0}
-                onChange={(_, v) => {
-                  if (!isNaN(v))
-                    update({
-                      size: [Math.max(1, Math.round(v)), trigger.size?.[1] ?? projectTileSize],
-                    });
-                }}
-                flex={1}
-              >
-                <NumberInputField
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  _hover={{ bg: '#071018' }}
-                />
-              </NumberInput>
-              <Text fontSize="xs" color="gray.400" flexShrink={0}>
-                H
-              </Text>
-              <NumberInput
-                size="xs"
-                value={trigger.size?.[1] ?? projectTileSize}
-                min={1}
-                precision={0}
-                onChange={(_, v) => {
-                  if (!isNaN(v))
-                    update({
-                      size: [trigger.size?.[0] ?? projectTileSize, Math.max(1, Math.round(v))],
-                    });
-                }}
-                flex={1}
-              >
-                <NumberInputField
-                  bg="#0a0a0b"
-                  borderColor="#1a1a2e"
-                  color="white"
-                  fontFamily="mono"
-                  _hover={{ bg: '#071018' }}
-                />
-              </NumberInput>
-            </HStack>
-          </FormControl>
-        )}
+          <Field label="Label">
+            <CompactInput
+              placeholder="e.g. Front Door"
+              value={link.label ?? ''}
+              onChange={(event) =>
+                updateLocationLink(link.id, { label: event.target.value || undefined })
+              }
+            />
+          </Field>
 
-        {trigger.shape === 'polygon' && trigger.points && (
-          <VStack align="stretch" spacing={2}>
-            <FieldLabel>Vertices ({trigger.points.length})</FieldLabel>
-            <Text fontSize="10px" color="gray.500">
-              Drag vertices on the canvas to reposition them.
-            </Text>
-            {trigger.points.map(([px, py], i) => (
-              <HStack key={i} spacing={2}>
-                <Badge fontSize="9px" colorScheme="purple" flexShrink={0}>
-                  {i}
-                </Badge>
-                <Text fontSize="10px" color="gray.400" fontFamily="mono">
-                  ({px}, {py})
-                </Text>
-              </HStack>
-            ))}
-          </VStack>
-        )}
-      </VStack>
-
-      {link && (
-        <>
-          <Divider borderColor="#071018" />
-          <VStack align="stretch" spacing={3}>
-            <HStack justify="space-between" align="center">
-              <SectionLabel>Connected Link</SectionLabel>
-              <Badge colorScheme="cyan" fontSize="9px">
-                {link.id}
-              </Badge>
-            </HStack>
-
-            <FormControl>
-              <FieldLabel>Label</FieldLabel>
-              <Input
-                size="xs"
-                variant="filled"
-                bg="#0a0a0b"
-                color="white"
-                placeholder="e.g. Front Door"
-                value={link.label ?? ''}
-                onChange={(e) =>
-                  updateLocationLink(link.id, { label: e.target.value || undefined })
-                }
-                _hover={{ bg: '#071018' }}
-              />
-            </FormControl>
-
-            <FormControl>
-              <FieldLabel>Target Map</FieldLabel>
-              <Select
-                size="xs"
-                value={link.targetMapId}
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                onChange={(e) =>
-                  updateLocationLink(link.id, {
-                    targetMapId: e.target.value,
-                    targetAnchorId: '',
-                  })
-                }
-              >
-                <option value="" disabled>
-                  — Select a map —
+          <Field label="Target Map" helperText={!targetMap ? 'Target map not found' : undefined}>
+            <CompactSelect
+              value={link.targetMapId}
+              onChange={(event) =>
+                updateLocationLink(link.id, {
+                  targetMapId: event.target.value,
+                  targetAnchorId: '',
+                })
+              }
+            >
+              <option value="" disabled>
+                Select a map
+              </option>
+              {maps.map((map) => (
+                <option key={map.id} value={map.id}>
+                  {map.name}
+                  {map.id === currentMap?.id ? ' (same map)' : ''}
                 </option>
-                {maps.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                    {m.id === currentMap?.id ? ' (same map)' : ''}
-                  </option>
-                ))}
-              </Select>
-              {!targetMap && (
-                <Text fontSize="10px" color="red.400" mt={1}>
-                  ⚠ Target map not found
-                </Text>
-              )}
-            </FormControl>
+              ))}
+            </CompactSelect>
+          </Field>
 
-            <FormControl>
-              <FieldLabel>Arrival Anchor</FieldLabel>
-              <Select
-                size="xs"
-                value={link.targetAnchorId}
-                bg="#0a0a0b"
-                borderColor="#1a1a2e"
-                color="white"
-                isDisabled={!targetMap}
-                onChange={(e) => updateLocationLink(link.id, { targetAnchorId: e.target.value })}
-              >
-                <option value="" disabled>
-                  — Select an anchor —
+          <Field
+            label="Arrival Anchor"
+            helperText={
+              !targetAnchor && targetMap
+                ? 'No anchor selected; link has no arrival point.'
+                : undefined
+            }
+          >
+            <CompactSelect
+              value={link.targetAnchorId}
+              isDisabled={!targetMap}
+              onChange={(event) =>
+                updateLocationLink(link.id, { targetAnchorId: event.target.value })
+              }
+            >
+              <option value="" disabled>
+                Select an anchor
+              </option>
+              {(targetMap?.spatialPrimitives?.anchors ?? []).map((anchor) => (
+                <option key={anchor.id} value={anchor.id}>
+                  {anchor.name}
                 </option>
-                {(targetMap?.spatialPrimitives?.anchors ?? []).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
-              {targetMap && !targetAnchor && (
-                <Text fontSize="10px" color="red.400" mt={1}>
-                  ⚠ No anchor selected — link has no arrival point.
-                </Text>
-              )}
-            </FormControl>
+              ))}
+            </CompactSelect>
+          </Field>
 
-            <HStack spacing={2}>
-              <Button
-                size="xs"
-                variant="outline"
-                colorScheme="cyan"
-                flex={1}
-                isDisabled={!targetMap || !targetAnchor}
-                onClick={jumpToTarget}
-              >
-                → Jump to target
-              </Button>
-              <Button
-                size="xs"
-                variant="ghost"
-                colorScheme="cyan"
-                onClick={() => {
-                  selectTrigger(null);
-                  selectLink(link.id);
-                }}
-              >
-                Open link
-              </Button>
-              <Button
-                size="xs"
-                variant="ghost"
-                colorScheme="red"
-                onClick={() => removeLocationLink(link.id)}
-              >
-                Unlink
-              </Button>
-            </HStack>
-          </VStack>
-        </>
-      )}
-    </VStack>
+          <HStack spacing={2}>
+            <Button
+              size="xs"
+              variant="outline"
+              colorScheme="cyan"
+              flex={1}
+              isDisabled={!targetMap || !targetAnchor}
+              onClick={jumpToTarget}
+            >
+              Jump to target
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              colorScheme="cyan"
+              onClick={() => {
+                selectTrigger(null);
+                selectLink(link.id);
+              }}
+            >
+              Open link
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              colorScheme="red"
+              onClick={() => removeLocationLink(link.id)}
+            >
+              Unlink
+            </Button>
+          </HStack>
+        </InspectorSection>
+      ) : null}
+    </FieldStack>
   );
 };
 
@@ -421,7 +285,9 @@ export const TriggerInspector: React.FC = () => {
   const currentMap = useEditorStore((s) => s.currentMap);
   const selectedTriggerId = useEditorStore((s) => s.selectedTriggerId);
 
-  const trigger = currentMap?.spatialPrimitives?.triggers?.find((t) => t.id === selectedTriggerId);
+  const trigger = currentMap?.spatialPrimitives?.triggers?.find(
+    (entry) => entry.id === selectedTriggerId,
+  );
 
   if (!trigger) {
     return (

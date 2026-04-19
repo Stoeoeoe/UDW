@@ -69,7 +69,7 @@ export const EntityPalette: React.FC = () => {
 
   if (entityTypes.length === 0) {
     return (
-      <Flex direction="column" h="full" bg="editor.panelBg">
+      <Flex direction="column" h="full" bg="editorPanelBg">
         <PanelHeader title="Entities" />
         <VStack flex={1} justify="center" spacing={2} p={4}>
           <Text fontSize="2xl">🎯</Text>
@@ -85,7 +85,7 @@ export const EntityPalette: React.FC = () => {
   }
 
   return (
-    <Flex direction="column" h="full" bg="editor.panelBg" overflow="hidden">
+    <Flex direction="column" h="full" bg="editorPanelBg" overflow="hidden">
       {/* Header */}
       <PanelHeader
         title="Entities"
@@ -100,15 +100,12 @@ export const EntityPalette: React.FC = () => {
 
       {/* Search */}
       {entityTypes.length > 5 && (
-        <Box px={2} py={2} borderBottom="1px" borderColor="editor.border">
+        <Box px={2} py={2} borderBottom="1px" borderColor="editorShellBorder">
           <InputGroup size="xs">
             <InputLeftElement pointerEvents="none">
               <SearchIcon color="gray.600" fontSize="10px" />
             </InputLeftElement>
             <Input
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               placeholder="Filter entities..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -227,7 +224,7 @@ export const EntityPalette: React.FC = () => {
       </Box>
 
       {/* Help tip */}
-      <Box px={3} py={2} borderTop="1px" borderColor="editor.border" flexShrink={0}>
+      <Box px={3} py={2} borderTop="1px" borderColor="editorShellBorder" flexShrink={0}>
         <Text fontSize="9px" color="gray.600" textAlign="center">
           Select an entity, then click on the map to place it
         </Text>

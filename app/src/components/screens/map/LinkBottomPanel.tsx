@@ -24,7 +24,7 @@ export const LinkBottomPanel: React.FC = () => {
   };
 
   return (
-    <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
+    <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
       <PanelHeader
         title="Location Links"
         actions={

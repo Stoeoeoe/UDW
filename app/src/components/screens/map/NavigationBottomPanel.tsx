@@ -6,7 +6,7 @@ import { TriggerBottomPanel } from './TriggerBottomPanel';
 
 export const NavigationBottomPanel: React.FC = () => {
   return (
-    <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
+    <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
       <Tabs
         size="sm"
         variant="line"
@@ -16,7 +16,7 @@ export const NavigationBottomPanel: React.FC = () => {
         display="flex"
         flexDirection="column"
       >
-        <TabList bg="editor.headerBg" borderBottom="1px" borderColor="editor.border">
+        <TabList bg="editorHeaderBg" borderBottom="1px" borderColor="editorShellBorder">
           <Tab fontSize="xs">Links</Tab>
           <Tab fontSize="xs">Anchors</Tab>
           <Tab fontSize="xs">Triggers</Tab>

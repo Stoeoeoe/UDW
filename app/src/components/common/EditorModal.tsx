@@ -6,6 +6,7 @@ export interface EditorModalProps {
   onClose: () => void;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  title?: string;
 }
 
 /**

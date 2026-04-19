@@ -54,14 +54,13 @@ const InlineTableField: React.FC<{
   onChange: (updates: Partial<TableField>) => void;
   onDelete: () => void;
 }> = ({ field, onChange, onDelete }) => (
-  <Box bg="#0a0a0b" borderRadius="md" border="1px" borderColor="#1a1a2e" p={2}>
+  <Box bg="editorInlineBg" borderRadius="md" border="1px" borderColor="editorInlineBorder" p={2}>
     <VStack spacing={2} align="stretch">
       <HStack spacing={1}>
         <Input
           size="xs"
-          bg="#05060a"
-          borderColor="#1a1a2e"
-          color="white"
+          bg="editorFieldBg"
+          borderColor="editorInlineBorder"
           fontFamily="mono"
           value={field.key}
           flex={1}
@@ -70,9 +69,8 @@ const InlineTableField: React.FC<{
         />
         <Select
           size="xs"
-          bg="#05060a"
-          borderColor="#1a1a2e"
-          color="white"
+          bg="editorFieldBg"
+          borderColor="editorInlineBorder"
           w="85px"
           value={field.type}
           onChange={(e) => {
@@ -90,7 +88,7 @@ const InlineTableField: React.FC<{
           }}
         >
           {FIELD_TYPES.map((t) => (
-            <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+            <option key={t.value} value={t.value}>
               {t.label}
             </option>
           ))}
@@ -127,9 +125,8 @@ const InlineTableField: React.FC<{
           onChange={(_, val) => onChange({ defaultValue: isNaN(val) ? 0 : val })}
         >
           <NumberInputField
-            bg="#05060a"
-            borderColor="#1a1a2e"
-            color="white"
+            bg="editorFieldBg"
+            borderColor="editorInlineBorder"
             placeholder="default"
           />
           <NumberInputStepper>
@@ -141,9 +138,8 @@ const InlineTableField: React.FC<{
       {field.type === 'string' && (
         <Input
           size="xs"
-          bg="#05060a"
-          borderColor="#1a1a2e"
-          color="white"
+          bg="editorFieldBg"
+          borderColor="editorInlineBorder"
           value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
           onChange={(e) => onChange({ defaultValue: e.target.value })}
           placeholder="default"
@@ -156,9 +152,8 @@ const InlineTableField: React.FC<{
               <HStack key={oi} spacing={1}>
                 <Input
                   size="xs"
-                  bg="#05060a"
-                  borderColor="#1a1a2e"
-                  color="white"
+                  bg="editorFieldBg"
+                  borderColor="editorInlineBorder"
                   value={opt}
                   w="80px"
                   onChange={(e) => {
@@ -204,14 +199,13 @@ const InlineTableField: React.FC<{
           </HStack>
           <Select
             size="xs"
-            bg="#05060a"
-            borderColor="#1a1a2e"
-            color="white"
+            bg="editorFieldBg"
+            borderColor="editorInlineBorder"
             value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
             onChange={(e) => onChange({ defaultValue: e.target.value })}
           >
             {(field.enumValues || []).map((opt) => (
-              <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
+              <option key={opt} value={opt}>
                 {opt}
               </option>
             ))}
@@ -221,8 +215,8 @@ const InlineTableField: React.FC<{
 
       <Input
         size="xs"
-        bg="#05060a"
-        borderColor="#1a1a2e"
+        bg="editorFieldBg"
+        borderColor="editorInlineBorder"
         color="gray.500"
         value={field.description ?? ''}
         onChange={(e) => onChange({ description: e.target.value || undefined })}
@@ -387,7 +381,7 @@ export const TableEditor: React.FC<TableEditorProps> = ({
               </HStack>
             )}
 
-            <Collapse in={initialExpandedId || isExpanded} animateOpacity>
+            <Collapse in={initialExpandedId === tbl.id || isExpanded} animateOpacity>
               <Box px={3} pb={3} pt={2} bg="whiteAlpha.50">
                 <VStack spacing={3} align="stretch">
                   <Box>

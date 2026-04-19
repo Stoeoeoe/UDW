@@ -2,6 +2,7 @@ import { Box, Flex } from '@chakra-ui/react';
 import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/navigation/Sidebar';
 import { ProjectPanel } from './components/panels/ProjectPanel';
+import { AppShell } from './components/common/AppShell';
 import {
   MapEditor,
   TilesetEditor,
@@ -57,54 +58,17 @@ function App() {
   };
 
   return (
-    <Flex
-      direction="column"
-      h="100vh"
-      w="100vw"
-      overflow="hidden"
-      bg="editorAppBg"
-      color="gray.200"
-      userSelect="none"
-    >
-      {/* Top Bar */}
-      <Box
-        h="12"
-        borderBottom="1px"
-        borderColor="editorBorderSubtle"
-        bg="editorPanelBg"
-        zIndex="20"
-        flexShrink={0}
-      >
-        <TopBar />
-      </Box>
-
-      {/* Main Workspace */}
-      <Flex flex={1} overflow="hidden" minH={0}>
-        {/* Sidebar (always visible) */}
-        <Sidebar activeMode={editorMode} onModeChange={setEditorMode} />
-
-        {/* Editor Content */}
-        <Box flex={1} overflow="hidden">
-          {renderEditor()}
-        </Box>
-      </Flex>
-
-      {/* Status Bar */}
-      <Flex
-        h="6"
-        bg="editorChromeBg"
-        borderTop="1px"
-        borderColor="editorBorderSubtle"
-        alignItems="center"
-        px="2"
-        fontSize="xs"
-        color="editorMutedText"
-        zIndex="20"
-        flexShrink={0}
-      >
-        Ready
-      </Flex>
-    </Flex>
+    <AppShell
+      topBar={<TopBar />}
+      workspace={
+        <Flex flex={1} overflow="hidden" minH={0} h="full">
+          <Sidebar activeMode={editorMode} onModeChange={setEditorMode} />
+          <Box flex={1} overflow="hidden" h="full">
+            {renderEditor()}
+          </Box>
+        </Flex>
+      }
+    />
   );
 }
 

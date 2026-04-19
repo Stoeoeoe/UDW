@@ -159,7 +159,7 @@ export const MapEditor: React.FC = () => {
               <MapLeftPanel />
             )
           }
-          leftPanelDefaultSize={20}
+          leftPanelDefaultSize={18}
         />
       );
     }
@@ -219,8 +219,8 @@ export const MapEditor: React.FC = () => {
             <TilesetPalette enableMultiSelect={true} />
           )
         }
-        leftPanelDefaultSize={20}
-        rightPanelDefaultSize={20}
+        leftPanelDefaultSize={18}
+        rightPanelDefaultSize={22}
         bottomPanelDefaultSize={25}
       />
 

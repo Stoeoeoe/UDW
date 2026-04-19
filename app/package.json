@@ -13,6 +13,8 @@
     "devtools": "react-devtools",
     "build": "tsc -p tsconfig.build.json && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:ui": "node scripts/check-ui-hex.mjs",
+    "lint:ui:strict": "node scripts/check-ui-hex.mjs --strict",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

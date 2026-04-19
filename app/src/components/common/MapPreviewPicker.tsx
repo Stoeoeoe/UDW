@@ -3,6 +3,7 @@ import { Box, Text, Flex, Spinner, HStack, IconButton, Tooltip } from '@chakra-u
 import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveTileAt } from '../../lib/mapUtils';
+import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
 import { Map as GameMap, Tileset } from '../../types/schema';
 import { useProject } from '../../hooks/useProject';
 
@@ -62,7 +63,7 @@ function renderToCanvas(
   const H = map.height * ts;
 
   // Background
-  ctx.fillStyle = '#0a0a0b';
+  ctx.fillStyle = EDITOR_CANVAS_HEX;
   ctx.fillRect(0, 0, W, H);
 
   // Visual + terrain layers sorted by zOrder
@@ -424,7 +425,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
         h={`${Math.min(height, 120)}px`}
         align="center"
         justify="center"
-        bg="#0a0a0b"
+        bg="editorCanvasBg"
         borderRadius="md"
         border="1px"
         borderColor="whiteAlpha.100"
@@ -445,7 +446,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
         h={`${height}px`}
         position="relative"
         overflow="hidden"
-        bg="#0a0a0b"
+        bg="editorCanvasBg"
         borderRadius="md"
         border="1px solid rgba(255,255,255,0.08)"
         cursor={

@@ -241,7 +241,7 @@ export const MapWorldView: React.FC = () => {
   const excludedCount = maps.length - includedCount;
 
   return (
-    <Box h="full" w="full" position="relative" bg="editor.viewportBg" overflow="hidden">
+    <Box h="full" w="full" position="relative" bg="editorCanvasBg" overflow="hidden">
       <Box
         position="absolute"
         inset={0}

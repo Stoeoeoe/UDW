@@ -83,14 +83,11 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
           <FormLabel>Category</FormLabel>
           <Select
             size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
             value={category}
             onChange={(e) => setCategory(e.target.value as EntityCategory)}
           >
             {CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value} style={{ background: '#1a202c' }}>
+              <option key={c.value} value={c.value}>
                 {c.icon} {c.label}
               </option>
             ))}
@@ -101,9 +98,6 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
           <FormLabel>Group</FormLabel>
           <Input
             size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
             value={group}
             onChange={(e) => setGroup(e.target.value)}
             placeholder="e.g. Interactables"
@@ -153,8 +147,6 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
         <FormLabel>Description</FormLabel>
         <Input
           size="sm"
-          bg="gray.800"
-          color="white"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Brief description (optional)"

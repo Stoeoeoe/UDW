@@ -329,7 +329,7 @@ const TestValueRow: React.FC<{
           w="80px"
           onChange={(_, val) => onChange(path, isNaN(val) ? 0 : val)}
         >
-          <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+          <NumberInputField bg="editorInlineBg" borderColor="editorInlineBorder" />
           <NumberInputStepper>
             <NumberIncrementStepper />
             <NumberDecrementStepper />
@@ -339,9 +339,8 @@ const TestValueRow: React.FC<{
       {type === 'string' && (
         <Input
           size="xs"
-          bg="#0a0a0b"
-          borderColor="#1a1a2e"
-          color="white"
+          bg="editorInlineBg"
+          borderColor="editorInlineBorder"
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(path, e.target.value)}
           w="120px"
@@ -350,15 +349,14 @@ const TestValueRow: React.FC<{
       {type === 'enum' && (
         <Select
           size="xs"
-          bg="#0a0a0b"
-          borderColor="#1a1a2e"
-          color="white"
+          bg="editorInlineBg"
+          borderColor="editorInlineBorder"
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(path, e.target.value)}
           w="120px"
         >
           {(enumValues || []).map((opt) => (
-            <option key={opt} value={opt} style={{ background: '#0a0a0b' }}>
+            <option key={opt} value={opt}>
               {opt}
             </option>
           ))}
@@ -417,7 +415,7 @@ const FnMockRow: React.FC<{
             w="80px"
             onChange={(_, val) => onChange(path, isNaN(val) ? 0 : val)}
           >
-            <NumberInputField bg="#0a0a0b" borderColor="#1a1a2e" color="white" />
+            <NumberInputField bg="editorInlineBg" borderColor="editorInlineBorder" />
             <NumberInputStepper>
               <NumberIncrementStepper />
               <NumberDecrementStepper />
@@ -427,9 +425,8 @@ const FnMockRow: React.FC<{
         {returnType === 'string' && (
           <Input
             size="xs"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
+            bg="editorInlineBg"
+            borderColor="editorInlineBorder"
             value={typeof returnValue === 'string' ? returnValue : ''}
             onChange={(e) => onChange(path, e.target.value)}
             w="120px"
@@ -841,7 +838,10 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         <Box
           flex={1}
           sx={{
-            '.cm-editor': { borderRadius: '4px', border: '1px solid #1a1a2e' },
+            '.cm-editor': {
+              borderRadius: '4px',
+              border: '1px solid var(--chakra-colors-editor-inline-border)',
+            },
             '.cm-editor.cm-focused': { outline: 'none', border: '1px solid #3182ce' },
           }}
         >
@@ -916,7 +916,15 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
 
       {/* Test panel */}
       {showTest && (
-        <Box mt={2} px={2} py={2} bg="#0a0a0b" borderRadius="md" border="1px" borderColor="#1a1a2e">
+        <Box
+          mt={2}
+          px={2}
+          py={2}
+          bg="editorInlineBg"
+          borderRadius="md"
+          border="1px"
+          borderColor="editorInlineBorder"
+        >
           <HStack justify="space-between" mb={2}>
             <Text fontSize="9px" color="gray.500" fontWeight="bold" textTransform="uppercase">
               Test Values

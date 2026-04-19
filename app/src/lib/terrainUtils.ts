@@ -235,37 +235,6 @@ export function getCornerTerrainsForTile(
   ];
 }
 
-function getTerrainDataValue(
-  terrainData: (string | null)[][],
-  x: number,
-  y: number,
-): string | null {
-  if (y < 0 || y >= terrainData.length) {
-    return null;
-  }
-
-  const row = terrainData[y];
-  if (!row || x < 0 || x >= row.length) {
-    return null;
-  }
-
-  return row[x] ?? null;
-}
-
-function pickTerrainDataCorner(
-  terrainData: (string | null)[][],
-  candidates: Array<[number, number]>,
-): string | null {
-  for (const [x, y] of candidates) {
-    const terrainId = getTerrainDataValue(terrainData, x, y);
-    if (terrainId !== null) {
-      return terrainId;
-    }
-  }
-
-  return null;
-}
-
 /**
  * Derive a tile's corner terrains from the persisted terrainData cell grid.
  *
@@ -283,9 +252,6 @@ export function getTerrainCornersFromTerrainData(
   // frequent non-null terrain; on ties, pick the lexicographically smallest id
   // to keep behavior deterministic.
   const H = terrainData.length;
-  const W = H > 0 ? (terrainData[0]?.length ?? 0) : 0;
-
-  const cpW = W + 1;
 
   const computeCorner = (cx: number, cy: number): string | null => {
     const counts = new Map<string, number>();

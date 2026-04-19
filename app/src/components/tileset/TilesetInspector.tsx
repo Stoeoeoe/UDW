@@ -4,7 +4,6 @@ import {
   HStack,
   Text,
   Box,
-  Select,
   NumberInput,
   NumberInputField,
   NumberInputStepper,
@@ -13,6 +12,7 @@ import {
   FormControl,
 } from '@chakra-ui/react';
 import { FormLabel } from '../common/FormLabel';
+import { CompactSelect } from '../common/Fields';
 import { PropertyForm, propertyDefinitionsToSchema } from '../common/PropertyForm';
 import { SectionLabel } from '../common/Typography.tsx';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -223,11 +223,8 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                         borderWidth={1}
                         borderColor="editorBorderLight"
                       />
-                      <Select
+                      <CompactSelect
                         size="sm"
-                        bg="#05060a"
-                        borderColor="#0b1116"
-                        color="white"
                         value={terrainValue}
                         onChange={(e) => onChange(e.target.value)}
                       >
@@ -237,7 +234,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                             {o.name}
                           </option>
                         ))}
-                      </Select>
+                      </CompactSelect>
                     </HStack>
                   );
                 },

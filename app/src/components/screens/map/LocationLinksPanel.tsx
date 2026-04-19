@@ -45,18 +45,18 @@ export const LocationLinksPanel: React.FC = () => {
   };
 
   return (
-    <Box borderTop="1px" borderColor="editor.border">
+    <Box borderTop="1px" borderColor="editorShellBorder">
       <Flex
         align="center"
         px="2"
         py="1"
-        bg="editor.headerBg"
+        bg="editorHeaderBg"
         _hover={{ bg: 'whiteAlpha.50' }}
         cursor="pointer"
         onClick={activateNavLayer}
         userSelect="none"
         borderBottom="1px"
-        borderColor={isNavLayerSelected ? 'cyan.700' : 'editor.border'}
+        borderColor={isNavLayerSelected ? 'cyan.700' : 'editorShellBorder'}
       >
         <Box w="6px" h="6px" borderRadius="full" bg="cyan.500" mr="2" flexShrink={0} />
         <Text

@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Button,
-  FormControl,
-  FormLabel,
-  HStack,
-  Image,
-  Input,
-  useToast,
-} from '@chakra-ui/react';
+import { Box, Button, FormControl, HStack, Image, Input, useToast } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { fileSystem } from '../../../lib/fileSystem';
 import { resolveSpriteAsset } from '../../../lib/asepriteUtils';

@@ -9,6 +9,7 @@ import {
   getPolygonFromCollision,
   isValidPolygon,
 } from '../../lib/collisionUtils';
+import { EDITOR_CANVAS_HEX, EDITOR_FIELD_HEX } from '../../lib/editorColors';
 import { useProject } from '../../hooks/useProject';
 
 type CollisionMode = 'none' | 'full' | 'polygon';
@@ -396,7 +397,7 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
     canvas.height = CANVAS_SIZE;
 
     context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-    context.fillStyle = '#090b10';
+    context.fillStyle = EDITOR_CANVAS_HEX;
     context.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
     const drawRect = getDrawRect();
@@ -579,8 +580,8 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
                   setRawText(e.target.value);
                   setRawError(null);
                 }}
-                bg="#05060a"
-                borderColor="#0b1116"
+                bg={EDITOR_FIELD_HEX}
+                borderColor="editorFieldBorder"
                 color="white"
               />
               <HStack spacing={2}>

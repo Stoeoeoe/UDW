@@ -87,16 +87,17 @@ export const SettingsEditor: React.FC = () => {
       items={categories}
       selectedId={activeCategory}
       onSelect={(id: string) => setActiveCategory(id as SettingsCategory)}
+      enableSearch={true}
     />
   );
 
   const renderSettingRow = (label: string, description: string, control: React.ReactNode) => (
     <HStack justify="space-between" align="start" py={3}>
       <VStack align="start" spacing={0} flex={1}>
-        <Text fontSize="sm" fontWeight="medium" color="gray.200">
+        <Text fontSize="sm" fontWeight="medium" color="editorText">
           {label}
         </Text>
-        <Text fontSize="xs" color="gray.500">
+        <Text fontSize="xs" color="editorMutedText">
           {description}
         </Text>
       </VStack>
@@ -105,12 +106,12 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderGeneralSettings = () => (
-    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
+    <VStack align="stretch" spacing={0} divider={<Divider />}>
       {renderSettingRow(
         'Theme',
         'Application color theme',
         <HStack>
-          <Badge colorScheme="blue" fontSize="xs">
+          <Badge variant="editor" colorScheme="blue">
             Dark Only
           </Badge>
         </HStack>,
@@ -136,7 +137,7 @@ export const SettingsEditor: React.FC = () => {
           onChange={(_, val) => updateSetting('autosaveInterval', val)}
           isDisabled={!settings.autosaveEnabled}
         >
-          <NumberInputField bg="#0a0a0b" borderColor="#071018" />
+          <NumberInputField />
           <NumberInputStepper>
             <NumberIncrementStepper />
             <NumberDecrementStepper />
@@ -155,7 +156,7 @@ export const SettingsEditor: React.FC = () => {
           value={settings.undoHistorySize}
           onChange={(_, val) => updateSetting('undoHistorySize', val)}
         >
-          <NumberInputField bg="#0a0a0b" borderColor="#071018" />
+          <NumberInputField />
           <NumberInputStepper>
             <NumberIncrementStepper />
             <NumberDecrementStepper />
@@ -166,7 +167,7 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderEditorSettings = () => (
-    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
+    <VStack align="stretch" spacing={0} divider={<Divider />}>
       {renderSettingRow(
         'Show Tile Indices',
         'Display tile index numbers on the tileset',
@@ -204,25 +205,17 @@ export const SettingsEditor: React.FC = () => {
           onChange={(e) =>
             updateSetting('defaultTool', e.target.value as AppSettings['defaultTool'])
           }
-          bg="#0a0a0b"
-          borderColor="#071018"
         >
-          <option value="select" style={{ background: '#0a0a0b' }}>
-            Select
-          </option>
-          <option value="stamp" style={{ background: '#0a0a0b' }}>
-            Stamp
-          </option>
-          <option value="entityPlace" style={{ background: '#0a0a0b' }}>
-            Entity Place
-          </option>
+          <option value="select">Select</option>
+          <option value="stamp">Stamp</option>
+          <option value="entityPlace">Entity Place</option>
         </Select>,
       )}
     </VStack>
   );
 
   const renderGridSettings = () => (
-    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
+    <VStack align="stretch" spacing={0} divider={<Divider />}>
       {renderSettingRow(
         'Show Grid',
         'Display grid overlay on map viewport',
@@ -245,7 +238,7 @@ export const SettingsEditor: React.FC = () => {
           onChange={(_, val) => updateSetting('gridOpacity', val)}
           isDisabled={!settings.showGrid}
         >
-          <NumberInputField bg="#0a0a0b" borderColor="#071018" />
+          <NumberInputField />
           <NumberInputStepper>
             <NumberIncrementStepper />
             <NumberDecrementStepper />
@@ -256,7 +249,7 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderExportSettings = () => (
-    <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
+    <VStack align="stretch" spacing={0} divider={<Divider />}>
       {renderSettingRow(
         'Export Format',
         'Default format for map exports',
@@ -267,18 +260,10 @@ export const SettingsEditor: React.FC = () => {
           onChange={(e) =>
             updateSetting('exportFormat', e.target.value as AppSettings['exportFormat'])
           }
-          bg="#0a0a0b"
-          borderColor="#071018"
         >
-          <option value="json" style={{ background: '#0a0a0b' }}>
-            JSON
-          </option>
-          <option value="xml" style={{ background: '#0a0a0b' }}>
-            XML
-          </option>
-          <option value="binary" style={{ background: '#0a0a0b' }}>
-            Binary
-          </option>
+          <option value="json">JSON</option>
+          <option value="xml">XML</option>
+          <option value="binary">Binary</option>
         </Select>,
       )}
       {renderSettingRow(
@@ -305,10 +290,10 @@ export const SettingsEditor: React.FC = () => {
 
   const renderShortcutsSettings = () => (
     <VStack align="stretch" spacing={4}>
-      <Text fontSize="xs" color="gray.500">
+      <Text fontSize="xs" color="editorMutedText">
         Keyboard shortcuts cannot be customized yet. Here are the current bindings:
       </Text>
-      <VStack align="stretch" spacing={0} divider={<Divider borderColor="#071018" />}>
+      <VStack align="stretch" spacing={0} divider={<Divider />}>
         {[
           ['B', 'Brush / Paint tool'],
           ['E', 'Eraser tool'],
@@ -322,10 +307,10 @@ export const SettingsEditor: React.FC = () => {
           ['Delete', 'Delete selected'],
         ].map(([key, action]) => (
           <HStack key={key} justify="space-between" py={2}>
-            <Text fontSize="sm" color="gray.300">
+            <Text fontSize="sm" color="editorText">
               {action}
             </Text>
-            <Badge bg="#071018" color="gray.300" fontFamily="mono" fontSize="xs" px={2}>
+            <Badge variant="editor" color="editorText" fontFamily="mono">
               {key}
             </Badge>
           </HStack>
@@ -368,7 +353,7 @@ export const SettingsEditor: React.FC = () => {
       content={
         <Box p={6} maxW="700px" mx="auto">
           <VStack align="stretch" spacing={4}>
-            <Text fontSize="lg" fontWeight="bold" color="white">
+            <Text fontSize="lg" fontWeight="bold" color="editorText">
               {categoryTitles[activeCategory]}
             </Text>
             {renderCategoryContent()}
@@ -376,7 +361,7 @@ export const SettingsEditor: React.FC = () => {
         </Box>
       }
       leftPanel={leftPanel}
-      leftPanelDefaultSize={15}
+      leftPanelDefaultSize={18}
     />
   );
 };

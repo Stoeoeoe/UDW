@@ -155,7 +155,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search icons... (try 'Tree', 'Sword')"
-                bg="#0a0a0b"
+                bg="editorInlineBg"
               />
             </HStack>
 

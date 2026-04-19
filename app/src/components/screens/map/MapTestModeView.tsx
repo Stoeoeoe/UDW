@@ -4,6 +4,7 @@ import { Box, HStack, Text, VStack } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
+import { EDITOR_CANVAS_HEX } from '../../../lib/editorColors';
 import { resolveMapContext, resolveTileAt } from '../../../lib/mapUtils';
 import type { Map as GameMap, SortingLayer, Tileset } from '../../../types/schema';
 import { bakeLayerCanvas, getRenderableMapLayers } from './mapThreeUtils';
@@ -594,7 +595,7 @@ export const MapTestModeView: React.FC = () => {
       parent: container,
       width: container.clientWidth || 800,
       height: container.clientHeight || 600,
-      backgroundColor: '#0a0a0b',
+      backgroundColor: EDITOR_CANVAS_HEX,
       transparent: false,
       scene: MapTestScene,
       scale: {
@@ -633,7 +634,7 @@ export const MapTestModeView: React.FC = () => {
   ]);
 
   return (
-    <Box w="full" h="full" position="relative" overflow="hidden" bg="#0a0a0b">
+    <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">
       <Box ref={containerRef} w="full" h="full" />
 
       <Box

@@ -37,8 +37,8 @@ const CategoryHeader: React.FC<CategoryHeaderProps> = ({
     px="2"
     py="1"
     borderBottom="1px"
-    borderColor="editor.border"
-    bg="editor.headerBg"
+    borderColor="editorShellBorder"
+    bg="editorSectionBg"
     _hover={{ bg: 'whiteAlpha.50' }}
     cursor="pointer"
     onClick={onToggle}
@@ -246,7 +246,7 @@ export const LayersPanel: React.FC = () => {
 
   return (
     <>
-      <Flex direction="column" h="full" bg="editor.panelBg" color="gray.200">
+      <Flex direction="column" h="full" bg="editorPanelBg" color="gray.200">
         {/* Panel header */}
         <PanelHeader
           title="Layers"
@@ -283,7 +283,7 @@ export const LayersPanel: React.FC = () => {
                 <Collapse in={!isCollapsed} animateOpacity>
                   {catLayers.length === 0 ? (
                     <Box px="4" py="2">
-                      <CaptionText color="gray.700" fontStyle="italic">
+                      <CaptionText color="gray.600" fontStyle="italic">
                         No {catConfig.label.toLowerCase()} layers
                       </CaptionText>
                     </Box>

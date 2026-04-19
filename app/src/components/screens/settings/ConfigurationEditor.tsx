@@ -908,6 +908,7 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         title="Terrain Types"
         description="Used by tileset terrain painting and autotile generation."
         items={terrainItems}
+        enableSearch={true}
         addLabel="Add Terrain"
         onAdd={() => {
           setEditingTerrainId(null);
@@ -929,6 +930,7 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         title="Tile Metadata Fields"
         description="Project-level metadata schema for tile properties."
         items={metadataItems}
+        enableSearch={true}
         addLabel="Add Metadata Field"
         onAdd={() => {
           setEditingMetadataKey(null);
@@ -952,6 +954,7 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         title="Location Metadata Fields"
         description="Project-level metadata schema for maps/locations."
         items={locationItems}
+        enableSearch={true}
         addLabel="Add Location Metadata"
         onAdd={() => {
           setEditingMetadataKey(null);
@@ -975,6 +978,7 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         title="Item Classes"
         description="Reusable templates that add extra property definitions to items."
         items={itemClassItems}
+        enableSearch={true}
         addLabel="Add Item Class"
         onAdd={() => {
           setEditingItemClassId(null);
@@ -996,6 +1000,7 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         title="Layer Definitions"
         description="Template layers automatically used by maps in this project."
         items={layerItems}
+        enableSearch={true}
         addLabel="Add Layer"
         onAdd={() => {
           setEditingLayerId(null);

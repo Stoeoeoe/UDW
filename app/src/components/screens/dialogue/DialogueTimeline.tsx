@@ -48,6 +48,24 @@ interface DialogueTimelineProps {
   handleDragEnd: (event: DragEndEvent) => void;
 }
 
+const DIALOGUE_SURFACES = {
+  defaultBg: '#242a34',
+  defaultBorder: '#3b4658',
+  defaultHoverBorder: '#556277',
+  selectedBorder: '#63b3ed',
+  commentBg: '#20252d',
+  commentBorder: '#4a5360',
+  actionBg: '#173024',
+  actionInnerBg: '#102218',
+  jumpBg: '#2a2618',
+  jumpLine: '#5c5431',
+  jumpChipBg: '#171406',
+  endBg: '#2d1b20',
+  endLine: '#6b2734',
+  choiceBg: '#252c37',
+  appendBg: '#202631',
+};
+
 export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
   selectedDialogue,
   selectedDialogueId,
@@ -83,7 +101,6 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
     );
   }
 
-  // Build top-level render groups
   type RenderGroup =
     | { kind: 'single'; node: DialogueNode; flatIndex: number }
     | {
@@ -109,18 +126,22 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
       i++;
       continue;
     }
+
     const choiceNode = node as DialogueChoiceNode;
     const branchMap = new Map<string, Array<{ node: DialogueNode; flatIndex: number }>>();
     for (const opt of choiceNode.options) branchMap.set(opt.id, []);
+
     let inner = i + 1;
     while (inner < selectedDialogue.nodes.length) {
       const child = selectedDialogue.nodes[inner];
       if (child.editor?.parentChoiceNodeId !== choiceNode.id) break;
       const optId = child.editor?.parentOptionId;
-      if (optId && branchMap.has(optId))
+      if (optId && branchMap.has(optId)) {
         branchMap.get(optId)!.push({ node: child, flatIndex: inner });
+      }
       inner++;
     }
+
     groups.push({
       kind: 'choice',
       choiceNode,
@@ -146,27 +167,29 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
     const isJump = node.type === 'jump';
     const isAction = node.type === 'action';
     const isEnd = node.type === 'end';
+
     const typeColor =
       node.type === 'line'
-        ? '#60a5fa'
+        ? 'blue.300'
         : node.type === 'choice'
-          ? '#a78bfa'
+          ? 'purple.300'
           : node.type === 'action'
-            ? '#34d399'
+            ? 'green.300'
             : node.type === 'jump'
-              ? '#fbbf24'
+              ? 'yellow.300'
               : node.type === 'comment'
-                ? '#6b7280'
-                : '#f87171';
+                ? 'gray.400'
+                : 'red.300';
+
     const cardBg = isComment
-      ? '#161618'
+      ? DIALOGUE_SURFACES.commentBg
       : isAction
-        ? '#141a14'
+        ? DIALOGUE_SURFACES.actionBg
         : isEnd
-          ? '#1a1212'
+          ? DIALOGUE_SURFACES.endBg
           : isJump
-            ? '#1a1a10'
-            : '#1e1e28';
+            ? DIALOGUE_SURFACES.jumpBg
+            : DIALOGUE_SURFACES.defaultBg;
 
     return (
       <Box
@@ -175,16 +198,23 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
         onClick={(e) => {
           e.stopPropagation();
           setSelectedNodeId(node.id);
-          if (isAction)
+          if (isAction) {
             setExpandedActionNodeIds((cur) => {
               const s = new Set(cur);
               s.has(node.id) ? s.delete(node.id) : s.add(node.id);
               return s;
             });
+          }
         }}
         border="1px"
         borderStyle={isComment ? 'dashed' : 'solid'}
-        borderColor={selected ? '#6c63ff' : isComment ? '#333' : '#2e2e3e'}
+        borderColor={
+          selected
+            ? DIALOGUE_SURFACES.selectedBorder
+            : isComment
+              ? DIALOGUE_SURFACES.commentBorder
+              : DIALOGUE_SURFACES.defaultBorder
+        }
         borderLeftWidth={branchMeta?.branchId ? '3px' : isComment ? '0px' : '3px'}
         borderLeftColor={
           branchMeta?.branchId
@@ -198,8 +228,13 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
         p={isComment ? 2 : 3}
         mb={2}
         cursor="pointer"
-        opacity={isComment ? 0.75 : 1}
-        _hover={{ borderColor: selected ? '#6c63ff' : '#555' }}
+        opacity={isComment ? 0.92 : 1}
+        boxShadow={selected ? '0 0 0 1px rgba(99, 179, 237, 0.22)' : 'none'}
+        _hover={{
+          borderColor: selected
+            ? DIALOGUE_SURFACES.selectedBorder
+            : DIALOGUE_SURFACES.defaultHoverBorder,
+        }}
       >
         <Flex align="center" gap={2} mb={isComment ? 1 : 2}>
           <Text
@@ -212,7 +247,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
           >
             {node.type}
           </Text>
-          <Text fontSize="11px" color="gray.400" fontFamily="mono">
+          <Text fontSize="11px" color="gray.300" fontFamily="mono">
             {node.id}
           </Text>
           {missingMsgKey && <WarningIcon color="orange.300" boxSize="10px" />}
@@ -239,10 +274,11 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
               if (!selectedDialogueId) return;
               updateDialogue(selectedDialogueId, (d) => {
                 const ids = new Set<string>([node.id]);
-                if (node.type === 'choice')
+                if (node.type === 'choice') {
                   for (const n of d.nodes) {
                     if (n.editor?.parentChoiceNodeId === node.id) ids.add(n.id);
                   }
+                }
                 return {
                   ...removeNodesWithCleanup(d, ids),
                   nodes: relinkLinearFlow(removeNodesWithCleanup(d, ids).nodes),
@@ -252,6 +288,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             }}
           />
         </Flex>
+
         {node.type === 'line' && (
           <VStack align="stretch" spacing={1}>
             {(node.speaker || node.emotion) && (
@@ -267,53 +304,65 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                   </Badge>
                 )}
                 {!!node.msgKey.trim() && (
-                  <Text fontSize="9px" color="gray.500" fontFamily="mono" noOfLines={1} ml="auto">
+                  <Text fontSize="9px" color="gray.400" fontFamily="mono" noOfLines={1} ml="auto">
                     {node.msgKey}
                   </Text>
                 )}
               </HStack>
             )}
-            <Text fontSize="12px" color="gray.200" noOfLines={3} lineHeight="1.5">
+            <Text fontSize="12px" color="gray.100" noOfLines={3} lineHeight="1.5">
               {node.text || (
-                <Text as="span" color="gray.600" fontStyle="italic">
+                <Text as="span" color="gray.400" fontStyle="italic">
                   (empty line)
                 </Text>
               )}
             </Text>
           </VStack>
         )}
+
         {isAction && (
-          <Box bg="#0d1a0d" borderRadius="sm" px={2} py={1} fontFamily="mono" fontSize="11px">
+          <Box
+            bg={DIALOGUE_SURFACES.actionInnerBg}
+            borderRadius="sm"
+            px={2}
+            py={1}
+            border="1px solid"
+            borderColor="green.900"
+            fontFamily="mono"
+            fontSize="11px"
+          >
             {expandedActionNodeIds.has(node.id) ? (
-              <Text color="green.200" whiteSpace="pre-wrap" noOfLines={8}>
+              <Text color="green.100" whiteSpace="pre-wrap" noOfLines={8}>
                 {node.lua || '(empty)'}
               </Text>
             ) : (
-              <Text color="green.400" noOfLines={1}>
+              <Text color="green.200" noOfLines={1}>
                 {node.lua ? node.lua.split('\n')[0] : '(empty)'}
               </Text>
             )}
           </Box>
         )}
+
         {isJump &&
           (() => {
             const isExternal = Boolean(node.targetDialogueId);
             const label = isExternal
-              ? `${node.targetDialogueId} › ${node.targetNodeId || '?'}`
+              ? `${node.targetDialogueId} > ${node.targetNodeId || '?'}`
               : node.targetNodeId || null;
             const canNavigate = !isExternal && !!node.targetNodeId;
             return (
               <Flex align="center" gap={2} mt={1}>
-                <Box flex={1} h="1px" bg="#3a3a20" />
+                <Box flex={1} h="1px" bg={DIALOGUE_SURFACES.jumpLine} />
                 <Box
                   px={3}
                   py={1}
-                  border="1px solid #fbbf24"
+                  border="1px solid"
+                  borderColor="yellow.400"
                   borderRadius="full"
-                  bg="#1a1a08"
+                  bg={DIALOGUE_SURFACES.jumpChipBg}
                   flexShrink={0}
                   cursor={canNavigate ? 'pointer' : 'default'}
-                  _hover={canNavigate ? { bg: '#2a2a10' } : {}}
+                  _hover={canNavigate ? { bg: '#26210c' } : {}}
                   onClick={(e) => {
                     if (!canNavigate) return;
                     e.stopPropagation();
@@ -323,14 +372,14 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                 >
                   <Flex align="center" gap={2}>
                     <Text fontSize="11px" color="yellow.300" fontFamily="mono" fontWeight="bold">
-                      ⟶
+                      {'->'}
                     </Text>
                     {label ? (
-                      <Text fontSize="11px" color="yellow.200" fontFamily="mono">
+                      <Text fontSize="11px" color="yellow.100" fontFamily="mono">
                         {label}
                       </Text>
                     ) : (
-                      <Text fontSize="11px" color="gray.500" fontStyle="italic">
+                      <Text fontSize="11px" color="gray.400" fontStyle="italic">
                         no target
                       </Text>
                     )}
@@ -341,22 +390,24 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                     )}
                   </Flex>
                 </Box>
-                <Box flex={1} h="1px" bg="#3a3a20" />
+                <Box flex={1} h="1px" bg={DIALOGUE_SURFACES.jumpLine} />
               </Flex>
             );
           })()}
+
         {isComment && (
-          <Text fontSize="11px" color="gray.500" fontStyle="italic" noOfLines={3}>
+          <Text fontSize="11px" color="gray.300" fontStyle="italic" noOfLines={3}>
             {node.text || '(empty comment)'}
           </Text>
         )}
+
         {isEnd && (
           <Flex align="center" gap={2}>
-            <Box w="full" h="1px" bg="red.900" />
-            <Text fontSize="10px" color="red.500" flexShrink={0} fontFamily="mono">
+            <Box w="full" h="1px" bg={DIALOGUE_SURFACES.endLine} />
+            <Text fontSize="10px" color="red.300" flexShrink={0} fontFamily="mono">
               END
             </Text>
-            <Box w="full" h="1px" bg="red.900" />
+            <Box w="full" h="1px" bg={DIALOGUE_SURFACES.endLine} />
           </Flex>
         )}
       </Box>
@@ -373,10 +424,10 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             variant="ghost"
             w="full"
             h="16px"
-            opacity={0}
-            _hover={{ opacity: 1 }}
+            opacity={0.28}
+            _hover={{ opacity: 1, color: 'gray.100', bg: 'editorHoverBg' }}
             fontSize="10px"
-            color="gray.500"
+            color="gray.400"
           >
             + insert
           </Button>
@@ -387,18 +438,18 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
   );
 
   return (
-    <VStack align="stretch" spacing={0} h="full" overflow="hidden">
+    <VStack align="stretch" spacing={0} h="full" overflow="hidden" bg="editorWorkspaceBg">
       <Flex
         px={4}
         py={2}
-        bg="#141418"
+        bg="editorSectionBg"
         borderBottom="1px"
-        borderColor="whiteAlpha.200"
+        borderColor="editorShellBorder"
         align="center"
         gap={2}
         minH="40px"
       >
-        <Text fontSize="13px" color="gray.100" fontWeight="semibold" flexShrink={0}>
+        <Text fontSize="13px" color="gray.50" fontWeight="semibold" flexShrink={0}>
           {selectedDialogue.name}
         </Text>
         <Badge colorScheme={selectedDialogue.oneShot ? 'purple' : 'green'} flexShrink={0}>
@@ -438,7 +489,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             onClick={() => setIsTimelineHeaderCollapsed((c) => !c)}
             title={isTimelineHeaderCollapsed ? 'Show metadata' : 'Hide metadata'}
           >
-            {isTimelineHeaderCollapsed ? '▸ info' : '▾ info'}
+            {isTimelineHeaderCollapsed ? '> info' : 'v info'}
           </Button>
         </HStack>
       </Flex>
@@ -478,15 +529,24 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                       setSelectedNodeId(choiceNode.id);
                     }}
                     border="1px solid"
-                    borderColor={choiceSelected ? '#6c63ff' : '#2e2e3e'}
+                    borderColor={
+                      choiceSelected
+                        ? DIALOGUE_SURFACES.selectedBorder
+                        : DIALOGUE_SURFACES.defaultBorder
+                    }
                     borderLeftWidth="3px"
-                    borderLeftColor="#a78bfa"
+                    borderLeftColor="purple.300"
                     borderRadius="md"
-                    bg="#1e1e28"
+                    bg={DIALOGUE_SURFACES.choiceBg}
                     p={3}
                     mb={0}
                     cursor="pointer"
-                    _hover={{ borderColor: choiceSelected ? '#6c63ff' : '#555' }}
+                    boxShadow={choiceSelected ? '0 0 0 1px rgba(99, 179, 237, 0.22)' : 'none'}
+                    _hover={{
+                      borderColor: choiceSelected
+                        ? DIALOGUE_SURFACES.selectedBorder
+                        : DIALOGUE_SURFACES.defaultHoverBorder,
+                    }}
                   >
                     <Flex align="center" gap={2} mb={1}>
                       <Text
@@ -494,12 +554,12 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                         fontWeight="bold"
                         textTransform="uppercase"
                         letterSpacing="0.1em"
-                        color="#a78bfa"
+                        color="purple.300"
                         flexShrink={0}
                       >
                         choice
                       </Text>
-                      <Text fontSize="11px" color="gray.400" fontFamily="mono">
+                      <Text fontSize="11px" color="gray.300" fontFamily="mono">
                         {choiceNode.id}
                       </Text>
                       {missingMsgKey && <WarningIcon color="orange.300" boxSize="10px" />}
@@ -548,9 +608,9 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                             borderColor={col}
                             pt={1}
                           >
-                            <Text fontSize="11px" color="gray.200" noOfLines={1}>
+                            <Text fontSize="11px" color="gray.100" noOfLines={1}>
                               {opt.text || (
-                                <Text as="span" color="gray.600" fontStyle="italic">
+                                <Text as="span" color="gray.400" fontStyle="italic">
                                   (empty)
                                 </Text>
                               )}
@@ -589,13 +649,18 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                                 w="full"
                                 h="18px"
                                 fontSize="9px"
-                                color="gray.600"
+                                color="gray.300"
+                                bg={DIALOGUE_SURFACES.appendBg}
                                 borderColor={col}
                                 borderWidth="1px"
                                 borderStyle="dashed"
                                 borderRadius="sm"
-                                _hover={{ color: 'gray.300', opacity: 1 }}
-                                opacity={0.5}
+                                _hover={{
+                                  color: 'gray.50',
+                                  opacity: 1,
+                                  bg: DIALOGUE_SURFACES.choiceBg,
+                                }}
+                                opacity={0.78}
                               >
                                 + append
                               </Button>
@@ -624,10 +689,10 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                 w="full"
                 h="24px"
                 fontSize="10px"
-                color="gray.500"
+                color="gray.300"
                 borderColor="whiteAlpha.200"
                 borderStyle="dashed"
-                _hover={{ color: 'gray.200', borderColor: 'whiteAlpha.400' }}
+                _hover={{ color: 'gray.50', borderColor: 'whiteAlpha.400', bg: 'editorHoverBg' }}
               >
                 + append node
               </Button>

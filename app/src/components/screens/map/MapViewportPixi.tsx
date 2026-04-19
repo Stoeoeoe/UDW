@@ -7,6 +7,7 @@ import { useMapRenderer } from './useMapRenderer';
 import { useMapTools } from './useMapTools';
 import { ZoomControls } from '../../common/ZoomControls';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
+import { EDITOR_CANVAS_HEX } from '../../../lib/editorColors';
 import { Map3DLayerView } from './Map3DLayerView';
 import { MapTestModeView } from './MapTestModeView';
 
@@ -51,7 +52,7 @@ export const MapViewportPixi: React.FC = () => {
       try {
         const app = new Application();
         await app.init({
-          background: '#0a0a0b',
+          background: EDITOR_CANVAS_HEX,
           resizeTo: container,
           antialias: false,
           resolution: window.devicePixelRatio || 1,
@@ -605,7 +606,7 @@ export const MapViewportPixi: React.FC = () => {
   }, [isReady, tilesets, loadedSprites, setMode, setActiveTileset, toast]);
 
   return (
-    <Box w="full" h="full" position="relative" overflow="hidden">
+    <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">
       <Box ref={containerRef} w="full" h="full" cursor={getCursor()} />
 
       {show3DLayerView && (

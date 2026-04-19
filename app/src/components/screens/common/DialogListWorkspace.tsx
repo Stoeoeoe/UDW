@@ -9,6 +9,7 @@ import {
   Badge,
   Flex,
   Tooltip,
+  Input,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 
@@ -33,6 +34,8 @@ interface DialogListWorkspaceProps {
   emptyTitle?: string;
   emptyDescription?: string;
   maxWidth?: string;
+  enableSearch?: boolean;
+  searchPlaceholder?: string;
 }
 
 export const DialogListWorkspace: React.FC<DialogListWorkspaceProps> = ({
@@ -47,7 +50,19 @@ export const DialogListWorkspace: React.FC<DialogListWorkspaceProps> = ({
   emptyTitle = 'No items yet',
   emptyDescription = 'Create your first item to get started.',
   maxWidth = '980px',
+  enableSearch = false,
+  searchPlaceholder,
 }) => {
+  const [search, setSearch] = React.useState('');
+  const normalizedQuery = search.trim().toLowerCase();
+  const visibleItems = normalizedQuery
+    ? items.filter((item) =>
+        [item.title, item.subtitle, item.id]
+          .filter(Boolean)
+          .some((value) => value!.toLowerCase().includes(normalizedQuery)),
+      )
+    : items;
+
   return (
     <Box h="full" overflowY="auto" px={6} py={5}>
       <VStack align="stretch" spacing={4} maxW={maxWidth} mx="auto">
@@ -80,38 +95,52 @@ export const DialogListWorkspace: React.FC<DialogListWorkspaceProps> = ({
           )}
         </Flex>
 
-        {items.length === 0 ? (
+        {enableSearch ? (
+          <Input
+            size="sm"
+            variant="compact"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={searchPlaceholder ?? `Search ${title.toLowerCase()}...`}
+          />
+        ) : null}
+
+        {visibleItems.length === 0 ? (
           <VStack
             spacing={2}
             align="center"
             justify="center"
             minH="320px"
             borderWidth="1px"
-            borderColor="#1a1a2e"
+            borderColor="editorInlineBorder"
             borderRadius="lg"
-            bg="#0a0a0b"
+            bg="editorInlineBg"
           >
             <Text fontSize="4xl">{emptyIcon}</Text>
             <Text color="gray.300" fontWeight="semibold">
-              {emptyTitle}
+              {items.length === 0 ? emptyTitle : `No ${title.toLowerCase()} match "${search}"`}
             </Text>
             <Text color="gray.600" fontSize="sm" textAlign="center" maxW="460px">
-              {emptyDescription}
+              {items.length === 0 ? emptyDescription : 'Try a different name or id.'}
             </Text>
           </VStack>
         ) : (
           <VStack spacing={2} align="stretch">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <Box
                 key={item.id}
                 px={4}
                 py={3}
                 borderWidth="1px"
-                borderColor="#1a1a2e"
+                borderColor="editorInlineBorder"
                 borderRadius="md"
-                bg="#0a0a0b"
+                bg="editorInlineBg"
                 cursor={onOpenItem ? 'pointer' : 'default'}
-                _hover={onOpenItem ? { borderColor: '#2c4f73', bg: '#0b1016' } : undefined}
+                _hover={
+                  onOpenItem
+                    ? { borderColor: 'editorFieldBorderHover', bg: 'editorInlineHoverBg' }
+                    : undefined
+                }
                 onClick={() => onOpenItem?.(item.id)}
                 role={onOpenItem ? 'button' : undefined}
               >

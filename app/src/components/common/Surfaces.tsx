@@ -23,7 +23,7 @@ export const EditorCard: React.FC<BoxProps> = ({
   </Box>
 );
 
-export interface SurfaceSectionHeaderProps extends BoxProps {
+export interface SurfaceSectionHeaderProps extends Omit<BoxProps, 'title'> {
   title: React.ReactNode;
   actions?: React.ReactNode;
 }

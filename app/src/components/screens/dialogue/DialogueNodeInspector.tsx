@@ -107,9 +107,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Name</FieldLabel>
             <Input
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedDialogue.name}
               onChange={(event) =>
                 updateDialogue(selectedDialogue.id, (dialogue) => ({
@@ -138,9 +135,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Tags (comma separated)</FieldLabel>
             <Input
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedDialogue.tags.join(', ')}
               onChange={(event) =>
                 updateDialogue(selectedDialogue.id, (dialogue) => ({
@@ -189,9 +183,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Speaker</FieldLabel>
             <Select
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedNode.speaker ?? ''}
               onChange={(event) => {
                 const actorId = event.target.value || undefined;
@@ -206,11 +197,9 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
                 });
               }}
             >
-              <option value="" style={{ background: '#0a0a0b' }}>
-                Narrator
-              </option>
+              <option value="">Narrator</option>
               {actors.map((actor) => (
-                <option key={actor.id} value={actor.id} style={{ background: '#0a0a0b' }}>
+                <option key={actor.id} value={actor.id}>
                   {actor.name}
                 </option>
               ))}
@@ -221,9 +210,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Emotion</FieldLabel>
             <Select
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedNode.emotion ?? ''}
               onChange={(event) =>
                 updateSelectedNode((node) => {
@@ -235,12 +221,10 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
                 })
               }
             >
-              <option value="" style={{ background: '#0a0a0b' }}>
-                None
-              </option>
+              <option value="">None</option>
               {(actors.find((actor) => actor.id === selectedNode.speaker)?.emotions ?? []).map(
                 (emotion) => (
-                  <option key={emotion} value={emotion} style={{ background: '#0a0a0b' }}>
+                  <option key={emotion} value={emotion}>
                     {emotion}
                   </option>
                 ),
@@ -252,9 +236,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Message Key</FieldLabel>
             <Input
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedNode.msgKey}
               onChange={(event) =>
                 updateSelectedNode((node) => {
@@ -274,9 +255,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Text</FieldLabel>
             <Textarea
               minH="110px"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedNode.text}
               onChange={(event) =>
                 updateSelectedNode((node) => {
@@ -361,9 +339,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
                 <VStack align="stretch" spacing={2}>
                   <Input
                     size="xs"
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
                     value={option.text}
                     onChange={(event) =>
                       updateChoiceOption(selectedNode.id, option.id, (item) => ({
@@ -376,9 +351,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
 
                   <Input
                     size="xs"
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
                     value={option.msgKey}
                     onChange={(event) =>
                       updateChoiceOption(selectedNode.id, option.id, (item) => ({
@@ -396,9 +368,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
 
                   <Input
                     size="xs"
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
                     value={option.condition ?? ''}
                     onChange={(event) =>
                       updateChoiceOption(selectedNode.id, option.id, (item) => ({
@@ -411,9 +380,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
 
                   <Select
                     size="xs"
-                    bg="#0a0a0b"
-                    borderColor="#1a1a2e"
-                    color="white"
                     value={option.targetNodeId}
                     onChange={(event) => {
                       const targetNodeId = event.target.value;
@@ -433,11 +399,9 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
                       }));
                     }}
                   >
-                    <option value="" style={{ background: '#0a0a0b' }}>
-                      Select target node
-                    </option>
+                    <option value="">Select target node</option>
                     {dialogueNodeTargets.map((nodeId) => (
-                      <option key={nodeId} value={nodeId} style={{ background: '#0a0a0b' }}>
+                      <option key={nodeId} value={nodeId}>
                         {nodeId}
                       </option>
                     ))}
@@ -501,7 +465,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
 
           <FormControl>
             <FieldLabel>Lua Script</FieldLabel>
-            <Box border="1px" borderColor="#1a1a2e" borderRadius="md" overflow="hidden">
+            <Box border="1px" borderColor="editorInlineBorder" borderRadius="md" overflow="hidden">
               <LuaScriptEditor
                 value={selectedNode.lua}
                 height="220px"
@@ -554,9 +518,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Target Dialogue</FieldLabel>
             <Select
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedNode.targetDialogueId ?? ''}
               onChange={(event) =>
                 updateSelectedNode((node) => {
@@ -569,13 +530,11 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
                 })
               }
             >
-              <option value="" style={{ background: '#0a0a0b' }}>
-                Current dialogue
-              </option>
+              <option value="">Current dialogue</option>
               {Array.from(dialogues.values())
                 .filter((dialogue) => dialogue.id !== selectedDialogue.id)
                 .map((dialogue) => (
-                  <option key={dialogue.id} value={dialogue.id} style={{ background: '#0a0a0b' }}>
+                  <option key={dialogue.id} value={dialogue.id}>
                     {dialogue.name}
                   </option>
                 ))}
@@ -586,9 +545,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
             <FieldLabel>Target Node</FieldLabel>
             <Select
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               value={selectedNode.targetNodeId}
               onChange={(event) =>
                 updateSelectedNode((node) => {
@@ -600,13 +556,11 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
                 })
               }
             >
-              <option value="" style={{ background: '#0a0a0b' }}>
-                Select target node
-              </option>
+              <option value="">Select target node</option>
               {(dialogues.get(selectedNode.targetDialogueId || selectedDialogue.id)?.nodes ?? [])
                 .filter((node) => node.type !== 'comment')
                 .map((node) => (
-                  <option key={node.id} value={node.id} style={{ background: '#0a0a0b' }}>
+                  <option key={node.id} value={node.id}>
                     {node.id}
                   </option>
                 ))}
@@ -634,9 +588,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
 
           <Textarea
             minH="120px"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
             value={selectedNode.text}
             onChange={(event) =>
               updateSelectedNode((node) => {

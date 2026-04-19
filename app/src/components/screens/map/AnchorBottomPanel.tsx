@@ -32,7 +32,7 @@ export const AnchorBottomPanel: React.FC = () => {
   };
 
   return (
-    <Flex direction="column" h="full" overflow="hidden" bg="editor.panelBg">
+    <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
       <PanelHeader
         title="Anchors"
         actions={

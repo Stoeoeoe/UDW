@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, VStack, HStack, Text, IconButton, Flex, Tooltip } from '@chakra-ui/react';
+import { Box, VStack, HStack, Text, IconButton, Flex, Tooltip, Input } from '@chakra-ui/react';
 import PanelHeader from '../../../components/common/PanelHeader';
 import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 
@@ -45,6 +45,8 @@ export interface ListPanelProps {
   onDeleteItem?: (item: ListPanelItem) => void;
   editActionLabel?: string;
   deleteActionLabel?: string;
+  enableSearch?: boolean;
+  searchPlaceholder?: string;
 }
 
 export const ListPanel: React.FC<ListPanelProps> = ({
@@ -63,7 +65,11 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   onDeleteItem,
   editActionLabel = 'Edit',
   deleteActionLabel = 'Delete',
+  enableSearch = false,
+  searchPlaceholder,
 }) => {
+  const [search, setSearch] = React.useState('');
+
   React.useEffect(() => {
     if (!onSelect || !autoSelectFirst) return;
     if (!items || items.length === 0) return;
@@ -72,6 +78,15 @@ export const ListPanel: React.FC<ListPanelProps> = ({
       onSelect(items[0].id);
     }
   }, [items, selectedId, onSelect, autoSelectFirst]);
+
+  const normalizedQuery = search.trim().toLowerCase();
+  const visibleItems = normalizedQuery
+    ? items.filter((item) =>
+        [item.label, item.sublabel, item.id]
+          .filter(Boolean)
+          .some((value) => value!.toLowerCase().includes(normalizedQuery)),
+      )
+    : items;
 
   return (
     <Flex direction="column" h="full" overflow="hidden">
@@ -97,20 +112,35 @@ export const ListPanel: React.FC<ListPanelProps> = ({
       />
 
       {/* Items */}
-      {topContent && (
-        <Box px={2} py={2} borderBottom="1px" borderColor="editor.border">
+      {(enableSearch || topContent) && (
+        <Box px={2} py={2} borderBottom="1px" borderColor="editorShellBorder" bg="editorSectionBg">
+          {enableSearch && (
+            <Input
+              mb={topContent ? 2 : 0}
+              size="xs"
+              variant="compact"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={searchPlaceholder ?? `Search ${title.toLowerCase()}...`}
+              pl={8}
+              backgroundImage={`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23718096' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6.05 6.05a7.5 7.5 0 0 0 10.6 10.6Z'/%3E%3C/svg%3E")`}
+              backgroundRepeat="no-repeat"
+              backgroundPosition="8px center"
+              backgroundSize="12px"
+            />
+          )}
           {topContent}
         </Box>
       )}
 
       <Box flex={1} overflowY="auto" p={1}>
-        {items.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <Text fontSize="xs" color="gray.600" textAlign="center" mt={4} fontStyle="italic">
-            {emptyMessage}
+            {items.length === 0 ? emptyMessage : `No ${title.toLowerCase()} match "${search}"`}
           </Text>
         ) : (
           <VStack spacing={1} align="stretch">
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const isSelected = item.id === selectedId;
               const resolvedActions: ListPanelAction[] = [
                 ...(onEditItem
@@ -155,10 +185,10 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                   rounded="md"
                   cursor={item.disabled ? 'not-allowed' : 'pointer'}
                   opacity={item.disabled ? 0.5 : 1}
-                  bg={isSelected ? 'blue.900' : 'transparent'}
+                  bg={isSelected ? 'blue.900' : 'blackAlpha.100'}
                   border="1px"
-                  borderColor={isSelected ? 'blue.500' : 'transparent'}
-                  _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.50' }}
+                  borderColor={isSelected ? 'blue.500' : 'whiteAlpha.50'}
+                  _hover={{ bg: isSelected ? 'blue.900' : 'whiteAlpha.100' }}
                   onClick={() => !item.disabled && onSelect?.(item.id)}
                   transition="all 0.1s"
                   role="group"

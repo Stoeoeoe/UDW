@@ -649,9 +649,8 @@ export const DialogueEditor: React.FC = () => {
           value={search}
           placeholder="Filter..."
           onChange={(event) => setSearch(event.target.value)}
-          bg="#222228"
-          borderColor="#333"
-          color="gray.100"
+          bg="editorInlineBg"
+          borderColor="editorInlineBorder"
         />
       }
       itemActions={(item) => [
@@ -680,7 +679,7 @@ export const DialogueEditor: React.FC = () => {
 
   const settingsContent = (
     <VStack align="stretch" spacing={4} p={4}>
-      <Box p={3} border="1px" borderColor="whiteAlpha.200" borderRadius="md" bg="#17171c">
+      <Box p={3} border="1px" borderColor="whiteAlpha.200" borderRadius="md" bg="editorPanelBg">
         <Text fontSize="12px" color="gray.200" mb={2}>
           Dialogue Settings
         </Text>
@@ -688,9 +687,6 @@ export const DialogueEditor: React.FC = () => {
           <FieldLabel>Default Lua Context (`self`)</FieldLabel>
           <Select
             size="sm"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
             value={dialogueIndex.defaultContextTypeId ?? ''}
             onChange={(event) => {
               const next = {
@@ -702,11 +698,9 @@ export const DialogueEditor: React.FC = () => {
               queueSave();
             }}
           >
-            <option value="" style={{ background: '#0a0a0b' }}>
-              None
-            </option>
+            <option value="">None</option>
             {scriptContextTypes.map((contextType) => (
-              <option key={contextType.id} value={contextType.id} style={{ background: '#0a0a0b' }}>
+              <option key={contextType.id} value={contextType.id}>
                 {contextType.name}
               </option>
             ))}
@@ -714,7 +708,7 @@ export const DialogueEditor: React.FC = () => {
         </FormControl>
       </Box>
 
-      <Box p={3} border="1px" borderColor="whiteAlpha.200" borderRadius="md" bg="#17171c">
+      <Box p={3} border="1px" borderColor="whiteAlpha.200" borderRadius="md" bg="editorPanelBg">
         <Text fontSize="11px" color="gray.500">
           Save behavior: auto-save after edits and when editor loses focus.
         </Text>
@@ -746,13 +740,13 @@ export const DialogueEditor: React.FC = () => {
     );
 
   const content = (
-    <VStack align="stretch" spacing={0} h="full">
+    <VStack align="stretch" spacing={0} h="full" bg="editorWorkspaceBg">
       <Flex
         align="center"
         gap={2}
         px={4}
         h="40px"
-        bg="#141418"
+        bg="editorHeaderBg"
         borderBottom="1px"
         borderColor="whiteAlpha.200"
       >
@@ -796,6 +790,7 @@ export const DialogueEditor: React.FC = () => {
           title: 'Dialogues',
           subtitle: `${dialogueIndex.dialogues.length} dialogue${dialogueIndex.dialogues.length === 1 ? '' : 's'}${isDirty ? ' (dirty)' : ''}`,
         }}
+        viewportBackground={false}
         content={content}
         leftPanel={leftPanel}
         rightPanel={
@@ -822,7 +817,7 @@ export const DialogueEditor: React.FC = () => {
             />
           ) : undefined
         }
-        leftPanelDefaultSize={20}
+        leftPanelDefaultSize={18}
         rightPanelDefaultSize={28}
       />
 

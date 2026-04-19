@@ -33,13 +33,13 @@ export function TopTabbedEditorLayout<T extends string>({
       <HStack
         px={4}
         h="10"
-        bg="#03040a"
+        bg="editorPanelBg"
         borderBottom="1px"
-        borderColor="#071018"
+        borderColor="editorShellBorder"
         flexShrink={0}
         spacing={1}
       >
-        <Text fontWeight="bold" fontSize="sm" color="white" mr={3}>
+        <Text fontWeight="bold" fontSize="sm" color="editorText" mr={3}>
           {title}
         </Text>
         {tabs.map((tab) => {
@@ -66,7 +66,7 @@ export function TopTabbedEditorLayout<T extends string>({
                   ml={1}
                   fontSize="9px"
                   colorScheme={isActive ? 'blue' : 'gray'}
-                  variant="subtle"
+                  variant="editor"
                 >
                   {count}
                 </Badge>
@@ -89,9 +89,9 @@ export function TopTabbedEditorLayout<T extends string>({
             w={sidebarWidth}
             flexShrink={0}
             borderLeft="1px"
-            borderColor="#071018"
+            borderColor="editorShellBorder"
             overflowY="auto"
-            bg="#05060a"
+            bg="editorHeaderBg"
           >
             {sidebarContent}
           </Box>

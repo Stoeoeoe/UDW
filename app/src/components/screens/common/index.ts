@@ -20,3 +20,9 @@ export type { TopTabbedEditorTab } from './TopTabbedEditorLayout';
 
 export { DialogListWorkspace } from './DialogListWorkspace';
 export type { DialogListItem } from './DialogListWorkspace';
+
+export { EditorWorkspaceShell } from '../../common/EditorWorkspaceShell';
+export type { EditorWorkspaceShellProps } from '../../common/EditorWorkspaceShell';
+
+export { InspectorShell } from '../../common/InspectorShell';
+export type { InspectorShellProps } from '../../common/InspectorShell';

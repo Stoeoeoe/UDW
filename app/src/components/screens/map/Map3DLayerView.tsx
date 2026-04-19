@@ -26,6 +26,7 @@ import {
 import { FiRefreshCw } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
+import { EDITOR_CANVAS_HEX } from '../../../lib/editorColors';
 import type { Layer } from '../../../types/schema';
 import { bakeLayerCanvas, configurePixelArtTexture, getRenderableMapLayers } from './mapThreeUtils';
 
@@ -74,11 +75,11 @@ function createScene(canvas: HTMLCanvasElement, w: number, h: number): SceneStat
   });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(w, h, false);
-  renderer.setClearColor(0x0a0a0b);
+  renderer.setClearColor(EDITOR_CANVAS_HEX);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x0a0a0b, 800, 2000);
+  scene.fog = new THREE.Fog(EDITOR_CANVAS_HEX, 800, 2000);
 
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 3000);
 
@@ -412,7 +413,7 @@ export const Map3DLayerView: React.FC = () => {
   const visibleLayers = getRenderableMapLayers(layers);
 
   return (
-    <Box w="full" h="full" position="relative" overflow="hidden" bg="#0a0a0b">
+    <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">
       {/* Three.js canvas — fills container */}
       <Box ref={containerRef} w="full" h="full">
         <canvas

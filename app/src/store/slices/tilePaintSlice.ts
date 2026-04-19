@@ -189,7 +189,7 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
             else if (tileIdx === null) {
               setTileInState(currentMap, activeVariationId, layerId, x, y, null);
             }
-          } else if (tileIndex !== undefined && tileIndex !== null) {
+          } else if (tilesetId && tileIndex !== undefined && tileIndex !== null) {
             setTileInState(
               currentMap,
               activeVariationId,

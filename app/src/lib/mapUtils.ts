@@ -53,7 +53,7 @@ export function resolveTileAt(
   for (const context of chain) {
     if (context === 'base') {
       const layer = map.layers.find((l) => l.id === layerId);
-      const cell = layer?.data[y]?.[x];
+      const cell = layer?.data?.[y]?.[x];
       if (cell === null || cell === undefined) return null;
       if (typeof cell === 'string') return cell;
       return decodeTileRef(cell, map.tilesetRefs);

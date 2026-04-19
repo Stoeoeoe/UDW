@@ -253,10 +253,10 @@ export const VariationManager: React.FC = () => {
       <Flex
         p="3"
         borderBottom="1px"
-        borderColor="editor.border"
+        borderColor="editorShellBorder"
         align="center"
         justify="space-between"
-        bg="editor.headerBg"
+        bg="editorSectionBg"
       >
         <HStack spacing={2} align="center">
           <Text
@@ -277,7 +277,7 @@ export const VariationManager: React.FC = () => {
               if (!val) setActiveVariation(null);
               else setActiveVariation(val);
             }}
-            bg="editor.headerBg"
+            bg="editorSectionBg"
             borderColor="transparent"
             color="gray.300"
             width="220px"
@@ -356,7 +356,7 @@ export const VariationManager: React.FC = () => {
 
                 return (
                   <Box key={season.id}>
-                    <Text fontSize="9px" color="gray.600" px={2} py={0.5} fontStyle="italic">
+                    <Text fontSize="9px" color="gray.500" px={2} py={0.5} fontStyle="italic">
                       Under {season.displayName}:
                     </Text>
                     {children.map((child) => renderVariationItem(child, 1))}

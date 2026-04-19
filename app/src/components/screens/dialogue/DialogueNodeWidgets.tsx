@@ -37,7 +37,7 @@ export const NodeTypeMenu: React.FC<{
   return (
     <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} placement={placement} isLazy>
       <PopoverTrigger>{trigger}</PopoverTrigger>
-      <PopoverContent w="150px" bg="#1e1e24" borderColor="#333">
+      <PopoverContent w="150px" bg="editorPanelBg" borderColor="editorShellBorder">
         <PopoverBody p={1}>
           <VStack align="stretch" spacing={0}>
             {NODE_TYPES_MENU.map(([type, label]) => (
@@ -122,9 +122,8 @@ export const NodeIdField: React.FC<{
       <FieldLabel>Node ID</FieldLabel>
       <Input
         size="xs"
-        bg="#0a0a0b"
-        borderColor={isDuplicate ? 'red.500' : '#1a1a2e'}
-        color="white"
+        bg="editorInlineBg"
+        borderColor={isDuplicate ? 'red.500' : 'editorInlineBorder'}
         fontFamily="mono"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

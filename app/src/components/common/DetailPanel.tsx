@@ -8,22 +8,34 @@ interface DetailPanelProps extends BoxProps {
 
 export const DetailPanel: React.FC<DetailPanelProps> = ({
   children,
-  maxWidth = '900px',
+  maxWidth = '1120px',
   ...rest
 }) => (
-  <Box h="full" overflowY="auto" p={6} {...rest}>
-    <Box
-      w="80%"
-      maxW={maxWidth}
-      mx="auto"
-      bg="editor.panelBg"
-      border="1px"
-      padding={5}
-      borderColor="whiteAlpha.100"
-      borderRadius="lg"
-      overflow="hidden"
-    >
-      {children}
+  <Box
+    h="full"
+    overflowY="auto"
+    px={{ base: 5, md: 8 }}
+    py={{ base: 5, md: 7 }}
+    bg="editorWorkspaceBg"
+    {...rest}
+  >
+    <Box w="full" maxW="1280px" mr="auto">
+      <Box
+        w="full"
+        maxW={maxWidth}
+        mr="auto"
+        ml={0}
+        bg="editorPanelBg"
+        border="1px"
+        borderColor="editorBorderSubtle"
+        borderRadius="xl"
+        px={{ base: 5, md: 7 }}
+        py={{ base: 5, md: 6 }}
+        boxShadow="0 18px 40px rgba(0, 0, 0, 0.18)"
+        overflow="hidden"
+      >
+        {children}
+      </Box>
     </Box>
   </Box>
 );

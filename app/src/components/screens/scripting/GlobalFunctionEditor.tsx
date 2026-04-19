@@ -49,9 +49,8 @@ const ParamRow: React.FC<{
   <HStack spacing={1}>
     <Input
       size="xs"
-      bg="#05060a"
-      borderColor="#1a1a2e"
-      color="white"
+      bg="editorFieldBg"
+      borderColor="editorInlineBorder"
       fontFamily="mono"
       value={param.name}
       onChange={(e) => onChange({ name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
@@ -60,15 +59,14 @@ const ParamRow: React.FC<{
     />
     <Select
       size="xs"
-      bg="#05060a"
-      borderColor="#1a1a2e"
-      color="white"
+      bg="editorFieldBg"
+      borderColor="editorInlineBorder"
       value={param.type}
       w="90px"
       onChange={(e) => onChange({ type: e.target.value as ScriptPrimitiveType })}
     >
       {PARAM_TYPES.map((t) => (
-        <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+        <option key={t.value} value={t.value}>
           {t.label}
         </option>
       ))}
@@ -152,9 +150,8 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
           </SectionLabel>
           <Input
             size="xs"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
+            bg="editorInlineBg"
+            borderColor="editorInlineBorder"
             fontFamily="mono"
             value={fn.name}
             onChange={(e) =>
@@ -169,9 +166,8 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
           </SectionLabel>
           <Select
             size="xs"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
+            bg="editorInlineBg"
+            borderColor="editorInlineBorder"
             value={fn.returnType}
             onChange={(e) => {
               const nextReturnType = e.target.value as ScriptPrimitiveType;
@@ -182,7 +178,7 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
             }}
           >
             {RETURN_TYPES.map((t) => (
-              <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+              <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
@@ -191,17 +187,14 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
             <Select
               mt={2}
               size="xs"
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
+              bg="editorInlineBg"
+              borderColor="editorInlineBorder"
               value={fn.returnTableId ?? ''}
               onChange={(e) => onUpdate(fn.id, { returnTableId: e.target.value || undefined })}
             >
-              <option value="" style={{ background: '#0a0a0b' }}>
-                - select table -
-              </option>
+              <option value="">- select table -</option>
               {tables.map((table) => (
-                <option key={table.id} value={table.id} style={{ background: '#0a0a0b' }}>
+                <option key={table.id} value={table.id}>
                   {table.name}
                 </option>
               ))}
@@ -245,9 +238,8 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
           </SectionLabel>
           <Input
             size="xs"
-            bg="#0a0a0b"
-            borderColor="#1a1a2e"
-            color="white"
+            bg="editorInlineBg"
+            borderColor="editorInlineBorder"
             value={fn.description ?? ''}
             onChange={(e) => onUpdate(fn.id, { description: e.target.value || undefined })}
             placeholder="Optional"

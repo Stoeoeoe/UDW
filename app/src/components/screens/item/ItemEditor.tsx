@@ -8,11 +8,8 @@ import {
   Input,
   NumberDecrementStepper,
   NumberIncrementStepper,
-  NumberInput,
-  NumberInputField,
   NumberInputStepper,
   Select,
-  Text,
   Textarea,
   useDisclosure,
   VStack,
@@ -22,9 +19,9 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
 import { DetailPanel } from '../../common/DetailPanel';
-import { useFilteredList } from '../../../hooks/useFilteredList';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { CompactNumberInput, FieldStack, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { SectionLabel } from '../../common/Typography.tsx';
 import { ComboboxInput } from '../../common/ComboboxInput';
@@ -41,7 +38,6 @@ export const ItemEditor: React.FC = () => {
   const deleteItem = useEditorStore((state) => state.deleteItem);
   const addItem = useEditorStore((state) => state.addItem);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [search, setSearch] = React.useState('');
 
   const selectedItem = items.find((i) => i.id === selectedItemId);
 
@@ -64,8 +60,6 @@ export const ItemEditor: React.FC = () => {
     [items],
   );
 
-  const filteredItems = useFilteredList(listItems, search);
-
   const deleteItemById = async (id: string, name: string) => {
     if (!confirm(`Delete item "${name}"?`)) return;
     await deleteItem(id);
@@ -74,23 +68,13 @@ export const ItemEditor: React.FC = () => {
   const leftPanel = (
     <ListPanel
       title="Items"
-      items={filteredItems}
+      items={listItems}
       selectedId={selectedItemId}
       onSelect={setSelectedItem}
       onAdd={onOpen}
       autoSelectFirst={true}
       emptyMessage="No items defined"
-      topContent={
-        <Input
-          size="xs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search items..."
-          bg="#0a0a0b"
-          borderColor="#333"
-          color="gray.100"
-        />
-      }
+      enableSearch={true}
       onDeleteItem={async (listItem) => {
         const item = items.find((entry) => entry.id === listItem.id);
         if (!item) return;
@@ -229,12 +213,10 @@ const ItemDetail: React.FC<{
       }}
     >
       <VStack align="stretch" spacing={5}>
-        <VStack align="stretch" spacing={3}>
+        <FieldStack>
           <FormControl>
             <FieldLabel>ID</FieldLabel>
-            <Text fontSize="xs" fontFamily="mono" color="gray.400">
-              {item.id}
-            </Text>
+            <ReadOnlyIdField value={item.id} />
           </FormControl>
 
           <form.Field name="name">
@@ -243,8 +225,6 @@ const ItemDetail: React.FC<{
                 <FieldLabel>Name</FieldLabel>
                 <Input
                   size="sm"
-                  bg="gray.950"
-                  color="white"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -259,8 +239,6 @@ const ItemDetail: React.FC<{
                 <FieldLabel>Category</FieldLabel>
                 <ComboboxInput
                   size="sm"
-                  bg="gray.950"
-                  color="white"
                   placeholder="e.g. Consumable, Weapon, Tool"
                   value={field.state.value}
                   options={knownCategories}
@@ -278,8 +256,6 @@ const ItemDetail: React.FC<{
                   <FieldLabel>Item Class</FieldLabel>
                   <Select
                     size="sm"
-                    bg="gray.950"
-                    color="white"
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -302,8 +278,6 @@ const ItemDetail: React.FC<{
                 <FieldLabel>Description</FieldLabel>
                 <Textarea
                   size="sm"
-                  bg="gray.950"
-                  color="white"
                   rows={4}
                   resize="vertical"
                   value={field.state.value}
@@ -318,25 +292,23 @@ const ItemDetail: React.FC<{
             {(field) => (
               <FormControl>
                 <FieldLabel>Max Stack Size</FieldLabel>
-                <NumberInput
-                  size="sm"
+                <CompactNumberInput
                   min={1}
                   value={field.state.value}
                   onChange={(_, val) => field.handleChange(isNaN(val) ? 1 : val)}
                   onBlur={field.handleBlur}
                 >
-                  <NumberInputField bg="gray.950" color="white" />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
                   </NumberInputStepper>
-                </NumberInput>
+                </CompactNumberInput>
               </FormControl>
             )}
           </form.Field>
-        </VStack>
+        </FieldStack>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <VStack align="stretch" spacing={3}>
           <SectionLabel>Assets</SectionLabel>
@@ -348,8 +320,6 @@ const ItemDetail: React.FC<{
                 <HStack spacing={2}>
                   <Input
                     size="sm"
-                    bg="gray.950"
-                    color="white"
                     fontFamily="mono"
                     placeholder="assets/icons/my-item.png"
                     value={field.state.value}
@@ -378,8 +348,6 @@ const ItemDetail: React.FC<{
                 <HStack spacing={2}>
                   <Input
                     size="sm"
-                    bg="gray.950"
-                    color="white"
                     fontFamily="mono"
                     placeholder="assets/audio/pickup.wav"
                     value={field.state.value}
@@ -419,7 +387,7 @@ const ItemDetail: React.FC<{
             if (!selectedClass || selectedClass.properties.length === 0) return null;
             return (
               <>
-                <Divider borderColor="#071018" />
+                <Divider />
                 <VStack align="stretch" spacing={3}>
                   <SectionLabel>{selectedClass.name} Properties</SectionLabel>
                   <form.Field name="classProperties">
@@ -439,7 +407,7 @@ const ItemDetail: React.FC<{
           }}
         </form.Subscribe>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <HStack justify="space-between">
           <Button

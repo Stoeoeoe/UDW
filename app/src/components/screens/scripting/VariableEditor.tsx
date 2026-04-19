@@ -79,10 +79,8 @@ export const VariableListEditorSingle: React.FC<{
   variable: GameVariable;
   tables: ScriptTable[];
   onUpdate: (key: string, updates: Partial<GameVariable>) => void;
-  onDelete: (key: string) => void;
   onMove: (key: string, direction: -1 | 1) => void;
-}> = ({ variable: v, tables, onUpdate, onDelete, onMove }) => {
-  const typeInfo = VARIABLE_TYPES.find((t) => t.value === v.type)!;
+}> = ({ variable: v, tables, onUpdate, onMove }) => {
   return (
     <VStack spacing={3} align="stretch" p={4}>
       <Box>
@@ -302,7 +300,7 @@ const ScriptTester: React.FC<{
   const activeContext = contextTypes.find((ct) => ct.id === selectedContext);
 
   return (
-    <Box borderTop="1px" borderColor="#071018" bg="#03040a" flexShrink={0}>
+    <Box borderTop="1px" borderColor="editorShellBorder" bg="editorPanelBg" flexShrink={0}>
       <HStack
         px={3}
         py={1.5}
@@ -608,6 +606,7 @@ export const VariableEditor: React.FC = () => {
             title="Variables"
             description="Lua-exposed runtime variables. Click an entry to edit it."
             items={variableItems}
+            enableSearch={true}
             addLabel="Add Variable"
             onAdd={handleAddItem}
             onOpenItem={openEditDialog}
@@ -623,6 +622,7 @@ export const VariableEditor: React.FC = () => {
             title="Tables"
             description="Reusable table schemas used by variables, namespaces, and context types."
             items={tableItems}
+            enableSearch={true}
             addLabel="Add Table"
             onAdd={handleAddItem}
             onOpenItem={openEditDialog}
@@ -638,6 +638,7 @@ export const VariableEditor: React.FC = () => {
             title="Global Functions"
             description="Callable functions available anywhere in the Lua sandbox."
             items={functionItems}
+            enableSearch={true}
             addLabel="Add Function"
             onAdd={handleAddItem}
             onOpenItem={openEditDialog}
@@ -653,6 +654,7 @@ export const VariableEditor: React.FC = () => {
             title="Namespaces"
             description="Singleton script APIs such as weather, camera, and audio systems."
             items={namespaceItems}
+            enableSearch={true}
             addLabel="Add Namespace"
             onAdd={handleAddItem}
             onOpenItem={openEditDialog}
@@ -668,6 +670,7 @@ export const VariableEditor: React.FC = () => {
             title="Context Types"
             description="Defines the shape of self for script execution contexts."
             items={contextItems}
+            enableSearch={true}
             addLabel="Add Context"
             onAdd={handleAddItem}
             onOpenItem={openEditDialog}
@@ -706,7 +709,6 @@ export const VariableEditor: React.FC = () => {
               variable={variable}
               tables={s.scriptTables}
               onUpdate={handleUpdateGameVariable}
-              onDelete={s.deleteGameVariable}
               onMove={handleMove}
             />
           </Box>

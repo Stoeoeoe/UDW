@@ -13,9 +13,9 @@ export interface PanelHeaderProps {
 export const PanelHeader: React.FC<PanelHeaderProps> = ({ label, title, subtitle, actions }) => {
   return (
     <Box
-      bg="editor.headerBg"
+      bg="editorHeaderBg"
       borderBottom="1px"
-      borderColor="editor.border"
+      borderColor="editorShellBorder"
       px={4}
       py={3}
       flexShrink={0}

@@ -108,16 +108,16 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
   };
 
   return (
-    <Flex direction="column" h="full" bg="editor.panelBg" color="gray.200" overflow="hidden">
+    <Flex direction="column" h="full" bg="editorPanelBg" color="gray.200" overflow="hidden">
       {/* Maps List Section */}
       <Box flex="0 0 auto">
         <Flex
           p="3"
           borderBottom="1px"
-          borderColor="editor.border"
+          borderColor="editorShellBorder"
           align="center"
           justify="space-between"
-          bg="editor.headerBg"
+          bg="editorSectionBg"
           cursor="pointer"
           _hover={{ bg: 'whiteAlpha.50' }}
           onClick={() => setMapsCollapsed(!mapsCollapsed)}
@@ -158,7 +158,7 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
         </Flex>
 
         {!mapsCollapsed && (
-          <Box maxH="200px" overflowY="auto" p={1}>
+          <Box maxH="200px" overflowY="auto" p={1} bg="editorPanelBg">
             <VStack spacing={0} align="stretch">
               {maps.length === 0 && (
                 <Text fontSize="xs" color="gray.600" textAlign="center" py={4} fontStyle="italic">
@@ -256,7 +256,7 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
       {showEditingPanels && (
         <>
           {/* Divider */}
-          <Box borderBottom="1px" borderColor="editor.border" />
+          <Box borderBottom="1px" borderColor="editorShellBorder" />
 
           {/* Variation Manager for active map */}
           <Box flex="0 0 auto" maxH="280px" overflow="hidden">
@@ -264,7 +264,7 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
           </Box>
 
           {/* Divider */}
-          <Box borderBottom="1px" borderColor="editor.border" />
+          <Box borderBottom="1px" borderColor="editorShellBorder" />
 
           {/* Layers Panel */}
           <Box flex={1} overflow="hidden" minH="100px">

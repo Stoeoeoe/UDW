@@ -5,7 +5,6 @@ import {
   Divider,
   FormControl,
   Input,
-  Text,
   useDisclosure,
   VStack,
   HStack,
@@ -17,9 +16,9 @@ import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
 import { DetailPanel } from '../../common/DetailPanel';
 import { GameIcon } from '../../common/GameIcon';
-import { useFilteredList } from '../../../hooks/useFilteredList';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { ReadOnlyIdField } from '../../common/Fields';
 import { FormLabelUppercase } from '../../common/FormLabel';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
@@ -33,7 +32,6 @@ export const ActorEditor: React.FC = () => {
   const addActor = useEditorStore((state) => state.addActor);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [newActorIcon, setNewActorIcon] = useState('GiPerson');
-  const [search, setSearch] = React.useState('');
 
   const selectedActor = actors.find((a) => a.id === selectedActorId);
 
@@ -48,8 +46,6 @@ export const ActorEditor: React.FC = () => {
     [actors],
   );
 
-  const filteredActorItems = useFilteredList(actorItems, search);
-
   const deleteActorById = async (id: string, name: string) => {
     if (!confirm(`Delete actor "${name}"?`)) return;
     await deleteActor(id);
@@ -58,23 +54,13 @@ export const ActorEditor: React.FC = () => {
   const leftPanel = (
     <ListPanel
       title="Actors"
-      items={filteredActorItems}
+      items={actorItems}
       selectedId={selectedActorId}
       onSelect={setSelectedActor}
       onAdd={onOpen}
       autoSelectFirst={true}
       emptyMessage="No actors defined"
-      topContent={
-        <Input
-          size="xs"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search actors..."
-          bg="#0a0a0b"
-          borderColor="#333"
-          color="gray.100"
-        />
-      }
+      enableSearch={true}
       onDeleteItem={async (item) => {
         const actor = actors.find((entry) => entry.id === item.id);
         if (!actor) return;
@@ -175,9 +161,7 @@ const ActorDetail: React.FC<{
         <VStack align="stretch" spacing={3}>
           <FormControl>
             <FieldLabel>ID</FieldLabel>
-            <Text fontSize="xs" fontFamily="mono" color="gray.400">
-              {actor.id}
-            </Text>
+            <ReadOnlyIdField value={actor.id} />
           </FormControl>
 
           <form.Field name="name">
@@ -186,8 +170,6 @@ const ActorDetail: React.FC<{
                 <FieldLabel>Name</FieldLabel>
                 <Input
                   size="sm"
-                  bg="gray.950"
-                  color="white"
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -210,7 +192,7 @@ const ActorDetail: React.FC<{
           </form.Field>
         </VStack>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <HStack justify="space-between">
           <Button

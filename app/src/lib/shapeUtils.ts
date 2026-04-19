@@ -76,7 +76,7 @@ export async function applyShape(params: {
         for (let py = 0; py < patternH; py++) {
           for (let px = 0; px < patternW; px++) {
             const tileIdx = pattern[py][px];
-            if (tileIdx !== null) {
+            if (tileIdx !== null && activeTilesetId) {
               const nx = tx + px,
                 ny = ty + py;
               if (nx >= 0 && nx < currentMap.width && ny >= 0 && ny < currentMap.height) {

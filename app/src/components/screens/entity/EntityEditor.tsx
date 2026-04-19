@@ -12,8 +12,6 @@ import {
   IconButton,
   useDisclosure,
   Divider,
-  NumberInput,
-  NumberInputField,
   Tooltip,
 } from '@chakra-ui/react';
 import { DeleteIcon, RepeatIcon, CheckIcon } from '@chakra-ui/icons';
@@ -30,12 +28,12 @@ import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
 import { DetailPanel } from '../../common/DetailPanel';
 import { GameIcon } from '../../common/GameIcon';
-import { useFilteredList } from '../../../hooks/useFilteredList';
 import { EntityType, EntityCategory } from '../../../types/schema';
 import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
 import { PropertyDefinitionEditor } from './PropertyDefinitionEditor';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { IconPicker, ColorPicker } from '../common/FormFields';
+import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { SectionLabel } from '../../common/Typography.tsx';
 
@@ -54,7 +52,6 @@ export const EntityEditor: React.FC = () => {
   const updateEntityType = useEditorStore((state) => state.updateEntityType);
   const deleteEntityType = useEditorStore((state) => state.deleteEntityType);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [search, setSearch] = React.useState('');
 
   const selectedType = entityTypes.find((t) => t.id === selectedEntityTypeId);
 
@@ -68,8 +65,6 @@ export const EntityEditor: React.FC = () => {
       })),
     [entityTypes],
   );
-
-  const filteredEntityItems = useFilteredList(entityItems, search);
 
   const deleteEntityTypeById = async (id: string, displayName: string) => {
     if (!confirm(`Delete entity type "${displayName}"?`)) return;
@@ -87,23 +82,13 @@ export const EntityEditor: React.FC = () => {
   const leftPanel = (
     <ListPanel
       title="Entity Types"
-      items={filteredEntityItems}
+      items={entityItems}
       selectedId={selectedEntityTypeId}
       onSelect={setSelectedEntityType}
       onAdd={onOpen}
       autoSelectFirst={true}
       emptyMessage="No entity types defined"
-      topContent={
-        <Input
-          size="xs"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search entity types..."
-          bg="#0a0a0b"
-          borderColor="#333"
-          color="gray.100"
-        />
-      }
+      enableSearch={true}
       onDeleteItem={async (item) => {
         const entityType = entityTypes.find((entry) => entry.id === item.id);
         if (!entityType) return;
@@ -243,9 +228,7 @@ const EntityTypeDetail: React.FC<{
         <VStack align="stretch" spacing={3}>
           <FormControl>
             <FieldLabel>ID</FieldLabel>
-            <Text fontSize="xs" fontFamily="mono" color="gray.400">
-              {entityType.id}
-            </Text>
+            <ReadOnlyIdField value={entityType.id} />
           </FormControl>
 
           <form.Field name="displayName">
@@ -254,8 +237,6 @@ const EntityTypeDetail: React.FC<{
                 <FieldLabel>Display Name</FieldLabel>
                 <Input
                   size="sm"
-                  bg="gray.950"
-                  color="white"
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -272,8 +253,6 @@ const EntityTypeDetail: React.FC<{
                   <FieldLabel>Category</FieldLabel>
                   <Select
                     size="sm"
-                    bg="gray.950"
-                    color="white"
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
@@ -294,8 +273,6 @@ const EntityTypeDetail: React.FC<{
                   <FieldLabel>Group</FieldLabel>
                   <Input
                     size="sm"
-                    bg="gray.950"
-                    color="white"
                     name={field.name}
                     value={field.state.value ?? ''}
                     onBlur={field.handleBlur}
@@ -323,8 +300,6 @@ const EntityTypeDetail: React.FC<{
                 <FieldLabel>Description</FieldLabel>
                 <Input
                   size="sm"
-                  bg="gray.950"
-                  color="white"
                   name={field.name}
                   value={field.state.value ?? ''}
                   onBlur={field.handleBlur}
@@ -358,7 +333,7 @@ const EntityTypeDetail: React.FC<{
           </HStack>
         </VStack>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <VStack align="stretch" spacing={3}>
           <SectionLabel textStyle="fieldLabel">Size (px)</SectionLabel>
@@ -368,7 +343,7 @@ const EntityTypeDetail: React.FC<{
             </Text>
             <form.Field name="defaultSize">
               {(field) => (
-                <NumberInput
+                <CompactNumberInput
                   min={1}
                   value={field.state.value?.[0] ?? 16}
                   precision={0}
@@ -377,9 +352,7 @@ const EntityTypeDetail: React.FC<{
                       field.handleChange([Math.round(val), field.state.value?.[1] ?? 16]);
                   }}
                   flex={1}
-                >
-                  <NumberInputField bg="gray.950" color="white" />
-                </NumberInput>
+                ></CompactNumberInput>
               )}
             </form.Field>
             <Text fontSize="xs" color="gray.400" flexShrink={0}>
@@ -387,7 +360,7 @@ const EntityTypeDetail: React.FC<{
             </Text>
             <form.Field name="defaultSize">
               {(field) => (
-                <NumberInput
+                <CompactNumberInput
                   min={1}
                   value={field.state.value?.[1] ?? 16}
                   precision={0}
@@ -396,15 +369,13 @@ const EntityTypeDetail: React.FC<{
                       field.handleChange([field.state.value?.[0] ?? 16, Math.round(val)]);
                   }}
                   flex={1}
-                >
-                  <NumberInputField bg="gray.950" color="white" />
-                </NumberInput>
+                ></CompactNumberInput>
               )}
             </form.Field>
           </HStack>
         </VStack>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <form.Field name="sprite">
           {(field) => (
@@ -423,7 +394,7 @@ const EntityTypeDetail: React.FC<{
           )}
         </form.Field>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <form.Field name="properties">
           {(field) => (
@@ -436,7 +407,7 @@ const EntityTypeDetail: React.FC<{
           )}
         </form.Field>
 
-        <Divider borderColor="#071018" />
+        <Divider />
 
         <HStack justify="space-between">
           <Button
@@ -496,9 +467,9 @@ const EntitySpriteEditor: React.FC<{
         <VStack align="stretch" spacing={2}>
           {isLoaded && (
             <Box
-              bg="#0a0a0b"
+              bg="editorInlineBg"
               border="1px"
-              borderColor="#1a1a2e"
+              borderColor="editorInlineBorder"
               borderRadius="md"
               p={2}
               display="flex"

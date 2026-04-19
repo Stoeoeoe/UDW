@@ -14,9 +14,9 @@ export const ViewportShell: React.FC<ViewportShellProps> = ({ title, subtitle, c
       <HStack
         px={6}
         py={3}
-        bg="editor.border"
+        bg="editorHeaderBg"
         borderBottom="1px"
-        borderColor="#0b1116"
+        borderColor="editorShellBorder"
         justify="space-between"
         h="14"
         position="relative"
@@ -31,7 +31,7 @@ export const ViewportShell: React.FC<ViewportShellProps> = ({ title, subtitle, c
           )}
         </VStack>
       </HStack>
-      <Box flex={1} position="relative" bg="editor.viewportBg" overflow="hidden">
+      <Box flex={1} position="relative" bg="editorCanvasBg" overflow="hidden">
         {children}
       </Box>
     </VStack>
