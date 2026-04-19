@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   Menu,
   nativeImage,
   session,
@@ -130,6 +131,20 @@ function createWindow() {
   setupIpcHandlers(win);
   setupLuaLSHandlers(win);
   setupApplicationMenu();
+
+  win.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(win!, {
+      type: 'question',
+      buttons: ['Close anyway', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'Unsaved changes',
+      message: 'You have unsaved changes. Close without saving?',
+    });
+    if (choice === 0) {
+      event.preventDefault();
+    }
+  });
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
