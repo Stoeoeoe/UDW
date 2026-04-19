@@ -3,6 +3,7 @@ import { Box, Text, useToast } from '@chakra-ui/react';
 import { Application, BitmapFont } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { useMapRenderer } from './useMapRenderer';
 import { useMapTools } from './useMapTools';
 import { ZoomControls } from '../../common/ZoomControls';
@@ -163,11 +164,13 @@ export const MapViewportPixi: React.FC = () => {
         newViewport.setZoom(1.5);
       }
 
-      if (
+      const hasSavedCamera =
         initialCamera &&
         typeof initialCamera.x === 'number' &&
-        typeof initialCamera.y === 'number'
-      ) {
+        typeof initialCamera.y === 'number' &&
+        (initialCamera.x !== 0 || initialCamera.y !== 0);
+
+      if (hasSavedCamera) {
         try {
           newViewport.moveCenter(initialCamera.x, initialCamera.y);
         } catch {
@@ -572,8 +575,7 @@ export const MapViewportPixi: React.FC = () => {
   // Detect missing tileset images referenced by the current map and navigate to tileset editor
   const tilesets = useEditorStore((s) => s.tilesets);
   const loadedSprites = useEditorStore((s) => s.loadedSprites);
-  const setMode = useEditorStore((s) => s.setMode);
-  const setActiveTileset = useEditorStore((s) => s.setActiveTileset);
+  const openDocument = useWorkspaceStore((state) => state.openDocument);
   const toast = useToast();
 
   useEffect(() => {
@@ -598,12 +600,16 @@ export const MapViewportPixi: React.FC = () => {
           status: 'warning',
           duration: 4000,
         });
-        setMode('tilesets');
-        setActiveTileset(tsId);
+        openDocument({
+          kind: 'tileset',
+          tilesetId: tsId,
+          label: ts.name,
+          saveUnitId: `tileset:${tsId}`,
+        });
         return;
       }
     }
-  }, [isReady, tilesets, loadedSprites, setMode, setActiveTileset, toast]);
+  }, [isReady, tilesets, loadedSprites, openDocument, toast]);
 
   return (
     <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">

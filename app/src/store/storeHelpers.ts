@@ -22,8 +22,7 @@ import {
   PropertyValues,
 } from '../types/schema';
 import { ToolType } from '../types/editor';
-import { fileSystem } from '../lib/fileSystem';
-import { useSaveStore } from '../lib/saveManager';
+import { saveProjectDebounced } from '../lib/saveManager';
 import { encodeTileRef } from '../lib/tileRef';
 
 // ============================================================================
@@ -399,15 +398,7 @@ export function applyEntityPatch(
 // ============================================================================
 
 export async function persistProject(project: Project): Promise<void> {
-  useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('', `${project.id}.vproj`, {
-    $schema: '../schemas/project.schema.json',
-    ...project,
-  });
-  useSaveStore.getState().setStatus('saved');
-  setTimeout(() => {
-    if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
-  }, 2000);
+  saveProjectDebounced(project, 'configuration');
 }
 
 export type ScriptingStateSnapshot = {

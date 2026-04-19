@@ -19,180 +19,215 @@ import {
 type SetFn = Parameters<StateCreator<EditorStore, [['zustand/immer', never]], []>>[0];
 type GetFn = Parameters<StateCreator<EditorStore, [['zustand/immer', never]], []>>[1];
 
+function setResourceLoadingState(set: SetFn, label: string, progress: number): void {
+  set((state) => {
+    state.resourceLoadingLabel = label;
+    state.resourceLoadingProgress = progress;
+  });
+}
+
 export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void> {
-  // 1. Load all tilesets
-  const tilesets = await fileSystem.loadAllTilesets();
-  for (const tileset of tilesets) {
-    const tilesObjCount = tileset.tiles ? Object.keys(tileset.tiles).length : 0;
-    const normalizedTileCount = Math.max(
-      tileset.tileCount || 0,
-      tilesObjCount,
-      tileset.columns || 1,
-    );
-    const normalized = { ...tileset, tileCount: normalizedTileCount } as typeof tileset;
-    set((state) => {
-      state.tilesets.set(tileset.id, castDraft(normalized));
-    });
+  setResourceLoadingState(set, 'Loading tilesets', 0.12);
 
-    try {
-      const blob = await fileSystem.loadAsset(tileset.spriteSheet);
-      await get().loadSprite(tileset.spriteSheet, blob);
-    } catch (e) {
-      console.warn(`Failed to load sprite for tileset ${tileset.id}:`, e);
-    }
-  }
-
-  set((state) => {
-    if (!state.activeTilesetId && tilesets.length > 0) {
-      state.activeTilesetId = tilesets[0].id;
-      state.selectedTileIndex = 0;
-    }
-  });
-
-  const proj = get().project;
-
-  // 1.5 Terrain types
-  if (proj?.terrainTypes?.length) {
-    set((state) => {
-      state.terrainTypes = proj.terrainTypes!.map((t) => castDraft(t));
-    });
-  }
-
-  // 1.6 Layer definitions
-  if (proj?.layerDefinitions?.length) {
-    set((state) => {
-      state.layerDefinitions = proj.layerDefinitions!.map((d) => castDraft(d));
-    });
-  }
-
-  // 1.7 Entity types
-  if (proj?.entityTypes?.length) {
-    set((state) => {
-      state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
-    });
-  }
-
-  // 1.72 Tile metadata definitions
-  if (proj?.tileMetadataDefinitions?.length) {
-    set((state) => {
-      state.tileMetadataDefinitions = proj.tileMetadataDefinitions!.map((d) => castDraft(d));
-    });
-  }
-
-  // 1.73 Location (map) metadata definitions
-  if (proj?.locationMetadataDefinitions?.length) {
-    set((state) => {
-      state.locationMetadataDefinitions = proj.locationMetadataDefinitions!.map((d) =>
-        castDraft(d),
+  try {
+    // 1. Load all tilesets
+    const tilesets = await fileSystem.loadAllTilesets();
+    for (const tileset of tilesets) {
+      const tilesObjCount = tileset.tiles ? Object.keys(tileset.tiles).length : 0;
+      const normalizedTileCount = Math.max(
+        tileset.tileCount || 0,
+        tilesObjCount,
+        tileset.columns || 1,
       );
-    });
-  }
+      const normalized = { ...tileset, tileCount: normalizedTileCount } as typeof tileset;
+      set((state) => {
+        state.tilesets.set(tileset.id, castDraft(normalized));
+      });
 
-  // 1.75 Game variables
-  if (proj?.gameVariables?.length) {
-    set((state) => {
-      state.gameVariables = castDraft(proj.gameVariables!);
-    });
-  }
-
-  // 1.76 Scripting primitives
-  if (proj?.scriptTables?.length) {
-    set((state) => {
-      state.scriptTables = castDraft(proj.scriptTables!);
-    });
-  }
-  if (proj?.scriptFunctions?.length) {
-    set((state) => {
-      state.scriptFunctions = castDraft(proj.scriptFunctions!);
-    });
-  }
-  if (proj?.scriptNamespaces?.length) {
-    set((state) => {
-      state.scriptNamespaces = castDraft(proj.scriptNamespaces!);
-    });
-  }
-  if (proj?.scriptContextTypes?.length) {
-    set((state) => {
-      state.scriptContextTypes = castDraft(proj.scriptContextTypes!);
-    });
-  }
-
-  // 1.8 Actors
-  const actors = await fileSystem.loadAllActors();
-  set((state) => {
-    state.actors = castDraft(actors);
-  });
-
-  // 1.81 Item classes (project-level, stored on project)
-  if (proj?.itemClasses?.length) {
-    set((state) => {
-      state.itemClasses = castDraft(proj.itemClasses!);
-    });
-  }
-
-  // 1.82 Items
-  const items = await fileSystem.loadAllItems();
-  set((state) => {
-    state.items = castDraft(items);
-  });
-
-  // 1.85 Dialogue index + documents
-  const loadedDialogueIndex: DialogueIndex = (await fileSystem.readDialogueIndex()) ?? {
-    version: 1,
-    categories: [],
-    customActors: [],
-    dialogues: [],
-  };
-
-  const loadedDialogues = await fileSystem.loadDialoguesByIds(
-    loadedDialogueIndex.dialogues.map((entry) => entry.id),
-  );
-
-  set((state) => {
-    state.dialogueIndex = castDraft(loadedDialogueIndex);
-    state.dialogues = new globalThis.Map(loadedDialogues.map((d) => [d.id, castDraft(d)]));
-    state.selectedDialogueId = loadedDialogues[0]?.id ?? null;
-    const first = loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string };
-    state.selectedDialogueNodeId = first?.startNodeId ?? first?.entryStepId ?? null;
-  });
-
-  // 1.9 Entity type sprites
-  for (const et of get().entityTypes) {
-    if (!et.sprite?.path) continue;
-    try {
-      const path = et.sprite.path;
-      const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
-      const blob = looksRelative
-        ? await fileSystem.loadAsset(path)
-        : await fileSystem.readFileAsBlob(path);
-      await get().loadSprite(path, blob);
-    } catch (e) {
-      console.warn(`Failed to load sprite for entity type ${et.id}:`, e);
+      try {
+        const blob = await fileSystem.loadAsset(tileset.spriteSheet);
+        await get().loadSprite(tileset.spriteSheet, blob);
+      } catch (e) {
+        console.warn(`Failed to load sprite for tileset ${tileset.id}:`, e);
+      }
     }
-  }
 
-  // 2. Load all maps
-  const maps = await fileSystem.loadAllMaps();
-  const layerDefs = get().layerDefinitions;
-  const enrichedMaps = maps.map((m) => addMissingDefinitionLayers(m, layerDefs));
-
-  withHistorySuppressed(() =>
     set((state) => {
-      state.maps = castDraft(enrichedMaps);
-    }),
-  );
+      if (!state.activeTilesetId && tilesets.length > 0) {
+        state.activeTilesetId = tilesets[0].id;
+        state.selectedTileIndex = 0;
+      }
+    });
 
-  if (enrichedMaps.length > 0) {
-    withHistorySuppressed(
-      () =>
-        set((state) => {
-          state.currentMap = castDraft(enrichedMaps[0]);
-          state.currentMapPath = `maps/${enrichedMaps[0].id}.vmap`;
-          state.selectedLayerId = getPreferredSelectedLayerId(enrichedMaps[0]);
-          syncToolStateForSelectedLayer(state, { forceDefault: true });
-        }),
-      { clearHistory: true },
+    const proj = get().project;
+
+    setResourceLoadingState(set, 'Loading project definitions', 0.28);
+
+    // 1.5 Terrain types
+    if (proj?.terrainTypes?.length) {
+      set((state) => {
+        state.terrainTypes = proj.terrainTypes!.map((t) => castDraft(t));
+      });
+    }
+
+    // 1.6 Layer definitions
+    if (proj?.layerDefinitions?.length) {
+      set((state) => {
+        state.layerDefinitions = proj.layerDefinitions!.map((d) => castDraft(d));
+      });
+    }
+
+    // 1.7 Entity types
+    if (proj?.entityTypes?.length) {
+      set((state) => {
+        state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
+      });
+    }
+
+    // 1.72 Tile metadata definitions
+    if (proj?.tileMetadataDefinitions?.length) {
+      set((state) => {
+        state.tileMetadataDefinitions = proj.tileMetadataDefinitions!.map((d) => castDraft(d));
+      });
+    }
+
+    // 1.73 Location (map) metadata definitions
+    if (proj?.locationMetadataDefinitions?.length) {
+      set((state) => {
+        state.locationMetadataDefinitions = proj.locationMetadataDefinitions!.map((d) =>
+          castDraft(d),
+        );
+      });
+    }
+
+    // 1.75 Game variables
+    if (proj?.gameVariables?.length) {
+      set((state) => {
+        state.gameVariables = castDraft(proj.gameVariables!);
+      });
+    }
+
+    // 1.76 Scripting primitives
+    if (proj?.scriptTables?.length) {
+      set((state) => {
+        state.scriptTables = castDraft(proj.scriptTables!);
+      });
+    }
+    if (proj?.scriptFunctions?.length) {
+      set((state) => {
+        state.scriptFunctions = castDraft(proj.scriptFunctions!);
+      });
+    }
+    if (proj?.scriptNamespaces?.length) {
+      set((state) => {
+        state.scriptNamespaces = castDraft(proj.scriptNamespaces!);
+      });
+    }
+    if (proj?.scriptContextTypes?.length) {
+      set((state) => {
+        state.scriptContextTypes = castDraft(proj.scriptContextTypes!);
+      });
+    }
+
+    setResourceLoadingState(set, 'Loading actors and items', 0.48);
+
+    // 1.8 Actors
+    const actors = await fileSystem.loadAllActors();
+    set((state) => {
+      state.actors = castDraft(actors);
+    });
+
+    // 1.81 Item classes (project-level, stored on project)
+    if (proj?.itemClasses?.length) {
+      set((state) => {
+        state.itemClasses = castDraft(proj.itemClasses!);
+      });
+    }
+
+    // 1.82 Items
+    const items = await fileSystem.loadAllItems();
+    set((state) => {
+      state.items = castDraft(items);
+    });
+
+    setResourceLoadingState(set, 'Loading dialogues', 0.64);
+
+    // 1.85 Dialogue index + documents
+    const loadedDialogueIndex: DialogueIndex = (await fileSystem.readDialogueIndex()) ?? {
+      version: 1,
+      categories: [],
+      customActors: [],
+      dialogues: [],
+    };
+
+    const loadedDialogues = await fileSystem.loadDialoguesByIds(
+      loadedDialogueIndex.dialogues.map((entry) => entry.id),
     );
+
+    set((state) => {
+      state.dialogueIndex = castDraft(loadedDialogueIndex);
+      state.dialogues = new globalThis.Map(loadedDialogues.map((d) => [d.id, castDraft(d)]));
+      state.selectedDialogueId = loadedDialogues[0]?.id ?? null;
+      const first = loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string };
+      state.selectedDialogueNodeId = first?.startNodeId ?? first?.entryStepId ?? null;
+    });
+
+    setResourceLoadingState(set, 'Loading entity assets', 0.78);
+
+    // 1.9 Entity type sprites
+    for (const et of get().entityTypes) {
+      if (!et.sprite?.path) continue;
+      try {
+        const path = et.sprite.path;
+        const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
+        const blob = looksRelative
+          ? await fileSystem.loadAsset(path)
+          : await fileSystem.readFileAsBlob(path);
+        await get().loadSprite(path, blob);
+      } catch (e) {
+        console.warn(`Failed to load sprite for entity type ${et.id}:`, e);
+      }
+    }
+
+    setResourceLoadingState(set, 'Loading locations', 0.9);
+
+    // 2. Load all maps
+    const maps = await fileSystem.loadAllMaps();
+    const layerDefs = get().layerDefinitions;
+    const enrichedMaps = maps.map((m) => addMissingDefinitionLayers(m, layerDefs));
+
+    withHistorySuppressed(() =>
+      set((state) => {
+        state.maps = castDraft(enrichedMaps);
+      }),
+    );
+
+    setResourceLoadingState(set, 'Preparing workspace', 0.97);
+
+    if (enrichedMaps.length > 0) {
+      withHistorySuppressed(
+        () =>
+          set((state) => {
+            state.currentMap = castDraft(enrichedMaps[0]);
+            state.currentMapPath = `maps/${enrichedMaps[0].id}.vmap`;
+            state.selectedLayerId = getPreferredSelectedLayerId(enrichedMaps[0]);
+            syncToolStateForSelectedLayer(state, { forceDefault: true });
+          }),
+        { clearHistory: true },
+      );
+    }
+
+    set((state) => {
+      state.resourcesLoaded = true;
+      state.resourceLoadingLabel = null;
+      state.resourceLoadingProgress = 1;
+    });
+  } catch (error) {
+    set((state) => {
+      state.resourceLoadingLabel = 'Loading failed';
+      state.resourceLoadingProgress = 0;
+    });
+    throw error;
   }
 }
 

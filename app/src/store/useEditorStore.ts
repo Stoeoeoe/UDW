@@ -9,7 +9,7 @@ import { Project, Map as GameMap, Tileset } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 import { resolveEntities } from '../lib/mapUtils';
 import { fileSystem } from '../lib/fileSystem';
-import { saveMapDebounced, useSaveStore } from '../lib/saveManager';
+import { registerSaveAccessors, saveMapDebounced } from '../lib/saveManager';
 import {
   getPreferredSelectedLayerId,
   syncToolStateForSelectedLayer,
@@ -62,6 +62,9 @@ export interface EditorStore
   // Fields from EditorState not owned by any slice
   project: Project | null;
   projectPath: string | null;
+  resourcesLoaded: boolean;
+  resourceLoadingLabel: string | null;
+  resourceLoadingProgress: number;
   mode: EditorMode;
   loadedSprites: globalThis.Map<string, HTMLImageElement>;
   selectedEntityTypeId: string | null;
@@ -252,6 +255,9 @@ export const useEditorStore = create<EditorStore>()(
           // ── Initial state not owned by slices ─────────────────────────────
           project: null,
           projectPath: null,
+          resourcesLoaded: false,
+          resourceLoadingLabel: null,
+          resourceLoadingProgress: 0,
           mode: 'project' as EditorMode,
           loadedSprites: new globalThis.Map(),
           selectedEntityTypeId: null,
@@ -275,6 +281,9 @@ export const useEditorStore = create<EditorStore>()(
                 set((state) => {
                   state.project = project;
                   state.projectPath = path;
+                  state.resourcesLoaded = false;
+                  state.resourceLoadingLabel = 'Preparing workspace';
+                  state.resourceLoadingProgress = 0.05;
                   state.currentMap = null;
                   state.currentMapPath = null;
                   state.maps = [];
@@ -311,6 +320,9 @@ export const useEditorStore = create<EditorStore>()(
                 set((state) => {
                   state.project = null;
                   state.projectPath = null;
+                  state.resourcesLoaded = false;
+                  state.resourceLoadingLabel = null;
+                  state.resourceLoadingProgress = 0;
                   state.currentMap = null;
                   state.maps = [];
                   state.tilesets = new globalThis.Map();
@@ -368,6 +380,17 @@ export const useEditorStore = create<EditorStore>()(
 
 // Register temporal store reference (used by withHistorySuppressed in slices)
 registerTemporalStore(() => useEditorStore.temporal.getState());
+registerSaveAccessors({
+  getMapById: (mapId) => {
+    const state = useEditorStore.getState();
+    if (state.currentMap?.id === mapId) {
+      return state.currentMap;
+    }
+    return state.maps.find((map) => map.id === mapId) ?? null;
+  },
+  getProject: () => useEditorStore.getState().project,
+  getTilesetById: (tilesetId) => useEditorStore.getState().tilesets.get(tilesetId) ?? null,
+});
 
 // ============================================================================
 // IPC listeners (Electron hot-reload for assets and tilesets)
@@ -475,19 +498,4 @@ useEditorStore.subscribe(
     }
   },
   { fireImmediately: false },
-);
-
-useEditorStore.subscribe(
-  (state) => ({
-    terrainTypes: state.terrainTypes,
-    entityTypes: state.entityTypes,
-    layerDefinitions: state.layerDefinitions,
-  }),
-  () => {
-    useSaveStore.getState().setStatus('saved');
-    setTimeout(() => {
-      if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
-    }, 2000);
-  },
-  { equalityFn: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
 );

@@ -2,9 +2,7 @@ import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { Tileset, TileDefinition } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
-import { serializeTileset } from '../../lib/tilesetMigration';
-import { useSaveStore } from '../../lib/saveManager';
-import { pendingTilesetSaves, TILESET_SAVE_DEBOUNCE_MS } from '../storeHelpers';
+import { saveTilesetDebounced, saveTilesetImmediate } from '../../lib/saveManager';
 import type { EditorStore } from '../useEditorStore';
 
 type ImmerStateCreator<T> = StateCreator<
@@ -13,16 +11,6 @@ type ImmerStateCreator<T> = StateCreator<
   [],
   T
 >;
-
-async function saveTilesetFile(tileset: Tileset): Promise<void> {
-  const snapshot = serializeTileset(JSON.parse(JSON.stringify(tileset)) as Tileset);
-  useSaveStore.getState().setStatus('saving');
-  await fileSystem.saveJson('tilesets', `${tileset.id}.vts`, snapshot);
-  useSaveStore.getState().setStatus('saved');
-  setTimeout(() => {
-    if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
-  }, 2000);
-}
 
 export interface TilesetSlice {
   tilesets: Map<string, Tileset>;
@@ -128,21 +116,11 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
     }),
 
   scheduleTilesetSave: (tilesetId) => {
-    const existing = pendingTilesetSaves.get(tilesetId);
-    if (existing) clearTimeout(existing);
-
-    const timeoutId = setTimeout(async () => {
-      pendingTilesetSaves.delete(tilesetId);
-      const tileset = get().tilesets.get(tilesetId);
-      if (!tileset) return;
-      await saveTilesetFile(tileset);
-    }, TILESET_SAVE_DEBOUNCE_MS);
-
-    pendingTilesetSaves.set(tilesetId, timeoutId);
+    saveTilesetDebounced(tilesetId);
   },
 
   addTileset: async (tileset) => {
-    await saveTilesetFile(tileset);
+    await saveTilesetImmediate(tileset);
 
     set((state) => {
       state.tilesets.set(tileset.id, castDraft(tileset));
@@ -169,8 +147,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
     });
 
     if (updatedTileset) {
-      await saveTilesetFile(updatedTileset);
-
+      saveTilesetDebounced(updatedTileset.id);
       if ('spriteSheet' in updates && updatedTileset.spriteSheet) {
         try {
           const blob = await fileSystem.loadAsset(updatedTileset.spriteSheet);
@@ -191,12 +168,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       }
     });
 
-    useSaveStore.getState().setStatus('saving');
     await fileSystem.deleteJson('tilesets', `${id}.vts`);
-    useSaveStore.getState().setStatus('saved');
-    setTimeout(() => {
-      if (useSaveStore.getState().status === 'saved') useSaveStore.getState().setStatus('idle');
-    }, 2000);
   },
 
   updateTileDefinition: (tilesetId, index, definition) => {
@@ -231,6 +203,6 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       updatedTileset = JSON.parse(JSON.stringify(ts));
     });
 
-    if (updatedTileset) await saveTilesetFile(updatedTileset);
+    if (updatedTileset) saveTilesetDebounced(updatedTileset.id);
   },
 });

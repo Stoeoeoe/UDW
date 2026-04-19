@@ -1,0 +1,217 @@
+import {
+  cancelPendingSaveUnit,
+  clearSaveUnit,
+  saveMapImmediate,
+  saveProjectImmediate,
+  saveTilesetImmediate,
+  getDirtySaveUnitIds,
+} from './saveManager';
+import { fileSystem } from './fileSystem';
+import { useEditorStore } from '../store/useEditorStore';
+import { useAppSettingsStore } from '../store/useAppSettingsStore';
+import { WorkspaceTab } from '../types/workspace';
+import { addMissingDefinitionLayers, ensureNavigationLayer } from '../store/storeHelpers';
+import { deserializeMap } from './mapMigration';
+import { migrateMapToEncodedData } from './tileRef';
+import { Map as GameMap, Project, Tileset } from '../types/schema';
+
+export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
+  if (!tab) return false;
+
+  return (
+    tab.document.kind === 'location' ||
+    tab.document.kind === 'tileset' ||
+    tab.document.kind === 'configuration' ||
+    tab.document.kind === 'settings' ||
+    tab.document.kind === 'entities' ||
+    tab.document.kind === 'scripting'
+  );
+}
+
+export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> {
+  if (!tab) return;
+
+  const editor = useEditorStore.getState();
+  const document = tab.document;
+
+  if (document.kind === 'location') {
+    const map =
+      editor.currentMap?.id === document.mapId
+        ? editor.currentMap
+        : (editor.maps.find((entry) => entry.id === document.mapId) ?? null);
+    if (map) {
+      await saveMapImmediate(map);
+    }
+    return;
+  }
+
+  if (document.kind === 'tileset') {
+    const tileset = editor.tilesets.get(document.tilesetId);
+    if (tileset) {
+      await saveTilesetImmediate(tileset);
+    }
+    return;
+  }
+
+  if (document.kind === 'configuration') {
+    if (editor.project) {
+      await saveProjectImmediate(editor.project, 'configuration');
+    }
+    return;
+  }
+
+  if (document.kind === 'settings') {
+    useAppSettingsStore.getState().saveDraft();
+    return;
+  }
+
+  if ((document.kind === 'entities' || document.kind === 'scripting') && editor.project) {
+    await saveProjectImmediate(editor.project, 'configuration');
+  }
+}
+
+export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
+  const editor = useEditorStore.getState();
+  const dirtySaveUnits = getDirtySaveUnitIds();
+
+  for (const saveUnitId of dirtySaveUnits) {
+    if (saveUnitId.startsWith('location:')) {
+      const mapId = saveUnitId.slice('location:'.length);
+      const map =
+        editor.currentMap?.id === mapId
+          ? editor.currentMap
+          : (editor.maps.find((entry) => entry.id === mapId) ?? null);
+      if (map) {
+        await saveMapImmediate(map);
+      }
+      continue;
+    }
+
+    if (saveUnitId.startsWith('tileset:')) {
+      const tilesetId = saveUnitId.slice('tileset:'.length);
+      const tileset = editor.tilesets.get(tilesetId);
+      if (tileset) {
+        await saveTilesetImmediate(tileset);
+      }
+      continue;
+    }
+
+    if (saveUnitId === 'configuration') {
+      if (editor.project) {
+        await saveProjectImmediate(editor.project, 'configuration');
+      }
+      continue;
+    }
+
+    if (saveUnitId === 'settings') {
+      useAppSettingsStore.getState().saveDraft();
+    }
+  }
+}
+
+function applyDiscardedProject(nextProject: Project): void {
+  const editor = useEditorStore.getState();
+  const nextMaps = editor.maps.map((map) =>
+    ensureNavigationLayer(addMissingDefinitionLayers(map, nextProject.layerDefinitions ?? [])),
+  );
+  const nextCurrentMap = editor.currentMap
+    ? (nextMaps.find((map) => map.id === editor.currentMap?.id) ?? null)
+    : null;
+
+  useEditorStore.setState({
+    project: nextProject,
+    terrainTypes: nextProject.terrainTypes ?? [],
+    layerDefinitions: nextProject.layerDefinitions ?? [],
+    entityTypes: nextProject.entityTypes ?? [],
+    tileMetadataDefinitions: nextProject.tileMetadataDefinitions ?? [],
+    locationMetadataDefinitions: nextProject.locationMetadataDefinitions ?? [],
+    gameVariables: nextProject.gameVariables ?? [],
+    scriptTables: nextProject.scriptTables ?? [],
+    scriptFunctions: nextProject.scriptFunctions ?? [],
+    scriptNamespaces: nextProject.scriptNamespaces ?? [],
+    scriptContextTypes: nextProject.scriptContextTypes ?? [],
+    itemClasses: nextProject.itemClasses ?? [],
+    maps: nextMaps,
+    currentMap: nextCurrentMap,
+  });
+
+  if (nextCurrentMap) {
+    useEditorStore.getState().setCurrentMap(nextCurrentMap);
+  }
+}
+
+function normalizeTileset(rawTileset: Tileset): Tileset {
+  const tilesObjCount = rawTileset.tiles ? Object.keys(rawTileset.tiles).length : 0;
+  return {
+    ...rawTileset,
+    tileCount: Math.max(rawTileset.tileCount || 0, tilesObjCount, rawTileset.columns || 1),
+  };
+}
+
+export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Promise<void> {
+  if (!tab) return;
+
+  const { document } = tab;
+  cancelPendingSaveUnit(document.saveUnitId);
+
+  if (document.kind === 'settings') {
+    useAppSettingsStore.getState().resetDraft();
+    clearSaveUnit(document.saveUnitId);
+    return;
+  }
+
+  if (
+    document.kind === 'configuration' ||
+    document.kind === 'entities' ||
+    document.kind === 'scripting'
+  ) {
+    const editor = useEditorStore.getState();
+    if (!editor.project) return;
+    const rawProject = await fileSystem.readJson('', `${editor.project.id}.vproj`);
+    if (!rawProject) return;
+    applyDiscardedProject(rawProject as Project);
+    clearSaveUnit(document.saveUnitId);
+    return;
+  }
+
+  if (document.kind === 'location') {
+    const rawMap = await fileSystem.readJson('maps', `${document.mapId}.vmap`);
+    if (!rawMap) return;
+
+    const editor = useEditorStore.getState();
+    const nextMap = ensureNavigationLayer(
+      addMissingDefinitionLayers(
+        deserializeMap(migrateMapToEncodedData(rawMap as GameMap)),
+        editor.layerDefinitions,
+      ),
+    );
+
+    useEditorStore.setState((state) => ({
+      maps: state.maps.map((map) => (map.id === nextMap.id ? nextMap : map)),
+      currentMap: state.currentMap?.id === nextMap.id ? nextMap : state.currentMap,
+    }));
+
+    if (editor.currentMap?.id === nextMap.id) {
+      editor.setCurrentMap(nextMap);
+    }
+
+    clearSaveUnit(document.saveUnitId);
+    return;
+  }
+
+  if (document.kind === 'tileset') {
+    const rawTileset = await fileSystem.readJson('tilesets', `${document.tilesetId}.vts`);
+    if (!rawTileset) return;
+
+    const nextTileset = normalizeTileset(rawTileset as Tileset);
+    useEditorStore.setState((state) => {
+      const nextTilesets = new Map(state.tilesets);
+      nextTilesets.set(nextTileset.id, nextTileset);
+      return {
+        tilesets: nextTilesets,
+      };
+    });
+
+    clearSaveUnit(document.saveUnitId);
+  }
+}

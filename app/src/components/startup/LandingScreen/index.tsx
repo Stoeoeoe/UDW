@@ -18,6 +18,8 @@ import { Project } from '../../../types/schema';
 import { recentProjects, RecentProject } from '../../../lib/recentProjects';
 import { ActionCard } from './ActionCard';
 import { RecentProjectItem } from './RecentProjectItem';
+import { FiFolder, FiPlus } from 'react-icons/fi';
+import { FcFolder, FcPlus } from 'react-icons/fc';
 
 export const LandingScreen: React.FC = () => {
   const loadProject = useEditorStore((state) => state.loadProject);
@@ -113,7 +115,7 @@ export const LandingScreen: React.FC = () => {
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
             <ActionCard
               onClick={handleOpenProject}
-              icon="📂"
+              icon={<FcFolder />}
               title="Open Project"
               description="Select a .vproj file to open an existing project."
               hoverColor="blue.500"
@@ -121,7 +123,7 @@ export const LandingScreen: React.FC = () => {
 
             <ActionCard
               onClick={onOpen}
-              icon="✨"
+              icon={<FcPlus />}
               title="New Project"
               description="Start from scratch and create a new project directory."
               hoverColor="green.500"

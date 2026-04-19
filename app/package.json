@@ -4,9 +4,10 @@
     "email": "matthias.stoe@gmail.com",
     "name": "Matthias Stöckli"
   },
-  "description": "Map editor application built with Electron, React, and TypeScript",
+  "description": "Vulcanus Editor",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "packageManager": "npm@11.6.2",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -46,6 +46,7 @@ type ConfigurationTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemc
 
 interface ConfigurationEditorProps {
   initialTab?: ConfigurationTab;
+  onTabChange?: (tab: ConfigurationTab) => void;
 }
 
 type MetadataDraft = {
@@ -727,6 +728,7 @@ const MetadataDefinitionDialog: React.FC<{
 
 export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
   initialTab = 'terrain',
+  onTabChange,
 }) => {
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const deleteTerrainType = useEditorStore((state) => state.deleteTerrainType);
@@ -747,6 +749,13 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (activeTab === initialTab) {
+      return;
+    }
+    onTabChange?.(activeTab);
+  }, [activeTab, initialTab, onTabChange]);
 
   const terrainDialog = useDisclosure();
   const [editingTerrainId, setEditingTerrainId] = useState<string | null>(null);

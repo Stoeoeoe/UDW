@@ -16,61 +16,22 @@ import {
 } from '@chakra-ui/react';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
-
-// Settings categories
-type SettingsCategory = 'general' | 'editor' | 'grid' | 'export' | 'shortcuts';
-
-interface AppSettings {
-  // General
-  theme: 'dark' | 'light';
-  autosaveEnabled: boolean;
-  autosaveInterval: number; // minutes
-  undoHistorySize: number;
-
-  // Editor
-  showTileIndices: boolean;
-  snapToGrid: boolean;
-  highlightHoveredTile: boolean;
-  defaultTool: 'select' | 'stamp' | 'entitySelect';
-
-  // Grid
-  showGrid: boolean;
-  gridOpacity: number;
-  gridColor: string;
-
-  // Export
-  exportFormat: 'json' | 'xml' | 'binary';
-  prettyPrintJson: boolean;
-  includeMetadata: boolean;
-}
-
-const defaultSettings: AppSettings = {
-  theme: 'dark',
-  autosaveEnabled: true,
-  autosaveInterval: 5,
-  undoHistorySize: 50,
-  showTileIndices: false,
-  snapToGrid: true,
-  highlightHoveredTile: true,
-  defaultTool: 'select',
-  showGrid: true,
-  gridOpacity: 30,
-  gridColor: '#ffffff',
-  exportFormat: 'json',
-  prettyPrintJson: true,
-  includeMetadata: true,
-};
+import {
+  useAppSettingsStore,
+  AppSettings,
+  SettingsCategory,
+} from '../../../store/useAppSettingsStore';
 
 /**
  * SettingsEditor - Global application settings.
  */
 export const SettingsEditor: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('general');
-  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const settings = useAppSettingsStore((state) => state.draftSettings);
+  const updateDraftSetting = useAppSettingsStore((state) => state.updateDraftSetting);
 
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    // TODO: Persist to localStorage or electron store
+    updateDraftSetting(key, value);
   };
 
   const categories: ListPanelItem[] = [
@@ -337,7 +298,7 @@ export const SettingsEditor: React.FC = () => {
   };
 
   const categoryTitles: Record<SettingsCategory, string> = {
-    general: 'General Settings (Fake. TODO!)',
+    general: 'General Settings',
     editor: 'Editor Preferences',
     grid: 'Grid & Display',
     export: 'Export Options',

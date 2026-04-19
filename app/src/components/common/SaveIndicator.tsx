@@ -3,25 +3,29 @@ import { HStack, Text, Spinner, Box } from '@chakra-ui/react';
 import { CheckIcon, WarningIcon } from '@chakra-ui/icons';
 import { useSaveStore } from '../../lib/saveManager';
 
-/**
- * SaveIndicator - Shows current save status in the UI
- *
- * States:
- * - idle: Nothing shown (or subtle "All changes saved")
- * - saving: Spinner with "Saving..."
- * - saved: Checkmark with "Saved" (fades after 2s)
- * - error: Warning icon with error message
- */
-export const SaveIndicator: React.FC = () => {
-  const status = useSaveStore((state) => state.status);
-  const error = useSaveStore((state) => state.error);
+interface SaveIndicatorProps {
+  saveUnitId?: string | null;
+}
 
-  // Keep the indicator rendered at a constant size to avoid layout shifts.
-  // When idle we hide it visually but still reserve the same space.
+export const SaveIndicator: React.FC<SaveIndicatorProps> = ({ saveUnitId }) => {
+  const activeSaveUnitId = useSaveStore((state) => state.activeSaveUnitId);
+  const trackedSaveUnitId = saveUnitId ?? activeSaveUnitId;
+  const saveUnit = useSaveStore((state) =>
+    trackedSaveUnitId ? state.saveUnits[trackedSaveUnitId] : undefined,
+  );
+
+  const status = saveUnit?.status ?? 'idle';
+  const error = saveUnit?.error ?? null;
   const visible = status !== 'idle';
 
   const getStatusDisplay = (): { icon: React.ReactNode; text: string; color: string } => {
     switch (status) {
+      case 'dirty':
+        return {
+          icon: <Box boxSize="2" borderRadius="full" bg="orange.400" />,
+          text: 'Unsaved',
+          color: 'orange.300',
+        };
       case 'saving':
         return {
           icon: <Spinner size="xs" color="blue.400" />,
@@ -67,11 +71,12 @@ export const SaveIndicator: React.FC = () => {
   );
 };
 
-/**
- * Compact save indicator for tight spaces (just icon, no text)
- */
-export const SaveIndicatorCompact: React.FC = () => {
-  const status = useSaveStore((state) => state.status);
+export const SaveIndicatorCompact: React.FC<SaveIndicatorProps> = ({ saveUnitId }) => {
+  const activeSaveUnitId = useSaveStore((state) => state.activeSaveUnitId);
+  const trackedSaveUnitId = saveUnitId ?? activeSaveUnitId;
+  const status = useSaveStore((state) =>
+    trackedSaveUnitId ? (state.saveUnits[trackedSaveUnitId]?.status ?? 'idle') : 'idle',
+  );
   const visible = status !== 'idle';
 
   return (
@@ -84,6 +89,7 @@ export const SaveIndicatorCompact: React.FC = () => {
       opacity={visible ? 1 : 0}
       pointerEvents={visible ? 'auto' : 'none'}
     >
+      {status === 'dirty' && <Box boxSize="2" borderRadius="full" bg="orange.400" />}
       {status === 'saving' && <Spinner size="xs" color="blue.400" />}
       {status === 'saved' && <CheckIcon boxSize={3} color="green.400" />}
       {status === 'error' && <WarningIcon boxSize={3} color="red.400" />}

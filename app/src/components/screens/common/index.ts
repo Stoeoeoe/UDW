@@ -12,6 +12,9 @@ export type { InspectorSection, InspectorPanelProps } from './InspectorPanel';
 export { EmptyScreen } from './EmptyScreen';
 export type { EmptyScreenProps } from './EmptyScreen';
 
+export { WorkspaceLoadingScreen } from './WorkspaceLoadingScreen';
+export type { WorkspaceLoadingScreenProps } from './WorkspaceLoadingScreen';
+
 export { ResizableEditorLayout } from './ResizableEditorLayout';
 export type { ResizableEditorLayoutProps } from './ResizableEditorLayout';
 

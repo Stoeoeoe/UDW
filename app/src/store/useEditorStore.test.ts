@@ -28,6 +28,9 @@ describe('useEditorStore', () => {
   it('should initialize with default state', () => {
     const state = useEditorStore.getState();
     expect(state.project).toBeNull();
+    expect(state.resourcesLoaded).toBe(false);
+    expect(state.resourceLoadingLabel).toBeNull();
+    expect(state.resourceLoadingProgress).toBe(0);
     expect(state.mode).toBe('project');
     expect(state.activeTool).toBe('stamp');
   });
@@ -49,6 +52,9 @@ describe('useEditorStore', () => {
     const state = useEditorStore.getState();
     expect(state.project).toEqual(mockProject);
     expect(state.projectPath).toBe(mockPath);
+    expect(state.resourcesLoaded).toBe(false);
+    expect(state.resourceLoadingLabel).toBe('Preparing workspace');
+    expect(state.resourceLoadingProgress).toBe(0.05);
   });
 
   it('should change editor mode', () => {

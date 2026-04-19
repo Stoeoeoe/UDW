@@ -1,59 +1,125 @@
 import React from 'react';
 import {
   Box,
+  Button,
   Flex,
   HStack,
-  Text,
-  Button,
+  IconButton,
   Menu,
   MenuButton,
-  MenuList,
-  MenuItem,
   MenuDivider,
+  MenuItem,
+  MenuList,
+  Text,
   useToast,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
-import { convertLayerDataToStrings } from '../../lib/tileRef';
 import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
 import { MapToolbar, MapToolbarActions } from './MapToolbar';
-import { SaveIndicator } from '../common/SaveIndicator';
+import { useWorkspaceStore } from '../../store/useWorkspaceStore';
+import {
+  canSaveWorkspaceTab,
+  saveAllDirtyWorkspaceUnits,
+  saveWorkspaceTab,
+} from '../../lib/workspaceSaveActions';
+import { useSaveStore } from '../../lib/saveManager';
+import { FaSave } from 'react-icons/fa';
 
 export const TopBar: React.FC = () => {
-  const mode = useEditorStore((state) => state.mode);
   const closeProject = useEditorStore((state) => state.closeProject);
   const loadProject = useEditorStore((state) => state.loadProject);
   const loadProjectResources = useEditorStore((state) => state.loadProjectResources);
-  const updateProject = useEditorStore((state) => state.updateProject);
-  const maps = useEditorStore((state) => state.maps);
-  const tilesets = useEditorStore((state) => state.tilesets);
   const project = useEditorStore((state) => state.project);
   const toast = useToast();
 
-  // Handlers
+  const tabs = useWorkspaceStore((state) => state.tabs);
+  const activeTabId = useWorkspaceStore((state) => state.activeTabId);
+  const resetWorkspace = useWorkspaceStore((state) => state.resetWorkspace);
+  const dirtySaveUnitCount = useSaveStore(
+    (state) => Object.values(state.saveUnits).filter((unit) => unit.dirty).length,
+  );
+
+  const activeTab = React.useMemo(
+    () => tabs.find((tab) => tab.id === activeTabId) ?? null,
+    [activeTabId, tabs],
+  );
+  const canSaveActiveTab = canSaveWorkspaceTab(activeTab);
+
+  React.useEffect(() => {
+    const isTextEntryTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName.toLowerCase();
+      return (
+        target.isContentEditable ||
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target.closest('[contenteditable="true"]') !== null
+      );
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isPrimaryModifier = event.ctrlKey || event.metaKey;
+      if (!isPrimaryModifier || event.defaultPrevented || isTextEntryTarget(event.target)) {
+        return;
+      }
+
+      if (event.key.toLowerCase() !== 's') {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (event.shiftKey) {
+        void handleSaveAll();
+        return;
+      }
+
+      if (canSaveActiveTab) {
+        void handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [canSaveActiveTab]);
+
   const handleCloseProject = () => {
-    if (confirm('Are you sure you want to close the project? Unsaved changes may be lost.')) {
-      closeProject();
+    const message =
+      dirtySaveUnitCount > 0
+        ? `Close the project? ${dirtySaveUnitCount} unsaved document${dirtySaveUnitCount === 1 ? '' : 's'} will remain unsaved.`
+        : 'Are you sure you want to close the project?';
+    if (!confirm(message)) {
+      return;
     }
+
+    resetWorkspace();
+    useSaveStore.getState().reset();
+    closeProject();
+    window.history.replaceState(null, '', '#/');
   };
 
   const handleOpenProject = async () => {
     try {
       const { project: nextProject, path } = await fileSystem.openProject();
+      resetWorkspace();
+      useSaveStore.getState().reset();
       await loadProject(path, nextProject);
       await loadProjectResources();
+      window.history.replaceState(null, '', '#/');
       toast({
-        title: 'Project Changed',
+        title: 'Project opened',
         description: `Switched to ${nextProject.name}`,
         status: 'success',
         duration: 3000,
       });
-    } catch (e: unknown) {
-      if (e instanceof Error && e.message !== 'Open project cancelled.') {
-        console.error(e);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message !== 'Open project cancelled.') {
+        console.error(error);
         toast({
           title: 'Failed to open project',
-          description: e.message,
+          description: error.message,
           status: 'error',
           duration: 5000,
         });
@@ -61,74 +127,46 @@ export const TopBar: React.FC = () => {
     }
   };
 
-  const handleSaveProject = async () => {
-    if (!project) return;
+  const handleSave = async () => {
+    if (!canSaveActiveTab) return;
+
     try {
-      await updateProject(project);
+      await saveWorkspaceTab(activeTab);
       toast({
-        title: 'Project saved',
+        title: 'Saved',
         status: 'success',
-        duration: 2000,
+        duration: 1800,
       });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Unknown error';
+    } catch (error: unknown) {
       toast({
-        title: 'Failed to save project',
-        description: message,
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
         status: 'error',
-        duration: 5000,
+        duration: 4000,
       });
     }
   };
 
-  const handleExport = async () => {
-    if (!project) return;
-
+  const handleSaveAll = async () => {
     try {
-      const exportedMaps = maps.map((map) => ({
-        ...map,
-        layers: map.layers.map((layer) => {
-          if (!layer.data || typeof layer.data[0]?.[0] !== 'number') {
-            return layer;
-          }
-
-          return {
-            ...layer,
-            data: convertLayerDataToStrings(layer.data as (number | null)[][], map.tilesetRefs),
-          };
-        }),
-      }));
-
-      const bundle = {
-        version: 1,
-        format: 'unity-export-bundle',
-        exportedAt: new Date().toISOString(),
-        project,
-        maps: exportedMaps,
-        tilesets: Array.from(tilesets.values()),
-      };
-
-      await fileSystem.saveJson('', 'unity-export.bundle.json', bundle);
+      await saveAllDirtyWorkspaceUnits();
       toast({
-        title: 'Export complete',
-        description: 'Wrote unity-export.bundle.json to the project root.',
+        title: 'All dirty documents saved',
         status: 'success',
-        duration: 4000,
+        duration: 1800,
       });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Unknown error';
+    } catch (error: unknown) {
       toast({
-        title: 'Export failed',
-        description: message,
+        title: 'Save all failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
         status: 'error',
-        duration: 5000,
+        duration: 4000,
       });
     }
   };
 
   return (
     <Flex align="center" justify="space-between" h="full" px="4" userSelect="none">
-      {/* Left: Branding & Menus */}
       <HStack spacing="6">
         <HStack spacing="2">
           <Flex
@@ -182,9 +220,17 @@ export const TopBar: React.FC = () => {
               <MenuItem
                 bg="transparent"
                 _hover={{ bg: 'editorPanelBg' }}
-                onClick={handleSaveProject}
+                onClick={() => void handleSave()}
+                isDisabled={!canSaveActiveTab}
               >
-                Save Project
+                Save
+              </MenuItem>
+              <MenuItem
+                bg="transparent"
+                _hover={{ bg: 'editorPanelBg' }}
+                onClick={() => void handleSaveAll()}
+              >
+                Save All
               </MenuItem>
               <MenuDivider borderColor="editorBorderLight" />
               <MenuItem
@@ -195,40 +241,38 @@ export const TopBar: React.FC = () => {
               >
                 Close Project
               </MenuItem>
-              <MenuItem bg="transparent" _hover={{ bg: 'editorPanelBg' }}>
-                Exit Control Panel
-              </MenuItem>
             </MenuList>
           </Menu>
-
-          <Button variant="ghost" size="xs" color="gray.400" fontWeight="medium">
-            Edit
-          </Button>
-          <Button variant="ghost" size="xs" color="gray.400" fontWeight="medium">
-            View
-          </Button>
-          <Button variant="ghost" size="xs" color="gray.400" fontWeight="medium">
-            Window
-          </Button>
+          <IconButton
+            aria-label="Save"
+            icon={<FaSave />}
+            size="xs"
+            variant="ghost"
+            colorScheme="gray"
+            onClick={() => void handleSave()}
+            isDisabled={!canSaveActiveTab}
+          />
+          <IconButton
+            aria-label="Save All"
+            icon={<FaSave />}
+            size="xs"
+            variant="ghost"
+            colorScheme="blue"
+            onClick={() => void handleSaveAll()}
+          />
         </HStack>
       </HStack>
 
-      {/* Center: Toolbar (Map or Tileset) */}
-      {mode === 'maps' ? <MapToolbar /> : mode === 'tilesets' ? <TilesetToolbar /> : <Box />}
+      {activeTab?.document.kind === 'location' ? (
+        <MapToolbar />
+      ) : activeTab?.document.kind === 'tileset' ? (
+        <TilesetToolbar />
+      ) : (
+        <Box />
+      )}
 
-      {/* Right: Save Status & Actions */}
       <HStack spacing="3">
-        {mode === 'maps' && <MapToolbarActions />}
-        <SaveIndicator />
-        <Button
-          colorScheme="blue"
-          size="xs"
-          fontWeight="medium"
-          boxShadow="sm"
-          onClick={handleExport}
-        >
-          Export
-        </Button>
+        {activeTab?.document.kind === 'location' && <MapToolbarActions />}
       </HStack>
     </Flex>
   );

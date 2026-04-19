@@ -114,6 +114,41 @@ export const ToolPropertiesPanel: React.FC = () => {
               </Text>
             ) : (
               <VStack align="stretch" spacing={1}>
+                <HStack
+                  spacing={3}
+                  align="center"
+                  px={3}
+                  py={2}
+                  rounded="md"
+                  cursor="pointer"
+                  bg={selectedTerrainId === null ? 'blue.700' : 'transparent'}
+                  _hover={{ bg: selectedTerrainId === null ? 'blue.600' : 'gray.700' }}
+                  onClick={() => setSelectedTerrain(null)}
+                >
+                  <Box
+                    w="14px"
+                    h="14px"
+                    rounded="full"
+                    borderWidth={1}
+                    borderColor="gray.600"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    color="gray.400"
+                    fontSize="10px"
+                    flexShrink={0}
+                  >
+                    ×
+                  </Box>
+                  <Text
+                    fontSize="sm"
+                    flex={1}
+                    fontWeight={selectedTerrainId === null ? 'semibold' : 'normal'}
+                    color={selectedTerrainId === null ? 'white' : 'gray.300'}
+                  >
+                    None (Erase)
+                  </Text>
+                </HStack>
                 {terrainTypes.map((t) => (
                   <HStack
                     key={t.id}

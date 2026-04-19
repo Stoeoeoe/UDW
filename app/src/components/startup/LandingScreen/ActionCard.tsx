@@ -1,10 +1,10 @@
 import React from 'react';
-import { Heading, Text } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text } from '@chakra-ui/react';
 import { EditorCard } from '../../common/Surfaces';
 
 interface ActionCardProps {
   onClick: () => void;
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   description: string;
   hoverColor: string;
@@ -24,10 +24,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     _hover={{ borderColor: hoverColor, transform: 'translateY(-4px)', bg: 'editorHoverBg' }}
     transition="all 0.2s"
     onClick={onClick}
+    dropShadow="lg"
   >
-    <Text fontSize="4xl" mb={4}>
+    <Flex height={10} alignItems="center" justifyContent="center" mb={4} fontSize="4xl">
       {icon}
-    </Text>
+    </Flex>
     <Heading size="md" mb={2}>
       {title}
     </Heading>

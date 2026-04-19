@@ -19,6 +19,9 @@ export interface EditorState {
   // Project data
   project: Project | null;
   projectPath: string | null; // Folder path or null if unsaved
+  resourcesLoaded: boolean;
+  resourceLoadingLabel: string | null;
+  resourceLoadingProgress: number;
   mode: EditorMode;
 
   // Assets

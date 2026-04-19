@@ -50,9 +50,7 @@ const report = { files: {}, emojis: {} };
 
 function isTextFile(file) {
   const ext = path.extname(file).toLowerCase();
-  return (
-    textFileExts.has(ext) || file.includes('README') || file.includes('LICENSE')
-  );
+  return textFileExts.has(ext) || file.includes('README') || file.includes('LICENSE');
 }
 
 async function scanFile(file) {
@@ -85,20 +83,14 @@ async function scanFile(file) {
   try {
     await walk(root, scanFile);
     const sorted = Object.entries(report.emojis).sort((a, b) => b[1] - a[1]);
-    const summary = sorted
-      .slice(0, 30)
-      .map(([ch, c]) => ({ emoji: ch, count: c }));
+    const summary = sorted.slice(0, 30).map(([ch, c]) => ({ emoji: ch, count: c }));
     const out = {
       summary,
       totalEmojiTypes: sorted.length,
       totalFiles: Object.keys(report.files).length,
       files: report.files,
     };
-    await fs.writeFile(
-      path.join(root, 'emojis-report.json'),
-      JSON.stringify(out, null, 2),
-      'utf8',
-    );
+    await fs.writeFile(path.join(root, 'emojis-report.json'), JSON.stringify(out, null, 2), 'utf8');
     console.log(
       'Emoji scan complete. Found',
       sorted.length,
@@ -108,10 +100,7 @@ async function scanFile(file) {
     );
     console.log('Report written to emojis-report.json');
     if (sorted.length) {
-      console.log(
-        'Top results:\n',
-        summary.map((s) => `${s.emoji}  x${s.count}`).join('\n'),
-      );
+      console.log('Top results:\n', summary.map((s) => `${s.emoji}  x${s.count}`).join('\n'));
     } else console.log('No emoji characters found.');
   } catch (err) {
     console.error('scan failed:', err);

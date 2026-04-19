@@ -10,6 +10,7 @@ import { LayerItem } from './LayerItem';
 import { LayerModal, LayerFormData } from './LayerModal';
 import { LAYER_CATEGORIES, LayerCategoryConfig, kindToCategory } from './layerConstants';
 import { CaptionText, SectionLabel } from '../../../components/common/Typography.tsx';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Category section header with collapse toggle + add button
@@ -81,8 +82,8 @@ export const LayersPanel: React.FC = () => {
   const updateLayer = useEditorStore((state) => state.updateLayer);
   const removeLayer = useEditorStore((state) => state.removeLayer);
   const layerDefinitions = useEditorStore((state) => state.layerDefinitions);
-  const setMode = useEditorStore((state) => state.setMode);
   const setSelectedLayerDefinition = useEditorStore((state) => state.setSelectedLayerDefinition);
+  const openDocument = useWorkspaceStore((state) => state.openDocument);
   const toast = useToast();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -139,7 +140,12 @@ export const LayersPanel: React.FC = () => {
 
   const handleGoToDefinition = (definitionId: string) => {
     setSelectedLayerDefinition(definitionId);
-    setMode('layers');
+    openDocument({
+      kind: 'configuration',
+      label: 'Configuration',
+      saveUnitId: 'configuration',
+      configTab: 'layers',
+    });
   };
 
   const handleOpenAddModal = (categoryConfig?: LayerCategoryConfig) => {
