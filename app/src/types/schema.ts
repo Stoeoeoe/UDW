@@ -64,8 +64,8 @@ export interface TileDefinition {
   terrain?: string; // Optional terrain id referencing a WangColor or terrain set
   probability?: number; // Optional placement probability weight for random tile selection (relative weight)
   // Tile-heights from this tile to the ground contact. Used on Y-sorted layers:
-  // depth = worldY + pivotY * tileSize. Default 1.0 (this tile IS the ground tile).
-  // For tiles above the ground (e.g. tree crown 3 rows up): set pivotY = 3.0 so
+  // depth = worldY + pivotY * tileSize. Default 1 (this tile IS the ground tile).
+  // For tiles above the ground (e.g. tree crown 3 rows up): set pivotY = 3 so
   // sort depth = this tile's worldY + 3*tileSize = the actual ground line.
   pivotY?: number;
   // Optional per-corner terrain assignments for corner-based Wang tiles

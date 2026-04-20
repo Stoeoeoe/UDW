@@ -759,7 +759,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         const cx = sheetX + col * tileSize + tileSize / 2;
         const cy = sheetY + row * tileSize + tileSize / 2;
 
-        const label = pivotY.toFixed(2);
+        const label = String(pivotY);
         ctx.lineWidth = 3 / effectiveZoom;
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.strokeText(label, cx, cy);

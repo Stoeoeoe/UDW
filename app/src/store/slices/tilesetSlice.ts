@@ -174,7 +174,16 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
   updateTileDefinition: (tilesetId, index, definition) => {
     set((state) => {
       const ts = state.tilesets.get(tilesetId);
-      if (ts) ts.tiles[index] = castDraft(definition);
+      if (ts) {
+        const normalizedDefinition =
+          definition.pivotY === undefined
+            ? definition
+            : {
+                ...definition,
+                pivotY: Math.max(0, Math.round(definition.pivotY)),
+              };
+        ts.tiles[index] = castDraft(normalizedDefinition);
+      }
     });
     get().scheduleTilesetSave(tilesetId);
   },

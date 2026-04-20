@@ -16,11 +16,15 @@ vi.mock('../lib/fileSystem', () => ({
   },
 }));
 
-vi.mock('../lib/saveManager', () => ({
-  useSaveStore: {
-    getState: () => ({ setStatus: vi.fn(), status: 'idle' }),
-  },
-}));
+vi.mock('../lib/saveManager', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/saveManager')>();
+  return {
+    ...actual,
+    useSaveStore: {
+      getState: () => ({ setStatus: vi.fn(), status: 'idle' }),
+    },
+  };
+});
 
 describe('tileset save scheduling', () => {
   beforeEach(() => {
@@ -57,8 +61,8 @@ describe('tileset save scheduling', () => {
       collision: { type: 'full' },
     } as Partial<TileDefinition>);
 
-    // Advance timers past debounce threshold (300ms)
-    await vi.advanceTimersByTimeAsync(350);
+    // Advance timers past debounce threshold
+    await vi.advanceTimersByTimeAsync(1100);
 
     // Allow any pending microtasks to complete
     await Promise.resolve();
@@ -71,5 +75,33 @@ describe('tileset save scheduling', () => {
     // payload snapshot should contain the tiles array with updated collision
     expect(last[2]).toBeTruthy();
     expect(last[2].tiles[0].collision.type).toBe('full');
+  });
+
+  it('saves pivotY as a non-negative integer', async () => {
+    const fs = await import('../lib/fileSystem');
+
+    const ts: Tileset = {
+      version: 1,
+      name: 'TS1',
+      id: 'ts1',
+      spriteSheet: 's.png',
+      columns: 4,
+      tileCount: 1,
+      tiles: { 0: {} },
+      wangSets: [],
+    };
+
+    await useEditorStore.getState().addTileset(ts);
+
+    useEditorStore.getState().updateTileDefinition('ts1', 0, {
+      pivotY: 2.6,
+    } as Partial<TileDefinition>);
+
+    await vi.advanceTimersByTimeAsync(1100);
+    await Promise.resolve();
+
+    const calls = vi.mocked(fs.fileSystem.saveJson).mock.calls;
+    const last = calls[calls.length - 1];
+    expect(last[2].tiles[0].pivotY).toBe(3);
   });
 });

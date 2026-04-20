@@ -1,5 +1,5 @@
 /**
- * Tileset serialization helpers — strip redundant default values on save,
+ * Tileset serialization helpers - strip redundant default values on save,
  * restore them on load. Old files (with all fields present) load fine because
  * we only add missing defaults, never overwrite existing values.
  */
@@ -8,9 +8,20 @@ import { Tileset, TileDefinition } from '../types/schema';
 
 const DEFAULT_TERRAIN_CORNERS: (string | null)[] = [null, null, null, null];
 
+function normalizePivotY(pivotY: number | undefined): number | undefined {
+  if (pivotY === undefined) return undefined;
+  if (!Number.isFinite(pivotY)) return 1;
+  return Math.max(0, Math.round(pivotY));
+}
+
+function normalizeTileDefinition(def: TileDefinition): TileDefinition {
+  const pivotY = normalizePivotY(def.pivotY);
+  return pivotY === def.pivotY ? def : { ...def, pivotY };
+}
+
 function isTrivialTileDefinition(index: number, def: TileDefinition): boolean {
   // A tile entry is "trivial" if it only has collision:{type:'none'} and/or
-  // spriteIndex === key — i.e. no useful data at all.
+  // spriteIndex === key - i.e. no useful data at all.
   const hasId = def.id !== undefined;
   const hasNonDefaultId = hasId && def.id !== `tile_${index}_0` && def.id !== String(index);
   const hasTags = def.tags && def.tags.length > 0;
@@ -35,25 +46,37 @@ function isTrivialTileDefinition(index: number, def: TileDefinition): boolean {
 }
 
 function stripTileDefaults(index: number, def: TileDefinition): TileDefinition | null {
-  if (isTrivialTileDefinition(index, def)) return null;
+  const normalizedDef = normalizeTileDefinition(def);
+  if (isTrivialTileDefinition(index, normalizedDef)) return null;
 
   const stripped: TileDefinition = {};
 
-  if (def.id !== undefined) stripped.id = def.id;
-  if (def.tags && def.tags.length > 0) stripped.tags = def.tags;
-  if (def.collision && def.collision.type !== 'none') stripped.collision = def.collision;
-  if (def.properties && def.properties.length > 0) stripped.properties = def.properties;
-  if (def.terrain !== undefined) stripped.terrain = def.terrain;
-  if (def.probability !== undefined && def.probability !== 1)
-    stripped.probability = def.probability;
-  if (def.pivotY !== undefined && def.pivotY !== 1) stripped.pivotY = def.pivotY;
-  if (def.terrainCorners && def.terrainCorners.some((c, i) => c !== DEFAULT_TERRAIN_CORNERS[i]))
-    stripped.terrainCorners = def.terrainCorners;
+  if (normalizedDef.id !== undefined) stripped.id = normalizedDef.id;
+  if (normalizedDef.tags && normalizedDef.tags.length > 0) stripped.tags = normalizedDef.tags;
+  if (normalizedDef.collision && normalizedDef.collision.type !== 'none') {
+    stripped.collision = normalizedDef.collision;
+  }
+  if (normalizedDef.properties && normalizedDef.properties.length > 0) {
+    stripped.properties = normalizedDef.properties;
+  }
+  if (normalizedDef.terrain !== undefined) stripped.terrain = normalizedDef.terrain;
+  if (normalizedDef.probability !== undefined && normalizedDef.probability !== 1) {
+    stripped.probability = normalizedDef.probability;
+  }
+  if (normalizedDef.pivotY !== undefined && normalizedDef.pivotY !== 1) {
+    stripped.pivotY = normalizedDef.pivotY;
+  }
+  if (
+    normalizedDef.terrainCorners &&
+    normalizedDef.terrainCorners.some((c, i) => c !== DEFAULT_TERRAIN_CORNERS[i])
+  ) {
+    stripped.terrainCorners = normalizedDef.terrainCorners;
+  }
 
   return stripped;
 }
 
-/** Prepare a tileset for serialization — strips redundant defaults from tile entries. */
+/** Prepare a tileset for serialization - strips redundant defaults from tile entries. */
 export function serializeTileset(tileset: Tileset): Tileset & { $schema: string } {
   const tiles: Record<number, TileDefinition> = {};
 
@@ -68,12 +91,16 @@ export function serializeTileset(tileset: Tileset): Tileset & { $schema: string 
   return { $schema: '../../schemas/tileset.schema.json', ...tileset, tiles };
 }
 
-/** Restore defaults for tile definitions loaded from disk.
- *  This is non-destructive — only fills in fields that are missing. */
+/** Restore defaults for tile definitions loaded from disk. */
 export function migrateTilesetOnLoad(tileset: Tileset): Tileset {
-  // Nothing to restore at the moment — all optional fields default to undefined
-  // which is treated as "default" throughout the codebase. The only side-effect
-  // of stripping is reducing disk size. If future code needs explicit defaults,
-  // add them here.
-  return tileset;
+  const normalizedTiles: Record<number, TileDefinition> = {};
+  let changed = false;
+
+  for (const [keyStr, def] of Object.entries(tileset.tiles ?? {})) {
+    const normalizedDef = normalizeTileDefinition(def);
+    normalizedTiles[Number(keyStr)] = normalizedDef;
+    if (normalizedDef !== def) changed = true;
+  }
+
+  return changed ? { ...tileset, tiles: normalizedTiles } : tileset;
 }

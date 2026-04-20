@@ -9,6 +9,7 @@ import type { StateCreator } from 'zustand';
 import { fileSystem } from '../lib/fileSystem';
 import { resolveSpriteAsset } from '../lib/asepriteUtils';
 import { DialogueIndex } from '../types/schema';
+import { migrateTilesetOnLoad } from '../lib/tilesetMigration';
 import {
   addMissingDefinitionLayers,
   getPreferredSelectedLayerId,
@@ -33,22 +34,26 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
     // 1. Load all tilesets
     const tilesets = await fileSystem.loadAllTilesets();
     for (const tileset of tilesets) {
-      const tilesObjCount = tileset.tiles ? Object.keys(tileset.tiles).length : 0;
+      const migratedTileset = migrateTilesetOnLoad(tileset);
+      const tilesObjCount = migratedTileset.tiles ? Object.keys(migratedTileset.tiles).length : 0;
       const normalizedTileCount = Math.max(
-        tileset.tileCount || 0,
+        migratedTileset.tileCount || 0,
         tilesObjCount,
-        tileset.columns || 1,
+        migratedTileset.columns || 1,
       );
-      const normalized = { ...tileset, tileCount: normalizedTileCount } as typeof tileset;
+      const normalized = {
+        ...migratedTileset,
+        tileCount: normalizedTileCount,
+      } as typeof migratedTileset;
       set((state) => {
-        state.tilesets.set(tileset.id, castDraft(normalized));
+        state.tilesets.set(migratedTileset.id, castDraft(normalized));
       });
 
       try {
-        const blob = await fileSystem.loadAsset(tileset.spriteSheet);
-        await get().loadSprite(tileset.spriteSheet, blob);
+        const blob = await fileSystem.loadAsset(migratedTileset.spriteSheet);
+        await get().loadSprite(migratedTileset.spriteSheet, blob);
       } catch (e) {
-        console.warn(`Failed to load sprite for tileset ${tileset.id}:`, e);
+        console.warn(`Failed to load sprite for tileset ${migratedTileset.id}:`, e);
       }
     }
 

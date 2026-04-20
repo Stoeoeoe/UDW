@@ -87,8 +87,8 @@
           "exclusiveMinimum": 0
         },
         "pivotY": {
-          "type": "number",
-          "description": "Tile-heights from this tile to the ground contact. depth = worldY + pivotY*tileSize. Default 1.0 (ground tile). Crown 3 rows above ground: pivotY=3.0.",
+          "type": "integer",
+          "description": "Tile-heights from this tile to the ground contact. depth = worldY + pivotY*tileSize. Default 1 (ground tile). Crown 3 rows above ground: pivotY=3.",
           "minimum": 0
         },
         "terrainCorners": {

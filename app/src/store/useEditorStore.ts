@@ -10,6 +10,7 @@ import { recentProjects } from '../lib/recentProjects';
 import { resolveEntities } from '../lib/mapUtils';
 import { fileSystem } from '../lib/fileSystem';
 import { registerSaveAccessors, saveMapDebounced } from '../lib/saveManager';
+import { migrateTilesetOnLoad } from '../lib/tilesetMigration';
 import {
   getPreferredSelectedLayerId,
   syncToolStateForSelectedLayer,
@@ -440,21 +441,22 @@ if ('ipcRenderer' in window) {
           console.warn('Tileset changed but could not parse JSON:', relativePath);
           return;
         }
+        const migratedTileset = migrateTilesetOnLoad(tileset);
         useEditorStore.setState((state) => {
           const newMap = new Map(state.tilesets);
           try {
-            newMap.set(tileset.id, tileset);
+            newMap.set(migratedTileset.id, migratedTileset);
           } catch (_e) {
-            newMap.set(relativePath, tileset);
+            newMap.set(relativePath, migratedTileset);
           }
           return { tilesets: newMap };
         });
-        if (tileset.spriteSheet) {
+        if (migratedTileset.spriteSheet) {
           try {
-            const blob = await fileSystem.loadAsset(tileset.spriteSheet);
-            await useEditorStore.getState().loadSprite(tileset.spriteSheet, blob);
+            const blob = await fileSystem.loadAsset(migratedTileset.spriteSheet);
+            await useEditorStore.getState().loadSprite(migratedTileset.spriteSheet, blob);
           } catch (e) {
-            console.warn('Failed to reload tileset sprite:', tileset.spriteSheet, e);
+            console.warn('Failed to reload tileset sprite:', migratedTileset.spriteSheet, e);
           }
         }
       } catch (_e) {

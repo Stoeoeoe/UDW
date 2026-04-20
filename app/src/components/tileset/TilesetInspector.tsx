@@ -41,16 +41,16 @@ const PivotYField: React.FC<PivotYFieldProps> = ({
   currentTileDef,
   updateTileDef,
 }) => {
-  const [text, setText] = React.useState(() => (currentPivotY ?? 1).toFixed(2));
+  const [text, setText] = React.useState(() => String(currentPivotY ?? 1));
   const tileDefRef = React.useRef(currentTileDef);
   tileDefRef.current = currentTileDef;
 
-  const numericRegex = /^-?\d+(?:\.\d+)?$/;
+  const integerRegex = /^-?\d+$/;
 
   const handleChange = (str: string) => {
     setText(str);
-    if (!numericRegex.test(str)) return;
-    const numeric = parseFloat(str);
+    if (!integerRegex.test(str)) return;
+    const numeric = parseInt(str, 10);
     const clamped = Math.max(0, numeric);
     if (clamped === (tileDefRef.current.pivotY ?? 1)) return;
     updateTileDef(tilesetId, tileIndex, {
@@ -60,9 +60,9 @@ const PivotYField: React.FC<PivotYFieldProps> = ({
   };
 
   const handleBlur = () => {
-    const numeric = parseFloat(text);
+    const numeric = parseInt(text, 10);
     const clamped = Number.isFinite(numeric) ? Math.max(0, numeric) : 1;
-    setText(clamped.toFixed(2));
+    setText(String(clamped));
     if (clamped === (tileDefRef.current.pivotY ?? 1)) return;
     updateTileDef(tilesetId, tileIndex, {
       ...tileDefRef.current,
@@ -76,8 +76,8 @@ const PivotYField: React.FC<PivotYFieldProps> = ({
       <NumberInput
         value={text}
         min={0}
-        step={0.5}
-        precision={2}
+        step={1}
+        precision={0}
         onChange={handleChange}
         onBlur={handleBlur}
       >
@@ -88,9 +88,9 @@ const PivotYField: React.FC<PivotYFieldProps> = ({
         </NumberInputStepper>
       </NumberInput>
       <Text fontSize="9px" color="gray.500" mt={2}>
-        Tile-heights from this tile to the ground contact point. 1.0 = ground tile (bottom of
-        sprite). For tiles above the ground (e.g. tree crown 3 rows up): set to 3.0 so the sort
-        depth lands at the actual ground line.
+        Tile-heights from this tile to the ground contact point. 1 = ground tile (bottom of sprite).
+        For tiles above the ground (e.g. tree crown 3 rows up): set to 3 so the sort depth lands at
+        the actual ground line.
       </Text>
     </FormControl>
   );
