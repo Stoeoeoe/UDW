@@ -46,22 +46,48 @@ export const TopBar: React.FC = () => {
   );
   const canSaveActiveTab = canSaveWorkspaceTab(activeTab);
 
-  React.useEffect(() => {
-    const isTextEntryTarget = (target: EventTarget | null): boolean => {
-      if (!(target instanceof HTMLElement)) return false;
-      const tagName = target.tagName.toLowerCase();
-      return (
-        target.isContentEditable ||
-        tagName === 'input' ||
-        tagName === 'textarea' ||
-        tagName === 'select' ||
-        target.closest('[contenteditable="true"]') !== null
-      );
-    };
+  const handleSave = React.useCallback(async () => {
+    if (!canSaveActiveTab) return;
 
+    try {
+      await saveWorkspaceTab(activeTab);
+      toast({
+        title: 'Saved',
+        status: 'success',
+        duration: 1800,
+      });
+    } catch (error: unknown) {
+      toast({
+        title: 'Save failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+        duration: 4000,
+      });
+    }
+  }, [activeTab, canSaveActiveTab, toast]);
+
+  const handleSaveAll = React.useCallback(async () => {
+    try {
+      await saveAllDirtyWorkspaceUnits();
+      toast({
+        title: 'All dirty documents saved',
+        status: 'success',
+        duration: 1800,
+      });
+    } catch (error: unknown) {
+      toast({
+        title: 'Save all failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+        duration: 4000,
+      });
+    }
+  }, [toast]);
+
+  React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isPrimaryModifier = event.ctrlKey || event.metaKey;
-      if (!isPrimaryModifier || event.defaultPrevented || isTextEntryTarget(event.target)) {
+      if (!isPrimaryModifier || event.defaultPrevented) {
         return;
       }
 
@@ -83,7 +109,7 @@ export const TopBar: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [canSaveActiveTab]);
+  }, [canSaveActiveTab, handleSave, handleSaveAll]);
 
   const handleCloseProject = () => {
     const message =
@@ -124,44 +150,6 @@ export const TopBar: React.FC = () => {
           duration: 5000,
         });
       }
-    }
-  };
-
-  const handleSave = async () => {
-    if (!canSaveActiveTab) return;
-
-    try {
-      await saveWorkspaceTab(activeTab);
-      toast({
-        title: 'Saved',
-        status: 'success',
-        duration: 1800,
-      });
-    } catch (error: unknown) {
-      toast({
-        title: 'Save failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        status: 'error',
-        duration: 4000,
-      });
-    }
-  };
-
-  const handleSaveAll = async () => {
-    try {
-      await saveAllDirtyWorkspaceUnits();
-      toast({
-        title: 'All dirty documents saved',
-        status: 'success',
-        duration: 1800,
-      });
-    } catch (error: unknown) {
-      toast({
-        title: 'Save all failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        status: 'error',
-        duration: 4000,
-      });
     }
   };
 

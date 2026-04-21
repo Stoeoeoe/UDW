@@ -9,14 +9,37 @@ import {
 import { fileSystem } from './fileSystem';
 import { useEditorStore } from '../store/useEditorStore';
 import { useAppSettingsStore } from '../store/useAppSettingsStore';
-import { WorkspaceTab } from '../types/workspace';
+import { WorkspaceDocument, WorkspaceTab } from '../types/workspace';
 import { addMissingDefinitionLayers, ensureNavigationLayer } from '../store/storeHelpers';
 import { deserializeMap } from './mapMigration';
 import { migrateMapToEncodedData } from './tileRef';
 import { Map as GameMap, Project, Tileset } from '../types/schema';
 
+type WorkspaceSaveOverride = {
+  saveTab?: (tab: WorkspaceTab) => Promise<void>;
+  saveAll?: () => Promise<void>;
+};
+
+const workspaceSaveOverrides = new Map<WorkspaceDocument['kind'], WorkspaceSaveOverride>();
+
+export function registerWorkspaceTabSaveOverride(
+  kind: WorkspaceDocument['kind'],
+  override: WorkspaceSaveOverride,
+): () => void {
+  workspaceSaveOverrides.set(kind, override);
+  return () => {
+    if (workspaceSaveOverrides.get(kind) === override) {
+      workspaceSaveOverrides.delete(kind);
+    }
+  };
+}
+
 export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
   if (!tab) return false;
+
+  if (workspaceSaveOverrides.has(tab.document.kind)) {
+    return true;
+  }
 
   return (
     tab.document.kind === 'location' ||
@@ -24,12 +47,19 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'configuration' ||
     tab.document.kind === 'settings' ||
     tab.document.kind === 'entities' ||
-    tab.document.kind === 'scripting'
+    tab.document.kind === 'scripting' ||
+    tab.document.kind === 'dialogues'
   );
 }
 
 export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> {
   if (!tab) return;
+
+  const override = workspaceSaveOverrides.get(tab.document.kind);
+  if (override?.saveTab) {
+    await override.saveTab(tab);
+    return;
+  }
 
   const editor = useEditorStore.getState();
   const document = tab.document;
@@ -105,6 +135,12 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
 
     if (saveUnitId === 'settings') {
       useAppSettingsStore.getState().saveDraft();
+    }
+  }
+
+  for (const override of workspaceSaveOverrides.values()) {
+    if (override.saveAll) {
+      await override.saveAll();
     }
   }
 }

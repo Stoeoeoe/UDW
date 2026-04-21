@@ -26,6 +26,7 @@ import {
   ScriptContextType,
 } from '../../../types/schema';
 import { fileSystem } from '../../../lib/fileSystem';
+import { registerWorkspaceTabSaveOverride } from '../../../lib/workspaceSaveActions';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
 import { validateLuaChunk } from '../../../lib/luaRunner';
@@ -185,6 +186,21 @@ export const DialogueEditor: React.FC = () => {
       window.removeEventListener('blur', onWindowBlur);
     };
   }, [flushSavesNow]);
+
+  useEffect(
+    () =>
+      registerWorkspaceTabSaveOverride('dialogues', {
+        saveTab: async () => {
+          if (!isDirty) return;
+          await flushSavesNow();
+        },
+        saveAll: async () => {
+          if (!isDirty) return;
+          await flushSavesNow();
+        },
+      }),
+    [flushSavesNow, isDirty],
+  );
 
   useEffect(() => {
     let cancelled = false;

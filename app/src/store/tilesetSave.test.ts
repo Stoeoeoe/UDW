@@ -5,6 +5,7 @@ import { enableMapSet } from 'immer';
 enableMapSet();
 
 import { useEditorStore } from './useEditorStore';
+import { useAppSettingsStore } from './useAppSettingsStore';
 import type { TileDefinition, Tileset } from '../types/schema';
 
 // Mock fileSystem and saveManager used by the store
@@ -13,6 +14,7 @@ vi.mock('../lib/fileSystem', () => ({
     saveJson: vi.fn(async () => undefined),
     loadAllTilesets: vi.fn(async () => []),
     loadAllMaps: vi.fn(async () => []),
+    loadAsset: vi.fn(async () => new Blob()),
   },
 }));
 
@@ -31,6 +33,17 @@ describe('tileset save scheduling', () => {
     // Reset store and timers
     const { closeProject } = useEditorStore.getState();
     closeProject();
+    useAppSettingsStore.setState((state) => ({
+      ...state,
+      savedSettings: {
+        ...state.savedSettings,
+        autosaveEnabled: true,
+      },
+      draftSettings: {
+        ...state.draftSettings,
+        autosaveEnabled: true,
+      },
+    }));
     vi.useFakeTimers();
   });
 
