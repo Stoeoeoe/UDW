@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getVariationChain, resolveTileAt, resolveEntities } from './mapUtils';
+import { getVariationChain, resolveTileAt, resolveEntities, resolveMapContext } from './mapUtils';
 import type { Map } from '../types/schema';
 
 describe('mapUtils', () => {
@@ -229,6 +229,173 @@ describe('mapUtils', () => {
       const entities = resolveEntities(mockMap, 'v2');
       expect(entities).toHaveLength(1);
       expect(entities[0].id).toBe('e2'); // e1 removed in v2, e2 added in v1
+    });
+
+    it('should apply modify entity overrides', () => {
+      const mapWithModify: Map = {
+        ...mockMap,
+        variations: [
+          {
+            id: 'vmod',
+            displayName: 'Modify Variation',
+            kind: 'generic',
+            entityOverrides: [
+              {
+                action: 'modify',
+                entityId: 'e1',
+                entity: { label: 'Modified Label', properties: { hp: 100 } },
+              },
+            ],
+          },
+        ],
+      };
+      const entities = resolveEntities(mapWithModify, 'vmod');
+      expect(entities).toHaveLength(1);
+      expect(entities[0].id).toBe('e1');
+      expect(entities[0].label).toBe('Modified Label');
+      expect(entities[0].properties.hp).toBe(100);
+    });
+
+    it('should collect entities from entity-kind layers', () => {
+      const mapWithEntityLayer: Map = {
+        ...mockMap,
+        layers: [
+          ...mockMap.layers,
+          {
+            id: 'entities-layer',
+            name: 'Entities',
+            kind: 'entity',
+            visible: true,
+            locked: false,
+            opacity: 1,
+            zOrder: 1,
+            entities: [{ id: 'layer-e1', typeId: 'npc', position: [5, 5], properties: {} }],
+          },
+        ],
+      };
+      const entities = resolveEntities(mapWithEntityLayer, null);
+      expect(entities.find((e) => e.id === 'e1')).toBeDefined();
+      expect(entities.find((e) => e.id === 'layer-e1')).toBeDefined();
+    });
+  });
+
+  describe('resolveMapContext', () => {
+    it('returns base map name and tilesetId when no variation', () => {
+      const ctx = resolveMapContext(mockMap, null);
+      expect(ctx.name).toBe('Test Map');
+      expect(ctx.baseTilesetId).toBe('ts1');
+      expect(ctx.description).toBeUndefined();
+    });
+
+    it('returns base context when variation has no metadata overrides', () => {
+      const ctx = resolveMapContext(mockMap, 'v1');
+      expect(ctx.name).toBe('Test Map');
+      expect(ctx.baseTilesetId).toBe('ts1');
+    });
+
+    it('applies mapNameOverride from a variation', () => {
+      const mapWithMeta: Map = {
+        ...mockMap,
+        variations: [
+          {
+            id: 'vsummer',
+            displayName: 'Summer',
+            kind: 'season',
+            metadata: { mapNameOverride: 'Summer Map' },
+          },
+        ],
+      };
+      const ctx = resolveMapContext(mapWithMeta, 'vsummer');
+      expect(ctx.name).toBe('Summer Map');
+    });
+
+    it('ignores blank mapNameOverride', () => {
+      const mapWithBlank: Map = {
+        ...mockMap,
+        variations: [
+          {
+            id: 'vblank',
+            displayName: 'Blank Override',
+            kind: 'generic',
+            metadata: { mapNameOverride: '   ' },
+          },
+        ],
+      };
+      const ctx = resolveMapContext(mapWithBlank, 'vblank');
+      expect(ctx.name).toBe('Test Map');
+    });
+
+    it('applies baseTilesetIdOverride from a variation', () => {
+      const mapWithTilesetOverride: Map = {
+        ...mockMap,
+        variations: [
+          {
+            id: 'vwinter',
+            displayName: 'Winter',
+            kind: 'season',
+            metadata: { baseTilesetIdOverride: 'ts1_winter' },
+          },
+        ],
+      };
+      const ctx = resolveMapContext(mapWithTilesetOverride, 'vwinter');
+      expect(ctx.baseTilesetId).toBe('ts1_winter');
+    });
+
+    it('applies descriptionOverride from a variation', () => {
+      const mapWithDesc: Map = {
+        ...mockMap,
+        metadata: { description: 'Base description' },
+        variations: [
+          {
+            id: 'vdesc',
+            displayName: 'Desc Override',
+            kind: 'generic',
+            metadata: { descriptionOverride: 'Overridden description' },
+          },
+        ],
+      };
+      const ctx = resolveMapContext(mapWithDesc, 'vdesc');
+      expect(ctx.description).toBe('Overridden description');
+    });
+
+    it('clears description when descriptionOverride is empty string', () => {
+      const mapWithDesc: Map = {
+        ...mockMap,
+        metadata: { description: 'Base description' },
+        variations: [
+          {
+            id: 'vclear',
+            displayName: 'Clear Desc',
+            kind: 'generic',
+            metadata: { descriptionOverride: '' },
+          },
+        ],
+      };
+      const ctx = resolveMapContext(mapWithDesc, 'vclear');
+      expect(ctx.description).toBeUndefined();
+    });
+
+    it('child variation metadata takes precedence over parent', () => {
+      const mapWithChain: Map = {
+        ...mockMap,
+        variations: [
+          {
+            id: 'vparent',
+            displayName: 'Parent',
+            kind: 'generic',
+            metadata: { mapNameOverride: 'Parent Name' },
+          },
+          {
+            id: 'vchild',
+            displayName: 'Child',
+            kind: 'generic',
+            parentId: 'vparent',
+            metadata: { mapNameOverride: 'Child Name' },
+          },
+        ],
+      };
+      const ctx = resolveMapContext(mapWithChain, 'vchild');
+      expect(ctx.name).toBe('Child Name');
     });
   });
 });
