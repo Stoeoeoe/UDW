@@ -19,6 +19,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test --config playwright.e2e.config.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,html}\"",
