@@ -20,7 +20,6 @@ export const TilesetEditor: React.FC = () => {
   const tilesetMode = useEditorStore((state) => state.tilesetToolMode);
   const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
   const tilesets = useEditorStore((state) => state.tilesets);
-  const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
   const resetSelectedTiles = useEditorStore((state) => state.resetSelectedTiles);
 
   const { selectedTileIndex, handleTileSelect } = useTileSelection();
@@ -28,73 +27,9 @@ export const TilesetEditor: React.FC = () => {
 
   const activeTileset = activeTilesetId ? tilesets.get(activeTilesetId) : null;
 
-  const tilesetItems: ListPanelItem[] = Array.from(tilesets.values()).map((ts) => ({
-    id: ts.id,
-    label: ts.name,
-    sublabel: `${tileSize}×${tileSize} • ${ts.tileCount} tiles`,
-  }));
-
   const toast = useToast();
   const { isOpen: isCreatorOpen, onOpen: onCreatorOpen, onClose: onCreatorClose } = useDisclosure();
-  const { isOpen: isMetaOpen, onOpen: onMetaOpen, onClose: onMetaClose } = useDisclosure();
-
-  const handleSelectTileset = (id: string) => {
-    setActiveTileset(id);
-    resetSelectedTiles?.();
-  };
-
-  const tilesetListPanel = (
-    <ListPanel
-      title="Tilesets"
-      items={tilesetItems}
-      selectedId={activeTilesetId}
-      onSelect={handleSelectTileset}
-      enableSearch={true}
-      autoSelectFirst={true}
-      emptyMessage="No tilesets imported"
-      onAdd={onCreatorOpen}
-      itemActions={(item) => [
-        {
-          id: 'edit',
-          label: 'Edit tileset',
-          icon: <EditIcon fontSize="10px" />,
-          ariaLabel: 'Edit Tileset',
-          onClick: () => {
-            if (activeTilesetId !== item.id) handleSelectTileset(item.id);
-            onMetaOpen();
-          },
-        },
-        {
-          id: 'delete',
-          label: 'Delete tileset',
-          icon: <DeleteIcon fontSize="10px" />,
-          ariaLabel: 'Delete Tileset',
-          hoverColor: 'red.300',
-          onClick: async () => {
-            const ts = tilesets.get(item.id);
-            if (!ts) return;
-
-            if (
-              confirm(`Delete tileset "${ts.name}"? This removes metadata but not the image file.`)
-            ) {
-              try {
-                await useEditorStore.getState().deleteTileset(ts.id);
-                toast({ title: 'Tileset deleted', status: 'info' });
-              } catch (err: unknown) {
-                toast({
-                  title: 'Failed to delete',
-                  description: err instanceof Error ? err.message : 'Unknown error',
-                  status: 'error',
-                });
-              }
-            }
-          },
-        },
-      ]}
-    />
-  );
-
-  const leftPanel = tilesetListPanel;
+  const { isOpen: isMetaOpen, onClose: onMetaClose } = useDisclosure();
 
   const rightPanel = activeTileset ? (
     tilesetMode === 'terrain' ? (
@@ -172,9 +107,7 @@ export const TilesetEditor: React.FC = () => {
               </VStack>
             </Flex>
           }
-          leftPanel={leftPanel}
           rightPanel={rightPanel}
-          leftPanelDefaultSize={18}
           rightPanelDefaultSize={22}
         />
 
@@ -196,7 +129,6 @@ export const TilesetEditor: React.FC = () => {
               onCreate={onCreatorOpen}
             />
           }
-          leftPanel={leftPanel}
         />
         <CreateTilesetDialog isOpen={isCreatorOpen} onClose={onCreatorClose} />
       </>
@@ -230,9 +162,7 @@ export const TilesetEditor: React.FC = () => {
             </Box>
           </Flex>
         }
-        leftPanel={leftPanel}
         rightPanel={rightPanel}
-        leftPanelDefaultSize={18}
         rightPanelDefaultSize={22}
       />
 
