@@ -10,15 +10,15 @@ export const LAYER_ICONS = [
   { value: 'overlay', label: '📐 Overlay' },
 ];
 
-export type LayerCategory = 'terrain' | 'tiles' | 'collision' | 'entities' | 'other';
+export type LayerCategory = 'visual' | 'collision' | 'entities' | 'other';
 
 /** Maps a LayerKind to its display category. */
 export function kindToCategory(kind: LayerKind): LayerCategory {
   switch (kind) {
     case 'terrain':
-      return 'terrain';
     case 'visual':
-      return 'tiles';
+    case 'object':
+      return 'visual';
     case 'collision':
       return 'collision';
     case 'entity':
@@ -46,8 +46,12 @@ export interface LayerCategoryConfig {
 
 /** Ordered display config for all layer categories. */
 export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
-  { id: 'terrain', label: 'Terrain', kinds: ['terrain'], color: 'green.700' },
-  { id: 'tiles', label: 'Tiles', kinds: ['visual'], color: 'blue.700' },
+  {
+    id: 'visual',
+    label: 'Visual',
+    kinds: ['visual', 'terrain', 'object'],
+    color: 'blue.700',
+  },
   { id: 'collision', label: 'Collision', kinds: ['collision'], color: 'orange.700' },
   { id: 'entities', label: 'Entities', kinds: ['entity'], color: 'purple.700' },
   {

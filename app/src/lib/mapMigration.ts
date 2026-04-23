@@ -12,6 +12,7 @@
  */
 
 import { Layer, Map as GameMap } from '../types/schema';
+import { migrateLegacyObjectLayerToObjectGroups } from './objectGroups';
 
 // ─── Sparse layer encoding ────────────────────────────────────────────────────
 
@@ -134,14 +135,18 @@ export function serializeMap(map: GameMap): WireMap {
   const layers: WireLayer[] = map.layers.map((layer) => {
     const wire: WireLayer = { ...layer } as WireLayer;
 
+    if (wire.sortingLayer === 'objects') {
+      migrateLegacyObjectLayerToObjectGroups(wire as Layer, map.tilesetRefs);
+    }
+
     // Sparse encode tile data
-    if (layer.data) {
-      wire.data = encodeLayerData(layer.data);
+    if (Array.isArray(wire.data)) {
+      wire.data = encodeLayerData(wire.data);
     }
 
     // Terrain palette compression
-    if (layer.terrainData && layer.terrainData.length > 0) {
-      const { palette, encoded } = encodeTerrainData(layer.terrainData as (string | null)[][]);
+    if (wire.terrainData && wire.terrainData.length > 0) {
+      const { palette, encoded } = encodeTerrainData(wire.terrainData as (string | null)[][]);
       wire.terrainPalette = palette;
       wire.terrainData = encoded;
     }

@@ -100,8 +100,9 @@ export interface TilesetTabSession {
   activeTilesetId: string | null;
   selectedTileIndex: number | null;
   selectedTileIndices: number[];
+  selectedObjectDefinitionId: string | null;
   selectedTerrainId: string | null;
-  tilesetToolMode: 'select' | 'terrain';
+  tilesetToolMode: 'select' | 'terrain' | 'objects';
   showTilesetCollisionOverlay: boolean;
   showTilesetSortPivotOverlay: boolean;
 }

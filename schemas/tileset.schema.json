@@ -54,6 +54,11 @@
       "type": "array",
       "description": "Wang sets for autotiling (Tiled-compatible).",
       "items": { "$ref": "#/$defs/WangSet" }
+    },
+    "objects": {
+      "type": "array",
+      "description": "Reusable multi-tile object definitions such as trees or bushes.",
+      "items": { "$ref": "#/$defs/TilesetObjectDefinition" }
     }
   },
   "$defs": {
@@ -139,6 +144,29 @@
         "y": { "type": "number" },
         "width": { "type": "number" },
         "height": { "type": "number" }
+      }
+    },
+    "TilesetObjectDefinition": {
+      "type": "object",
+      "required": ["id", "name", "tiles"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "tiles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TilesetObjectTile" }
+        }
+      }
+    },
+    "TilesetObjectTile": {
+      "type": "object",
+      "required": ["x", "y", "tileIndex"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 },
+        "tileIndex": { "type": "integer", "minimum": 0 }
       }
     },
     "WangSet": {

@@ -190,15 +190,62 @@ export const LayersPanel: React.FC = () => {
     }
 
     if (editingLayer) {
+      const nextSortingLayer = data.kind === 'object' ? 'objects' : data.sortingLayer;
+      const nextLayerShape =
+        data.kind === 'entity'
+          ? {
+              entities: editingLayer.entities ?? [],
+              data: undefined,
+              terrainData: undefined,
+              objectInstances: undefined,
+            }
+          : data.kind === 'terrain'
+            ? {
+                data:
+                  editingLayer.kind === 'terrain' && editingLayer.data
+                    ? editingLayer.data
+                    : Array(currentMap.height)
+                        .fill(null)
+                        .map(() => Array(currentMap.width).fill(null)),
+                terrainData:
+                  editingLayer.kind === 'terrain' && editingLayer.terrainData
+                    ? editingLayer.terrainData
+                    : Array(currentMap.height)
+                        .fill(null)
+                        .map(() => Array(currentMap.width).fill(null)),
+                entities: undefined,
+                objectInstances: undefined,
+              }
+            : data.kind === 'object'
+              ? {
+                  data: undefined,
+                  terrainData: undefined,
+                  entities: undefined,
+                  objectInstances: editingLayer.objectInstances ?? [],
+                }
+              : {
+                  data:
+                    editingLayer.kind === 'visual' && editingLayer.data
+                      ? editingLayer.data
+                      : Array(currentMap.height)
+                          .fill(null)
+                          .map(() => Array(currentMap.width).fill(null)),
+                  terrainData: undefined,
+                  entities: undefined,
+                  objectInstances: undefined,
+                };
+
       updateLayer(editingLayer.id, {
         name: data.name,
         kind: data.kind,
         zOrder: data.zOrder,
         icon: data.icon || undefined,
-        sortingLayer: data.sortingLayer,
+        sortingLayer: nextSortingLayer,
+        ...nextLayerShape,
       });
       toast({ title: 'Layer updated', status: 'success', duration: 1500 });
     } else {
+      const sortingLayer = data.kind === 'object' ? 'objects' : data.sortingLayer;
       const id = `layer-${Date.now()}`;
       const base: Layer = {
         id,
@@ -209,11 +256,15 @@ export const LayersPanel: React.FC = () => {
         opacity: 1,
         zOrder: data.zOrder,
         icon: data.icon || undefined,
-        sortingLayer: data.sortingLayer,
+        sortingLayer,
       };
 
       if (data.kind === 'entity') {
         base.entities = [];
+      } else if (data.kind === 'object') {
+        base.objectInstances = [];
+      } else if (data.sortingLayer === 'objects') {
+        base.objectInstances = [];
       } else {
         base.data = Array(currentMap.height)
           .fill(null)

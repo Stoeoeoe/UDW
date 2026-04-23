@@ -66,9 +66,11 @@ function renderToCanvas(
   ctx.fillStyle = EDITOR_CANVAS_HEX;
   ctx.fillRect(0, 0, W, H);
 
-  // Visual + terrain layers sorted by zOrder
+  // Visual-style layers sorted by zOrder
   const layers = [...map.layers]
-    .filter((l) => l.visible && (l.kind === 'visual' || l.kind === 'terrain'))
+    .filter(
+      (l) => l.visible && (l.kind === 'visual' || l.kind === 'terrain' || l.kind === 'object'),
+    )
     .sort((a, b) => a.zOrder - b.zOrder);
 
   ctx.imageSmoothingEnabled = false;
@@ -76,7 +78,7 @@ function renderToCanvas(
   for (const layer of layers) {
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
-        const ref = resolveTileAt(map, layer.id, x, y, null);
+        const ref = resolveTileAt(map, layer.id, x, y, null, tilesets);
         if (!ref) continue;
 
         const colonIdx = ref.indexOf(':');

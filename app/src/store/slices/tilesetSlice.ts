@@ -17,6 +17,7 @@ export interface TilesetSlice {
   activeTilesetId: string | null;
   selectedTileIndex: number | null;
   selectedTileIndices: number[];
+  selectedObjectDefinitionId: string | null;
   mapEditorSelectedTileIndex: number | null;
   mapEditorSelectedTileIndices: number[];
   tilesetEditorSelectedTileIndex: number | null;
@@ -32,6 +33,7 @@ export interface TilesetSlice {
   setActiveTileset: (id: string | null) => void;
   setSelectedTile: (index: number | null) => void;
   setSelectedTiles: (indexes: number[]) => void;
+  setSelectedObjectDefinition: (id: string | null) => void;
   toggleSelectedTile: (index: number) => void;
   setSelectedTerrain: (id: string | null) => void;
   setSampledPattern: (
@@ -60,6 +62,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
   activeTilesetId: null,
   selectedTileIndex: null,
   selectedTileIndices: [],
+  selectedObjectDefinitionId: null,
   mapEditorSelectedTileIndex: null,
   mapEditorSelectedTileIndices: [],
   tilesetEditorSelectedTileIndex: null,
@@ -72,6 +75,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       state.activeTilesetId = id;
       state.selectedTileIndex = null;
       state.selectedTileIndices = [];
+      state.selectedObjectDefinitionId = null;
       state.selectedTerrainId = null;
     }),
 
@@ -80,6 +84,9 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       state.selectedTileIndex = index;
       if (index !== null) state.selectedTerrainId = null;
       state.selectedTileIndices = index !== null ? [index] : [];
+      if (state.tilesetToolMode !== 'objects') {
+        state.selectedObjectDefinitionId = null;
+      }
       state.sampledPattern = null;
     }),
 
@@ -88,7 +95,20 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       state.selectedTileIndices = indexes.slice();
       state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
       if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+      if (state.tilesetToolMode !== 'objects') {
+        state.selectedObjectDefinitionId = null;
+      }
       state.sampledPattern = null;
+    }),
+
+  setSelectedObjectDefinition: (id) =>
+    set((state) => {
+      state.selectedObjectDefinitionId = id;
+      if (id !== null) {
+        state.selectedTileIndex = null;
+        state.selectedTileIndices = [];
+        state.selectedTerrainId = null;
+      }
     }),
 
   toggleSelectedTile: (index) =>
@@ -101,6 +121,9 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
           ? state.selectedTileIndices[state.selectedTileIndices.length - 1]
           : null;
       if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+      if (state.tilesetToolMode !== 'objects') {
+        state.selectedObjectDefinitionId = null;
+      }
     }),
 
   setSelectedTerrain: (id) =>
@@ -180,7 +203,9 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
             ? definition
             : {
                 ...definition,
-                pivotY: Math.max(0, Math.round(definition.pivotY)),
+                pivotY: Number.isFinite(definition.pivotY)
+                  ? Math.max(0, Math.round(definition.pivotY))
+                  : 1,
               };
         ts.tiles[index] = castDraft(normalizedDefinition);
       }

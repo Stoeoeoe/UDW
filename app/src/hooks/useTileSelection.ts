@@ -42,9 +42,8 @@ export function useTileSelection(options?: { local?: boolean }) {
   const handleTileSelect = useCallback(
     (index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => {
       // Ctrl+click: toggle individual tile in selection
-      toggleSelectedTile(index);
       if (meta?.ctrlKey) {
-        setSelectedTile(index);
+        toggleSelectedTile(index);
         return;
       }
 

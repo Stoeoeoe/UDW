@@ -45,6 +45,25 @@ function isTrivialTileDefinition(index: number, def: TileDefinition): boolean {
   );
 }
 
+function normalizeTilesetObjects(tileset: Tileset): Tileset {
+  if (!tileset.objects) return tileset;
+
+  const nextObjects = tileset.objects
+    .map((objectDefinition) => ({
+      ...objectDefinition,
+      tiles: [...objectDefinition.tiles]
+        .map((tile) => ({
+          x: Math.max(0, Math.round(tile.x)),
+          y: Math.max(0, Math.round(tile.y)),
+          tileIndex: Math.max(0, Math.round(tile.tileIndex)),
+        }))
+        .sort((a, b) => a.y - b.y || a.x - b.x || a.tileIndex - b.tileIndex),
+    }))
+    .filter((objectDefinition) => objectDefinition.tiles.length > 0);
+
+  return { ...tileset, objects: nextObjects };
+}
+
 function stripTileDefaults(index: number, def: TileDefinition): TileDefinition | null {
   const normalizedDef = normalizeTileDefinition(def);
   if (isTrivialTileDefinition(index, normalizedDef)) return null;
@@ -78,9 +97,10 @@ function stripTileDefaults(index: number, def: TileDefinition): TileDefinition |
 
 /** Prepare a tileset for serialization - strips redundant defaults from tile entries. */
 export function serializeTileset(tileset: Tileset): Tileset & { $schema: string } {
+  const normalizedTileset = normalizeTilesetObjects(tileset);
   const tiles: Record<number, TileDefinition> = {};
 
-  for (const [keyStr, def] of Object.entries(tileset.tiles ?? {})) {
+  for (const [keyStr, def] of Object.entries(normalizedTileset.tiles ?? {})) {
     const index = Number(keyStr);
     const stripped = stripTileDefaults(index, def);
     if (stripped && Object.keys(stripped).length > 0) {
@@ -88,19 +108,24 @@ export function serializeTileset(tileset: Tileset): Tileset & { $schema: string 
     }
   }
 
-  return { $schema: '../../schemas/tileset.schema.json', ...tileset, tiles };
+  return { $schema: '../../schemas/tileset.schema.json', ...normalizedTileset, tiles };
 }
 
 /** Restore defaults for tile definitions loaded from disk. */
 export function migrateTilesetOnLoad(tileset: Tileset): Tileset {
+  const normalizedTileset = normalizeTilesetObjects(tileset);
   const normalizedTiles: Record<number, TileDefinition> = {};
   let changed = false;
 
-  for (const [keyStr, def] of Object.entries(tileset.tiles ?? {})) {
+  for (const [keyStr, def] of Object.entries(normalizedTileset.tiles ?? {})) {
     const normalizedDef = normalizeTileDefinition(def);
     normalizedTiles[Number(keyStr)] = normalizedDef;
     if (normalizedDef !== def) changed = true;
   }
 
-  return changed ? { ...tileset, tiles: normalizedTiles } : tileset;
+  if (changed || normalizedTileset !== tileset) {
+    return { ...normalizedTileset, tiles: normalizedTiles };
+  }
+
+  return normalizedTileset;
 }

@@ -45,6 +45,8 @@ export interface EditorState {
   selectedLayerId: string | null;
   selectedTileIndex: number | null; // Selected index within active tileset
   selectedTileIndices: number[]; // Multiple selected indices for stencil selection
+  selectedObjectDefinitionId?: string | null; // Selected reusable multi-tile object definition
+  selectedObjectInstanceId?: string | null; // Selected placed object instance on the map
   selectedTerrainId: string | null; // Selected terrain for autotiling
   activeTilesetId: string | null; // Currently visible tileset in palette
   // Per-editor selection (keeps map and tileset selections independent when needed)
@@ -71,6 +73,7 @@ export interface EditorState {
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood'; // Shape mode for tools
   brushSize: number; // Brush radius for point/line modes (1 = single tile)
   hoveredTile: { x: number; y: number } | null; // Currently hovered tile in viewport
+  hoveredWorldPosition: { x: number; y: number } | null; // Currently hovered pixel position in viewport
   // Live drawing preview (used to render shape previews while dragging)
   drawPreview?: {
     isDrawing: boolean;
@@ -80,7 +83,7 @@ export interface EditorState {
   };
 
   // Tileset-specific tool mode used by the Tileset toolbar
-  tilesetToolMode?: 'select' | 'terrain';
+  tilesetToolMode?: 'select' | 'terrain' | 'objects';
 
   // Camera
   camera: {
@@ -166,6 +169,9 @@ export type ToolType =
   | 'erase'
   | 'terrain' // Terrain brush for autotiling
   | 'fill'
+  | 'objectSelect' // Select & move placed map objects
+  | 'objectPlace' // Place reusable tileset objects as map instances
+  | 'objectDelete' // Delete placed map objects
   | 'entitySelect' // Select & move entities
   | 'entityPlace'
   | 'entityDelete' // Delete entities

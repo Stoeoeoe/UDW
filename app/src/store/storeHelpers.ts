@@ -22,6 +22,7 @@ import {
   PropertyValues,
 } from '../types/schema';
 import { ToolType } from '../types/editor';
+import { applyObjectGroupEdits, migrateLegacyObjectLayerToObjectGroups } from '../lib/objectGroups';
 import { saveProjectDebounced } from '../lib/saveManager';
 import { encodeTileRef } from '../lib/tileRef';
 
@@ -183,9 +184,17 @@ export function createDefaultLayer(width: number, height: number): Layer {
 // Tool / layer sync helpers
 // ============================================================================
 
+export function getEffectiveToolLayerKind(layer: Layer): Layer['kind'] {
+  if (layer.kind === 'object' || layer.sortingLayer === 'objects') {
+    return 'object';
+  }
+  return layer.kind;
+}
+
 export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   terrain: 'terrain',
   visual: 'stamp',
+  object: 'objectPlace',
   collision: 'stamp',
   navigation: 'select',
   metadata: 'stamp',
@@ -195,6 +204,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
 export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   terrain: ['terrain', 'erase'],
   visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
+  object: ['objectSelect', 'objectPlace', 'objectDelete'],
   collision: ['stamp', 'erase', 'fill', 'select'],
   navigation: ['select', 'anchorPlace', 'triggerPlace', 'triggerPolygon', 'linkPlace'],
   metadata: ['stamp', 'erase', 'fill', 'select'],
@@ -252,6 +262,7 @@ export function syncToolStateForSelectedLayer(
     selectedLinkId: string | null;
     selectedAnchorId: string | null;
     selectedEntityId: string | null;
+    selectedObjectInstanceId: string | null;
     selectedEntityIds: Set<string>;
     selectedTriggerId: string | null;
   },
@@ -262,12 +273,13 @@ export function syncToolStateForSelectedLayer(
   );
   if (!layer) return;
 
-  const validTools = VALID_TOOLS_BY_KIND[layer.kind] ?? ['stamp'];
+  const effectiveKind = getEffectiveToolLayerKind(layer);
+  const validTools = VALID_TOOLS_BY_KIND[effectiveKind] ?? ['stamp'];
   if (options.forceDefault || !validTools.includes(state.activeTool)) {
-    state.activeTool = DEFAULT_TOOL_BY_KIND[layer.kind] ?? 'stamp';
+    state.activeTool = DEFAULT_TOOL_BY_KIND[effectiveKind] ?? 'stamp';
   }
 
-  if (layer.kind === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
+  if (effectiveKind === 'terrain' && !state.selectedTerrainId && state.terrainTypes.length > 0) {
     state.selectedTerrainId = state.terrainTypes[0].id;
   }
 
@@ -279,6 +291,9 @@ export function syncToolStateForSelectedLayer(
   if (layer.kind !== 'entity') {
     state.selectedEntityId = null;
     state.selectedEntityIds = new Set();
+  }
+  if (effectiveKind !== 'object') {
+    state.selectedObjectInstanceId = null;
   }
 }
 
@@ -317,9 +332,24 @@ export function setTileInState(
       return;
     }
   }
-  const encodedValue = value ? encodeTileRef(value, map.tilesetRefs) : null;
   const layer = map.layers.find((l) => l.id === layerId);
-  if (layer && layer.data && layer.data[y] && !layer.locked) {
+  if (!layer || layer.locked) return;
+
+  if (value) {
+    const tilesetId = value.slice(0, value.lastIndexOf(':'));
+    if (tilesetId && !map.tilesetRefs.includes(tilesetId)) {
+      map.tilesetRefs.push(tilesetId);
+    }
+  }
+
+  if (layer.sortingLayer === 'objects') {
+    migrateLegacyObjectLayerToObjectGroups(layer, map.tilesetRefs);
+    applyObjectGroupEdits(layer, [{ x, y, value }]);
+    return;
+  }
+
+  const encodedValue = value ? encodeTileRef(value, map.tilesetRefs) : null;
+  if (layer.data && layer.data[y]) {
     layer.data[y][x] = encodedValue;
   }
 }

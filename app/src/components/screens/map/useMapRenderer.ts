@@ -10,6 +10,14 @@ import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { getIconTexture } from '../../../lib/iconRaster';
 import { resolveLinkTarget, getTriggerCenter } from '../../../lib/locationLinkUtils';
+import {
+  collectObjectPlacementOrigins,
+  computeObjectInstanceSortDepth,
+  expandObjectInstanceSpriteTiles,
+  getCenteredObjectPlacementOrigin,
+  getCenteredObjectPlacementPixelOrigin,
+  getObjectInstanceBounds,
+} from '../../../lib/mapObjects';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
 
 interface UseMapRendererProps {
@@ -18,6 +26,20 @@ interface UseMapRendererProps {
 
 type OverlayPoint = { x: number; y: number };
 type OverlaySegment = { a: OverlayPoint; b: OverlayPoint };
+
+const OUT_OF_BOUNDS_OBJECT_ALPHA = 0.25;
+
+function isTileSpriteOutsideMap(
+  x: number,
+  y: number,
+  tileSize: number,
+  mapWidth: number,
+  mapHeight: number,
+): boolean {
+  return (
+    x < 0 || y < 0 || x + tileSize > mapWidth * tileSize || y + tileSize > mapHeight * tileSize
+  );
+}
 
 export function quantizeOverlayPoint(x: number, y: number): OverlayPoint {
   return { x: Math.round(x), y: Math.round(y) };
@@ -76,11 +98,11 @@ export function computeCollisionOverlay(
   [...currentMap.layers]
     .sort((a, b) => a.zOrder - b.zOrder)
     .forEach((layer) => {
-      if (!layer.visible || layer.kind !== 'visual') return;
+      if (!layer.visible || (layer.kind !== 'visual' && layer.kind !== 'object')) return;
 
       for (let y = 0; y < currentMap.height; y++) {
         for (let x = 0; x < currentMap.width; x++) {
-          const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
+          const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
           if (!tileRef) continue;
 
           const [tsId, indexStr] = tileRef.split(':');
@@ -292,11 +314,72 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     [...currentMap.layers]
       .sort((a, b) => a.zOrder - b.zOrder)
       .forEach((layer) => {
-        if (!layer.visible || (layer.kind !== 'visual' && layer.kind !== 'terrain')) return;
+        if (
+          !layer.visible ||
+          (layer.kind !== 'visual' && layer.kind !== 'terrain' && layer.kind !== 'object')
+        )
+          return;
+
+        if (
+          (layer.kind === 'object' || layer.sortingLayer === 'objects') &&
+          (layer.objectInstances?.length ?? 0) > 0
+        ) {
+          for (const objectInstance of layer.objectInstances ?? []) {
+            const spriteTiles = expandObjectInstanceSpriteTiles(
+              tilesets,
+              objectInstance.tilesetId,
+              objectInstance.objectDefinitionId,
+              objectInstance.x,
+              objectInstance.y,
+              tileSize,
+            );
+            const baseTileset = tilesets.get(objectInstance.tilesetId);
+            if (!baseTileset) continue;
+
+            let effectiveTileset = baseTileset;
+            const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
+            if (variation?.tilesetSuffix) {
+              const suffixed = tilesets.get(
+                `${objectInstance.tilesetId}${variation.tilesetSuffix}`,
+              );
+              if (suffixed) effectiveTileset = suffixed;
+            }
+
+            for (const tile of spriteTiles) {
+              const collision = effectiveTileset.tiles[tile.tileIndex]?.collision;
+              if (!collision || collision.type === 'none') continue;
+
+              if (collision.type === 'full') {
+                const polygon = [
+                  quantizeOverlayPoint(tile.x, tile.y),
+                  quantizeOverlayPoint(tile.x + tileSize, tile.y),
+                  quantizeOverlayPoint(tile.x + tileSize, tile.y + tileSize),
+                  quantizeOverlayPoint(tile.x, tile.y + tileSize),
+                ];
+                fillPolygons.push(polygon);
+                addPolygonSegments(mergedSegments, polygon);
+                continue;
+              }
+
+              for (const shape of collision.shapes || []) {
+                const points = shapeToNormalizedPolygon(shape, tileSize);
+                if (points.length < 3) continue;
+
+                const polygon = points.map(([px, py]) =>
+                  quantizeOverlayPoint(tile.x + px * tileSize, tile.y + py * tileSize),
+                );
+
+                fillPolygons.push(polygon);
+                addPolygonSegments(mergedSegments, polygon);
+              }
+            }
+          }
+          return;
+        }
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
-            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
+            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
             if (!tileRef) continue;
 
             const [tsId, indexStr] = tileRef.split(':');
@@ -424,7 +507,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render tiles
   const renderTiles = useCallback(() => {
     const tileContainer = tileContainerRef.current;
-    const { currentMap, activeVariationId, tilesets } = useEditorStore.getState();
+    const { currentMap, activeVariationId, tilesets, selectedObjectInstanceId } =
+      useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!tileContainer || !currentMap) return;
 
@@ -435,11 +519,97 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     [...currentMap.layers]
       .sort((a, b) => a.zOrder - b.zOrder)
       .forEach((layer) => {
-        if (!layer.visible || (layer.kind !== 'visual' && layer.kind !== 'terrain')) return;
+        if (
+          !layer.visible ||
+          (layer.kind !== 'visual' && layer.kind !== 'terrain' && layer.kind !== 'object')
+        )
+          return;
+
+        if (
+          (layer.kind === 'object' || layer.sortingLayer === 'objects') &&
+          (layer.objectInstances?.length ?? 0) > 0
+        ) {
+          const objectInstances = layer.objectInstances ?? [];
+
+          objectInstances
+            .map((objectInstance, index) => ({
+              objectInstance,
+              index,
+              depth: computeObjectInstanceSortDepth(tilesets, layer, objectInstance, tileSize),
+            }))
+            .sort((left, right) => {
+              if (left.depth !== right.depth) return left.depth - right.depth;
+              return left.index - right.index;
+            })
+            .forEach(({ objectInstance }) => {
+              const objectContainer = new Container();
+              const bounds = getObjectInstanceBounds(tilesets, objectInstance, tileSize);
+              if (bounds) {
+                objectContainer.x = bounds.x;
+                objectContainer.y = bounds.y;
+              }
+
+              const spriteTiles = expandObjectInstanceSpriteTiles(
+                tilesets,
+                objectInstance.tilesetId,
+                objectInstance.objectDefinitionId,
+                objectInstance.x,
+                objectInstance.y,
+                tileSize,
+              );
+
+              spriteTiles.forEach((tile) => {
+                const tileset = tilesets.get(tile.tilesetId);
+                if (!tileset) return;
+
+                let effectiveTileset = tileset;
+                const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
+                if (variation?.tilesetSuffix) {
+                  const suffixed = tilesets.get(`${tile.tilesetId}${variation.tilesetSuffix}`);
+                  if (suffixed) effectiveTileset = suffixed;
+                }
+
+                const texture = getTileTexture(
+                  effectiveTileset.spriteSheet,
+                  tile.tileIndex,
+                  effectiveTileset.columns,
+                );
+
+                if (!texture) return;
+
+                const sprite = new Sprite(texture);
+                sprite.x = tile.x - objectInstance.x;
+                sprite.y = tile.y - objectInstance.y;
+                sprite.width = tileSize;
+                sprite.height = tileSize;
+                sprite.alpha = isTileSpriteOutsideMap(
+                  tile.x,
+                  tile.y,
+                  tileSize,
+                  currentMap.width,
+                  currentMap.height,
+                )
+                  ? OUT_OF_BOUNDS_OBJECT_ALPHA
+                  : 1;
+                objectContainer.addChild(sprite);
+              });
+
+              if (bounds && objectInstance.id === selectedObjectInstanceId) {
+                const outline = new Graphics();
+                outline.rect(0, 0, bounds.width, bounds.height);
+                outline.stroke({ width: 2, color: 0xffffff, alpha: 0.95 });
+                objectContainer.addChild(outline);
+              }
+
+              tileContainer.addChild(objectContainer);
+            });
+
+          return;
+        }
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
-            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
+            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
             if (!tileRef) continue;
 
             const [tsId, indexStr] = tileRef.split(':');
@@ -818,15 +988,23 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render hover highlight
   const renderHover = useCallback(() => {
     const hoverGraphics = hoverGraphicsRef.current;
-    const { hoveredTile, activeTool } = useEditorStore.getState();
+    const { hoveredTile, activeTool, currentMap, selectedLayerId } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!hoverGraphics) return;
 
     hoverGraphics.clear();
 
+    const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
+    const isObjectLayer =
+      selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
+    if (isObjectLayer) return;
+
     // No tile hover for tools that operate on objects rather than tiles
     const noTileHoverTools = [
       'anchorPlace',
+      'objectSelect',
+      'objectPlace',
+      'objectDelete',
       'entitySelect',
       'entityPlace',
       'entityDelete',
@@ -850,6 +1028,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       activeTool,
       activeTilesetId,
       hoveredTile,
+      hoveredWorldPosition,
       tilesets,
       currentMap,
       activeVariationId,
@@ -861,18 +1040,135 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       sampledPattern,
       selectedTerrainId,
       terrainTypes,
+      selectedObjectDefinitionId,
+      selectedLayerId,
+      entitySnapMode,
     } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!previewContainer) return;
 
     previewContainer.removeChildren();
+    previewContainer.alpha = 0.5;
+
+    const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
+    const isObjectLayer =
+      selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
 
     if (
       activeTool === 'anchorPlace' ||
       activeTool === 'entityPlace' ||
       activeTool === 'entitySelect' ||
-      activeTool === 'entityDelete'
+      activeTool === 'entityDelete' ||
+      activeTool === 'objectSelect' ||
+      activeTool === 'objectDelete'
     ) {
+      return;
+    }
+
+    if (isObjectLayer) {
+      previewContainer.alpha = 1;
+
+      if (activeTool !== 'objectPlace') {
+        return;
+      }
+
+      if (!currentMap || !activeTilesetId || !selectedObjectDefinitionId) {
+        return;
+      }
+
+      const previewOrigins =
+        drawPreview &&
+        drawPreview.isDrawing &&
+        drawPreview.mode !== 'select' &&
+        drawPreview.start &&
+        drawPreview.end &&
+        drawMode !== 'point'
+          ? collectObjectPlacementOrigins(
+              drawMode as 'rect' | 'circle' | 'line',
+              drawPreview.start,
+              drawPreview.end,
+              brushSize || 1,
+              tilesets,
+              activeTilesetId,
+              selectedObjectDefinitionId,
+            )
+          : entitySnapMode === 'pixel'
+            ? hoveredWorldPosition
+              ? [{ x: hoveredWorldPosition.x, y: hoveredWorldPosition.y }]
+              : []
+            : hoveredTile
+              ? [{ x: hoveredTile.x, y: hoveredTile.y }]
+              : [];
+
+      if (previewOrigins.length === 0) {
+        return;
+      }
+
+      const ts = tilesets.get(activeTilesetId);
+      const objectDefinition = ts?.objects?.find(
+        (objectDefinition) => objectDefinition.id === selectedObjectDefinitionId,
+      );
+      if (!ts || !objectDefinition) return;
+
+      let effectiveTileset = ts;
+      const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
+      if (variation?.tilesetSuffix) {
+        const suffixed = tilesets.get(`${activeTilesetId}${variation.tilesetSuffix}`);
+        if (suffixed) effectiveTileset = suffixed;
+      }
+
+      for (const origin of previewOrigins) {
+        const isPixelPointPreview = entitySnapMode === 'pixel' && drawMode === 'point';
+        const placementOrigin = isPixelPointPreview
+          ? getCenteredObjectPlacementPixelOrigin(
+              tilesets,
+              activeTilesetId,
+              selectedObjectDefinitionId,
+              origin.x,
+              origin.y,
+              tileSize,
+            )
+          : (() => {
+              const tileOrigin = getCenteredObjectPlacementOrigin(
+                tilesets,
+                activeTilesetId,
+                selectedObjectDefinitionId,
+                origin.x,
+                origin.y,
+              );
+              return {
+                x: tileOrigin.x * tileSize,
+                y: tileOrigin.y * tileSize,
+              };
+            })();
+
+        for (const tile of objectDefinition.tiles) {
+          const texture = getTileTexture(
+            effectiveTileset.spriteSheet,
+            tile.tileIndex,
+            effectiveTileset.columns,
+          );
+          if (!texture) continue;
+          const sprite = new Sprite(texture);
+          const spriteX = placementOrigin.x + tile.x * tileSize;
+          const spriteY = placementOrigin.y + tile.y * tileSize;
+          sprite.x = spriteX;
+          sprite.y = spriteY;
+          sprite.width = tileSize;
+          sprite.height = tileSize;
+          sprite.alpha = isTileSpriteOutsideMap(
+            spriteX,
+            spriteY,
+            tileSize,
+            currentMap.width,
+            currentMap.height,
+          )
+            ? OUT_OF_BOUNDS_OBJECT_ALPHA
+            : 1;
+          previewContainer.addChild(sprite);
+        }
+      }
+
       return;
     }
 

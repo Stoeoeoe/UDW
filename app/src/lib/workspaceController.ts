@@ -43,6 +43,7 @@ export function createDefaultTilesetSession(
     activeTilesetId: document.tilesetId,
     selectedTileIndex: null,
     selectedTileIndices: [],
+    selectedObjectDefinitionId: null,
     selectedTerrainId: null,
     tilesetToolMode: 'select',
     showTilesetCollisionOverlay: false,
@@ -94,6 +95,7 @@ export function captureTabSession(tab: WorkspaceTab | null): void {
       activeTilesetId: editor.activeTilesetId,
       selectedTileIndex: editor.selectedTileIndex,
       selectedTileIndices: [...editor.selectedTileIndices],
+      selectedObjectDefinitionId: editor.selectedObjectDefinitionId ?? null,
       selectedTerrainId: editor.selectedTerrainId,
       tilesetToolMode: editor.tilesetToolMode ?? 'select',
       showTilesetCollisionOverlay: editor.showTilesetCollisionOverlay,
@@ -146,6 +148,7 @@ export function applyTabSession(tab: WorkspaceTab | null): void {
     editor.setSelectedTerrain(session.selectedTerrainId);
     editor.setSelectedTile(session.selectedTileIndex);
     editor.setSelectedTiles(session.selectedTileIndices);
+    editor.setSelectedObjectDefinition(session.selectedObjectDefinitionId);
     editor.setTilesetToolMode(session.tilesetToolMode);
     editor.setShowTilesetCollisionOverlay(session.showTilesetCollisionOverlay);
     editor.setShowTilesetSortPivotOverlay(session.showTilesetSortPivotOverlay);

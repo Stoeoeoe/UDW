@@ -11,6 +11,7 @@ import { LinkInspector } from './LinkInspector';
 import { AnchorInspector } from './AnchorInspector';
 import { TriggerInspector } from './TriggerInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
+import { ObjectPalette } from '../../tileset/ObjectPalette';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
 import { NavigationBottomPanel } from './NavigationBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
@@ -26,11 +27,15 @@ const MapRightPanel: React.FC = () => {
   const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
   const selectedTriggerId = useEditorStore((state) => state.selectedTriggerId);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
+  const selectedObjectInstanceId = useEditorStore((state) => state.selectedObjectInstanceId);
   const currentMap = useEditorStore((state) => state.currentMap);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
 
   const selectedLayerKind = currentMap?.layers.find((l) => l.id === selectedLayerId)?.kind;
-  const showEntityInspector = selectedLayerKind === 'entity' || selectedLayerKind === 'navigation';
+  const showPropertiesInspector =
+    selectedLayerKind === 'entity' ||
+    selectedLayerKind === 'navigation' ||
+    selectedLayerKind === 'object';
 
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="auto">
@@ -40,12 +45,12 @@ const MapRightPanel: React.FC = () => {
         <AnchorInspector />
       ) : selectedTriggerId ? (
         <TriggerInspector />
-      ) : selectedEntityId ? (
+      ) : selectedEntityId || selectedObjectInstanceId ? (
         <PropertiesPanel />
       ) : (
         <>
           <ToolPropertiesPanel />
-          {showEntityInspector && <PropertiesPanel />}
+          {showPropertiesInspector && <PropertiesPanel />}
         </>
       )}
     </VStack>
@@ -126,7 +131,7 @@ export const MapEditor: React.FC = () => {
     return (
       <>
         <EmptyScreen
-          icon="🗺️"
+          icon="Map"
           title="No Location Active"
           description="Open a location from the explorer or create a new map to start building your world."
           buttonLabel="Create First Map"
@@ -144,18 +149,29 @@ export const MapEditor: React.FC = () => {
   const activeVariation = currentMap.variations?.find(
     (variation) => variation.id === activeVariationId,
   );
-  const selectedLayerKind = currentMap.layers.find((layer) => layer.id === selectedLayerId)?.kind;
+  const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
+  const selectedLayerKind = selectedLayer?.kind;
+  const isObjectLayer =
+    selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
+  const subtitleParts = [
+    `${currentMap.width}x${currentMap.height} tiles`,
+    `${currentMap.layers.length} layers`,
+  ];
+
+  if (selectedLayer) {
+    subtitleParts.push(isObjectLayer ? `${selectedLayer.name} - objects` : selectedLayer.name);
+  }
+
+  if (activeVariation) {
+    subtitleParts.push(activeVariation.displayName);
+  }
 
   return (
     <>
       <ResizableEditorLayout
         header={{
           title: activeView === 'world' ? 'World' : effectiveMap.name || 'Location',
-          subtitle:
-            activeView === 'world'
-              ? 'Location world view'
-              : `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers${activeVariation ? ` • ${activeVariation.displayName}` : ''}`,
-          //          actions: viewToggle,
+          subtitle: activeView === 'world' ? 'Location world view' : subtitleParts.join(' - '),
         }}
         content={activeView === 'world' ? <MapWorldView /> : <MapViewportPixi />}
         leftPanel={<MapLeftPanel />}
@@ -165,6 +181,8 @@ export const MapEditor: React.FC = () => {
             <EntityBottomPalette />
           ) : selectedLayerKind === 'navigation' ? (
             <NavigationBottomPanel />
+          ) : isObjectLayer ? (
+            <ObjectPalette />
           ) : selectedLayerKind === 'terrain' ? null : (
             <TilesetPalette enableMultiSelect={true} />
           )

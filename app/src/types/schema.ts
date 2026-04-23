@@ -53,6 +53,19 @@ export interface Tileset {
   tileCount: number; // Total number of tiles
   tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)
   wangSets?: WangSet[]; // Modern autotiling logic (Tiled-compatible)
+  objects?: TilesetObjectDefinition[]; // Reusable multi-tile object definitions (trees, bushes, etc.)
+}
+
+export interface TilesetObjectDefinition {
+  id: string;
+  name: string;
+  tiles: TilesetObjectTile[];
+}
+
+export interface TilesetObjectTile {
+  x: number; // Relative tile offset from the object's top-left origin
+  y: number; // Relative tile offset from the object's top-left origin
+  tileIndex: number;
 }
 
 export interface TileDefinition {
@@ -155,6 +168,10 @@ export interface Layer {
   icon?: string; // Optional icon identifier
   // For tile-like layers this holds encoded tile IDs, row-major [y][x]
   data?: (number | null)[][]; // Encoded tile IDs (tiles only)
+  // For Y-sorted object layers: connected painted tiles stored as first-class groups.
+  objectGroups?: ObjectGroup[];
+  // Explicit placed object instances for object layers.
+  objectInstances?: MapObjectInstance[];
 
   // For terrain layers: parallel grid storing the terrain ID painted at each cell.
   // Used to re-resolve tile graphics when terrain rules change.
@@ -167,8 +184,29 @@ export interface Layer {
 
 export type SortingLayer = 'ground' | 'objects' | 'above';
 
+export interface ObjectGroup {
+  id: string;
+  tiles: ObjectGroupTile[];
+}
+
+export interface ObjectGroupTile {
+  x: number;
+  y: number;
+  tilesetId: string;
+  tileIndex: number;
+}
+
+export interface MapObjectInstance {
+  id: string;
+  tilesetId: string;
+  objectDefinitionId: string;
+  x: number; // Pixel X coordinate of the object's top-left origin; may be negative for overhangs
+  y: number; // Pixel Y coordinate of the object's top-left origin; may be negative for overhangs
+}
+
 export type LayerKind =
-  | 'visual' // Rendered tiles
+  | 'visual' // Rendered tile layers
+  | 'object' // Placed reusable object instances
   | 'collision' // Collision data
   | 'navigation' // Combined layer for anchors, triggers, and location links
   | 'metadata' // Data-only, invisible

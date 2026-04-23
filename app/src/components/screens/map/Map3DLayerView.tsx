@@ -301,7 +301,9 @@ export const Map3DLayerView: React.FC = () => {
     );
 
     // Centre the camera target on the middle of the stack
-    const visCount = layers.filter((l) => l.kind === 'visual' || l.kind === 'terrain').length;
+    const visCount = layers.filter(
+      (l) => l.kind === 'visual' || l.kind === 'terrain' || l.kind === 'object',
+    ).length;
     state.target.set(0, ((visCount - 1) * layerGap) / 2, 0);
     state.spherical.radius = Math.max(mapW, mapH) * projectTileSize * 0.9;
     updateCamera(state);
@@ -390,7 +392,9 @@ export const Map3DLayerView: React.FC = () => {
   const resetCamera = useCallback(() => {
     const state = sceneRef.current;
     if (!state) return;
-    const visCount = layers.filter((l) => l.kind === 'visual' || l.kind === 'terrain').length;
+    const visCount = layers.filter(
+      (l) => l.kind === 'visual' || l.kind === 'terrain' || l.kind === 'object',
+    ).length;
     state.target.set(0, ((visCount - 1) * layerGap) / 2, 0);
     state.spherical = {
       theta: 0.5,

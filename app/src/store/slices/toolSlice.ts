@@ -20,6 +20,7 @@ export interface ToolSlice {
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood';
   brushSize: number;
   hoveredTile: { x: number; y: number } | null;
+  hoveredWorldPosition: { x: number; y: number } | null;
   drawPreview: {
     isDrawing: boolean;
     start: { x: number; y: number } | null;
@@ -27,7 +28,7 @@ export interface ToolSlice {
     mode?: 'draw' | 'select';
   };
   polygonPreviewPoints: [number, number][] | null; // WIP polygon vertices for triggerPolygon tool
-  tilesetToolMode: 'select' | 'terrain';
+  tilesetToolMode: 'select' | 'terrain' | 'objects';
   entitySnapMode: 'grid' | 'pixel';
   showCollisionOverlay: boolean;
   showTilesetCollisionOverlay: boolean;
@@ -54,6 +55,7 @@ export interface ToolSlice {
   setBrushSize: (size: number) => void;
   setMode: (mode: EditorMode) => void;
   setHoveredTile: (pos: { x: number; y: number } | null) => void;
+  setHoveredWorldPosition: (pos: { x: number; y: number } | null) => void;
   setDrawPreview: (preview: {
     isDrawing: boolean;
     start: { x: number; y: number } | null;
@@ -61,7 +63,7 @@ export interface ToolSlice {
     mode?: 'draw' | 'select';
   }) => void;
   setPolygonPreviewPoints: (points: [number, number][] | null) => void;
-  setTilesetToolMode: (mode: 'select' | 'terrain') => void;
+  setTilesetToolMode: (mode: 'select' | 'terrain' | 'objects') => void;
   setCamera: (camera: Partial<EditorState['camera']>) => void;
   resetCamera: () => void;
   setTimePreviewEnabled: (enabled: boolean) => void;
@@ -75,6 +77,7 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   drawMode: 'point',
   brushSize: 1,
   hoveredTile: null,
+  hoveredWorldPosition: null,
   drawPreview: { isDrawing: false, start: null, end: null },
   polygonPreviewPoints: null,
   tilesetToolMode: 'select',
@@ -182,6 +185,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
     set((state) => {
       state.hoveredTile = pos;
     }),
+  setHoveredWorldPosition: (pos) =>
+    set((state) => {
+      state.hoveredWorldPosition = pos;
+    }),
 
   setMode: (mode) =>
     set((state) => {
@@ -228,6 +235,7 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
     set((state) => {
       state.selectedTileIndex = null;
       state.selectedTileIndices = [];
+      state.selectedObjectDefinitionId = null;
       state.selectedTerrainId = null;
       state.sampledPattern = null;
     }),

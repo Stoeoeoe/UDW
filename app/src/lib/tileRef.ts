@@ -9,6 +9,7 @@
  */
 
 import { Layer, Map as GameMap } from '../types/schema';
+import { collectTilesetRefsFromObjectGroups } from './objectGroups';
 
 type MigratableLayer = Omit<Layer, 'data'> & {
   data?: (string | number | null)[][];
@@ -87,6 +88,16 @@ export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[
           tilesetSet.add(tilesetId);
         }
       }
+    }
+  }
+
+  for (const tilesetId of collectTilesetRefsFromObjectGroups(layers as Layer[])) {
+    tilesetSet.add(tilesetId);
+  }
+
+  for (const layer of layers as Layer[]) {
+    for (const objectInstance of layer.objectInstances ?? []) {
+      tilesetSet.add(objectInstance.tilesetId);
     }
   }
 

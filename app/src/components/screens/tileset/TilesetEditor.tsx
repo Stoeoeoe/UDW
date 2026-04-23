@@ -225,6 +225,7 @@ export const TilesetEditor: React.FC = () => {
                 selectedIndex={selectedTileIndex}
                 onSelect={handleTileSelect}
                 tool={tilesetMode}
+                enableMultiSelect={tilesetMode === 'objects'}
               />
             </Box>
           </Flex>

@@ -26,6 +26,7 @@ import {
   useEditorHistory,
   useEditorStore,
 } from '../../store/useEditorStore';
+import { getEffectiveToolLayerKind } from '../../store/storeHelpers';
 import { ToolType } from '../../types/editor';
 import { LayerKind } from '../../types/schema';
 import { Toolbar, ToolItem } from '../common/Toolbar';
@@ -41,6 +42,16 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     { id: 'random', icon: FiShuffle, label: 'Random (R)', group: 'tiles' },
     { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'tiles' },
     { id: 'fill', icon: FiDroplet, label: 'Bucket Fill (G)', group: 'tiles' },
+  ],
+  object: [
+    {
+      id: 'objectSelect',
+      icon: FiMousePointer,
+      label: 'Select / Move Object (M)',
+      group: 'objects',
+    },
+    { id: 'objectPlace', icon: FiEdit2, label: 'Place Object (N)', group: 'objects' },
+    { id: 'objectDelete', icon: FiTrash2, label: 'Delete Object (X)', group: 'objects' },
   ],
   collision: [
     { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'collision' },
@@ -93,11 +104,13 @@ export const MapToolbar: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
 
   const selectedLayer = currentMap?.layers.find((l) => l.id === selectedLayerId);
-  const tools = selectedLayer
-    ? (TOOLS_BY_KIND[selectedLayer.kind] ?? FALLBACK_TOOLS)
-    : FALLBACK_TOOLS;
+  const effectiveKind = selectedLayer ? getEffectiveToolLayerKind(selectedLayer) : null;
+  const tools = effectiveKind ? (TOOLS_BY_KIND[effectiveKind] ?? FALLBACK_TOOLS) : FALLBACK_TOOLS;
 
-  const showSnapToggle = selectedLayer?.kind === 'entity' || selectedLayer?.kind === 'navigation';
+  const showSnapToggle =
+    selectedLayer?.kind === 'entity' ||
+    selectedLayer?.kind === 'navigation' ||
+    effectiveKind === 'object';
 
   return (
     <HStack spacing={4}>

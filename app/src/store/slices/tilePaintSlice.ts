@@ -3,6 +3,11 @@ import { createTileRef } from '../../lib/tileUtils';
 import { sampleRandomTile } from '../../lib/randomUtils';
 import { samplePatternAt } from '../../lib/tileUtils';
 import { floodFillCollect } from '../../lib/algorithms';
+import { createMapObjectInstanceId, removeObjectInstanceAtTile } from '../../lib/mapObjects';
+import {
+  applyObjectGroupEdits,
+  migrateLegacyObjectLayerToObjectGroups,
+} from '../../lib/objectGroups';
 import { resolveTileAt } from '../../lib/mapUtils';
 import { setTileInState } from '../storeHelpers';
 import type { EditorStore } from '../useEditorStore';
@@ -15,13 +20,25 @@ type ImmerStateCreator<T> = StateCreator<
 >;
 
 export interface TilePaintSlice {
+  selectedObjectInstanceId: string | null;
   paintTile: (layerId: string, x: number, y: number, tilesetId: string, tileIndex: number) => void;
   paintTilesBatch: (
     layerId: string,
     tiles: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }>,
   ) => void;
+  placeObjectInstance: (
+    layerId: string,
+    x: number,
+    y: number,
+    tilesetId: string,
+    objectDefinitionId: string,
+  ) => void;
+  removeObjectInstance: (layerId: string, objectInstanceId: string) => void;
+  moveObjectInstance: (layerId: string, objectInstanceId: string, x: number, y: number) => void;
+  selectObjectInstance: (id: string | null) => void;
   eraseTile: (layerId: string, x: number, y: number) => void;
   eraseTilesBatch: (layerId: string, positions: Array<{ x: number; y: number }>) => void;
+  eraseObjectInstanceAt: (layerId: string, x: number, y: number) => void;
   paintTerrainDataBatch: (
     layerId: string,
     cells: Array<{ x: number; y: number; terrainId: string | null }>,
@@ -48,6 +65,8 @@ export interface TilePaintSlice {
 }
 
 export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => ({
+  selectedObjectInstanceId: null,
+
   paintTile: (layerId, x, y, tilesetId, tileIndex) =>
     set((state) => {
       if (!state.currentMap) return;
@@ -65,6 +84,24 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
     set((state) => {
       if (!state.currentMap) return;
       const { currentMap, activeVariationId } = state;
+      const layer = currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (layer?.sortingLayer === 'objects' && !activeVariationId) {
+        migrateLegacyObjectLayerToObjectGroups(layer, currentMap.tilesetRefs);
+        const edits: Array<{ x: number; y: number; value: string | null }> = [];
+        for (const { x, y, tilesetId, tileIndex } of tiles) {
+          if (x < 0 || y < 0 || x >= currentMap.width || y >= currentMap.height) continue;
+          if (!currentMap.tilesetRefs.includes(tilesetId)) {
+            currentMap.tilesetRefs.push(tilesetId);
+          }
+          edits.push({
+            x,
+            y,
+            value: createTileRef(tilesetId, tileIndex),
+          });
+        }
+        applyObjectGroupEdits(layer, edits);
+        return;
+      }
       for (const { x, y, tilesetId, tileIndex } of tiles) {
         if (x < 0 || y < 0 || x >= currentMap.width || y >= currentMap.height) continue;
         setTileInState(
@@ -78,16 +115,104 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
       }
     }),
 
+  placeObjectInstance: (layerId, x, y, tilesetId, objectDefinitionId) =>
+    set((state) => {
+      if (!state.currentMap || state.activeVariationId) return;
+      const layer = state.currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (!layer || layer.locked) return;
+      if (!state.currentMap.tilesetRefs.includes(tilesetId)) {
+        state.currentMap.tilesetRefs.push(tilesetId);
+      }
+      if (!layer.objectInstances) {
+        layer.objectInstances = [];
+      }
+      const objectInstanceId = createMapObjectInstanceId();
+      layer.objectInstances.push({
+        id: objectInstanceId,
+        tilesetId,
+        objectDefinitionId,
+        x,
+        y,
+      });
+      delete layer.data;
+      state.selectedObjectInstanceId = objectInstanceId;
+    }),
+
+  removeObjectInstance: (layerId, objectInstanceId) =>
+    set((state) => {
+      if (!state.currentMap || state.activeVariationId) return;
+      const layer = state.currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (!layer || layer.locked || !layer.objectInstances) return;
+      layer.objectInstances = layer.objectInstances.filter(
+        (instance) => instance.id !== objectInstanceId,
+      );
+      if (state.selectedObjectInstanceId === objectInstanceId) {
+        state.selectedObjectInstanceId = null;
+      }
+    }),
+
+  moveObjectInstance: (layerId, objectInstanceId, x, y) =>
+    set((state) => {
+      if (!state.currentMap || state.activeVariationId) return;
+      const layer = state.currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (!layer || layer.locked || !layer.objectInstances) return;
+      const objectInstance = layer.objectInstances.find(
+        (instance) => instance.id === objectInstanceId,
+      );
+      if (!objectInstance) return;
+      objectInstance.x = x;
+      objectInstance.y = y;
+    }),
+
+  selectObjectInstance: (id) =>
+    set((state) => {
+      state.selectedObjectInstanceId = id;
+      if (id !== null) {
+        state.selectedEntityId = null;
+        state.selectedLinkId = null;
+        state.selectedAnchorId = null;
+        state.selectedTriggerId = null;
+      }
+    }),
+
   eraseTile: (layerId, x, y) =>
     set((state) => {
       if (!state.currentMap) return;
       setTileInState(state.currentMap, state.activeVariationId, layerId, x, y, null);
     }),
 
+  eraseObjectInstanceAt: (layerId, x, y) =>
+    set((state) => {
+      if (!state.currentMap || state.activeVariationId) return;
+      const layer = state.currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (!layer || layer.locked) return;
+      const hit = removeObjectInstanceAtTile(
+        layer,
+        x,
+        y,
+        state.tilesets,
+        state.project?.tileSize ?? 16,
+      );
+      if (hit && state.selectedObjectInstanceId === hit.id) {
+        state.selectedObjectInstanceId = null;
+      }
+    }),
+
   eraseTilesBatch: (layerId, positions) =>
     set((state) => {
       if (!state.currentMap) return;
       const { currentMap, activeVariationId } = state;
+      const layer = currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (layer?.sortingLayer === 'objects' && !activeVariationId) {
+        migrateLegacyObjectLayerToObjectGroups(layer, currentMap.tilesetRefs);
+        applyObjectGroupEdits(
+          layer,
+          positions
+            .filter(({ x, y }) => x >= 0 && y >= 0 && x < currentMap.width && y < currentMap.height)
+            .map(({ x, y }) => ({ x, y, value: null })),
+        );
+        return;
+      }
       for (const { x, y } of positions) {
         if (x < 0 || y < 0 || x >= currentMap.width || y >= currentMap.height) continue;
         setTileInState(currentMap, activeVariationId, layerId, x, y, null);
@@ -116,15 +241,35 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
       if (!state.currentMap) return;
       const { currentMap, activeVariationId } = state;
       const targetTileRef = createTileRef(tilesetId, tileIndex);
-      const startTile = resolveTileAt(currentMap, layerId, startX, startY, activeVariationId);
+      const startTile = resolveTileAt(
+        currentMap,
+        layerId,
+        startX,
+        startY,
+        activeVariationId,
+        state.tilesets,
+      );
       if (startTile === targetTileRef) return;
       const cells = floodFillCollect(
         startX,
         startY,
         currentMap.width,
         currentMap.height,
-        (x, y) => resolveTileAt(currentMap, layerId, x, y, activeVariationId) === startTile,
+        (x, y) =>
+          resolveTileAt(currentMap, layerId, x, y, activeVariationId, state.tilesets) === startTile,
       );
+      const layer = currentMap.layers.find((candidate) => candidate.id === layerId);
+      if (layer?.sortingLayer === 'objects' && !activeVariationId) {
+        migrateLegacyObjectLayerToObjectGroups(layer, currentMap.tilesetRefs);
+        if (!currentMap.tilesetRefs.includes(tilesetId)) {
+          currentMap.tilesetRefs.push(tilesetId);
+        }
+        applyObjectGroupEdits(
+          layer,
+          cells.map(({ x, y }) => ({ x, y, value: targetTileRef })),
+        );
+        return;
+      }
       for (const { x, y } of cells) {
         setTileInState(currentMap, activeVariationId, layerId, x, y, targetTileRef);
       }
@@ -136,14 +281,76 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
       const { currentMap, activeVariationId } = state;
       const { mode, tilesetId, tileIndex, tileIndices, pattern } = options;
       const tileset = tilesetId ? state.tilesets.get(tilesetId) : undefined;
-      const startTile = resolveTileAt(currentMap, layerId, startX, startY, activeVariationId);
+      const startTile = resolveTileAt(
+        currentMap,
+        layerId,
+        startX,
+        startY,
+        activeVariationId,
+        state.tilesets,
+      );
       const cells = floodFillCollect(
         startX,
         startY,
         currentMap.width,
         currentMap.height,
-        (x, y) => resolveTileAt(currentMap, layerId, x, y, activeVariationId) === startTile,
+        (x, y) =>
+          resolveTileAt(currentMap, layerId, x, y, activeVariationId, state.tilesets) === startTile,
       );
+      const layer = currentMap.layers.find((candidate) => candidate.id === layerId);
+
+      if (layer?.sortingLayer === 'objects' && !activeVariationId) {
+        migrateLegacyObjectLayerToObjectGroups(layer, currentMap.tilesetRefs);
+        const edits: Array<{ x: number; y: number; value: string | null }> = [];
+        for (const { x, y } of cells) {
+          if (mode === 'erase') {
+            edits.push({ x, y, value: null });
+          } else if (mode === 'random' && tilesetId) {
+            const idx = sampleRandomTile(
+              tileIndices ?? (tileIndex !== undefined ? [tileIndex] : []),
+              tileset,
+            );
+            if (idx !== null) {
+              if (!currentMap.tilesetRefs.includes(tilesetId)) {
+                currentMap.tilesetRefs.push(tilesetId);
+              }
+              edits.push({ x, y, value: createTileRef(tilesetId, idx) });
+            }
+          } else if (mode === 'stamp' && (tilesetId || pattern)) {
+            if (pattern && pattern.patternW > 0 && pattern.patternH > 0) {
+              const tileIdx = samplePatternAt(
+                {
+                  pattern: pattern.pattern,
+                  patternW: pattern.patternW,
+                  patternH: pattern.patternH,
+                  minCol: 0,
+                  minRow: 0,
+                },
+                startX,
+                startY,
+                x,
+                y,
+              );
+              if (tileIdx !== null && tilesetId) {
+                if (!currentMap.tilesetRefs.includes(tilesetId)) {
+                  currentMap.tilesetRefs.push(tilesetId);
+                }
+                edits.push({ x, y, value: createTileRef(tilesetId, tileIdx) });
+              } else if (tileIdx === null) {
+                edits.push({ x, y, value: null });
+              }
+            } else if (tilesetId && tileIndex !== undefined && tileIndex !== null) {
+              if (!currentMap.tilesetRefs.includes(tilesetId)) {
+                currentMap.tilesetRefs.push(tilesetId);
+              }
+              edits.push({ x, y, value: createTileRef(tilesetId, tileIndex) });
+            }
+          }
+        }
+
+        applyObjectGroupEdits(layer, edits);
+        return;
+      }
 
       for (const { x, y } of cells) {
         if (mode === 'erase') {

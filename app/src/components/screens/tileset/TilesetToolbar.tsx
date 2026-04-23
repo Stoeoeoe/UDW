@@ -1,6 +1,6 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiShield, FiArrowDown } from 'react-icons/fi';
+import { FiMousePointer, FiEdit2, FiShield, FiArrowDown, FiBox } from 'react-icons/fi';
 import Toolbar, { ToolItem, ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 
@@ -19,6 +19,7 @@ export const TilesetToolbar: React.FC = () => {
 
   const TOOLS: ToolItem[] = [
     { id: 'select', icon: FiMousePointer, label: 'Select', group: 'main' },
+    { id: 'objects', icon: FiBox, label: 'Objects', group: 'main' },
     { id: 'terrain', icon: FiEdit2, label: 'Terrain Paint', group: 'main' },
   ];
 
@@ -31,7 +32,7 @@ export const TilesetToolbar: React.FC = () => {
       <Toolbar
         items={visibleTools}
         activeId={tilesetToolMode}
-        onActivate={(id) => setTilesetToolMode(id as 'select' | 'terrain')}
+        onActivate={(id) => setTilesetToolMode(id as 'select' | 'terrain' | 'objects')}
       />
       <ToolbarShell>
         <ToolbarToggleButton

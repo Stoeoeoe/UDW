@@ -31,7 +31,7 @@ const SORTING_LAYER_OPTIONS: { value: SortingLayer; label: string; description: 
   {
     value: 'objects',
     label: 'Objects (Y-sorted)',
-    description: 'Per-tile depth by pivot Y (trees, pillars, props)',
+    description: 'Placed object instances sorted by their foot/base at runtime',
   },
   { value: 'above', label: 'Above', description: 'Always on top (roofs, canopy)' },
 ];
@@ -49,7 +49,8 @@ export interface LayerModalProps {
 // locationlink is system-managed — never user-addable
 const ALL_KIND_OPTIONS: { value: LayerKind; label: string }[] = [
   { value: 'terrain', label: 'Terrain (Autotiled)' },
-  { value: 'visual', label: 'Visual (Tiles)' },
+  { value: 'visual', label: 'Tile Layer' },
+  { value: 'object', label: 'Object Layer' },
   { value: 'entity', label: 'Entity (Objects)' },
   { value: 'collision', label: 'Collision' },
   { value: 'navigation', label: 'Navigation' },
@@ -72,7 +73,10 @@ export const LayerModal: React.FC<LayerModalProps> = ({
   const form = useForm({
     defaultValues: initialData,
     onSubmit: async ({ value }) => {
-      onSave(value);
+      onSave({
+        ...value,
+        sortingLayer: value.kind === 'object' ? 'objects' : value.sortingLayer,
+      });
     },
   });
 
@@ -115,7 +119,15 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                     <FieldLabel>Type</FieldLabel>
                     <Select
                       value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value as LayerKind)}
+                      onChange={(e) => {
+                        const nextKind = e.target.value as LayerKind;
+                        field.handleChange(nextKind);
+                        if (nextKind === 'object') {
+                          form.setFieldValue('sortingLayer', 'objects');
+                        } else if (form.state.values.sortingLayer === 'objects') {
+                          form.setFieldValue('sortingLayer', 'ground');
+                        }
+                      }}
                       onBlur={field.handleBlur}
                       size="sm"
                       bg="gray.800"
@@ -150,30 +162,44 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                 )}
               </form.Field>
 
-              <form.Field name="sortingLayer">
-                {(field) => (
-                  <FormControl>
-                    <FieldLabel>Sorting Layer</FieldLabel>
-                    <Select
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value as SortingLayer)}
-                      onBlur={field.handleBlur}
-                      size="sm"
-                      bg="gray.800"
-                    >
-                      {SORTING_LAYER_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <Text fontSize="10px" color="gray.500" mt={1}>
-                      {SORTING_LAYER_OPTIONS.find((o) => o.value === field.state.value)
-                        ?.description ?? ''}
-                    </Text>
-                  </FormControl>
-                )}
-              </form.Field>
+              <form.Subscribe selector={(state) => state.values.kind}>
+                {(kind) =>
+                  kind === 'object' ? (
+                    <FormControl>
+                      <FieldLabel>Sorting Layer</FieldLabel>
+                      <Input value="Objects (Y-sorted)" size="sm" bg="gray.800" isReadOnly />
+                      <Text fontSize="10px" color="gray.500" mt={1}>
+                        Object layers place reusable objects and always use object-level Y-sorting.
+                      </Text>
+                    </FormControl>
+                  ) : (
+                    <form.Field name="sortingLayer">
+                      {(field) => (
+                        <FormControl>
+                          <FieldLabel>Sorting Layer</FieldLabel>
+                          <Select
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value as SortingLayer)}
+                            onBlur={field.handleBlur}
+                            size="sm"
+                            bg="gray.800"
+                          >
+                            {SORTING_LAYER_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </Select>
+                          <Text fontSize="10px" color="gray.500" mt={1}>
+                            {SORTING_LAYER_OPTIONS.find((o) => o.value === field.state.value)
+                              ?.description ?? ''}
+                          </Text>
+                        </FormControl>
+                      )}
+                    </form.Field>
+                  )
+                }
+              </form.Subscribe>
 
               <form.Field name="icon">
                 {(field) => (

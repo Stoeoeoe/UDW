@@ -17,6 +17,16 @@ import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
 import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
 import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
 import { MapTrigger } from '../../../types/schema';
+import { getObjectGroupAt } from '../../../lib/objectGroups';
+import { matchObjectDefinitionByPattern } from '../../../lib/tilesetObjects';
+import {
+  collectObjectPlacementOrigins,
+  getCenteredObjectPlacementOrigin,
+  getCenteredObjectPlacementPixelOrigin,
+  getObjectInstanceAtTile,
+  getObjectInstanceAtWorldPosition,
+  objectPlacementIntersectsMap,
+} from '../../../lib/mapObjects';
 
 interface UseMapToolsProps {
   viewport: Viewport | null;
@@ -32,6 +42,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const selectedTileIndex = useEditorStore((state) => state.selectedTileIndex);
   const selectedTileIndices = useEditorStore((state) => state.selectedTileIndices);
   const sampledPattern = useEditorStore((state) => state.sampledPattern);
+  const selectedObjectDefinitionId = useEditorStore((state) => state.selectedObjectDefinitionId);
   const activeTool = useEditorStore((state) => state.activeTool);
   const drawMode = useEditorStore((state) => state.drawMode);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
@@ -41,6 +52,10 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
   const paintTilesBatch = useEditorStore((state) => state.paintTilesBatch);
   const eraseTilesBatch = useEditorStore((state) => state.eraseTilesBatch);
+  const placeObjectInstance = useEditorStore((state) => state.placeObjectInstance);
+  const removeObjectInstance = useEditorStore((state) => state.removeObjectInstance);
+  const moveObjectInstance = useEditorStore((state) => state.moveObjectInstance);
+  const selectObjectInstance = useEditorStore((state) => state.selectObjectInstance);
   const paintTerrainDataBatch = useEditorStore((state) => state.paintTerrainDataBatch);
   const bucketFillAdvanced = useEditorStore((state) => state.bucketFillAdvanced);
   const placeEntity = useEditorStore((state) => state.placeEntity);
@@ -54,10 +69,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const updateTrigger = useEditorStore((state) => state.updateTrigger);
   const selectTrigger = useEditorStore((state) => state.selectTrigger);
   const setHoveredTile = useEditorStore((state) => state.setHoveredTile);
+  const setHoveredWorldPosition = useEditorStore((state) => state.setHoveredWorldPosition);
   const setDrawPreview = useEditorStore((state) => state.setDrawPreview);
   const setPolygonPreviewPoints = useEditorStore((state) => state.setPolygonPreviewPoints);
   const setSelectedTile = useEditorStore((state) => state.setSelectedTile);
   const setSelectedTiles = useEditorStore((state) => state.setSelectedTiles);
+  const setSelectedObjectDefinition = useEditorStore((state) => state.setSelectedObjectDefinition);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
   const setSampledPattern = useEditorStore((state) => state.setSampledPattern);
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
@@ -68,6 +85,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const lineAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const draggingEntityRef = useRef<string | null>(null);
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null); // Entity drag offset
+  const draggingObjectInstanceRef = useRef<string | null>(null);
+  const dragObjectOffsetRef = useRef<{ x: number; y: number } | null>(null);
   const draggingAnchorRef = useRef<string | null>(null);
   const dragAnchorOffsetRef = useRef<{ x: number; y: number } | null>(null);
   const draggingTriggerRef = useRef<string | null>(null);
@@ -117,6 +136,19 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         tilesets,
       }),
     [activeTool, sampledPattern, selectedTileIndices, activeTilesetId, tilesets],
+  );
+
+  const snapWorldPosition = useCallback(
+    (x: number, y: number): [number, number] => {
+      if (entitySnapMode === 'grid') {
+        return [
+          Math.floor(x / projectTileSize) * projectTileSize,
+          Math.floor(y / projectTileSize) * projectTileSize,
+        ];
+      }
+      return [Math.round(x), Math.round(y)];
+    },
+    [entitySnapMode, projectTileSize],
   );
 
   // Apply a shape (delegates to shared util)
@@ -603,7 +635,41 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         return;
       }
 
-      if (activeTool === 'entitySelect' || activeTool === 'entityDelete') {
+      const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
+      const isBaseObjectLayer =
+        (selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects') &&
+        activeVariationId === null;
+
+      if (isBaseObjectLayer && (activeTool === 'objectSelect' || activeTool === 'objectDelete')) {
+        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        if (!worldPos || !selectedLayerId || !selectedLayer) return;
+        const hit = getObjectInstanceAtWorldPosition(
+          selectedLayer,
+          worldPos.x,
+          worldPos.y,
+          tilesets,
+          projectTileSize,
+        );
+
+        if (activeTool === 'objectDelete') {
+          if (hit) {
+            removeObjectInstance(selectedLayerId, hit.id);
+          }
+        } else {
+          selectObjectInstance(hit?.id ?? null);
+          if (hit) {
+            startHistoryBatch();
+            draggingObjectInstanceRef.current = hit.id;
+            dragObjectOffsetRef.current = {
+              x: worldPos.x - hit.x,
+              y: worldPos.y - hit.y,
+            };
+          } else {
+            draggingObjectInstanceRef.current = null;
+            dragObjectOffsetRef.current = null;
+          }
+        }
+      } else if (activeTool === 'entitySelect' || activeTool === 'entityDelete') {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
         if (!worldPos) return;
         const resolvedEntities = resolveEntities(currentMap, activeVariationId);
@@ -635,12 +701,80 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         }
       } else if (activeTool === 'select') {
         selectEntity(null);
+        selectObjectInstance(null);
       } else if (
         activeTool === 'stamp' ||
         activeTool === 'random' ||
         activeTool === 'erase' ||
-        activeTool === 'fill'
+        activeTool === 'fill' ||
+        activeTool === 'objectPlace'
       ) {
+        const objectDefinitionId = selectedObjectDefinitionId;
+        const canPlaceObjectInstances =
+          isBaseObjectLayer && activeTool === 'objectPlace' && !!objectDefinitionId;
+
+        if (selectedLayerId && drawMode === 'point' && canPlaceObjectInstances) {
+          startHistoryBatch();
+          if (activeTilesetId && objectDefinitionId) {
+            const origin =
+              entitySnapMode === 'pixel' && worldPos
+                ? getCenteredObjectPlacementPixelOrigin(
+                    tilesets,
+                    activeTilesetId,
+                    objectDefinitionId,
+                    worldPos.x,
+                    worldPos.y,
+                    projectTileSize,
+                  )
+                : (() => {
+                    const tileOrigin = getCenteredObjectPlacementOrigin(
+                      tilesets,
+                      activeTilesetId,
+                      objectDefinitionId,
+                      tx,
+                      ty,
+                    );
+                    return {
+                      x: tileOrigin.x * projectTileSize,
+                      y: tileOrigin.y * projectTileSize,
+                    };
+                  })();
+            if (
+              objectPlacementIntersectsMap(
+                tilesets,
+                activeTilesetId,
+                objectDefinitionId,
+                origin.x,
+                origin.y,
+                projectTileSize,
+                currentMap.width,
+                currentMap.height,
+              )
+            ) {
+              placeObjectInstance(
+                selectedLayerId,
+                origin.x,
+                origin.y,
+                activeTilesetId,
+                objectDefinitionId,
+              );
+            }
+          }
+          return;
+        }
+
+        if (selectedLayerId && drawMode !== 'point' && canPlaceObjectInstances) {
+          drawStartRef.current = { x: tx, y: ty };
+          isDrawingRef.current = true;
+          setDrawPreview({
+            isDrawing: true,
+            start: { x: tx, y: ty },
+            end: { x: tx, y: ty },
+            mode: 'draw',
+          });
+          return;
+        }
+
         const shouldFlood = activeTool === 'fill' || drawMode === 'flood';
 
         if (shouldFlood) {
@@ -786,6 +920,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       activeTilesetId,
       selectedTileIndex,
       selectedTileIndices,
+      selectedObjectDefinitionId,
       selectedEntityTypeId,
       activeVariationId,
       selectedTerrainId,
@@ -794,11 +929,16 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       screenToTile,
       applyShape,
       applyTerrainShape,
+      placeObjectInstance,
+      removeObjectInstance,
+      moveObjectInstance,
+      selectObjectInstance,
       selectEntity,
       removeEntity,
       bucketFillAdvanced,
       getPattern,
       placeEntity,
+      snapWorldPosition,
       setDrawPreview,
       setPolygonPreviewPoints,
       hitTestEntity,
@@ -815,15 +955,14 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     (e: PointerEvent) => {
       if (!viewport || !currentMap) return;
       const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+      if (worldPos) {
+        setHoveredWorldPosition({ x: Math.round(worldPos.x), y: Math.round(worldPos.y) });
+      } else {
+        setHoveredWorldPosition(null);
+      }
 
       const tile = screenToTile(e.clientX, e.clientY);
-      if (
-        tile &&
-        tile.x >= 0 &&
-        tile.x < currentMap.width &&
-        tile.y >= 0 &&
-        tile.y < currentMap.height
-      ) {
+      if (tile) {
         setHoveredTile({ x: tile.x, y: tile.y });
       } else {
         setHoveredTile(null);
@@ -864,6 +1003,16 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           end: { x: tile.x, y: tile.y },
           mode: 'draw',
         });
+      }
+
+      // Move entity while dragging with entitySelect or global select
+      if (e.buttons === 1 && activeTool === 'objectSelect' && draggingObjectInstanceRef.current) {
+        const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        if (worldPos && selectedLayerId) {
+          const offset = dragObjectOffsetRef.current ?? { x: 0, y: 0 };
+          const [x, y] = snapWorldPosition(worldPos.x - offset.x, worldPos.y - offset.y);
+          moveObjectInstance(selectedLayerId, draggingObjectInstanceRef.current, x, y);
+        }
       }
 
       // Move entity while dragging with entitySelect or global select
@@ -1092,15 +1241,13 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         tile
       ) {
         const { x: tx, y: ty } = tile;
-        if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-          if (
-            (activeTool === 'stamp' && (activeTilesetId || sampledPattern)) ||
-            (activeTool === 'random' && activeTilesetId)
-          ) {
-            applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'paint');
-          } else if (activeTool === 'erase') {
-            applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'erase');
-          }
+        if (
+          (activeTool === 'stamp' && (activeTilesetId || sampledPattern)) ||
+          (activeTool === 'random' && activeTilesetId)
+        ) {
+          applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'paint');
+        } else if (activeTool === 'erase') {
+          applyShape('point', { x: tx, y: ty }, { x: tx, y: ty }, 'erase');
         }
       }
 
@@ -1116,9 +1263,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         // Only paint if we've moved to a new position
         if (lastTerrainPaintRef.current?.x !== tx || lastTerrainPaintRef.current?.y !== ty) {
           lastTerrainPaintRef.current = { x: tx, y: ty };
-          if (tx >= 0 && tx < currentMap.width && ty >= 0 && ty < currentMap.height) {
-            applyTerrainShape('point', { x: tx, y: ty }, { x: tx, y: ty }, selectedTerrainId);
-          }
+          applyTerrainShape('point', { x: tx, y: ty }, { x: tx, y: ty }, selectedTerrainId);
         }
       }
 
@@ -1144,6 +1289,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       currentMap,
       screenToTile,
       setHoveredTile,
+      setHoveredWorldPosition,
       setDrawPreview,
       applyShape,
       applyTerrainShape,
@@ -1168,12 +1314,120 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
 
           // Single tile click (no drag) - use simple eyedropper
           if (width === 1 && height === 1) {
+            const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
+            if (
+              (selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects') &&
+              !activeVariationId
+            ) {
+              const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+              const objectInstance = worldPos
+                ? getObjectInstanceAtWorldPosition(
+                    selectedLayer,
+                    worldPos.x,
+                    worldPos.y,
+                    tilesets,
+                    projectTileSize,
+                  )
+                : getObjectInstanceAtTile(selectedLayer, tile.x, tile.y, tilesets, projectTileSize);
+              if (objectInstance) {
+                const objectTileset = tilesets.get(objectInstance.tilesetId);
+                const objectDefinition = objectTileset?.objects?.find(
+                  (entry) => entry.id === objectInstance.objectDefinitionId,
+                );
+                if (objectTileset && objectDefinition) {
+                  const patternWidth =
+                    Math.max(...objectDefinition.tiles.map((groupTile) => groupTile.x)) + 1;
+                  const patternHeight =
+                    Math.max(...objectDefinition.tiles.map((groupTile) => groupTile.y)) + 1;
+                  const pattern: (number | null)[][] = Array.from({ length: patternHeight }, () =>
+                    Array(patternWidth).fill(null),
+                  );
+
+                  const tileIndices: number[] = [];
+                  for (const groupTile of objectDefinition.tiles) {
+                    pattern[groupTile.y][groupTile.x] = groupTile.tileIndex;
+                    tileIndices.push(groupTile.tileIndex);
+                  }
+
+                  setActiveTileset(objectInstance.tilesetId);
+                  setSelectedTiles(tileIndices);
+                  setSelectedObjectDefinition(objectDefinition.id);
+                  setSampledPattern({
+                    tilesetId: objectInstance.tilesetId,
+                    pattern,
+                    width: patternWidth,
+                    height: patternHeight,
+                  });
+
+                  isSamplingRef.current = false;
+                  sampleStartRef.current = null;
+                  setDrawPreview({ isDrawing: false, start: null, end: null });
+                  finishHistoryBatch();
+                  return;
+                }
+              }
+
+              const objectGroup = getObjectGroupAt(selectedLayer, tile.x, tile.y);
+              if (objectGroup && objectGroup.tiles.length > 0) {
+                const firstTilesetId = objectGroup.tiles[0].tilesetId;
+                const singleTileset = objectGroup.tiles.every(
+                  (groupTile) => groupTile.tilesetId === firstTilesetId,
+                );
+                if (singleTileset) {
+                  let maxX = 0;
+                  let maxY = 0;
+                  let minX = Infinity;
+                  let minY = Infinity;
+                  for (const groupTile of objectGroup.tiles) {
+                    minX = Math.min(minX, groupTile.x);
+                    minY = Math.min(minY, groupTile.y);
+                    maxX = Math.max(maxX, groupTile.x);
+                    maxY = Math.max(maxY, groupTile.y);
+                  }
+
+                  const patternWidth = maxX - minX + 1;
+                  const patternHeight = maxY - minY + 1;
+                  const pattern: (number | null)[][] = Array.from({ length: patternHeight }, () =>
+                    Array(patternWidth).fill(null),
+                  );
+
+                  const tileIndices: number[] = [];
+                  for (const groupTile of objectGroup.tiles) {
+                    pattern[groupTile.y - minY][groupTile.x - minX] = groupTile.tileIndex;
+                    tileIndices.push(groupTile.tileIndex);
+                  }
+
+                  setActiveTileset(firstTilesetId);
+                  setSelectedTiles(tileIndices);
+                  setSampledPattern({
+                    tilesetId: firstTilesetId,
+                    pattern,
+                    width: patternWidth,
+                    height: patternHeight,
+                  });
+
+                  const objectTileset = tilesets.get(firstTilesetId);
+                  const matchedObject = objectTileset
+                    ? matchObjectDefinitionByPattern(objectTileset, pattern)
+                    : null;
+                  setSelectedObjectDefinition(matchedObject?.id ?? null);
+
+                  isSamplingRef.current = false;
+                  sampleStartRef.current = null;
+                  setDrawPreview({ isDrawing: false, start: null, end: null });
+                  finishHistoryBatch();
+                  return;
+                }
+              }
+            }
+
             const tileRef = resolveTileAt(
               currentMap,
               selectedLayerId,
               tile.x,
               tile.y,
               activeVariationId,
+              tilesets,
             );
             if (tileRef) {
               const colonIdx = tileRef.lastIndexOf(':');
@@ -1182,6 +1436,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                 const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
                 if (!isNaN(tileIndex)) {
                   setActiveTileset(tilesetId);
+                  setSelectedObjectDefinition(null);
                   setSelectedTile(tileIndex);
                 }
               }
@@ -1190,6 +1445,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               // Keep the active tool the same; stamping this pattern will erase
               setSelectedTile(null);
               setSelectedTiles([]);
+              setSelectedObjectDefinition(null);
               const pattern = [[null]] as (number | null)[][];
               setSampledPattern({
                 tilesetId: activeTilesetId ?? '',
@@ -1221,6 +1477,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                   tx,
                   ty,
                   activeVariationId,
+                  tilesets,
                 );
                 if (tileRef) {
                   const colonIdx = tileRef.lastIndexOf(':');
@@ -1243,6 +1500,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           if (firstTilesetId) {
             // Set the active tileset
             setActiveTileset(firstTilesetId);
+            setSelectedObjectDefinition(null);
 
             // Check if tiles form a contiguous rectangle in the tileset
             // Only highlight in tileset palette if they do
@@ -1311,6 +1569,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
             // Sampled region contained no tiles — store an all-null sampled pattern
             setSelectedTile(null);
             setSelectedTiles([]);
+            setSelectedObjectDefinition(null);
             setSampledPattern({
               tilesetId: activeTilesetId ?? '',
               pattern,
@@ -1328,6 +1587,79 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       }
 
       // Handle terrain shape drawing on pointer up
+      if (
+        isDrawingRef.current &&
+        drawStartRef.current &&
+        currentMap &&
+        selectedLayerId &&
+        activeTool === 'objectPlace' &&
+        drawMode !== 'point'
+      ) {
+        const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
+        const isBaseObjectLayer =
+          (selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects') &&
+          activeVariationId === null;
+        if (isBaseObjectLayer) {
+          const tile = screenToTile(e.clientX, e.clientY);
+          setDrawPreview({ isDrawing: false, start: null, end: null });
+          if (tile) {
+            startHistoryBatch();
+            const origins = collectObjectPlacementOrigins(
+              drawMode as 'rect' | 'circle' | 'line',
+              drawStartRef.current,
+              tile,
+              useEditorStore.getState().brushSize,
+              tilesets,
+              activeTilesetId ?? '',
+              selectedObjectDefinitionId ?? '',
+            );
+
+            if (activeTilesetId && selectedObjectDefinitionId) {
+              for (const origin of origins) {
+                const centeredOrigin = getCenteredObjectPlacementOrigin(
+                  tilesets,
+                  activeTilesetId,
+                  selectedObjectDefinitionId,
+                  origin.x,
+                  origin.y,
+                );
+                const x = centeredOrigin.x * projectTileSize;
+                const y = centeredOrigin.y * projectTileSize;
+                if (
+                  objectPlacementIntersectsMap(
+                    tilesets,
+                    activeTilesetId,
+                    selectedObjectDefinitionId,
+                    x,
+                    y,
+                    projectTileSize,
+                    currentMap.width,
+                    currentMap.height,
+                  )
+                ) {
+                  placeObjectInstance(
+                    selectedLayerId,
+                    x,
+                    y,
+                    activeTilesetId,
+                    selectedObjectDefinitionId,
+                  );
+                }
+              }
+            }
+          }
+          isDrawingRef.current = false;
+          drawStartRef.current = null;
+          lastTerrainPaintRef.current = null;
+          draggingObjectInstanceRef.current = null;
+          dragObjectOffsetRef.current = null;
+          draggingEntityRef.current = null;
+          dragOffsetRef.current = null;
+          finishHistoryBatch();
+          return;
+        }
+      }
+
       if (
         isDrawingRef.current &&
         drawStartRef.current &&
@@ -1369,6 +1701,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       isDrawingRef.current = false;
       drawStartRef.current = null;
       lastTerrainPaintRef.current = null;
+      draggingObjectInstanceRef.current = null;
+      dragObjectOffsetRef.current = null;
       draggingEntityRef.current = null;
       dragOffsetRef.current = null;
       if (draggingAnchorRef.current) {
@@ -1443,6 +1777,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       setActiveTileset,
       setSelectedTile,
       setSelectedTiles,
+      setSelectedObjectDefinition,
       setSampledPattern,
       finishHistoryBatch,
       addTrigger,

@@ -95,6 +95,17 @@ export const MapViewportPixi: React.FC = () => {
 
     return () => {
       destroyed = true;
+      const oldViewport = viewportRef.current;
+      if (oldViewport?.parent) {
+        try {
+          oldViewport.parent.removeChild(oldViewport);
+        } catch {
+          // Fast Refresh can already have torn down the Pixi tree.
+        }
+      }
+      viewportRef.current = null;
+      setViewport(null);
+      setIsReady(false);
       setAppInitialized(false);
       if (appRef.current) {
         try {
@@ -153,15 +164,34 @@ export const MapViewportPixi: React.FC = () => {
 
     // Reuse existing viewport if one already exists — avoids destroy/recreate flicker.
     // Just update the world bounds and reapply the camera for the new map.
-    if (viewportRef.current) {
+    const existingViewport = viewportRef.current;
+    const existingViewportIsReusable =
+      existingViewport &&
+      existingViewport.parent === app.stage &&
+      !(existingViewport as { destroyed?: boolean }).destroyed;
+
+    if (existingViewportIsReusable) {
       try {
-        viewportRef.current.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
-        applyCamera(viewportRef.current);
+        existingViewport.resize(app.screen.width, app.screen.height, worldWidth, worldHeight);
+        applyCamera(existingViewport);
         // viewport state is unchanged so no setViewport/setIsReady flip needed
         return;
       } catch (e) {
         // Fall through to full recreate if resize fails
       }
+    }
+
+    if (existingViewport) {
+      try {
+        existingViewport.parent?.removeChild(existingViewport);
+        if (!(existingViewport as { destroyed?: boolean }).destroyed) {
+          existingViewport.destroy({ children: true });
+        }
+      } catch {
+        // Ignore stale viewport cleanup errors and build a fresh one below.
+      }
+      viewportRef.current = null;
+      setViewport(null);
     }
 
     try {
@@ -279,6 +309,8 @@ export const MapViewportPixi: React.FC = () => {
             const prev = prevState.currentMap?.layers?.[i];
             return (
               layer.data !== prev?.data ||
+              layer.objectGroups !== prev?.objectGroups ||
+              layer.objectInstances !== prev?.objectInstances ||
               layer.id !== prev?.id ||
               layer.kind !== prev?.kind ||
               layer.visible !== prev?.visible
@@ -328,6 +360,9 @@ export const MapViewportPixi: React.FC = () => {
       if (state.selectedEntityId !== prevState.selectedEntityId) {
         renderEntities();
       }
+      if (state.selectedObjectInstanceId !== prevState.selectedObjectInstanceId) {
+        renderTiles();
+      }
       // Re-render collision overlay when tileset metadata changes
       if (state.tilesets !== prevState.tilesets) {
         renderCollisionOverlay();
@@ -341,7 +376,10 @@ export const MapViewportPixi: React.FC = () => {
         renderTerrainOverlay();
       }
       // Re-render hover on hover change
-      if (state.hoveredTile !== prevState.hoveredTile) {
+      if (
+        state.hoveredTile !== prevState.hoveredTile ||
+        state.hoveredWorldPosition !== prevState.hoveredWorldPosition
+      ) {
         renderHover();
         renderPreview();
       }
@@ -356,8 +394,10 @@ export const MapViewportPixi: React.FC = () => {
       // Re-render preview on tool/tile selection/brush size/draw mode change
       if (
         state.activeTool !== prevState.activeTool ||
+        state.activeTilesetId !== prevState.activeTilesetId ||
         state.selectedTileIndex !== prevState.selectedTileIndex ||
         state.selectedTileIndices !== prevState.selectedTileIndices ||
+        state.selectedObjectDefinitionId !== prevState.selectedObjectDefinitionId ||
         state.drawPreview !== prevState.drawPreview ||
         state.brushSize !== prevState.brushSize ||
         state.drawMode !== prevState.drawMode
@@ -439,6 +479,9 @@ export const MapViewportPixi: React.FC = () => {
           selectedEntityId,
           removeEntity,
           selectEntity,
+          selectedObjectInstanceId,
+          removeObjectInstance,
+          selectObjectInstance,
           selectedLinkId,
           removeLocationLink,
           selectLink,
@@ -473,6 +516,13 @@ export const MapViewportPixi: React.FC = () => {
           selectEntity(null);
           return;
         }
+        const { selectedLayerId } = useEditorStore.getState();
+        if (selectedObjectInstanceId && selectedLayerId) {
+          e.preventDefault();
+          removeObjectInstance(selectedLayerId, selectedObjectInstanceId);
+          selectObjectInstance(null);
+          return;
+        }
       }
 
       // Escape cancels polygon pen drawing
@@ -488,9 +538,23 @@ export const MapViewportPixi: React.FC = () => {
 
       // Tool shortcuts
       if (e.key === 'v' || e.key === 'V') useEditorStore.getState().setActiveTool('select');
-      if (e.key === 'b' || e.key === 'B') useEditorStore.getState().setActiveTool('stamp');
+      if (e.key === 'b' || e.key === 'B') {
+        const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
+        const layer = cm?.layers.find((l) => l.id === selectedLayerId);
+        if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+          useEditorStore.getState().setActiveTool('objectPlace');
+        } else {
+          useEditorStore.getState().setActiveTool('stamp');
+        }
+      }
       if (e.key === 'r' || e.key === 'R') useEditorStore.getState().setActiveTool('random');
-      if (e.key === 'e' || e.key === 'E') useEditorStore.getState().setActiveTool('erase');
+      if (e.key === 'e' || e.key === 'E') {
+        const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
+        const layer = cm?.layers.find((l) => l.id === selectedLayerId);
+        if (!(layer?.kind === 'object' || layer?.sortingLayer === 'objects')) {
+          useEditorStore.getState().setActiveTool('erase');
+        }
+      }
       if (e.key === 't' || e.key === 'T') useEditorStore.getState().setActiveTool('terrain');
       if (e.key === 'g' || e.key === 'G') useEditorStore.getState().setDrawMode('flood');
       if (e.key === 'n' || e.key === 'N') {
@@ -498,6 +562,8 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('linkPlace');
+        } else if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+          useEditorStore.getState().setActiveTool('objectPlace');
         } else {
           useEditorStore.getState().setActiveTool('entityPlace');
         }
@@ -514,6 +580,8 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('select');
+        } else if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+          useEditorStore.getState().setActiveTool('objectSelect');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
         }
@@ -521,7 +589,9 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'x' || e.key === 'X') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind !== 'navigation') {
+        if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+          useEditorStore.getState().setActiveTool('objectDelete');
+        } else if (layer?.kind !== 'navigation') {
           useEditorStore.getState().setActiveTool('entityDelete');
         }
       }
@@ -563,9 +633,14 @@ export const MapViewportPixi: React.FC = () => {
       activeTool === 'stamp' ||
       activeTool === 'random' ||
       activeTool === 'erase' ||
-      activeTool === 'fill'
+      activeTool === 'fill' ||
+      activeTool === 'objectPlace' ||
+      activeTool === 'objectDelete'
     ) {
       return 'crosshair';
+    }
+    if (activeTool === 'objectSelect') {
+      return 'default';
     }
     return 'default';
   };

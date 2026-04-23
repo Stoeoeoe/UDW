@@ -25,6 +25,8 @@ export const LayerTypeIcon: React.FC<{ kind: LayerKind }> = ({ kind }) => {
   switch (kind) {
     case 'visual':
       return <BsImage {...iconProps} />;
+    case 'object':
+      return <BsTree {...iconProps} />;
     case 'collision':
       return <BsShieldExclamation {...iconProps} />;
     case 'navigation':

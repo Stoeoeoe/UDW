@@ -14,7 +14,9 @@ vi.mock('../lib/fileSystem', () => ({
     saveJson: vi.fn(async () => undefined),
     loadAllTilesets: vi.fn(async () => []),
     loadAllMaps: vi.fn(async () => []),
-    loadAsset: vi.fn(async () => new Blob()),
+    loadAsset: vi.fn(async () => {
+      throw new Error('Sprite loading is not needed in this test.');
+    }),
   },
 }));
 
@@ -116,5 +118,54 @@ describe('tileset save scheduling', () => {
     const calls = vi.mocked(fs.fileSystem.saveJson).mock.calls;
     const last = calls[calls.length - 1];
     expect(last[2].tiles[0].pivotY).toBe(3);
+  });
+
+  it('saves reusable object definitions on the tileset payload', async () => {
+    const fs = await import('../lib/fileSystem');
+
+    const ts: Tileset = {
+      version: 1,
+      name: 'TS1',
+      id: 'ts1',
+      spriteSheet: 's.png',
+      columns: 4,
+      tileCount: 64,
+      tiles: {},
+      objects: [],
+      wangSets: [],
+    };
+
+    await useEditorStore.getState().addTileset(ts);
+
+    await useEditorStore.getState().updateTileset('ts1', {
+      objects: [
+        {
+          id: 'obj_tree',
+          name: 'Tree',
+          tiles: [
+            { x: 0, y: 0, tileIndex: 10 },
+            { x: 0, y: 1, tileIndex: 26 },
+            { x: 0, y: 2, tileIndex: 42 },
+          ],
+        },
+      ],
+    });
+
+    await vi.advanceTimersByTimeAsync(1100);
+    await Promise.resolve();
+
+    const calls = vi.mocked(fs.fileSystem.saveJson).mock.calls;
+    const last = calls[calls.length - 1];
+    expect(last[2].objects).toEqual([
+      {
+        id: 'obj_tree',
+        name: 'Tree',
+        tiles: [
+          { x: 0, y: 0, tileIndex: 10 },
+          { x: 0, y: 1, tileIndex: 26 },
+          { x: 0, y: 2, tileIndex: 42 },
+        ],
+      },
+    ]);
   });
 });

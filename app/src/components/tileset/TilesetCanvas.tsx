@@ -7,6 +7,11 @@ import { Tileset } from '../../types/schema';
 import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
 import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
 import { useProject } from '../../hooks/useProject';
+import {
+  findObjectDefinitionAtTileIndex,
+  getTileIndicesForObjectDefinition,
+  getTilesetObjectBounds,
+} from '../../lib/tilesetObjects';
 
 interface TilesetCanvasProps {
   tileset: Tileset;
@@ -14,7 +19,7 @@ interface TilesetCanvasProps {
   onSelect: (index: number, meta?: { ctrlKey?: boolean; shiftKey?: boolean }) => void;
   mode?: 'interactive' | 'static';
   zoom?: number;
-  tool?: 'select' | 'terrain';
+  tool?: 'select' | 'terrain' | 'objects';
   enableMultiSelect?: boolean;
 }
 
@@ -33,6 +38,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const sprite = loadedSprites.get(tileset.spriteSheet);
   const setSelectedTiles = useEditorStore((state) => state.setSelectedTiles);
   const selectedTileIndices = useEditorStore((state) => state.selectedTileIndices);
+  const selectedObjectDefinitionId = useEditorStore((state) => state.selectedObjectDefinitionId);
+  const setSelectedObjectDefinition = useEditorStore((state) => state.setSelectedObjectDefinition);
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
   const setTileCornerTerrain = useEditorStore((state) => state.setTileCornerTerrain);
@@ -51,6 +58,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const mouseMovedDuringDown = useRef(false);
   const ignoreClickRef = useRef(false);
   const initializedRef = useRef(false);
+  const selectionMetaRef = useRef<{ ctrlKey: boolean; shiftKey: boolean }>({
+    ctrlKey: false,
+    shiftKey: false,
+  });
 
   const STORAGE_KEY = `tilesetCamera:${tileset.id}`;
 
@@ -231,6 +242,17 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           index >= 0 &&
           index < tileset.tileCount
         ) {
+          if (tool === 'objects') {
+            const objectDefinition = findObjectDefinitionAtTileIndex(tileset, index);
+            if (objectDefinition) {
+              setSelectedObjectDefinition(objectDefinition.id);
+              setSelectedTiles(getTileIndicesForObjectDefinition(objectDefinition, tileset));
+              ignoreClickRef.current = true;
+              return;
+            }
+            setSelectedObjectDefinition(null);
+          }
+
           // If multi-select is disabled, perform single-tile select immediately on mouse down
           if (!enableMultiSelect) {
             onSelect(index, {
@@ -242,6 +264,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           setIsSelecting(true);
           setSelectionStart({ col, row });
           setSelectionEnd({ col, row });
+          selectionMetaRef.current = {
+            ctrlKey: e.ctrlKey || e.metaKey,
+            shiftKey: e.shiftKey,
+          };
           mouseMovedDuringDown.current = false;
         }
       }
@@ -373,7 +399,11 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
         if (range.length > 0) {
           // Respect enableMultiSelect prop: only bulk-select when allowed
           if (typeof enableMultiSelect !== 'undefined' ? enableMultiSelect : true) {
-            setSelectedTiles(range);
+            const { ctrlKey } = selectionMetaRef.current;
+            const nextSelection = ctrlKey
+              ? Array.from(new Set([...selectedTileIndices, ...range]))
+              : range;
+            setSelectedTiles(nextSelection);
             // Prevent the subsequent click event from turning this into a single select
             ignoreClickRef.current = true;
           } else {
@@ -385,6 +415,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       setIsSelecting(false);
       setSelectionStart(null);
       setSelectionEnd(null);
+      selectionMetaRef.current = { ctrlKey: false, shiftKey: false };
       mouseMovedDuringDown.current = false;
     }
     panZoom.stopPan();
@@ -394,6 +425,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     isTerrainPainting,
     tileset,
     setSelectedTiles,
+    selectedTileIndices,
     enableMultiSelect,
     onSelect,
     panZoom,
@@ -576,6 +608,65 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
       ctx.fillStyle = 'rgba(49, 130, 206, 0.2)';
       ctx.fillRect(sheetX + col * tileSize, sheetY + row * tileSize, tileSize, tileSize);
+    }
+
+    if (tool === 'objects') {
+      const labelFontSize = Math.max(7, tileSize * 0.28);
+      ctx.font = `bold ${labelFontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (const objectDefinition of tileset.objects ?? []) {
+        const bounds = getTilesetObjectBounds(objectDefinition, tileset);
+        if (!bounds) continue;
+
+        const isSelected = objectDefinition.id === selectedObjectDefinitionId;
+        const fillStyle = isSelected ? 'rgba(72, 187, 120, 0.22)' : 'rgba(72, 187, 120, 0.08)';
+        const strokeStyle = isSelected ? 'rgba(104, 211, 145, 0.95)' : 'rgba(104, 211, 145, 0.35)';
+        const labelBg = isSelected ? 'rgba(10, 20, 15, 0.95)' : 'rgba(10, 20, 15, 0.72)';
+
+        for (const tile of objectDefinition.tiles) {
+          const col = tile.tileIndex % tileset.columns;
+          const row = Math.floor(tile.tileIndex / tileset.columns);
+          const x = sheetX + col * tileSize;
+          const y = sheetY + row * tileSize;
+          ctx.fillStyle = fillStyle;
+          ctx.fillRect(x, y, tileSize, tileSize);
+          ctx.strokeStyle = strokeStyle;
+          ctx.lineWidth = (isSelected ? 2 : 1) / effectiveZoom;
+          ctx.strokeRect(x, y, tileSize, tileSize);
+        }
+
+        const boxX = sheetX + bounds.minCol * tileSize;
+        const boxY = sheetY + bounds.minRow * tileSize;
+        const boxW = (bounds.maxCol - bounds.minCol + 1) * tileSize;
+        const boxH = (bounds.maxRow - bounds.minRow + 1) * tileSize;
+
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = (isSelected ? 2 : 1) / effectiveZoom;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+        const labelHeight = 14 / effectiveZoom;
+        const labelWidth = Math.min(
+          Math.max(36 / effectiveZoom, boxW * 0.9),
+          Math.max(36 / effectiveZoom, boxW - 4 / effectiveZoom),
+        );
+        const labelX = boxX + boxW / 2 - labelWidth / 2;
+        const labelY = boxY + 2 / effectiveZoom;
+
+        ctx.fillStyle = labelBg;
+        ctx.fillRect(labelX, labelY, labelWidth, labelHeight);
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 1 / effectiveZoom;
+        ctx.strokeRect(labelX, labelY, labelWidth, labelHeight);
+
+        ctx.fillStyle = isSelected ? 'rgba(198, 246, 213, 1)' : 'rgba(154, 230, 180, 0.95)';
+        ctx.fillText(
+          objectDefinition.name || objectDefinition.id,
+          boxX + boxW / 2,
+          labelY + labelHeight / 2 + 0.5 / effectiveZoom,
+        );
+      }
     }
 
     // Draw terrain corner overlays when in terrain tool (50% opacity quadrants with rounded outer corners)
@@ -804,6 +895,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     tileset,
     selectedIndex,
     selectedTileIndices,
+    selectedObjectDefinitionId,
     effectiveZoom,
     camera,
     mode,
@@ -854,6 +946,15 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
 
     const index = row * tileset.columns + col;
     if (col >= 0 && col < tileset.columns && row >= 0 && index >= 0 && index < tileset.tileCount) {
+      if (tool === 'objects') {
+        const objectDefinition = findObjectDefinitionAtTileIndex(tileset, index);
+        if (objectDefinition) {
+          setSelectedObjectDefinition(objectDefinition.id);
+          setSelectedTiles(getTileIndicesForObjectDefinition(objectDefinition, tileset));
+          return;
+        }
+      }
+
       onSelect(index, {
         ctrlKey: e.ctrlKey || e.metaKey,
         shiftKey: e.shiftKey,

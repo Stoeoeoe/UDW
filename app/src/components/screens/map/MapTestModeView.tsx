@@ -5,6 +5,11 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { EDITOR_CANVAS_HEX } from '../../../lib/editorColors';
+import {
+  computeObjectInstanceSortDepth,
+  expandObjectInstanceSpriteTiles,
+  iterateRenderableObjectTiles,
+} from '../../../lib/mapObjects';
 import { resolveMapContext, resolveTileAt } from '../../../lib/mapUtils';
 import type { Map as GameMap, SortingLayer, Tileset } from '../../../types/schema';
 import { bakeLayerCanvas, getRenderableMapLayers } from './mapThreeUtils';
@@ -29,7 +34,7 @@ interface ObjectTileSprite {
   sourceCanvas: HTMLCanvasElement;
   worldX: number;
   worldY: number;
-  pivotY: number;
+  depth: number;
 }
 
 const GROUND_DEPTH_BASE = 0;
@@ -171,62 +176,95 @@ function createObjectTileSprites(
   for (const layer of visibleLayers) {
     if (resolveSortingLayer(layer.sortingLayer) !== 'objects') continue;
 
-    for (let y = 0; y < currentMap.height; y += 1) {
-      for (let x = 0; x < currentMap.width; x += 1) {
-        const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
-        if (!tileRef) continue;
-
-        const [tilesetId, indexStr] = tileRef.split(':');
-        const index = Number.parseInt(indexStr, 10);
-        if (!Number.isFinite(index)) continue;
-
-        const tileset = tilesets.get(tilesetId);
-        if (!tileset) continue;
-
-        const variation = currentMap.variations?.find((item) => item.id === activeVariationId);
-        let effectiveTileset = tileset;
-        if (variation?.tilesetSuffix) {
-          const suffixed = tilesets.get(`${tilesetId}${variation.tilesetSuffix}`);
-          if (suffixed) effectiveTileset = suffixed;
-        }
-
-        const spriteImage = loadedSprites.get(effectiveTileset.spriteSheet);
-        if (!spriteImage) continue;
-
-        const cacheKey = `${effectiveTileset.id}:${index}`;
-        let tileCanvas = cellCanvasCache.get(cacheKey);
-        if (!tileCanvas) {
-          const canvas = document.createElement('canvas');
-          canvas.width = projectTileSize;
-          canvas.height = projectTileSize;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) continue;
-          const sx = (index % effectiveTileset.columns) * projectTileSize;
-          const sy = Math.floor(index / effectiveTileset.columns) * projectTileSize;
-          ctx.drawImage(
-            spriteImage,
-            sx,
-            sy,
-            projectTileSize,
-            projectTileSize,
-            0,
-            0,
-            projectTileSize,
-            projectTileSize,
-          );
-          cellCanvasCache.set(cacheKey, canvas);
-          tileCanvas = canvas;
-        }
-
-        const pivotY = effectiveTileset.tiles[index]?.pivotY ?? 1;
-        sprites.push({
-          textureKey: `map-test-obj-${cacheKey}`,
-          sourceCanvas: tileCanvas,
-          worldX: x * projectTileSize,
-          worldY: y * projectTileSize,
-          pivotY,
-        });
+    const objectDepthByTile = new Map<string, number>();
+    for (const objectInstance of layer.objectInstances ?? []) {
+      const depth = computeObjectInstanceSortDepth(
+        tilesets,
+        layer,
+        objectInstance,
+        projectTileSize,
+      );
+      const tiles = expandObjectInstanceSpriteTiles(
+        tilesets,
+        objectInstance.tilesetId,
+        objectInstance.objectDefinitionId,
+        objectInstance.x,
+        objectInstance.y,
+        projectTileSize,
+      );
+      for (const tile of tiles) {
+        objectDepthByTile.set(`${tile.x},${tile.y}`, depth);
       }
+    }
+
+    const renderableTiles =
+      (layer.objectInstances?.length ?? 0) > 0
+        ? (layer.objectInstances ?? []).flatMap((objectInstance) =>
+            expandObjectInstanceSpriteTiles(
+              tilesets,
+              objectInstance.tilesetId,
+              objectInstance.objectDefinitionId,
+              objectInstance.x,
+              objectInstance.y,
+              projectTileSize,
+            ),
+          )
+        : iterateRenderableObjectTiles(currentMap, layer, tilesets, projectTileSize).map(
+            (tile) => ({
+              ...tile,
+              x: tile.x * projectTileSize,
+              y: tile.y * projectTileSize,
+            }),
+          );
+    for (const tile of renderableTiles) {
+      const tileset = tilesets.get(tile.tilesetId);
+      if (!tileset) continue;
+
+      const variation = currentMap.variations?.find((item) => item.id === activeVariationId);
+      let effectiveTileset = tileset;
+      if (variation?.tilesetSuffix) {
+        const suffixed = tilesets.get(`${tile.tilesetId}${variation.tilesetSuffix}`);
+        if (suffixed) effectiveTileset = suffixed;
+      }
+
+      const spriteImage = loadedSprites.get(effectiveTileset.spriteSheet);
+      if (!spriteImage) continue;
+
+      const cacheKey = `${effectiveTileset.id}:${tile.tileIndex}`;
+      let tileCanvas = cellCanvasCache.get(cacheKey);
+      if (!tileCanvas) {
+        const canvas = document.createElement('canvas');
+        canvas.width = projectTileSize;
+        canvas.height = projectTileSize;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) continue;
+        const sx = (tile.tileIndex % effectiveTileset.columns) * projectTileSize;
+        const sy = Math.floor(tile.tileIndex / effectiveTileset.columns) * projectTileSize;
+        ctx.drawImage(
+          spriteImage,
+          sx,
+          sy,
+          projectTileSize,
+          projectTileSize,
+          0,
+          0,
+          projectTileSize,
+          projectTileSize,
+        );
+        cellCanvasCache.set(cacheKey, canvas);
+        tileCanvas = canvas;
+      }
+
+      const fallbackPivotY = effectiveTileset.tiles[tile.tileIndex]?.pivotY ?? 1;
+      sprites.push({
+        textureKey: `map-test-obj-${cacheKey}`,
+        sourceCanvas: tileCanvas,
+        worldX: tile.x,
+        worldY: tile.y,
+        depth:
+          objectDepthByTile.get(`${tile.x},${tile.y}`) ??
+          tile.y + fallbackPivotY * projectTileSize + layer.zOrder,
+      });
     }
   }
 
@@ -248,13 +286,13 @@ function createCollisionBodies(
   const bodies: CollisionBodySpec[] = [];
 
   for (const layer of visibleLayers) {
-    if (layer.kind !== 'visual') {
+    if (layer.kind !== 'visual' && layer.kind !== 'object') {
       continue;
     }
 
     for (let y = 0; y < currentMap.height; y += 1) {
       for (let x = 0; x < currentMap.width; x += 1) {
-        const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
+        const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
         if (!tileRef) {
           continue;
         }
@@ -465,7 +503,7 @@ export const MapTestModeView: React.FC = () => {
           }
           const image = this.add.image(obj.worldX, obj.worldY, obj.textureKey);
           image.setOrigin(0, 0);
-          image.setDepth(obj.worldY + obj.pivotY * projectTileSize);
+          image.setDepth(obj.depth);
         });
 
         this.matter.world.setBounds(0, 0, mapWidthPx, mapHeightPx, 64, true, true, true, true);

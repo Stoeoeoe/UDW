@@ -1,4 +1,6 @@
-import { EntityInstance, Map, Variation } from '../types/schema';
+import { EntityInstance, Map as GameMap, Tileset, Variation } from '../types/schema';
+import { getObjectGroupTileRef } from './objectGroups';
+import { resolveObjectInstanceTileAt } from './mapObjects';
 import { decodeTileRef } from './tileRef';
 
 interface VariationMetadataOverrides {
@@ -17,7 +19,10 @@ export interface EffectiveMapContext {
  * Resolves the inheritance chain for a variation.
  * Returns an array starting from root (base) to the target variation.
  */
-export function getVariationChain(map: Map, variationId: string | null): (Variation | 'base')[] {
+export function getVariationChain(
+  map: GameMap,
+  variationId: string | null,
+): (Variation | 'base')[] {
   if (!variationId) return ['base'];
 
   const chain: (Variation | 'base')[] = [];
@@ -42,17 +47,24 @@ export function getVariationChain(map: Map, variationId: string | null): (Variat
  * accounting for variation inheritance.
  */
 export function resolveTileAt(
-  map: Map,
+  map: GameMap,
   layerId: string,
   x: number,
   y: number,
   variationId: string | null,
+  tilesets?: Map<string, Tileset>,
 ): string | null {
   const chain = getVariationChain(map, variationId).reverse(); // Child to Parent to Base
 
   for (const context of chain) {
     if (context === 'base') {
       const layer = map.layers.find((l) => l.id === layerId);
+      const objectTile = layer
+        ? tilesets
+          ? resolveObjectInstanceTileAt(layer, x, y, tilesets)
+          : getObjectGroupTileRef(layer, x, y)
+        : null;
+      if (objectTile) return objectTile;
       const cell = layer?.data?.[y]?.[x];
       if (cell === null || cell === undefined) return null;
       if (typeof cell === 'string') return cell;
@@ -83,7 +95,7 @@ export function resolveTileAt(
  * Resolves all entities for the current variation context.
  * Variations can Add, Remove, or Modify entities.
  */
-export function resolveEntities(map: Map, variationId: string | null) {
+export function resolveEntities(map: GameMap, variationId: string | null) {
   const chain = getVariationChain(map, variationId); // Base to Child
   // Start with top-level entities (legacy) and entities declared on entity-type layers
   let entities: EntityInstance[] = [];
@@ -127,7 +139,7 @@ export function resolveEntities(map: Map, variationId: string | null) {
  * Resolves map-level metadata after applying variation metadata overrides.
  * Child variation metadata wins over parent variation metadata.
  */
-export function resolveMapContext(map: Map, variationId: string | null): EffectiveMapContext {
+export function resolveMapContext(map: GameMap, variationId: string | null): EffectiveMapContext {
   const context: EffectiveMapContext = {
     name: map.name,
     baseTilesetId: map.baseTilesetId,

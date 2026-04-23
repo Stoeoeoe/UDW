@@ -8,7 +8,9 @@ type EditorStoreState = ReturnType<typeof useEditorStore.getState>;
 export function getRenderableMapLayers(layers: Layer[]): Layer[] {
   return layers
     .filter(
-      (layer) => (layer.kind === 'visual' || layer.kind === 'terrain') && layer.visible !== false,
+      (layer) =>
+        (layer.kind === 'visual' || layer.kind === 'terrain' || layer.kind === 'object') &&
+        layer.visible !== false,
     )
     .sort((a, b) => a.zOrder - b.zOrder);
 }
@@ -45,7 +47,7 @@ export function bakeLayerCanvas(
 
   for (let y = 0; y < mapH; y++) {
     for (let x = 0; x < mapW; x++) {
-      const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
+      const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
       if (!tileRef) continue;
 
       const [tilesetId, indexStr] = tileRef.split(':');

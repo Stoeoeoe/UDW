@@ -109,6 +109,7 @@ function syncEditorSelectionsWithMap(): void {
     if (!currentMap) {
       state.selectedLayerId = null;
       state.selectedEntityId = null;
+      state.selectedObjectInstanceId = null;
       state.selectedLinkId = null;
       state.selectedAnchorId = null;
       state.selectedTriggerId = null;
@@ -154,6 +155,15 @@ function syncEditorSelectionsWithMap(): void {
         (e) => e.id === state.selectedEntityId,
       );
       if (!hasEntity) state.selectedEntityId = null;
+    }
+
+    if (state.selectedObjectInstanceId) {
+      const hasObjectInstance = currentMap.layers.some((layer) =>
+        (layer.objectInstances ?? []).some(
+          (instance) => instance.id === state.selectedObjectInstanceId,
+        ),
+      );
+      if (!hasObjectInstance) state.selectedObjectInstanceId = null;
     }
   });
 }
@@ -291,6 +301,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.tilesets = new globalThis.Map();
                   state.loadedSprites = new globalThis.Map();
                   state.selectedLayerId = null;
+                  state.selectedObjectInstanceId = null;
                   state.selectedAnchorId = null;
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
@@ -328,6 +339,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.maps = [];
                   state.tilesets = new globalThis.Map();
                   state.loadedSprites = new globalThis.Map();
+                  state.selectedObjectInstanceId = null;
                   state.activeTilesetId = null;
                   state.selectedTileIndex = null;
                   state.selectedAnchorId = null;
