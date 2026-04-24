@@ -17,7 +17,7 @@ import {
   VStack,
   useDisclosure,
 } from '@chakra-ui/react';
-import { DeleteIcon, RepeatIcon, CheckIcon } from '@chakra-ui/icons';
+import { RepeatIcon } from '@chakra-ui/icons';
 import { fileSystem } from '../../../lib/fileSystem';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -50,15 +50,9 @@ export const EntityEditor: React.FC = () => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
   const updateEntityType = useEditorStore((state) => state.updateEntityType);
-  const deleteEntityType = useEditorStore((state) => state.deleteEntityType);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const selectedType = entityTypes.find((t) => t.id === selectedEntityTypeId);
-
-  const deleteEntityTypeById = async (id: string, displayName: string) => {
-    if (!confirm(`Delete entity type "${displayName}"?`)) return;
-    await deleteEntityType(id);
-  };
 
   const existingGroups = useMemo(() => {
     const groups = new Set<string>();
@@ -92,7 +86,6 @@ export const EntityEditor: React.FC = () => {
         entityType={selectedType}
         existingGroups={existingGroups}
         onUpdate={updateEntityType}
-        onDelete={async () => deleteEntityTypeById(selectedType.id, selectedType.displayName)}
       />
     </DetailPanel>
   ) : (
@@ -118,9 +111,9 @@ const EntityTypeDetail: React.FC<{
   entityType: EntityType;
   existingGroups: string[];
   onUpdate: (id: string, updates: Partial<EntityType>) => void;
-  onDelete: () => void;
-}> = ({ entityType, existingGroups, onUpdate, onDelete }) => {
-  const form = useForm({
+}> = ({ entityType, existingGroups, onUpdate }) => {
+  let form: ReturnType<typeof useForm<any, any, any, any, any, any, any, any, any, any, any, any>>;
+  form = useForm({
     defaultValues: {
       displayName: entityType.displayName,
       category: entityType.category,
@@ -144,6 +137,7 @@ const EntityTypeDetail: React.FC<{
         sprite: value.sprite,
         properties: value.properties,
       });
+      form.reset(value);
     },
   });
 
@@ -193,59 +187,38 @@ const EntityTypeDetail: React.FC<{
       }}
     >
       <VStack align="stretch" spacing={6}>
-        <Box
-          border="1px"
+        <HStack
+          justify="space-between"
+          align="start"
+          spacing={4}
+          pb={4}
+          borderBottom="1px"
           borderColor="whiteAlpha.100"
-          bg="whiteAlpha.50"
-          borderRadius="xl"
-          px={5}
-          py={4}
         >
-          <HStack justify="space-between" align="start" spacing={4}>
-            <HStack spacing={4} align="center">
-              <Box
-                boxSize="56px"
-                borderRadius="xl"
-                bg="editorInlineBg"
-                border="1px"
-                borderColor="editorInlineBorder"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                flexShrink={0}
-              >
-                <GameIcon iconName={entityType.icon} size={26} fallback="GiBox" />
-              </Box>
-              <VStack align="start" spacing={1}>
-                <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
-                  {entityType.displayName}
-                </Text>
-                <Text textStyle="monoMeta">{entityType.id}</Text>
-                <HStack spacing={2}>
-                  <Badge variant="editor">{entityType.category}</Badge>
-                  {entityType.group ? <Badge variant="editor">{entityType.group}</Badge> : null}
-                </HStack>
-              </VStack>
-            </HStack>
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
+          <HStack spacing={4} align="center">
+            <Box
+              boxSize="56px"
+              borderRadius="xl"
+              bg="whiteAlpha.50"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              flexShrink={0}
             >
-              {([canSubmit, isSubmitting, isDirty]) => (
-                <Button
-                  size="sm"
-                  colorScheme="blue"
-                  type="submit"
-                  disabled={!canSubmit}
-                  isLoading={isSubmitting}
-                  opacity={isDirty ? 1 : 0.6}
-                  leftIcon={<CheckIcon fontSize="10px" />}
-                >
-                  Save Changes
-                </Button>
-              )}
-            </form.Subscribe>
+              <GameIcon iconName={entityType.icon} size={26} fallback="GiBox" />
+            </Box>
+            <VStack align="start" spacing={1}>
+              <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
+                {entityType.displayName}
+              </Text>
+              <Text textStyle="monoMeta">{entityType.id}</Text>
+              <HStack spacing={2}>
+                <Badge variant="editor">{entityType.category}</Badge>
+                {entityType.group ? <Badge variant="editor">{entityType.group}</Badge> : null}
+              </HStack>
+            </VStack>
           </HStack>
-        </Box>
+        </HStack>
 
         <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
           <GridItem>
@@ -440,40 +413,30 @@ const EntityTypeDetail: React.FC<{
           )}
         </form.Field>
 
-        <Divider />
-
-        <HStack justify="space-between">
-          <Button
-            size="xs"
-            colorScheme="red"
-            variant="outline"
-            leftIcon={<DeleteIcon fontSize="10px" />}
-            onClick={onDelete}
-          >
-            Delete Entity Type
-          </Button>
-
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
-          >
-            {([canSubmit, isSubmitting, isDirty]) => (
-              <Button
-                size="sm"
-                colorScheme="blue"
-                type="submit"
-                disabled={!canSubmit}
-                isLoading={isSubmitting}
-                opacity={isDirty ? 1 : 0.5}
-                leftIcon={<CheckIcon fontSize="10px" />}
-              >
-                Save Changes
-              </Button>
-            )}
-          </form.Subscribe>
-        </HStack>
+        <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
+          {({ isDirty, values }) => (
+            <FormAutosave isDirty={isDirty} values={values} onSave={() => form.handleSubmit()} />
+          )}
+        </form.Subscribe>
       </VStack>
     </form>
   );
+};
+
+const FormAutosave: React.FC<{
+  isDirty: boolean;
+  values: unknown;
+  onSave: () => void | Promise<void>;
+}> = ({ isDirty, values, onSave }) => {
+  React.useEffect(() => {
+    if (!isDirty) return;
+    const timeout = window.setTimeout(() => {
+      void onSave();
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [isDirty, onSave, values]);
+
+  return null;
 };
 
 const EntitySpriteEditor: React.FC<{

@@ -27,12 +27,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         mr="auto"
         ml={0}
         bg="editorPanelBg"
-        border="1px"
-        borderColor="whiteAlpha.100"
-        borderRadius="xl"
-        px={{ base: 5, md: 7 }}
-        py={{ base: 5, md: 6 }}
-        boxShadow="0 10px 24px rgba(0, 0, 0, 0.12)"
+        borderRadius="lg"
+        px={{ base: 5, md: 6 }}
+        py={{ base: 5, md: 5 }}
         overflow="hidden"
       >
         {children}

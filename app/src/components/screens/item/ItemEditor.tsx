@@ -19,7 +19,7 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import { CheckIcon, DeleteIcon } from '@chakra-ui/icons';
+import { CheckIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { DetailPanel } from '../../common/DetailPanel';
@@ -34,11 +34,18 @@ import { fileSystem } from '../../../lib/fileSystem';
 import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { GiChest } from 'react-icons/gi';
 
+const ITEM_ACCENT = {
+  color: 'purple.300',
+  border: 'rgba(196,181,253,0.55)',
+  surface: 'rgba(196,181,253,0.08)',
+  surfaceStrong: 'rgba(196,181,253,0.12)',
+  line: 'rgba(196,181,253,0.22)',
+};
+
 export const ItemEditor: React.FC = () => {
   const items = useEditorStore((state) => state.items);
   const selectedItemId = useEditorStore((state) => state.selectedItemId);
   const updateItem = useEditorStore((state) => state.updateItem);
-  const deleteItem = useEditorStore((state) => state.deleteItem);
   const addItem = useEditorStore((state) => state.addItem);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -51,11 +58,6 @@ export const ItemEditor: React.FC = () => {
     }
     return Array.from(cats).sort();
   }, [items]);
-
-  const deleteItemById = async (id: string, name: string) => {
-    if (!confirm(`Delete item "${name}"?`)) return;
-    await deleteItem(id);
-  };
 
   const emptyContent =
     items.length === 0 ? (
@@ -76,12 +78,7 @@ export const ItemEditor: React.FC = () => {
 
   const centerContent = selectedItem ? (
     <DetailPanel key={selectedItem.id} maxWidth="1240px">
-      <ItemDetail
-        item={selectedItem}
-        knownCategories={knownCategories}
-        onUpdate={updateItem}
-        onDelete={async () => deleteItemById(selectedItem.id, selectedItem.name)}
-      />
+      <ItemDetail item={selectedItem} knownCategories={knownCategories} onUpdate={updateItem} />
     </DetailPanel>
   ) : (
     emptyContent
@@ -123,11 +120,11 @@ const ItemDetail: React.FC<{
   item: Item;
   knownCategories: string[];
   onUpdate: (id: string, updates: Partial<Item>) => Promise<void>;
-  onDelete: () => void;
-}> = ({ item, knownCategories, onUpdate, onDelete }) => {
+}> = ({ item, knownCategories, onUpdate }) => {
   const itemClasses = useEditorStore((state) => state.itemClasses);
 
-  const form = useForm({
+  let form: ReturnType<typeof useForm<any, any, any, any, any, any, any, any, any, any, any, any>>;
+  form = useForm({
     defaultValues: {
       name: item.name,
       category: item.category,
@@ -146,6 +143,7 @@ const ItemDetail: React.FC<{
         classProperties:
           Object.keys(value.classProperties).length > 0 ? value.classProperties : undefined,
       });
+      form.reset(value);
     },
   });
 
@@ -184,22 +182,39 @@ const ItemDetail: React.FC<{
       }}
     >
       <VStack align="stretch" spacing={6}>
-        <Box
-          border="1px"
-          borderColor="whiteAlpha.100"
-          bg="whiteAlpha.50"
-          borderRadius="xl"
-          px={5}
-          py={4}
+        <VStack
+          align="stretch"
+          spacing={4}
+          pl={4}
+          borderLeftWidth="3px"
+          borderLeftColor={ITEM_ACCENT.border}
         >
-          <HStack justify="space-between" align="start" spacing={4}>
+          <Text
+            fontSize="xs"
+            textTransform="uppercase"
+            letterSpacing="widest"
+            color="editorMutedText"
+          >
+            Items /{' '}
+            <Text as="span" color={ITEM_ACCENT.color} fontWeight="bold">
+              {item.name}
+            </Text>
+          </Text>
+
+          <HStack
+            justify="space-between"
+            align="start"
+            spacing={4}
+            pb={4}
+            borderBottom="1px"
+            borderColor="whiteAlpha.100"
+          >
             <HStack spacing={4} align="center">
               <Box
                 boxSize="56px"
                 borderRadius="xl"
-                bg="editorInlineBg"
-                border="1px"
-                borderColor="editorInlineBorder"
+                bg={ITEM_ACCENT.surface}
+                color={ITEM_ACCENT.color}
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
@@ -213,265 +228,279 @@ const ItemDetail: React.FC<{
                 </Text>
                 <Text textStyle="monoMeta">{item.id}</Text>
                 <HStack spacing={2}>
-                  <Badge variant="editor">Item</Badge>
+                  <Badge variant="editor" color={ITEM_ACCENT.color}>
+                    Item
+                  </Badge>
                   {item.category ? <Badge variant="editor">{item.category}</Badge> : null}
                 </HStack>
               </VStack>
             </HStack>
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
-            >
-              {([canSubmit, isSubmitting, isDirty]) => (
-                <Button
-                  size="sm"
-                  colorScheme="blue"
-                  type="submit"
-                  disabled={!canSubmit}
-                  isLoading={isSubmitting}
-                  opacity={isDirty ? 1 : 0.6}
-                  leftIcon={<CheckIcon fontSize="10px" />}
-                >
-                  Save Changes
-                </Button>
-              )}
-            </form.Subscribe>
           </HStack>
-        </Box>
+        </VStack>
 
         <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
           <GridItem>
-            <FieldStack>
-              <FormControl>
-                <FieldLabel>ID</FieldLabel>
-                <ReadOnlyIdField value={item.id} />
-              </FormControl>
+            <Box
+              borderRadius="xl"
+              px={4}
+              py={4}
+              bgGradient={`linear(to-br, ${ITEM_ACCENT.surfaceStrong}, rgba(196,181,253,0.02) 45%, transparent 80%)`}
+            >
+              <FieldStack>
+                <FormControl>
+                  <FieldLabel>ID</FieldLabel>
+                  <ReadOnlyIdField value={item.id} />
+                </FormControl>
 
-              <form.Field name="name">
-                {(field) => (
-                  <FormControl>
-                    <FieldLabel>Name</FieldLabel>
-                    <Input
-                      size="sm"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  </FormControl>
-                )}
-              </form.Field>
-
-              <form.Field name="category">
-                {(field) => (
-                  <FormControl>
-                    <FieldLabel>Category</FieldLabel>
-                    <ComboboxInput
-                      size="sm"
-                      placeholder="e.g. Consumable, Weapon, Tool"
-                      value={field.state.value}
-                      options={knownCategories}
-                      onBlur={field.handleBlur}
-                      onChange={(v) => field.handleChange(v)}
-                    />
-                  </FormControl>
-                )}
-              </form.Field>
-
-              {itemClasses.length > 0 && (
-                <form.Field name="classId">
+                <form.Field name="name">
                   {(field) => (
                     <FormControl>
-                      <FieldLabel>Item Class</FieldLabel>
-                      <Select
+                      <FieldLabel>Name</FieldLabel>
+                      <Input
                         size="sm"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                      >
-                        <option value="">-- None --</option>
-                        {itemClasses.map((cls) => (
-                          <option key={cls.id} value={cls.id}>
-                            {cls.name}
-                          </option>
-                        ))}
-                      </Select>
+                      />
                     </FormControl>
                   )}
                 </form.Field>
-              )}
 
-              <form.Field name="description">
-                {(field) => (
-                  <FormControl>
-                    <FieldLabel>Description</FieldLabel>
-                    <Textarea
-                      size="sm"
-                      rows={5}
-                      resize="vertical"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  </FormControl>
-                )}
-              </form.Field>
+                <form.Field name="category">
+                  {(field) => (
+                    <FormControl>
+                      <FieldLabel>Category</FieldLabel>
+                      <ComboboxInput
+                        size="sm"
+                        placeholder="e.g. Consumable, Weapon, Tool"
+                        value={field.state.value}
+                        options={knownCategories}
+                        onBlur={field.handleBlur}
+                        onChange={(v) => field.handleChange(v)}
+                      />
+                    </FormControl>
+                  )}
+                </form.Field>
 
-              <form.Field name="maxStackSize">
-                {(field) => (
-                  <FormControl>
-                    <FieldLabel>Max Stack Size</FieldLabel>
-                    <CompactNumberInput
-                      min={1}
-                      value={field.state.value}
-                      onChange={(_, val) => field.handleChange(isNaN(val) ? 1 : val)}
-                      onBlur={field.handleBlur}
-                    >
-                      <NumberInputStepper>
-                        <NumberIncrementStepper />
-                        <NumberDecrementStepper />
-                      </NumberInputStepper>
-                    </CompactNumberInput>
-                  </FormControl>
+                {itemClasses.length > 0 && (
+                  <form.Field name="classId">
+                    {(field) => (
+                      <FormControl>
+                        <FieldLabel>Item Class</FieldLabel>
+                        <Select
+                          size="sm"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        >
+                          <option value="">-- None --</option>
+                          {itemClasses.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  </form.Field>
                 )}
-              </form.Field>
-            </FieldStack>
+
+                <form.Field name="description">
+                  {(field) => (
+                    <FormControl>
+                      <FieldLabel>Description</FieldLabel>
+                      <Textarea
+                        size="sm"
+                        rows={5}
+                        resize="vertical"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                    </FormControl>
+                  )}
+                </form.Field>
+
+                <form.Field name="maxStackSize">
+                  {(field) => (
+                    <FormControl>
+                      <FieldLabel>Max Stack Size</FieldLabel>
+                      <CompactNumberInput
+                        min={1}
+                        value={field.state.value}
+                        onChange={(_, val) => field.handleChange(isNaN(val) ? 1 : val)}
+                        onBlur={field.handleBlur}
+                      >
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </CompactNumberInput>
+                    </FormControl>
+                  )}
+                </form.Field>
+              </FieldStack>
+            </Box>
           </GridItem>
 
           <GridItem>
-            <VStack align="stretch" spacing={5}>
-              <VStack align="stretch" spacing={3}>
-                <SectionLabel>Assets</SectionLabel>
+            <Box
+              bg="rgba(255,255,255,0.025)"
+              border="1px"
+              borderColor="whiteAlpha.100"
+              borderRadius="xl"
+              px={5}
+              py={5}
+              minH="100%"
+            >
+              <VStack align="stretch" spacing={5}>
+                <VStack align="stretch" spacing={3}>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="black"
+                    color={ITEM_ACCENT.color}
+                    textTransform="uppercase"
+                    letterSpacing="widest"
+                    pb={2}
+                    borderBottom="1px"
+                    borderColor={ITEM_ACCENT.line}
+                  >
+                    Assets
+                  </Text>
 
-                <form.Field name="icon">
-                  {(field) => (
-                    <FormControl>
-                      <FieldLabel>Icon</FieldLabel>
-                      <HStack spacing={2}>
-                        <Input
-                          size="sm"
-                          fontFamily="mono"
-                          placeholder="assets/icons/my-item.png"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          flex={1}
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorScheme="gray"
-                          flexShrink={0}
-                          onClick={() => handlePickIcon((p) => field.handleChange(p))}
-                        >
-                          Browse...
-                        </Button>
-                      </HStack>
-                    </FormControl>
-                  )}
-                </form.Field>
-
-                <form.Field name="pickupSound">
-                  {(field) => (
-                    <FormControl>
-                      <FieldLabel>Pickup Sound (optional)</FieldLabel>
-                      <HStack spacing={2}>
-                        <Input
-                          size="sm"
-                          fontFamily="mono"
-                          placeholder="assets/audio/pickup.wav"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          flex={1}
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorScheme="gray"
-                          flexShrink={0}
-                          onClick={() => handlePickSound((p) => field.handleChange(p))}
-                        >
-                          Browse...
-                        </Button>
-                        {field.state.value && (
+                  <form.Field name="icon">
+                    {(field) => (
+                      <FormControl>
+                        <FieldLabel>Icon</FieldLabel>
+                        <HStack spacing={2}>
+                          <Input
+                            size="sm"
+                            fontFamily="mono"
+                            placeholder="assets/icons/my-item.png"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            flex={1}
+                          />
                           <Button
                             size="sm"
-                            variant="ghost"
-                            color="red.400"
+                            variant="outline"
+                            colorScheme="gray"
                             flexShrink={0}
-                            onClick={() => field.handleChange('')}
+                            onClick={() => handlePickIcon((p) => field.handleChange(p))}
                           >
-                            Clear
+                            Browse...
                           </Button>
-                        )}
-                      </HStack>
-                    </FormControl>
-                  )}
-                </form.Field>
-              </VStack>
+                        </HStack>
+                      </FormControl>
+                    )}
+                  </form.Field>
 
-              <form.Subscribe selector={(s) => s.values.classId}>
-                {(classId) => {
-                  const selectedClass = itemClasses.find((c) => c.id === classId);
-                  if (!selectedClass || selectedClass.properties.length === 0) return null;
-                  return (
-                    <>
-                      <Divider />
-                      <VStack align="stretch" spacing={3}>
-                        <SectionLabel>{selectedClass.name} Properties</SectionLabel>
-                        <form.Field name="classProperties">
-                          {(field) => (
-                            <PropertyForm
-                              schema={propertyDefinitionsToSchema(selectedClass.properties)}
-                              values={field.state.value}
-                              onChange={(key, value) =>
-                                field.handleChange({ ...field.state.value, [key]: value })
-                              }
-                            />
+                  <form.Field name="pickupSound">
+                    {(field) => (
+                      <FormControl>
+                        <FieldLabel>Pickup Sound (optional)</FieldLabel>
+                        <HStack spacing={2}>
+                          <Input
+                            size="sm"
+                            fontFamily="mono"
+                            placeholder="assets/audio/pickup.wav"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            flex={1}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            colorScheme="gray"
+                            flexShrink={0}
+                            onClick={() => handlePickSound((p) => field.handleChange(p))}
+                          >
+                            Browse...
+                          </Button>
+                          {field.state.value && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              color="red.400"
+                              flexShrink={0}
+                              onClick={() => field.handleChange('')}
+                            >
+                              Clear
+                            </Button>
                           )}
-                        </form.Field>
-                      </VStack>
-                    </>
-                  );
-                }}
-              </form.Subscribe>
-            </VStack>
+                        </HStack>
+                      </FormControl>
+                    )}
+                  </form.Field>
+                </VStack>
+
+                <form.Subscribe selector={(s) => s.values.classId}>
+                  {(classId) => {
+                    const selectedClass = itemClasses.find((c) => c.id === classId);
+                    if (!selectedClass || selectedClass.properties.length === 0) return null;
+                    return (
+                      <>
+                        <Divider />
+                        <VStack align="stretch" spacing={3}>
+                          <Text
+                            fontSize="xs"
+                            fontWeight="black"
+                            color={ITEM_ACCENT.color}
+                            textTransform="uppercase"
+                            letterSpacing="widest"
+                            pb={2}
+                            borderBottom="1px"
+                            borderColor={ITEM_ACCENT.line}
+                          >
+                            {selectedClass.name} Properties
+                          </Text>
+                          <form.Field name="classProperties">
+                            {(field) => (
+                              <PropertyForm
+                                schema={propertyDefinitionsToSchema(selectedClass.properties)}
+                                values={field.state.value}
+                                onChange={(key, value) =>
+                                  field.handleChange({ ...field.state.value, [key]: value })
+                                }
+                              />
+                            )}
+                          </form.Field>
+                        </VStack>
+                      </>
+                    );
+                  }}
+                </form.Subscribe>
+              </VStack>
+            </Box>
           </GridItem>
         </SimpleGrid>
 
-        <Divider />
-
-        <HStack justify="space-between">
-          <Button
-            size="xs"
-            colorScheme="red"
-            variant="outline"
-            leftIcon={<DeleteIcon fontSize="10px" />}
-            onClick={onDelete}
-          >
-            Delete Item
-          </Button>
-
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
-          >
-            {([canSubmit, isSubmitting, isDirty]) => (
-              <Button
-                size="sm"
-                colorScheme="blue"
-                type="submit"
-                disabled={!canSubmit}
-                isLoading={isSubmitting}
-                opacity={isDirty ? 1 : 0.5}
-                leftIcon={<CheckIcon fontSize="10px" />}
-              >
-                Save Changes
-              </Button>
-            )}
-          </form.Subscribe>
-        </HStack>
+        <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
+          {({ isDirty, values }) => (
+            <FormAutosave isDirty={isDirty} values={values} onSave={() => form.handleSubmit()} />
+          )}
+        </form.Subscribe>
       </VStack>
     </form>
   );
+};
+
+const FormAutosave: React.FC<{
+  isDirty: boolean;
+  values: unknown;
+  onSave: () => void | Promise<void>;
+}> = ({ isDirty, values, onSave }) => {
+  React.useEffect(() => {
+    if (!isDirty) return;
+    const timeout = window.setTimeout(() => {
+      void onSave();
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [isDirty, onSave, values]);
+
+  return null;
 };
 
 export default ItemEditor;
