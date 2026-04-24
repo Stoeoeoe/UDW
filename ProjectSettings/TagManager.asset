@@ -59,8 +59,12 @@ TagManager:
   - name: Characters
     uniqueID: 47421343
     locked: 0
+  - name: Objects
+    uniqueID: 1983556973
+    locked: 0
   - name: Above
     uniqueID: 961700441
     locked: 0
   m_RenderingLayers:
   - Default
+  m_MigratedRenderPipelines: []

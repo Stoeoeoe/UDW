@@ -739,8 +739,8 @@ GameObject:
   - component: {fileID: 789938966457487899}
   - component: {fileID: 4654039551551919212}
   - component: {fileID: 4211830286840800522}
-  - component: {fileID: 6913748579357674220}
   - component: {fileID: 1818461748592574796}
+  - component: {fileID: 5522847340107149325}
   m_Layer: 10
   m_Name: TestCharacter
   m_TagString: Player
@@ -798,7 +798,7 @@ MonoBehaviour:
   characterGraphicsGo: {fileID: 9151607056303179122}
   abilitiesGo: {fileID: 949958667771556574}
   <Controller>k__BackingField: {fileID: 4211830286840800522}
-  <Orientation>k__BackingField: {fileID: 6913748579357674220}
+  <Orientation>k__BackingField: {fileID: 0}
   actor: Player
   <Stamina>k__BackingField: {fileID: 7673362515365116421}
 --- !u!50 &1412798929070309304
@@ -882,8 +882,8 @@ SortingGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7329059664347269403}
   m_Enabled: 1
-  m_SortingLayerID: 47421343
-  m_SortingLayer: 4
+  m_SortingLayerID: 1983556973
+  m_SortingLayer: 5
   m_SortingOrder: 0
   m_SortAtRoot: 0
   m_Sort3DAs2D: 0
@@ -949,18 +949,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Character.Controller2D
   _acceleration: 60
   _deceleration: 60
---- !u!114 &6913748579357674220
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7329059664347269403}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 79adc711087414e4aaa6ceee7de5d100, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Character.Orientation2D
 --- !u!114 &1818461748592574796
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -973,6 +961,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79adc711087414e4aaa6ceee7de5d100, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.Orientation2D
+--- !u!114 &5522847340107149325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7329059664347269403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bc06bdc956a4826ae50ed57b7bd4231, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Character.YSortByPosition
+  offset: 0
+  precision: 100
 --- !u!1 &7803843678168213874
 GameObject:
   m_ObjectHideFlags: 0
@@ -1130,8 +1132,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 1983556973
+  m_SortingLayer: 5
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -6145153117917986877, guid: 8f32b111b27a2594b9244d77b4d0742c,
@@ -1144,7 +1146,7 @@ SpriteRenderer:
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1
 --- !u!114 &8160659729119610378
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1161,6 +1163,7 @@ MonoBehaviour:
   _Transitions: {fileID: 0}
   _ActionOnDisable: 0
   _PlayAutomatically: 1
+  _Names: []
   _Animations:
   - {fileID: 3346143868754109990, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
   - {fileID: -2355971724533255871, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}

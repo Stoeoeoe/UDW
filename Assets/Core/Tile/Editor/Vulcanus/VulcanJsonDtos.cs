@@ -80,6 +80,7 @@ namespace Core.Tile.Editor.Vulcanus
 
         // Keyed by tile-index string ("16", "17", …); sparse — missing entries are default tiles.
         [JsonProperty("tiles")] public Dictionary<string, TileMetaDto> Tiles { get; set; } = new();
+        [JsonProperty("objects")] public List<TilesetObjectDefinitionDto> Objects { get; set; } = new();
     }
 
     internal class TileMetaDto
@@ -90,11 +91,24 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("tags")] public List<string> Tags { get; set; }
         [JsonProperty("collision")] public CollisionDto Collision { get; set; }
         [JsonProperty("properties")] public List<PropertyInstanceDto> Properties { get; set; } = new();
+        [JsonProperty("pivotY")] public float? PivotY { get; set; }
     }
 
     internal class CollisionDto
     {
         [JsonProperty("type")] public string Type { get; set; } = "";
+        [JsonProperty("shapes")] public List<CollisionShapeDto> Shapes { get; set; } = new();
+    }
+
+    internal class CollisionShapeDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("type")] public string Type { get; set; }
+        [JsonProperty("points")] public List<List<float>> Points { get; set; } = new();
+        [JsonProperty("x")] public float? X { get; set; }
+        [JsonProperty("y")] public float? Y { get; set; }
+        [JsonProperty("width")] public float? Width { get; set; }
+        [JsonProperty("height")] public float? Height { get; set; }
     }
 
     internal class PropertyInstanceDto
@@ -173,17 +187,43 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("name")] public string Name { get; set; } = "Layer";
         [JsonProperty("kind")] public string Kind { get; set; } = "visual";
         [JsonProperty("zOrder")] public int ZOrder { get; set; }
+        [JsonProperty("sortingLayer")] public string SortingLayer { get; set; }
         [JsonProperty("opacity")] public float Opacity { get; set; } = 1f;
         [JsonProperty("visible")] public bool Visible { get; set; } = true;
 
         // Tile layers: either a 2-D array (dense) or a sparse object.
-        // We keep this as raw Newtonsoft token to handle the union type.
         [JsonProperty("data")] public Newtonsoft.Json.Linq.JToken Data { get; set; }
 
         [JsonProperty("terrainData")] public Newtonsoft.Json.Linq.JArray TerrainData { get; set; }
         [JsonProperty("terrainPalette")] public List<string> TerrainPalette { get; set; }
 
         [JsonProperty("entities")] public List<EntityInstanceDto> Entities { get; set; } = new();
+
+        // Object layers (kind == "object")
+        [JsonProperty("objectInstances")] public List<MapObjectInstanceDto> ObjectInstances { get; set; } = new();
+    }
+
+    internal class MapObjectInstanceDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("tilesetId")] public string TilesetId { get; set; }
+        [JsonProperty("objectDefinitionId")] public string ObjectDefinitionId { get; set; }
+        [JsonProperty("x")] public int X { get; set; }
+        [JsonProperty("y")] public int Y { get; set; }
+    }
+
+    internal class TilesetObjectDefinitionDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("tiles")] public List<TilesetObjectTileDto> Tiles { get; set; } = new();
+    }
+
+    internal class TilesetObjectTileDto
+    {
+        [JsonProperty("x")] public int X { get; set; }
+        [JsonProperty("y")] public int Y { get; set; }
+        [JsonProperty("tileIndex")] public int TileIndex { get; set; }
     }
 
     internal class EntityInstanceDto

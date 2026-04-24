@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
@@ -5,6 +6,30 @@ namespace Core.Tile.Vulcanus
     [CreateAssetMenu(fileName = "VulcanusTileset", menuName = "Game/Vulcanus/Tileset")]
     public class VulcanusTilesetAsset : ScriptableObject
     {
+        [Serializable]
+        public class ObjectTile
+        {
+            public int x;
+            public int y;
+            public int tileIndex;
+        }
+
+        [Serializable]
+        public class ObjectDefinition
+        {
+            public string id;
+            public string name;
+            public ObjectTile[] tiles;
+            // Optional baked sprite representing the whole object (may be null).
+            public Sprite sprite;
+            // Prefab sub-asset with SpriteRenderer + merged PolygonCollider2D (may be null).
+            public GameObject prefab;
+
+            // Dimensions of the object in tiles (computed by importer).
+            public int widthTiles;
+            public int heightTiles;
+        }
+
         [SerializeField] private string tilesetId;
         [SerializeField] private string displayName;
         [SerializeField] private Texture2D spriteSheet;
@@ -12,6 +37,7 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private int tileCount;
         [SerializeField] private int tileSize;
         [SerializeField] private VulcanusTile[] tiles;
+        [SerializeField] private ObjectDefinition[] objectDefinitions = Array.Empty<ObjectDefinition>();
 
         public string TilesetId => tilesetId;
         public string DisplayName => displayName;
@@ -20,6 +46,7 @@ namespace Core.Tile.Vulcanus
         public int TileCount => tileCount;
         public int TileSize => tileSize;
         public VulcanusTile[] Tiles => tiles;
+        public ObjectDefinition[] ObjectDefinitions => objectDefinitions;
 
         public void Configure(
             string id,
@@ -28,7 +55,8 @@ namespace Core.Tile.Vulcanus
             int setColumns,
             int count,
             int size,
-            VulcanusTile[] setTiles)
+            VulcanusTile[] setTiles,
+            ObjectDefinition[] setObjectDefinitions = null)
         {
             tilesetId = id;
             displayName = name;
@@ -37,6 +65,18 @@ namespace Core.Tile.Vulcanus
             tileCount = count;
             tileSize = size;
             tiles = setTiles;
+            objectDefinitions = setObjectDefinitions ?? Array.Empty<ObjectDefinition>();
+        }
+
+        public bool TryGetObjectDefinition(string defId, out ObjectDefinition def)
+        {
+            def = null;
+            if (objectDefinitions == null || string.IsNullOrEmpty(defId)) return false;
+            foreach (var d in objectDefinitions)
+            {
+                if (d != null && d.id == defId) { def = d; return true; }
+            }
+            return false;
         }
 
         public bool TryGetTile(int tileIndex, out VulcanusTile tile)

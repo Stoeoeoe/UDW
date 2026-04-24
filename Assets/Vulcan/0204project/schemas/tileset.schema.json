@@ -2,9 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "tileset.schema.json",
   "title": "Tileset",
-  "description": "A tileset file (.tileset.json) defining a sprite sheet and per-tile metadata.",
+  "description": "A tileset file (.vts) defining a sprite sheet and per-tile metadata.",
   "type": "object",
-  "required": ["version", "id", "name", "spriteSheet", "columns", "tileCount", "tiles"],
+  "required": [
+    "version",
+    "id",
+    "name",
+    "spriteSheet",
+    "columns",
+    "tileCount",
+    "tiles"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {
@@ -46,6 +54,11 @@
       "type": "array",
       "description": "Wang sets for autotiling (Tiled-compatible).",
       "items": { "$ref": "#/$defs/WangSet" }
+    },
+    "objects": {
+      "type": "array",
+      "description": "Reusable multi-tile object definitions such as trees or bushes.",
+      "items": { "$ref": "#/$defs/TilesetObjectDefinition" }
     }
   },
   "$defs": {
@@ -77,6 +90,11 @@
           "type": "number",
           "description": "Relative weight for random tile selection. Default is 1.",
           "exclusiveMinimum": 0
+        },
+        "pivotY": {
+          "type": "integer",
+          "description": "Tile-heights from this tile to the ground contact. depth = worldY + pivotY*tileSize. Default 1 (ground tile). Crown 3 rows above ground: pivotY=3.",
+          "minimum": 0
         },
         "terrainCorners": {
           "type": "array",
@@ -126,6 +144,29 @@
         "y": { "type": "number" },
         "width": { "type": "number" },
         "height": { "type": "number" }
+      }
+    },
+    "TilesetObjectDefinition": {
+      "type": "object",
+      "required": ["id", "name", "tiles"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "tiles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TilesetObjectTile" }
+        }
+      }
+    },
+    "TilesetObjectTile": {
+      "type": "object",
+      "required": ["x", "y", "tileIndex"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 },
+        "tileIndex": { "type": "integer", "minimum": 0 }
       }
     },
     "WangSet": {

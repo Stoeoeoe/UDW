@@ -112,16 +112,16 @@ namespace Core.Tile.Editor.Vulcanus
 
             var result = new List<VulcanusWorldCatalog.MapBinding>();
             var projectAssetPath = AssetDatabase.GetAssetPath(project);
-            var projectRoot = Path.GetDirectoryName(VulcanusJsonImporter.ToAbsolutePath(projectAssetPath));
+            var projectRoot = Path.GetDirectoryName(VulcanusImportHelpers.ToAbsolutePath(projectAssetPath));
 
             if (!string.IsNullOrWhiteSpace(projectRoot) && Directory.Exists(projectRoot))
             {
-                var mapFiles = Directory.GetFiles(projectRoot, "*.map.json", SearchOption.AllDirectories);
+                var mapFiles = Directory.GetFiles(projectRoot, "*.vmap", SearchOption.AllDirectories);
                 discoveredMapCount = mapFiles.Length;
 
                 foreach (var mapJsonAbsolute in mapFiles)
                 {
-                    if (!VulcanusJsonImporter.TryAbsoluteToAssetPath(mapJsonAbsolute, out var mapAssetPath))
+                    if (!VulcanusImportHelpers.TryAbsoluteToAssetPath(mapJsonAbsolute, out var mapAssetPath))
                         continue;
 
                     var mapPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(mapAssetPath);
@@ -130,9 +130,7 @@ namespace Core.Tile.Editor.Vulcanus
                     var fileName = Path.GetFileName(mapJsonAbsolute);
                     var mapId = importedMap != null && !string.IsNullOrWhiteSpace(importedMap.MapId)
                         ? importedMap.MapId
-                        : fileName.EndsWith(".map.json", StringComparison.OrdinalIgnoreCase)
-                            ? fileName[..^".map.json".Length]
-                            : Path.GetFileNameWithoutExtension(fileName);
+                        : VulcanusImportHelpers.GetBaseName(fileName);
 
                     if (string.IsNullOrWhiteSpace(mapId)) continue;
 

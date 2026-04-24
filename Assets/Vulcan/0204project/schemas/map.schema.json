@@ -90,6 +90,7 @@
           "type": "string",
           "enum": [
             "visual",
+            "object",
             "collision",
             "navigation",
             "metadata",
@@ -105,6 +106,11 @@
           "maximum": 1
         },
         "zOrder": { "type": "integer" },
+        "sortingLayer": {
+          "type": "string",
+          "enum": ["ground", "above"],
+          "description": "Sorting bucket at runtime for visual/tile layers. 'ground' uses fixed zOrder; 'above' always renders on top. Default 'ground'. Object layers (kind='object') handle their own Y-sorting."
+        },
         "icon": { "type": "string" },
         "definitionId": {
           "type": "string",
@@ -122,6 +128,16 @@
             },
             { "$ref": "#/$defs/SparseLayerData" }
           ]
+        },
+        "objectGroups": {
+          "type": "array",
+          "description": "Connected painted tiles stored as first-class groups for object-sorted layers.",
+          "items": { "$ref": "#/$defs/ObjectGroup" }
+        },
+        "objectInstances": {
+          "type": "array",
+          "description": "Placed reusable object instances for object-sorted layers. Instance positions are stored in pixels.",
+          "items": { "$ref": "#/$defs/MapObjectInstance" }
         },
         "terrainPalette": {
           "type": "array",
@@ -152,6 +168,41 @@
           "description": "Entity instances on this layer (entity layers only).",
           "items": { "$ref": "#/$defs/EntityInstance" }
         }
+      }
+    },
+    "ObjectGroup": {
+      "type": "object",
+      "required": ["id", "tiles"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "tiles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ObjectGroupTile" }
+        }
+      }
+    },
+    "ObjectGroupTile": {
+      "type": "object",
+      "required": ["x", "y", "tilesetId", "tileIndex"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 },
+        "tilesetId": { "type": "string" },
+        "tileIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "MapObjectInstance": {
+      "type": "object",
+      "required": ["id", "tilesetId", "objectDefinitionId", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "tilesetId": { "type": "string" },
+        "objectDefinitionId": { "type": "string" },
+        "x": { "type": "integer", "description": "Pixel X coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map." },
+        "y": { "type": "integer", "description": "Pixel Y coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map." }
       }
     },
     "SparseLayerData": {

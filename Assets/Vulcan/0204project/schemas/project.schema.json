@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "project.schema.json",
   "title": "Project",
-  "description": "A project file (project.json) containing global settings, layer definitions, and entity type definitions.",
+  "description": "A project file (*.vproj) containing global settings, layer definitions, and entity type definitions.",
   "type": "object",
   "required": [
     "version",

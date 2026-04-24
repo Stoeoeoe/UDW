@@ -7,7 +7,7 @@
   "startNodeId": "step_4",
   "tags": [],
   "createdAt": "2026-04-11T08:30:29.445Z",
-  "updatedAt": "2026-04-11T13:35:26.949Z",
+  "updatedAt": "2026-04-19T09:27:47.679Z",
   "nodes": [
     {
       "id": "step_4",
@@ -107,7 +107,7 @@
       "id": "step_10",
       "type": "action",
       "lua": "",
-      "next": null,
+      "next": "step_13",
       "editor": {
         "branchId": "step_5:o2",
         "parentChoiceNodeId": "step_5",

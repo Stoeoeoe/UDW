@@ -22,6 +22,7 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private string[] tags = Array.Empty<string>();
         [SerializeField] private VulcanusCollisionKind collisionKind;
         [SerializeField] private bool isFarmable;
+        [SerializeField] private float pivotY = 1f;
         [Serializable]
         public class VulcanusTileProperty
         {
@@ -29,7 +30,20 @@ namespace Core.Tile.Vulcanus
             public string jsonValue;
         }
 
+        [Serializable]
+        public class CollisionShape
+        {
+            public string id;
+            public string type; // "polygon", "rectangle", "circle"
+            public Vector2[] points;
+            public float x;
+            public float y;
+            public float width;
+            public float height;
+        }
+
         [SerializeField] private VulcanusTileProperty[] properties = Array.Empty<VulcanusTileProperty>();
+        [SerializeField] private CollisionShape[] collisionShapes = Array.Empty<CollisionShape>();
 
         public string TileId => tileId;
         public int TileIndex => tileIndex;
@@ -38,7 +52,9 @@ namespace Core.Tile.Vulcanus
         public string[] Tags => tags;
         public VulcanusCollisionKind CollisionKind => collisionKind;
         public bool IsFarmable => isFarmable;
+        public float PivotY => pivotY;
         public VulcanusTileProperty[] Properties => properties;
+        public CollisionShape[] CollisionShapes => collisionShapes;
 
         public void Configure(
             int index,
@@ -47,7 +63,9 @@ namespace Core.Tile.Vulcanus
             TerrainType mappedTerrain,
             string[] tagValues,
             VulcanusCollisionKind collision,
-            VulcanusTileProperty[] metaProperties = null)
+            VulcanusTileProperty[] metaProperties = null,
+            float tilePivotY = 1f,
+            CollisionShape[] shapes = null)
         {
             tileIndex = index;
             tileId = id;
@@ -56,7 +74,9 @@ namespace Core.Tile.Vulcanus
             tags = tagValues ?? Array.Empty<string>();
             collisionKind = collision;
             properties = metaProperties ?? Array.Empty<VulcanusTileProperty>();
+            pivotY = Mathf.Max(0.01f, tilePivotY);
             colliderType = collision == VulcanusCollisionKind.None ? UnityEngine.Tilemaps.Tile.ColliderType.None : UnityEngine.Tilemaps.Tile.ColliderType.Grid;
+            collisionShapes = shapes ?? Array.Empty<CollisionShape>();
         }
 
         public bool TryGetProperty(string key, out string jsonValue)

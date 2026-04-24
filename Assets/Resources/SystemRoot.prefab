@@ -23927,7 +23927,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000
+  m_ApplyToSortingLayers: 00000000e9f72b6bdfb2e3886dad3a7617358f5f9f97d30259625239
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -24824,8 +24824,7 @@ MonoBehaviour:
   _fader: {fileID: 2128117698243013595}
   _mainCharacterPrefab: {fileID: 1754888933028988936, guid: 204dcfde5843dd14b8cca533c2b59858,
     type: 3}
-  _vulcanWorldCatalog: {fileID: 11400000, guid: fa6414ed90050a6499149bea3365d64f,
-    type: 2}
+  _VulcanusWorldCatalog: {fileID: 0}
   _defaultSpawnKey: Default
 --- !u!1 &8334041893401315472
 GameObject:
