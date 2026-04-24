@@ -130,7 +130,7 @@ function createBakedLayerTextures(
   }
 
   return visibleLayers
-    .filter((layer) => resolveSortingLayer(layer.sortingLayer) !== 'objects')
+    .filter((layer) => layer.kind !== 'object')
     .map((layer) => {
       const canvas = bakeLayerCanvas(
         layer,
@@ -174,7 +174,7 @@ function createObjectTileSprites(
   const cellCanvasCache = new Map<string, HTMLCanvasElement>();
 
   for (const layer of visibleLayers) {
-    if (resolveSortingLayer(layer.sortingLayer) !== 'objects') continue;
+    if (layer.kind !== 'object') continue;
 
     const objectDepthByTile = new Map<string, number>();
     for (const objectInstance of layer.objectInstances ?? []) {

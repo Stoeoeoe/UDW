@@ -151,8 +151,7 @@ export const MapEditor: React.FC = () => {
   );
   const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
   const selectedLayerKind = selectedLayer?.kind;
-  const isObjectLayer =
-    selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
+  const isObjectLayer = selectedLayer?.kind === 'object';
   const subtitleParts = [
     `${currentMap.width}x${currentMap.height} tiles`,
     `${currentMap.layers.length} layers`,

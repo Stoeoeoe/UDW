@@ -6,6 +6,10 @@ import { LandingScreen } from './components/startup/LandingScreen';
 import { EmptyScreen } from './components/screens/common/EmptyScreen';
 import { WorkspaceLoadingScreen } from './components/screens/common/WorkspaceLoadingScreen';
 import { WorkspaceExplorer } from './components/navigation/WorkspaceExplorer';
+import {
+  WorkspaceCommandPalette,
+  WorkspaceCommandPaletteButton,
+} from './components/navigation/WorkspaceCommandPalette';
 import { WorkspaceTabs } from './components/navigation/WorkspaceTabs';
 import {
   ActorEditor,
@@ -31,6 +35,12 @@ import { WorkspaceTab, WorkspaceTreeNode } from './types/workspace';
 import { useSaveStore, getSaveUnitStatus } from './lib/saveManager';
 import { persistWorkspaceSession, restoreWorkspaceSession } from './lib/workspacePersistence';
 import { discardWorkspaceTabChanges } from './lib/workspaceSaveActions';
+import {
+  buildCommandPaletteResources,
+  CommandPaletteFilter,
+  CommandPaletteMatch,
+  searchCommandPaletteResources,
+} from './lib/workspaceCommandPalette';
 
 function App() {
   const project = useEditorStore((state) => state.project);
@@ -40,10 +50,19 @@ function App() {
   const resourceLoadingProgress = useEditorStore((state) => state.resourceLoadingProgress);
   const maps = useEditorStore((state) => state.maps);
   const tilesets = useEditorStore((state) => state.tilesets);
+  const entityTypes = useEditorStore((state) => state.entityTypes);
+  const actors = useEditorStore((state) => state.actors);
+  const items = useEditorStore((state) => state.items);
+  const dialogueIndex = useEditorStore((state) => state.dialogueIndex);
+  const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
+  const selectedActorId = useEditorStore((state) => state.selectedActorId);
+  const selectedItemId = useEditorStore((state) => state.selectedItemId);
+  const selectedDialogueId = useEditorStore((state) => state.selectedDialogueId);
 
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const expandedNodeIds = useWorkspaceStore((state) => state.expandedNodeIds);
+  const recentResourceKeys = useWorkspaceStore((state) => state.recentResourceKeys);
   const openDocument = useWorkspaceStore((state) => state.openDocument);
   const activateTab = useWorkspaceStore((state) => state.activateTab);
   const closeTab = useWorkspaceStore((state) => state.closeTab);
@@ -52,6 +71,7 @@ function App() {
   const restoreWorkspace = useWorkspaceStore((state) => state.restoreWorkspace);
   const toggleNode = useWorkspaceStore((state) => state.toggleNode);
   const setExpanded = useWorkspaceStore((state) => state.setExpanded);
+  const markRecentResource = useWorkspaceStore((state) => state.markRecentResource);
   const resetWorkspace = useWorkspaceStore((state) => state.resetWorkspace);
   const dirtySaveUnitCount = useSaveStore(
     (state) => Object.values(state.saveUnits).filter((unit) => unit.dirty).length,
@@ -65,6 +85,11 @@ function App() {
   );
   const previousTabRef = React.useRef<WorkspaceTab | null>(null);
   const initializedProjectPathRef = React.useRef<string | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = React.useState(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = React.useState('');
+  const [commandPaletteFilter, setCommandPaletteFilter] =
+    React.useState<CommandPaletteFilter>('all');
+  const [commandPaletteSelectedIndex, setCommandPaletteSelectedIndex] = React.useState(-1);
 
   React.useEffect(() => {
     collectDefaultExpandedNodeIds(treeNodes).forEach((nodeId) => setExpanded(nodeId, true));
@@ -184,6 +209,140 @@ function App() {
     previousTabRef.current = activeTab;
   }, [activeTab, project]);
 
+  const commandPaletteResources = React.useMemo(
+    () =>
+      buildCommandPaletteResources({
+        maps,
+        tilesets,
+        entityTypes,
+        actors,
+        items,
+        dialogueIndex,
+      }),
+    [actors, dialogueIndex, entityTypes, items, maps, tilesets],
+  );
+
+  const commandPaletteResourceMap = React.useMemo(
+    () => new Map(commandPaletteResources.map((resource) => [resource.key, resource])),
+    [commandPaletteResources],
+  );
+
+  const commandPaletteResults = React.useMemo(() => {
+    if (!commandPaletteQuery.trim()) {
+      return recentResourceKeys
+        .map((key) => commandPaletteResourceMap.get(key))
+        .filter((resource): resource is NonNullable<typeof resource> => resource !== undefined)
+        .map(
+          (resource, index): CommandPaletteMatch => ({
+            resource,
+            matchedField: 'label',
+            labelMatchIndices: [],
+            secondaryMatchIndices: [],
+            score: 1000 - index,
+          }),
+        )
+        .filter((match) => filterCommandPaletteMatch(match, commandPaletteFilter));
+    }
+
+    return searchCommandPaletteResources(
+      commandPaletteResources,
+      commandPaletteQuery,
+      commandPaletteFilter,
+    );
+  }, [
+    commandPaletteFilter,
+    commandPaletteQuery,
+    commandPaletteResourceMap,
+    commandPaletteResources,
+    recentResourceKeys,
+  ]);
+
+  const openCommandPalette = React.useCallback(() => {
+    setCommandPaletteQuery('');
+    setCommandPaletteFilter('all');
+    setCommandPaletteSelectedIndex(-1);
+    setIsCommandPaletteOpen(true);
+  }, []);
+
+  const closeCommandPalette = React.useCallback(() => {
+    setIsCommandPaletteOpen(false);
+  }, []);
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isPrimaryModifier = event.ctrlKey || event.metaKey;
+      if (!isPrimaryModifier || event.defaultPrevented || event.key.toLowerCase() !== 'p') {
+        return;
+      }
+
+      event.preventDefault();
+      if (isCommandPaletteOpen) {
+        closeCommandPalette();
+        return;
+      }
+
+      openCommandPalette();
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [closeCommandPalette, isCommandPaletteOpen, openCommandPalette]);
+
+  React.useEffect(() => {
+    const handleOpenCommandPalette = () => {
+      if (isCommandPaletteOpen) {
+        closeCommandPalette();
+        return;
+      }
+
+      openCommandPalette();
+    };
+
+    window.addEventListener('openCommandPalette', handleOpenCommandPalette as EventListener);
+    return () =>
+      window.removeEventListener('openCommandPalette', handleOpenCommandPalette as EventListener);
+  }, [closeCommandPalette, isCommandPaletteOpen, openCommandPalette]);
+
+  React.useEffect(() => {
+    if (!activeTab) return;
+
+    if (activeTab.document.kind === 'location') {
+      markRecentResource(`location:${activeTab.document.mapId}`);
+      return;
+    }
+
+    if (activeTab.document.kind === 'tileset') {
+      markRecentResource(`tileset:${activeTab.document.tilesetId}`);
+      return;
+    }
+
+    if (activeTab.document.kind === 'entities' && selectedEntityTypeId) {
+      markRecentResource(`entity:${selectedEntityTypeId}`);
+      return;
+    }
+
+    if (activeTab.document.kind === 'actors' && selectedActorId) {
+      markRecentResource(`actor:${selectedActorId}`);
+      return;
+    }
+
+    if (activeTab.document.kind === 'items' && selectedItemId) {
+      markRecentResource(`item:${selectedItemId}`);
+      return;
+    }
+
+    if (activeTab.document.kind === 'dialogues' && selectedDialogueId) {
+      markRecentResource(`dialogue:${selectedDialogueId}`);
+    }
+  }, [
+    activeTab,
+    markRecentResource,
+    selectedActorId,
+    selectedDialogueId,
+    selectedEntityTypeId,
+    selectedItemId,
+  ]);
+
   const handleOpenNode = React.useCallback(
     (node: WorkspaceTreeNode, options?: { pin?: boolean }) => {
       if (!node.document) return;
@@ -195,6 +354,39 @@ function App() {
       activateTab(tab.id);
     },
     [activateTab, openDocument],
+  );
+
+  const handleOpenPaletteResult = React.useCallback(
+    (result: CommandPaletteMatch, options?: { pin?: boolean }) => {
+      if (result.resource.type === 'entity' && result.resource.resourceId) {
+        useEditorStore.getState().setSelectedEntityType(result.resource.resourceId);
+      }
+
+      if (result.resource.type === 'actor' && result.resource.resourceId) {
+        useEditorStore.getState().setSelectedActor(result.resource.resourceId);
+      }
+
+      if (result.resource.type === 'item' && result.resource.resourceId) {
+        useEditorStore.getState().setSelectedItem(result.resource.resourceId);
+      }
+
+      if (result.resource.type === 'dialogue' && result.resource.resourceId) {
+        useEditorStore.setState((state) => {
+          state.selectedDialogueId = result.resource.resourceId ?? null;
+          state.selectedDialogueNodeId = null;
+        });
+      }
+
+      const tab = openDocument(result.resource.document, {
+        preview: !options?.pin && supportsPreviewTab(result.resource.document),
+        pin: options?.pin,
+      });
+      ensureDocumentSession(tab.document, tab.id);
+      activateTab(tab.id);
+      markRecentResource(result.resource.key);
+      closeCommandPalette();
+    },
+    [activateTab, closeCommandPalette, markRecentResource, openDocument],
   );
 
   const handleCloseTab = React.useCallback(
@@ -267,47 +459,60 @@ function App() {
   }
 
   return (
-    <AppShell
-      topBar={<TopBar />}
-      workspace={
-        <Flex flex={1} overflow="hidden" minH={0} h="full">
-          <Box
-            w="72"
-            flexShrink={0}
-            borderRight="1px"
-            borderColor="editorShellBorder"
-            overflow="hidden"
-          >
-            <WorkspaceExplorer
-              nodes={treeNodes}
-              expandedNodeIds={expandedNodeIds}
-              activeTabId={activeTabId}
-              onToggleNode={toggleNode}
-              onOpenNode={handleOpenNode}
-            />
-          </Box>
-          <Flex flex={1} overflow="hidden" minW={0} direction="column">
-            <WorkspaceTabs
-              tabs={tabs}
-              activeTabId={activeTabId}
-              onActivate={activateTab}
-              onPin={pinTab}
-              onReorder={reorderTabs}
-              onClose={(tabId) => void handleCloseTab(tabId)}
-            />
-            <Box flex={1} overflow="hidden" minH={0}>
-              <ActiveWorkspaceDocument tab={activeTab} />
+    <>
+      <AppShell
+        topBar={<TopBar />}
+        workspace={
+          <Flex flex={1} overflow="hidden" minH={0} h="full">
+            <Box
+              w="72"
+              flexShrink={0}
+              borderRight="1px"
+              borderColor="editorShellBorder"
+              overflow="hidden"
+            >
+              <WorkspaceExplorer
+                nodes={treeNodes}
+                expandedNodeIds={expandedNodeIds}
+                activeTabId={activeTabId}
+                onToggleNode={toggleNode}
+                onOpenNode={handleOpenNode}
+                headerAction={<WorkspaceCommandPaletteButton onClick={openCommandPalette} />}
+              />
             </Box>
+            <Flex flex={1} overflow="hidden" minW={0} direction="column">
+              <WorkspaceTabs
+                tabs={tabs}
+                activeTabId={activeTabId}
+                onActivate={activateTab}
+                onPin={pinTab}
+                onReorder={reorderTabs}
+                onClose={(tabId) => void handleCloseTab(tabId)}
+              />
+              <Box flex={1} overflow="hidden" minH={0}>
+                <ActiveWorkspaceDocument tab={activeTab} />
+              </Box>
+            </Flex>
           </Flex>
-        </Flex>
-      }
-    />
+        }
+      />
+      <WorkspaceCommandPalette
+        isOpen={isCommandPaletteOpen}
+        query={commandPaletteQuery}
+        filter={commandPaletteFilter}
+        results={commandPaletteResults}
+        selectedIndex={commandPaletteSelectedIndex}
+        onClose={closeCommandPalette}
+        onQueryChange={setCommandPaletteQuery}
+        onFilterChange={setCommandPaletteFilter}
+        onSelectedIndexChange={setCommandPaletteSelectedIndex}
+        onOpenResult={handleOpenPaletteResult}
+      />
+    </>
   );
 }
 
 const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = ({ tab }) => {
-  const openDocument = useWorkspaceStore((state) => state.openDocument);
-
   if (!tab) {
     return (
       <EmptyScreen
@@ -325,29 +530,8 @@ const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = ({ tab }
       return <TilesetEditor />;
     case 'settings':
       return <SettingsEditor />;
-    case 'configuration': {
-      const configurationDocument = tab.document;
-      const handleConfigurationTabChange = React.useCallback(
-        (configTab: NonNullable<typeof configurationDocument.configTab>) => {
-          if ((configurationDocument.configTab ?? 'terrain') === configTab) {
-            return;
-          }
-
-          openDocument({
-            ...configurationDocument,
-            configTab,
-          });
-        },
-        [configurationDocument, openDocument],
-      );
-
-      return (
-        <ConfigurationEditor
-          initialTab={configurationDocument.configTab ?? 'terrain'}
-          onTabChange={handleConfigurationTabChange}
-        />
-      );
-    }
+    case 'configuration':
+      return <ConfigurationWorkspaceDocument document={tab.document} />;
     case 'entities':
       return <EntityEditor />;
     case 'actors':
@@ -361,6 +545,33 @@ const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = ({ tab }
     default:
       return null;
   }
+};
+
+const ConfigurationWorkspaceDocument: React.FC<{
+  document: Extract<WorkspaceTab['document'], { kind: 'configuration' }>;
+}> = ({ document }) => {
+  const openDocument = useWorkspaceStore((state) => state.openDocument);
+
+  const handleConfigurationTabChange = React.useCallback(
+    (configTab: NonNullable<typeof document.configTab>) => {
+      if ((document.configTab ?? 'terrain') === configTab) {
+        return;
+      }
+
+      openDocument({
+        ...document,
+        configTab,
+      });
+    },
+    [document, openDocument],
+  );
+
+  return (
+    <ConfigurationEditor
+      initialTab={document.configTab ?? 'terrain'}
+      onTabChange={handleConfigurationTabChange}
+    />
+  );
 };
 
 function getPreferredInitialDocument(nodes: WorkspaceTreeNode[]): WorkspaceTreeNode | null {
@@ -402,6 +613,34 @@ function collectDefaultExpandedNodeIds(nodes: WorkspaceTreeNode[]): string[] {
     }
   }
   return collected;
+}
+
+function filterCommandPaletteMatch(
+  match: CommandPaletteMatch,
+  filter: CommandPaletteFilter,
+): boolean {
+  if (filter === 'all') return true;
+
+  switch (filter) {
+    case 'locations':
+      return match.resource.type === 'location';
+    case 'tilesets':
+      return match.resource.type === 'tileset';
+    case 'entities':
+      return match.resource.type === 'entity';
+    case 'actors':
+      return match.resource.type === 'actor';
+    case 'items':
+      return match.resource.type === 'item';
+    case 'dialogues':
+      return match.resource.type === 'dialogue';
+    case 'quests':
+      return match.resource.type === 'quest';
+    case 'audio':
+      return match.resource.type === 'audio';
+    default:
+      return true;
+  }
 }
 
 export default App;

@@ -26,6 +26,7 @@ interface WorkspaceExplorerProps {
   activeTabId: string | null;
   onToggleNode: (nodeId: string) => void;
   onOpenNode: (node: WorkspaceTreeNode, options?: { pin?: boolean }) => void;
+  headerAction?: React.ReactNode;
 }
 
 function getNodeIcon(node: WorkspaceTreeNode) {
@@ -66,12 +67,20 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
   activeTabId,
   onToggleNode,
   onOpenNode,
+  headerAction,
 }) => {
   return (
     <VStack align="stretch" spacing={0} h="full" bg="editorSidebarBg" overflow="hidden">
-      <Box px={4} py={3} borderBottom="1px" borderColor="editorShellBorder">
+      <HStack
+        px={4}
+        py={3}
+        borderBottom="1px"
+        borderColor="editorShellBorder"
+        justify="space-between"
+      >
         <SectionLabel textStyle="panelLabel">Project</SectionLabel>
-      </Box>
+        {headerAction}
+      </HStack>
       <Box flex={1} overflowY="auto" px={2} py={2}>
         <VStack align="stretch" spacing={1}>
           {nodes.map((node) => (

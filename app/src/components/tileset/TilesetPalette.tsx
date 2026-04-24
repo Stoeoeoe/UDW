@@ -36,8 +36,7 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
 
   const [zoom, setZoom] = useState(2.0); // Default to 200% for pixel art
   const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
-  const isObjectLayer =
-    selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
+  const isObjectLayer = selectedLayer?.kind === 'object';
 
   const handleObjectSelect = (objectId: string) => {
     if (!currentTileset || !objectId) {

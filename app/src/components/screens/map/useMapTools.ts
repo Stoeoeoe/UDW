@@ -636,9 +636,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       }
 
       const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
-      const isBaseObjectLayer =
-        (selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects') &&
-        activeVariationId === null;
+      const isBaseObjectLayer = selectedLayer?.kind === 'object' && activeVariationId === null;
 
       if (isBaseObjectLayer && (activeTool === 'objectSelect' || activeTool === 'objectDelete')) {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
@@ -1315,10 +1313,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           // Single tile click (no drag) - use simple eyedropper
           if (width === 1 && height === 1) {
             const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
-            if (
-              (selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects') &&
-              !activeVariationId
-            ) {
+            if (selectedLayer?.kind === 'object' && !activeVariationId) {
               const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
               const objectInstance = worldPos
                 ? getObjectInstanceAtWorldPosition(
@@ -1596,9 +1591,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         drawMode !== 'point'
       ) {
         const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
-        const isBaseObjectLayer =
-          (selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects') &&
-          activeVariationId === null;
+        const isBaseObjectLayer = selectedLayer?.kind === 'object' && activeVariationId === null;
         if (isBaseObjectLayer) {
           const tile = screenToTile(e.clientX, e.clientY);
           setDrawPreview({ isDrawing: false, start: null, end: null });

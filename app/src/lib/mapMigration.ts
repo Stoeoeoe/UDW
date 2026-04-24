@@ -12,7 +12,6 @@
  */
 
 import { Layer, Map as GameMap } from '../types/schema';
-import { migrateLegacyObjectLayerToObjectGroups } from './objectGroups';
 
 // ─── Sparse layer encoding ────────────────────────────────────────────────────
 
@@ -134,10 +133,6 @@ type WireMap = Omit<GameMap, 'layers'> & { layers: WireLayer[] };
 export function serializeMap(map: GameMap): WireMap {
   const layers: WireLayer[] = map.layers.map((layer) => {
     const wire: WireLayer = { ...layer } as WireLayer;
-
-    if (wire.sortingLayer === 'objects') {
-      migrateLegacyObjectLayerToObjectGroups(wire as Layer, map.tilesetRefs);
-    }
 
     // Sparse encode tile data
     if (Array.isArray(wire.data)) {

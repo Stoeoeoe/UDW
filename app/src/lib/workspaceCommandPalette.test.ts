@@ -1,0 +1,104 @@
+import { describe, expect, it } from 'vitest';
+import {
+  buildCommandPaletteResources,
+  highlightText,
+  searchCommandPaletteResources,
+} from './workspaceCommandPalette';
+
+describe('workspaceCommandPalette', () => {
+  const resources = buildCommandPaletteResources({
+    maps: [
+      {
+        version: 1,
+        id: 'village',
+        name: 'Village',
+        width: 10,
+        height: 10,
+        baseTilesetId: 'village-tiles',
+        tilesetRefs: ['village-tiles'],
+        layers: [],
+        entities: [],
+      },
+    ],
+    tilesets: new Map([
+      [
+        'village-tiles',
+        {
+          version: 1,
+          id: 'village-tiles',
+          name: 'Village Tileset',
+          spriteSheet: 'village.png',
+          columns: 8,
+          tileCount: 64,
+          tiles: {},
+        },
+      ],
+    ]),
+    entityTypes: [
+      {
+        id: 'merchant-stall',
+        displayName: 'Merchant Stall',
+        category: 'object',
+        placeholderColor: '#ffffff',
+        properties: [],
+      },
+    ],
+    actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+    items: [
+      {
+        id: 'apple',
+        name: 'Apple',
+        category: 'Food',
+        icon: '',
+        description: '',
+        maxStackSize: 10,
+      },
+    ],
+    dialogueIndex: {
+      version: 1,
+      categories: [],
+      customActors: [],
+      dialogues: [
+        {
+          id: 'intro',
+          name: 'Intro Conversation',
+          oneShot: false,
+          nodeCount: 4,
+          tags: [],
+          updatedAt: '2026-04-23T00:00:00.000Z',
+        },
+      ],
+    },
+  });
+
+  it('prefers prefix matches ahead of fuzzy matches', () => {
+    const matches = searchCommandPaletteResources(resources, 'vi', 'all');
+
+    expect(matches[0]?.resource.label).toBe('Village');
+    expect(matches[1]?.resource.label).toBe('Village Tileset');
+  });
+
+  it('filters by resource type chip', () => {
+    const matches = searchCommandPaletteResources(resources, 'mar', 'actors');
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.resource.type).toBe('actor');
+    expect(matches[0]?.resource.label).toBe('Marcus');
+  });
+
+  it('returns fuzzy name matches when the query is non-contiguous', () => {
+    const matches = searchCommandPaletteResources(resources, 'mrs', 'all');
+
+    expect(matches[0]?.resource.label).toBe('Marcus');
+    expect(matches[0]?.labelMatchIndices).toEqual([0, 2, 5]);
+  });
+
+  it('splits highlighted text into emphasized and plain segments', () => {
+    expect(highlightText('Marcus', [0, 1, 4])).toEqual([
+      { text: 'Ma', highlighted: true },
+      { text: 'rc', highlighted: false },
+      { text: 'u', highlighted: true },
+      { text: 's', highlighted: false },
+    ]);
+  });
+});

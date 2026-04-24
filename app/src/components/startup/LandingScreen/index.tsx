@@ -106,9 +106,12 @@ export const LandingScreen: React.FC = () => {
     >
       <VStack spacing={10} maxW="container.md" textAlign="center" w="full" px={4}>
         <Box>
-          <Heading size="2xl" color="white" mb={2}>
-            Vulcanus Editor
-          </Heading>
+          <Image
+            src="vulcanus-text.png"
+            width={400}
+            alt="Project Icon"
+            sx={{ imageRendering: 'pixelated' }}
+          />
         </Box>
         <Image
           src="vulcanus-project-icon.png"

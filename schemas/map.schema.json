@@ -108,8 +108,8 @@
         "zOrder": { "type": "integer" },
         "sortingLayer": {
           "type": "string",
-          "enum": ["ground", "objects", "above"],
-          "description": "Sorting bucket at runtime. 'ground' and 'above' use fixed zOrder; 'objects' is Y-sorted per tile (depth = worldY + pivotY*tileSize). Default 'ground'."
+          "enum": ["ground", "above"],
+          "description": "Sorting bucket at runtime for visual/tile layers. 'ground' uses fixed zOrder; 'above' always renders on top. Default 'ground'. Object layers (kind='object') handle their own Y-sorting."
         },
         "icon": { "type": "string" },
         "definitionId": {

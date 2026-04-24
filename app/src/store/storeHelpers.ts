@@ -22,7 +22,6 @@ import {
   PropertyValues,
 } from '../types/schema';
 import { ToolType } from '../types/editor';
-import { applyObjectGroupEdits, migrateLegacyObjectLayerToObjectGroups } from '../lib/objectGroups';
 import { saveProjectDebounced } from '../lib/saveManager';
 import { encodeTileRef } from '../lib/tileRef';
 
@@ -185,9 +184,6 @@ export function createDefaultLayer(width: number, height: number): Layer {
 // ============================================================================
 
 export function getEffectiveToolLayerKind(layer: Layer): Layer['kind'] {
-  if (layer.kind === 'object' || layer.sortingLayer === 'objects') {
-    return 'object';
-  }
   return layer.kind;
 }
 
@@ -340,12 +336,6 @@ export function setTileInState(
     if (tilesetId && !map.tilesetRefs.includes(tilesetId)) {
       map.tilesetRefs.push(tilesetId);
     }
-  }
-
-  if (layer.sortingLayer === 'objects') {
-    migrateLegacyObjectLayerToObjectGroups(layer, map.tilesetRefs);
-    applyObjectGroupEdits(layer, [{ x, y, value }]);
-    return;
   }
 
   const encodedValue = value ? encodeTileRef(value, map.tilesetRefs) : null;

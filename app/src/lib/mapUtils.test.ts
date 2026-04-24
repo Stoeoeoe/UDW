@@ -130,12 +130,11 @@ describe('mapUtils', () => {
           {
             id: 'objects',
             name: 'Objects',
-            kind: 'visual',
+            kind: 'object',
             visible: true,
             locked: false,
             opacity: 1,
             zOrder: 1,
-            sortingLayer: 'objects',
             objectGroups: [
               {
                 id: 'obj_tree',
@@ -161,12 +160,11 @@ describe('mapUtils', () => {
           {
             id: 'objects',
             name: 'Objects',
-            kind: 'visual',
+            kind: 'object',
             visible: true,
             locked: false,
             opacity: 1,
             zOrder: 1,
-            sortingLayer: 'objects',
             objectInstances: [
               {
                 id: 'inst_tree',

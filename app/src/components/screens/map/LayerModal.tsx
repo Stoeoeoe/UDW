@@ -28,11 +28,6 @@ export interface LayerFormData {
 
 const SORTING_LAYER_OPTIONS: { value: SortingLayer; label: string; description: string }[] = [
   { value: 'ground', label: 'Ground', description: 'Flat, sorted by z-order (floors, paths)' },
-  {
-    value: 'objects',
-    label: 'Objects (Y-sorted)',
-    description: 'Placed object instances sorted by their foot/base at runtime',
-  },
   { value: 'above', label: 'Above', description: 'Always on top (roofs, canopy)' },
 ];
 
@@ -65,6 +60,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
   isEditing,
   lockedKinds,
 }) => {
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
   const kindOptions =
     lockedKinds && lockedKinds.length > 0
       ? ALL_KIND_OPTIONS.filter((o) => lockedKinds.includes(o.value))
@@ -73,15 +69,12 @@ export const LayerModal: React.FC<LayerModalProps> = ({
   const form = useForm({
     defaultValues: initialData,
     onSubmit: async ({ value }) => {
-      onSave({
-        ...value,
-        sortingLayer: value.kind === 'object' ? 'objects' : value.sortingLayer,
-      });
+      onSave(value);
     },
   });
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
+    <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered initialFocusRef={nameInputRef}>
       <ModalOverlay backdropFilter="blur(4px)" />
       <ModalContent bg="gray.900" border="1px" borderColor="editorBorderLight">
         <ModalHeader fontSize="md" pb={2}>
@@ -101,13 +94,13 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                   <FormControl>
                     <FieldLabel>Name</FieldLabel>
                     <Input
+                      ref={nameInputRef}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       placeholder="Layer name"
                       size="sm"
                       bg="gray.800"
-                      autoFocus
                     />
                   </FormControl>
                 )}
@@ -120,13 +113,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                     <Select
                       value={field.state.value}
                       onChange={(e) => {
-                        const nextKind = e.target.value as LayerKind;
-                        field.handleChange(nextKind);
-                        if (nextKind === 'object') {
-                          form.setFieldValue('sortingLayer', 'objects');
-                        } else if (form.state.values.sortingLayer === 'objects') {
-                          form.setFieldValue('sortingLayer', 'ground');
-                        }
+                        field.handleChange(e.target.value as LayerKind);
                       }}
                       onBlur={field.handleBlur}
                       size="sm"
@@ -164,15 +151,12 @@ export const LayerModal: React.FC<LayerModalProps> = ({
 
               <form.Subscribe selector={(state) => state.values.kind}>
                 {(kind) =>
-                  kind === 'object' ? (
-                    <FormControl>
-                      <FieldLabel>Sorting Layer</FieldLabel>
-                      <Input value="Objects (Y-sorted)" size="sm" bg="gray.800" isReadOnly />
-                      <Text fontSize="10px" color="gray.500" mt={1}>
-                        Object layers place reusable objects and always use object-level Y-sorting.
-                      </Text>
-                    </FormControl>
-                  ) : (
+                  kind !== 'object' &&
+                  kind !== 'entity' &&
+                  kind !== 'terrain' &&
+                  kind !== 'navigation' &&
+                  kind !== 'collision' &&
+                  kind !== 'metadata' ? (
                     <form.Field name="sortingLayer">
                       {(field) => (
                         <FormControl>
@@ -197,7 +181,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                         </FormControl>
                       )}
                     </form.Field>
-                  )
+                  ) : null
                 }
               </form.Subscribe>
 

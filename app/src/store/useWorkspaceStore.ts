@@ -11,6 +11,7 @@ interface WorkspaceStore {
   tabs: WorkspaceTab[];
   activeTabId: string | null;
   expandedNodeIds: string[];
+  recentResourceKeys: string[];
   locationSessions: Record<string, LocationTabSession>;
   tilesetSessions: Record<string, TilesetTabSession>;
   autosaveEnabled: boolean;
@@ -34,6 +35,7 @@ interface WorkspaceStore {
   }) => void;
   toggleNode: (nodeId: string) => void;
   setExpanded: (nodeId: string, expanded: boolean) => void;
+  markRecentResource: (resourceKey: string) => void;
   setLocationSession: (tabId: string, session: LocationTabSession) => void;
   setTilesetSession: (tabId: string, session: TilesetTabSession) => void;
   setAutosaveEnabled: (enabled: boolean) => void;
@@ -114,6 +116,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   tabs: [],
   activeTabId: null,
   expandedNodeIds: defaultExpandedNodeIds(),
+  recentResourceKeys: [],
   locationSessions: {},
   tilesetSessions: {},
   autosaveEnabled: readAutosavePreference(),
@@ -333,6 +336,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       };
     }),
 
+  markRecentResource: (resourceKey) =>
+    set((state) => ({
+      recentResourceKeys: [
+        resourceKey,
+        ...state.recentResourceKeys.filter((entry) => entry !== resourceKey),
+      ].slice(0, 8),
+    })),
+
   setLocationSession: (tabId, session) =>
     set((state) => ({
       locationSessions: {
@@ -359,6 +370,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       tabs: [],
       activeTabId: null,
       expandedNodeIds: defaultExpandedNodeIds(),
+      recentResourceKeys: [],
       locationSessions: {},
       tilesetSessions: {},
     }),

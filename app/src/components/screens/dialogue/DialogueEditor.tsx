@@ -62,6 +62,7 @@ import { FieldLabel } from '../../common/Typography.tsx';
 export const DialogueEditor: React.FC = () => {
   const project = useEditorStore((state) => state.project);
   const actors = useEditorStore((state) => state.actors);
+  const storedSelectedDialogueId = useEditorStore((state) => state.selectedDialogueId);
   const gameVariables = useEditorStore((state) => state.gameVariables);
   const scriptTables = useEditorStore((state) => state.scriptTables);
   const scriptFunctions = useEditorStore((state) => state.scriptFunctions);
@@ -100,6 +101,20 @@ export const DialogueEditor: React.FC = () => {
   useEffect(() => {
     dialogueIndexRef.current = dialogueIndex;
   }, [dialogueIndex]);
+
+  useEffect(() => {
+    if (!storedSelectedDialogueId || storedSelectedDialogueId === selectedDialogueId) return;
+    if (!dialogues.has(storedSelectedDialogueId)) return;
+    setSelectedDialogueId(storedSelectedDialogueId);
+    setSelectedNodeId(null);
+  }, [dialogues, selectedDialogueId, storedSelectedDialogueId]);
+
+  useEffect(() => {
+    useEditorStore.setState((state) => {
+      state.selectedDialogueId = selectedDialogueId;
+      state.selectedDialogueNodeId = selectedNodeId;
+    });
+  }, [selectedDialogueId, selectedNodeId]);
 
   const selectedDialogue = selectedDialogueId ? (dialogues.get(selectedDialogueId) ?? null) : null;
   const selectedNode = selectedDialogue?.nodes.find((node) => node.id === selectedNodeId) ?? null;
@@ -236,7 +251,11 @@ export const DialogueEditor: React.FC = () => {
       if (cancelled) return;
       setDialogueIndex(syncedIndex);
       setDialogues(map);
-      setSelectedDialogueId(normalizedDialogues[0]?.id ?? null);
+      const preferredDialogueId =
+        storedSelectedDialogueId && map.has(storedSelectedDialogueId)
+          ? storedSelectedDialogueId
+          : (normalizedDialogues[0]?.id ?? null);
+      setSelectedDialogueId(preferredDialogueId);
       setSelectedNodeId(null);
       setIsDirty(false);
       dirtyDialogueIdsRef.current.clear();
@@ -249,7 +268,7 @@ export const DialogueEditor: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [project]);
+  }, [project, storedSelectedDialogueId]);
 
   useEffect(() => {
     if (!selectedDialogue || !selectedNode || selectedNode.type !== 'action') {

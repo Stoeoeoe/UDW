@@ -167,4 +167,17 @@ describe('useWorkspaceStore', () => {
       'location:map-2',
     ]);
   });
+
+  it('tracks recent resources in last-accessed order without duplicates', () => {
+    useWorkspaceStore.getState().markRecentResource('location:map-1');
+    useWorkspaceStore.getState().markRecentResource('tileset:tileset-1');
+    useWorkspaceStore.getState().markRecentResource('actor:marcus');
+    useWorkspaceStore.getState().markRecentResource('location:map-1');
+
+    expect(useWorkspaceStore.getState().recentResourceKeys).toEqual([
+      'location:map-1',
+      'actor:marcus',
+      'tileset:tileset-1',
+    ]);
+  });
 });

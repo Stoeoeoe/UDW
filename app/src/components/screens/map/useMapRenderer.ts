@@ -320,10 +320,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         )
           return;
 
-        if (
-          (layer.kind === 'object' || layer.sortingLayer === 'objects') &&
-          (layer.objectInstances?.length ?? 0) > 0
-        ) {
+        if (layer.kind === 'object' && (layer.objectInstances?.length ?? 0) > 0) {
           for (const objectInstance of layer.objectInstances ?? []) {
             const spriteTiles = expandObjectInstanceSpriteTiles(
               tilesets,
@@ -525,10 +522,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         )
           return;
 
-        if (
-          (layer.kind === 'object' || layer.sortingLayer === 'objects') &&
-          (layer.objectInstances?.length ?? 0) > 0
-        ) {
+        if (layer.kind === 'object' && (layer.objectInstances?.length ?? 0) > 0) {
           const objectInstances = layer.objectInstances ?? [];
 
           objectInstances
@@ -995,8 +989,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     hoverGraphics.clear();
 
     const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
-    const isObjectLayer =
-      selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
+    const isObjectLayer = selectedLayer?.kind === 'object';
     if (isObjectLayer) return;
 
     // No tile hover for tools that operate on objects rather than tiles
@@ -1051,8 +1044,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     previewContainer.alpha = 0.5;
 
     const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
-    const isObjectLayer =
-      selectedLayer?.kind === 'object' || selectedLayer?.sortingLayer === 'objects';
+    const isObjectLayer = selectedLayer?.kind === 'object';
 
     if (
       activeTool === 'anchorPlace' ||

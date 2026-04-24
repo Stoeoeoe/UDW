@@ -9,7 +9,7 @@ import { TilesetInspector } from '../../tileset/TilesetInspector';
 import { TilesetTerrainPanel } from '../../tileset/TilesetTerrainPanel';
 import TilesetMetadataDialog from '../../tileset/TilesetMetadataDialog';
 import { CreateTilesetDialog } from './CreateTilesetDialog';
-import { ListPanel, ListPanelItem, EmptyScreen } from '../common';
+import { EmptyScreen } from '../common';
 import { useTileSelection } from '../../../hooks/useTileSelection';
 
 /**

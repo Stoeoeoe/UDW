@@ -13,6 +13,7 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react';
+import { FiSearch } from 'react-icons/fi';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
 import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
@@ -24,7 +25,6 @@ import {
   saveWorkspaceTab,
 } from '../../lib/workspaceSaveActions';
 import { useSaveStore } from '../../lib/saveManager';
-import { FaSave } from 'react-icons/fa';
 
 export const TopBar: React.FC = () => {
   const closeProject = useEditorStore((state) => state.closeProject);
@@ -153,6 +153,10 @@ export const TopBar: React.FC = () => {
     }
   };
 
+  const handleOpenCommandPalette = React.useCallback(() => {
+    window.dispatchEvent(new CustomEvent('openCommandPalette'));
+  }, []);
+
   return (
     <Flex align="center" justify="space-between" h="full" px="4" userSelect="none">
       <HStack spacing="6">
@@ -169,10 +173,10 @@ export const TopBar: React.FC = () => {
             fontSize="xs"
             boxShadow="sm"
           >
-            ED
+            VE
           </Flex>
           <Text fontWeight="semibold" color="gray.300" fontSize="sm" letterSpacing="tight">
-            {project?.name || 'PixelEditor'}
+            {project?.name || 'Vulcanus Editor'}
           </Text>
         </HStack>
 
@@ -231,23 +235,6 @@ export const TopBar: React.FC = () => {
               </MenuItem>
             </MenuList>
           </Menu>
-          <IconButton
-            aria-label="Save"
-            icon={<FaSave />}
-            size="xs"
-            variant="ghost"
-            colorScheme="gray"
-            onClick={() => void handleSave()}
-            isDisabled={!canSaveActiveTab}
-          />
-          <IconButton
-            aria-label="Save All"
-            icon={<FaSave />}
-            size="xs"
-            variant="ghost"
-            colorScheme="blue"
-            onClick={() => void handleSaveAll()}
-          />
         </HStack>
       </HStack>
 
@@ -261,6 +248,13 @@ export const TopBar: React.FC = () => {
 
       <HStack spacing="3">
         {activeTab?.document.kind === 'location' && <MapToolbarActions />}
+        <IconButton
+          aria-label="Open command palette"
+          icon={<FiSearch />}
+          size="sm"
+          variant="ghost"
+          onClick={handleOpenCommandPalette}
+        />
       </HStack>
     </Flex>
   );

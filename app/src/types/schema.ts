@@ -161,9 +161,8 @@ export interface Layer {
   locked: boolean; // Prevent editing
   opacity: number; // 0.0 to 1.0
   zOrder: number; // Rendering order
-  // Sorting layer governs how this layer's tiles are sorted at runtime.
-  // 'ground' and 'above' use the layer's fixed zOrder; 'objects' is
-  // Y-sorted per tile (depth = worldY + pivotY * tileSize). Default 'ground'.
+  // Sorting layer governs how visual/tile layers are sorted at runtime.
+  // 'ground' uses the layer's fixed zOrder; 'above' always renders on top.
   sortingLayer?: SortingLayer;
   icon?: string; // Optional icon identifier
   // For tile-like layers this holds encoded tile IDs, row-major [y][x]
@@ -182,7 +181,7 @@ export interface Layer {
   definitionId?: string; // Reference to LayerDefinition (if from project template)
 }
 
-export type SortingLayer = 'ground' | 'objects' | 'above';
+export type SortingLayer = 'ground' | 'above';
 
 export interface ObjectGroup {
   id: string;

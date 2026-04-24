@@ -190,7 +190,6 @@ export const LayersPanel: React.FC = () => {
     }
 
     if (editingLayer) {
-      const nextSortingLayer = data.kind === 'object' ? 'objects' : data.sortingLayer;
       const nextLayerShape =
         data.kind === 'entity'
           ? {
@@ -240,12 +239,11 @@ export const LayersPanel: React.FC = () => {
         kind: data.kind,
         zOrder: data.zOrder,
         icon: data.icon || undefined,
-        sortingLayer: nextSortingLayer,
+        sortingLayer: data.sortingLayer,
         ...nextLayerShape,
       });
       toast({ title: 'Layer updated', status: 'success', duration: 1500 });
     } else {
-      const sortingLayer = data.kind === 'object' ? 'objects' : data.sortingLayer;
       const id = `layer-${Date.now()}`;
       const base: Layer = {
         id,
@@ -256,14 +254,12 @@ export const LayersPanel: React.FC = () => {
         opacity: 1,
         zOrder: data.zOrder,
         icon: data.icon || undefined,
-        sortingLayer,
+        sortingLayer: data.sortingLayer,
       };
 
       if (data.kind === 'entity') {
         base.entities = [];
       } else if (data.kind === 'object') {
-        base.objectInstances = [];
-      } else if (data.sortingLayer === 'objects') {
         base.objectInstances = [];
       } else {
         base.data = Array(currentMap.height)

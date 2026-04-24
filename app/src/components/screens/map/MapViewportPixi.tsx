@@ -541,7 +541,7 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'b' || e.key === 'B') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+        if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectPlace');
         } else {
           useEditorStore.getState().setActiveTool('stamp');
@@ -551,7 +551,7 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'e' || e.key === 'E') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (!(layer?.kind === 'object' || layer?.sortingLayer === 'objects')) {
+        if (!(layer?.kind === 'object')) {
           useEditorStore.getState().setActiveTool('erase');
         }
       }
@@ -562,7 +562,7 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('linkPlace');
-        } else if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+        } else if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectPlace');
         } else {
           useEditorStore.getState().setActiveTool('entityPlace');
@@ -580,7 +580,7 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'navigation') {
           useEditorStore.getState().setActiveTool('select');
-        } else if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+        } else if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectSelect');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
@@ -589,7 +589,7 @@ export const MapViewportPixi: React.FC = () => {
       if (e.key === 'x' || e.key === 'X') {
         const { selectedLayerId, currentMap: cm } = useEditorStore.getState();
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
-        if (layer?.kind === 'object' || layer?.sortingLayer === 'objects') {
+        if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectDelete');
         } else if (layer?.kind !== 'navigation') {
           useEditorStore.getState().setActiveTool('entityDelete');
