@@ -1,6 +1,6 @@
 import { Actor, DialogueIndex, EntityType, Item, Map as GameMap, Tileset } from '../types/schema';
 import { WorkspaceDocument } from '../types/workspace';
-import { createLocationDocument, createWorkspaceScreenDocument } from './workspaceRouting';
+import { createLocationDocument } from './workspaceRouting';
 
 export type CommandPaletteFilter =
   | 'all'
@@ -97,7 +97,13 @@ export function buildCommandPaletteResources(
         type: 'entity',
         typeLabel: 'Entity',
         label: entityType.displayName,
-        document: createWorkspaceScreenDocument('entities'),
+        secondaryLabel: entityType.folderPath || undefined,
+        document: {
+          kind: 'entity',
+          entityTypeId: entityType.id,
+          label: entityType.displayName,
+          saveUnitId: 'configuration',
+        },
         resourceId: entityType.id,
       });
     });
@@ -111,7 +117,13 @@ export function buildCommandPaletteResources(
         type: 'actor',
         typeLabel: 'Actor',
         label: actor.name,
-        document: createWorkspaceScreenDocument('actors'),
+        secondaryLabel: actor.folderPath || undefined,
+        document: {
+          kind: 'actor',
+          actorId: actor.id,
+          label: actor.name,
+          saveUnitId: `actor:${actor.id}`,
+        },
         resourceId: actor.id,
       });
     });
@@ -125,7 +137,13 @@ export function buildCommandPaletteResources(
         type: 'item',
         typeLabel: 'Item',
         label: item.name,
-        document: createWorkspaceScreenDocument('items'),
+        secondaryLabel: item.folderPath || undefined,
+        document: {
+          kind: 'item',
+          itemId: item.id,
+          label: item.name,
+          saveUnitId: `item:${item.id}`,
+        },
         resourceId: item.id,
       });
     });
@@ -139,7 +157,13 @@ export function buildCommandPaletteResources(
         type: 'dialogue',
         typeLabel: 'Dialogue',
         label: dialogue.name,
-        document: createWorkspaceScreenDocument('dialogues'),
+        secondaryLabel: dialogue.folderPath || undefined,
+        document: {
+          kind: 'dialogue',
+          dialogueId: dialogue.id,
+          label: dialogue.name,
+          saveUnitId: `dialogue:${dialogue.id}`,
+        },
         resourceId: dialogue.id,
       });
     });

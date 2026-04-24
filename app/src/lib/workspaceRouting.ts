@@ -81,6 +81,26 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'config');
       if (document.configTab) params.set('tab', document.configTab);
       break;
+    case 'actor':
+      params.set('doc', 'actor');
+      params.set('id', document.actorId);
+      break;
+    case 'entity':
+      params.set('doc', 'entity');
+      params.set('id', document.entityTypeId);
+      break;
+    case 'item':
+      params.set('doc', 'item');
+      params.set('id', document.itemId);
+      break;
+    case 'dialogue':
+      params.set('doc', 'dialogue');
+      params.set('id', document.dialogueId);
+      break;
+    case 'variable':
+      params.set('doc', 'variable');
+      params.set('id', document.variableKey);
+      break;
     case 'entities':
     case 'actors':
     case 'items':
@@ -148,6 +168,61 @@ export function documentFromHash(
       label: 'Configuration',
       saveUnitId: 'configuration',
       configTab,
+    };
+  }
+
+  if (doc === 'actor') {
+    const actorId = params.get('id');
+    if (!actorId) return null;
+    const actor = snapshot.actors?.find((a) => a.id === actorId);
+    if (!actor) return null;
+    return { kind: 'actor', actorId: actor.id, label: actor.name, saveUnitId: `actor:${actor.id}` };
+  }
+
+  if (doc === 'entity') {
+    const entityTypeId = params.get('id');
+    if (!entityTypeId) return null;
+    const et = snapshot.entityTypes?.find((e) => e.id === entityTypeId);
+    if (!et) return null;
+    return {
+      kind: 'entity',
+      entityTypeId: et.id,
+      label: et.displayName,
+      saveUnitId: 'configuration',
+    };
+  }
+
+  if (doc === 'item') {
+    const itemId = params.get('id');
+    if (!itemId) return null;
+    const item = snapshot.items?.find((i) => i.id === itemId);
+    if (!item) return null;
+    return { kind: 'item', itemId: item.id, label: item.name, saveUnitId: `item:${item.id}` };
+  }
+
+  if (doc === 'dialogue') {
+    const dialogueId = params.get('id');
+    if (!dialogueId) return null;
+    const entry = snapshot.dialogueEntries?.find((d) => d.id === dialogueId);
+    if (!entry) return null;
+    return {
+      kind: 'dialogue',
+      dialogueId: entry.id,
+      label: entry.name,
+      saveUnitId: `dialogue:${entry.id}`,
+    };
+  }
+
+  if (doc === 'variable') {
+    const variableKey = params.get('id');
+    if (!variableKey) return null;
+    const variable = snapshot.gameVariables?.find((v) => v.key === variableKey);
+    if (!variable) return null;
+    return {
+      kind: 'variable',
+      variableKey: variable.key,
+      label: variable.key,
+      saveUnitId: 'configuration',
     };
   }
 

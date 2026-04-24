@@ -57,7 +57,11 @@
           "type": "array",
           "items": { "type": "string" }
         },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "folderPath": {
+          "type": "string",
+          "description": "Virtual folder path for workspace organization. Empty string or absent = root."
+        }
       }
     }
   }

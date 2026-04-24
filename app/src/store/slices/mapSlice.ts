@@ -54,10 +54,17 @@ export interface MapSlice {
 
   setCurrentMap: (map: GameMap | null) => void;
   loadMap: (mapId: string) => void;
-  createNewMap: (name: string, width: number, height: number, tilesetId: string) => Promise<void>;
+  createNewMap: (
+    name: string,
+    width: number,
+    height: number,
+    tilesetId: string,
+    folderPath?: string,
+  ) => Promise<void>;
   updateCurrentMap: (updates: Partial<GameMap>) => void;
   addMap: (map: GameMap) => void;
   deleteMap: (mapId: string) => Promise<void>;
+  updateMapFolderPath: (mapId: string, folderPath: string) => Promise<void>;
 }
 
 export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
@@ -150,7 +157,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
       { clearHistory: true },
     ),
 
-  createNewMap: async (name, width, height, tilesetId) => {
+  createNewMap: async (name, width, height, tilesetId, folderPath = '') => {
     const id = name.toLowerCase().replace(/\s+/g, '-');
     const layerDefs = get().layerDefinitions;
     const definedLayers = createLayersFromDefinitions(layerDefs, width, height);
@@ -167,6 +174,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
       tilesetRefs: [tilesetId],
       layers: baseLayers,
       entities: [],
+      folderPath: folderPath.trim() || undefined,
     };
     const newMap = ensureNavigationLayer(rawMap);
 
@@ -259,6 +267,22 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
         }),
       { clearHistory: true },
     );
+  },
+
+  updateMapFolderPath: async (mapId, folderPath) => {
+    let updatedMap: GameMap | null = null;
+    set((state) => {
+      const idx = state.maps.findIndex((m) => m.id === mapId);
+      if (idx < 0) return;
+      const merged = { ...state.maps[idx], folderPath } as GameMap;
+      updatedMap = merged;
+      state.maps[idx] = castDraft(merged);
+      if (state.currentMap?.id === mapId) {
+        state.currentMap = castDraft(merged);
+      }
+    });
+    const map = updatedMap ?? get().maps.find((m) => m.id === mapId);
+    if (map) await persistMap(map);
   },
 });
 

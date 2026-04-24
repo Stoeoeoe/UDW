@@ -52,6 +52,16 @@ export function getWorkspaceTabId(document: WorkspaceDocument): string {
       return 'settings';
     case 'configuration':
       return 'config';
+    case 'actor':
+      return `actor:${document.actorId}`;
+    case 'entity':
+      return `entity:${document.entityTypeId}`;
+    case 'item':
+      return `item:${document.itemId}`;
+    case 'dialogue':
+      return `dialogue:${document.dialogueId}`;
+    case 'variable':
+      return `variable:${document.variableKey}`;
     case 'entities':
     case 'actors':
     case 'items':
@@ -64,7 +74,14 @@ export function getWorkspaceTabId(document: WorkspaceDocument): string {
 }
 
 function defaultExpandedNodeIds(): string[] {
-  return ['group:locations', 'group:tilesets', 'group:game-data'];
+  return [
+    'group:locations',
+    'group:tilesets',
+    'group:actors',
+    'group:entities',
+    'group:items',
+    'group:dialogues',
+  ];
 }
 
 export function supportsPreviewTab(document: WorkspaceDocument): boolean {

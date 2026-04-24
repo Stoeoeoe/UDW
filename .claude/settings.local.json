@@ -7,7 +7,9 @@
       "Bash(git -C e:/map-editor status --short)",
       "Bash(git -C e:/map-editor status --short --untracked-files=all)",
       "Bash(git -C e:/map-editor show HEAD:app/src/store/useEditorStore.ts)",
-      "Bash(find /e/map-editor/app/src -type f -name \"*.tsx\" -exec grep -l \"PropertyDefinition\\\\|PropertyValue\\\\|PropertyInstance\" {} \\\\;)"
+      "Bash(find /e/map-editor/app/src -type f -name \"*.tsx\" -exec grep -l \"PropertyDefinition\\\\|PropertyValue\\\\|PropertyInstance\" {} \\\\;)",
+      "Bash(npm run *)",
+      "Bash(./node_modules/.bin/tsc -p tsconfig.build.json --noEmit)"
     ]
   },
   "enabledPlugins": {

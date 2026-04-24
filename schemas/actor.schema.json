@@ -29,6 +29,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'NPCs/Villagers'). Empty string or absent = root."
     }
   }
 }

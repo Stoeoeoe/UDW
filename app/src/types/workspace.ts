@@ -1,4 +1,12 @@
-import { Map as GameMap, Tileset } from './schema';
+import {
+  Map as GameMap,
+  Tileset,
+  Actor,
+  EntityType,
+  Item,
+  DialogueListEntry,
+  GameVariable,
+} from './schema';
 import { ToolType } from './editor';
 
 export type WorkspaceScreenKind = 'entities' | 'actors' | 'items' | 'dialogues' | 'scripting';
@@ -52,6 +60,36 @@ export type WorkspaceDocument =
       kind: 'scripting';
       label: string;
       saveUnitId: 'configuration';
+    }
+  | {
+      kind: 'actor';
+      actorId: string;
+      label: string;
+      saveUnitId: string;
+    }
+  | {
+      kind: 'entity';
+      entityTypeId: string;
+      label: string;
+      saveUnitId: 'configuration';
+    }
+  | {
+      kind: 'item';
+      itemId: string;
+      label: string;
+      saveUnitId: string;
+    }
+  | {
+      kind: 'dialogue';
+      dialogueId: string;
+      label: string;
+      saveUnitId: string;
+    }
+  | {
+      kind: 'variable';
+      variableKey: string;
+      label: string;
+      saveUnitId: 'configuration';
     };
 
 export type WorkspaceConfigTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses';
@@ -62,11 +100,27 @@ export interface WorkspaceTab {
   isPreview?: boolean;
 }
 
+export type ResourceKind =
+  | 'location'
+  | 'tileset'
+  | 'actor'
+  | 'entity'
+  | 'item'
+  | 'dialogue'
+  | 'variable';
+
 export interface WorkspaceTreeNode {
   id: string;
-  kind: 'group' | 'branch' | 'leaf';
+  kind: 'group' | 'branch' | 'leaf' | 'folder';
   label: string;
   icon?: string;
+  resourceIcon?:
+    | {
+        type: 'game-icon' | 'asset' | 'emoji';
+        value: string;
+      }
+    | undefined;
+  resourceKind?: ResourceKind;
   document?: WorkspaceDocument;
   children?: WorkspaceTreeNode[];
   defaultExpanded?: boolean;
@@ -119,4 +173,9 @@ export type LocationWorkspaceLeaf = {
 export interface WorkspaceProjectSnapshot {
   maps: GameMap[];
   tilesets: Map<string, Tileset>;
+  actors?: Actor[];
+  entityTypes?: EntityType[];
+  items?: Item[];
+  dialogueEntries?: DialogueListEntry[];
+  gameVariables?: GameVariable[];
 }

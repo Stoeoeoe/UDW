@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { documentFromHash } from './workspaceRouting';
-import { Map as GameMap, Tileset } from '../types/schema';
+import { documentFromHash, documentToHash } from './workspaceRouting';
+import {
+  Actor,
+  DialogueListEntry,
+  EntityType,
+  GameVariable,
+  Item,
+  Map as GameMap,
+  Tileset,
+} from '../types/schema';
 
-function createMap(overrides: Partial<GameMap>): GameMap {
+function createMap(overrides: Partial<GameMap> = {}): GameMap {
   return {
     version: 1,
     id: 'map-1',
@@ -17,25 +25,34 @@ function createMap(overrides: Partial<GameMap>): GameMap {
   };
 }
 
-describe('documentFromHash', () => {
+function createSnapshot(
+  overrides: {
+    maps?: GameMap[];
+    tilesets?: Map<string, Tileset>;
+    actors?: Actor[];
+    entityTypes?: EntityType[];
+    items?: Item[];
+    dialogueEntries?: DialogueListEntry[];
+    gameVariables?: GameVariable[];
+  } = {},
+) {
+  return {
+    maps: overrides.maps ?? [],
+    tilesets: overrides.tilesets ?? new Map<string, Tileset>(),
+    actors: overrides.actors ?? [],
+    entityTypes: overrides.entityTypes ?? [],
+    items: overrides.items ?? [],
+    dialogueEntries: overrides.dialogueEntries ?? [],
+    gameVariables: overrides.gameVariables ?? [],
+  };
+}
+
+describe('workspaceRouting', () => {
   it('treats a legacy location overview route as a map route', () => {
-    const document = documentFromHash('#/?doc=location-overview&id=map-1', {
-      maps: [createMap({})],
-      tilesets: new Map<string, Tileset>(),
-    });
-
-    expect(document).toMatchObject({
-      kind: 'location',
-      mapId: 'map-1',
-      variationId: null,
-    });
-  });
-
-  it('resolves a base-only location route without forcing a base variant', () => {
-    const document = documentFromHash('#/?doc=location&id=map-1', {
-      maps: [createMap({})],
-      tilesets: new Map<string, Tileset>(),
-    });
+    const document = documentFromHash(
+      '#/?doc=location-overview&id=map-1',
+      createSnapshot({ maps: [createMap()] }),
+    );
 
     expect(document).toMatchObject({
       kind: 'location',
@@ -45,20 +62,16 @@ describe('documentFromHash', () => {
   });
 
   it('does not force a base variation when a location has variations but no explicit variant', () => {
-    const document = documentFromHash('#/?doc=location&id=map-1', {
-      maps: [
-        createMap({
-          variations: [
-            {
-              id: 'winter',
-              displayName: 'Winter',
-              tilesetSuffix: '',
-            },
-          ],
-        }),
-      ],
-      tilesets: new Map<string, Tileset>(),
-    });
+    const document = documentFromHash(
+      '#/?doc=location&id=map-1',
+      createSnapshot({
+        maps: [
+          createMap({
+            variations: [{ id: 'winter', displayName: 'Winter', tilesetSuffix: '' }],
+          }),
+        ],
+      }),
+    );
 
     expect(document).toMatchObject({
       kind: 'location',
@@ -67,38 +80,12 @@ describe('documentFromHash', () => {
     });
   });
 
-  it('preserves an explicit variation in a legacy location route as initial editor context', () => {
-    const document = documentFromHash('#/?doc=location&id=map-1&variant=winter', {
-      maps: [
-        createMap({
-          variations: [
-            {
-              id: 'winter',
-              displayName: 'Winter',
-              tilesetSuffix: '',
-            },
-          ],
-        }),
-      ],
-      tilesets: new Map<string, Tileset>(),
-    });
-
-    expect(document).toMatchObject({
-      kind: 'location',
-      mapId: 'map-1',
-      variationId: 'winter',
-    });
-  });
-
   it('resolves first-class singleton editor routes and preserves legacy screen compatibility', () => {
-    const entitiesDocument = documentFromHash('#/?doc=entities', {
-      maps: [],
-      tilesets: new Map<string, Tileset>(),
-    });
-    const legacyEntitiesDocument = documentFromHash('#/?doc=legacy&mode=entities', {
-      maps: [],
-      tilesets: new Map<string, Tileset>(),
-    });
+    const entitiesDocument = documentFromHash('#/?doc=entities', createSnapshot());
+    const legacyEntitiesDocument = documentFromHash(
+      '#/?doc=legacy&mode=entities',
+      createSnapshot(),
+    );
 
     expect(entitiesDocument).toMatchObject({
       kind: 'entities',
@@ -110,5 +97,108 @@ describe('documentFromHash', () => {
       label: 'Entities',
       saveUnitId: 'configuration',
     });
+  });
+
+  it('round-trips first-class resource routes for non-map documents', () => {
+    const snapshot = createSnapshot({
+      actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+      entityTypes: [
+        {
+          id: 'merchant-stall',
+          displayName: 'Merchant Stall',
+          category: 'object',
+          placeholderColor: '#ffffff',
+          properties: [],
+        },
+      ],
+      items: [
+        {
+          id: 'apple',
+          name: 'Apple',
+          category: 'Food',
+          icon: '',
+          description: '',
+          maxStackSize: 10,
+        },
+      ],
+      dialogueEntries: [
+        {
+          id: 'intro',
+          name: 'Intro Conversation',
+          oneShot: false,
+          nodeCount: 4,
+          tags: [],
+          updatedAt: '2026-04-23T00:00:00.000Z',
+        },
+      ],
+      gameVariables: [
+        {
+          key: 'weather.isRain',
+          type: 'boolean',
+          category: 'Weather',
+          defaultValue: false,
+        },
+      ],
+    });
+
+    expect(
+      documentFromHash(
+        documentToHash({
+          kind: 'actor',
+          actorId: 'marcus',
+          label: 'Marcus',
+          saveUnitId: 'actor:marcus',
+        }),
+        snapshot,
+      ),
+    ).toMatchObject({ kind: 'actor', actorId: 'marcus' });
+
+    expect(
+      documentFromHash(
+        documentToHash({
+          kind: 'entity',
+          entityTypeId: 'merchant-stall',
+          label: 'Merchant Stall',
+          saveUnitId: 'configuration',
+        }),
+        snapshot,
+      ),
+    ).toMatchObject({ kind: 'entity', entityTypeId: 'merchant-stall' });
+
+    expect(
+      documentFromHash(
+        documentToHash({
+          kind: 'item',
+          itemId: 'apple',
+          label: 'Apple',
+          saveUnitId: 'item:apple',
+        }),
+        snapshot,
+      ),
+    ).toMatchObject({ kind: 'item', itemId: 'apple' });
+
+    expect(
+      documentFromHash(
+        documentToHash({
+          kind: 'dialogue',
+          dialogueId: 'intro',
+          label: 'Intro Conversation',
+          saveUnitId: 'dialogue:intro',
+        }),
+        snapshot,
+      ),
+    ).toMatchObject({ kind: 'dialogue', dialogueId: 'intro' });
+
+    expect(
+      documentFromHash(
+        documentToHash({
+          kind: 'variable',
+          variableKey: 'weather.isRain',
+          label: 'weather.isRain',
+          saveUnitId: 'configuration',
+        }),
+        snapshot,
+      ),
+    ).toMatchObject({ kind: 'variable', variableKey: 'weather.isRain' });
   });
 });

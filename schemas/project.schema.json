@@ -192,6 +192,10 @@
               "description": "Relative path to the sprite image asset (e.g. 'assets/hero.png')."
             }
           }
+        },
+        "folderPath": {
+          "type": "string",
+          "description": "Virtual folder path for workspace organization. Empty string or absent = root."
         }
       }
     },
@@ -295,6 +299,10 @@
           "type": "array",
           "items": { "$ref": "#/$defs/TableField" },
           "description": "Legacy inline field definitions. Use tableId instead for new data."
+        },
+        "folderPath": {
+          "type": "string",
+          "description": "Virtual folder path for workspace organization. Empty string or absent = root."
         }
       }
     },

@@ -68,7 +68,11 @@
       "type": "array",
       "items": { "$ref": "#/$defs/Variation" }
     },
-    "metadata": { "$ref": "#/$defs/MapMetadata" }
+    "metadata": { "$ref": "#/$defs/MapMetadata" },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'World/Dungeon'). Empty string or absent = root."
+    }
   },
   "$defs": {
     "Layer": {

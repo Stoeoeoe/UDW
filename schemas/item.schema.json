@@ -49,6 +49,10 @@
       "type": "object",
       "description": "Values for the extra properties defined by the assigned ItemClass.",
       "additionalProperties": true
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'Consumables/Potions'). Empty string or absent = root."
     }
   }
 }

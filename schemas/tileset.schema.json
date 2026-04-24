@@ -59,6 +59,10 @@
       "type": "array",
       "description": "Reusable multi-tile object definitions such as trees or bushes.",
       "items": { "$ref": "#/$defs/TilesetObjectDefinition" }
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'Environment/Forest'). Empty string or absent = root."
     }
   },
   "$defs": {

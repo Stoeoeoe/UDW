@@ -23,9 +23,16 @@ import { CaptionText } from '../common/Typography.tsx';
 interface MapCreatorProps {
   onCreate?: () => void;
   onCancel?: () => void;
+  folderPath?: string;
+  onCreatedMapId?: (mapId: string) => void;
 }
 
-export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) => {
+export const MapCreator: React.FC<MapCreatorProps> = ({
+  onCreate,
+  onCancel,
+  folderPath,
+  onCreatedMapId,
+}) => {
   const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
   const createNewMap = useEditorStore((state) => state.createNewMap);
   const toast = useToast();
@@ -48,7 +55,8 @@ export const MapCreator: React.FC<MapCreatorProps> = ({ onCreate, onCancel }) =>
 
     setIsSubmitting(true);
     try {
-      await createNewMap(name, width, height, tilesetId);
+      await createNewMap(name, width, height, tilesetId, folderPath);
+      onCreatedMapId?.(name.toLowerCase().replace(/\s+/g, '-'));
       toast({
         title: 'Map created',
         status: 'success',

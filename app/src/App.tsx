@@ -24,14 +24,18 @@ import {
 import { ConfigurationEditor } from './components/screens/settings/ConfigurationEditor';
 import { useEditorStore } from './store/useEditorStore';
 import { supportsPreviewTab, useWorkspaceStore } from './store/useWorkspaceStore';
-import { buildWorkspaceTree } from './lib/workspaceTree';
+import {
+  buildWorkspaceTree,
+  collectDefaultExpandedNodeIds,
+  findFirstDocument,
+} from './lib/workspaceTree';
 import { documentFromHash, documentToHash } from './lib/workspaceRouting';
 import {
   applyTabSession,
   captureTabSession,
   ensureDocumentSession,
 } from './lib/workspaceController';
-import { WorkspaceTab, WorkspaceTreeNode } from './types/workspace';
+import { WorkspaceDocument, WorkspaceTab, WorkspaceTreeNode } from './types/workspace';
 import { useSaveStore, getSaveUnitStatus } from './lib/saveManager';
 import { persistWorkspaceSession, restoreWorkspaceSession } from './lib/workspacePersistence';
 import { discardWorkspaceTabChanges } from './lib/workspaceSaveActions';
@@ -54,6 +58,7 @@ function App() {
   const actors = useEditorStore((state) => state.actors);
   const items = useEditorStore((state) => state.items);
   const dialogueIndex = useEditorStore((state) => state.dialogueIndex);
+  const gameVariables = useEditorStore((state) => state.gameVariables);
   const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
   const selectedActorId = useEditorStore((state) => state.selectedActorId);
   const selectedItemId = useEditorStore((state) => state.selectedItemId);
@@ -77,7 +82,19 @@ function App() {
     (state) => Object.values(state.saveUnits).filter((unit) => unit.dirty).length,
   );
 
-  const treeNodes = React.useMemo(() => buildWorkspaceTree(maps, tilesets), [maps, tilesets]);
+  const treeNodes = React.useMemo(
+    () =>
+      buildWorkspaceTree({
+        maps,
+        tilesets,
+        actors,
+        entityTypes,
+        items,
+        dialogueEntries: dialogueIndex?.dialogues ?? [],
+        gameVariables,
+      }),
+    [maps, tilesets, actors, entityTypes, items, dialogueIndex, gameVariables],
+  );
   const toast = useToast();
   const activeTab = React.useMemo(
     () => tabs.find((tab) => tab.id === activeTabId) ?? null,
@@ -114,7 +131,15 @@ function App() {
     if (!project || !projectPath || !resourcesLoaded) return;
     if (initializedProjectPathRef.current === projectPath) return;
 
-    const snapshot = { maps, tilesets };
+    const snapshot = {
+      maps,
+      tilesets,
+      actors,
+      entityTypes,
+      items,
+      dialogueEntries: dialogueIndex?.dialogues ?? [],
+      gameVariables,
+    };
     const restored = restoreWorkspaceSession(projectPath, snapshot);
 
     if (restored) {
@@ -143,6 +168,11 @@ function App() {
     resourcesLoaded,
     maps,
     tilesets,
+    actors,
+    entityTypes,
+    items,
+    dialogueIndex,
+    gameVariables,
     treeNodes,
     openDocument,
     activateTab,
@@ -153,7 +183,15 @@ function App() {
     if (!project || !projectPath || !resourcesLoaded) return;
 
     const syncFromHash = () => {
-      const document = documentFromHash(window.location.hash, { maps, tilesets });
+      const document = documentFromHash(window.location.hash, {
+        maps,
+        tilesets,
+        actors,
+        entityTypes,
+        items,
+        dialogueEntries: dialogueIndex?.dialogues ?? [],
+        gameVariables,
+      });
       if (!document) return;
 
       const tab = openDocument(document);
@@ -163,7 +201,20 @@ function App() {
 
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [project, projectPath, resourcesLoaded, maps, tilesets, openDocument, activateTab]);
+  }, [
+    project,
+    projectPath,
+    resourcesLoaded,
+    maps,
+    tilesets,
+    actors,
+    entityTypes,
+    items,
+    dialogueIndex,
+    gameVariables,
+    openDocument,
+    activateTab,
+  ]);
 
   React.useEffect(() => {
     if (!projectPath || !resourcesLoaded) return;
@@ -305,33 +356,47 @@ function App() {
 
   React.useEffect(() => {
     if (!activeTab) return;
+    const doc = activeTab.document;
 
-    if (activeTab.document.kind === 'location') {
-      markRecentResource(`location:${activeTab.document.mapId}`);
+    if (doc.kind === 'location') {
+      markRecentResource(`location:${doc.mapId}`);
+      return;
+    }
+    if (doc.kind === 'tileset') {
+      markRecentResource(`tileset:${doc.tilesetId}`);
+      return;
+    }
+    if (doc.kind === 'actor') {
+      markRecentResource(`actor:${doc.actorId}`);
+      return;
+    }
+    if (doc.kind === 'entity') {
+      markRecentResource(`entity:${doc.entityTypeId}`);
+      return;
+    }
+    if (doc.kind === 'item') {
+      markRecentResource(`item:${doc.itemId}`);
+      return;
+    }
+    if (doc.kind === 'dialogue') {
+      markRecentResource(`dialogue:${doc.dialogueId}`);
       return;
     }
 
-    if (activeTab.document.kind === 'tileset') {
-      markRecentResource(`tileset:${activeTab.document.tilesetId}`);
-      return;
-    }
-
-    if (activeTab.document.kind === 'entities' && selectedEntityTypeId) {
+    // Legacy screen tabs — still mark selection-based recents for backward compat
+    if (doc.kind === 'entities' && selectedEntityTypeId) {
       markRecentResource(`entity:${selectedEntityTypeId}`);
       return;
     }
-
-    if (activeTab.document.kind === 'actors' && selectedActorId) {
+    if (doc.kind === 'actors' && selectedActorId) {
       markRecentResource(`actor:${selectedActorId}`);
       return;
     }
-
-    if (activeTab.document.kind === 'items' && selectedItemId) {
+    if (doc.kind === 'items' && selectedItemId) {
       markRecentResource(`item:${selectedItemId}`);
       return;
     }
-
-    if (activeTab.document.kind === 'dialogues' && selectedDialogueId) {
+    if (doc.kind === 'dialogues' && selectedDialogueId) {
       markRecentResource(`dialogue:${selectedDialogueId}`);
     }
   }, [
@@ -356,27 +421,20 @@ function App() {
     [activateTab, openDocument],
   );
 
+  const handleOpenDocument = React.useCallback(
+    (document: WorkspaceDocument, options?: { pin?: boolean }) => {
+      const tab = openDocument(document, {
+        preview: !options?.pin && supportsPreviewTab(document),
+        pin: options?.pin,
+      });
+      ensureDocumentSession(tab.document, tab.id);
+      activateTab(tab.id);
+    },
+    [activateTab, openDocument],
+  );
+
   const handleOpenPaletteResult = React.useCallback(
     (result: CommandPaletteMatch, options?: { pin?: boolean }) => {
-      if (result.resource.type === 'entity' && result.resource.resourceId) {
-        useEditorStore.getState().setSelectedEntityType(result.resource.resourceId);
-      }
-
-      if (result.resource.type === 'actor' && result.resource.resourceId) {
-        useEditorStore.getState().setSelectedActor(result.resource.resourceId);
-      }
-
-      if (result.resource.type === 'item' && result.resource.resourceId) {
-        useEditorStore.getState().setSelectedItem(result.resource.resourceId);
-      }
-
-      if (result.resource.type === 'dialogue' && result.resource.resourceId) {
-        useEditorStore.setState((state) => {
-          state.selectedDialogueId = result.resource.resourceId ?? null;
-          state.selectedDialogueNodeId = null;
-        });
-      }
-
       const tab = openDocument(result.resource.document, {
         preview: !options?.pin && supportsPreviewTab(result.resource.document),
         pin: options?.pin,
@@ -477,6 +535,7 @@ function App() {
                 activeTabId={activeTabId}
                 onToggleNode={toggleNode}
                 onOpenNode={handleOpenNode}
+                onOpenDocument={handleOpenDocument}
                 headerAction={<WorkspaceCommandPaletteButton onClick={openCommandPalette} />}
               />
             </Box>
@@ -542,6 +601,16 @@ const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = ({ tab }
       return <DialogueEditor />;
     case 'scripting':
       return <VariableEditor />;
+    case 'actor':
+      return <ActorResourceDocument actorId={tab.document.actorId} />;
+    case 'entity':
+      return <EntityResourceDocument entityTypeId={tab.document.entityTypeId} />;
+    case 'item':
+      return <ItemResourceDocument itemId={tab.document.itemId} />;
+    case 'dialogue':
+      return <DialogueResourceDocument dialogueId={tab.document.dialogueId} />;
+    case 'variable':
+      return <VariableResourceDocument variableKey={tab.document.variableKey} />;
     default:
       return null;
   }
@@ -574,6 +643,48 @@ const ConfigurationWorkspaceDocument: React.FC<{
   );
 };
 
+// ─── Per-resource document wrappers ──────────────────────────────────────────
+// Each syncs the store selection on mount so the existing screen shows the
+// correct item, then renders the full editor screen.
+
+const ActorResourceDocument: React.FC<{ actorId: string }> = ({ actorId }) => {
+  const setSelectedActor = useEditorStore((state) => state.setSelectedActor);
+  React.useEffect(() => {
+    setSelectedActor(actorId);
+  }, [actorId, setSelectedActor]);
+  return <ActorEditor />;
+};
+
+const EntityResourceDocument: React.FC<{ entityTypeId: string }> = ({ entityTypeId }) => {
+  const setSelectedEntityType = useEditorStore((state) => state.setSelectedEntityType);
+  React.useEffect(() => {
+    setSelectedEntityType(entityTypeId);
+  }, [entityTypeId, setSelectedEntityType]);
+  return <EntityEditor />;
+};
+
+const ItemResourceDocument: React.FC<{ itemId: string }> = ({ itemId }) => {
+  const setSelectedItem = useEditorStore((state) => state.setSelectedItem);
+  React.useEffect(() => {
+    setSelectedItem(itemId);
+  }, [itemId, setSelectedItem]);
+  return <ItemEditor />;
+};
+
+const DialogueResourceDocument: React.FC<{ dialogueId: string }> = ({ dialogueId }) => {
+  React.useEffect(() => {
+    useEditorStore.setState((state) => {
+      state.selectedDialogueId = dialogueId;
+      state.selectedDialogueNodeId = null;
+    });
+  }, [dialogueId]);
+  return <DialogueEditor />;
+};
+
+const VariableResourceDocument: React.FC<{ variableKey: string }> = () => {
+  return <VariableEditor />;
+};
+
 function getPreferredInitialDocument(nodes: WorkspaceTreeNode[]): WorkspaceTreeNode | null {
   const primaryDocument = findFirstDocument(
     nodes,
@@ -584,35 +695,6 @@ function getPreferredInitialDocument(nodes: WorkspaceTreeNode[]): WorkspaceTreeN
   }
 
   return findFirstDocument(nodes, () => true);
-}
-
-function findFirstDocument(
-  nodes: WorkspaceTreeNode[],
-  predicate: (node: WorkspaceTreeNode) => boolean,
-): WorkspaceTreeNode | null {
-  for (const node of nodes) {
-    if (node.document && predicate(node)) {
-      return node;
-    }
-    if (node.children?.length) {
-      const child = findFirstDocument(node.children, predicate);
-      if (child) return child;
-    }
-  }
-  return null;
-}
-
-function collectDefaultExpandedNodeIds(nodes: WorkspaceTreeNode[]): string[] {
-  const collected: string[] = [];
-  for (const node of nodes) {
-    if (node.defaultExpanded) {
-      collected.push(node.id);
-    }
-    if (node.children?.length) {
-      collected.push(...collectDefaultExpandedNodeIds(node.children));
-    }
-  }
-  return collected;
 }
 
 function filterCommandPaletteMatch(

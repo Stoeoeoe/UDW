@@ -670,48 +670,6 @@ export const DialogueEditor: React.FC = () => {
     });
   };
 
-  const leftPanel = (
-    <ListPanel
-      title="Dialogues"
-      items={dialoguePanelItems}
-      selectedId={selectedDialogueId}
-      onSelect={handleSelectDialogue}
-      onAdd={openCreateDialogueModal}
-      emptyMessage="No dialogues yet"
-      topContent={
-        <Input
-          size="xs"
-          value={search}
-          placeholder="Filter..."
-          onChange={(event) => setSearch(event.target.value)}
-          bg="editorInlineBg"
-          borderColor="editorInlineBorder"
-        />
-      }
-      itemActions={(item) => [
-        {
-          id: 'edit',
-          label: 'Edit dialogue metadata',
-          icon: <EditIcon fontSize="10px" />,
-          ariaLabel: 'Rename dialogue',
-          onClick: () => openEditDialogueModal(item.id),
-        },
-        {
-          id: 'delete',
-          label: 'Delete dialogue',
-          icon: <DeleteIcon fontSize="10px" />,
-          ariaLabel: 'Delete dialogue',
-          hoverColor: 'red.300',
-          onClick: async () => {
-            if (confirm(`Delete dialogue "${item.label}"?`)) {
-              await removeDialogue(item.id);
-            }
-          },
-        },
-      ]}
-    />
-  );
-
   const settingsContent = (
     <VStack align="stretch" spacing={4} p={4}>
       <Box p={3} border="1px" borderColor="whiteAlpha.200" borderRadius="md" bg="editorPanelBg">
@@ -827,7 +785,6 @@ export const DialogueEditor: React.FC = () => {
         }}
         viewportBackground={false}
         content={content}
-        leftPanel={leftPanel}
         rightPanel={
           activeTab === 'timeline' ? (
             <DialogueNodeInspector
@@ -852,7 +809,6 @@ export const DialogueEditor: React.FC = () => {
             />
           ) : undefined
         }
-        leftPanelDefaultSize={18}
         rightPanelDefaultSize={28}
       />
 

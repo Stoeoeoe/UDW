@@ -1,19 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import {
+  Badge,
+  Box,
   Button,
   Divider,
   FormControl,
+  GridItem,
   Input,
+  SimpleGrid,
   useDisclosure,
   VStack,
   HStack,
+  Text,
 } from '@chakra-ui/react';
 import { DeleteIcon, CheckIcon } from '@chakra-ui/icons';
 import { IconPicker } from '../common/FormFields';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { ListPanel, ListPanelItem } from '../common';
 import { DetailPanel } from '../../common/DetailPanel';
 import { GameIcon } from '../../common/GameIcon';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
@@ -26,7 +30,6 @@ import { GiPerson } from 'react-icons/gi';
 export const ActorEditor: React.FC = () => {
   const actors = useEditorStore((state) => state.actors);
   const selectedActorId = useEditorStore((state) => state.selectedActorId);
-  const setSelectedActor = useEditorStore((state) => state.setSelectedActor);
   const updateActor = useEditorStore((state) => state.updateActor);
   const deleteActor = useEditorStore((state) => state.deleteActor);
   const addActor = useEditorStore((state) => state.addActor);
@@ -35,40 +38,10 @@ export const ActorEditor: React.FC = () => {
 
   const selectedActor = actors.find((a) => a.id === selectedActorId);
 
-  const actorItems: ListPanelItem[] = useMemo(
-    () =>
-      actors.map((actor) => ({
-        id: actor.id,
-        label: actor.name,
-        sublabel: actor.id,
-        icon: <GameIcon iconName={actor.icon} size={24} fallback={<GiPerson />} />,
-      })),
-    [actors],
-  );
-
   const deleteActorById = async (id: string, name: string) => {
     if (!confirm(`Delete actor "${name}"?`)) return;
     await deleteActor(id);
   };
-
-  const leftPanel = (
-    <ListPanel
-      title="Actors"
-      items={actorItems}
-      selectedId={selectedActorId}
-      onSelect={setSelectedActor}
-      onAdd={onOpen}
-      autoSelectFirst={true}
-      emptyMessage="No actors defined"
-      enableSearch={true}
-      onDeleteItem={async (item) => {
-        const actor = actors.find((entry) => entry.id === item.id);
-        if (!actor) return;
-        await deleteActorById(actor.id, actor.name);
-      }}
-      deleteActionLabel="Delete actor"
-    />
-  );
 
   const content =
     actors.length === 0 ? (
@@ -88,7 +61,7 @@ export const ActorEditor: React.FC = () => {
     );
 
   const centerContent = selectedActor ? (
-    <DetailPanel key={selectedActor.id}>
+    <DetailPanel key={selectedActor.id} maxWidth="1180px">
       <ActorDetail
         key={selectedActor.id}
         actor={selectedActor}
@@ -108,8 +81,6 @@ export const ActorEditor: React.FC = () => {
           subtitle: `${actors.length} actor${actors.length !== 1 ? 's' : ''} defined`,
         }}
         content={centerContent}
-        leftPanel={leftPanel}
-        leftPanelDefaultSize={18}
       />
 
       <CreateItemDialog
@@ -157,40 +128,99 @@ const ActorDetail: React.FC<{
         form.handleSubmit();
       }}
     >
-      <VStack align="stretch" spacing={5}>
-        <VStack align="stretch" spacing={3}>
-          <FormControl>
-            <FieldLabel>ID</FieldLabel>
-            <ReadOnlyIdField value={actor.id} />
-          </FormControl>
-
-          <form.Field name="name">
-            {(field) => (
-              <FormControl>
-                <FieldLabel>Name</FieldLabel>
-                <Input
+      <VStack align="stretch" spacing={6}>
+        <Box
+          border="1px"
+          borderColor="whiteAlpha.100"
+          bg="whiteAlpha.50"
+          borderRadius="xl"
+          px={5}
+          py={4}
+        >
+          <HStack justify="space-between" align="start" spacing={4}>
+            <HStack spacing={4} align="center">
+              <Box
+                boxSize="56px"
+                borderRadius="xl"
+                bg="editorInlineBg"
+                border="1px"
+                borderColor="editorInlineBorder"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexShrink={0}
+              >
+                <GameIcon iconName={actor.icon} size={26} fallback={<GiPerson />} />
+              </Box>
+              <VStack align="start" spacing={1}>
+                <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
+                  {actor.name}
+                </Text>
+                <Text textStyle="monoMeta">{actor.id}</Text>
+                <Badge variant="editor">Actor</Badge>
+              </VStack>
+            </HStack>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting, state.isDirty]}
+            >
+              {([canSubmit, isSubmitting, isDirty]) => (
+                <Button
                   size="sm"
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-              </FormControl>
-            )}
-          </form.Field>
+                  colorScheme="blue"
+                  type="submit"
+                  disabled={!canSubmit}
+                  isLoading={isSubmitting}
+                  opacity={isDirty ? 1 : 0.6}
+                  leftIcon={<CheckIcon fontSize="10px" />}
+                >
+                  Save Changes
+                </Button>
+              )}
+            </form.Subscribe>
+          </HStack>
+        </Box>
 
-          <form.Field name="icon">
-            {(field) => (
+        <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
+          <GridItem>
+            <VStack align="stretch" spacing={4}>
               <FormControl>
-                <FieldLabel>Icon</FieldLabel>
-                <IconPicker
-                  value={field.state.value}
-                  onChange={(v) => field.handleChange(v ?? '')}
-                />
+                <FieldLabel>ID</FieldLabel>
+                <ReadOnlyIdField value={actor.id} />
               </FormControl>
-            )}
-          </form.Field>
-        </VStack>
+
+              <form.Field name="name">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Name</FieldLabel>
+                    <Input
+                      size="sm"
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                  </FormControl>
+                )}
+              </form.Field>
+            </VStack>
+          </GridItem>
+
+          <GridItem>
+            <VStack align="stretch" spacing={4}>
+              <form.Field name="icon">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Icon</FieldLabel>
+                    <IconPicker
+                      value={field.state.value}
+                      onChange={(v) => field.handleChange(v ?? '')}
+                    />
+                  </FormControl>
+                )}
+              </form.Field>
+            </VStack>
+          </GridItem>
+        </SimpleGrid>
 
         <Divider />
 
@@ -210,7 +240,7 @@ const ActorDetail: React.FC<{
           >
             {([canSubmit, isSubmitting, isDirty]) => (
               <Button
-                size="xs"
+                size="sm"
                 colorScheme="blue"
                 type="submit"
                 disabled={!canSubmit}

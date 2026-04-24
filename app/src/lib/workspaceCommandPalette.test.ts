@@ -93,6 +93,41 @@ describe('workspaceCommandPalette', () => {
     expect(matches[0]?.labelMatchIndices).toEqual([0, 2, 5]);
   });
 
+  it('exposes per-resource documents and folder paths for non-map resources', () => {
+    const actor = resources.find((resource) => resource.key === 'actor:marcus');
+    const entity = buildCommandPaletteResources({
+      maps: [],
+      tilesets: new Map(),
+      entityTypes: [
+        {
+          id: 'merchant-stall',
+          displayName: 'Merchant Stall',
+          category: 'object',
+          placeholderColor: '#ffffff',
+          properties: [],
+          folderPath: 'World/Town',
+        },
+      ],
+      actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson', folderPath: 'NPCs/Villagers' }],
+      items: [],
+      dialogueIndex: null,
+    });
+
+    expect(actor).toMatchObject({
+      document: {
+        kind: 'actor',
+        actorId: 'marcus',
+      },
+    });
+    expect(entity[0]).toMatchObject({
+      secondaryLabel: 'World/Town',
+      document: {
+        kind: 'entity',
+        entityTypeId: 'merchant-stall',
+      },
+    });
+  });
+
   it('splits highlighted text into emphasized and plain segments', () => {
     expect(highlightText('Marcus', [0, 1, 4])).toEqual([
       { text: 'Ma', highlighted: true },

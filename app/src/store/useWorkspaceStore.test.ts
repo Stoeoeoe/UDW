@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useSaveStore } from '../lib/saveManager';
 import { WorkspaceDocument } from '../types/workspace';
-import { useWorkspaceStore } from './useWorkspaceStore';
+import { getWorkspaceTabId, useWorkspaceStore } from './useWorkspaceStore';
 
 function locationDocument(mapId: string, variationId: string | null = null): WorkspaceDocument {
   return {
@@ -46,6 +46,15 @@ function screenDocument(kind: PreviewableScreenKind): WorkspaceDocument {
         saveUnitId: 'configuration',
       };
   }
+}
+
+function actorDocument(actorId: string): WorkspaceDocument {
+  return {
+    kind: 'actor',
+    actorId,
+    label: actorId,
+    saveUnitId: `actor:${actorId}`,
+  };
 }
 
 describe('useWorkspaceStore', () => {
@@ -166,6 +175,16 @@ describe('useWorkspaceStore', () => {
       'location:map-1',
       'location:map-2',
     ]);
+  });
+
+  it('uses first-class tab ids for resource documents', () => {
+    expect(getWorkspaceTabId(actorDocument('marcus'))).toBe('actor:marcus');
+
+    const tab = useWorkspaceStore
+      .getState()
+      .openDocument(actorDocument('marcus'), { preview: true });
+    expect(tab.id).toBe('actor:marcus');
+    expect(tab.isPreview).toBe(true);
   });
 
   it('tracks recent resources in last-accessed order without duplicates', () => {

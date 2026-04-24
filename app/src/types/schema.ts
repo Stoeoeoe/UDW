@@ -54,6 +54,7 @@ export interface Tileset {
   tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)
   wangSets?: WangSet[]; // Modern autotiling logic (Tiled-compatible)
   objects?: TilesetObjectDefinition[]; // Reusable multi-tile object definitions (trees, bushes, etc.)
+  folderPath?: string; // Virtual workspace folder (e.g. 'Environment/Forest'). Absent = root.
 }
 
 export interface TilesetObjectDefinition {
@@ -135,6 +136,7 @@ export interface Map {
   spatialPrimitives?: SpatialPrimitives; // Optional paths/areas/anchors
   variations?: Variation[]; // Optional seasonal/contextual variants
   metadata?: MapMetadata;
+  folderPath?: string; // Virtual workspace folder (e.g. 'World/Dungeon'). Absent = root.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -372,6 +374,7 @@ export interface GameVariable {
   tableId?: string; // Only used when type === 'table'
   // Legacy: inline complex fields (migrated to tableId)
   complexFields?: TableField[];
+  folderPath?: string; // Virtual workspace folder. Absent = root.
 }
 
 // ─── Scripting Primitives ────────────────────────────────────────────────────
@@ -438,6 +441,7 @@ export interface Item {
   pickupSound?: string; // Relative path to pickup audio clip (optional)
   classId?: string; // Optional reference to an ItemClass id
   classProperties?: PropertyValues; // Values for the extra properties defined by the assigned ItemClass
+  folderPath?: string; // Virtual workspace folder (e.g. 'Consumables/Potions'). Absent = root.
 }
 
 // Actor Definitions
@@ -446,6 +450,7 @@ export interface Actor {
   name: string; // Display name
   icon: string; // Emoji icon for display
   emotions?: string[]; // Named emotions available for line nodes
+  folderPath?: string; // Virtual workspace folder (e.g. 'NPCs/Villagers'). Absent = root.
 }
 
 /** @deprecated Use Actor. Kept for compatibility while migrating call sites. */
@@ -470,6 +475,7 @@ export interface DialogueListEntry {
   nodeCount: number;
   tags: string[];
   updatedAt: string;
+  folderPath?: string; // Virtual workspace folder. Absent = root.
 }
 
 export interface DialogueNodeEditorMeta {
@@ -587,6 +593,7 @@ export interface EntityType {
   properties: PropertyDefinition[];
   defaultSize?: [number, number]; // Pixel dimensions [width, height]
   sprite?: { path: string }; // Relative path to image asset; size locked to image dimensions
+  folderPath?: string; // Virtual workspace folder. Absent = root.
 }
 
 export type EntityCategory =

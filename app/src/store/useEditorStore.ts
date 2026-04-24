@@ -9,7 +9,11 @@ import { Project, Map as GameMap, Tileset } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 import { resolveEntities } from '../lib/mapUtils';
 import { fileSystem } from '../lib/fileSystem';
-import { registerSaveAccessors, saveMapDebounced } from '../lib/saveManager';
+import {
+  registerSaveAccessors,
+  saveMapDebounced,
+  saveDialogueIndexImmediate,
+} from '../lib/saveManager';
 import { migrateTilesetOnLoad } from '../lib/tilesetMigration';
 import {
   getPreferredSelectedLayerId,
@@ -82,6 +86,9 @@ export interface EditorStore
   loadProjectResources: () => Promise<void>;
   loadSprite: (path: string, blob: Blob) => Promise<string>;
   updateProject: (project: Project) => Promise<void>;
+
+  // Dialogue index actions
+  updateDialogueEntryFolderPath: (dialogueId: string, folderPath: string) => Promise<void>;
 
   // Misc
   validate: () => ValidationError[];
@@ -377,6 +384,18 @@ export const useEditorStore = create<EditorStore>()(
           },
 
           validate: () => [],
+
+          updateDialogueEntryFolderPath: async (dialogueId, folderPath) => {
+            let nextIndex: import('../types/schema').DialogueIndex | null = null;
+            set((state) => {
+              if (!state.dialogueIndex) return;
+              const entry = state.dialogueIndex.dialogues.find((d) => d.id === dialogueId);
+              if (!entry) return;
+              entry.folderPath = folderPath;
+              nextIndex = castDraft(state.dialogueIndex);
+            });
+            if (nextIndex) await saveDialogueIndexImmediate(nextIndex);
+          },
         })),
       ),
     ),

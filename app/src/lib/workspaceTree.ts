@@ -1,92 +1,100 @@
-import { Map as GameMap, Tileset } from '../types/schema';
-import { WorkspaceTreeNode } from '../types/workspace';
-import { createLocationDocument, createWorkspaceScreenDocument } from './workspaceRouting';
+import {
+  Map as GameMap,
+  Tileset,
+  Actor,
+  EntityType,
+  Item,
+  DialogueListEntry,
+  GameVariable,
+} from '../types/schema';
+import { ResourceKind, WorkspaceTreeNode } from '../types/workspace';
+import {
+  listLocationDescriptors,
+  listTilesetDescriptors,
+  listActorDescriptors,
+  listEntityDescriptors,
+  listItemDescriptors,
+  listDialogueDescriptors,
+  ResourceDescriptor,
+} from './resourceAdapters';
+import { createWorkspaceScreenDocument } from './workspaceRouting';
 
-export function buildWorkspaceTree(
-  maps: GameMap[],
-  tilesets: Map<string, Tileset>,
-): WorkspaceTreeNode[] {
-  const locationChildren = maps
-    .slice()
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .map((map) => buildLocationNode(map));
+// ─── Public input shape ───────────────────────────────────────────────────────
 
-  const tilesetChildren = Array.from(tilesets.values())
-    .slice()
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .map<WorkspaceTreeNode>((tileset) => ({
-      id: `tileset:${tileset.id}`,
-      kind: 'leaf',
-      label: tileset.name,
-      icon: 'tileset',
-      document: {
-        kind: 'tileset',
-        tilesetId: tileset.id,
-        label: tileset.name,
-        saveUnitId: `tileset:${tileset.id}`,
-      },
-    }));
+export interface WorkspaceTreeInput {
+  maps: GameMap[];
+  tilesets: Map<string, Tileset>;
+  actors: Actor[];
+  entityTypes: EntityType[];
+  items: Item[];
+  dialogueEntries: DialogueListEntry[];
+  gameVariables: GameVariable[];
+}
+
+// ─── Tree builder ─────────────────────────────────────────────────────────────
+
+export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode[] {
+  const locationNodes = buildResourceSection(
+    'location',
+    'Locations',
+    'locations',
+    listLocationDescriptors(input.maps),
+    'location',
+  );
+
+  const tilesetNodes = buildResourceSection(
+    'tileset',
+    'Tilesets',
+    'tilesets',
+    listTilesetDescriptors(input.tilesets),
+    'tileset',
+  );
+
+  const actorNodes = buildResourceSection(
+    'actor',
+    'Actors',
+    'actors',
+    listActorDescriptors(input.actors),
+    'actors',
+  );
+
+  const entityNodes = buildResourceSection(
+    'entity',
+    'Entities',
+    'entities',
+    listEntityDescriptors(input.entityTypes),
+    'entities',
+  );
+
+  const itemNodes = buildResourceSection(
+    'item',
+    'Items',
+    'items',
+    listItemDescriptors(input.items),
+    'items',
+  );
+
+  const dialogueNodes = buildResourceSection(
+    'dialogue',
+    'Dialogues',
+    'dialogues',
+    listDialogueDescriptors(input.dialogueEntries),
+    'dialogues',
+  );
 
   return [
+    locationNodes,
+    tilesetNodes,
+    actorNodes,
+    entityNodes,
+    itemNodes,
+    dialogueNodes,
     {
-      id: 'group:locations',
-      kind: 'group',
-      label: 'Locations',
-      icon: 'locations',
-      defaultExpanded: true,
-      children: locationChildren,
-    },
-    {
-      id: 'group:tilesets',
-      kind: 'group',
-      label: 'Tilesets',
-      icon: 'tilesets',
-      defaultExpanded: true,
-      children: tilesetChildren,
-    },
-    {
-      id: 'group:game-data',
-      kind: 'group',
-      label: 'Game Data',
-      icon: 'game-data',
-      defaultExpanded: true,
-      children: [
-        {
-          id: 'entities',
-          kind: 'leaf',
-          label: 'Entities',
-          icon: 'entities',
-          document: createWorkspaceScreenDocument('entities'),
-        },
-        {
-          id: 'actors',
-          kind: 'leaf',
-          label: 'Actors',
-          icon: 'actors',
-          document: createWorkspaceScreenDocument('actors'),
-        },
-        {
-          id: 'items',
-          kind: 'leaf',
-          label: 'Items',
-          icon: 'items',
-          document: createWorkspaceScreenDocument('items'),
-        },
-        {
-          id: 'dialogues',
-          kind: 'leaf',
-          label: 'Dialogues',
-          icon: 'dialogues',
-          document: createWorkspaceScreenDocument('dialogues'),
-        },
-        {
-          id: 'scripting',
-          kind: 'leaf',
-          label: 'Scripting',
-          icon: 'scripting',
-          document: createWorkspaceScreenDocument('scripting'),
-        },
-      ],
+      id: 'scripting',
+      kind: 'leaf',
+      label: 'Scripting',
+      icon: 'scripting',
+      document: createWorkspaceScreenDocument('scripting'),
     },
     {
       id: 'settings',
@@ -100,7 +108,7 @@ export function buildWorkspaceTree(
       },
     },
     {
-      id: 'configuration',
+      id: 'config',
       kind: 'leaf',
       label: 'Configuration',
       icon: 'configuration',
@@ -114,12 +122,166 @@ export function buildWorkspaceTree(
   ];
 }
 
-function buildLocationNode(map: GameMap): WorkspaceTreeNode {
+// ─── Section builder ──────────────────────────────────────────────────────────
+
+function buildResourceSection(
+  resourceKind: ResourceKind,
+  label: string,
+  icon: string,
+  descriptors: ResourceDescriptor[],
+  leafIcon: string,
+): WorkspaceTreeNode {
+  const groupId = `group:${getResourceGroupIdSuffix(resourceKind)}`;
+  const sorted = descriptors.slice().sort((a, b) => a.name.localeCompare(b.name));
+
   return {
-    id: `location:${map.id}`,
-    kind: 'leaf',
-    label: map.name,
-    icon: 'location',
-    document: createLocationDocument(map, null),
+    id: groupId,
+    kind: 'group',
+    label,
+    icon,
+    resourceKind,
+    defaultExpanded: true,
+    children: buildFolderChildren('', resourceKind, sorted, '', leafIcon),
   };
+}
+
+// ─── Folder partitioning ──────────────────────────────────────────────────────
+
+function buildFolderChildren(
+  _parentId: string,
+  resourceKind: ResourceKind,
+  descriptors: ResourceDescriptor[],
+  currentPath: string,
+  leafIcon: string,
+): WorkspaceTreeNode[] {
+  const directItems: ResourceDescriptor[] = [];
+  const subfolderMap = new globalThis.Map<string, ResourceDescriptor[]>();
+
+  for (const descriptor of descriptors) {
+    const rel = getRelativePath(descriptor.folderPath, currentPath);
+    if (!rel) {
+      directItems.push(descriptor);
+      continue;
+    }
+
+    const topSegment = rel.split('/')[0];
+    if (!subfolderMap.has(topSegment)) subfolderMap.set(topSegment, []);
+    subfolderMap.get(topSegment)!.push(descriptor);
+  }
+
+  const folderNodes: WorkspaceTreeNode[] = Array.from(subfolderMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([segment, children]) => {
+      const folderPath = currentPath ? `${currentPath}/${segment}` : segment;
+      const folderId = `folder:${resourceKind}:${folderPath}`;
+      return {
+        id: folderId,
+        kind: 'folder' as const,
+        label: segment,
+        icon: 'folder',
+        resourceKind,
+        children: buildFolderChildren('', resourceKind, children, folderPath, leafIcon),
+      };
+    });
+
+  const leafNodes: WorkspaceTreeNode[] = directItems.map((descriptor) =>
+    buildResourceLeaf(descriptor, leafIcon),
+  );
+
+  return [...folderNodes, ...leafNodes];
+}
+
+function getRelativePath(folderPath: string, currentPath: string): string {
+  if (!folderPath) return '';
+  if (!currentPath) return folderPath;
+  if (folderPath === currentPath) return '';
+  if (folderPath.startsWith(currentPath + '/')) {
+    return folderPath.slice(currentPath.length + 1);
+  }
+  return '';
+}
+
+function buildResourceLeaf(descriptor: ResourceDescriptor, icon: string): WorkspaceTreeNode {
+  return {
+    id: getLeafNodeId(descriptor),
+    kind: 'leaf',
+    label: descriptor.name,
+    icon,
+    resourceIcon: descriptor.resourceIcon,
+    resourceKind: descriptor.kind,
+    document: descriptor.document,
+  };
+}
+
+export function getLeafNodeId(descriptor: ResourceDescriptor): string {
+  return `${descriptor.kind}:${descriptor.id}`;
+}
+
+function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
+  switch (resourceKind) {
+    case 'location':
+      return 'locations';
+    case 'tileset':
+      return 'tilesets';
+    case 'actor':
+      return 'actors';
+    case 'entity':
+      return 'entities';
+    case 'item':
+      return 'items';
+    case 'dialogue':
+      return 'dialogues';
+    case 'variable':
+      return 'variables';
+  }
+}
+
+// ─── Compat: old two-arg signature for App.tsx ────────────────────────────────
+// App.tsx calls buildWorkspaceTree(maps, tilesets) today. We expose a shim so
+// we can migrate App.tsx in the next step without breaking the build here.
+
+export function buildWorkspaceTreeCompat(
+  maps: GameMap[],
+  tilesets: Map<string, Tileset>,
+): WorkspaceTreeNode[] {
+  return buildWorkspaceTree({
+    maps,
+    tilesets,
+    actors: [],
+    entityTypes: [],
+    items: [],
+    dialogueEntries: [],
+    gameVariables: [],
+  });
+}
+
+// ─── Helpers used by App.tsx ──────────────────────────────────────────────────
+
+export function collectDefaultExpandedNodeIds(nodes: WorkspaceTreeNode[]): string[] {
+  const collected: string[] = [];
+  for (const node of nodes) {
+    if (node.defaultExpanded) {
+      collected.push(node.id);
+    }
+    if (node.children?.length) {
+      collected.push(...collectDefaultExpandedNodeIds(node.children));
+    }
+  }
+  return collected;
+}
+
+export function findFirstDocument(
+  nodes: WorkspaceTreeNode[],
+  predicate: (node: WorkspaceTreeNode) => boolean,
+): WorkspaceTreeNode | null {
+  for (const node of nodes) {
+    if (node.document && predicate(node)) {
+      return node;
+    }
+    if (node.children?.length) {
+      const child = findFirstDocument(node.children, predicate);
+      if (child) return child;
+    }
+  }
+  return null;
 }

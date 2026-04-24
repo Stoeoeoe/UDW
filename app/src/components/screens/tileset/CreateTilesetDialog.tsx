@@ -12,9 +12,16 @@ import { MutedFieldLabel } from '../../common/Typography.tsx';
 interface CreateTilesetDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  folderPath?: string;
+  onCreatedTilesetId?: (tilesetId: string) => void;
 }
 
-export const CreateTilesetDialog: React.FC<CreateTilesetDialogProps> = ({ isOpen, onClose }) => {
+export const CreateTilesetDialog: React.FC<CreateTilesetDialogProps> = ({
+  isOpen,
+  onClose,
+  folderPath,
+  onCreatedTilesetId,
+}) => {
   const addTileset = useEditorStore((s) => s.addTileset);
   const { tileSize } = useProject();
   const toast = useToast();
@@ -102,9 +109,11 @@ export const CreateTilesetDialog: React.FC<CreateTilesetDialogProps> = ({ isOpen
         tileCount,
         tiles,
         wangSets: [],
+        folderPath: folderPath?.trim() || undefined,
       };
 
       await addTileset(newTileset);
+      onCreatedTilesetId?.(newTileset.id);
       toast({ title: 'Tileset created', status: 'success' });
       onClose();
     } catch (e: unknown) {
