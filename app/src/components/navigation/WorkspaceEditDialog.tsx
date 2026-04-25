@@ -80,8 +80,13 @@ const OpenMapMetadataDialog: React.FC<{
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
 }> = ({ document, onClose, onOpenDocument }) => {
+  const onOpenDocumentRef = React.useRef(onOpenDocument);
+  onOpenDocumentRef.current = onOpenDocument;
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+
   React.useEffect(() => {
-    onOpenDocument(document, { pin: true });
+    onOpenDocumentRef.current(document, { pin: true });
 
     let cancelled = false;
     let attempts = 0;
@@ -94,13 +99,13 @@ const OpenMapMetadataDialog: React.FC<{
         window.dispatchEvent(
           new CustomEvent('openMetadataDialog', { detail: { initialTab: 'base' } }),
         );
-        onClose();
+        onCloseRef.current();
         return;
       }
 
       attempts += 1;
       if (attempts >= 20) {
-        onClose();
+        onCloseRef.current();
         return;
       }
       window.setTimeout(openWhenReady, 30);
@@ -110,7 +115,7 @@ const OpenMapMetadataDialog: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [document, onClose, onOpenDocument]);
+  }, [document]);
 
   return null;
 };
