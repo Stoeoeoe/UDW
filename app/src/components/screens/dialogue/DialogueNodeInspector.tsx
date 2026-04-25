@@ -3,26 +3,23 @@ import {
   Badge,
   Box,
   Button,
-  FormControl,
   HStack,
   IconButton,
+  FormControl,
   Input,
   Select,
-  Switch,
   Text,
   Textarea,
   VStack,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
-import { ConditionEditor } from '../scripting/ConditionEditor';
 import { InspectorEmptyState, InspectorPanel } from '../common';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { NodeIdField } from './DialogueNodeWidgets';
 import {
   assignBranchMetaToNode,
   nextOptionId,
-  parseTags,
   suggestMsgKey,
   ActionLuaValidation,
 } from './dialogueUtils';
@@ -89,83 +86,16 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
       title={selectedDialogue?.name || 'Dialogue'}
       subtitle={selectedDialogue ? selectedDialogue.id : undefined}
       emptyState={
-        <InspectorEmptyState message="No dialogue selected" hint="Create or pick a dialogue" />
+        <InspectorEmptyState
+          message="No node selected"
+          hint={
+            selectedDialogue
+              ? 'Select a node from the timeline'
+              : 'Open a dialogue from the explorer'
+          }
+        />
       }
     >
-      {!selectedDialogue && null}
-
-      {selectedDialogue && !selectedNode && (
-        <VStack align="stretch" spacing={4}>
-          <Text fontSize="12px" color="gray.500" fontStyle="italic">
-            Click a node to inspect it.
-          </Text>
-          <Text fontSize="10px" color="gray.500" textTransform="uppercase" fontWeight="bold">
-            Dialogue Metadata
-          </Text>
-
-          <FormControl>
-            <FieldLabel>Name</FieldLabel>
-            <Input
-              size="xs"
-              value={selectedDialogue.name}
-              onChange={(event) =>
-                updateDialogue(selectedDialogue.id, (dialogue) => ({
-                  ...dialogue,
-                  name: event.target.value,
-                }))
-              }
-            />
-          </FormControl>
-
-          <FormControl display="flex" alignItems="center" justifyContent="space-between">
-            <FieldLabel mb={0}>One-shot</FieldLabel>
-            <Switch
-              size="sm"
-              isChecked={selectedDialogue.oneShot}
-              onChange={(event) =>
-                updateDialogue(selectedDialogue.id, (dialogue) => ({
-                  ...dialogue,
-                  oneShot: event.target.checked,
-                }))
-              }
-            />
-          </FormControl>
-
-          <FormControl>
-            <FieldLabel>Tags (comma separated)</FieldLabel>
-            <Input
-              size="xs"
-              value={selectedDialogue.tags.join(', ')}
-              onChange={(event) =>
-                updateDialogue(selectedDialogue.id, (dialogue) => ({
-                  ...dialogue,
-                  tags: parseTags(event.target.value),
-                }))
-              }
-            />
-          </FormControl>
-
-          <Text fontSize="10px" color="gray.500" textTransform="uppercase" fontWeight="bold">
-            Entry Condition (Lua)
-          </Text>
-
-          <ConditionEditor
-            value={selectedDialogue.entryCondition ?? ''}
-            onChange={(expr) =>
-              updateDialogue(selectedDialogue.id, (dialogue) => ({
-                ...dialogue,
-                entryCondition: expr.trim() ? expr : undefined,
-              }))
-            }
-            variables={gameVariables}
-            tables={scriptTables}
-            functions={scriptFunctions}
-            namespaces={scriptNamespaces}
-            activeContextType={activeContextType}
-          />
-        </VStack>
-      )}
-
       {selectedDialogue && selectedNode?.type === 'line' && (
         <VStack align="stretch" spacing={3}>
           <Badge colorScheme="blue" w="fit-content">

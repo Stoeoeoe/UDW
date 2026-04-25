@@ -1,6 +1,19 @@
 import React from 'react';
 import { AddIcon } from '@chakra-ui/icons';
-import { Box, HStack, Icon, IconButton, Image, Text, VStack, useToast } from '@chakra-ui/react';
+import {
+  Box,
+  FormControl,
+  HStack,
+  Icon,
+  IconButton,
+  Image,
+  Input,
+  Select,
+  Text,
+  Textarea,
+  VStack,
+  useToast,
+} from '@chakra-ui/react';
 import {
   ContextMenuState,
   CreateNewResourceDialog,
@@ -17,8 +30,10 @@ import {
   FiMapPin,
   FiMessageSquare,
   FiPackage,
+  FiEdit2,
   FiSettings,
   FiSliders,
+  FiTrash2,
   FiUsers,
 } from 'react-icons/fi';
 import { WorkspaceDocument, WorkspaceTreeNode } from '../../types/workspace';
@@ -36,6 +51,7 @@ import { MapCreator } from '../dialogs/MapCreator';
 import { CreateTilesetDialog } from '../screens/tileset/CreateTilesetDialog';
 import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
 import { EditorModal } from '../common/EditorModal';
+import { EntityFormDialog } from '../screens/common/EntityFormDialog';
 import {
   buildI18nExport,
   createDefaultDialogueIndex,
@@ -47,6 +63,9 @@ import {
   type MetadataDraft,
 } from '../screens/dialogue/dialogueUtils';
 import { useEditorStore } from '../../store/useEditorStore';
+import { TilesetMetadataDialog } from '../tileset/TilesetMetadataDialog';
+import { IconPicker, ColorPicker } from '../screens/common/FormFields';
+import { FormLabel } from '../common/FormLabel';
 
 interface WorkspaceExplorerProps {
   nodes: WorkspaceTreeNode[];
@@ -64,6 +83,15 @@ type CreateDialogState = {
   kind: CreatableKind;
   folderPath: string;
 } | null;
+
+type EditDialogState =
+  | { kind: 'location'; document: Extract<WorkspaceDocument, { kind: 'location' }> }
+  | { kind: 'tileset'; document: Extract<WorkspaceDocument, { kind: 'tileset' }> }
+  | { kind: 'actor'; document: Extract<WorkspaceDocument, { kind: 'actor' }> }
+  | { kind: 'entity'; document: Extract<WorkspaceDocument, { kind: 'entity' }> }
+  | { kind: 'item'; document: Extract<WorkspaceDocument, { kind: 'item' }> }
+  | { kind: 'dialogue'; document: Extract<WorkspaceDocument, { kind: 'dialogue' }> }
+  | null;
 
 type WorkspaceAccent = {
   color: string;
@@ -162,6 +190,7 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
 }) => {
   const [contextMenu, setContextMenu] = React.useState<ContextMenuState | null>(null);
   const [createDialog, setCreateDialog] = React.useState<CreateDialogState>(null);
+  const [editDialog, setEditDialog] = React.useState<EditDialogState>(null);
   const primaryNodes = React.useMemo(
     () =>
       nodes.filter(
@@ -211,6 +240,79 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
     setCreateDialog({ kind, folderPath });
   }, []);
 
+  const handleEditResource = React.useCallback((node: WorkspaceTreeNode) => {
+    if (!node.document) return;
+    switch (node.document.kind) {
+      case 'location':
+        setEditDialog({ kind: 'location', document: node.document });
+        break;
+      case 'tileset':
+        setEditDialog({ kind: 'tileset', document: node.document });
+        break;
+      case 'actor':
+        setEditDialog({ kind: 'actor', document: node.document });
+        break;
+      case 'entity':
+        setEditDialog({ kind: 'entity', document: node.document });
+        break;
+      case 'item':
+        setEditDialog({ kind: 'item', document: node.document });
+        break;
+      case 'dialogue':
+        setEditDialog({ kind: 'dialogue', document: node.document });
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const handleDeleteResource = React.useCallback(async (node: WorkspaceTreeNode) => {
+    if (!node.document) return;
+    if (!canQuickDelete(node.document)) return;
+    if (!confirm(`Delete "${node.label}"?`)) return;
+
+    const store = useEditorStore.getState();
+    const document = node.document;
+    switch (document.kind) {
+      case 'actor':
+        await store.deleteActor(document.actorId);
+        break;
+      case 'entity':
+        await store.deleteEntityType(document.entityTypeId);
+        break;
+      case 'item':
+        await store.deleteItem(document.itemId);
+        break;
+      case 'tileset':
+        await store.deleteTileset(document.tilesetId);
+        break;
+      case 'location':
+        await store.deleteMap(document.mapId);
+        break;
+      case 'dialogue': {
+        const current = useEditorStore.getState();
+        if (!current.dialogueIndex) return;
+        const dialogueId = document.dialogueId;
+        const nextIndex = {
+          ...current.dialogueIndex,
+          dialogues: current.dialogueIndex.dialogues.filter((entry) => entry.id !== dialogueId),
+        };
+        useEditorStore.setState((draft) => {
+          draft.dialogueIndex = nextIndex;
+          draft.dialogues.delete(dialogueId);
+          if (draft.selectedDialogueId === dialogueId) {
+            draft.selectedDialogueId = nextIndex.dialogues[0]?.id ?? null;
+            draft.selectedDialogueNodeId = null;
+          }
+        });
+        await saveDialogueIndexImmediate(nextIndex);
+        break;
+      }
+      default:
+        break;
+    }
+  }, []);
+
   return (
     <VStack align="stretch" spacing={0} h="full" bg="editorSidebarBg" overflow="hidden">
       <HStack
@@ -240,6 +342,8 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
               onOpenNode={onOpenNode}
               onContextMenu={handleContextMenu}
               onCreateResource={handleCreateResource}
+              onEditResource={handleEditResource}
+              onDeleteResource={handleDeleteResource}
             />
           ))}
         </VStack>
@@ -266,6 +370,8 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
                 onOpenNode={onOpenNode}
                 onContextMenu={handleContextMenu}
                 onCreateResource={handleCreateResource}
+                onEditResource={handleEditResource}
+                onDeleteResource={handleDeleteResource}
               />
             ))}
           </VStack>
@@ -282,6 +388,11 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
         onClose={() => setCreateDialog(null)}
         onOpenDocument={handleOpenDocument}
       />
+      <WorkspaceEditDialog
+        state={editDialog}
+        onClose={() => setEditDialog(null)}
+        onOpenDocument={handleOpenDocument}
+      />
     </VStack>
   );
 };
@@ -296,6 +407,8 @@ const WorkspaceExplorerNode: React.FC<{
   onOpenNode: (node: WorkspaceTreeNode, options?: { pin?: boolean }) => void;
   onContextMenu: (node: WorkspaceTreeNode, event: React.MouseEvent) => void;
   onCreateResource: (kind: CreatableKind, folderPath: string) => void;
+  onEditResource: (node: WorkspaceTreeNode) => void;
+  onDeleteResource: (node: WorkspaceTreeNode) => void | Promise<void>;
 }> = ({
   node,
   expandedNodeIds,
@@ -306,6 +419,8 @@ const WorkspaceExplorerNode: React.FC<{
   onOpenNode,
   onContextMenu,
   onCreateResource,
+  onEditResource,
+  onDeleteResource,
 }) => {
   const saveUnits = useSaveStore((state) => state.saveUnits);
   const isExpanded = expandedNodeIds.includes(node.id);
@@ -386,6 +501,8 @@ const WorkspaceExplorerNode: React.FC<{
                 onOpenNode={onOpenNode}
                 onContextMenu={onContextMenu}
                 onCreateResource={onCreateResource}
+                onEditResource={onEditResource}
+                onDeleteResource={onDeleteResource}
               />
             </Box>
           ))}
@@ -464,6 +581,8 @@ const WorkspaceExplorerNode: React.FC<{
                 onOpenNode={onOpenNode}
                 onContextMenu={onContextMenu}
                 onCreateResource={onCreateResource}
+                onEditResource={onEditResource}
+                onDeleteResource={onDeleteResource}
               />
             </Box>
           ))}
@@ -483,6 +602,7 @@ const WorkspaceExplorerNode: React.FC<{
       color={isActive ? 'editorText' : 'editorMutedText'}
       borderWidth="1px"
       borderColor={isActive ? 'whiteAlpha.100' : 'transparent'}
+      role="group"
       _hover={{
         bg: isActive ? (inheritedAccent?.hoverTint ?? 'editorHoverBg') : 'editorHoverBg',
         color: 'editorText',
@@ -507,6 +627,38 @@ const WorkspaceExplorerNode: React.FC<{
         {node.label}
       </Text>
       {isDirty && <Box boxSize="2" borderRadius="full" bg="orange.400" flexShrink={0} />}
+      {node.document && (canQuickEdit(node.document) || canQuickDelete(node.document)) && (
+        <HStack spacing={1} opacity={0} _groupHover={{ opacity: 1 }} flexShrink={0}>
+          {canQuickEdit(node.document) && (
+            <IconButton
+              aria-label={`Edit ${node.label}`}
+              icon={<Icon as={FiEdit2} boxSize={3} />}
+              size="xs"
+              variant="ghost"
+              color="gray.400"
+              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEditResource(node);
+              }}
+            />
+          )}
+          {canQuickDelete(node.document) && (
+            <IconButton
+              aria-label={`Delete ${node.label}`}
+              icon={<Icon as={FiTrash2} boxSize={3} />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              _hover={{ color: 'red.300', bg: 'whiteAlpha.100' }}
+              onClick={(event) => {
+                event.stopPropagation();
+                void onDeleteResource(node);
+              }}
+            />
+          )}
+        </HStack>
+      )}
     </HStack>
   );
 };
@@ -661,6 +813,388 @@ const WorkspaceCreateDialog: React.FC<{
       onClose={onClose}
       onOpenDocument={onOpenDocument}
     />
+  );
+};
+
+const WorkspaceEditDialog: React.FC<{
+  state: EditDialogState;
+  onClose: () => void;
+  onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
+}> = ({ state, onClose, onOpenDocument }) => {
+  const toast = useToast();
+  const tilesetId = state?.kind === 'tileset' ? state.document.tilesetId : null;
+  const tileset = useEditorStore((s) => (tilesetId ? s.tilesets.get(tilesetId) : undefined));
+
+  if (!state) return null;
+
+  if (state.kind === 'location') {
+    return (
+      <OpenMapMetadataDialog
+        document={state.document}
+        onClose={onClose}
+        onOpenDocument={onOpenDocument}
+      />
+    );
+  }
+
+  if (state.kind === 'tileset') {
+    if (!tileset) return null;
+    return <TilesetMetadataDialog isOpen onClose={onClose} tileset={tileset} />;
+  }
+
+  if (state.kind === 'dialogue') {
+    return (
+      <DialogueMetadataDialog
+        document={state.document}
+        onClose={onClose}
+        onOpenDocument={onOpenDocument}
+      />
+    );
+  }
+
+  if (state.kind === 'actor') {
+    return <ActorMetadataDialog document={state.document} onClose={onClose} />;
+  }
+
+  if (state.kind === 'entity') {
+    return <EntityMetadataDialog document={state.document} onClose={onClose} />;
+  }
+
+  if (state.kind === 'item') {
+    return <ItemMetadataDialog document={state.document} onClose={onClose} />;
+  }
+
+  toast({
+    title: 'Unsupported resource',
+    status: 'warning',
+  });
+  return null;
+};
+
+const OpenMapMetadataDialog: React.FC<{
+  document: Extract<WorkspaceDocument, { kind: 'location' }>;
+  onClose: () => void;
+  onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
+}> = ({ document, onClose, onOpenDocument }) => {
+  React.useEffect(() => {
+    onOpenDocument(document, { pin: true });
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const openWhenReady = () => {
+      if (cancelled) return;
+
+      const currentMapId = useEditorStore.getState().currentMap?.id;
+      if (currentMapId === document.mapId) {
+        window.dispatchEvent(
+          new CustomEvent('openMetadataDialog', { detail: { initialTab: 'base' } }),
+        );
+        onClose();
+        return;
+      }
+
+      attempts += 1;
+      if (attempts >= 20) {
+        onClose();
+        return;
+      }
+
+      window.setTimeout(openWhenReady, 30);
+    };
+
+    window.setTimeout(openWhenReady, 30);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document, onClose, onOpenDocument]);
+
+  return null;
+};
+
+const DialogueMetadataDialog: React.FC<{
+  document: Extract<WorkspaceDocument, { kind: 'dialogue' }>;
+  onClose: () => void;
+  onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
+}> = ({ document, onClose, onOpenDocument }) => {
+  const dialogue = useEditorStore((s) => s.dialogues.get(document.dialogueId));
+  const dialogueIndex = useEditorStore((s) => s.dialogueIndex);
+  const gameVariables = useEditorStore((s) => s.gameVariables);
+  const scriptTables = useEditorStore((s) => s.scriptTables);
+  const scriptFunctions = useEditorStore((s) => s.scriptFunctions);
+  const scriptNamespaces = useEditorStore((s) => s.scriptNamespaces);
+  const scriptContextTypes = useEditorStore((s) => s.scriptContextTypes);
+  const toast = useToast();
+
+  if (!dialogue || !dialogueIndex) return null;
+
+  return (
+    <CreateDialogueDialog
+      isOpen
+      onClose={onClose}
+      mode="edit"
+      initialValues={{
+        name: dialogue.name,
+        oneShot: dialogue.oneShot,
+        entryCondition: dialogue.entryCondition ?? '',
+      }}
+      onApply={(values) => {
+        const updated = {
+          ...dialogue,
+          name: values.name.trim(),
+          oneShot: values.oneShot,
+          entryCondition: values.entryCondition.trim() || undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        const entry = {
+          ...getDialogueEntry(updated),
+          folderPath: dialogueIndex.dialogues.find((d) => d.id === updated.id)?.folderPath,
+        };
+        const nextIndex = {
+          ...dialogueIndex,
+          dialogues: dialogueIndex.dialogues.map((item) => (item.id === updated.id ? entry : item)),
+        };
+        useEditorStore.setState((draft) => {
+          draft.dialogues.set(updated.id, updated);
+          draft.dialogueIndex = nextIndex;
+        });
+        void saveDialogueIndexImmediate(nextIndex);
+        void saveDialogueImmediate(updated);
+        void fileSystem
+          .saveJson('dialogues', `${updated.id}.runtime.dialogue.json`, toRuntimeDialogue(updated))
+          .then(() =>
+            fileSystem.saveJson('dialogues', `${updated.id}.i18n.json`, buildI18nExport(updated)),
+          )
+          .then(() => {
+            onOpenDocument(
+              {
+                kind: 'dialogue',
+                dialogueId: updated.id,
+                label: updated.name,
+                saveUnitId: `dialogue:${updated.id}`,
+              },
+              { pin: true },
+            );
+            onClose();
+          })
+          .catch((error) => {
+            toast({
+              title: 'Save dialogue failed',
+              description: error instanceof Error ? error.message : 'Unknown error',
+              status: 'error',
+            });
+          });
+      }}
+      gameVariables={gameVariables}
+      scriptTables={scriptTables}
+      scriptFunctions={scriptFunctions}
+      scriptNamespaces={scriptNamespaces}
+      activeContextType={
+        scriptContextTypes.find((context) => context.id === dialogueIndex.defaultContextTypeId) ??
+        undefined
+      }
+    />
+  );
+};
+
+const ActorMetadataDialog: React.FC<{
+  document: Extract<WorkspaceDocument, { kind: 'actor' }>;
+  onClose: () => void;
+}> = ({ document, onClose }) => {
+  const actor = useEditorStore((s) => s.actors.find((entry) => entry.id === document.actorId));
+  const updateActor = useEditorStore((s) => s.updateActor);
+  const [name, setName] = React.useState(actor?.name ?? '');
+  const [icon, setIcon] = React.useState(actor?.icon ?? 'GiPerson');
+
+  if (!actor) return null;
+
+  return (
+    <EditorModal isOpen onClose={onClose}>
+      <EntityFormDialog
+        title="Edit Actor"
+        onCancel={onClose}
+        onSubmit={async () => {
+          await updateActor(actor.id, { name: name.trim() || actor.name, icon });
+          onClose();
+        }}
+        submitLabel="Save"
+      >
+        <FormControl>
+          <FormLabel>Name</FormLabel>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Icon</FormLabel>
+          <IconPicker value={icon} onChange={(value) => setIcon(value ?? '')} />
+        </FormControl>
+      </EntityFormDialog>
+    </EditorModal>
+  );
+};
+
+const EntityMetadataDialog: React.FC<{
+  document: Extract<WorkspaceDocument, { kind: 'entity' }>;
+  onClose: () => void;
+}> = ({ document, onClose }) => {
+  const entity = useEditorStore((s) =>
+    s.entityTypes.find((entry) => entry.id === document.entityTypeId),
+  );
+  const updateEntityType = useEditorStore((s) => s.updateEntityType);
+  const [displayName, setDisplayName] = React.useState(entity?.displayName ?? '');
+  const [category, setCategory] = React.useState(entity?.category ?? 'object');
+  const [group, setGroup] = React.useState(entity?.group ?? '');
+  const [description, setDescription] = React.useState(entity?.description ?? '');
+  const [icon, setIcon] = React.useState(entity?.icon ?? 'GiYinYang');
+  const [placeholderColor, setPlaceholderColor] = React.useState(
+    entity?.placeholderColor ?? '#888888',
+  );
+
+  if (!entity) return null;
+
+  return (
+    <EditorModal isOpen onClose={onClose}>
+      <EntityFormDialog
+        title="Edit Entity Type"
+        onCancel={onClose}
+        onSubmit={async () => {
+          await updateEntityType(entity.id, {
+            displayName: displayName.trim() || entity.displayName,
+            category: category as any,
+            group: group.trim() || undefined,
+            description: description.trim() || undefined,
+            icon,
+            placeholderColor,
+          });
+          onClose();
+        }}
+        submitLabel="Save"
+        scrollable
+      >
+        <FormControl>
+          <FormLabel>Name</FormLabel>
+          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        </FormControl>
+        <HStack spacing={4} align="start">
+          <FormControl>
+            <FormLabel>Category</FormLabel>
+            <Select
+              value={category}
+              onChange={(e) =>
+                setCategory(
+                  e.target.value as 'object' | 'trigger' | 'spawn' | 'transition' | 'decoration',
+                )
+              }
+            >
+              <option value="object">Object</option>
+              <option value="trigger">Trigger</option>
+              <option value="spawn">Spawn</option>
+              <option value="transition">Transition</option>
+              <option value="decoration">Decoration</option>
+            </Select>
+          </FormControl>
+          <FormControl>
+            <FormLabel>Group</FormLabel>
+            <Input
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              placeholder="Ungrouped"
+            />
+          </FormControl>
+        </HStack>
+        <FormControl>
+          <FormLabel>Description</FormLabel>
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+        </FormControl>
+        <HStack spacing={4} align="start">
+          <FormControl>
+            <FormLabel>Icon</FormLabel>
+            <IconPicker value={icon} onChange={(value) => setIcon(value ?? '')} />
+          </FormControl>
+          <FormControl>
+            <FormLabel>Color</FormLabel>
+            <ColorPicker value={placeholderColor} onChange={setPlaceholderColor} />
+          </FormControl>
+        </HStack>
+      </EntityFormDialog>
+    </EditorModal>
+  );
+};
+
+const ItemMetadataDialog: React.FC<{
+  document: Extract<WorkspaceDocument, { kind: 'item' }>;
+  onClose: () => void;
+}> = ({ document, onClose }) => {
+  const item = useEditorStore((s) => s.items.find((entry) => entry.id === document.itemId));
+  const updateItem = useEditorStore((s) => s.updateItem);
+  const itemClasses = useEditorStore((s) => s.itemClasses);
+  const [name, setName] = React.useState(item?.name ?? '');
+  const [category, setCategory] = React.useState(item?.category ?? '');
+  const [description, setDescription] = React.useState(item?.description ?? '');
+  const [icon, setIcon] = React.useState(item?.icon ?? '');
+  const [maxStackSize, setMaxStackSize] = React.useState(item?.maxStackSize ?? 99);
+  const [classId, setClassId] = React.useState(item?.classId ?? '');
+
+  if (!item) return null;
+
+  return (
+    <EditorModal isOpen onClose={onClose}>
+      <EntityFormDialog
+        title="Edit Item"
+        onCancel={onClose}
+        onSubmit={async () => {
+          await updateItem(item.id, {
+            name: name.trim() || item.name,
+            category,
+            description,
+            icon,
+            maxStackSize,
+            classId: classId || undefined,
+          });
+          onClose();
+        }}
+        submitLabel="Save"
+        scrollable
+      >
+        <FormControl>
+          <FormLabel>Name</FormLabel>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Category</FormLabel>
+          <Input value={category} onChange={(e) => setCategory(e.target.value)} />
+        </FormControl>
+        {itemClasses.length > 0 && (
+          <FormControl>
+            <FormLabel>Item Class</FormLabel>
+            <Select value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <option value="">-- None --</option>
+              {itemClasses.map((itemClass) => (
+                <option key={itemClass.id} value={itemClass.id}>
+                  {itemClass.name}
+                </option>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+        <FormControl>
+          <FormLabel>Description</FormLabel>
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Icon Asset</FormLabel>
+          <Input value={icon} onChange={(e) => setIcon(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Max Stack Size</FormLabel>
+          <Input
+            type="number"
+            value={maxStackSize}
+            onChange={(e) => setMaxStackSize(Number(e.target.value) || 1)}
+          />
+        </FormControl>
+      </EntityFormDialog>
+    </EditorModal>
   );
 };
 
@@ -825,6 +1359,28 @@ function getNodeAccent(node: WorkspaceTreeNode): WorkspaceAccent | null {
   const resourceKind = node.resourceKind ?? getDocumentResourceKind(node.document);
   if (!resourceKind) return null;
   return accentByResourceKind[resourceKind as CreatableKind] ?? null;
+}
+
+function canQuickEdit(document: WorkspaceDocument): boolean {
+  return (
+    document.kind === 'location' ||
+    document.kind === 'tileset' ||
+    document.kind === 'actor' ||
+    document.kind === 'entity' ||
+    document.kind === 'item' ||
+    document.kind === 'dialogue'
+  );
+}
+
+function canQuickDelete(document: WorkspaceDocument): boolean {
+  return (
+    document.kind === 'location' ||
+    document.kind === 'tileset' ||
+    document.kind === 'actor' ||
+    document.kind === 'entity' ||
+    document.kind === 'item' ||
+    document.kind === 'dialogue'
+  );
 }
 
 function getDocumentResourceKind(document: WorkspaceDocument | undefined): CreatableKind | null {

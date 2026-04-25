@@ -6,15 +6,13 @@ import {
   Flex,
   FormControl,
   HStack,
-  Input,
   Select,
   Text,
   VStack,
-  useDisclosure,
 } from '@chakra-ui/react';
-import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import {
   DialogueChoiceNode,
   DialogueChoiceOption,
@@ -28,15 +26,12 @@ import {
 import { fileSystem } from '../../../lib/fileSystem';
 import { registerWorkspaceTabSaveOverride } from '../../../lib/workspaceSaveActions';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { ListPanel, ListPanelItem } from '../common';
 import { validateLuaChunk } from '../../../lib/luaRunner';
 import {
   ActionLuaValidation,
   DialogueTab,
-  MetadataDraft,
   buildI18nExport,
   createDefaultDialogueIndex,
-  createEmptyDialogue,
   createNodeByType,
   getBrokenReferenceNodeIds,
   getDuplicateMsgKeys,
@@ -50,13 +45,11 @@ import {
   relinkLinearFlow,
   removeNodesWithCleanup,
   reorderNodeBlocks,
-  slugify,
   toRuntimeDialogue,
   upsertDialogueEntry,
 } from './dialogueUtils';
 import { DialogueNodeInspector } from './DialogueNodeInspector';
 import { DialogueTimeline } from './DialogueTimeline';
-import { CreateDialogueDialog } from './CreateDialogueDialog';
 import { FieldLabel } from '../../common/Typography.tsx';
 
 export const DialogueEditor: React.FC = () => {
@@ -68,9 +61,10 @@ export const DialogueEditor: React.FC = () => {
   const scriptFunctions = useEditorStore((state) => state.scriptFunctions);
   const scriptNamespaces = useEditorStore((state) => state.scriptNamespaces);
   const scriptContextTypes = useEditorStore((state) => state.scriptContextTypes);
+  const workspaceTabs = useWorkspaceStore((state) => state.tabs);
+  const activeTabId = useWorkspaceStore((state) => state.activeTabId);
 
   const [activeTab, setActiveTab] = useState<DialogueTab>('timeline');
-  const [search, setSearch] = useState('');
   const [dialogueIndex, setDialogueIndex] = useState<DialogueIndex>(createDefaultDialogueIndex());
   const [dialogues, setDialogues] = useState<Map<string, DialogueDocument>>(new Map());
   const [selectedDialogueId, setSelectedDialogueId] = useState<string | null>(null);
@@ -80,14 +74,6 @@ export const DialogueEditor: React.FC = () => {
   const [isTimelineHeaderCollapsed, setIsTimelineHeaderCollapsed] = useState(false);
 
   const [actionLuaValidation, setActionLuaValidation] = useState<ActionLuaValidation | null>(null);
-
-  const metaModal = useDisclosure();
-  const [metaMode, setMetaMode] = useState<'create' | 'edit'>('create');
-  const [metadataDraft, setMetadataDraft] = useState<MetadataDraft>({
-    name: '',
-    oneShot: false,
-    entryCondition: '',
-  });
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyDialogueIdsRef = useRef<Set<string>>(new Set());
@@ -101,6 +87,19 @@ export const DialogueEditor: React.FC = () => {
   useEffect(() => {
     dialogueIndexRef.current = dialogueIndex;
   }, [dialogueIndex]);
+
+  const activeDocument = useMemo(
+    () => workspaceTabs.find((tab) => tab.id === activeTabId)?.document ?? null,
+    [activeTabId, workspaceTabs],
+  );
+
+  useEffect(() => {
+    if (activeDocument?.kind !== 'dialogue') return;
+    if (activeDocument.dialogueId === selectedDialogueId) return;
+    if (!dialogues.has(activeDocument.dialogueId)) return;
+    setSelectedDialogueId(activeDocument.dialogueId);
+    setSelectedNodeId(null);
+  }, [activeDocument, dialogues, selectedDialogueId]);
 
   useEffect(() => {
     if (!storedSelectedDialogueId || storedSelectedDialogueId === selectedDialogueId) return;
@@ -310,37 +309,6 @@ export const DialogueEditor: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNodeId, selectedDialogueId]);
 
-  const dialogueItems = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return dialogueIndex.dialogues
-      .filter((entry) => (term ? entry.name.toLowerCase().includes(term) : true))
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [dialogueIndex.dialogues, search]);
-
-  const dialoguePanelItems: ListPanelItem[] = useMemo(
-    () =>
-      dialogueItems.map((entry) => ({
-        id: entry.id,
-        label: entry.name,
-        sublabel: `${entry.nodeCount} node${entry.nodeCount === 1 ? '' : 's'}`,
-        badge: (
-          <Badge fontSize="9px" colorScheme={entry.oneShot ? 'purple' : 'green'} variant="subtle">
-            {entry.oneShot ? 'one-shot' : 'repeatable'}
-          </Badge>
-        ),
-      })),
-    [dialogueItems],
-  );
-
-  const handleSelectDialogue = useCallback(
-    (dialogueId: string) => {
-      setSelectedDialogueId(dialogueId);
-      const dialogue = dialogues.get(dialogueId);
-      setSelectedNodeId(dialogue?.startNodeId ?? null);
-    },
-    [dialogues],
-  );
-
   const dialogueNodeTargets = useMemo(
     () =>
       selectedDialogue
@@ -378,99 +346,6 @@ export const DialogueEditor: React.FC = () => {
     },
     [queueSave],
   );
-
-  const openCreateDialogueModal = () => {
-    setMetaMode('create');
-    setMetadataDraft({
-      name: 'New Dialogue',
-      oneShot: false,
-      entryCondition: '',
-    });
-    metaModal.onOpen();
-  };
-
-  const openEditDialogueModal = (dialogueId: string) => {
-    const dialogue = dialogues.get(dialogueId);
-    if (!dialogue) return;
-
-    setMetaMode('edit');
-    setMetadataDraft({
-      name: dialogue.name,
-      oneShot: dialogue.oneShot,
-      entryCondition: dialogue.entryCondition ?? '',
-    });
-    setSelectedDialogueId(dialogue.id);
-    metaModal.onOpen();
-  };
-
-  const applyDialogueMetadata = (values: MetadataDraft) => {
-    const name = values.name.trim();
-    if (!name) return;
-
-    if (metaMode === 'create') {
-      const derived = slugify(name);
-      const id = derived ? `dlg_${derived}` : nextDialogueId(dialogueIndex);
-      const uniqueId = dialogues.has(id) ? nextDialogueId(dialogueIndex) : id;
-      const dialogue = createEmptyDialogue(uniqueId, name, values.oneShot, values.entryCondition);
-
-      setDialogues((previous) => {
-        const next = new Map(previous);
-        next.set(dialogue.id, dialogue);
-        dialoguesRef.current = next;
-        return next;
-      });
-
-      setDialogueIndex((previous) => {
-        const next = upsertDialogueEntry(previous, dialogue);
-        dialogueIndexRef.current = next;
-        return next;
-      });
-
-      setSelectedDialogueId(dialogue.id);
-      setSelectedNodeId(dialogue.startNodeId);
-      queueSave(dialogue.id);
-      metaModal.onClose();
-      return;
-    }
-
-    if (!selectedDialogueId) return;
-    updateDialogue(selectedDialogueId, (dialogue) => ({
-      ...dialogue,
-      name,
-      oneShot: values.oneShot,
-      entryCondition: values.entryCondition.trim() || undefined,
-    }));
-    metaModal.onClose();
-  };
-
-  const removeDialogue = async (dialogueId: string) => {
-    if (!dialogues.has(dialogueId)) return;
-
-    setDialogues((previous) => {
-      const next = new Map(previous);
-      next.delete(dialogueId);
-      dialoguesRef.current = next;
-      return next;
-    });
-
-    setDialogueIndex((previous) => {
-      const next = {
-        ...previous,
-        dialogues: previous.dialogues.filter((entry) => entry.id !== dialogueId),
-      };
-      dialogueIndexRef.current = next;
-      return next;
-    });
-
-    await fileSystem.deleteJson('dialogues', `${dialogueId}.dialogue.json`);
-    await fileSystem.deleteJson('dialogues', `${dialogueId}.runtime.dialogue.json`);
-    await fileSystem.deleteJson('dialogues', `${dialogueId}.i18n.json`);
-
-    const fallbackId = dialogueIndexRef.current.dialogues[0]?.id ?? null;
-    setSelectedDialogueId((current) => (current === dialogueId ? fallbackId : current));
-    setSelectedNodeId(null);
-    queueSave();
-  };
 
   const renameNode = (oldId: string, newId: string) => {
     if (!selectedDialogueId || !selectedDialogue) return;
@@ -743,9 +618,14 @@ export const DialogueEditor: React.FC = () => {
         borderBottom="1px"
         borderColor="whiteAlpha.200"
       >
-        <Text fontSize="12px" color="gray.500">
-          {selectedDialogue ? `${selectedDialogue.id}.dlg` : 'dialogues'}
-        </Text>
+        <VStack align="start" spacing={0}>
+          <Text fontSize="10px" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+            Dialogues
+          </Text>
+          <Text fontSize="12px" color="gray.300">
+            {selectedDialogue ? selectedDialogue.name : 'Open a dialogue from the explorer'}
+          </Text>
+        </VStack>
 
         <HStack spacing={1} ml={3}>
           {(
@@ -780,8 +660,10 @@ export const DialogueEditor: React.FC = () => {
     <>
       <ResizableEditorLayout
         header={{
-          title: 'Dialogues',
-          subtitle: `${dialogueIndex.dialogues.length} dialogue${dialogueIndex.dialogues.length === 1 ? '' : 's'}${isDirty ? ' (dirty)' : ''}`,
+          title: selectedDialogue?.name || 'Dialogues',
+          subtitle: selectedDialogue
+            ? `${selectedDialogue.id}${isDirty ? ' • unsaved changes' : ''}`
+            : `${dialogueIndex.dialogues.length} dialogue${dialogueIndex.dialogues.length === 1 ? '' : 's'}`,
         }}
         viewportBackground={false}
         content={content}
@@ -810,19 +692,6 @@ export const DialogueEditor: React.FC = () => {
           ) : undefined
         }
         rightPanelDefaultSize={28}
-      />
-
-      <CreateDialogueDialog
-        isOpen={metaModal.isOpen}
-        onClose={metaModal.onClose}
-        mode={metaMode}
-        initialValues={metadataDraft}
-        onApply={applyDialogueMetadata}
-        gameVariables={gameVariables}
-        scriptTables={scriptTables}
-        scriptFunctions={scriptFunctions}
-        scriptNamespaces={scriptNamespaces}
-        activeContextType={activeContextType}
       />
     </>
   );
