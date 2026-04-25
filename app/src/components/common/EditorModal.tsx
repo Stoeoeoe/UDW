@@ -7,6 +7,7 @@ export interface EditorModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   title?: string;
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 /**
@@ -17,9 +18,16 @@ export const EditorModal: React.FC<EditorModalProps> = ({
   onClose,
   children,
   size = 'xl',
+  initialFocusRef,
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size={size} isCentered>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size={size}
+      isCentered
+      initialFocusRef={initialFocusRef}
+    >
       <ModalOverlay backdropFilter="blur(4px)" />
       <ModalContent bg="transparent" border="none" boxShadow="none">
         {children}

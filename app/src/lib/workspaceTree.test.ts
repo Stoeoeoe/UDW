@@ -180,6 +180,13 @@ describe('buildWorkspaceTree', () => {
     expect(
       tree.find((node) => node.id === 'group:entities')?.children?.[0]?.resourceIcon,
     ).toBeUndefined();
+    expect(
+      tree.find((node) => node.id === 'group:entities')?.children?.[0]?.document,
+    ).toMatchObject({
+      kind: 'entity',
+      entityTypeId: 'merchant-stall',
+      saveUnitId: 'entity:merchant-stall',
+    });
     expect(tree.find((node) => node.id === 'scripting')?.document).toMatchObject({
       kind: 'scripting',
       saveUnitId: 'configuration',

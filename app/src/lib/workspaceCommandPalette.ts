@@ -1,5 +1,6 @@
 import { Actor, DialogueIndex, EntityType, Item, Map as GameMap, Tileset } from '../types/schema';
 import { WorkspaceDocument } from '../types/workspace';
+import { createEditorResourceDocument } from './editorResourceTypes';
 import { createLocationDocument } from './workspaceRouting';
 
 export type CommandPaletteFilter =
@@ -9,9 +10,7 @@ export type CommandPaletteFilter =
   | 'entities'
   | 'actors'
   | 'items'
-  | 'quests'
-  | 'dialogues'
-  | 'audio';
+  | 'dialogues';
 
 export type CommandPaletteResourceType =
   | 'location'
@@ -19,9 +18,7 @@ export type CommandPaletteResourceType =
   | 'entity'
   | 'actor'
   | 'item'
-  | 'quest'
-  | 'dialogue'
-  | 'audio';
+  | 'dialogue';
 
 export interface CommandPaletteResource {
   key: string;
@@ -79,12 +76,11 @@ export function buildCommandPaletteResources(
         type: 'tileset',
         typeLabel: 'Tileset',
         label: tileset.name,
-        document: {
-          kind: 'tileset',
-          tilesetId: tileset.id,
-          label: tileset.name,
-          saveUnitId: `tileset:${tileset.id}`,
-        },
+        document: createEditorResourceDocument({
+          type: 'tileset',
+          id: tileset.id,
+          name: tileset.name,
+        }),
       });
     });
 
@@ -98,12 +94,11 @@ export function buildCommandPaletteResources(
         typeLabel: 'Entity',
         label: entityType.displayName,
         secondaryLabel: entityType.folderPath || undefined,
-        document: {
-          kind: 'entity',
-          entityTypeId: entityType.id,
-          label: entityType.displayName,
-          saveUnitId: 'configuration',
-        },
+        document: createEditorResourceDocument({
+          type: 'entity',
+          id: entityType.id,
+          name: entityType.displayName,
+        }),
         resourceId: entityType.id,
       });
     });
@@ -118,12 +113,11 @@ export function buildCommandPaletteResources(
         typeLabel: 'Actor',
         label: actor.name,
         secondaryLabel: actor.folderPath || undefined,
-        document: {
-          kind: 'actor',
-          actorId: actor.id,
-          label: actor.name,
-          saveUnitId: `actor:${actor.id}`,
-        },
+        document: createEditorResourceDocument({
+          type: 'actor',
+          id: actor.id,
+          name: actor.name,
+        }),
         resourceId: actor.id,
       });
     });
@@ -138,12 +132,11 @@ export function buildCommandPaletteResources(
         typeLabel: 'Item',
         label: item.name,
         secondaryLabel: item.folderPath || undefined,
-        document: {
-          kind: 'item',
-          itemId: item.id,
-          label: item.name,
-          saveUnitId: `item:${item.id}`,
-        },
+        document: createEditorResourceDocument({
+          type: 'item',
+          id: item.id,
+          name: item.name,
+        }),
         resourceId: item.id,
       });
     });
@@ -158,12 +151,11 @@ export function buildCommandPaletteResources(
         typeLabel: 'Dialogue',
         label: dialogue.name,
         secondaryLabel: dialogue.folderPath || undefined,
-        document: {
-          kind: 'dialogue',
-          dialogueId: dialogue.id,
-          label: dialogue.name,
-          saveUnitId: `dialogue:${dialogue.id}`,
-        },
+        document: createEditorResourceDocument({
+          type: 'dialogue',
+          id: dialogue.id,
+          name: dialogue.name,
+        }),
         resourceId: dialogue.id,
       });
     });

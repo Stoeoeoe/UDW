@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi';
 import { WorkspaceTab } from '../../types/workspace';
 import { useSaveStore } from '../../lib/saveManager';
+import { getDocumentSaveUnitId } from '../../store/useWorkspaceStore';
 
 interface WorkspaceTabsProps {
   tabs: WorkspaceTab[];
@@ -106,7 +107,7 @@ export const WorkspaceTabs: React.FC<WorkspaceTabsProps> = ({
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId;
-        const saveUnit = saveUnits[tab.document.saveUnitId];
+        const saveUnit = saveUnits[getDocumentSaveUnitId(tab.document)];
         const isDirty = Boolean(saveUnit?.dirty);
         const IconComponent = getDocumentIcon(tab);
 

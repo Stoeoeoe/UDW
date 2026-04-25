@@ -1,6 +1,8 @@
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { EntityType, PropertyDefinition } from '../../types/schema';
+import { fileSystem } from '../../lib/fileSystem';
+import { useSaveStore } from '../../lib/saveManager';
 import { persistProject } from '../storeHelpers';
 import type { EditorStore } from '../useEditorStore';
 
@@ -32,28 +34,46 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
     set((state) => {
       state.entityTypes.push(castDraft(entityType));
     });
-    const proj = get().project;
-    if (proj) {
-      const projectToSave = { ...proj, entityTypes: get().entityTypes };
-      await persistProject(projectToSave);
-      set((state) => {
-        state.project = castDraft(projectToSave);
+    const saveUnitId = `entity:${entityType.id}`;
+    useSaveStore.getState().markSaving(saveUnitId);
+    try {
+      await fileSystem.saveJson('entities', `${entityType.id}.entity.json`, {
+        $schema: '../../schemas/entity-type.schema.json',
+        ...entityType,
       });
+      useSaveStore.getState().markSaved(saveUnitId);
+    } catch (error) {
+      useSaveStore
+        .getState()
+        .markError(saveUnitId, error instanceof Error ? error.message : 'Unknown error');
+      throw error;
     }
   },
 
   updateEntityType: async (id, updates) => {
+    let updatedEntityType: EntityType | null = null;
     set((state) => {
       const et = state.entityTypes.find((e) => e.id === id);
-      if (et) Object.assign(et, updates);
+      if (!et) return;
+      Object.assign(et, updates);
+      updatedEntityType = { ...et } as EntityType;
     });
-    const proj = get().project;
-    if (proj) {
-      const projectToSave = { ...proj, entityTypes: get().entityTypes };
-      await persistProject(projectToSave);
-      set((state) => {
-        state.project = castDraft(projectToSave);
-      });
+    const entityType = updatedEntityType ?? get().entityTypes.find((entry) => entry.id === id);
+    if (entityType) {
+      const saveUnitId = `entity:${entityType.id}`;
+      useSaveStore.getState().markSaving(saveUnitId);
+      try {
+        await fileSystem.saveJson('entities', `${entityType.id}.entity.json`, {
+          $schema: '../../schemas/entity-type.schema.json',
+          ...entityType,
+        });
+        useSaveStore.getState().markSaved(saveUnitId);
+      } catch (error) {
+        useSaveStore
+          .getState()
+          .markError(saveUnitId, error instanceof Error ? error.message : 'Unknown error');
+        throw error;
+      }
     }
   },
 
@@ -62,13 +82,16 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
       state.entityTypes = state.entityTypes.filter((e) => e.id !== id);
       if (state.selectedEntityTypeId === id) state.selectedEntityTypeId = null;
     });
-    const proj = get().project;
-    if (proj) {
-      const projectToSave = { ...proj, entityTypes: get().entityTypes };
-      await persistProject(projectToSave);
-      set((state) => {
-        state.project = castDraft(projectToSave);
-      });
+    const saveUnitId = `entity:${id}`;
+    useSaveStore.getState().markSaving(saveUnitId);
+    try {
+      await fileSystem.deleteJson('entities', `${id}.entity.json`);
+      useSaveStore.getState().clearUnit(saveUnitId);
+    } catch (error) {
+      useSaveStore
+        .getState()
+        .markError(saveUnitId, error instanceof Error ? error.message : 'Unknown error');
+      throw error;
     }
   },
 

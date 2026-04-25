@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "project.schema.json",
   "title": "Project",
-  "description": "A project file (*.vproj) containing global settings, layer definitions, and entity type definitions.",
+  "description": "A project file (*.vproj) containing global settings and shared editor definitions.",
   "type": "object",
   "required": [
     "version",
@@ -62,7 +62,7 @@
     },
     "entityTypes": {
       "type": "array",
-      "description": "Project-level entity type definitions.",
+      "description": "Deprecated legacy entity type definitions. New projects store entity types as separate files in entities/.",
       "items": { "$ref": "#/$defs/EntityType" }
     },
     "tileMetadataDefinitions": {

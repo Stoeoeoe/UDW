@@ -124,6 +124,7 @@ describe('workspaceCommandPalette', () => {
       document: {
         kind: 'entity',
         entityTypeId: 'merchant-stall',
+        saveUnitId: 'entity:merchant-stall',
       },
     });
   });

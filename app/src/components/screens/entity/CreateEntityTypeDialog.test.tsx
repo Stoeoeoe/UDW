@@ -21,7 +21,7 @@ describe('CreateEntityTypeDialog', () => {
       </ChakraProvider>,
     );
 
-    const input = screen.getByPlaceholderText('e.g. Treasure Chest');
+    const input = screen.getByPlaceholderText('e.g. My Entity Type');
     fireEvent.change(input, { target: { value: 'Treasure Chest' } });
 
     // id should be rendered

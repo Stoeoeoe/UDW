@@ -1,5 +1,7 @@
 import { useEditorStore } from '../store/useEditorStore';
 import { ResourceKind, WorkspaceDocument } from '../types/workspace';
+import { EditorResourceDescriptor } from '../types/editorResource';
+import { createEditorResourceDocument, getEditorResourceSaveUnitId } from './editorResourceTypes';
 import {
   Actor,
   DialogueListEntry,
@@ -8,164 +10,155 @@ import {
   Item,
   Map as GameMap,
   Tileset,
+  getSchemaResourceId,
+  getSchemaResourceName,
 } from '../types/schema';
 
-export interface ResourceDescriptor {
+export interface ResourceDescriptor extends EditorResourceDescriptor {
   kind: ResourceKind;
-  id: string;
-  name: string;
-  folderPath: string;
-  resourceIcon?:
-    | {
-        type: 'game-icon' | 'asset' | 'emoji';
-        value: string;
-      }
-    | undefined;
   document: WorkspaceDocument;
-  saveUnitId: string;
 }
 
 export function actorDocument(actor: Actor): WorkspaceDocument {
-  return {
-    kind: 'actor',
-    actorId: actor.id,
-    label: actor.name,
-    saveUnitId: `actor:${actor.id}`,
-  };
+  return createEditorResourceDocument({
+    type: 'actor',
+    id: getSchemaResourceId(actor),
+    name: getSchemaResourceName(actor),
+  });
 }
 
 export function entityDocument(entityType: EntityType): WorkspaceDocument {
-  return {
-    kind: 'entity',
-    entityTypeId: entityType.id,
-    label: entityType.displayName,
-    saveUnitId: 'configuration',
-  };
+  return createEditorResourceDocument({
+    type: 'entity',
+    id: getSchemaResourceId(entityType),
+    name: getSchemaResourceName(entityType),
+  });
 }
 
 export function itemDocument(item: Item): WorkspaceDocument {
-  return {
-    kind: 'item',
-    itemId: item.id,
-    label: item.name,
-    saveUnitId: `item:${item.id}`,
-  };
+  return createEditorResourceDocument({
+    type: 'item',
+    id: getSchemaResourceId(item),
+    name: getSchemaResourceName(item),
+  });
 }
 
 export function dialogueDocument(entry: DialogueListEntry): WorkspaceDocument {
-  return {
-    kind: 'dialogue',
-    dialogueId: entry.id,
-    label: entry.name,
-    saveUnitId: `dialogue:${entry.id}`,
-  };
+  return createEditorResourceDocument({
+    type: 'dialogue',
+    id: getSchemaResourceId(entry),
+    name: getSchemaResourceName(entry),
+  });
 }
 
 export function variableDocument(variable: GameVariable): WorkspaceDocument {
-  return {
-    kind: 'variable',
-    variableKey: variable.key,
-    label: variable.key,
-    saveUnitId: 'configuration',
-  };
+  return createEditorResourceDocument({
+    type: 'variable',
+    id: getSchemaResourceId(variable),
+    name: getSchemaResourceName(variable),
+  });
 }
 
 export function locationDocument(map: GameMap): WorkspaceDocument {
-  return {
-    kind: 'location',
-    mapId: map.id,
-    variationId: null,
-    label: map.name,
-    saveUnitId: `location:${map.id}`,
-  };
+  return createEditorResourceDocument({
+    type: 'location',
+    id: getSchemaResourceId(map),
+    name: getSchemaResourceName(map),
+  });
 }
 
 export function tilesetDocument(tileset: Tileset): WorkspaceDocument {
-  return {
-    kind: 'tileset',
-    tilesetId: tileset.id,
-    label: tileset.name,
-    saveUnitId: `tileset:${tileset.id}`,
-  };
+  return createEditorResourceDocument({
+    type: 'tileset',
+    id: getSchemaResourceId(tileset),
+    name: getSchemaResourceName(tileset),
+  });
 }
 
 export function listActorDescriptors(actors: Actor[]): ResourceDescriptor[] {
   return actors.map((actor) => ({
+    type: 'actor',
     kind: 'actor',
-    id: actor.id,
-    name: actor.name,
+    id: getSchemaResourceId(actor),
+    name: getSchemaResourceName(actor),
     folderPath: normalizeFolderPath(actor.folderPath),
     resourceIcon: actor.icon ? { type: 'game-icon', value: actor.icon } : undefined,
     document: actorDocument(actor),
-    saveUnitId: `actor:${actor.id}`,
+    saveUnitId: getEditorResourceSaveUnitId('actor', actor.id),
   }));
 }
 
 export function listEntityDescriptors(entityTypes: EntityType[]): ResourceDescriptor[] {
   return entityTypes.map((entityType) => ({
+    type: 'entity',
     kind: 'entity',
-    id: entityType.id,
-    name: entityType.displayName,
+    id: getSchemaResourceId(entityType),
+    name: getSchemaResourceName(entityType),
     folderPath: normalizeFolderPath(entityType.folderPath),
     resourceIcon: entityType.icon ? { type: 'game-icon', value: entityType.icon } : undefined,
     document: entityDocument(entityType),
-    saveUnitId: 'configuration',
+    saveUnitId: getEditorResourceSaveUnitId('entity', entityType.id),
   }));
 }
 
 export function listItemDescriptors(items: Item[]): ResourceDescriptor[] {
   return items.map((item) => ({
+    type: 'item',
     kind: 'item',
-    id: item.id,
-    name: item.name,
+    id: getSchemaResourceId(item),
+    name: getSchemaResourceName(item),
     folderPath: normalizeFolderPath(item.folderPath),
     resourceIcon: item.icon ? { type: 'asset', value: item.icon } : undefined,
     document: itemDocument(item),
-    saveUnitId: `item:${item.id}`,
+    saveUnitId: getEditorResourceSaveUnitId('item', item.id),
   }));
 }
 
 export function listDialogueDescriptors(entries: DialogueListEntry[]): ResourceDescriptor[] {
   return entries.map((entry) => ({
+    type: 'dialogue',
     kind: 'dialogue',
-    id: entry.id,
-    name: entry.name,
+    id: getSchemaResourceId(entry),
+    name: getSchemaResourceName(entry),
     folderPath: normalizeFolderPath(entry.folderPath),
     document: dialogueDocument(entry),
-    saveUnitId: `dialogue:${entry.id}`,
+    saveUnitId: getEditorResourceSaveUnitId('dialogue', entry.id),
   }));
 }
 
 export function listVariableDescriptors(variables: GameVariable[]): ResourceDescriptor[] {
   return variables.map((variable) => ({
+    type: 'variable',
     kind: 'variable',
-    id: variable.key,
-    name: variable.key,
+    id: getSchemaResourceId(variable),
+    name: getSchemaResourceName(variable),
     folderPath: normalizeFolderPath(variable.folderPath),
     document: variableDocument(variable),
-    saveUnitId: 'configuration',
+    saveUnitId: getEditorResourceSaveUnitId('variable', variable.key),
   }));
 }
 
 export function listLocationDescriptors(maps: GameMap[]): ResourceDescriptor[] {
   return maps.map((map) => ({
+    type: 'location',
     kind: 'location',
-    id: map.id,
-    name: map.name,
+    id: getSchemaResourceId(map),
+    name: getSchemaResourceName(map),
     folderPath: normalizeFolderPath(map.folderPath),
     document: locationDocument(map),
-    saveUnitId: `location:${map.id}`,
+    saveUnitId: getEditorResourceSaveUnitId('location', map.id),
   }));
 }
 
 export function listTilesetDescriptors(tilesets: Map<string, Tileset>): ResourceDescriptor[] {
   return Array.from(tilesets.values()).map((tileset) => ({
+    type: 'tileset',
     kind: 'tileset',
-    id: tileset.id,
-    name: tileset.name,
+    id: getSchemaResourceId(tileset),
+    name: getSchemaResourceName(tileset),
     folderPath: normalizeFolderPath(tileset.folderPath),
     document: tilesetDocument(tileset),
-    saveUnitId: `tileset:${tileset.id}`,
+    saveUnitId: getEditorResourceSaveUnitId('tileset', tileset.id),
   }));
 }
 

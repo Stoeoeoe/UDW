@@ -308,9 +308,10 @@ export async function saveProjectImmediate(
   useSaveStore.getState().markSaving(saveUnitId);
 
   try {
+    const { entityTypes: _legacyEntityTypes, ...projectToSave } = project;
     await fileSystem.saveJson('', `${project.id}.vproj`, {
       $schema: '../schemas/project.schema.json',
-      ...project,
+      ...projectToSave,
     });
     useSaveStore.getState().markSaved(saveUnitId);
     scheduleSavedReset(saveUnitId);

@@ -159,11 +159,15 @@ describe('workspaceRouting', () => {
           kind: 'entity',
           entityTypeId: 'merchant-stall',
           label: 'Merchant Stall',
-          saveUnitId: 'configuration',
+          saveUnitId: 'entity:merchant-stall',
         }),
         snapshot,
       ),
-    ).toMatchObject({ kind: 'entity', entityTypeId: 'merchant-stall' });
+    ).toMatchObject({
+      kind: 'entity',
+      entityTypeId: 'merchant-stall',
+      saveUnitId: 'entity:merchant-stall',
+    });
 
     expect(
       documentFromHash(

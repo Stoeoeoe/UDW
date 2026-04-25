@@ -19,6 +19,8 @@ import {
 } from '@chakra-ui/react';
 import { RepeatIcon } from '@chakra-ui/icons';
 import { fileSystem } from '../../../lib/fileSystem';
+import { markSaveUnitDirty } from '../../../lib/saveManager';
+import { registerWorkspaceTabSaveOverride } from '../../../lib/workspaceSaveActions';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { DetailPanel } from '../../common/DetailPanel';
@@ -31,6 +33,7 @@ import { IconPicker, ColorPicker } from '../common/FormFields';
 import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { SectionLabel } from '../../common/Typography.tsx';
+import { GiAbstract039 } from 'react-icons/gi';
 
 async function loadSpriteBlob(path: string): Promise<Blob> {
   const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
@@ -126,7 +129,7 @@ const EntityTypeDetail: React.FC<{
       properties: entityType.properties,
     },
     onSubmit: async ({ value }) => {
-      onUpdate(entityType.id, {
+      await onUpdate(entityType.id, {
         displayName: value.displayName,
         category: value.category,
         group: value.group,
@@ -143,9 +146,11 @@ const EntityTypeDetail: React.FC<{
 
   const [spritePath, setSpritePath] = React.useState(entityType.sprite?.path);
   const [spriteLoading, setSpriteLoading] = React.useState(false);
+  const latestIsDirtyRef = React.useRef(false);
   const loadSprite = useEditorStore((state) => state.loadSprite);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
   const isLoaded = spritePath ? loadedSprites.has(spritePath) : false;
+  const saveUnitId = `entity:${entityType.id}`;
 
   const loadImageFromPath = async (path: string, blobHint?: Blob) => {
     setSpriteLoading(true);
@@ -178,6 +183,22 @@ const EntityTypeDetail: React.FC<{
     }
   };
 
+  React.useEffect(
+    () =>
+      registerWorkspaceTabSaveOverride('entity', {
+        saveTab: async (tab) => {
+          if (tab.document.kind !== 'entity' || tab.document.entityTypeId !== entityType.id) return;
+          if (!latestIsDirtyRef.current) return;
+          await form.handleSubmit();
+        },
+        saveAll: async () => {
+          if (!latestIsDirtyRef.current) return;
+          await form.handleSubmit();
+        },
+      }),
+    [entityType.id, form],
+  );
+
   return (
     <form
       onSubmit={(e) => {
@@ -205,7 +226,7 @@ const EntityTypeDetail: React.FC<{
               justifyContent="center"
               flexShrink={0}
             >
-              <GameIcon iconName={entityType.icon} size={26} fallback="GiBox" />
+              <GameIcon iconName={entityType.icon} size={26} fallback={<GiAbstract039 />} />
             </Box>
             <VStack align="start" spacing={1}>
               <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
@@ -413,9 +434,15 @@ const EntityTypeDetail: React.FC<{
           )}
         </form.Field>
 
-        <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
-          {({ isDirty, values }) => (
-            <FormAutosave isDirty={isDirty} values={values} onSave={() => form.handleSubmit()} />
+        <form.Subscribe selector={(state) => state.isDirty}>
+          {(isDirty) => (
+            <EntityDirtyBridge
+              isDirty={isDirty}
+              saveUnitId={saveUnitId}
+              onDirtyChange={(next) => {
+                latestIsDirtyRef.current = next;
+              }}
+            />
           )}
         </form.Subscribe>
       </VStack>
@@ -423,18 +450,17 @@ const EntityTypeDetail: React.FC<{
   );
 };
 
-const FormAutosave: React.FC<{
+const EntityDirtyBridge: React.FC<{
   isDirty: boolean;
-  values: unknown;
-  onSave: () => void | Promise<void>;
-}> = ({ isDirty, values, onSave }) => {
+  saveUnitId: string;
+  onDirtyChange: (isDirty: boolean) => void;
+}> = ({ isDirty, saveUnitId, onDirtyChange }) => {
   React.useEffect(() => {
-    if (!isDirty) return;
-    const timeout = window.setTimeout(() => {
-      void onSave();
-    }, 300);
-    return () => window.clearTimeout(timeout);
-  }, [isDirty, onSave, values]);
+    onDirtyChange(isDirty);
+    if (isDirty) {
+      markSaveUnitDirty(saveUnitId);
+    }
+  }, [isDirty, onDirtyChange, saveUnitId]);
 
   return null;
 };

@@ -1,4 +1,5 @@
 import { Map as GameMap } from '../types/schema';
+import { createEditorResourceDocument } from './editorResourceTypes';
 import {
   WorkspaceConfigTab,
   WorkspaceDocument,
@@ -18,12 +19,15 @@ export function createLocationDocument(
   map: GameMap,
   variationId: string | null = null,
 ): WorkspaceDocument {
+  const document = createEditorResourceDocument({
+    type: 'location',
+    id: map.id,
+    name: map.name,
+  }) as Extract<WorkspaceDocument, { kind: 'location' }>;
+
   return {
-    kind: 'location',
-    mapId: map.id,
+    ...document,
     variationId,
-    label: map.name,
-    saveUnitId: `location:${map.id}`,
   };
 }
 
@@ -141,12 +145,11 @@ export function documentFromHash(
     const tilesetId = params.get('id');
     if (!tilesetId || !snapshot.tilesets.has(tilesetId)) return null;
     const tileset = snapshot.tilesets.get(tilesetId);
-    return {
-      kind: 'tileset',
-      tilesetId,
-      label: tileset?.name ?? tilesetId,
-      saveUnitId: `tileset:${tilesetId}`,
-    };
+    return createEditorResourceDocument({
+      type: 'tileset',
+      id: tilesetId,
+      name: tileset?.name ?? tilesetId,
+    });
   }
 
   if (doc === 'settings') {
@@ -176,7 +179,11 @@ export function documentFromHash(
     if (!actorId) return null;
     const actor = snapshot.actors?.find((a) => a.id === actorId);
     if (!actor) return null;
-    return { kind: 'actor', actorId: actor.id, label: actor.name, saveUnitId: `actor:${actor.id}` };
+    return createEditorResourceDocument({
+      type: 'actor',
+      id: actor.id,
+      name: actor.name,
+    });
   }
 
   if (doc === 'entity') {
@@ -184,12 +191,11 @@ export function documentFromHash(
     if (!entityTypeId) return null;
     const et = snapshot.entityTypes?.find((e) => e.id === entityTypeId);
     if (!et) return null;
-    return {
-      kind: 'entity',
-      entityTypeId: et.id,
-      label: et.displayName,
-      saveUnitId: 'configuration',
-    };
+    return createEditorResourceDocument({
+      type: 'entity',
+      id: et.id,
+      name: et.displayName,
+    });
   }
 
   if (doc === 'item') {
@@ -197,7 +203,11 @@ export function documentFromHash(
     if (!itemId) return null;
     const item = snapshot.items?.find((i) => i.id === itemId);
     if (!item) return null;
-    return { kind: 'item', itemId: item.id, label: item.name, saveUnitId: `item:${item.id}` };
+    return createEditorResourceDocument({
+      type: 'item',
+      id: item.id,
+      name: item.name,
+    });
   }
 
   if (doc === 'dialogue') {
@@ -205,12 +215,11 @@ export function documentFromHash(
     if (!dialogueId) return null;
     const entry = snapshot.dialogueEntries?.find((d) => d.id === dialogueId);
     if (!entry) return null;
-    return {
-      kind: 'dialogue',
-      dialogueId: entry.id,
-      label: entry.name,
-      saveUnitId: `dialogue:${entry.id}`,
-    };
+    return createEditorResourceDocument({
+      type: 'dialogue',
+      id: entry.id,
+      name: entry.name,
+    });
   }
 
   if (doc === 'variable') {
@@ -218,12 +227,11 @@ export function documentFromHash(
     if (!variableKey) return null;
     const variable = snapshot.gameVariables?.find((v) => v.key === variableKey);
     if (!variable) return null;
-    return {
-      kind: 'variable',
-      variableKey: variable.key,
-      label: variable.key,
-      saveUnitId: 'configuration',
-    };
+    return createEditorResourceDocument({
+      type: 'variable',
+      id: variable.key,
+      name: variable.key,
+    });
   }
 
   if (

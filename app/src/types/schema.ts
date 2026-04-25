@@ -1,3 +1,36 @@
+import type { EditorResource } from './editorResource';
+
+export interface FolderedEditorResource {
+  folderPath?: string;
+}
+
+export interface NamedEditorResource extends EditorResource, FolderedEditorResource {}
+
+export interface DisplayNamedEditorResource extends FolderedEditorResource {
+  id: string;
+  displayName: string;
+}
+
+export interface KeyedEditorResource extends FolderedEditorResource {
+  key: string;
+}
+
+export type SchemaEditorResource =
+  | NamedEditorResource
+  | DisplayNamedEditorResource
+  | KeyedEditorResource;
+
+export function getSchemaResourceId(resource: SchemaEditorResource): string {
+  if ('key' in resource) return resource.key;
+  return resource.id;
+}
+
+export function getSchemaResourceName(resource: SchemaEditorResource): string {
+  if ('name' in resource) return resource.name;
+  if ('displayName' in resource) return resource.displayName;
+  return resource.key;
+}
+
 export interface Project {
   id: string; // Unique identifier (kebab-case)
   version: string; // File format version (starts at 1.0)
@@ -44,17 +77,14 @@ export interface LayerDefinition {
   description?: string; // Optional description
 }
 
-export interface Tileset {
+export interface Tileset extends NamedEditorResource {
   version: number;
-  id: string; // Unique identifier (kebab-case)
-  name: string; // Display name
   spriteSheet: string; // Relative path to PNG file (from project root or assets)
   columns: number; // Number of columns in sprite sheet
   tileCount: number; // Total number of tiles
   tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)
   wangSets?: WangSet[]; // Modern autotiling logic (Tiled-compatible)
   objects?: TilesetObjectDefinition[]; // Reusable multi-tile object definitions (trees, bushes, etc.)
-  folderPath?: string; // Virtual workspace folder (e.g. 'Environment/Forest'). Absent = root.
 }
 
 export interface TilesetObjectDefinition {
@@ -122,10 +152,8 @@ export interface PropertyInstance {
   value: PropertyValue;
 }
 
-export interface Map {
+export interface Map extends NamedEditorResource {
   version: number;
-  id: string; // Unique identifier
-  name: string; // Display name
   width: number; // Width in tiles
   height: number; // Height in tiles
   baseTilesetId: string; // Reference to tileset
@@ -136,7 +164,6 @@ export interface Map {
   spatialPrimitives?: SpatialPrimitives; // Optional paths/areas/anchors
   variations?: Variation[]; // Optional seasonal/contextual variants
   metadata?: MapMetadata;
-  folderPath?: string; // Virtual workspace folder (e.g. 'World/Dungeon'). Absent = root.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -362,7 +389,7 @@ export interface ScriptTable {
   fields: TableField[];
 }
 
-export interface GameVariable {
+export interface GameVariable extends KeyedEditorResource {
   key: string; // Dotted Lua path, e.g. "weather.isRain" or "date.season"
   type: GameVariableType;
   category: string; // Grouping label, e.g. "Weather", "Date", "Game State"
@@ -374,7 +401,6 @@ export interface GameVariable {
   tableId?: string; // Only used when type === 'table'
   // Legacy: inline complex fields (migrated to tableId)
   complexFields?: TableField[];
-  folderPath?: string; // Virtual workspace folder. Absent = root.
 }
 
 // ─── Scripting Primitives ────────────────────────────────────────────────────
@@ -431,9 +457,7 @@ export interface ItemClass {
   properties: PropertyDefinition[]; // Extra properties for items of this class
 }
 
-export interface Item {
-  id: string; // Unique identifier (kebab-case)
-  name: string; // Display name
+export interface Item extends NamedEditorResource {
   category: string; // Category grouping (e.g. "Consumable", "Weapon")
   icon: string; // Relative path to icon image (from project assets)
   description: string; // Long description shown to the player
@@ -441,16 +465,12 @@ export interface Item {
   pickupSound?: string; // Relative path to pickup audio clip (optional)
   classId?: string; // Optional reference to an ItemClass id
   classProperties?: PropertyValues; // Values for the extra properties defined by the assigned ItemClass
-  folderPath?: string; // Virtual workspace folder (e.g. 'Consumables/Potions'). Absent = root.
 }
 
 // Actor Definitions
-export interface Actor {
-  id: string; // Unique identifier (kebab-case)
-  name: string; // Display name
+export interface Actor extends NamedEditorResource {
   icon: string; // Emoji icon for display
   emotions?: string[]; // Named emotions available for line nodes
-  folderPath?: string; // Virtual workspace folder (e.g. 'NPCs/Villagers'). Absent = root.
 }
 
 /** @deprecated Use Actor. Kept for compatibility while migrating call sites. */
@@ -468,14 +488,11 @@ export interface DialogueCustomActor {
   note?: string;
 }
 
-export interface DialogueListEntry {
-  id: string;
-  name: string;
+export interface DialogueListEntry extends NamedEditorResource {
   oneShot: boolean;
   nodeCount: number;
   tags: string[];
   updatedAt: string;
-  folderPath?: string; // Virtual workspace folder. Absent = root.
 }
 
 export interface DialogueNodeEditorMeta {
@@ -559,10 +576,8 @@ export interface DialogueI18nExport {
   messages: DialogueI18nMessage[];
 }
 
-export interface DialogueDocument {
+export interface DialogueDocument extends NamedEditorResource {
   version: number;
-  id: string;
-  name: string;
   oneShot: boolean;
   entryCondition?: string;
   startNodeId: string;
@@ -581,10 +596,8 @@ export interface DialogueIndex {
 }
 
 // Entity Type Definitions
-export interface EntityType {
-  id: string; // Unique identifier
+export interface EntityType extends DisplayNamedEditorResource {
   category: EntityCategory;
-  displayName: string;
   description?: string;
   icon?: string; // Emoji or icon identifier for display
   group?: string; // Grouping label (e.g., "Actors", "Interactables")
@@ -593,7 +606,6 @@ export interface EntityType {
   properties: PropertyDefinition[];
   defaultSize?: [number, number]; // Pixel dimensions [width, height]
   sprite?: { path: string }; // Relative path to image asset; size locked to image dimensions
-  folderPath?: string; // Virtual workspace folder. Absent = root.
 }
 
 export type EntityCategory =

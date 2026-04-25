@@ -1,4 +1,9 @@
 import { create } from 'zustand';
+import {
+  getEditorResourceDocumentTabId,
+  getEditorResourceSaveUnitId,
+  getEditorResourceTypeFromDocument,
+} from '../lib/editorResourceTypes';
 import { useSaveStore } from '../lib/saveManager';
 import {
   LocationTabSession,
@@ -43,25 +48,16 @@ interface WorkspaceStore {
 }
 
 export function getWorkspaceTabId(document: WorkspaceDocument): string {
+  const resourceTabId = getEditorResourceDocumentTabId(document);
+  if (resourceTabId) {
+    return resourceTabId;
+  }
+
   switch (document.kind) {
-    case 'location':
-      return `location:${document.mapId}`;
-    case 'tileset':
-      return `tileset:${document.tilesetId}`;
     case 'settings':
       return 'settings';
     case 'configuration':
       return 'config';
-    case 'actor':
-      return `actor:${document.actorId}`;
-    case 'entity':
-      return `entity:${document.entityTypeId}`;
-    case 'item':
-      return `item:${document.itemId}`;
-    case 'dialogue':
-      return `dialogue:${document.dialogueId}`;
-    case 'variable':
-      return `variable:${document.variableKey}`;
     case 'entities':
     case 'actors':
     case 'items':
@@ -71,6 +67,26 @@ export function getWorkspaceTabId(document: WorkspaceDocument): string {
     default:
       return 'tab';
   }
+}
+
+export function getDocumentSaveUnitId(document: WorkspaceDocument): string {
+  const type = getEditorResourceTypeFromDocument(document);
+  const tabId = getEditorResourceDocumentTabId(document);
+  if (type && tabId) {
+    return getEditorResourceSaveUnitId(type, tabId.slice(type.length + 1));
+  }
+  return document.saveUnitId;
+}
+
+function normalizeDocument(document: WorkspaceDocument): WorkspaceDocument {
+  if (getEditorResourceTypeFromDocument(document)) {
+    return {
+      ...document,
+      saveUnitId: getDocumentSaveUnitId(document),
+    } as WorkspaceDocument;
+  }
+
+  return document;
 }
 
 function defaultExpandedNodeIds(): string[] {
@@ -126,7 +142,7 @@ function persistAutosavePreference(enabled: boolean): void {
 }
 
 function isPreviewTabDirty(tab: WorkspaceTab): boolean {
-  return Boolean(useSaveStore.getState().saveUnits[tab.document.saveUnitId]?.dirty);
+  return Boolean(useSaveStore.getState().saveUnits[getDocumentSaveUnitId(tab.document)]?.dirty);
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -139,20 +155,21 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   autosaveEnabled: readAutosavePreference(),
 
   openDocument: (document, options) => {
+    const normalizedDocument = normalizeDocument(document);
     const previewRequested = Boolean(options?.preview) && supportsPreviewTab(document);
-    const tabId = getWorkspaceTabId(document);
+    const tabId = getWorkspaceTabId(normalizedDocument);
     const existing = get().tabs.find((tab) => tab.id === tabId);
 
     if (previewRequested) {
       const nextTab = existing
         ? {
             ...existing,
-            document,
+            document: normalizedDocument,
             isPreview: existing.isPreview,
           }
         : ({
             id: tabId,
-            document,
+            document: normalizedDocument,
             isPreview: true,
           } satisfies WorkspaceTab);
 
@@ -231,7 +248,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (existing) {
       const nextTab = {
         ...existing,
-        document,
+        document: normalizedDocument,
         isPreview: options?.pin ? false : existing.isPreview,
       };
       set((state) => ({
@@ -243,7 +260,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
     const tab: WorkspaceTab = {
       id: tabId,
-      document,
+      document: normalizedDocument,
       isPreview: previewRequested,
     };
 
@@ -321,7 +338,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   restoreWorkspace: ({ tabs, activeTabId, expandedNodeIds }) =>
     set(() => ({
-      tabs: tabs.map((tab) => ({ ...tab, isPreview: false })),
+      tabs: tabs.map((tab) => ({
+        ...tab,
+        isPreview: false,
+        document: normalizeDocument(tab.document),
+      })),
       activeTabId: tabs.some((tab) => tab.id === activeTabId) ? activeTabId : (tabs[0]?.id ?? null),
       expandedNodeIds:
         expandedNodeIds.length > 0

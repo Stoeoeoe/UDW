@@ -83,11 +83,12 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
     }
 
     // 1.7 Entity types
-    if (proj?.entityTypes?.length) {
-      set((state) => {
-        state.entityTypes = proj.entityTypes!.map((e) => castDraft(e));
-      });
-    }
+    const entityTypes = await fileSystem.loadAllEntityTypes();
+    const effectiveEntityTypes =
+      entityTypes.length > 0 ? entityTypes : (proj?.entityTypes?.map((e) => castDraft(e)) ?? []);
+    set((state) => {
+      state.entityTypes = castDraft(effectiveEntityTypes);
+    });
 
     // 1.72 Tile metadata definitions
     if (proj?.tileMetadataDefinitions?.length) {

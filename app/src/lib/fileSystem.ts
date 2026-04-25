@@ -8,6 +8,7 @@ import {
   Actor,
   DialogueDocument,
   DialogueIndex,
+  EntityType,
   Item,
   Map as GameMap,
   Project,
@@ -261,6 +262,33 @@ export class FileSystemManager {
     }
   }
 
+  /**
+   * Load all entity types from entities/ directory.
+   */
+  async loadAllEntityTypes(): Promise<EntityType[]> {
+    if (this.isElectron()) {
+      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
+        projectPath: this.projectPath,
+        subDir: 'entities',
+      })) as EntityType[];
+    } else {
+      if (!this.projectRoot) throw new Error('No project open.');
+      const entityTypes: EntityType[] = [];
+      try {
+        const dir = await this.projectRoot.getDirectoryHandle('entities', { create: false });
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.entity.json')) {
+            const file = await (entry as FileSystemFileHandle).getFile();
+            entityTypes.push(JSON.parse(await file.text()));
+          }
+        }
+      } catch {
+        // entities/ directory may not exist yet
+      }
+      return entityTypes;
+    }
+  }
+
   async readDialogueIndex(): Promise<DialogueIndex | null> {
     const index = await this.readJson('dialogues', 'dialogues.index.json');
     return (index as DialogueIndex | null) ?? null;
@@ -280,7 +308,7 @@ export class FileSystemManager {
    * Save a JSON file (Map, Tileset, or Project)
    */
   async saveJson(
-    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | 'items' | '',
+    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | 'items' | 'entities' | '',
     filename: string,
     data: unknown,
   ): Promise<void> {
@@ -302,7 +330,7 @@ export class FileSystemManager {
    * Delete a JSON file
    */
   async deleteJson(
-    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | 'items' | '',
+    subDir: 'maps' | 'tilesets' | 'actors' | 'npcs' | 'dialogues' | 'items' | 'entities' | '',
     filename: string,
   ): Promise<void> {
     if (this.isElectron()) {

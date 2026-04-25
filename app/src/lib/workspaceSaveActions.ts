@@ -158,7 +158,6 @@ function applyDiscardedProject(nextProject: Project): void {
     project: nextProject,
     terrainTypes: nextProject.terrainTypes ?? [],
     layerDefinitions: nextProject.layerDefinitions ?? [],
-    entityTypes: nextProject.entityTypes ?? [],
     tileMetadataDefinitions: nextProject.tileMetadataDefinitions ?? [],
     locationMetadataDefinitions: nextProject.locationMetadataDefinitions ?? [],
     gameVariables: nextProject.gameVariables ?? [],
@@ -206,6 +205,23 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
     const rawProject = await fileSystem.readJson('', `${editor.project.id}.vproj`);
     if (!rawProject) return;
     applyDiscardedProject(rawProject as Project);
+    clearSaveUnit(document.saveUnitId);
+    return;
+  }
+
+  if (document.kind === 'entity') {
+    const rawEntityType = await fileSystem.readJson(
+      'entities',
+      `${document.entityTypeId}.entity.json`,
+    );
+    if (!rawEntityType) return;
+
+    useEditorStore.setState((state) => ({
+      entityTypes: state.entityTypes.map((entityType) =>
+        entityType.id === document.entityTypeId ? (rawEntityType as typeof entityType) : entityType,
+      ),
+    }));
+
     clearSaveUnit(document.saveUnitId);
     return;
   }

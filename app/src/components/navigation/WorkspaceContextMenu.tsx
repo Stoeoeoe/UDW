@@ -7,6 +7,18 @@ import {
   renameResourceFolder,
   setResourceFolderPath,
 } from '../../lib/resourceAdapters';
+import {
+  canDeleteEditorResourceDocument,
+  canRenameEditorResourceDocument,
+  canRevealEditorResourceDocument,
+  createEditorResourceDocument,
+  deleteEditorResourceDocument,
+  getEditorResourceFolderPath,
+  getEditorResourceFileExplorerPath,
+  getEditorResourceDocumentId,
+  getEditorResourceTypeLabel,
+  renameEditorResourceDocument,
+} from '../../lib/editorResourceTypes';
 import { useEditorStore } from '../../store/useEditorStore';
 import { ResourceKind, WorkspaceDocument, WorkspaceTreeNode } from '../../types/workspace';
 
@@ -118,10 +130,9 @@ export const CreateNewResourceDialog: React.FC<{
       switch (kind) {
         case 'actor':
           await store.addActor({ id, name, icon: 'GiPerson', emotions: [], folderPath });
-          onOpenDocument(
-            { kind: 'actor', actorId: id, label: name, saveUnitId: `actor:${id}` },
-            { pin: true },
-          );
+          onOpenDocument(createEditorResourceDocument({ type: 'actor', id, name }), {
+            pin: true,
+          });
           break;
         case 'entity':
           await store.addEntityType({
@@ -132,10 +143,9 @@ export const CreateNewResourceDialog: React.FC<{
             properties: [],
             folderPath,
           });
-          onOpenDocument(
-            { kind: 'entity', entityTypeId: id, label: name, saveUnitId: 'configuration' },
-            { pin: true },
-          );
+          onOpenDocument(createEditorResourceDocument({ type: 'entity', id, name }), {
+            pin: true,
+          });
           break;
         case 'item':
           await store.addItem({
@@ -147,10 +157,9 @@ export const CreateNewResourceDialog: React.FC<{
             maxStackSize: 99,
             folderPath,
           });
-          onOpenDocument(
-            { kind: 'item', itemId: id, label: name, saveUnitId: `item:${id}` },
-            { pin: true },
-          );
+          onOpenDocument(createEditorResourceDocument({ type: 'item', id, name }), {
+            pin: true,
+          });
           break;
       }
 
@@ -197,11 +206,11 @@ function buildMenuItems(
   const resourceKind = node.resourceKind ?? null;
   const folderPathForNode = getNodeFolderPath(node);
   const canCreate = Boolean(resourceKind && canCreateResourceKind(resourceKind));
-  const canRenameLeaf = Boolean(node.document && isRenameableLeaf(node.document));
+  const canRenameLeaf = canRenameEditorResourceDocument(node.document);
   const canRenameFolder = Boolean(node.kind === 'folder' && resourceKind && folderPathForNode);
-  const canDeleteLeaf = Boolean(node.document && isDeletableLeaf(node.document));
+  const canDeleteLeaf = canDeleteEditorResourceDocument(node.document);
   const canMoveLeaf = Boolean(node.document && resourceKind);
-  const canReveal = Boolean(node.document && isRevealableLeaf(node.document));
+  const canReveal = canRevealEditorResourceDocument(node.document);
 
   if ((node.kind === 'group' || node.kind === 'folder') && canCreate) {
     items.push({
@@ -329,49 +338,13 @@ async function handleRename(
   const nextName = prompt('Rename to:', node.label)?.trim();
   if (!nextName || nextName === node.label) return;
 
-  const store = useEditorStore.getState();
-  switch (node.document.kind) {
-    case 'actor':
-      await store.updateActor(node.document.actorId, { name: nextName });
-      break;
-    case 'entity':
-      await store.updateEntityType(node.document.entityTypeId, { displayName: nextName });
-      break;
-    case 'item':
-      await store.updateItem(node.document.itemId, { name: nextName });
-      break;
-    case 'tileset':
-      await store.updateTileset(node.document.tilesetId, { name: nextName });
-      break;
-    default:
-      break;
-  }
+  await renameEditorResourceDocument(node.document, nextName);
 }
 
 async function handleDelete(node: WorkspaceTreeNode): Promise<void> {
   if (!node.document) return;
   if (!confirm(`Delete "${node.label}"?`)) return;
-
-  const store = useEditorStore.getState();
-  switch (node.document.kind) {
-    case 'actor':
-      await store.deleteActor(node.document.actorId);
-      break;
-    case 'entity':
-      await store.deleteEntityType(node.document.entityTypeId);
-      break;
-    case 'item':
-      await store.deleteItem(node.document.itemId);
-      break;
-    case 'tileset':
-      await store.deleteTileset(node.document.tilesetId);
-      break;
-    case 'location':
-      await store.deleteMap(node.document.mapId);
-      break;
-    default:
-      break;
-  }
+  await deleteEditorResourceDocument(node.document);
 }
 
 function handleReveal(node: WorkspaceTreeNode): void {
@@ -380,26 +353,7 @@ function handleReveal(node: WorkspaceTreeNode): void {
   const projectPath = useEditorStore.getState().projectPath;
   if (!projectPath || !('ipcRenderer' in window)) return;
 
-  let relativePath = '';
-  switch (node.document.kind) {
-    case 'actor':
-      relativePath = `actors/${node.document.actorId}.actor.json`;
-      break;
-    case 'item':
-      relativePath = `items/${node.document.itemId}.vitm`;
-      break;
-    case 'location':
-      relativePath = `maps/${node.document.mapId}.vmap`;
-      break;
-    case 'tileset':
-      relativePath = `tilesets/${node.document.tilesetId}.vts`;
-      break;
-    case 'dialogue':
-      relativePath = `dialogues/${node.document.dialogueId}.dialogue.json`;
-      break;
-    default:
-      break;
-  }
+  const relativePath = getEditorResourceFileExplorerPath(node.document);
 
   if (relativePath) {
     void window.ipcRenderer.invoke('app:reveal-in-explorer', { projectPath, relativePath });
@@ -435,104 +389,13 @@ function getNodeFolderPath(node: WorkspaceTreeNode): string {
 }
 
 function getLeafFolderPath(document: WorkspaceDocument): string {
-  const state = useEditorStore.getState();
-
-  switch (document.kind) {
-    case 'actor':
-      return state.actors.find((actor) => actor.id === document.actorId)?.folderPath ?? '';
-    case 'entity':
-      return (
-        state.entityTypes.find((entityType) => entityType.id === document.entityTypeId)
-          ?.folderPath ?? ''
-      );
-    case 'item':
-      return state.items.find((item) => item.id === document.itemId)?.folderPath ?? '';
-    case 'location':
-      return state.maps.find((map) => map.id === document.mapId)?.folderPath ?? '';
-    case 'tileset':
-      return state.tilesets.get(document.tilesetId)?.folderPath ?? '';
-    case 'dialogue':
-      return (
-        state.dialogueIndex?.dialogues.find((dialogue) => dialogue.id === document.dialogueId)
-          ?.folderPath ?? ''
-      );
-    case 'variable':
-      return (
-        state.gameVariables.find((variable) => variable.key === document.variableKey)?.folderPath ??
-        ''
-      );
-    default:
-      return '';
-  }
+  return getEditorResourceFolderPath(document);
 }
 
 function getDocumentResourceId(document: WorkspaceDocument | undefined): string {
-  if (!document) return '';
-
-  switch (document.kind) {
-    case 'actor':
-      return document.actorId;
-    case 'entity':
-      return document.entityTypeId;
-    case 'item':
-      return document.itemId;
-    case 'location':
-      return document.mapId;
-    case 'tileset':
-      return document.tilesetId;
-    case 'dialogue':
-      return document.dialogueId;
-    case 'variable':
-      return document.variableKey;
-    default:
-      return '';
-  }
-}
-
-function isRenameableLeaf(document: WorkspaceDocument): boolean {
-  return (
-    document.kind === 'actor' ||
-    document.kind === 'entity' ||
-    document.kind === 'item' ||
-    document.kind === 'tileset'
-  );
-}
-
-function isDeletableLeaf(document: WorkspaceDocument): boolean {
-  return (
-    document.kind === 'actor' ||
-    document.kind === 'entity' ||
-    document.kind === 'item' ||
-    document.kind === 'tileset' ||
-    document.kind === 'location'
-  );
-}
-
-function isRevealableLeaf(document: WorkspaceDocument): boolean {
-  return (
-    document.kind === 'actor' ||
-    document.kind === 'item' ||
-    document.kind === 'location' ||
-    document.kind === 'tileset' ||
-    document.kind === 'dialogue'
-  );
+  return getEditorResourceDocumentId(document) ?? '';
 }
 
 function kindLabel(kind: ResourceKind): string {
-  switch (kind) {
-    case 'actor':
-      return 'Actor';
-    case 'entity':
-      return 'Entity';
-    case 'item':
-      return 'Item';
-    case 'location':
-      return 'Location';
-    case 'tileset':
-      return 'Tileset';
-    case 'dialogue':
-      return 'Dialogue';
-    case 'variable':
-      return 'Variable';
-  }
+  return getEditorResourceTypeLabel(kind);
 }

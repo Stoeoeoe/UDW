@@ -8,6 +8,7 @@ import {
   GameVariable,
 } from './schema';
 import { ToolType } from './editor';
+import { EditorResourceTypeId } from './editorResource';
 
 export type WorkspaceScreenKind = 'entities' | 'actors' | 'items' | 'dialogues' | 'scripting';
 
@@ -71,7 +72,7 @@ export type WorkspaceDocument =
       kind: 'entity';
       entityTypeId: string;
       label: string;
-      saveUnitId: 'configuration';
+      saveUnitId: string;
     }
   | {
       kind: 'item';
@@ -100,14 +101,7 @@ export interface WorkspaceTab {
   isPreview?: boolean;
 }
 
-export type ResourceKind =
-  | 'location'
-  | 'tileset'
-  | 'actor'
-  | 'entity'
-  | 'item'
-  | 'dialogue'
-  | 'variable';
+export type ResourceKind = EditorResourceTypeId;
 
 export interface WorkspaceTreeNode {
   id: string;

@@ -40,6 +40,8 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
   isOpen,
   size = 'xl',
 }) => {
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
+
   const form = useForm({
     defaultValues: {
       name: defaultName,
@@ -86,6 +88,7 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
                 <FormControl isRequired isInvalid={field.state.meta.errors.length > 0}>
                   <FormLabel>Name</FormLabel>
                   <Input
+                    ref={nameInputRef}
                     size="sm"
                     name={field.name}
                     value={field.state.value}
@@ -94,7 +97,6 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
                     placeholder={`e.g. My ${itemType}`}
                     bg="gray.800"
                     color="white"
-                    autoFocus
                   />
                   {field.state.meta.errors.length > 0 ? (
                     <FormErrorMessage>{field.state.meta.errors.join(', ')}</FormErrorMessage>
@@ -155,7 +157,7 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
 
   if (isOpen !== undefined) {
     return (
-      <EditorModal isOpen={isOpen} onClose={onClose} size={size}>
+      <EditorModal isOpen={isOpen} onClose={onClose} size={size} initialFocusRef={nameInputRef}>
         {card}
       </EditorModal>
     );
