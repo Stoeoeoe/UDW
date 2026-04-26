@@ -166,6 +166,21 @@ export function ensureNavigationLayer(map: GameMap): GameMap {
   return { ...map, layers: [...map.layers, navLayer] };
 }
 
+export function ensureCollisionLayer(map: GameMap): GameMap {
+  const hasCollisionLayer = map.layers.some((l) => l.kind === 'collision');
+  if (hasCollisionLayer) return map;
+  const collisionLayer: Layer = {
+    id: 'collision',
+    name: 'Collision',
+    kind: 'collision',
+    visible: true,
+    locked: false,
+    opacity: 1,
+    zOrder: 9998,
+  };
+  return { ...map, layers: [...map.layers, collisionLayer] };
+}
+
 export function createDefaultLayer(width: number, height: number): Layer {
   return {
     id: 'ground',
@@ -191,7 +206,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   terrain: 'terrain',
   visual: 'stamp',
   object: 'objectPlace',
-  collision: 'stamp',
+  collision: 'collisionSelect',
   navigation: 'select',
   metadata: 'stamp',
   entity: 'entitySelect',
@@ -201,7 +216,7 @@ export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   terrain: ['terrain', 'erase'],
   visual: ['stamp', 'random', 'erase', 'fill', 'terrain', 'select'],
   object: ['objectSelect', 'objectPlace', 'objectDelete'],
-  collision: ['stamp', 'erase', 'fill', 'select'],
+  collision: ['collisionSelect', 'collisionRect', 'collisionPolygon', 'collisionCircle'],
   navigation: ['select', 'anchorPlace', 'triggerPlace', 'triggerPolygon', 'linkPlace'],
   metadata: ['stamp', 'erase', 'fill', 'select'],
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
@@ -261,6 +276,7 @@ export function syncToolStateForSelectedLayer(
     selectedObjectInstanceId: string | null;
     selectedEntityIds: Set<string>;
     selectedTriggerId: string | null;
+    selectedCollisionId: string | null;
   },
   options: { forceDefault?: boolean } = {},
 ): void {
@@ -283,6 +299,9 @@ export function syncToolStateForSelectedLayer(
     state.selectedLinkId = null;
     state.selectedAnchorId = null;
     state.selectedTriggerId = null;
+  }
+  if (layer.kind !== 'collision') {
+    state.selectedCollisionId = null;
   }
   if (layer.kind !== 'entity') {
     state.selectedEntityId = null;

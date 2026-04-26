@@ -10,6 +10,7 @@ import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { LinkInspector } from './LinkInspector';
 import { AnchorInspector } from './AnchorInspector';
 import { TriggerInspector } from './TriggerInspector';
+import { CollisionInspector } from './CollisionInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { ObjectPalette } from '../../tileset/ObjectPalette';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
@@ -26,6 +27,7 @@ const MapRightPanel: React.FC = () => {
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
   const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
   const selectedTriggerId = useEditorStore((state) => state.selectedTriggerId);
+  const selectedCollisionId = useEditorStore((state) => state.selectedCollisionId);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const selectedObjectInstanceId = useEditorStore((state) => state.selectedObjectInstanceId);
   const currentMap = useEditorStore((state) => state.currentMap);
@@ -45,6 +47,8 @@ const MapRightPanel: React.FC = () => {
         <AnchorInspector />
       ) : selectedTriggerId ? (
         <TriggerInspector />
+      ) : selectedCollisionId ? (
+        <CollisionInspector />
       ) : selectedEntityId || selectedObjectInstanceId ? (
         <PropertiesPanel />
       ) : (

@@ -31,6 +31,7 @@ export function createDefaultLocationSession(
     selectedLinkId: null,
     selectedAnchorId: null,
     selectedTriggerId: null,
+    selectedCollisionId: null,
     timePreviewEnabled: false,
     timeOfDay: 0.5,
   };
@@ -84,6 +85,7 @@ export function captureTabSession(tab: WorkspaceTab | null): void {
       selectedLinkId: editor.selectedLinkId,
       selectedAnchorId: editor.selectedAnchorId,
       selectedTriggerId: editor.selectedTriggerId,
+      selectedCollisionId: editor.selectedCollisionId,
       timePreviewEnabled: editor.timePreviewEnabled,
       timeOfDay: editor.timeOfDay,
     });
@@ -133,6 +135,7 @@ export function applyTabSession(tab: WorkspaceTab | null): void {
     nextEditor.selectLink(session.selectedLinkId);
     nextEditor.selectAnchor(session.selectedAnchorId);
     nextEditor.selectTrigger(session.selectedTriggerId);
+    nextEditor.selectCollision(session.selectedCollisionId);
     nextEditor.setTimePreviewEnabled(session.timePreviewEnabled);
     nextEditor.setTimeOfDay(session.timeOfDay);
     useEditorStore.setState((state) => {

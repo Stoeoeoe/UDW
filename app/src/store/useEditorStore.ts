@@ -42,6 +42,7 @@ import {
 } from './slices/mapSlice';
 import { createLayerSlice, LayerSlice } from './slices/layerSlice';
 import { createTriggerSlice, TriggerSlice } from './slices/triggerSlice';
+import { createCollisionSlice, CollisionSlice } from './slices/collisionSlice';
 
 // ============================================================================
 // Store interface
@@ -63,7 +64,8 @@ export interface EditorStore
     MapSlice,
     LocationLinkSlice,
     LayerSlice,
-    TriggerSlice {
+    TriggerSlice,
+    CollisionSlice {
   // Fields from EditorState not owned by any slice
   project: Project | null;
   projectPath: string | null;
@@ -120,6 +122,7 @@ function syncEditorSelectionsWithMap(): void {
       state.selectedLinkId = null;
       state.selectedAnchorId = null;
       state.selectedTriggerId = null;
+      state.selectedCollisionId = null;
       state.activeVariationId = null;
       return;
     }
@@ -155,6 +158,13 @@ function syncEditorSelectionsWithMap(): void {
         (t) => t.id === state.selectedTriggerId,
       );
       if (!hasTrigger) state.selectedTriggerId = null;
+    }
+
+    if (state.selectedCollisionId) {
+      const hasCollision = currentMap.spatialPrimitives?.collisions?.some(
+        (c) => c.id === state.selectedCollisionId,
+      );
+      if (!hasCollision) state.selectedCollisionId = null;
     }
 
     if (state.selectedEntityId) {
@@ -269,6 +279,7 @@ export const useEditorStore = create<EditorStore>()(
           ...createLocationLinkSlice(set, get, {} as never),
           ...createLayerSlice(set, get, {} as never),
           ...createTriggerSlice(set, get, {} as never),
+          ...createCollisionSlice(set, get, {} as never),
 
           // ── Initial state not owned by slices ─────────────────────────────
           project: null,

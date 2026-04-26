@@ -140,6 +140,7 @@ export interface LocationTabSession {
   selectedLinkId: string | null;
   selectedAnchorId: string | null;
   selectedTriggerId: string | null;
+  selectedCollisionId: string | null;
   timePreviewEnabled: boolean;
   timeOfDay: number;
 }

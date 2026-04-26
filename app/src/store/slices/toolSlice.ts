@@ -95,7 +95,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
 
   setActiveTool: (tool) =>
     set((state) => {
-      if (state.activeTool === 'triggerPolygon' && tool !== 'triggerPolygon') {
+      if (
+        (state.activeTool === 'triggerPolygon' || state.activeTool === 'collisionPolygon') &&
+        tool !== state.activeTool
+      ) {
         state.polygonPreviewPoints = null;
       }
       state.activeTool = tool;

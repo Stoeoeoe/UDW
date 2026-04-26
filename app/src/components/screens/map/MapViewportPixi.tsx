@@ -272,6 +272,7 @@ export const MapViewportPixi: React.FC = () => {
     renderCollisionOverlay,
     renderTerrainOverlay,
     renderTriggers,
+    renderCollisionShapes,
     renderLocationLinks,
     renderHover,
     renderPreview,
@@ -288,6 +289,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderCollisionShapes();
     renderTriggers();
     renderLocationLinks();
     renderHover();
@@ -324,22 +326,30 @@ export const MapViewportPixi: React.FC = () => {
           state.currentMap?.spatialPrimitives?.triggers !==
           prevState.currentMap?.spatialPrimitives?.triggers;
 
-        if (linksChanged && !tileDataChanged && !triggersChanged) {
+        const collisionsChanged =
+          state.currentMap?.spatialPrimitives?.collisions !==
+          prevState.currentMap?.spatialPrimitives?.collisions;
+
+        if (linksChanged && !tileDataChanged && !triggersChanged && !collisionsChanged) {
           // Only links changed (e.g. link drag) — skip expensive tile/entity redraws
           renderLocationLinks();
-        } else if (triggersChanged && !tileDataChanged && !linksChanged) {
+        } else if (triggersChanged && !tileDataChanged && !linksChanged && !collisionsChanged) {
           renderTriggers();
+        } else if (collisionsChanged && !tileDataChanged && !linksChanged && !triggersChanged) {
+          renderCollisionShapes();
         } else if (tileDataChanged) {
           renderTiles();
           renderEntities();
           renderGrid();
           renderCollisionOverlay();
           renderTerrainOverlay();
+          renderCollisionShapes();
           renderTriggers();
           renderLocationLinks();
         } else {
           // Only entities or other map data changed — skip tile/grid redraws
           renderEntities();
+          renderCollisionShapes();
           renderTriggers();
           renderLocationLinks();
         }
@@ -356,6 +366,10 @@ export const MapViewportPixi: React.FC = () => {
       if (state.selectedTriggerId !== prevState.selectedTriggerId) {
         renderTriggers();
       }
+      // Re-render collision shapes when selection changes
+      if (state.selectedCollisionId !== prevState.selectedCollisionId) {
+        renderCollisionShapes();
+      }
       // Re-render entities when selection changes
       if (state.selectedEntityId !== prevState.selectedEntityId) {
         renderEntities();
@@ -370,6 +384,7 @@ export const MapViewportPixi: React.FC = () => {
       // Re-render collision overlay when toggled
       if (state.showCollisionOverlay !== prevState.showCollisionOverlay) {
         renderCollisionOverlay();
+        renderCollisionShapes();
       }
       // Re-render terrain overlay when toggled
       if (state.showTerrainOverlay !== prevState.showTerrainOverlay) {
@@ -387,9 +402,30 @@ export const MapViewportPixi: React.FC = () => {
       if (
         (state.drawPreview !== prevState.drawPreview &&
           (state.activeTool === 'triggerPlace' || prevState.activeTool === 'triggerPlace')) ||
-        state.polygonPreviewPoints !== prevState.polygonPreviewPoints
+        (state.polygonPreviewPoints !== prevState.polygonPreviewPoints &&
+          (state.activeTool === 'triggerPolygon' || prevState.activeTool === 'triggerPolygon'))
       ) {
         renderTriggers();
+      }
+      // Re-render collision shapes while drawing collision primitives
+      if (
+        (state.drawPreview !== prevState.drawPreview &&
+          (state.activeTool === 'collisionRect' ||
+            prevState.activeTool === 'collisionRect' ||
+            state.activeTool === 'collisionCircle' ||
+            prevState.activeTool === 'collisionCircle')) ||
+        (state.polygonPreviewPoints !== prevState.polygonPreviewPoints &&
+          (state.activeTool === 'collisionPolygon' ||
+            prevState.activeTool === 'collisionPolygon')) ||
+        (state.activeTool !== prevState.activeTool &&
+          (['collisionRect', 'collisionPolygon', 'collisionCircle', 'collisionSelect'].includes(
+            state.activeTool,
+          ) ||
+            ['collisionRect', 'collisionPolygon', 'collisionCircle', 'collisionSelect'].includes(
+              prevState.activeTool,
+            )))
+      ) {
+        renderCollisionShapes();
       }
       // Re-render preview on tool/tile selection/brush size/draw mode change
       if (
@@ -421,6 +457,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderCollisionShapes,
     renderTriggers,
     renderLocationLinks,
     renderHover,
@@ -488,10 +525,19 @@ export const MapViewportPixi: React.FC = () => {
           selectedTriggerId,
           removeTrigger,
           selectTrigger,
+          selectedCollisionId,
+          removeCollision,
+          selectCollision,
           selectedAnchorId: anchorId,
           removeAnchor,
           selectAnchor,
         } = useEditorStore.getState();
+        if (selectedCollisionId) {
+          e.preventDefault();
+          removeCollision(selectedCollisionId);
+          selectCollision(null);
+          return;
+        }
         if (selectedTriggerId) {
           e.preventDefault();
           removeTrigger(selectedTriggerId);
@@ -531,6 +577,12 @@ export const MapViewportPixi: React.FC = () => {
         if (activeTool === 'triggerPolygon') {
           setPolygonPreviewPoints(null);
           useEditorStore.getState().setActiveTool('select');
+          e.preventDefault();
+          return;
+        }
+        if (activeTool === 'collisionPolygon') {
+          setPolygonPreviewPoints(null);
+          useEditorStore.getState().setActiveTool('collisionSelect');
           e.preventDefault();
           return;
         }
@@ -635,7 +687,11 @@ export const MapViewportPixi: React.FC = () => {
       activeTool === 'erase' ||
       activeTool === 'fill' ||
       activeTool === 'objectPlace' ||
-      activeTool === 'objectDelete'
+      activeTool === 'triggerPolygon' ||
+      activeTool === 'triggerPlace' ||
+      activeTool === 'collisionPolygon' ||
+      activeTool === 'collisionRect' ||
+      activeTool === 'collisionCircle'
     ) {
       return 'crosshair';
     }

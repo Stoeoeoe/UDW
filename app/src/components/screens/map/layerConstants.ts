@@ -52,7 +52,13 @@ export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
     kinds: ['visual', 'terrain', 'object'],
     color: 'blue.700',
   },
-  { id: 'collision', label: 'Collision', kinds: ['collision'], color: 'orange.700' },
+  {
+    id: 'collision',
+    label: 'Collision',
+    kinds: ['collision'],
+    color: 'orange.700',
+    systemKinds: ['collision'],
+  },
   { id: 'entities', label: 'Entities', kinds: ['entity'], color: 'purple.700' },
   {
     id: 'other',

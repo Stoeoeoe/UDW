@@ -198,6 +198,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const terrainOverlayGraphicsRef = useRef<Graphics | null>(null);
   const locationLinksGraphicsRef = useRef<Graphics | null>(null);
   const triggerGraphicsRef = useRef<Graphics | null>(null);
+  const collisionShapesGraphicsRef = useRef<Graphics | null>(null);
   const hoverGraphicsRef = useRef<Graphics | null>(null);
   const selectionGraphicsRef = useRef<Graphics | null>(null);
   const previewContainerRef = useRef<Container | null>(null);
@@ -249,6 +250,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     locationLinksGraphics.zIndex = 2.9;
     locationLinksGraphicsRef.current = locationLinksGraphics;
     container.addChild(locationLinksGraphics);
+
+    // Collision shapes overlay (z: 2.83 — below triggers)
+    const collisionShapesGraphics = new Graphics();
+    collisionShapesGraphics.zIndex = 2.83;
+    collisionShapesGraphicsRef.current = collisionShapesGraphics;
+    container.addChild(collisionShapesGraphics);
 
     // Trigger zones overlay (z: 2.85 — below links, above terrain)
     const triggerGraphics = new Graphics();
@@ -1688,6 +1695,168 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     }
   }, [getTileTexture, projectTileSize]);
 
+  // Render collision shape primitives overlay
+  const renderCollisionShapes = useCallback(() => {
+    const g = collisionShapesGraphicsRef.current;
+    const {
+      currentMap,
+      selectedCollisionId,
+      activeTool,
+      drawPreview,
+      polygonPreviewPoints,
+      showCollisionOverlay,
+    } = useEditorStore.getState();
+    if (!g) return;
+    g.clear();
+    if (!currentMap) return;
+
+    const collisionLayer = currentMap.layers.find((l) => l.kind === 'collision');
+    if (!collisionLayer?.visible && !showCollisionOverlay) return;
+
+    const tileSize = projectTileSize;
+    const SHAPE_COLOR = 0xff6600;
+    const HANDLE_SIZE = 6;
+
+    // ── Placement previews ─────────────────────────────────────────────────
+    if (
+      activeTool === 'collisionRect' &&
+      drawPreview?.isDrawing &&
+      drawPreview.start &&
+      drawPreview.end
+    ) {
+      const sx = drawPreview.start.x * tileSize;
+      const sy = drawPreview.start.y * tileSize;
+      const ex = drawPreview.end.x * tileSize;
+      const ey = drawPreview.end.y * tileSize;
+      const px = Math.min(sx, ex);
+      const py = Math.min(sy, ey);
+      const pw = Math.abs(ex - sx);
+      const ph = Math.abs(ey - sy);
+      g.rect(px, py, pw, ph);
+      g.fill({ color: SHAPE_COLOR, alpha: 0.2 });
+      g.rect(px, py, pw, ph);
+      g.stroke({ width: 2, color: SHAPE_COLOR, alpha: 0.8 });
+    }
+
+    if (
+      activeTool === 'collisionCircle' &&
+      drawPreview?.isDrawing &&
+      drawPreview.start &&
+      drawPreview.end
+    ) {
+      const cx = drawPreview.start.x * tileSize;
+      const cy = drawPreview.start.y * tileSize;
+      const ex = drawPreview.end.x * tileSize;
+      const ey = drawPreview.end.y * tileSize;
+      const radius = Math.hypot(ex - cx, ey - cy);
+      if (radius > 0) {
+        g.circle(cx, cy, radius);
+        g.fill({ color: SHAPE_COLOR, alpha: 0.2 });
+        g.circle(cx, cy, radius);
+        g.stroke({ width: 2, color: SHAPE_COLOR, alpha: 0.8 });
+      }
+      g.circle(cx, cy, 3);
+      g.fill({ color: SHAPE_COLOR, alpha: 0.9 });
+      g.moveTo(cx, cy);
+      g.lineTo(ex, ey);
+      g.stroke({ width: 1, color: SHAPE_COLOR, alpha: 0.5 });
+    }
+
+    if (
+      activeTool === 'collisionPolygon' &&
+      polygonPreviewPoints &&
+      polygonPreviewPoints.length >= 1
+    ) {
+      const pts = polygonPreviewPoints;
+      const CLOSE_DIST = tileSize * 0.75;
+      if (pts.length >= 2) {
+        g.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.stroke({ width: 2, color: SHAPE_COLOR, alpha: 0.7 });
+      }
+      for (let i = 0; i < pts.length; i++) {
+        const isFirst = i === 0;
+        g.circle(pts[i][0], pts[i][1], isFirst && pts.length >= 3 ? 5 : 3);
+        g.fill({ color: isFirst ? 0xffd700 : SHAPE_COLOR, alpha: 0.9 });
+        if (isFirst && pts.length >= 3) {
+          g.circle(pts[0][0], pts[0][1], CLOSE_DIST);
+          g.stroke({ width: 1, color: 0xffd700, alpha: 0.3 });
+        }
+      }
+    }
+
+    // ── Committed shapes ───────────────────────────────────────────────────
+    const collisions = currentMap.spatialPrimitives?.collisions ?? [];
+    for (const col of collisions) {
+      const isSelected = col.id === selectedCollisionId;
+      const alpha = isSelected ? 0.25 : 0.12;
+      const strokeAlpha = isSelected ? 0.9 : 0.5;
+      const strokeWidth = isSelected ? 2 : 1;
+
+      if (col.shape === 'rectangle' && col.size) {
+        const [rx, ry] = col.position;
+        const [rw, rh] = col.size;
+        g.rect(rx, ry, rw, rh);
+        g.fill({ color: SHAPE_COLOR, alpha });
+        g.rect(rx, ry, rw, rh);
+        g.stroke({ width: strokeWidth, color: SHAPE_COLOR, alpha: strokeAlpha });
+        g.circle(rx + rw / 2, ry + rh / 2, 3);
+        g.fill({ color: SHAPE_COLOR, alpha: 0.8 });
+        if (isSelected) {
+          const handlePositions = [
+            [rx - HANDLE_SIZE, ry - HANDLE_SIZE],
+            [rx + rw, ry - HANDLE_SIZE],
+            [rx - HANDLE_SIZE, ry + rh],
+            [rx + rw, ry + rh],
+            [rx - HANDLE_SIZE, ry + rh / 2 - HANDLE_SIZE / 2],
+            [rx + rw, ry + rh / 2 - HANDLE_SIZE / 2],
+            [rx + rw / 2 - HANDLE_SIZE / 2, ry - HANDLE_SIZE],
+            [rx + rw / 2 - HANDLE_SIZE / 2, ry + rh],
+          ];
+          for (const [hx, hy] of handlePositions) {
+            g.rect(hx, hy, HANDLE_SIZE, HANDLE_SIZE);
+            g.fill({ color: 0xffffff, alpha: 0.9 });
+            g.stroke({ width: 1, color: 0x000000, alpha: 0.4 });
+          }
+        }
+      } else if (col.shape === 'circle' && col.radius !== undefined) {
+        const [cx, cy] = col.position;
+        const r = col.radius;
+        g.circle(cx, cy, r);
+        g.fill({ color: SHAPE_COLOR, alpha });
+        g.circle(cx, cy, r);
+        g.stroke({ width: strokeWidth, color: SHAPE_COLOR, alpha: strokeAlpha });
+        g.moveTo(cx - 3, cy);
+        g.lineTo(cx + 3, cy);
+        g.moveTo(cx, cy - 3);
+        g.lineTo(cx, cy + 3);
+        g.stroke({ width: 1, color: SHAPE_COLOR, alpha: 0.7 });
+        if (isSelected) {
+          g.rect(cx + r, cy - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
+          g.fill({ color: 0xffffff, alpha: 0.9 });
+          g.stroke({ width: 1, color: 0x000000, alpha: 0.4 });
+          g.moveTo(cx, cy);
+          g.lineTo(cx + r, cy);
+          g.stroke({ width: 1, color: SHAPE_COLOR, alpha: 0.4 });
+        }
+      } else if (col.shape === 'polygon' && col.points && col.points.length >= 3) {
+        const pts = col.points;
+        g.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.closePath();
+        g.fill({ color: SHAPE_COLOR, alpha });
+        g.stroke({ width: strokeWidth, color: SHAPE_COLOR, alpha: strokeAlpha });
+        if (isSelected) {
+          for (const [px, py] of pts) {
+            g.circle(px, py, HANDLE_SIZE / 2 + 1);
+            g.fill({ color: 0xffffff, alpha: 0.9 });
+            g.stroke({ width: 1, color: 0x000000, alpha: 0.4 });
+          }
+        }
+      }
+    }
+  }, [projectTileSize]);
+
   // Render trigger zones overlay
   const renderTriggers = useCallback(() => {
     const g = triggerGraphicsRef.current;
@@ -1828,6 +1997,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderCollisionShapes();
     renderTriggers();
     renderLocationLinks();
     renderHover();
@@ -1838,6 +2008,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderCollisionShapes,
     renderTriggers,
     renderLocationLinks,
     renderHover,
@@ -1851,6 +2022,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderCollisionShapes,
     renderTriggers,
     renderLocationLinks,
     renderHover,

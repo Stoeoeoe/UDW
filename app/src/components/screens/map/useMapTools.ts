@@ -16,7 +16,7 @@ import { getTriggerCenter } from '../../../lib/locationLinkUtils';
 import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
 import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
 import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
-import { MapTrigger } from '../../../types/schema';
+import { MapTrigger, MapCollision } from '../../../types/schema';
 import { getObjectGroupAt } from '../../../lib/objectGroups';
 import { matchObjectDefinitionByPattern } from '../../../lib/tilesetObjects';
 import {
@@ -68,6 +68,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const addTrigger = useEditorStore((state) => state.addTrigger);
   const updateTrigger = useEditorStore((state) => state.updateTrigger);
   const selectTrigger = useEditorStore((state) => state.selectTrigger);
+  const addCollision = useEditorStore((state) => state.addCollision);
+  const updateCollision = useEditorStore((state) => state.updateCollision);
+  const selectCollision = useEditorStore((state) => state.selectCollision);
   const setHoveredTile = useEditorStore((state) => state.setHoveredTile);
   const setHoveredWorldPosition = useEditorStore((state) => state.setHoveredWorldPosition);
   const setDrawPreview = useEditorStore((state) => state.setDrawPreview);
@@ -97,6 +100,21 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const triggerPlaceStartRef = useRef<{ x: number; y: number } | null>(null);
   // Polygon pen-draw state: list of vertices placed so far
   const polygonDrawPointsRef = useRef<[number, number][] | null>(null);
+  // Collision tool refs
+  const collisionPlaceStartRef = useRef<{ x: number; y: number } | null>(null);
+  const collisionCircleStartRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingCollisionRef = useRef<string | null>(null);
+  const dragCollisionOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingCollisionHandleRef = useRef<string | null>(null);
+  const dragCollisionInitialRef = useRef<{
+    x: number;
+    y: number;
+    w?: number;
+    h?: number;
+    r?: number;
+  } | null>(null);
+  const draggingCollisionVertexRef = useRef<number | null>(null);
+  const collisionPolygonPointsRef = useRef<[number, number][] | null>(null);
   const isShiftHeldRef = useRef(false);
   const terrainGridRef = useRef<Map<string, string | null>>(new Map());
   const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null);
@@ -395,6 +413,98 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     [currentMap, pointInPolygon],
   );
 
+  const hitTestCollision = useCallback(
+    (worldX: number, worldY: number): { collision: MapCollision; handle: string } | undefined => {
+      const collisions = currentMap?.spatialPrimitives?.collisions ?? [];
+      const selectedCollisionId = useEditorStore.getState().selectedCollisionId;
+      const HANDLE_RADIUS = 5;
+      const HANDLE_SIZE = 6;
+
+      for (const col of [...collisions].reverse()) {
+        if (col.shape === 'rectangle' && col.size) {
+          const [cx, cy] = col.position;
+          const [cw, ch] = col.size;
+
+          if (col.id === selectedCollisionId) {
+            const handles: Record<string, { x: number; y: number; w: number; h: number }> = {
+              nw: { x: cx - HANDLE_SIZE, y: cy - HANDLE_SIZE, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              ne: { x: cx + cw, y: cy - HANDLE_SIZE, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              sw: { x: cx - HANDLE_SIZE, y: cy + ch, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              se: { x: cx + cw, y: cy + ch, w: HANDLE_SIZE, h: HANDLE_SIZE },
+              left: {
+                x: cx - HANDLE_SIZE,
+                y: cy + ch / 2 - HANDLE_SIZE / 2,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+              right: {
+                x: cx + cw,
+                y: cy + ch / 2 - HANDLE_SIZE / 2,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+              top: {
+                x: cx + cw / 2 - HANDLE_SIZE / 2,
+                y: cy - HANDLE_SIZE,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+              bottom: {
+                x: cx + cw / 2 - HANDLE_SIZE / 2,
+                y: cy + ch,
+                w: HANDLE_SIZE,
+                h: HANDLE_SIZE,
+              },
+            };
+            for (const [name, r] of Object.entries(handles)) {
+              if (worldX >= r.x && worldX <= r.x + r.w && worldY >= r.y && worldY <= r.y + r.h) {
+                return { collision: col, handle: name };
+              }
+            }
+          }
+
+          if (worldX >= cx && worldX < cx + cw && worldY >= cy && worldY < cy + ch) {
+            return { collision: col, handle: 'body' };
+          }
+        } else if (col.shape === 'circle' && col.radius !== undefined) {
+          const [cx, cy] = col.position;
+          const r = col.radius;
+
+          if (col.id === selectedCollisionId) {
+            const dx = worldX - (cx + r);
+            const dy = worldY - cy;
+            if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 2) {
+              return { collision: col, handle: 'radius' };
+            }
+          }
+
+          const dx = worldX - cx;
+          const dy = worldY - cy;
+          if (Math.sqrt(dx * dx + dy * dy) <= r) {
+            return { collision: col, handle: 'body' };
+          }
+        } else if (col.shape === 'polygon' && col.points && col.points.length >= 3) {
+          if (col.id === selectedCollisionId) {
+            for (let i = 0; i < col.points.length; i++) {
+              const [px, py] = col.points[i];
+              const dx = worldX - px;
+              const dy = worldY - py;
+              if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 2) {
+                return { collision: col, handle: `vertex-${i}` };
+              }
+            }
+          }
+
+          if (pointInPolygon(worldX, worldY, col.points)) {
+            return { collision: col, handle: 'body' };
+          }
+        }
+      }
+      return undefined;
+    },
+    [currentMap, pointInPolygon],
+  );
+
   // Handle pointer down
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
@@ -613,6 +723,103 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
           setPolygonPreviewPoints(newPts);
         }
         e.preventDefault();
+        return;
+      }
+
+      // ── Collision tools ─────────────────────────────────────────────────────
+      if (activeTool === 'collisionRect' && e.button === 0 && inBounds && worldPos) {
+        const [sx, sy] = snapWorldPosition(worldPos.x, worldPos.y);
+        collisionPlaceStartRef.current = { x: sx, y: sy };
+        startHistoryBatch();
+        return;
+      }
+
+      if (activeTool === 'collisionPolygon' && e.button === 0 && inBounds && worldPos) {
+        const [sx, sy] = snapWorldPosition(worldPos.x, worldPos.y);
+        const pts = collisionPolygonPointsRef.current ?? [];
+        const CLOSE_DIST = projectTileSize * 0.75;
+        if (pts.length >= 3) {
+          const [fx, fy] = pts[0];
+          const dx = sx - fx;
+          const dy = sy - fy;
+          if (Math.sqrt(dx * dx + dy * dy) <= CLOSE_DIST) {
+            const minX = Math.min(...pts.map(([x]) => x));
+            const minY = Math.min(...pts.map(([, y]) => y));
+            addCollision({
+              id: `collision-${Date.now()}`,
+              shape: 'polygon',
+              position: [minX, minY],
+              points: pts,
+              tags: [],
+            });
+            collisionPolygonPointsRef.current = null;
+            setPolygonPreviewPoints(null);
+            useEditorStore.getState().setActiveTool('collisionSelect');
+            return;
+          }
+        }
+        const newPts: [number, number][] = [...pts, [sx, sy]];
+        collisionPolygonPointsRef.current = newPts;
+        setPolygonPreviewPoints(newPts);
+        return;
+      }
+
+      if (
+        activeTool === 'collisionPolygon' &&
+        e.button === 2 &&
+        collisionPolygonPointsRef.current
+      ) {
+        const pts = collisionPolygonPointsRef.current;
+        if (pts.length <= 1) {
+          collisionPolygonPointsRef.current = null;
+          setPolygonPreviewPoints(null);
+        } else {
+          const newPts: [number, number][] = pts.slice(0, -1);
+          collisionPolygonPointsRef.current = newPts;
+          setPolygonPreviewPoints(newPts);
+        }
+        e.preventDefault();
+        return;
+      }
+
+      if (activeTool === 'collisionCircle' && e.button === 0 && inBounds && worldPos) {
+        const [sx, sy] = snapWorldPosition(worldPos.x, worldPos.y);
+        collisionCircleStartRef.current = { x: sx, y: sy };
+        startHistoryBatch();
+        return;
+      }
+
+      if (activeTool === 'collisionSelect' && e.button === 0) {
+        if (!worldPos) return;
+        const hit = inBounds ? hitTestCollision(worldPos.x, worldPos.y) : undefined;
+        if (hit) {
+          selectCollision(hit.collision.id);
+          startHistoryBatch();
+          if (hit.handle.startsWith('vertex-')) {
+            draggingCollisionVertexRef.current = parseInt(hit.handle.replace('vertex-', ''), 10);
+            draggingCollisionRef.current = hit.collision.id;
+          } else if (hit.handle === 'radius') {
+            draggingCollisionHandleRef.current = 'radius';
+            dragCollisionInitialRef.current = {
+              x: hit.collision.position[0],
+              y: hit.collision.position[1],
+              r: hit.collision.radius,
+            };
+          } else if (hit.handle !== 'body') {
+            const [cx, cy] = hit.collision.position;
+            const [cw, ch] = hit.collision.size ?? [projectTileSize, projectTileSize];
+            draggingCollisionHandleRef.current = hit.handle;
+            dragCollisionInitialRef.current = { x: cx, y: cy, w: cw, h: ch };
+          } else {
+            draggingCollisionRef.current = hit.collision.id;
+            dragCollisionOffsetRef.current = {
+              x: worldPos.x - hit.collision.position[0],
+              y: worldPos.y - hit.collision.position[1],
+            };
+          }
+          return;
+        }
+        selectCollision(null);
         return;
       }
 
@@ -945,6 +1152,9 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       startHistoryBatch,
       selectTrigger,
       addTrigger,
+      hitTestCollision,
+      selectCollision,
+      addCollision,
     ],
   );
 
@@ -1229,6 +1439,194 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         });
       }
 
+      // collisionRect drag — live rect preview
+      if (
+        e.buttons === 1 &&
+        activeTool === 'collisionRect' &&
+        collisionPlaceStartRef.current &&
+        worldPos
+      ) {
+        const start = collisionPlaceStartRef.current;
+        const [ex, ey] = snapWorldPosition(worldPos.x, worldPos.y);
+        setDrawPreview({
+          isDrawing: true,
+          start: { x: start.x / projectTileSize, y: start.y / projectTileSize },
+          end: { x: ex / projectTileSize, y: ey / projectTileSize },
+          mode: 'draw',
+        });
+      }
+
+      // collisionCircle drag — live circle preview
+      if (
+        e.buttons === 1 &&
+        activeTool === 'collisionCircle' &&
+        collisionCircleStartRef.current &&
+        worldPos
+      ) {
+        const start = collisionCircleStartRef.current;
+        setDrawPreview({
+          isDrawing: true,
+          start: { x: start.x / projectTileSize, y: start.y / projectTileSize },
+          end: { x: worldPos.x / projectTileSize, y: worldPos.y / projectTileSize },
+          mode: 'draw',
+        });
+      }
+
+      // collisionSelect — drag polygon vertex
+      if (
+        e.buttons === 1 &&
+        activeTool === 'collisionSelect' &&
+        draggingCollisionRef.current &&
+        draggingCollisionVertexRef.current !== null &&
+        worldPos
+      ) {
+        const colId = draggingCollisionRef.current;
+        const vertIdx = draggingCollisionVertexRef.current;
+        const col = currentMap?.spatialPrimitives?.collisions?.find((c) => c.id === colId);
+        if (col?.shape === 'polygon' && col.points) {
+          const { entitySnapMode: snapMode } = useEditorStore.getState();
+          let nx = worldPos.x;
+          let ny = worldPos.y;
+          if (snapMode === 'grid') {
+            nx = Math.floor(nx / projectTileSize) * projectTileSize;
+            ny = Math.floor(ny / projectTileSize) * projectTileSize;
+          } else {
+            nx = Math.round(nx);
+            ny = Math.round(ny);
+          }
+          const newPoints: [number, number][] = col.points.map((p, i) =>
+            i === vertIdx ? [nx, ny] : p,
+          );
+          updateCollision(colId, { points: newPoints }, true);
+        }
+      }
+
+      // collisionSelect — drag body
+      if (
+        e.buttons === 1 &&
+        activeTool === 'collisionSelect' &&
+        draggingCollisionRef.current &&
+        draggingCollisionVertexRef.current === null &&
+        !draggingCollisionHandleRef.current &&
+        worldPos
+      ) {
+        const colId = draggingCollisionRef.current;
+        const col = currentMap?.spatialPrimitives?.collisions?.find((c) => c.id === colId);
+        if (!col) return;
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        const offset = dragCollisionOffsetRef.current ?? { x: 0, y: 0 };
+        const rawX = worldPos.x - offset.x;
+        const rawY = worldPos.y - offset.y;
+        const snappedX =
+          snapMode === 'grid'
+            ? Math.floor(rawX / projectTileSize) * projectTileSize
+            : Math.round(rawX);
+        const snappedY =
+          snapMode === 'grid'
+            ? Math.floor(rawY / projectTileSize) * projectTileSize
+            : Math.round(rawY);
+        if (col.shape === 'polygon' && col.points) {
+          const [origX, origY] = col.position;
+          const dx = snappedX - origX;
+          const dy = snappedY - origY;
+          if (dx !== 0 || dy !== 0) {
+            const newPoints: [number, number][] = col.points.map(([px, py]) => [px + dx, py + dy]);
+            updateCollision(colId, { position: [snappedX, snappedY], points: newPoints }, true);
+          }
+        } else {
+          updateCollision(colId, { position: [snappedX, snappedY] }, true);
+        }
+      }
+
+      // collisionSelect — drag radius handle (circle)
+      if (
+        e.buttons === 1 &&
+        activeTool === 'collisionSelect' &&
+        draggingCollisionHandleRef.current === 'radius' &&
+        dragCollisionInitialRef.current &&
+        worldPos
+      ) {
+        const init = dragCollisionInitialRef.current;
+        const newRadius = Math.max(
+          1,
+          Math.round(Math.hypot(worldPos.x - init.x, worldPos.y - init.y)),
+        );
+        const selectedId = useEditorStore.getState().selectedCollisionId;
+        if (selectedId) updateCollision(selectedId, { radius: newRadius }, true);
+      }
+
+      // collisionSelect — resize rectangle handle
+      if (
+        e.buttons === 1 &&
+        activeTool === 'collisionSelect' &&
+        draggingCollisionHandleRef.current &&
+        draggingCollisionHandleRef.current !== 'radius' &&
+        dragCollisionInitialRef.current &&
+        worldPos
+      ) {
+        const selectedId = useEditorStore.getState().selectedCollisionId;
+        if (!selectedId) return;
+        const init = dragCollisionInitialRef.current;
+        const handle = draggingCollisionHandleRef.current;
+        const { entitySnapMode: snapMode } = useEditorStore.getState();
+        const px =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.x / projectTileSize) * projectTileSize
+            : Math.round(worldPos.x);
+        const py =
+          snapMode === 'grid'
+            ? Math.floor(worldPos.y / projectTileSize) * projectTileSize
+            : Math.round(worldPos.y);
+        const MIN = 1;
+        let nx = init.x ?? 0,
+          ny = init.y ?? 0,
+          nw = init.w ?? projectTileSize,
+          nh = init.h ?? projectTileSize;
+        switch (handle) {
+          case 'nw':
+            nx = px;
+            ny = py;
+            nw = (init.x ?? 0) + (init.w ?? 0) - px;
+            nh = (init.y ?? 0) + (init.h ?? 0) - py;
+            break;
+          case 'ne':
+            ny = py;
+            nw = px - (init.x ?? 0);
+            nh = (init.y ?? 0) + (init.h ?? 0) - py;
+            break;
+          case 'sw':
+            nx = px;
+            nw = (init.x ?? 0) + (init.w ?? 0) - px;
+            nh = py - (init.y ?? 0);
+            break;
+          case 'se':
+            nw = px - (init.x ?? 0);
+            nh = py - (init.y ?? 0);
+            break;
+          case 'left':
+            nx = px;
+            nw = (init.x ?? 0) + (init.w ?? 0) - px;
+            break;
+          case 'right':
+            nw = px - (init.x ?? 0);
+            break;
+          case 'top':
+            ny = py;
+            nh = (init.y ?? 0) + (init.h ?? 0) - py;
+            break;
+          case 'bottom':
+            nh = py - (init.y ?? 0);
+            break;
+        }
+        if (nw < MIN) nw = MIN;
+        if (nh < MIN) nh = MIN;
+        updateCollision(
+          selectedId,
+          { position: [Math.round(nx), Math.round(ny)], size: [Math.round(nw), Math.round(nh)] },
+          true,
+        );
+      }
+
       // Paint/erase while dragging in point mode - use applyShape for proper brush/stencil support
       if (
         e.buttons === 1 &&
@@ -1293,6 +1691,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       applyTerrainShape,
       moveEntity,
       updateTrigger,
+      updateCollision,
+      snapWorldPosition,
     ],
   );
 
@@ -1705,6 +2105,63 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       draggingAnchorRef.current = null;
       dragAnchorOffsetRef.current = null;
 
+      // Finalize collisionRect drag → create the rectangle collision
+      if (activeTool === 'collisionRect' && collisionPlaceStartRef.current) {
+        const wPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        const start = collisionPlaceStartRef.current;
+        const [ex, ey] = wPos ? snapWorldPosition(wPos.x, wPos.y) : [start.x, start.y];
+        const x = Math.min(start.x, ex);
+        const y = Math.min(start.y, ey);
+        const w = Math.max(projectTileSize, Math.abs(ex - start.x));
+        const h = Math.max(projectTileSize, Math.abs(ey - start.y));
+        addCollision({
+          id: `collision-${Date.now()}`,
+          shape: 'rectangle',
+          position: [x, y],
+          size: [w, h],
+          tags: [],
+        });
+        useEditorStore.getState().setActiveTool('collisionSelect');
+        collisionPlaceStartRef.current = null;
+        setDrawPreview({ isDrawing: false, start: null, end: null });
+        finishHistoryBatch();
+        return;
+      }
+      collisionPlaceStartRef.current = null;
+
+      // Finalize collisionCircle drag → create the circle collision
+      if (activeTool === 'collisionCircle' && collisionCircleStartRef.current) {
+        const wPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+        const center = collisionCircleStartRef.current;
+        const radius = wPos
+          ? Math.max(1, Math.round(Math.hypot(wPos.x - center.x, wPos.y - center.y)))
+          : projectTileSize;
+        addCollision({
+          id: `collision-${Date.now()}`,
+          shape: 'circle',
+          position: [center.x, center.y],
+          radius,
+          tags: [],
+        });
+        useEditorStore.getState().setActiveTool('collisionSelect');
+        collisionCircleStartRef.current = null;
+        setDrawPreview({ isDrawing: false, start: null, end: null });
+        finishHistoryBatch();
+        return;
+      }
+      collisionCircleStartRef.current = null;
+
+      // Flush collision drag/resize save
+      if (draggingCollisionRef.current || draggingCollisionHandleRef.current) {
+        const { currentMap: map } = useEditorStore.getState();
+        if (map) saveMapDebounced(map);
+      }
+      draggingCollisionRef.current = null;
+      dragCollisionOffsetRef.current = null;
+      draggingCollisionHandleRef.current = null;
+      dragCollisionInitialRef.current = null;
+      draggingCollisionVertexRef.current = null;
+
       // Finalize triggerPlace drag → create the trigger
       if (activeTool === 'triggerPlace' && triggerPlaceStartRef.current) {
         const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
@@ -1774,6 +2231,8 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       setSampledPattern,
       finishHistoryBatch,
       addTrigger,
+      addCollision,
+      snapWorldPosition,
       projectTileSize,
       viewport,
     ],
@@ -1857,6 +2316,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     isDrawingRef.current = false;
     drawStartRef.current = null;
     lineAnchorRef.current = null;
+    collisionPolygonPointsRef.current = null;
     setDrawPreview({ isDrawing: false, start: null, end: null });
     finishHistoryBatch();
   }, [activeTool, drawMode, setDrawPreview, finishHistoryBatch]);

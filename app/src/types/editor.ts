@@ -144,6 +144,9 @@ export interface EditorState {
   // Trigger selection/editing state
   selectedTriggerId: string | null; // Currently selected trigger zone
 
+  // Collision selection/editing state
+  selectedCollisionId: string | null; // Currently selected collision shape
+
   // Validation
   validationErrors: ValidationError[];
 }
@@ -178,7 +181,11 @@ export type ToolType =
   | 'linkPlace' // Link creation tool — click a highlighted trigger to start a link
   | 'anchorPlace'
   | 'triggerPlace' // Place a new trigger zone (drag to size, rectangle)
-  | 'triggerPolygon'; // Draw a polygon trigger by clicking vertices
+  | 'triggerPolygon' // Draw a polygon trigger by clicking vertices
+  | 'collisionRect' // Drag to place a rectangle collision shape
+  | 'collisionPolygon' // Click vertices to draw a polygon collision shape
+  | 'collisionCircle' // Click center + drag to set radius for a circle collision shape
+  | 'collisionSelect'; // Select / move / resize / delete collision shapes
 
 export interface ValidationError {
   severity: 'error' | 'warning';

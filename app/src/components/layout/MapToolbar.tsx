@@ -18,6 +18,7 @@ import {
   FiBox,
   FiPenTool,
   FiPlay,
+  FiCircle,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import {
@@ -54,9 +55,10 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     { id: 'objectDelete', icon: FiTrash2, label: 'Delete Object (X)', group: 'objects' },
   ],
   collision: [
-    { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'collision' },
-    { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'collision' },
-    { id: 'fill', icon: FiDroplet, label: 'Fill (G)', group: 'collision' },
+    { id: 'collisionSelect', icon: FiMousePointer, label: 'Select / Move (V)', group: 'collision' },
+    { id: 'collisionRect', icon: FiMaximize, label: 'Draw Rectangle (T)', group: 'collision' },
+    { id: 'collisionPolygon', icon: FiPenTool, label: 'Draw Polygon', group: 'collision' },
+    { id: 'collisionCircle', icon: FiCircle, label: 'Draw Circle', group: 'collision' },
   ],
   navigation: [
     { id: 'select', icon: FiMousePointer, label: 'Select (V)', group: 'nav' },
@@ -110,6 +112,7 @@ export const MapToolbar: React.FC = () => {
   const showSnapToggle =
     selectedLayer?.kind === 'entity' ||
     selectedLayer?.kind === 'navigation' ||
+    selectedLayer?.kind === 'collision' ||
     effectiveKind === 'object';
 
   return (

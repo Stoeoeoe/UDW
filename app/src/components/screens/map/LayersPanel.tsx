@@ -99,6 +99,9 @@ export const LayersPanel: React.FC = () => {
   // Which category add-button was clicked (pre-fills the modal kind)
   const [addingToCategory, setAddingToCategory] = useState<LayerCategoryConfig | null>(null);
 
+  // Key incremented on every modal open to force useForm reinitialization
+  const [modalKey, setModalKey] = useState(0);
+
   // Collapse state per category (all open by default)
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
@@ -163,6 +166,7 @@ export const LayersPanel: React.FC = () => {
       icon: '',
       sortingLayer: 'ground',
     });
+    setModalKey((k) => k + 1);
     onOpen();
   };
 
@@ -176,6 +180,7 @@ export const LayersPanel: React.FC = () => {
       icon: layer.icon || '',
       sortingLayer: layer.sortingLayer ?? 'ground',
     });
+    setModalKey((k) => k + 1);
     onOpen();
   };
 
@@ -382,7 +387,7 @@ export const LayersPanel: React.FC = () => {
 
       {/* Add/Edit Layer Modal */}
       <LayerModal
-        key={editingLayer?.id ?? 'new'}
+        key={modalKey}
         isOpen={isOpen}
         onClose={onClose}
         onSave={handleSave}

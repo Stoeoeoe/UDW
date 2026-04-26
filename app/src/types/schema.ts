@@ -275,6 +275,7 @@ export interface SpatialPrimitives {
   areas?: Area[];
   anchors?: Anchor[];
   triggers?: MapTrigger[];
+  collisions?: MapCollision[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -294,6 +295,23 @@ export interface MapTrigger {
   position: [number, number]; // Pixel coords [x, y] — top-left for rect, first vertex for polygon
   size?: [number, number]; // Pixel [width, height] — only for rectangle shape
   points?: [number, number][]; // Absolute pixel vertices — only for polygon shape
+  tags?: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Map Collisions — physics collider shapes stored as spatial primitives
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type MapCollisionShape = 'rectangle' | 'polygon' | 'circle';
+
+export interface MapCollision {
+  id: string;
+  label?: string;
+  shape: MapCollisionShape;
+  position: [number, number]; // top-left for rect, center for circle, first vertex for polygon
+  size?: [number, number]; // rectangle only: [width, height]
+  radius?: number; // circle only
+  points?: [number, number][]; // polygon only: absolute pixel vertices
   tags?: string[];
 }
 

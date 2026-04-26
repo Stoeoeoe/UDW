@@ -363,6 +363,32 @@ function createCollisionBodies(
     }
   }
 
+  // Spatial primitive collisions from the collision layer
+  const spatialCollisions = currentMap.spatialPrimitives?.collisions ?? [];
+  for (const col of spatialCollisions) {
+    if (col.shape === 'rectangle' && col.size) {
+      const [x, y] = col.position;
+      const [w, h] = col.size;
+      bodies.push({ kind: 'rectangle', x: x + w / 2, y: y + h / 2, width: w, height: h });
+    } else if (col.shape === 'circle' && col.radius != null) {
+      const [cx, cy] = col.position;
+      const r = col.radius;
+      const count = 16;
+      const vertices = Array.from({ length: count }, (_, i) => {
+        const angle = (i / count) * Math.PI * 2;
+        return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
+      });
+      bodies.push({ kind: 'polygon', x: cx, y: cy, vertices });
+    } else if (col.shape === 'polygon' && col.points && col.points.length >= 3) {
+      const xs = col.points.map(([px]) => px);
+      const ys = col.points.map(([, py]) => py);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+      const vertices = col.points.map(([px, py]) => ({ x: px - cx, y: py - cy }));
+      bodies.push({ kind: 'polygon', x: cx, y: cy, vertices });
+    }
+  }
+
   return bodies;
 }
 
