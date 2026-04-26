@@ -661,6 +661,10 @@ namespace Core.Tile.Editor.Vulcanus
                             ScanProjectSource(summary, source, entityBuilders);
                             break;
 
+                        case SourceKind.EntityDefinition:
+                            ScanEntityDefinitionSource(source, entityBuilders);
+                            break;
+
                         case SourceKind.Map:
                             ScanMapSource(summary, source, entityBuilders);
                             break;
@@ -716,20 +720,25 @@ namespace Core.Tile.Editor.Vulcanus
                 summary.PrimaryProjectSource = source;
             }
 
-            source.SummaryText = $"{dto.EntityTypes.Count} entity type(s), {dto.LayerDefinitions.Count} layer(s), {dto.TerrainTypes.Count} terrain type(s).";
+            source.SummaryText = $"{dto.LayerDefinitions.Count} layer(s), {dto.TerrainTypes.Count} terrain type(s).";
+        }
 
-            foreach (var entityType in dto.EntityTypes ?? new List<EntityTypeDto>())
-            {
-                if (string.IsNullOrWhiteSpace(entityType.Id))
-                    continue;
+        private static void ScanEntityDefinitionSource(
+            SourceEntry source,
+            Dictionary<string, EntitySummaryBuilder> entityBuilders)
+        {
+            var dto = VulcanusImportHelpers.LoadDto<EntityTypeDto>(source.AbsolutePath);
+            source.SummaryText = $"Entity '{dto.DisplayName ?? dto.Id}', category '{dto.Category ?? "none"}'.";
 
-                var builder = GetOrCreateEntityBuilder(entityBuilders, entityType.Id);
-                builder.DisplayName = FirstNonEmpty(builder.DisplayName, entityType.DisplayName, entityType.Id);
-                builder.Category = FirstNonEmpty(builder.Category, entityType.Category, "Uncategorized");
-                builder.Group = FirstNonEmpty(builder.Group, entityType.Group, "Ungrouped");
-                builder.HasDefinition = true;
-                builder.TryAddImportSource(source);
-            }
+            if (string.IsNullOrWhiteSpace(dto.Id))
+                return;
+
+            var builder = GetOrCreateEntityBuilder(entityBuilders, dto.Id);
+            builder.DisplayName = FirstNonEmpty(builder.DisplayName, dto.DisplayName, dto.Id);
+            builder.Category = FirstNonEmpty(builder.Category, dto.Category, "Uncategorized");
+            builder.Group = FirstNonEmpty(builder.Group, dto.Group, "Ungrouped");
+            builder.HasDefinition = true;
+            builder.TryAddImportSource(source);
         }
 
         private static void ScanMapSource(
@@ -810,13 +819,6 @@ namespace Core.Tile.Editor.Vulcanus
                 {
                     entity.PrefabMapped = true;
                     entity.PrefabName = prefab.name;
-                    continue;
-                }
-
-                if (project != null && project.TryGetEntityPrefab(entity.TypeId, out prefab) && prefab != null)
-                {
-                    entity.PrefabMapped = true;
-                    entity.PrefabName = prefab.name;
                 }
             }
         }
@@ -836,11 +838,12 @@ namespace Core.Tile.Editor.Vulcanus
 
         private static bool IsSupportedSourceFile(string filePath)
         {
-            var extension = Path.GetExtension(filePath);
-            return extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)
-                   || extension.Equals(".vmap", StringComparison.OrdinalIgnoreCase)
-                   || extension.Equals(".vts", StringComparison.OrdinalIgnoreCase)
-                   || extension.Equals(".vitm", StringComparison.OrdinalIgnoreCase);
+                        var extension = Path.GetExtension(filePath);
+                        return filePath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)
+                                     || extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)
+                                     || extension.Equals(".vmap", StringComparison.OrdinalIgnoreCase)
+                                     || extension.Equals(".vts", StringComparison.OrdinalIgnoreCase)
+                                     || extension.Equals(".vitm", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GetSourceSortKey(string filePath)
@@ -849,14 +852,16 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 case SourceKind.Project:
                     return "0";
-                case SourceKind.Map:
+                case SourceKind.EntityDefinition:
                     return "1";
-                case SourceKind.Tileset:
+                case SourceKind.Map:
                     return "2";
-                case SourceKind.Item:
+                case SourceKind.Tileset:
                     return "3";
-                default:
+                case SourceKind.Item:
                     return "4";
+                default:
+                    return "5";
             }
         }
 
@@ -1044,6 +1049,8 @@ namespace Core.Tile.Editor.Vulcanus
 
             public static SourceKind GetKind(string filePath)
             {
+                if (filePath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)) return SourceKind.EntityDefinition;
+
                 var extension = Path.GetExtension(filePath);
                 if (extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)) return SourceKind.Project;
                 if (extension.Equals(".vmap", StringComparison.OrdinalIgnoreCase)) return SourceKind.Map;
@@ -1067,6 +1074,7 @@ namespace Core.Tile.Editor.Vulcanus
         {
             Unknown,
             Project,
+            EntityDefinition,
             Map,
             Tileset,
             Item

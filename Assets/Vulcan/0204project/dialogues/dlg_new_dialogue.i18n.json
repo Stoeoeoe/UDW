@@ -1,7 +1,7 @@
 {
   "dialogueId": "dlg_new_dialogue",
-  "dialogueName": "New Dialogue",
-  "generatedAt": "2026-04-19T09:27:48.016Z",
+  "dialogueName": "New Dialogue Testga",
+  "generatedAt": "2026-04-25T07:14:38.563Z",
   "messages": [
     {
       "msgKey": "dlg.dlg_new_dialogue.04",

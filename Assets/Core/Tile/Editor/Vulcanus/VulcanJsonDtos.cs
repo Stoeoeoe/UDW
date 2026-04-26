@@ -66,12 +66,26 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("displayName")] public string DisplayName { get; set; } = "";
         [JsonProperty("category")] public string Category { get; set; } = "";
         [JsonProperty("group")] public string Group { get; set; } = "";
+        [JsonProperty("description")] public string Description { get; set; } = "";
+        [JsonProperty("icon")] public string Icon { get; set; } = "";
+        [JsonProperty("placeholderColor")] public string PlaceholderColor { get; set; } = "";
+        [JsonProperty("placeholderIcon")] public string PlaceholderIcon { get; set; } = "";
+        [JsonProperty("properties")] public List<PropertyDefinitionDto> Properties { get; set; } = new();
+        [JsonProperty("defaultSize")] public List<int> DefaultSize { get; set; } = new();
+        [JsonProperty("sprite")] public EntitySpriteDto Sprite { get; set; }
+        [JsonProperty("folderPath")] public string FolderPath { get; set; } = "";
+    }
+
+    internal class EntitySpriteDto
+    {
+        [JsonProperty("path")] public string Path { get; set; } = "";
     }
 
     // ── Tileset ───────────────────────────────────────────────────────────────
 
     internal class TilesetDto
     {
+        [JsonProperty("version")] public int Version { get; set; } = 1;
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("spriteSheet")] public string SpriteSheet { get; set; }
@@ -81,6 +95,7 @@ namespace Core.Tile.Editor.Vulcanus
         // Keyed by tile-index string ("16", "17", …); sparse — missing entries are default tiles.
         [JsonProperty("tiles")] public Dictionary<string, TileMetaDto> Tiles { get; set; } = new();
         [JsonProperty("objects")] public List<TilesetObjectDefinitionDto> Objects { get; set; } = new();
+        [JsonProperty("folderPath")] public string FolderPath { get; set; } = "";
     }
 
     internal class TileMetaDto
@@ -131,16 +146,19 @@ namespace Core.Tile.Editor.Vulcanus
 
     internal class MapDto
     {
+        [JsonProperty("version")] public int Version { get; set; } = 1;
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("width")] public int Width { get; set; } = 1;
         [JsonProperty("height")] public int Height { get; set; } = 1;
+        [JsonProperty("baseTilesetId")] public string BaseTilesetId { get; set; }
         [JsonProperty("tilesetRefs")] public List<string> TilesetRefs { get; set; } = new();
         [JsonProperty("layers")] public List<LayerDto> Layers { get; set; } = new();
         [JsonProperty("entities")] public List<EntityInstanceDto> Entities { get; set; } = new();
         [JsonProperty("locationLinks")] public List<LocationLinkDto> LocationLinks { get; set; } = new();
         [JsonProperty("metadata")] public MapMetadataDto Metadata { get; set; }
         [JsonProperty("spatialPrimitives")] public SpatialPrimitivesDto SpatialPrimitives { get; set; }
+        [JsonProperty("folderPath")] public string FolderPath { get; set; } = "";
     }
 
     internal class MapMetadataDto
@@ -158,6 +176,21 @@ namespace Core.Tile.Editor.Vulcanus
     {
         [JsonProperty("triggers")] public List<MapTriggerDto> Triggers { get; set; } = new();
         [JsonProperty("anchors")] public List<AnchorDto> Anchors { get; set; } = new();
+        [JsonProperty("collisions")] public List<MapCollisionDto> Collisions { get; set; } = new();
+        [JsonProperty("paths")] public List<PathDto> Paths { get; set; } = new();
+        [JsonProperty("areas")] public List<AreaDto> Areas { get; set; } = new();
+    }
+
+    internal class MapCollisionDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("label")] public string Label { get; set; }
+        [JsonProperty("shape")] public string Shape { get; set; } = "rectangle";
+        [JsonProperty("position")] public List<float> Position { get; set; }
+        [JsonProperty("size")] public List<float> Size { get; set; }
+        [JsonProperty("radius")] public float Radius { get; set; }
+        [JsonProperty("points")] public List<List<float>> Points { get; set; } = new();
+        [JsonProperty("tags")] public List<string> Tags { get; set; } = new();
     }
 
     internal class MapTriggerDto
@@ -184,12 +217,16 @@ namespace Core.Tile.Editor.Vulcanus
 
     internal class LayerDto
     {
+        [JsonProperty("id")] public string Id { get; set; } = "";
         [JsonProperty("name")] public string Name { get; set; } = "Layer";
         [JsonProperty("kind")] public string Kind { get; set; } = "visual";
+        [JsonProperty("locked")] public bool Locked { get; set; }
         [JsonProperty("zOrder")] public int ZOrder { get; set; }
         [JsonProperty("sortingLayer")] public string SortingLayer { get; set; }
         [JsonProperty("opacity")] public float Opacity { get; set; } = 1f;
         [JsonProperty("visible")] public bool Visible { get; set; } = true;
+        [JsonProperty("icon")] public string Icon { get; set; }
+        [JsonProperty("definitionId")] public string DefinitionId { get; set; }
 
         // Tile layers: either a 2-D array (dense) or a sparse object.
         [JsonProperty("data")] public Newtonsoft.Json.Linq.JToken Data { get; set; }
@@ -199,8 +236,23 @@ namespace Core.Tile.Editor.Vulcanus
 
         [JsonProperty("entities")] public List<EntityInstanceDto> Entities { get; set; } = new();
 
+        [JsonProperty("objectGroups")] public List<ObjectGroupDto> ObjectGroups { get; set; } = new();
         // Object layers (kind == "object")
         [JsonProperty("objectInstances")] public List<MapObjectInstanceDto> ObjectInstances { get; set; } = new();
+    }
+
+    internal class ObjectGroupDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("tiles")] public List<ObjectGroupTileDto> Tiles { get; set; } = new();
+    }
+
+    internal class ObjectGroupTileDto
+    {
+        [JsonProperty("x")] public int X { get; set; }
+        [JsonProperty("y")] public int Y { get; set; }
+        [JsonProperty("tilesetId")] public string TilesetId { get; set; }
+        [JsonProperty("tileIndex")] public int TileIndex { get; set; }
     }
 
     internal class MapObjectInstanceDto
@@ -237,6 +289,35 @@ namespace Core.Tile.Editor.Vulcanus
 
         // Kept as raw token — reflected into MonoBehaviour fields by VulcanusEntityInitializer.
         [JsonProperty("properties")] public Newtonsoft.Json.Linq.JToken Properties { get; set; }
+        [JsonProperty("tags")] public List<string> Tags { get; set; } = new();
+        [JsonProperty("timeScope")] public TimeScopeDto TimeScope { get; set; }
+    }
+
+    internal class TimeScopeDto
+    {
+        [JsonProperty("startTime")] public float StartTime { get; set; }
+        [JsonProperty("endTime")] public float EndTime { get; set; }
+        [JsonProperty("seasons")] public List<string> Seasons { get; set; } = new();
+    }
+
+    internal class PathDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("points")] public List<List<float>> Points { get; set; } = new();
+        [JsonProperty("closed")] public bool Closed { get; set; }
+        [JsonProperty("width")] public float Width { get; set; }
+        [JsonProperty("tags")] public List<string> Tags { get; set; } = new();
+    }
+
+    internal class AreaDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("shape")] public string Shape { get; set; }
+        [JsonProperty("points")] public List<List<float>> Points { get; set; } = new();
+        [JsonProperty("priority")] public int Priority { get; set; }
+        [JsonProperty("tags")] public List<string> Tags { get; set; } = new();
     }
 
     internal class LocationLinkDto

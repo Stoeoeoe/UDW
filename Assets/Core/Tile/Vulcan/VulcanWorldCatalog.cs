@@ -54,7 +54,7 @@ namespace Core.Tile.Vulcanus
             for (var i = 0; i < entityPrefabMappings.Length; i++)
             {
                 var mapping = entityPrefabMappings[i];
-                if (mapping == null || !string.Equals(mapping.entityTypeId, entityTypeId, StringComparison.OrdinalIgnoreCase))
+                if (mapping == null || !string.Equals(mapping.GetEntityTypeId(), entityTypeId, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 prefab = mapping.prefab;

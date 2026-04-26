@@ -31,14 +31,6 @@ namespace Core.Tile.Editor.Vulcanus
                 zIndex = l.ZIndex
             }).ToArray();
 
-            var entityDefs = dto.EntityTypes.Select(e => new VulcanusProject.EntityTypeDefinition
-            {
-                id = e.Id,
-                displayName = e.DisplayName,
-                category = e.Category,
-                group = e.Group
-            }).ToArray();
-
             var metadataDefs = dto.TileMetadataDefinitions?.Select(d => new VulcanusProject.PropertyDefinition
             {
                 key = d.Key,
@@ -52,9 +44,6 @@ namespace Core.Tile.Editor.Vulcanus
             var catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
 
             var warnings = new System.Collections.Generic.List<string>();
-            var existingEntityMappings =
-                catalog != null ? catalog.EntityPrefabMappings : previousProject?.EntityPrefabMappings;
-            var entityMappings = VulcanusEditorUtils.BuildEntityMappings(entityDefs, existingEntityMappings, warnings);
 
             var locationMappings = (catalog != null ? catalog.LocationMappings : previousProject?.LocationMappings)
                                    ?? Array.Empty<VulcanusProject.MapLocationMapping>();
@@ -72,7 +61,6 @@ namespace Core.Tile.Editor.Vulcanus
                 dto.DefaultMapHeight > 0 ? dto.DefaultMapHeight : 32,
                 terrainDefs,
                 layerDefs,
-                entityDefs,
                 metadataDefs);
 
             VulcanusProject.ItemClassMapping[] itemMappings = Array.Empty<VulcanusProject.ItemClassMapping>();
@@ -91,7 +79,7 @@ namespace Core.Tile.Editor.Vulcanus
                     .ToArray();
             }
 
-            project.SetMappings(entityMappings, locationMappings, itemMappings, warnings.ToArray());
+            project.SetMappings(locationMappings, itemMappings, warnings.ToArray());
 
             ctx.AddObjectToAsset("project", project);
             ctx.SetMainObject(project);

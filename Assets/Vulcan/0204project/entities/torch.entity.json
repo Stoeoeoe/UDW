@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schemas/entity-type.schema.json",
+  "id": "torch",
+  "displayName": "Torch",
+  "category": "object",
+  "placeholderColor": "#888888",
+  "properties": [],
+  "folderPath": ""
+}

@@ -14,25 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Vulcan.VulcanWorldCatalog
   project: {fileID: -1814933055721424766, guid: 970770d7999d5f945b71ec98f97650ba,
     type: 3}
-  locationLinkPrefab: {fileID: 4189245286425888593, guid: 3af879b38f53ead4e93b7eef62371a61,
-    type: 3}
   entityPrefabMappings:
   - entityTypeId: torch
     entityDisplayName: Torch
+    entityDefinition: {fileID: 936352032444259862, guid: 9de1a446e326c8149bcbdb3caefea596,
+      type: 3}
     prefab: {fileID: 5775923001401589703, guid: 9853aa2db08ba664d8684cf8fa37d0ec,
       type: 3}
     candidatePrefabPaths:
     - Assets/Environment/Torch.prefab
-  - entityTypeId: hello_world
-    entityDisplayName: hello world
-    prefab: {fileID: 0}
-    candidatePrefabPaths: []
   locationMappings:
   - mapId: map-1
     locationData: {fileID: 447913706122126786, guid: d0b207797bae4d244bf3348ac6ee6098,
       type: 3}
   - mapId: map-2
     locationData: {fileID: 447913706122126786, guid: ef40c5f321e7ffe43b545e477b7f6c57,
+      type: 3}
+  - mapId: new-map
+    locationData: {fileID: 447913706122126786, guid: 00682469cf093b94bbbe6c2edabe5dfc,
       type: 3}
   mapBindings:
   - mapId: map-1
@@ -44,4 +43,9 @@ MonoBehaviour:
     mapPrefab: {fileID: -5252562787932730757, guid: ef40c5f321e7ffe43b545e477b7f6c57,
       type: 3}
     locationData: {fileID: 447913706122126786, guid: ef40c5f321e7ffe43b545e477b7f6c57,
+      type: 3}
+  - mapId: new-map
+    mapPrefab: {fileID: -678225615432937206, guid: 00682469cf093b94bbbe6c2edabe5dfc,
+      type: 3}
+    locationData: {fileID: 447913706122126786, guid: 00682469cf093b94bbbe6c2edabe5dfc,
       type: 3}

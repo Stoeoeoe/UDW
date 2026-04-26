@@ -2,12 +2,12 @@
   "$schema": "../../schemas/dialogue.schema.json",
   "version": 1,
   "id": "dlg_new_dialogue",
-  "name": "New Dialogue",
+  "name": "New Dialogue Testga",
   "oneShot": false,
   "startNodeId": "step_4",
   "tags": [],
   "createdAt": "2026-04-11T08:30:29.445Z",
-  "updatedAt": "2026-04-19T09:27:47.679Z",
+  "updatedAt": "2026-04-25T07:14:38.464Z",
   "nodes": [
     {
       "id": "step_4",

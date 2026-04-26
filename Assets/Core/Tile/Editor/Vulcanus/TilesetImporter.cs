@@ -57,6 +57,12 @@ namespace Core.Tile.Editor.Vulcanus
                 var tileId = !string.IsNullOrEmpty(meta?.Id) ? meta.Id : $"{tilesetId}_{i}";
                 var tilePivotY = meta?.PivotY ?? 1f;
 
+                // Use "grid" collision if "Full" mode was selected
+                if (collisionKind == VulcanusCollisionKind.Full)
+                {
+                    tile.colliderType = UnityEngine.Tilemaps.Tile.ColliderType.Grid;
+                }
+
                 VulcanusTile.VulcanusTileProperty[] metaProps = null;
                 if (meta?.Properties != null && meta.Properties.Count > 0)
                 {
@@ -89,24 +95,23 @@ namespace Core.Tile.Editor.Vulcanus
                 if (sprite != null)
                 {
                     sprite.name = $"sprite_{i:D4}";
-
                     // Bake per-tile collision into the sprite's physics shape.
                     // TilemapCollider2D uses this when colliderType == Sprite.
-                    if (collisionKind == VulcanusCollisionKind.Full)
+                    // if (collisionKind == VulcanusCollisionKind.Full)
+                    // {
+                    //     // Full tile — one rect covering the whole tile in local tile units.
+                    //     sprite.OverridePhysicsShape(new List<Vector2[]>
+                    //     {
+                    //         new Vector2[]
+                    //         {
+                    //             new Vector2(0, 0), new Vector2(1, 0),
+                    //             new Vector2(1, 1), new Vector2(0, 1)
+                    //         }
+                    //     });
+                    // }
+                    if (collisionKind == VulcanusCollisionKind.Complex && shapes != null && shapes.Length > 0)
                     {
-                        // Full tile — one rect covering the whole tile in local tile units.
-                        sprite.OverridePhysicsShape(new List<Vector2[]>
-                        {
-                            new Vector2[]
-                            {
-                                new Vector2(0, 0), new Vector2(1, 0),
-                                new Vector2(1, 1), new Vector2(0, 1)
-                            }
-                        });
-                    }
-                    else if (collisionKind == VulcanusCollisionKind.Complex && shapes != null && shapes.Length > 0)
-                    {
-                        var physicsShapes = BuildPhysicsShapesForSprite(shapes, tileSize, tilePivotY);
+                        var physicsShapes = BuildPhysicsShapesForSprite(shapes, tileSize);
                         if (physicsShapes.Count > 0)
                             sprite.OverridePhysicsShape(physicsShapes);
                     }
@@ -120,7 +125,7 @@ namespace Core.Tile.Editor.Vulcanus
                     metaProps, tilePivotY, shapes);
 
                 // Use Sprite collider type so TilemapCollider2D picks up the overridden physics shape.
-                if (collisionKind != VulcanusCollisionKind.None && sprite != null)
+                if (collisionKind == VulcanusCollisionKind.Complex && sprite != null)
                     tile.colliderType = UnityEngine.Tilemaps.Tile.ColliderType.Sprite;
 
                 tiles[i] = tile;
@@ -142,53 +147,47 @@ namespace Core.Tile.Editor.Vulcanus
 
         // ── Sprite physics shapes ─────────────────────────────────────────────
 
-        // Schema points are normalized [0,1] per tile, origin at top-left of the tile.
-        // Sprite.OverridePhysicsShape uses sprite-local space: pivot = (0,0), x+ right, y+ up,
-        // units = world units (i.e. pixels / PPU = pixels / tileSize).
-        // Tile sprite pivot is (0.5, pivotY), so the tile rect's bottom-left corner in local
-        // space is at (-0.5, -pivotY) in world units.
-        // Schema y=0 is the top of the tile, y=1 is the bottom (screen-down), so we flip y.
+
+        // Schema coords are normalized [0,1] with y=0 at top.
+        // OverridePhysicsShape coords are in pixels from the sprite's bottom-left (not pivot-relative).
+        // Unity handles the pivot offset internally when placing the collider.
+        //   x_px = sx * tileSize
+        //   y_px = (1 - sy) * tileSize + tileSize/2   (flip schema y; origin is half tile below bottom)
         private static List<Vector2[]> BuildPhysicsShapesForSprite(
-            VulcanusTile.CollisionShape[] shapes, int tileSize, float pivotY)
+            VulcanusTile.CollisionShape[] shapes, int tileSize)
         {
-            // Pivot offset in world units (sprite local origin relative to tile rect bottom-left).
-            float pivotOffsetX = -0.5f;          // pivot.x = 0.5 → shift left by 0.5
-            float pivotOffsetY = -pivotY;        // pivot.y = pivotY → shift down by pivotY
-
             var result = new List<Vector2[]>();
-            foreach (var sh in shapes)
-            {
-                if (sh == null) continue;
 
-                if (string.Equals(sh.type, "polygon", StringComparison.OrdinalIgnoreCase) && sh.points?.Length >= 3)
+            Vector2 ToLocal(float sx, float sy) =>
+                new(sx * tileSize, (1f - sy) * tileSize + tileSize * 0.5f);
+
+            foreach (var shape in shapes)
+            {
+                Vector2[] pts;
+                if (shape.type == "polygon" && shape.points != null && shape.points.Length >= 3)
                 {
-                    var pts = new Vector2[sh.points.Length];
-                    for (int i = 0; i < sh.points.Length; i++)
-                    {
-                        // nx in [0,1] left→right, ny in [0,1] top→bottom (schema convention).
-                        // Local x = nx - 0.5 + pivotOffsetX ... wait: nx=0 → tile left → local x = pivotOffsetX
-                        // nx=1 → tile right → local x = pivotOffsetX + 1
-                        // ny=0 → tile top → local y = pivotOffsetY + 1 (top is +1 from bottom in Unity y-up)
-                        // ny=1 → tile bottom → local y = pivotOffsetY
-                        var nx = sh.points[i].x;
-                        var ny = sh.points[i].y;
-                        pts[i] = new Vector2(pivotOffsetX + nx, pivotOffsetY + (1f - ny));
-                    }
-                    result.Add(pts);
+                    pts = new Vector2[shape.points.Length];
+                    for (int i = 0; i < shape.points.Length; i++)
+                        pts[i] = ToLocal(shape.points[i].x, shape.points[i].y);
                 }
-                else if (string.Equals(sh.type, "rectangle", StringComparison.OrdinalIgnoreCase))
+                else if (shape.type == "rectangle")
                 {
-                    var w = sh.width > 0 ? sh.width : 1f;
-                    var h = sh.height > 0 ? sh.height : 1f;
-                    var ox = pivotOffsetX + sh.x;
-                    var oy = pivotOffsetY + (1f - sh.y - h); // flip y, anchor at top of rect
-                    result.Add(new Vector2[]
+                    pts = new Vector2[]
                     {
-                        new Vector2(ox, oy), new Vector2(ox + w, oy),
-                        new Vector2(ox + w, oy + h), new Vector2(ox, oy + h)
-                    });
+                        ToLocal(shape.x,               shape.y),
+                        ToLocal(shape.x + shape.width,  shape.y),
+                        ToLocal(shape.x + shape.width,  shape.y + shape.height),
+                        ToLocal(shape.x,               shape.y + shape.height),
+                    };
                 }
+                else
+                {
+                    continue;
+                }
+
+                result.Add(pts);
             }
+
             return result;
         }
 

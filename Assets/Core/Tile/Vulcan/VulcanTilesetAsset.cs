@@ -20,12 +20,8 @@ namespace Core.Tile.Vulcanus
             public string id;
             public string name;
             public ObjectTile[] tiles;
-            // Optional baked sprite representing the whole object (may be null).
             public Sprite sprite;
-            // Prefab sub-asset with SpriteRenderer + merged PolygonCollider2D (may be null).
             public GameObject prefab;
-
-            // Dimensions of the object in tiles (computed by importer).
             public int widthTiles;
             public int heightTiles;
         }

@@ -753,10 +753,40 @@
       "id": "tile_12_5"
     },
     "173": {
-      "id": "tile_13_5"
+      "id": "tile_13_5",
+      "collision": {
+        "type": "full"
+      }
     },
     "174": {
-      "id": "tile_14_5"
+      "id": "tile_14_5",
+      "collision": {
+        "type": "complex",
+        "shapes": [
+          {
+            "id": "poly-1",
+            "type": "polygon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                0.4375,
+                0.4375
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      }
     },
     "175": {
       "id": "tile_15_5"

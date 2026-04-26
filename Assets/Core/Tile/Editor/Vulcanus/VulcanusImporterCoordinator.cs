@@ -4,13 +4,19 @@ using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(2, new[] { "vproj", "vts", "vmap", "vitm" }, 6100)]
+    [ScriptedImporter(3, new[] { "vproj", "vts", "vmap", "vitm", "entity.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
         {
             try
             {
+                if (ctx.assetPath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    EntityDefinitionImporter.ImportEntityDefinition(ctx);
+                    return;
+                }
+
                 if (ctx.assetPath.EndsWith(".vproj", StringComparison.OrdinalIgnoreCase))
                 {
                     ProjectImporter.ImportProject(ctx);

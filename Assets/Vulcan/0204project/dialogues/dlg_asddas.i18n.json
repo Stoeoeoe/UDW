@@ -1,0 +1,13 @@
+{
+  "dialogueId": "dlg_asddas",
+  "dialogueName": "asddas",
+  "generatedAt": "2026-04-25T08:09:35.617Z",
+  "messages": [
+    {
+      "msgKey": "dlg.dlg_asddas.01",
+      "text": "",
+      "nodeId": "step_1",
+      "sourceType": "line"
+    }
+  ]
+}

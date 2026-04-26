@@ -75,7 +75,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                 if (string.Equals(layer.Kind, "object", StringComparison.OrdinalIgnoreCase))
                 {
-                        SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, tilesetsByIndex);
+                    SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, tilesetsByIndex, ctx);
                     continue;
                 }
 
@@ -86,7 +86,15 @@ namespace Core.Tile.Editor.Vulcanus
                     continue;
                 }
 
-                var tilemap = CreateTilemapLayer(gridGo.transform, layer.Name, layer.ZOrder, layer.Opacity, layer.SortingLayer);
+                var hasTileCollision = layer.Kind.Equals("visual", StringComparison.OrdinalIgnoreCase) ||
+                                       layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
+                var tilemap = CreateTilemapLayer(
+                    gridGo.transform,
+                    layer.Name,
+                    layer.ZOrder,
+                    layer.Opacity,
+                    layer.SortingLayer,
+                    hasTileCollision);
                 PopulateTileLayer(tilemap, layer.Data, height, tilesetsByIndex);
 
                 var isTerrain = layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
@@ -115,6 +123,11 @@ namespace Core.Tile.Editor.Vulcanus
                 height,
                 tileSize,
                 catalog);
+            VulcanusMapTriggerImporter.SpawnColliders(
+                mapRoot.transform,
+                dto.SpatialPrimitives?.Collisions,
+                height,
+                tileSize);
 
             var plowedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Plowed", 10, DefaultOverlayAlpha);
             var irrigatedTilemap =
@@ -325,13 +338,15 @@ namespace Core.Tile.Editor.Vulcanus
             LayerDto layer,
             int mapHeight,
             int tileSize,
-            IList<VulcanusTilesetAsset> tilesetsByIndex)
+            IList<VulcanusTilesetAsset> tilesetsByIndex,
+            AssetImportContext ctx)
         {
             if (layer.ObjectInstances == null || layer.ObjectInstances.Count == 0) return;
 
             var group = new GameObject(layer.Name);
             group.transform.SetParent(mapRoot, false);
 
+            // Build a lookup from tilesetId → asset for the tilesets referenced in this map.
             var tilesetById = new Dictionary<string, VulcanusTilesetAsset>();
             foreach (var ts in tilesetsByIndex)
             {
@@ -344,37 +359,32 @@ namespace Core.Tile.Editor.Vulcanus
                 if (!tilesetById.TryGetValue(inst.TilesetId, out var tileset)) continue;
                 if (!tileset.TryGetObjectDefinition(inst.ObjectDefinitionId, out var def)) continue;
 
-                var objHeightTiles = def.heightTiles > 0 ? def.heightTiles
+                var objHeightTiles = def.heightTiles > 0
+                    ? def.heightTiles
                     : (def.tiles?.Length > 0 ? def.tiles.Max(t => t.y) - def.tiles.Min(t => t.y) + 1 : 1);
-                var objWidthTiles = def.widthTiles > 0 ? def.widthTiles
+                var objWidthTiles = def.widthTiles > 0
+                    ? def.widthTiles
                     : (def.tiles?.Length > 0 ? def.tiles.Max(t => t.x) - def.tiles.Min(t => t.x) + 1 : 1);
 
-                // inst.X/Y are top-left pixel coords in map space (Y down).
-                // Object origin is bottom-center (sprite pivot).
                 var worldX = inst.X / (float)tileSize + objWidthTiles * 0.5f;
                 var worldY = mapHeight - inst.Y / (float)tileSize - objHeightTiles;
-                var worldPos = new Vector3(worldX, worldY, 0f);
 
                 if (def.prefab != null)
                 {
-                    // Prefab was built by TilesetImporter with correct SpriteRenderer + collider.
-                    var go = GameObject.Instantiate(def.prefab);
-                    go.name = $"{def.id}_{inst.Id}";
-                    go.transform.SetParent(group.transform, false);
-                    go.transform.localPosition = worldPos;
-
-                    // Patch the sorting order to match the layer.
-                    var sr = go.GetComponent<SpriteRenderer>();
-                    if (sr != null) sr.sortingOrder = layer.ZOrder;
-                    var sg = go.GetComponent<SortingGroup>();
-                    if (sg != null) sg.sortingOrder = layer.ZOrder;
+                    var instance = UnityEngine.Object.Instantiate(def.prefab, group.transform);
+                    instance.name = $"{def.id}_{inst.Id}";
+                    instance.transform.localPosition = new Vector3(worldX, worldY, 0f);
+                    ApplyObjectSorting(instance, layer.ZOrder);
+                    continue;
                 }
-                else if (def.sprite != null)
+
+                // If the tileset importer created a baked sprite for this object definition,
+                // use the shared sprite (stored on the tileset) instead of baking per-map.
+                if (def.sprite != null)
                 {
-                    // Prefab was not generated (e.g. no Unity renderer available) — fallback sprite GO.
                     var go = new GameObject($"{def.id}_{inst.Id}");
                     go.transform.SetParent(group.transform, false);
-                    go.transform.localPosition = worldPos;
+                    go.transform.localPosition = new Vector3(worldX, worldY, 0f);
 
                     var sr = go.AddComponent<SpriteRenderer>();
                     sr.sprite = def.sprite;
@@ -382,18 +392,251 @@ namespace Core.Tile.Editor.Vulcanus
                     sr.sortingOrder = layer.ZOrder;
                     sr.spriteSortPoint = SpriteSortPoint.Pivot;
 
-                    var sg = go.AddComponent<SortingGroup>();
-                    sg.sortingLayerName = "Objects";
+                    // Add collision based on tileset tile collision definitions.
+                    if (def.tiles != null && def.tiles.Length > 0)
+                    {
+                        var hasCollision = false;
+                        foreach (var ot in def.tiles)
+                        {
+                            if (tileset.TryGetTile(ot.tileIndex, out var vtile) &&
+                                vtile.CollisionKind != VulcanusCollisionKind.None)
+                            {
+                                hasCollision = true;
+                                break;
+                            }
+                        }
+
+                        if (hasCollision)
+                        {
+                            var bc = go.AddComponent<BoxCollider2D>();
+                            bc.size = new Vector2(objWidthTiles, objHeightTiles);
+                            bc.offset = new Vector2(0f, objHeightTiles * 0.5f);
+                        }
+                    }
+
+                    var sortingGroup = go.AddComponent<SortingGroup>();
+                    sortingGroup.sortingLayerName = "Objects";
 
                     var ySort = go.AddComponent<YSortByPosition>();
                     ySort.Offset = -16;
                 }
+                else
+                {
+                    SpawnBakedInstance(group.transform, inst, def, tileset, mapHeight, tileSize, layer.ZOrder, ctx);
+                }
+            }
+        }
+
+        private static void ApplyObjectSorting(GameObject go, int sortingOrder)
+        {
+            foreach (var renderer in go.GetComponentsInChildren<SpriteRenderer>(true))
+            {
+                renderer.sortingLayerName = "Objects";
+                renderer.sortingOrder = sortingOrder;
+                renderer.spriteSortPoint = SpriteSortPoint.Pivot;
+            }
+
+            foreach (var sortingGroup in go.GetComponentsInChildren<SortingGroup>(true))
+            {
+                sortingGroup.sortingLayerName = "Objects";
+                sortingGroup.sortingOrder = sortingOrder;
+            }
+        }
+
+        private static void SpawnBakedInstance(
+            Transform parent,
+            MapObjectInstanceDto inst,
+            VulcanusTilesetAsset.ObjectDefinition def,
+            VulcanusTilesetAsset tileset,
+            int mapHeight,
+            int tileSize,
+            int sortingOrder,
+            AssetImportContext ctx)
+        {
+            if (def.tiles == null || def.tiles.Length == 0) return;
+
+            // Bounding box in object-local tile coords.
+            var minX = int.MaxValue; var maxX = int.MinValue;
+            var minY = int.MaxValue; var maxY = int.MinValue;
+            foreach (var t in def.tiles)
+            {
+                if (t.x < minX) minX = t.x; if (t.x > maxX) maxX = t.x;
+                if (t.y < minY) minY = t.y; if (t.y > maxY) maxY = t.y;
+            }
+
+            var bakeWidth = (maxX - minX + 1) * tileSize;
+            var bakeHeight = (maxY - minY + 1) * tileSize;
+
+            var baked = new Texture2D(bakeWidth, bakeHeight, TextureFormat.RGBA32, false);
+            baked.SetPixels32(new Color32[bakeWidth * bakeHeight]);
+
+            var srcTexture = tileset.SpriteSheet;
+            if (srcTexture != null && !srcTexture.isReadable)
+            {
+                Debug.LogWarning($"[VulcanusImporter] '{srcTexture.name}' is not readable — reimport the tileset to fix this.");
+                srcTexture = null;
+            }
+
+            foreach (var t in def.tiles)
+            {
+                if (srcTexture == null) break;
+
+                // Pixel rect of this tile in the sprite sheet (bottom-left origin).
+                var col = t.tileIndex % tileset.Columns;
+                var row = t.tileIndex / tileset.Columns;
+                var srcX = col * tileSize;
+                var srcY = srcTexture.height - (row + 1) * tileSize;
+                if (srcX < 0 || srcY < 0 || srcX + tileSize > srcTexture.width || srcY + tileSize > srcTexture.height)
+                    continue;
+
+                var pixels = srcTexture.GetPixels(srcX, srcY, tileSize, tileSize);
+
+                // Object-local y=0 is the top row; baked texture y=0 is bottom.
+                var dstX = (t.x - minX) * tileSize;
+                var dstY = (maxY - t.y) * tileSize;
+                baked.SetPixels(dstX, dstY, tileSize, tileSize, pixels);
+            }
+
+            baked.Apply();
+            baked.filterMode = FilterMode.Point;
+
+            // Pivot at bottom-center — this world position is used for Y-sort depth.
+            var sprite = Sprite.Create(
+                baked,
+                new Rect(0, 0, bakeWidth, bakeHeight),
+                new Vector2(0.5f, 0f),
+                tileSize, 0, SpriteMeshType.FullRect);
+
+            // inst.X/Y are top-left pixel coords in map space (Y down).
+            // Convert to Unity world space: worldY = mapHeight - (inst.Y / tileSize + objectHeightInTiles).
+            var objHeightTiles = maxY - minY + 1;
+            var worldX = inst.X / (float)tileSize + (maxX - minX + 1) * 0.5f;
+            var worldY = mapHeight - inst.Y / (float)tileSize - objHeightTiles;
+
+            var go = new GameObject($"{def.id}_{inst.Id}");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(worldX, worldY, 0f);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingLayerName = "Objects";
+            sr.sortingOrder = sortingOrder;
+            sr.spriteSortPoint = SpriteSortPoint.Pivot;
+
+            // Add collision based on tiles used by this object instance.
+            try
+            {
+                var hasFull = false;
+                var hasComplex = false;
+                foreach (var t in def.tiles)
+                {
+                    if (tileset.TryGetTile(t.tileIndex, out var vtile))
+                    {
+                        if (vtile.CollisionKind == VulcanusCollisionKind.Full) hasFull = true;
+                        else if (vtile.CollisionKind == VulcanusCollisionKind.Complex) hasComplex = true;
+                    }
+                }
+
+                if (hasFull)
+                {
+                    var worldW = bakeWidth / (float)tileSize;
+                    var worldH = bakeHeight / (float)tileSize;
+                    var bc = go.AddComponent<BoxCollider2D>();
+                    bc.size = new Vector2(worldW, worldH);
+                    bc.offset = new Vector2(0f, worldH * 0.5f);
+                }
+                else if (hasComplex)
+                {
+                    // Build composite collider from per-tile shapes where available.
+                    var rb = go.AddComponent<Rigidbody2D>();
+                    rb.bodyType = RigidbodyType2D.Static;
+                    var comp = go.AddComponent<CompositeCollider2D>();
+                    comp.geometryType = CompositeCollider2D.GeometryType.Polygons;
+
+                    var tileMinX = minX; var tileMaxY = maxY;
+                    var widthTiles = maxX - minX + 1;
+
+                    foreach (var t in def.tiles)
+                    {
+                        if (!tileset.TryGetTile(t.tileIndex, out var vtile2)) continue;
+                        var shapes = vtile2.CollisionShapes;
+                        var localTileCenterX = (t.x - tileMinX) - (widthTiles * 0.5f) + 0.5f;
+                        var localTileCenterY = (tileMaxY - t.y) + 0.5f;
+
+                        if (shapes == null || shapes.Length == 0)
+                        {
+                            // fallback per-tile box
+                            var bc = go.AddComponent<BoxCollider2D>();
+                            bc.size = Vector2.one;
+                            bc.offset = new Vector2(localTileCenterX, localTileCenterY);
+                            bc.usedByComposite = true;
+                            continue;
+                        }
+
+                        foreach (var sh in shapes)
+                        {
+                            try
+                            {
+                                if (string.Equals(sh.type, "polygon", StringComparison.OrdinalIgnoreCase) && sh.points != null && sh.points.Length > 0)
+                                {
+                                    var pc = go.AddComponent<PolygonCollider2D>();
+                                    var pts = new Vector2[sh.points.Length];
+                                    for (int pi = 0; pi < sh.points.Length; pi++)
+                                    {
+                                        var p = sh.points[pi];
+                                        pts[pi] = new Vector2(localTileCenterX + (p.x - 0.5f), localTileCenterY + (p.y - 0.5f));
+                                    }
+                                    pc.SetPath(0, pts);
+                                    pc.usedByComposite = true;
+                                }
+                                else if (string.Equals(sh.type, "rectangle", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var bc2 = go.AddComponent<BoxCollider2D>();
+                                    var w = sh.width > 0 ? sh.width : 1f;
+                                    var h = sh.height > 0 ? sh.height : 1f;
+                                    var cx = sh.x + w * 0.5f - 0.5f;
+                                    var cy = sh.y + h * 0.5f - 0.5f;
+                                    bc2.size = new Vector2(w, h);
+                                    bc2.offset = new Vector2(localTileCenterX + cx, localTileCenterY + cy);
+                                    bc2.usedByComposite = true;
+                                }
+                                else if (string.Equals(sh.type, "circle", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var cc = go.AddComponent<CircleCollider2D>();
+                                    var r = (sh.width > 0 ? sh.width : 1f) * 0.5f;
+                                    var cx = sh.x + (sh.width > 0 ? sh.width * 0.5f : 0.5f) - 0.5f;
+                                    var cy = sh.y + (sh.height > 0 ? sh.height * 0.5f : 0.5f) - 0.5f;
+                                    cc.radius = r;
+                                    cc.offset = new Vector2(localTileCenterX + cx, localTileCenterY + cy);
+                                    cc.usedByComposite = true;
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // Ensure baked texture and sprite are included in the imported asset so
+            // references don't get lost after import.
+            try
+            {
+                if (ctx != null)
+                {
+                    ctx.AddObjectToAsset($"bakedTexture_{def.id}_{inst.Id}", baked);
+                    ctx.AddObjectToAsset($"bakedSprite_{def.id}_{inst.Id}", sprite);
+                }
+            }
+            catch
+            {
+                // Non-fatal: if adding sub-assets fails for any reason, the import will still continue.
             }
         }
 
         // ── Tilemap helpers ───────────────────────────────────────────────────
 
-        private static Tilemap CreateTilemapLayer(Transform parent, string layerName, int sortingOrder, float opacity, string sortingLayerHint = null)
+        private static Tilemap CreateTilemapLayer(Transform parent, string layerName, int sortingOrder, float opacity, string sortingLayerHint = null, bool addCollider = false)
         {
             var go = new GameObject(layerName);
             go.transform.SetParent(parent, false);
@@ -402,11 +645,16 @@ namespace Core.Tile.Editor.Vulcanus
             tilemap.color = new Color(1f, 1f, 1f, Mathf.Clamp01(opacity));
 
             var renderer = go.AddComponent<TilemapRenderer>();
-            // "Objects" layers use Y-sort so multi-tile sprites (trees etc.) render behind the player correctly.
-            // pivotY on each sprite anchors the sort point at the ground contact, regardless of tile height.
             var isYSorted = string.Equals(sortingLayerHint, "Objects", StringComparison.OrdinalIgnoreCase);
             renderer.sortOrder = isYSorted ? TilemapRenderer.SortOrder.BottomLeft : TilemapRenderer.SortOrder.TopLeft;
             renderer.sortingOrder = sortingOrder;
+
+            if (addCollider)
+            {
+                var tilemapCollider = go.AddComponent<TilemapCollider2D>();
+                // No clue why, but we have to offset by 0.5y
+                tilemapCollider.offset = new Vector2(0f, -0.5f);
+            }
 
             return tilemap;
         }

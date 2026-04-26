@@ -15,12 +15,12 @@ namespace Core.Tile.Editor.Vulcanus
         // ── Entity mapping ────────────────────────────────────────────────────
 
         /// <summary>
-        /// Builds a fresh EntityPrefabMapping array from entity type definitions,
+        /// Builds a fresh EntityPrefabMapping array from entity definition assets,
         /// preserving any prefab assignments that already exist in <paramref name="existingMappings"/>.
         /// Missing prefabs are appended to <paramref name="warnings"/>.
         /// </summary>
         public static VulcanusProject.EntityPrefabMapping[] BuildEntityMappings(
-            VulcanusProject.EntityTypeDefinition[] entityTypes,
+            VulcanEntityDefinition[] entityDefinitions,
             VulcanusProject.EntityPrefabMapping[]  existingMappings,
             List<string>                         warnings,
             bool                                 autoAssignSingleMatch = false,
@@ -30,22 +30,22 @@ namespace Core.Tile.Editor.Vulcanus
             var result = new List<VulcanusProject.EntityPrefabMapping>();
             var unresolved = 0;
 
-            foreach (var type in entityTypes ?? Array.Empty<VulcanusProject.EntityTypeDefinition>())
+            foreach (var definition in entityDefinitions ?? Array.Empty<VulcanEntityDefinition>())
             {
-                if (string.IsNullOrWhiteSpace(type.id)) continue;
+                if (definition == null || string.IsNullOrWhiteSpace(definition.EntityTypeId))
+                    continue;
 
-                existingByType.TryGetValue(type.id, out var old);
+                existingByType.TryGetValue(definition.EntityTypeId, out var old);
                 var mapping = new VulcanusProject.EntityPrefabMapping
                 {
-                    entityTypeId      = type.id,
-                    entityDisplayName = string.IsNullOrWhiteSpace(type.displayName) ? type.id : type.displayName,
                     prefab            = old?.prefab,
                     candidatePrefabPaths = old?.candidatePrefabPaths ?? Array.Empty<string>()
                 };
+                mapping.BindDefinition(definition);
 
                 if (mapping.prefab == null)
                 {
-                    var candidates = FindCandidatePrefabPaths(type.id, type.displayName);
+                    var candidates = FindCandidatePrefabPaths(definition.EntityTypeId, definition.DisplayName);
                     mapping.candidatePrefabPaths = candidates;
 
                     if (autoAssignSingleMatch && candidates.Length == 1)
@@ -58,11 +58,11 @@ namespace Core.Tile.Editor.Vulcanus
                 if (mapping.prefab == null)
                 {
                     unresolved++;
-                    warnings?.Add($"No prefab mapped for entity type '{type.id}'. Assign it in a VulcanusWorldCatalog asset.");
+                    warnings?.Add($"No prefab mapped for entity type '{definition.EntityTypeId}'. Assign it in a VulcanusWorldCatalog asset.");
                 }
 
                 result.Add(mapping);
-                existingByType.Remove(type.id);
+                existingByType.Remove(definition.EntityTypeId);
             }
 
             // Keep any manual rows for entity types not in the current definition.
@@ -135,8 +135,11 @@ namespace Core.Tile.Editor.Vulcanus
             var dict = new Dictionary<string, VulcanusProject.EntityPrefabMapping>(StringComparer.OrdinalIgnoreCase);
             if (mappings == null) return dict;
             foreach (var m in mappings)
-                if (m != null && !string.IsNullOrWhiteSpace(m.entityTypeId))
-                    dict[m.entityTypeId] = m;
+            {
+                var typeId = m?.GetEntityTypeId();
+                if (!string.IsNullOrWhiteSpace(typeId))
+                    dict[typeId] = m;
+            }
             return dict;
         }
     }

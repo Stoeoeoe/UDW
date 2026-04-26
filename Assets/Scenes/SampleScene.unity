@@ -343,20 +343,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: -6241207932587951449, guid: d0b207797bae4d244bf3348ac6ee6098,
+    - target: {fileID: -6380817677958077998, guid: d0b207797bae4d244bf3348ac6ee6098,
         type: 3}
       propertyPath: m_ChunkCullingBounds.y
-      value: 4
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -1433788042044329938, guid: d0b207797bae4d244bf3348ac6ee6098,
         type: 3}
       propertyPath: m_Name
       value: map-1
       objectReference: {fileID: 0}
+    - target: {fileID: 5819668214867856517, guid: d0b207797bae4d244bf3348ac6ee6098,
+        type: 3}
+      propertyPath: m_ChunkCullingBounds.y
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 7442951001145528625, guid: d0b207797bae4d244bf3348ac6ee6098,
         type: 3}
       propertyPath: m_ChunkCullingBounds.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 8111479237819902114, guid: d0b207797bae4d244bf3348ac6ee6098,
         type: 3}
@@ -2044,12 +2049,22 @@ PrefabInstance:
     - target: {fileID: 2434293032161368707, guid: 204dcfde5843dd14b8cca533c2b59858,
         type: 3}
       propertyPath: m_SortingLayer
-      value: 4
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 2434293032161368707, guid: 204dcfde5843dd14b8cca533c2b59858,
         type: 3}
       propertyPath: m_SpriteSortPoint
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4788149031591454284, guid: 204dcfde5843dd14b8cca533c2b59858,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.441
+      objectReference: {fileID: 0}
+    - target: {fileID: 4788149031591454284, guid: 204dcfde5843dd14b8cca533c2b59858,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.543
       objectReference: {fileID: 0}
     - target: {fileID: 5211860480667561531, guid: 204dcfde5843dd14b8cca533c2b59858,
         type: 3}

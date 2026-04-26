@@ -65,11 +65,14 @@ namespace Core.Tile.Editor.Vulcanus
             var project = catalog.Project;
             if (project == null) { _lastSyncSummary = "Assign a VulcanusProject first."; return; }
 
+            var projectAssetPath = AssetDatabase.GetAssetPath(project);
+            var entityDefinitions = VulcanusProjectRegistry.FindEntityDefinitionsForProject(projectAssetPath);
+
             var warnings = new List<string>();
             var unresolved = 0;
 
             var entityMappings = VulcanusEditorUtils.BuildEntityMappings(
-                project.EntityTypes,
+                entityDefinitions,
                 catalog.EntityPrefabMappings,
                 warnings,
                 autoAssignMissingEntityPrefabs,

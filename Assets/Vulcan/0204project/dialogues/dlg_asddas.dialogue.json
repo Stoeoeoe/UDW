@@ -1,0 +1,20 @@
+{
+  "$schema": "../../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "dlg_asddas",
+  "name": "asddas",
+  "oneShot": false,
+  "startNodeId": "step_1",
+  "tags": [],
+  "createdAt": "2026-04-25T08:09:35.475Z",
+  "updatedAt": "2026-04-25T08:09:35.475Z",
+  "nodes": [
+    {
+      "id": "step_1",
+      "type": "line",
+      "text": "",
+      "msgKey": "dlg.dlg_asddas.01",
+      "next": null
+    }
+  ]
+}

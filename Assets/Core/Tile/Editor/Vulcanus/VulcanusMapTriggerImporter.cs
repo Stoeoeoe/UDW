@@ -355,6 +355,80 @@ namespace Core.Tile.Editor.Vulcanus
             TryAddTriggerDebugger(go);
         }
 
+        public static void SpawnColliders(
+            Transform mapRoot,
+            IReadOnlyList<MapCollisionDto> collisions,
+            int mapHeight,
+            int tileSize)
+        {
+            if (collisions == null || collisions.Count == 0)
+                return;
+
+            var group = new GameObject("Collisions");
+            group.transform.SetParent(mapRoot, false);
+
+            foreach (var dto in collisions)
+            {
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Id))
+                    continue;
+
+                CreateCollisionObject(group.transform, dto, mapHeight, tileSize);
+            }
+        }
+
+        private static void CreateCollisionObject(
+            Transform parent,
+            MapCollisionDto dto,
+            int mapHeight,
+            int tileSize)
+        {
+            var ts = Mathf.Max(1, tileSize);
+            var px = dto.Position != null && dto.Position.Count > 0 ? dto.Position[0] : 0f;
+            var py = dto.Position != null && dto.Position.Count > 1 ? dto.Position[1] : 0f;
+
+            var go = new GameObject(string.IsNullOrWhiteSpace(dto.Label) ? dto.Id : $"{dto.Label}_{dto.Id}");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = PixelToLocalPosition(px, py, mapHeight, ts);
+
+            if (dto.Shape.Equals("circle", StringComparison.OrdinalIgnoreCase))
+            {
+                var cc = go.AddComponent<CircleCollider2D>();
+                cc.radius = dto.Radius / ts;
+                // position is center for circles; offset collider so it stays at center
+                cc.offset = Vector2.zero;
+            }
+            else if (dto.Shape.Equals("polygon", StringComparison.OrdinalIgnoreCase))
+            {
+                var points = dto.Points;
+                if (points == null || points.Count < 3)
+                {
+                    Debug.LogWarning($"[VulcanusImporter] Collision '{dto.Id}' is a polygon but has fewer than 3 points.");
+                    UnityEngine.Object.DestroyImmediate(go);
+                    return;
+                }
+
+                var pc = go.AddComponent<PolygonCollider2D>();
+                var verts = new Vector2[points.Count];
+                for (var i = 0; i < points.Count; i++)
+                {
+                    var p = points[i];
+                    if (p == null || p.Count < 2) continue;
+                    // Points are absolute pixel coords; make them relative to the object's position
+                    verts[i] = new Vector2((p[0] - px) / ts, -(p[1] - py) / ts);
+                }
+                pc.points = verts;
+            }
+            else // rectangle (default)
+            {
+                var w = dto.Size != null && dto.Size.Count > 0 ? dto.Size[0] : 1f;
+                var h = dto.Size != null && dto.Size.Count > 1 ? dto.Size[1] : 1f;
+                var bc = go.AddComponent<BoxCollider2D>();
+                bc.size = new Vector2(w / ts, h / ts);
+                // position is top-left for rectangles; offset so center is correct
+                bc.offset = new Vector2(w / ts * 0.5f, -h / ts * 0.5f);
+            }
+        }
+
         private static void SetInteractableLayer(GameObject go)
         {
             var interactableLayer = LayerMask.NameToLayer(InteractableLayerName);

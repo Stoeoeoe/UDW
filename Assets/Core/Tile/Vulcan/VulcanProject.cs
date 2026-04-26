@@ -28,15 +28,6 @@ namespace Core.Tile.Vulcanus
         }
 
         [Serializable]
-        public struct EntityTypeDefinition
-        {
-            public string id;
-            public string displayName;
-            public string category;
-            public string group;
-        }
-
-        [Serializable]
         public struct PropertyDefinition
         {
             public string key;
@@ -49,10 +40,22 @@ namespace Core.Tile.Vulcanus
         [Serializable]
         public class EntityPrefabMapping
         {
-            public string entityTypeId;
-            public string entityDisplayName;
+            [HideInInspector] public string entityTypeId;
+            [HideInInspector] public string entityDisplayName;
+            public VulcanEntityDefinition entityDefinition;
             public GameObject prefab;
             public string[] candidatePrefabPaths = Array.Empty<string>();
+
+            public string GetEntityTypeId() => entityDefinition != null ? entityDefinition.EntityTypeId : entityTypeId;
+
+            public string GetEntityDisplayName() => entityDefinition != null ? entityDefinition.DisplayName : entityDisplayName;
+
+            public void BindDefinition(VulcanEntityDefinition definition)
+            {
+                entityDefinition = definition;
+                entityTypeId = definition != null ? definition.EntityTypeId : entityTypeId;
+                entityDisplayName = definition != null ? definition.DisplayName : entityDisplayName;
+            }
         }
 
         [Serializable]
@@ -69,11 +72,9 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private int defaultMapHeight;
         [SerializeField] private TerrainDefinition[] terrainTypes = Array.Empty<TerrainDefinition>();
         [SerializeField] private LayerDefinition[] layerDefinitions = Array.Empty<LayerDefinition>();
-        [SerializeField] private EntityTypeDefinition[] entityTypes = Array.Empty<EntityTypeDefinition>();
         [SerializeField] private PropertyDefinition[] tileMetadataDefinitions = Array.Empty<PropertyDefinition>();
 
         [Header("Mappings")]
-        [SerializeField] private EntityPrefabMapping[] entityPrefabMappings = Array.Empty<EntityPrefabMapping>();
         [SerializeField] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
         [SerializeField] private MapLocationMapping[] locationMappings = Array.Empty<MapLocationMapping>();
 
@@ -87,9 +88,7 @@ namespace Core.Tile.Vulcanus
         public int DefaultMapHeight => defaultMapHeight;
         public TerrainDefinition[] TerrainTypes => terrainTypes;
         public LayerDefinition[] LayerDefinitions => layerDefinitions;
-        public EntityTypeDefinition[] EntityTypes => entityTypes;
         public PropertyDefinition[] TileMetadataDefinitions => tileMetadataDefinitions;
-        public EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
         public ItemClassMapping[] ItemClassMappings => itemClassMappings;
         public MapLocationMapping[] LocationMappings => locationMappings;
         public string[] MappingWarnings => mappingWarnings;
@@ -102,7 +101,6 @@ namespace Core.Tile.Vulcanus
             int mapHeight,
             TerrainDefinition[] terrains,
             LayerDefinition[] layers,
-            EntityTypeDefinition[] entities,
             PropertyDefinition[] metadataDefinitions = null)
         {
             version = fileVersion;
@@ -112,17 +110,14 @@ namespace Core.Tile.Vulcanus
             defaultMapHeight = mapHeight;
             terrainTypes = terrains ?? Array.Empty<TerrainDefinition>();
             layerDefinitions = layers ?? Array.Empty<LayerDefinition>();
-            entityTypes = entities ?? Array.Empty<EntityTypeDefinition>();
             tileMetadataDefinitions = metadataDefinitions ?? Array.Empty<PropertyDefinition>();
         }
 
         public void SetMappings(
-            EntityPrefabMapping[] entityMappings,
             MapLocationMapping[] mapLocations,
             ItemClassMapping[] itemMappings,
             string[] warnings)
         {
-            entityPrefabMappings = entityMappings ?? Array.Empty<EntityPrefabMapping>();
             itemClassMappings = itemMappings ?? Array.Empty<ItemClassMapping>();
             locationMappings = mapLocations ?? Array.Empty<MapLocationMapping>();
             mappingWarnings = warnings ?? Array.Empty<string>();
@@ -150,28 +145,6 @@ namespace Core.Tile.Vulcanus
                     terrainType = terrain.mappedTerrainType;
                     return true;
                 }
-            }
-
-            return false;
-        }
-
-        public bool TryGetEntityPrefab(string entityTypeId, out GameObject prefab)
-        {
-            prefab = null;
-            if (string.IsNullOrWhiteSpace(entityTypeId) || entityPrefabMappings == null)
-                return false;
-
-            for (int i = 0; i < entityPrefabMappings.Length; i++)
-            {
-                var mapping = entityPrefabMappings[i];
-                if (mapping == null)
-                    continue;
-
-                if (!string.Equals(mapping.entityTypeId, entityTypeId, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                prefab = mapping.prefab;
-                return prefab != null;
             }
 
             return false;

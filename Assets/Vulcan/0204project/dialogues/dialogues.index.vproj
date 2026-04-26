@@ -7,11 +7,11 @@
   "dialogues": [
     {
       "id": "dlg_new_dialogue",
-      "name": "New Dialogue",
+      "name": "New Dialogue Testga",
       "oneShot": false,
       "nodeCount": 12,
       "tags": [],
-      "updatedAt": "2026-04-19T09:27:47.679Z"
+      "updatedAt": "2026-04-25T07:14:38.464Z"
     }
   ]
 }

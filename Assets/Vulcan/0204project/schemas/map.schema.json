@@ -68,7 +68,11 @@
       "type": "array",
       "items": { "$ref": "#/$defs/Variation" }
     },
-    "metadata": { "$ref": "#/$defs/MapMetadata" }
+    "metadata": { "$ref": "#/$defs/MapMetadata" },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'World/Dungeon'). Empty string or absent = root."
+    }
   },
   "$defs": {
     "Layer": {
@@ -312,6 +316,10 @@
         "triggers": {
           "type": "array",
           "items": { "$ref": "#/$defs/MapTrigger" }
+        },
+        "collisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/MapCollision" }
         }
       }
     },
@@ -343,6 +351,52 @@
           "items": { "type": "number", "minimum": 1 },
           "minItems": 2,
           "maxItems": 2
+        },
+        "points": {
+          "type": "array",
+          "description": "Absolute pixel vertices. Only for polygon shape.",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "MapCollision": {
+      "type": "object",
+      "required": ["id", "shape", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "shape": {
+          "type": "string",
+          "enum": ["rectangle", "polygon", "circle"]
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y]. Top-left for rectangle, center for circle, first vertex for polygon.",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "size": {
+          "type": "array",
+          "description": "Pixel [width, height]. Only for rectangle shape.",
+          "items": { "type": "number", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "radius": {
+          "type": "number",
+          "description": "Radius in pixels. Only for circle shape.",
+          "minimum": 1
         },
         "points": {
           "type": "array",

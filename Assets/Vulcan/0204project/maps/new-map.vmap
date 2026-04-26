@@ -1,0 +1,89 @@
+{
+  "$schema": "../../schemas/map.schema.json",
+  "version": 1,
+  "id": "new-map",
+  "name": "New Map",
+  "width": 4,
+  "height": 4,
+  "baseTilesetId": "villagetileset",
+  "tilesetRefs": [
+    "villagetileset"
+  ],
+  "layers": [
+    {
+      "id": "terrain",
+      "name": "Terrain",
+      "kind": "terrain",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 0,
+      "data": [
+        [
+          208,
+          144,
+          50,
+          50
+        ],
+        [
+          50,
+          50,
+          112,
+          50
+        ],
+        [
+          144,
+          50,
+          144,
+          144
+        ],
+        [
+          112,
+          50,
+          112,
+          144
+        ]
+      ],
+      "terrainData": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "definitionId": "terrain",
+      "terrainPalette": [
+        "grass"
+      ]
+    },
+    {
+      "id": "navigation",
+      "name": "Navigation",
+      "kind": "navigation",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 9999
+    }
+  ],
+  "entities": []
+}
