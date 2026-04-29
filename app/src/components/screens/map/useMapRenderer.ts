@@ -1011,8 +1011,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       'linkPlace',
       'triggerPlace',
       'triggerPolygon',
-      'select',
-    ];
+      'collisionSelect',
+      'collisionRect',
+      'collisionPolygon',
+      'collisionCircle',
+    ] as const;
     if (noTileHoverTools.includes(activeTool)) return;
 
     if (hoveredTile) {
