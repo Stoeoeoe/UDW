@@ -8,12 +8,10 @@ import {
 } from '../../lib/editorResourceTypes';
 import { fileSystem } from '../../lib/fileSystem';
 import { useEditorStore } from '../../store/useEditorStore';
-import { saveDialogueIndexImmediate, saveDialogueImmediate } from '../../lib/saveManager';
+import { saveDialogueImmediate } from '../../lib/saveManager';
 import {
   buildI18nExport,
-  createDefaultDialogueIndex,
   createEmptyDialogue,
-  getDialogueEntry,
   nextDialogueId,
   slugify,
   toRuntimeDialogue,
@@ -35,41 +33,31 @@ export const WorkspaceCreateDialog: React.FC<{
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
 }> = ({ state, onClose, onOpenDocument }) => {
   const toast = useToast();
-  const gameVariables = useEditorStore((s) => s.gameVariables);
-  const scriptTables = useEditorStore((s) => s.scriptTables);
-  const scriptFunctions = useEditorStore((s) => s.scriptFunctions);
-  const scriptNamespaces = useEditorStore((s) => s.scriptNamespaces);
-  const scriptContextTypes = useEditorStore((s) => s.scriptContextTypes);
+  const projectDialogueTypes = useEditorStore((s) => s.project?.dialogueTypes);
+  const dialogueTypes = projectDialogueTypes ?? [];
 
   const handleCreateDialogue = React.useCallback(
     async (values: MetadataDraft, folderPath: string) => {
       const state = useEditorStore.getState();
-      const existingIndex = state.dialogueIndex ?? createDefaultDialogueIndex();
       const derived = slugify(values.name);
-      const candidateId = derived ? `dlg_${derived}` : nextDialogueId(existingIndex);
+      const candidateId = derived ? `dlg_${derived}` : nextDialogueId(state.dialogues.values());
       const dialogueId = state.dialogues.has(candidateId)
-        ? nextDialogueId(existingIndex)
+        ? nextDialogueId(state.dialogues.values())
         : candidateId;
       const dialogue = createEmptyDialogue(
         dialogueId,
         values.name.trim(),
         values.oneShot,
-        values.entryCondition,
+        values.dialogueTypeId,
       );
-      const entry = { ...getDialogueEntry(dialogue), folderPath: folderPath || undefined };
-      const nextIndex = {
-        ...existingIndex,
-        dialogues: [...existingIndex.dialogues.filter((item) => item.id !== dialogue.id), entry],
-      };
+      dialogue.folderPath = folderPath || undefined;
 
       useEditorStore.setState((draft) => {
-        draft.dialogueIndex = nextIndex;
         draft.dialogues.set(dialogue.id, dialogue);
         draft.selectedDialogueId = dialogue.id;
         draft.selectedDialogueNodeId = dialogue.startNodeId;
       });
 
-      await saveDialogueIndexImmediate(nextIndex);
       await saveDialogueImmediate(dialogue);
       await fileSystem.saveJson(
         'dialogues',
@@ -134,7 +122,7 @@ export const WorkspaceCreateDialog: React.FC<{
         isOpen
         onClose={onClose}
         mode="create"
-        initialValues={{ name: '', oneShot: false, entryCondition: '' }}
+        initialValues={{ name: '', oneShot: false, dialogueTypeId: '' }}
         onApply={(values) => {
           void handleCreateDialogue(values, state.folderPath).catch((error) => {
             toast({
@@ -144,16 +132,7 @@ export const WorkspaceCreateDialog: React.FC<{
             });
           });
         }}
-        gameVariables={gameVariables}
-        scriptTables={scriptTables}
-        scriptFunctions={scriptFunctions}
-        scriptNamespaces={scriptNamespaces}
-        activeContextType={
-          scriptContextTypes.find(
-            (context) =>
-              context.id === useEditorStore.getState().dialogueIndex?.defaultContextTypeId,
-          ) ?? undefined
-        }
+        dialogueTypes={dialogueTypes}
       />
     );
   }

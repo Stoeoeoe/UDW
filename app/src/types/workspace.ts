@@ -4,7 +4,7 @@ import {
   Actor,
   EntityType,
   Item,
-  DialogueListEntry,
+  DialogueDocument,
   GameVariable,
 } from './schema';
 import { ToolType } from './editor';
@@ -171,6 +171,6 @@ export interface WorkspaceProjectSnapshot {
   actors?: Actor[];
   entityTypes?: EntityType[];
   items?: Item[];
-  dialogueEntries?: DialogueListEntry[];
+  dialogues?: DialogueDocument[];
   gameVariables?: GameVariable[];
 }

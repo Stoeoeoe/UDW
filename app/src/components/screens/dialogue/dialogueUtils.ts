@@ -3,11 +3,11 @@ import {
   DialogueChoiceOption,
   DialogueDocument,
   DialogueI18nExport,
-  DialogueIndex,
-  DialogueListEntry,
+  DialogueType,
   DialogueNode,
   DialogueNodeEditorMeta,
   DialogueNodeType,
+  Project,
   ScriptContextType,
 } from '../../../types/schema';
 
@@ -16,7 +16,7 @@ export type DialogueTab = 'timeline' | 'settings';
 export type MetadataDraft = {
   name: string;
   oneShot: boolean;
-  entryCondition: string;
+  dialogueTypeId: string;
 };
 
 export type ActionLuaValidation = {
@@ -40,21 +40,13 @@ export function slugify(value: string): string {
     .replace(/^_|_$/g, '');
 }
 
-export function createDefaultDialogueIndex(): DialogueIndex {
-  return {
-    version: 1,
-    categories: [],
-    customActors: [],
-    dialogues: [],
-  };
-}
-
-export function nextDialogueId(index: DialogueIndex): string {
-  const max = index.dialogues.reduce((acc, entry) => {
+export function nextDialogueId(dialogues: Iterable<Pick<DialogueDocument, 'id'>>): string {
+  let max = 0;
+  for (const entry of dialogues) {
     const match = /^dlg_(\d+)$/.exec(entry.id);
-    if (!match) return acc;
-    return Math.max(acc, Number(match[1]));
-  }, 0);
+    if (!match) continue;
+    max = Math.max(max, Number(match[1]));
+  }
   return `dlg_${max + 1}`;
 }
 
@@ -116,33 +108,30 @@ export function isNavigable(node: DialogueNode): boolean {
   return node.type !== 'comment';
 }
 
-export function normalizeDialogueIndex(raw: unknown): DialogueIndex {
-  if (!raw || typeof raw !== 'object') return createDefaultDialogueIndex();
-  const value = raw as Partial<DialogueIndex>;
+export function getFirstNavigableNodeId(nodes: DialogueNode[]): string | null {
+  return nodes.find((node) => isNavigable(node))?.id ?? null;
+}
 
-  return {
-    version: value.version ?? 1,
-    defaultContextTypeId: value.defaultContextTypeId,
-    categories: Array.isArray(value.categories) ? value.categories : [],
-    customActors: Array.isArray(value.customActors) ? value.customActors : [],
-    dialogues: Array.isArray(value.dialogues)
-      ? value.dialogues.map((entry) => ({
-          id: entry.id,
-          name: entry.name,
-          oneShot: (entry as DialogueListEntry).oneShot ?? false,
-          nodeCount: (entry as DialogueListEntry).nodeCount ?? 0,
-          tags: Array.isArray(entry.tags) ? entry.tags : [],
-          updatedAt: entry.updatedAt ?? nowIso(),
-        }))
-      : [],
-  };
+export function ensureValidStartNodeId(
+  nodes: DialogueNode[],
+  candidateStartNodeId?: string | null,
+): string {
+  const nodeSet = new Set(nodes.map((node) => node.id));
+  if (candidateStartNodeId && nodeSet.has(candidateStartNodeId)) {
+    const startNode = nodes.find((node) => node.id === candidateStartNodeId);
+    if (startNode && isNavigable(startNode)) {
+      return candidateStartNodeId;
+    }
+  }
+
+  return getFirstNavigableNodeId(nodes) ?? candidateStartNodeId ?? 'step_1';
 }
 
 export function createEmptyDialogue(
   id: string,
   name: string,
   oneShot: boolean,
-  entryCondition: string,
+  dialogueTypeId: string,
 ): DialogueDocument {
   const firstNodeId = 'step_1';
   return {
@@ -150,7 +139,7 @@ export function createEmptyDialogue(
     id,
     name,
     oneShot,
-    entryCondition: entryCondition.trim() || undefined,
+    dialogueTypeId: dialogueTypeId.trim() || undefined,
     startNodeId: firstNodeId,
     tags: [],
     createdAt: nowIso(),
@@ -350,7 +339,7 @@ export function migrateFromStepTransitionModel(
     id: typeof raw.id === 'string' ? (raw.id as string) : dialogueId,
     name: typeof raw.name === 'string' ? (raw.name as string) : 'Dialogue',
     oneShot: false,
-    entryCondition: undefined,
+    dialogueTypeId: undefined,
     startNodeId,
     tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
     createdAt: typeof raw.createdAt === 'string' ? (raw.createdAt as string) : nowIso(),
@@ -375,25 +364,23 @@ export function normalizeDialogueDocument(raw: unknown, fallbackId: string): Dia
       nodes.length > 0 ? nodes : createEmptyDialogue(fallbackId, 'New Dialogue', false, '').nodes;
     const nodeSet = new Set(safeNodes.map((node) => node.id));
 
-    let startNodeId =
+    const requestedStartNodeId =
       typeof value.startNodeId === 'string'
         ? (value.startNodeId as string)
         : typeof value.entryStepId === 'string'
           ? (value.entryStepId as string)
           : safeNodes[0].id;
-
-    if (!nodeSet.has(startNodeId)) {
-      startNodeId = safeNodes[0].id;
-    }
+    const startNodeId = ensureValidStartNodeId(safeNodes, requestedStartNodeId);
 
     return {
       version: typeof value.version === 'number' ? (value.version as number) : 1,
       id: typeof value.id === 'string' ? (value.id as string) : fallbackId,
       name: typeof value.name === 'string' ? (value.name as string) : 'Dialogue',
+      folderPath: typeof value.folderPath === 'string' ? (value.folderPath as string) : undefined,
       oneShot: typeof value.oneShot === 'boolean' ? (value.oneShot as boolean) : false,
-      entryCondition:
-        typeof value.entryCondition === 'string' && value.entryCondition.trim()
-          ? (value.entryCondition as string)
+      dialogueTypeId:
+        typeof value.dialogueTypeId === 'string' && value.dialogueTypeId.trim()
+          ? (value.dialogueTypeId as string)
           : undefined,
       startNodeId,
       tags: Array.isArray(value.tags) ? (value.tags as string[]) : [],
@@ -404,37 +391,6 @@ export function normalizeDialogueDocument(raw: unknown, fallbackId: string): Dia
   }
 
   return migrateFromStepTransitionModel(value, fallbackId);
-}
-
-export function getDialogueEntry(dialogue: DialogueDocument): DialogueListEntry {
-  return {
-    id: dialogue.id,
-    name: dialogue.name,
-    oneShot: dialogue.oneShot,
-    nodeCount: dialogue.nodes.filter((node) => node.type !== 'comment').length,
-    tags: dialogue.tags,
-    updatedAt: dialogue.updatedAt,
-  };
-}
-
-export function upsertDialogueEntry(
-  index: DialogueIndex,
-  dialogue: DialogueDocument,
-): DialogueIndex {
-  const entry = getDialogueEntry(dialogue);
-  const exists = index.dialogues.some((item) => item.id === dialogue.id);
-
-  if (exists) {
-    return {
-      ...index,
-      dialogues: index.dialogues.map((item) => (item.id === dialogue.id ? entry : item)),
-    };
-  }
-
-  return {
-    ...index,
-    dialogues: [...index.dialogues, entry],
-  };
 }
 
 export function buildI18nExport(dialogue: DialogueDocument): DialogueI18nExport {
@@ -473,7 +429,7 @@ export function buildI18nExport(dialogue: DialogueDocument): DialogueI18nExport 
 }
 
 export function toRuntimeDialogue(dialogue: DialogueDocument): DialogueDocument {
-  const nodes = dialogue.nodes.filter((node) => node.type !== 'comment');
+  const nodes = dialogue.nodes;
   const nodeIdSet = new Set(nodes.map((node) => node.id));
 
   const sanitizedNodes = nodes.map((node) => {
@@ -506,10 +462,13 @@ export function toRuntimeDialogue(dialogue: DialogueDocument): DialogueDocument 
     }
 
     if (node.type === 'jump') {
+      const targetDialogueId = node.targetDialogueId?.trim() ? node.targetDialogueId : null;
       return {
         ...node,
         editor: undefined,
-        targetNodeId: nodeIdSet.has(node.targetNodeId) ? node.targetNodeId : node.targetNodeId,
+        targetDialogueId,
+        targetNodeId:
+          !targetDialogueId && !nodeIdSet.has(node.targetNodeId) ? '' : node.targetNodeId,
       };
     }
 
@@ -519,10 +478,7 @@ export function toRuntimeDialogue(dialogue: DialogueDocument): DialogueDocument 
     };
   });
 
-  const fallbackStartNodeId = sanitizedNodes[0]?.id ?? dialogue.startNodeId;
-  const startNodeId = nodeIdSet.has(dialogue.startNodeId)
-    ? dialogue.startNodeId
-    : fallbackStartNodeId;
+  const startNodeId = ensureValidStartNodeId(sanitizedNodes, dialogue.startNodeId);
 
   return {
     ...dialogue,
@@ -788,9 +744,10 @@ export function removeNodesWithCleanup(
     return node;
   });
 
-  const nextStart = nodeIds.has(dialogue.startNodeId)
-    ? (nodes[0]?.id ?? dialogue.startNodeId)
-    : dialogue.startNodeId;
+  const nextStart = ensureValidStartNodeId(
+    nodes,
+    nodeIds.has(dialogue.startNodeId) ? null : dialogue.startNodeId,
+  );
 
   return {
     ...dialogue,
@@ -864,6 +821,25 @@ export function reorderNodeBlocks(
     }
   }
   return flattened;
+}
+
+export function getDialogueTypeById(
+  project: Project | null | undefined,
+  dialogueTypeId: string | null | undefined,
+): DialogueType | undefined {
+  if (!project || !dialogueTypeId) return undefined;
+  return project.dialogueTypes?.find((dialogueType) => dialogueType.id === dialogueTypeId);
+}
+
+export function resolveDialogueContextType(
+  project: Project | null | undefined,
+  dialogue: DialogueDocument | null | undefined,
+  scriptContextTypes: ScriptContextType[],
+): ScriptContextType | undefined {
+  const dialogueType = getDialogueTypeById(project, dialogue?.dialogueTypeId);
+  const contextTypeId = dialogueType?.contextTypeId || project?.defaultDialogueContextTypeId;
+  if (!contextTypeId) return undefined;
+  return scriptContextTypes.find((context) => context.id === contextTypeId);
 }
 
 // Unused in current code but exported to avoid re-importing ScriptContextType elsewhere

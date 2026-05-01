@@ -100,6 +100,15 @@
       "description": "Context types defining the shape of 'self' for script execution contexts.",
       "items": { "$ref": "#/$defs/ScriptContextType" }
     },
+    "defaultDialogueContextTypeId": {
+      "type": "string",
+      "description": "Default ScriptContextType id injected as 'self' for dialogue scripts when no dialogue type override is selected."
+    },
+    "dialogueTypes": {
+      "type": "array",
+      "description": "Named dialogue modes that can override the default dialogue script context.",
+      "items": { "$ref": "#/$defs/DialogueType" }
+    },
     "itemClasses": {
       "type": "array",
       "description": "Project-level item class definitions that add extra typed property schemas to items.",
@@ -440,6 +449,20 @@
         "functions": {
           "type": "array",
           "items": { "$ref": "#/$defs/ScriptFunction" }
+        }
+      }
+    },
+    "DialogueType": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "contextTypeId": {
+          "type": "string",
+          "description": "Optional ScriptContextType id used instead of the project's default dialogue context."
         }
       }
     },

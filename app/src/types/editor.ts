@@ -6,7 +6,6 @@ import {
   EntityType,
   Actor,
   DialogueDocument,
-  DialogueIndex,
   GameVariable,
   ScriptTable,
   ScriptFunction,
@@ -118,7 +117,6 @@ export interface EditorState {
   selectedActorId: string | null;
 
   // Dialogue database (stored separately from project)
-  dialogueIndex: DialogueIndex | null;
   dialogues: globalThis.Map<string, DialogueDocument>;
   selectedDialogueId: string | null;
   selectedDialogueNodeId: string | null;

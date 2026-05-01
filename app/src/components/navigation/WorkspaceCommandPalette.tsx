@@ -39,9 +39,7 @@ const FILTER_OPTIONS: Array<{ id: CommandPaletteFilter; label: string }> = [
   { id: 'entities', label: 'Entities' },
   { id: 'actors', label: 'Actors' },
   { id: 'items', label: 'Items' },
-  { id: 'quests', label: 'Quests' },
   { id: 'dialogues', label: 'Dialogues' },
-  { id: 'audio', label: 'Audio' },
 ];
 
 export const WorkspaceCommandPalette: React.FC<WorkspaceCommandPaletteProps> = ({

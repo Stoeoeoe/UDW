@@ -28,10 +28,6 @@ function filterCommandPaletteMatch(
       return match.resource.type === 'item';
     case 'dialogues':
       return match.resource.type === 'dialogue';
-    case 'quests':
-      return match.resource.type === 'quest';
-    case 'audio':
-      return match.resource.type === 'audio';
     default:
       return true;
   }
@@ -43,7 +39,7 @@ export function useCommandPalette() {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const actors = useEditorStore((state) => state.actors);
   const items = useEditorStore((state) => state.items);
-  const dialogueIndex = useEditorStore((state) => state.dialogueIndex);
+  const dialogues = useEditorStore((state) => state.dialogues);
 
   const recentResourceKeys = useWorkspaceStore((state) => state.recentResourceKeys);
   const openDocument = useWorkspaceStore((state) => state.openDocument);
@@ -62,9 +58,9 @@ export function useCommandPalette() {
         entityTypes,
         actors,
         items,
-        dialogueIndex,
+        dialogues: Array.from(dialogues.values()),
       }),
-    [actors, dialogueIndex, entityTypes, items, maps, tilesets],
+    [actors, dialogues, entityTypes, items, maps, tilesets],
   );
 
   const resourceMap = React.useMemo(

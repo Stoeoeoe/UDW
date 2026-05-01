@@ -1,4 +1,11 @@
-import { Actor, DialogueIndex, EntityType, Item, Map as GameMap, Tileset } from '../types/schema';
+import {
+  Actor,
+  DialogueDocument,
+  EntityType,
+  Item,
+  Map as GameMap,
+  Tileset,
+} from '../types/schema';
 import { WorkspaceDocument } from '../types/workspace';
 import { createEditorResourceDocument } from './editorResourceTypes';
 import { createLocationDocument } from './workspaceRouting';
@@ -44,7 +51,7 @@ export interface BuildCommandPaletteResourcesOptions {
   entityTypes: EntityType[];
   actors: Actor[];
   items: Item[];
-  dialogueIndex: DialogueIndex | null;
+  dialogues: DialogueDocument[];
 }
 
 const EMPTY_SECONDARY_MATCH: number[] = [];
@@ -141,7 +148,7 @@ export function buildCommandPaletteResources(
       });
     });
 
-  (options.dialogueIndex?.dialogues ?? [])
+  options.dialogues
     .slice()
     .sort((left, right) => left.name.localeCompare(right.name))
     .forEach((dialogue) => {
@@ -343,10 +350,6 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'item';
     case 'dialogues':
       return resource.type === 'dialogue';
-    case 'quests':
-      return resource.type === 'quest';
-    case 'audio':
-      return resource.type === 'audio';
     default:
       return true;
   }

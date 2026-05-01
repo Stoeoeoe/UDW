@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { fileSystem } from './fileSystem';
-import { DialogueDocument, DialogueIndex, Map as GameMap, Project, Tileset } from '../types/schema';
+import { DialogueDocument, Map as GameMap, Project, Tileset } from '../types/schema';
 import { serializeMap } from './mapMigration';
 import { serializeTileset } from './tilesetMigration';
 import { useAppSettingsStore } from '../store/useAppSettingsStore';
@@ -172,7 +172,6 @@ export const useSaveStore = create<SaveStore>((set) => ({
 
 const mapSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let projectSaveTimer: ReturnType<typeof setTimeout> | null = null;
-let dialogueIndexSaveTimer: ReturnType<typeof setTimeout> | null = null;
 const dialogueDocSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const tilesetSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -360,15 +359,6 @@ export async function saveTilesetImmediate(tileset: Tileset): Promise<void> {
   }
 }
 
-/** Legacy dialogue saves keep their existing autosave behavior. */
-export function saveDialogueIndexDebounced(index: DialogueIndex): void {
-  if (dialogueIndexSaveTimer) clearTimeout(dialogueIndexSaveTimer);
-  dialogueIndexSaveTimer = setTimeout(async () => {
-    await saveDialogueIndexImmediate(index);
-    dialogueIndexSaveTimer = null;
-  }, DEBOUNCE_DELAY);
-}
-
 export function saveDialogueDebounced(dialogue: DialogueDocument): void {
   const existing = dialogueDocSaveTimers.get(dialogue.id);
   if (existing) clearTimeout(existing);
@@ -379,17 +369,6 @@ export function saveDialogueDebounced(dialogue: DialogueDocument): void {
   }, DEBOUNCE_DELAY);
 
   dialogueDocSaveTimers.set(dialogue.id, timeoutId);
-}
-
-export async function saveDialogueIndexImmediate(index: DialogueIndex): Promise<void> {
-  try {
-    await fileSystem.saveJson('dialogues', 'dialogues.index.json', {
-      $schema: '../../schemas/dialogue-index.schema.json',
-      ...index,
-    });
-  } catch (error) {
-    console.error('Failed to save dialogue index:', error);
-  }
 }
 
 export async function saveDialogueImmediate(dialogue: DialogueDocument): Promise<void> {
@@ -411,10 +390,6 @@ export async function flushPendingSaves(): Promise<void> {
   if (projectSaveTimer) {
     clearTimeout(projectSaveTimer);
     projectSaveTimer = null;
-  }
-  if (dialogueIndexSaveTimer) {
-    clearTimeout(dialogueIndexSaveTimer);
-    dialogueIndexSaveTimer = null;
   }
 
   for (const timer of dialogueDocSaveTimers.values()) {

@@ -91,11 +91,11 @@ export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[
     }
   }
 
-  for (const tilesetId of collectTilesetRefsFromObjectGroups(layers as Layer[])) {
+  for (const tilesetId of collectTilesetRefsFromObjectGroups(layers as unknown as Layer[])) {
     tilesetSet.add(tilesetId);
   }
 
-  for (const layer of layers as Layer[]) {
+  for (const layer of layers as unknown as Layer[]) {
     for (const objectInstance of layer.objectInstances ?? []) {
       tilesetSet.add(objectInstance.tilesetId);
     }

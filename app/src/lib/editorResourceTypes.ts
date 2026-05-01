@@ -1,4 +1,4 @@
-import { saveDialogueIndexImmediate } from '../lib/saveManager';
+import { fileSystem } from '../lib/fileSystem';
 import { useEditorStore } from '../store/useEditorStore';
 import { WorkspaceDocument } from '../types/workspace';
 import {
@@ -289,29 +289,22 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canRevealInFileExplorer: true,
     fileExplorerPath: (resourceId) => `dialogues/${resourceId}.dialogue.json`,
     deleteResource: async (resourceId) => {
-      const current = useEditorStore.getState();
-      if (!current.dialogueIndex) return;
-
-      const nextIndex = {
-        ...current.dialogueIndex,
-        dialogues: current.dialogueIndex.dialogues.filter((entry) => entry.id !== resourceId),
-      };
-
       useEditorStore.setState((draft) => {
-        draft.dialogueIndex = nextIndex;
         draft.dialogues.delete(resourceId);
         if (draft.selectedDialogueId === resourceId) {
-          draft.selectedDialogueId = nextIndex.dialogues[0]?.id ?? null;
+          draft.selectedDialogueId = Array.from(draft.dialogues.keys())[0] ?? null;
           draft.selectedDialogueNodeId = null;
         }
       });
 
-      await saveDialogueIndexImmediate(nextIndex);
+      await Promise.allSettled([
+        fileSystem.deleteJson('dialogues', `${resourceId}.dialogue.json`),
+        fileSystem.deleteJson('dialogues', `${resourceId}.runtime.dialogue.json`),
+        fileSystem.deleteJson('dialogues', `${resourceId}.i18n.json`),
+      ]);
     },
     getFolderPath: (resourceId) =>
-      useEditorStore
-        .getState()
-        .dialogueIndex?.dialogues.find((dialogue) => dialogue.id === resourceId)?.folderPath ?? '',
+      useEditorStore.getState().dialogues.get(resourceId)?.folderPath ?? '',
   },
   variable: {
     id: 'variable',

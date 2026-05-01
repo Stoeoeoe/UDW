@@ -4,7 +4,7 @@ import {
   Actor,
   EntityType,
   Item,
-  DialogueListEntry,
+  DialogueDocument,
   GameVariable,
 } from '../types/schema';
 import { ResourceKind, WorkspaceTreeNode } from '../types/workspace';
@@ -27,7 +27,7 @@ export interface WorkspaceTreeInput {
   actors: Actor[];
   entityTypes: EntityType[];
   items: Item[];
-  dialogueEntries: DialogueListEntry[];
+  dialogues: DialogueDocument[];
   gameVariables: GameVariable[];
 }
 
@@ -78,7 +78,7 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
     'dialogue',
     'Dialogues',
     'dialogues',
-    listDialogueDescriptors(input.dialogueEntries),
+    listDialogueDescriptors(input.dialogues),
     'dialogues',
   );
 
@@ -250,7 +250,7 @@ export function buildWorkspaceTreeCompat(
     actors: [],
     entityTypes: [],
     items: [],
-    dialogueEntries: [],
+    dialogues: [],
     gameVariables: [],
   });
 }

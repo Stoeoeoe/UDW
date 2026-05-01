@@ -34,7 +34,7 @@ export function useWorkspaceInit() {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const actors = useEditorStore((state) => state.actors);
   const items = useEditorStore((state) => state.items);
-  const dialogueIndex = useEditorStore((state) => state.dialogueIndex);
+  const dialogues = useEditorStore((state) => state.dialogues);
   const gameVariables = useEditorStore((state) => state.gameVariables);
 
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -54,10 +54,10 @@ export function useWorkspaceInit() {
         actors,
         entityTypes,
         items,
-        dialogueEntries: dialogueIndex?.dialogues ?? [],
+        dialogues: Array.from(dialogues.values()),
         gameVariables,
       }),
-    [maps, tilesets, actors, entityTypes, items, dialogueIndex, gameVariables],
+    [maps, tilesets, actors, entityTypes, items, dialogues, gameVariables],
   );
 
   const initializedProjectPathRef = React.useRef<string | null>(null);
@@ -97,7 +97,7 @@ export function useWorkspaceInit() {
       actors,
       entityTypes,
       items,
-      dialogueEntries: dialogueIndex?.dialogues ?? [],
+      dialogues: Array.from(dialogues.values()),
       gameVariables,
     };
     const restored = restoreWorkspaceSession(projectPath, snapshot);
@@ -131,7 +131,7 @@ export function useWorkspaceInit() {
     actors,
     entityTypes,
     items,
-    dialogueIndex,
+    dialogues,
     gameVariables,
     treeNodes,
     openDocument,
@@ -149,7 +149,7 @@ export function useWorkspaceInit() {
         actors,
         entityTypes,
         items,
-        dialogueEntries: dialogueIndex?.dialogues ?? [],
+        dialogues: Array.from(dialogues.values()),
         gameVariables,
       });
       if (!document) return;
@@ -169,7 +169,7 @@ export function useWorkspaceInit() {
     actors,
     entityTypes,
     items,
-    dialogueIndex,
+    dialogues,
     gameVariables,
     openDocument,
     activateTab,

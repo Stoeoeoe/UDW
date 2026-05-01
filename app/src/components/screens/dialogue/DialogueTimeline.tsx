@@ -10,14 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { NodeTypeMenu, SortableGroupWrapper } from './DialogueNodeWidgets';
-import {
-  BRANCH_COLORS,
-  branchColor,
-  createNodeByType,
-  isBranchNode,
-  relinkLinearFlow,
-  removeNodesWithCleanup,
-} from './dialogueUtils';
+import { BRANCH_COLORS, branchColor, isBranchNode } from './dialogueUtils';
 import {
   DialogueChoiceNode,
   DialogueDocument,
@@ -27,7 +20,6 @@ import {
 
 interface DialogueTimelineProps {
   selectedDialogue: DialogueDocument | null;
-  selectedDialogueId: string | null;
   selectedNodeId: string | null;
   setSelectedNodeId: React.Dispatch<React.SetStateAction<string | null>>;
   expandedActionNodeIds: Set<string>;
@@ -37,14 +29,15 @@ interface DialogueTimelineProps {
   brokenReferenceNodeIds: Set<string>;
   duplicateMsgKeys: Set<string>;
   sensors: SensorDescriptor<SensorOptions>[];
-  updateDialogue: (id: string, updater: (d: DialogueDocument) => DialogueDocument) => void;
   insertNode: (type: DialogueNodeType, index: number) => void;
+  appendTopLevelNode: (type: DialogueNodeType) => void;
   appendNodeToBranch: (
     type: DialogueNodeType,
     choiceNodeId: string,
     optionId: string,
     branchOrder: number,
   ) => void;
+  removeNode: (nodeId: string) => void;
   handleDragEnd: (event: DragEndEvent) => void;
 }
 
@@ -68,7 +61,6 @@ const DIALOGUE_SURFACES = {
 
 export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
   selectedDialogue,
-  selectedDialogueId,
   selectedNodeId,
   setSelectedNodeId,
   expandedActionNodeIds,
@@ -78,21 +70,12 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
   brokenReferenceNodeIds,
   duplicateMsgKeys,
   sensors,
-  updateDialogue,
   insertNode,
+  appendTopLevelNode,
   appendNodeToBranch,
+  removeNode,
   handleDragEnd,
 }) => {
-  const appendTopLevelNode = (nodeType: DialogueNodeType) => {
-    if (!selectedDialogueId || !selectedDialogue) return;
-    updateDialogue(selectedDialogueId, (dialogue) => {
-      const created = createNodeByType(nodeType, dialogue, undefined);
-      const nextNodes = [...dialogue.nodes, created];
-      const relinked = relinkLinearFlow(nextNodes);
-      return { ...dialogue, startNodeId: dialogue.startNodeId || created.id, nodes: relinked };
-    });
-  };
-
   if (!selectedDialogue) {
     return (
       <Box p={5}>
@@ -129,15 +112,15 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
 
     const choiceNode = node as DialogueChoiceNode;
     const branchMap = new Map<string, Array<{ node: DialogueNode; flatIndex: number }>>();
-    for (const opt of choiceNode.options) branchMap.set(opt.id, []);
+    for (const option of choiceNode.options) branchMap.set(option.id, []);
 
     let inner = i + 1;
     while (inner < selectedDialogue.nodes.length) {
       const child = selectedDialogue.nodes[inner];
       if (child.editor?.parentChoiceNodeId !== choiceNode.id) break;
-      const optId = child.editor?.parentOptionId;
-      if (optId && branchMap.has(optId)) {
-        branchMap.get(optId)!.push({ node: child, flatIndex: inner });
+      const optionId = child.editor?.parentOptionId;
+      if (optionId && branchMap.has(optionId)) {
+        branchMap.get(optionId)!.push({ node: child, flatIndex: inner });
       }
       inner++;
     }
@@ -146,21 +129,23 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
       kind: 'choice',
       choiceNode,
       flatIndex: i,
-      branches: choiceNode.options.map((opt) => ({
-        optionId: opt.id,
-        nodes: branchMap.get(opt.id) ?? [],
+      branches: choiceNode.options.map((option) => ({
+        optionId: option.id,
+        nodes: branchMap.get(option.id) ?? [],
       })),
     });
     i = inner;
   }
 
-  const groupIds = groups.map((g) => (g.kind === 'single' ? g.node.id : g.choiceNode.id));
+  const groupIds = groups.map((group) =>
+    group.kind === 'single' ? group.node.id : group.choiceNode.id,
+  );
 
   const renderNodeCard = (node: DialogueNode) => {
     const selected = selectedNodeId === node.id;
     const missingMsgKey =
       (node.type === 'line' && (!node.msgKey.trim() || duplicateMsgKeys.has(node.msgKey))) ||
-      (node.type === 'choice' && node.options.some((o) => !o.msgKey.trim()));
+      (node.type === 'choice' && node.options.some((option) => !option.msgKey.trim()));
     const brokenRef = brokenReferenceNodeIds.has(node.id);
     const branchMeta = node.editor;
     const isComment = node.type === 'comment';
@@ -195,14 +180,14 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
       <Box
         key={node.id}
         role="group"
-        onClick={(e) => {
-          e.stopPropagation();
+        onClick={(event) => {
+          event.stopPropagation();
           setSelectedNodeId(node.id);
           if (isAction) {
-            setExpandedActionNodeIds((cur) => {
-              const s = new Set(cur);
-              s.has(node.id) ? s.delete(node.id) : s.add(node.id);
-              return s;
+            setExpandedActionNodeIds((current) => {
+              const next = new Set(current);
+              next.has(node.id) ? next.delete(node.id) : next.add(node.id);
+              return next;
             });
           }
         }}
@@ -269,21 +254,9 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             h="auto"
             minW="auto"
             p="2px"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!selectedDialogueId) return;
-              updateDialogue(selectedDialogueId, (d) => {
-                const ids = new Set<string>([node.id]);
-                if (node.type === 'choice') {
-                  for (const n of d.nodes) {
-                    if (n.editor?.parentChoiceNodeId === node.id) ids.add(n.id);
-                  }
-                }
-                return {
-                  ...removeNodesWithCleanup(d, ids),
-                  nodes: relinkLinearFlow(removeNodesWithCleanup(d, ids).nodes),
-                };
-              });
+            onClick={(event) => {
+              event.stopPropagation();
+              removeNode(node.id);
               setSelectedNodeId(null);
             }}
           />
@@ -363,9 +336,9 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                   flexShrink={0}
                   cursor={canNavigate ? 'pointer' : 'default'}
                   _hover={canNavigate ? { bg: '#26210c' } : {}}
-                  onClick={(e) => {
+                  onClick={(event) => {
                     if (!canNavigate) return;
-                    e.stopPropagation();
+                    event.stopPropagation();
                     setSelectedNodeId(node.targetNodeId);
                   }}
                   title={canNavigate ? `Go to ${node.targetNodeId}` : undefined}
@@ -455,9 +428,9 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
         <Badge colorScheme={selectedDialogue.oneShot ? 'purple' : 'green'} flexShrink={0}>
           {selectedDialogue.oneShot ? 'one-shot' : 'repeatable'}
         </Badge>
-        {!isTimelineHeaderCollapsed && selectedDialogue.entryCondition?.trim() && (
-          <Badge colorScheme="orange" variant="subtle" fontFamily="mono" maxW="160px" isTruncated>
-            {selectedDialogue.entryCondition}
+        {!isTimelineHeaderCollapsed && selectedDialogue.dialogueTypeId?.trim() && (
+          <Badge colorScheme="cyan" variant="subtle" fontFamily="mono" maxW="160px" isTruncated>
+            {selectedDialogue.dialogueTypeId}
           </Badge>
         )}
         {!isTimelineHeaderCollapsed && !!selectedDialogue.tags.length && (
@@ -475,10 +448,13 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
               </Button>
             }
             onSelect={(type) => {
-              const idx = selectedNodeId
-                ? Math.max(0, selectedDialogue.nodes.findIndex((n) => n.id === selectedNodeId) + 1)
+              const index = selectedNodeId
+                ? Math.max(
+                    0,
+                    selectedDialogue.nodes.findIndex((node) => node.id === selectedNodeId) + 1,
+                  )
                 : selectedDialogue.nodes.length;
-              insertNode(type, idx);
+              insertNode(type, index);
             }}
           />
 
@@ -486,7 +462,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             size="xs"
             variant="ghost"
             color="gray.500"
-            onClick={() => setIsTimelineHeaderCollapsed((c) => !c)}
+            onClick={() => setIsTimelineHeaderCollapsed((collapsed) => !collapsed)}
             title={isTimelineHeaderCollapsed ? 'Show metadata' : 'Hide metadata'}
           >
             {isTimelineHeaderCollapsed ? '> info' : 'v info'}
@@ -498,8 +474,8 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
         flex={1}
         overflowY="auto"
         p={3}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) setSelectedNodeId(null);
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setSelectedNodeId(null);
         }}
       >
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -517,15 +493,15 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
               const { choiceNode, flatIndex, branches } = group;
               const choiceSelected = selectedNodeId === choiceNode.id;
               const brokenRef = brokenReferenceNodeIds.has(choiceNode.id);
-              const missingMsgKey = choiceNode.options.some((o) => !o.msgKey.trim());
+              const missingMsgKey = choiceNode.options.some((option) => !option.msgKey.trim());
 
               return (
                 <SortableGroupWrapper key={choiceNode.id} id={choiceNode.id}>
                   {renderInsertGap(flatIndex)}
                   <Box
                     role="group"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={(event) => {
+                      event.stopPropagation();
                       setSelectedNodeId(choiceNode.id);
                     }}
                     border="1px solid"
@@ -581,41 +557,33 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                         h="auto"
                         minW="auto"
                         p="2px"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!selectedDialogueId) return;
-                          updateDialogue(selectedDialogueId, (d) => {
-                            const ids = new Set<string>([choiceNode.id]);
-                            for (const n of d.nodes) {
-                              if (n.editor?.parentChoiceNodeId === choiceNode.id) ids.add(n.id);
-                            }
-                            const c = removeNodesWithCleanup(d, ids);
-                            return { ...c, nodes: relinkLinearFlow(c.nodes) };
-                          });
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeNode(choiceNode.id);
                           setSelectedNodeId(null);
                         }}
                       />
                     </Flex>
                     <Flex gap={2}>
-                      {choiceNode.options.map((opt, optIdx) => {
-                        const col = BRANCH_COLORS[optIdx % BRANCH_COLORS.length];
+                      {choiceNode.options.map((option, optionIndex) => {
+                        const color = BRANCH_COLORS[optionIndex % BRANCH_COLORS.length];
                         return (
                           <Box
-                            key={opt.id}
+                            key={option.id}
                             flex={1}
                             minW={0}
                             borderTop="2px solid"
-                            borderColor={col}
+                            borderColor={color}
                             pt={1}
                           >
                             <Text fontSize="11px" color="gray.100" noOfLines={1}>
-                              {opt.text || (
+                              {option.text || (
                                 <Text as="span" color="gray.400" fontStyle="italic">
                                   (empty)
                                 </Text>
                               )}
                             </Text>
-                            {opt.condition?.trim() && (
+                            {option.condition?.trim() && (
                               <Badge fontSize="8px" colorScheme="yellow" mt="2px">
                                 if
                               </Badge>
@@ -626,16 +594,16 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                     </Flex>
                   </Box>
                   <Flex gap={2} mb={2} align="flex-start">
-                    {branches.map((branch, bIdx) => {
-                      const col = BRANCH_COLORS[bIdx % BRANCH_COLORS.length];
-                      const opt = choiceNode.options[bIdx];
+                    {branches.map((branch, branchIndex) => {
+                      const color = BRANCH_COLORS[branchIndex % BRANCH_COLORS.length];
+                      const option = choiceNode.options[branchIndex];
                       return (
                         <Box
                           key={branch.optionId}
                           flex={1}
                           minW={0}
                           borderLeft="2px solid"
-                          borderColor={col}
+                          borderColor={color}
                           pl={2}
                           pt={1}
                         >
@@ -651,7 +619,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                                 fontSize="9px"
                                 color="gray.300"
                                 bg={DIALOGUE_SURFACES.appendBg}
-                                borderColor={col}
+                                borderColor={color}
                                 borderWidth="1px"
                                 borderStyle="dashed"
                                 borderRadius="sm"
@@ -666,7 +634,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                               </Button>
                             }
                             onSelect={(type) =>
-                              appendNodeToBranch(type, choiceNode.id, opt.id, bIdx)
+                              appendNodeToBranch(type, choiceNode.id, option.id, branchIndex)
                             }
                           />
                         </Box>

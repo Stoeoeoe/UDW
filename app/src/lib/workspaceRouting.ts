@@ -213,12 +213,12 @@ export function documentFromHash(
   if (doc === 'dialogue') {
     const dialogueId = params.get('id');
     if (!dialogueId) return null;
-    const entry = snapshot.dialogueEntries?.find((d) => d.id === dialogueId);
-    if (!entry) return null;
+    const dialogue = snapshot.dialogues?.find((d) => d.id === dialogueId);
+    if (!dialogue) return null;
     return createEditorResourceDocument({
       type: 'dialogue',
-      id: entry.id,
-      name: entry.name,
+      id: dialogue.id,
+      name: dialogue.name,
     });
   }
 

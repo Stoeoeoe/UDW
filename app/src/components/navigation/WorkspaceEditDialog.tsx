@@ -10,12 +10,8 @@ import {
   submitEditorResourceMetadata,
   createEditorResourceDocument,
 } from '../../lib/editorResourceTypes';
-import { saveDialogueIndexImmediate, saveDialogueImmediate } from '../../lib/saveManager';
-import {
-  buildI18nExport,
-  getDialogueEntry,
-  toRuntimeDialogue,
-} from '../screens/dialogue/dialogueUtils';
+import { saveDialogueImmediate } from '../../lib/saveManager';
+import { buildI18nExport, toRuntimeDialogue } from '../screens/dialogue/dialogueUtils';
 import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
 import { ResourceMetadataFormDialog } from '../common/ResourceMetadataFormDialog';
 import { TilesetMetadataDialog } from '../tileset/TilesetMetadataDialog';
@@ -126,15 +122,11 @@ const DialogueMetadataDialog: React.FC<{
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
 }> = ({ document, onClose, onOpenDocument }) => {
   const dialogue = useEditorStore((s) => s.dialogues.get(document.dialogueId));
-  const dialogueIndex = useEditorStore((s) => s.dialogueIndex);
-  const gameVariables = useEditorStore((s) => s.gameVariables);
-  const scriptTables = useEditorStore((s) => s.scriptTables);
-  const scriptFunctions = useEditorStore((s) => s.scriptFunctions);
-  const scriptNamespaces = useEditorStore((s) => s.scriptNamespaces);
-  const scriptContextTypes = useEditorStore((s) => s.scriptContextTypes);
+  const projectDialogueTypes = useEditorStore((s) => s.project?.dialogueTypes);
+  const dialogueTypes = projectDialogueTypes ?? [];
   const toast = useToast();
 
-  if (!dialogue || !dialogueIndex) return null;
+  if (!dialogue) return null;
 
   return (
     <CreateDialogueDialog
@@ -144,29 +136,19 @@ const DialogueMetadataDialog: React.FC<{
       initialValues={{
         name: dialogue.name,
         oneShot: dialogue.oneShot,
-        entryCondition: dialogue.entryCondition ?? '',
+        dialogueTypeId: dialogue.dialogueTypeId ?? '',
       }}
       onApply={(values) => {
         const updated = {
           ...dialogue,
           name: values.name.trim(),
           oneShot: values.oneShot,
-          entryCondition: values.entryCondition.trim() || undefined,
+          dialogueTypeId: values.dialogueTypeId.trim() || undefined,
           updatedAt: new Date().toISOString(),
-        };
-        const entry = {
-          ...getDialogueEntry(updated),
-          folderPath: dialogueIndex.dialogues.find((d) => d.id === updated.id)?.folderPath,
-        };
-        const nextIndex = {
-          ...dialogueIndex,
-          dialogues: dialogueIndex.dialogues.map((item) => (item.id === updated.id ? entry : item)),
         };
         useEditorStore.setState((draft) => {
           draft.dialogues.set(updated.id, updated);
-          draft.dialogueIndex = nextIndex;
         });
-        void saveDialogueIndexImmediate(nextIndex);
         void saveDialogueImmediate(updated);
         void fileSystem
           .saveJson('dialogues', `${updated.id}.runtime.dialogue.json`, toRuntimeDialogue(updated))
@@ -192,14 +174,7 @@ const DialogueMetadataDialog: React.FC<{
             });
           });
       }}
-      gameVariables={gameVariables}
-      scriptTables={scriptTables}
-      scriptFunctions={scriptFunctions}
-      scriptNamespaces={scriptNamespaces}
-      activeContextType={
-        scriptContextTypes.find((context) => context.id === dialogueIndex.defaultContextTypeId) ??
-        undefined
-      }
+      dialogueTypes={dialogueTypes}
     />
   );
 };

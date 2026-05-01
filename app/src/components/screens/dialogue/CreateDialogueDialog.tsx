@@ -1,17 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FormControl, Input, Switch } from '@chakra-ui/react';
+import { FormControl, Input, Select, Switch } from '@chakra-ui/react';
 import { EntityFormDialog } from '../common';
 import { EditorModal } from '../../common/EditorModal';
-import { ConditionEditor } from '../scripting/ConditionEditor';
 import { FormLabel } from '../../common/FormLabel';
-import { SectionLabel } from '../../common/Typography.tsx';
-import {
-  GameVariable,
-  ScriptContextType,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptTable,
-} from '../../../types/schema';
+import { DialogueType } from '../../../types/schema';
 import { MetadataDraft } from './dialogueUtils';
 
 interface CreateDialogueDialogProps {
@@ -20,11 +12,7 @@ interface CreateDialogueDialogProps {
   mode: 'create' | 'edit';
   initialValues: MetadataDraft;
   onApply: (values: MetadataDraft) => void;
-  gameVariables: GameVariable[];
-  scriptTables: ScriptTable[];
-  scriptFunctions: ScriptFunction[];
-  scriptNamespaces: ScriptNamespace[];
-  activeContextType: ScriptContextType | undefined;
+  dialogueTypes: DialogueType[];
 }
 
 export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
@@ -33,11 +21,7 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
   mode,
   initialValues,
   onApply,
-  gameVariables,
-  scriptTables,
-  scriptFunctions,
-  scriptNamespaces,
-  activeContextType,
+  dialogueTypes,
 }) => {
   const [draft, setDraft] = useState<MetadataDraft>(initialValues);
 
@@ -82,17 +66,23 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
           />
         </FormControl>
 
-        <SectionLabel textStyle="mutedFieldLabel">Entry Condition (Lua, optional)</SectionLabel>
-
-        <ConditionEditor
-          value={draft.entryCondition}
-          onChange={(expr) => setDraft((cur) => ({ ...cur, entryCondition: expr }))}
-          variables={gameVariables}
-          tables={scriptTables}
-          functions={scriptFunctions}
-          namespaces={scriptNamespaces}
-          activeContextType={activeContextType}
-        />
+        <FormControl>
+          <FormLabel>Dialogue Type</FormLabel>
+          <Select
+            size="sm"
+            bg="gray.800"
+            color="white"
+            value={draft.dialogueTypeId}
+            onChange={(e) => setDraft((cur) => ({ ...cur, dialogueTypeId: e.target.value }))}
+          >
+            <option value="">Project default</option>
+            {dialogueTypes.map((dialogueType) => (
+              <option key={dialogueType.id} value={dialogueType.id}>
+                {dialogueType.name}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
       </EntityFormDialog>
     </EditorModal>
   );

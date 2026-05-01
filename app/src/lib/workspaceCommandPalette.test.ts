@@ -54,21 +54,19 @@ describe('workspaceCommandPalette', () => {
         maxStackSize: 10,
       },
     ],
-    dialogueIndex: {
-      version: 1,
-      categories: [],
-      customActors: [],
-      dialogues: [
-        {
-          id: 'intro',
-          name: 'Intro Conversation',
-          oneShot: false,
-          nodeCount: 4,
-          tags: [],
-          updatedAt: '2026-04-23T00:00:00.000Z',
-        },
-      ],
-    },
+    dialogues: [
+      {
+        version: 1,
+        id: 'intro',
+        name: 'Intro Conversation',
+        oneShot: false,
+        startNodeId: 'step_1',
+        tags: [],
+        createdAt: '2026-04-23T00:00:00.000Z',
+        updatedAt: '2026-04-23T00:00:00.000Z',
+        nodes: [{ id: 'step_1', type: 'line', text: '', msgKey: 'dlg.intro.01', next: null }],
+      },
+    ],
   });
 
   it('prefers prefix matches ahead of fuzzy matches', () => {
@@ -110,7 +108,7 @@ describe('workspaceCommandPalette', () => {
       ],
       actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson', folderPath: 'NPCs/Villagers' }],
       items: [],
-      dialogueIndex: null,
+      dialogues: [],
     });
 
     expect(actor).toMatchObject({

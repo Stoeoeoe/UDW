@@ -63,6 +63,9 @@ export interface Project {
   scriptFunctions?: ScriptFunction[];
   scriptNamespaces?: ScriptNamespace[];
   scriptContextTypes?: ScriptContextType[];
+  // Dialogue scripting defaults
+  defaultDialogueContextTypeId?: string;
+  dialogueTypes?: DialogueType[];
 }
 
 export type LayerType = 'tile' | 'entity' | 'terrain';
@@ -494,23 +497,11 @@ export interface Actor extends NamedEditorResource {
 /** @deprecated Use Actor. Kept for compatibility while migrating call sites. */
 export type Npc = Actor;
 
-export interface DialogueCategory {
+export interface DialogueType {
   id: string;
   name: string;
   description?: string;
-}
-
-export interface DialogueCustomActor {
-  id: string;
-  name: string;
-  note?: string;
-}
-
-export interface DialogueListEntry extends NamedEditorResource {
-  oneShot: boolean;
-  nodeCount: number;
-  tags: string[];
-  updatedAt: string;
+  contextTypeId?: string;
 }
 
 export interface DialogueNodeEditorMeta {
@@ -597,20 +588,12 @@ export interface DialogueI18nExport {
 export interface DialogueDocument extends NamedEditorResource {
   version: number;
   oneShot: boolean;
-  entryCondition?: string;
+  dialogueTypeId?: string;
   startNodeId: string;
   tags: string[];
   createdAt: string;
   updatedAt: string;
   nodes: DialogueNode[];
-}
-
-export interface DialogueIndex {
-  version: number;
-  defaultContextTypeId?: string;
-  categories: DialogueCategory[];
-  customActors: DialogueCustomActor[];
-  dialogues: DialogueListEntry[];
 }
 
 // Entity Type Definitions

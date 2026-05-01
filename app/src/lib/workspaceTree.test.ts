@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildWorkspaceTree } from './workspaceTree';
 import {
   Actor,
-  DialogueListEntry,
+  DialogueDocument,
   EntityType,
   GameVariable,
   Item,
@@ -32,7 +32,7 @@ function createTreeInput(
     actors?: Actor[];
     entityTypes?: EntityType[];
     items?: Item[];
-    dialogueEntries?: DialogueListEntry[];
+    dialogues?: DialogueDocument[];
     gameVariables?: GameVariable[];
   } = {},
 ) {
@@ -42,7 +42,7 @@ function createTreeInput(
     actors: overrides.actors ?? [],
     entityTypes: overrides.entityTypes ?? [],
     items: overrides.items ?? [],
-    dialogueEntries: overrides.dialogueEntries ?? [],
+    dialogues: overrides.dialogues ?? [],
     gameVariables: overrides.gameVariables ?? [],
   };
 }
@@ -137,14 +137,17 @@ describe('buildWorkspaceTree', () => {
             maxStackSize: 10,
           },
         ],
-        dialogueEntries: [
+        dialogues: [
           {
+            version: 1,
             id: 'intro',
             name: 'Intro Conversation',
+            startNodeId: 'step_1',
             oneShot: false,
-            nodeCount: 4,
             tags: [],
+            createdAt: '2026-04-23T00:00:00.000Z',
             updatedAt: '2026-04-23T00:00:00.000Z',
+            nodes: [{ id: 'step_1', type: 'line', text: '', msgKey: 'dlg.intro.01', next: null }],
           },
         ],
         gameVariables: [

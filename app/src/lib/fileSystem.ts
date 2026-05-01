@@ -7,7 +7,6 @@
 import {
   Actor,
   DialogueDocument,
-  DialogueIndex,
   EntityType,
   Item,
   Map as GameMap,
@@ -289,19 +288,37 @@ export class FileSystemManager {
     }
   }
 
-  async readDialogueIndex(): Promise<DialogueIndex | null> {
-    const index = await this.readJson('dialogues', 'dialogues.index.json');
-    return (index as DialogueIndex | null) ?? null;
-  }
-
   async loadDialogueById(id: string): Promise<DialogueDocument | null> {
     const dialogue = await this.readJson('dialogues', `${id}.dialogue.json`);
     return (dialogue as DialogueDocument | null) ?? null;
   }
 
-  async loadDialoguesByIds(ids: string[]): Promise<DialogueDocument[]> {
-    const results = await Promise.all(ids.map((id) => this.loadDialogueById(id)));
-    return results.filter((item): item is DialogueDocument => item !== null);
+  async loadAllDialogues(): Promise<DialogueDocument[]> {
+    if (this.isElectron()) {
+      const entries = (await window.ipcRenderer.invoke('app:fs-read-dir', {
+        projectPath: this.projectPath,
+        subDir: 'dialogues',
+      })) as unknown[];
+      return entries.filter(isDialogueSourceDocument).map((entry) => entry as DialogueDocument);
+    }
+
+    if (!this.projectRoot) throw new Error('No project open.');
+    const dialogues: DialogueDocument[] = [];
+    try {
+      const dir = await this.projectRoot.getDirectoryHandle('dialogues', { create: false });
+      for await (const entry of dir.values()) {
+        if (entry.kind !== 'file' || !entry.name.endsWith('.dialogue.json')) continue;
+        if (entry.name.endsWith('.runtime.dialogue.json')) continue;
+        const file = await (entry as FileSystemFileHandle).getFile();
+        const parsed = JSON.parse(await file.text());
+        if (isDialogueSourceDocument(parsed)) {
+          dialogues.push(parsed as DialogueDocument);
+        }
+      }
+    } catch {
+      // dialogues/ directory may not exist yet
+    }
+    return dialogues;
   }
 
   /**
@@ -444,3 +461,14 @@ export class FileSystemManager {
 }
 
 export const fileSystem = new FileSystemManager();
+
+function isDialogueSourceDocument(value: unknown): value is DialogueDocument {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return (
+    Array.isArray(record.nodes) &&
+    typeof record.id === 'string' &&
+    typeof record.name === 'string' &&
+    record.$schema === '../../schemas/dialogue.schema.json'
+  );
+}

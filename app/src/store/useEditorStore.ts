@@ -9,11 +9,7 @@ import { Project, Map as GameMap, Tileset } from '../types/schema';
 import { recentProjects } from '../lib/recentProjects';
 import { resolveEntities } from '../lib/mapUtils';
 import { fileSystem } from '../lib/fileSystem';
-import {
-  registerSaveAccessors,
-  saveMapDebounced,
-  saveDialogueIndexImmediate,
-} from '../lib/saveManager';
+import { registerSaveAccessors, saveMapDebounced, saveDialogueImmediate } from '../lib/saveManager';
 import { migrateTilesetOnLoad } from '../lib/tilesetMigration';
 import {
   getPreferredSelectedLayerId,
@@ -77,7 +73,6 @@ export interface EditorStore
   selectedEntityTypeId: string | null;
   panels: EditorState['panels'];
   validationErrors: ValidationError[];
-  dialogueIndex: import('../types/schema').DialogueIndex | null;
   dialogues: globalThis.Map<string, import('../types/schema').DialogueDocument>;
   selectedDialogueId: string | null;
   selectedDialogueNodeId: string | null;
@@ -89,8 +84,8 @@ export interface EditorStore
   loadSprite: (path: string, blob: Blob) => Promise<string>;
   updateProject: (project: Project) => Promise<void>;
 
-  // Dialogue index actions
-  updateDialogueEntryFolderPath: (dialogueId: string, folderPath: string) => Promise<void>;
+  // Dialogue actions
+  updateDialogueFolderPath: (dialogueId: string, folderPath: string) => Promise<void>;
 
   // Misc
   validate: () => ValidationError[];
@@ -297,7 +292,6 @@ export const useEditorStore = create<EditorStore>()(
             inspectorOpen: true,
             variationsOpen: true,
           },
-          dialogueIndex: null,
           dialogues: new globalThis.Map(),
           selectedDialogueId: null,
           selectedDialogueNodeId: null,
@@ -371,7 +365,6 @@ export const useEditorStore = create<EditorStore>()(
                   state.scriptContextTypes = [];
                   state.actors = [];
                   state.selectedActorId = null;
-                  state.dialogueIndex = null;
                   state.dialogues = new globalThis.Map();
                   state.selectedDialogueId = null;
                   state.selectedDialogueNodeId = null;
@@ -396,16 +389,16 @@ export const useEditorStore = create<EditorStore>()(
 
           validate: () => [],
 
-          updateDialogueEntryFolderPath: async (dialogueId, folderPath) => {
-            let nextIndex: import('../types/schema').DialogueIndex | null = null;
+          updateDialogueFolderPath: async (dialogueId, folderPath) => {
+            let nextDialogue: import('../types/schema').DialogueDocument | null = null;
             set((state) => {
-              if (!state.dialogueIndex) return;
-              const entry = state.dialogueIndex.dialogues.find((d) => d.id === dialogueId);
-              if (!entry) return;
-              entry.folderPath = folderPath;
-              nextIndex = castDraft(state.dialogueIndex);
+              const dialogue = state.dialogues.get(dialogueId);
+              if (!dialogue) return;
+              dialogue.folderPath = folderPath || undefined;
+              dialogue.updatedAt = new Date().toISOString();
+              nextDialogue = castDraft(dialogue);
             });
-            if (nextIndex) await saveDialogueIndexImmediate(nextIndex);
+            if (nextDialogue) await saveDialogueImmediate(nextDialogue);
           },
         })),
       ),

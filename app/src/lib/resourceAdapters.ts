@@ -4,7 +4,7 @@ import { EditorResourceDescriptor } from '../types/editorResource';
 import { createEditorResourceDocument, getEditorResourceSaveUnitId } from './editorResourceTypes';
 import {
   Actor,
-  DialogueListEntry,
+  DialogueDocument,
   EntityType,
   GameVariable,
   Item,
@@ -43,11 +43,11 @@ export function itemDocument(item: Item): WorkspaceDocument {
   });
 }
 
-export function dialogueDocument(entry: DialogueListEntry): WorkspaceDocument {
+export function dialogueDocument(dialogue: DialogueDocument): WorkspaceDocument {
   return createEditorResourceDocument({
     type: 'dialogue',
-    id: getSchemaResourceId(entry),
-    name: getSchemaResourceName(entry),
+    id: getSchemaResourceId(dialogue),
+    name: getSchemaResourceName(dialogue),
   });
 }
 
@@ -114,15 +114,15 @@ export function listItemDescriptors(items: Item[]): ResourceDescriptor[] {
   }));
 }
 
-export function listDialogueDescriptors(entries: DialogueListEntry[]): ResourceDescriptor[] {
-  return entries.map((entry) => ({
+export function listDialogueDescriptors(dialogues: DialogueDocument[]): ResourceDescriptor[] {
+  return dialogues.map((dialogue) => ({
     type: 'dialogue',
     kind: 'dialogue',
-    id: getSchemaResourceId(entry),
-    name: getSchemaResourceName(entry),
-    folderPath: normalizeFolderPath(entry.folderPath),
-    document: dialogueDocument(entry),
-    saveUnitId: getEditorResourceSaveUnitId('dialogue', entry.id),
+    id: getSchemaResourceId(dialogue),
+    name: getSchemaResourceName(dialogue),
+    folderPath: normalizeFolderPath(dialogue.folderPath),
+    document: dialogueDocument(dialogue),
+    saveUnitId: getEditorResourceSaveUnitId('dialogue', dialogue.id),
   }));
 }
 
@@ -178,7 +178,7 @@ export function buildAllResourceDescriptors(state: {
   actors: Actor[];
   entityTypes: EntityType[];
   items: Item[];
-  dialogueIndex: { dialogues: DialogueListEntry[] } | null;
+  dialogues: Map<string, DialogueDocument>;
   gameVariables: GameVariable[];
 }): AllResourceDescriptors {
   return {
@@ -187,7 +187,7 @@ export function buildAllResourceDescriptors(state: {
     actors: listActorDescriptors(state.actors),
     entities: listEntityDescriptors(state.entityTypes),
     items: listItemDescriptors(state.items),
-    dialogues: listDialogueDescriptors(state.dialogueIndex?.dialogues ?? []),
+    dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
     variables: listVariableDescriptors(state.gameVariables),
   };
 }
@@ -243,7 +243,7 @@ export async function setResourceFolderPath(
       await store.updateMapFolderPath(id, normalizedFolderPath);
       break;
     case 'dialogue':
-      await store.updateDialogueEntryFolderPath(id, normalizedFolderPath);
+      await store.updateDialogueFolderPath(id, normalizedFolderPath);
       break;
   }
 }
@@ -288,7 +288,7 @@ function listDescriptorsForKind(
     case 'item':
       return listItemDescriptors(state.items);
     case 'dialogue':
-      return listDialogueDescriptors(state.dialogueIndex?.dialogues ?? []);
+      return listDialogueDescriptors(Array.from(state.dialogues.values()));
     case 'variable':
       return listVariableDescriptors(state.gameVariables);
   }

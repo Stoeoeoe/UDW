@@ -8,7 +8,6 @@ import type { EditorStore } from './useEditorStore';
 import type { StateCreator } from 'zustand';
 import { fileSystem } from '../lib/fileSystem';
 import { resolveSpriteAsset } from '../lib/asepriteUtils';
-import { DialogueIndex } from '../types/schema';
 import { migrateTilesetOnLoad } from '../lib/tilesetMigration';
 import {
   addMissingDefinitionLayers,
@@ -158,20 +157,10 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
 
     setResourceLoadingState(set, 'Loading dialogues', 0.64);
 
-    // 1.85 Dialogue index + documents
-    const loadedDialogueIndex: DialogueIndex = (await fileSystem.readDialogueIndex()) ?? {
-      version: 1,
-      categories: [],
-      customActors: [],
-      dialogues: [],
-    };
-
-    const loadedDialogues = await fileSystem.loadDialoguesByIds(
-      loadedDialogueIndex.dialogues.map((entry) => entry.id),
-    );
+    // 1.85 Dialogue documents
+    const loadedDialogues = await fileSystem.loadAllDialogues();
 
     set((state) => {
-      state.dialogueIndex = castDraft(loadedDialogueIndex);
       state.dialogues = new globalThis.Map(loadedDialogues.map((d) => [d.id, castDraft(d)]));
       state.selectedDialogueId = loadedDialogues[0]?.id ?? null;
       const first = loadedDialogues[0] as unknown as { startNodeId?: string; entryStepId?: string };
