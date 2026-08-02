@@ -1,6 +1,6 @@
 This is the codebase for a stardew-valley like 2D Unity game set in ancient rome.
 
-# Architecture
+## Architecture
 
 ### Singleton Managers
 
