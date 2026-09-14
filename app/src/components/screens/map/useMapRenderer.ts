@@ -19,6 +19,7 @@ import {
   getObjectInstanceBounds,
 } from '../../../lib/mapObjects';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
+import type { ToolType } from '../../../types/editor';
 
 interface UseMapRendererProps {
   viewport: Viewport | null;
@@ -1000,7 +1001,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     if (isObjectLayer) return;
 
     // No tile hover for tools that operate on objects rather than tiles
-    const noTileHoverTools = [
+    const noTileHoverTools: readonly ToolType[] = [
       'anchorPlace',
       'objectSelect',
       'objectPlace',
@@ -1015,7 +1016,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       'collisionRect',
       'collisionPolygon',
       'collisionCircle',
-    ] as const;
+    ];
     if (noTileHoverTools.includes(activeTool)) return;
 
     if (hoveredTile) {
