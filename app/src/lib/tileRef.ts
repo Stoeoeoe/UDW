@@ -1,78 +1,124 @@
 /**
  * Tile Reference Encoding/Decoding Utilities
- * 
+ *
  * To optimize storage, tile references are encoded as numbers:
  * - High 16 bits: tileset index in map.tilesetRefs
  * - Low 16 bits: tile index within the tileset
- * 
+ *
  * This reduces JSON size significantly compared to "tilesetId:index" strings.
  */
 
-export interface ParsedTileRef {
-    tilesetId: string;
-    tileIndex: number;
-}
+import { Layer, Map as GameMap } from '../types/schema';
+import { collectTilesetRefsFromObjectGroups } from './objectGroups';
 
-/** Parse a tile reference in the form "tilesetId:tileIndex". */
-export function parseTileRef(tileRef: string | null): ParsedTileRef | null {
-    if (!tileRef) return null;
+type MigratableLayer = Omit<Layer, 'data'> & {
+  data?: (string | number | null)[][];
+};
 
-    const colonIndex = tileRef.lastIndexOf(':');
-    if (colonIndex <= 0) return null;
-
-    const tileIndexText = tileRef.slice(colonIndex + 1);
-    if (!/^\d+$/.test(tileIndexText)) return null;
-
-    return {
-        tilesetId: tileRef.slice(0, colonIndex),
-        tileIndex: Number(tileIndexText),
-    };
-}
-
-/** Create a tile reference string. */
-export function createTileRef(tilesetId: string, tileIndex: number): string {
-    return `${tilesetId}:${tileIndex}`;
-}
+type MigratableMap = Omit<GameMap, 'layers' | 'tilesetRefs'> & {
+  layers: MigratableLayer[];
+  tilesetRefs?: string[];
+};
 
 /**
  * Encode a tile reference string to a number
  */
 export function encodeTileRef(tileRef: string | null, tilesetRefs: string[]): number | null {
-    if (tileRef === null) return null;
+  if (tileRef === null) return null;
 
-    const parsed = parseTileRef(tileRef);
-    if (!parsed) {
-        throw new Error(`Invalid tile reference format: "${tileRef}" (expected "tilesetId:tileIndex")`);
-    }
+  const [tilesetId, tileIndexStr] = tileRef.split(':');
+  const tileIndex = parseInt(tileIndexStr, 10);
+  const tilesetIndex = tilesetRefs.indexOf(tilesetId);
 
-    const { tilesetId, tileIndex } = parsed;
-    if (tileIndex > 0xFFFF) {
-        throw new Error(`Tile index ${tileIndex} exceeds maximum of 65535 per tileset`);
-    }
+  if (tilesetIndex === -1) {
+    throw new Error(`Tileset ${tilesetId} not found in tilesetRefs`);
+  }
 
-    const tilesetIndex = tilesetRefs.indexOf(tilesetId);
-    if (tilesetIndex === -1) {
-        throw new Error(`Tileset ${tilesetId} not found in tilesetRefs`);
-    }
-    if (tilesetIndex > 0xFFFF) {
-        throw new Error(`Tileset index ${tilesetIndex} exceeds maximum of 65535`);
-    }
-
-    return (tilesetIndex << 16) | tileIndex;
+  return (tilesetIndex << 16) | tileIndex;
 }
 
 /**
  * Decode a tile reference number to a string
  */
 export function decodeTileRef(encoded: number | null, tilesetRefs: string[]): string | null {
-    if (encoded === null) return null;
-    
-    const tilesetIndex = encoded >>> 16;
-    const tileIndex = encoded & 0xFFFF;
-    
-    if (tilesetIndex >= tilesetRefs.length) {
-        throw new Error(`Invalid tileset index ${tilesetIndex}`);
+  if (encoded === null) return null;
+
+  const tilesetIndex = encoded >>> 16;
+  const tileIndex = encoded & 0xffff;
+
+  if (tilesetIndex >= tilesetRefs.length) {
+    throw new Error(`Invalid tileset index ${tilesetIndex}`);
+  }
+
+  return `${tilesetRefs[tilesetIndex]}:${tileIndex}`;
+}
+
+/**
+ * Convert layer data from string format to encoded number format
+ */
+export function convertLayerDataToEncoded(
+  data: (string | null)[][],
+  tilesetRefs: string[],
+): (number | null)[][] {
+  return data.map((row) => row.map((cell) => encodeTileRef(cell, tilesetRefs)));
+}
+
+/**
+ * Convert layer data from encoded number format to string format
+ */
+export function convertLayerDataToStrings(
+  data: (number | null)[][],
+  tilesetRefs: string[],
+): (string | null)[][] {
+  return data.map((row) => row.map((cell) => decodeTileRef(cell, tilesetRefs)));
+}
+
+/**
+ * Build tilesetRefs from existing string-based layer data
+ */
+export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[]): string[] {
+  const tilesetSet = new Set<string>();
+
+  for (const layer of layers) {
+    if (!layer.data) continue;
+    for (const row of layer.data) {
+      for (const cell of row) {
+        if (cell !== null) {
+          const [tilesetId] = cell.split(':');
+          tilesetSet.add(tilesetId);
+        }
+      }
     }
-    
-    return `${tilesetRefs[tilesetIndex]}:${tileIndex}`;
+  }
+
+  for (const tilesetId of collectTilesetRefsFromObjectGroups(layers as unknown as Layer[])) {
+    tilesetSet.add(tilesetId);
+  }
+
+  for (const layer of layers as unknown as Layer[]) {
+    for (const objectInstance of layer.objectInstances ?? []) {
+      tilesetSet.add(objectInstance.tilesetId);
+    }
+  }
+
+  return Array.from(tilesetSet).sort(); // Sort for consistency
+}
+
+/**
+ * Migrate a map from string-based data to encoded data
+ */
+export function migrateMapToEncodedData(map: MigratableMap): GameMap {
+  if (!map.tilesetRefs) {
+    // Build tilesetRefs from data
+    map.tilesetRefs = buildTilesetRefsFromData(map.layers as any);
+  }
+
+  // Convert layer data
+  for (const layer of map.layers) {
+    if (layer.data && typeof layer.data[0]?.[0] === 'string') {
+      layer.data = convertLayerDataToEncoded(layer.data as (string | null)[][], map.tilesetRefs);
+    }
+  }
+
+  return map as unknown as GameMap;
 }

@@ -1,160 +1,404 @@
 /**
- * Save Manager - Unified persistence layer with debouncing and status tracking
- * 
- * Provides:
- * - Debounced auto-save for rapid changes (e.g., painting tiles)
- * - Save status tracking (idle, saving, saved, error)
- * - Unified save API for maps, tilesets, and project settings
+ * Save Manager - central save-unit tracking with manual save support and optional autosave.
  */
 
 import { create } from 'zustand';
 import { fileSystem } from './fileSystem';
-import { Map as GameMap, Project } from '../types/schema';
+import { DialogueDocument, Map as GameMap, Project, Tileset } from '../types/schema';
+import { serializeMap } from './mapMigration';
+import { serializeTileset } from './tilesetMigration';
+import { useAppSettingsStore } from '../store/useAppSettingsStore';
 
-// Save status types
-export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+
+export interface SaveUnitState {
+  status: SaveStatus;
+  lastSaved: Date | null;
+  error: string | null;
+  dirty: boolean;
+}
 
 export interface SaveState {
-    status: SaveStatus;
-    lastSaved: Date | null;
-    error: string | null;
-    pendingMapSave: boolean;
-    pendingProjectSave: boolean;
+  activeSaveUnitId: string | null;
+  saveUnits: Record<string, SaveUnitState>;
+  status: SaveStatus;
+  lastSaved: Date | null;
+  error: string | null;
 }
 
 interface SaveStore extends SaveState {
-    setStatus: (status: SaveStatus, error?: string) => void;
-    setLastSaved: (date: Date) => void;
-    setPendingMapSave: (pending: boolean) => void;
-    setPendingProjectSave: (pending: boolean) => void;
+  setActiveSaveUnit: (saveUnitId: string | null) => void;
+  markDirty: (saveUnitId: string) => void;
+  markSaving: (saveUnitId: string) => void;
+  markSaved: (saveUnitId: string) => void;
+  markError: (saveUnitId: string, error: string) => void;
+  clearUnit: (saveUnitId: string) => void;
+  reset: () => void;
 }
 
-export const useSaveStore = create<SaveStore>((set) => ({
+interface SaveAccessors {
+  getMapById?: (mapId: string) => GameMap | null;
+  getProject?: () => Project | null;
+  getTilesetById?: (tilesetId: string) => Tileset | null;
+}
+
+const saveAccessors: SaveAccessors = {};
+
+export function registerSaveAccessors(accessors: SaveAccessors): void {
+  Object.assign(saveAccessors, accessors);
+}
+
+function emptySaveUnitState(): SaveUnitState {
+  return {
     status: 'idle',
     lastSaved: null,
     error: null,
-    pendingMapSave: false,
-    pendingProjectSave: false,
+    dirty: false,
+  };
+}
 
-    setStatus: (status, error) => set({ status, error: error || null }),
-    setLastSaved: (date) => set({ lastSaved: date, status: 'saved' }),
-    setPendingMapSave: (pending) => set({ pendingMapSave: pending }),
-    setPendingProjectSave: (pending) => set({ pendingProjectSave: pending }),
+function getTrackedUnit(state: SaveState, saveUnitId: string | null): SaveUnitState {
+  if (!saveUnitId) return emptySaveUnitState();
+  return state.saveUnits[saveUnitId] ?? emptySaveUnitState();
+}
+
+function syncActiveState(state: SaveState): Pick<SaveState, 'status' | 'lastSaved' | 'error'> {
+  const active = getTrackedUnit(state, state.activeSaveUnitId);
+  return {
+    status: active.status,
+    lastSaved: active.lastSaved,
+    error: active.error,
+  };
+}
+
+function updateSaveUnit(
+  state: SaveState,
+  saveUnitId: string,
+  updater: (unit: SaveUnitState) => SaveUnitState,
+): SaveState {
+  const current = state.saveUnits[saveUnitId] ?? emptySaveUnitState();
+  const nextSaveUnits = {
+    ...state.saveUnits,
+    [saveUnitId]: updater(current),
+  };
+  const nextState = {
+    ...state,
+    saveUnits: nextSaveUnits,
+  };
+  return {
+    ...nextState,
+    ...syncActiveState(nextState),
+  };
+}
+
+export const useSaveStore = create<SaveStore>((set) => ({
+  activeSaveUnitId: null,
+  saveUnits: {},
+  status: 'idle',
+  lastSaved: null,
+  error: null,
+
+  setActiveSaveUnit: (saveUnitId) =>
+    set((state) => {
+      const nextState = {
+        ...state,
+        activeSaveUnitId: saveUnitId,
+      };
+      return {
+        ...nextState,
+        ...syncActiveState(nextState),
+      };
+    }),
+
+  markDirty: (saveUnitId) =>
+    set((state) =>
+      updateSaveUnit(state, saveUnitId, (unit) => ({
+        ...unit,
+        status: 'dirty',
+        dirty: true,
+        error: null,
+      })),
+    ),
+
+  markSaving: (saveUnitId) =>
+    set((state) =>
+      updateSaveUnit(state, saveUnitId, (unit) => ({
+        ...unit,
+        status: 'saving',
+        error: null,
+      })),
+    ),
+
+  markSaved: (saveUnitId) =>
+    set((state) =>
+      updateSaveUnit(state, saveUnitId, (unit) => ({
+        ...unit,
+        status: 'saved',
+        dirty: false,
+        error: null,
+        lastSaved: new Date(),
+      })),
+    ),
+
+  markError: (saveUnitId, error) =>
+    set((state) =>
+      updateSaveUnit(state, saveUnitId, (unit) => ({
+        ...unit,
+        status: 'error',
+        dirty: true,
+        error,
+      })),
+    ),
+
+  clearUnit: (saveUnitId) =>
+    set((state) =>
+      updateSaveUnit(state, saveUnitId, () => ({
+        status: 'idle',
+        lastSaved: null,
+        error: null,
+        dirty: false,
+      })),
+    ),
+
+  reset: () =>
+    set({
+      activeSaveUnitId: null,
+      saveUnits: {},
+      status: 'idle',
+      lastSaved: null,
+      error: null,
+    }),
 }));
 
-// Debounce timers
-let mapSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const mapSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let projectSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const dialogueDocSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const tilesetSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-// Debounce delay in ms (300ms for responsive feel, not too aggressive)
-const DEBOUNCE_DELAY = 300;
-
-// Show "Saved" status duration
+const DEBOUNCE_DELAY = 1000;
 const SAVED_DISPLAY_DURATION = 2000;
 
-/**
- * Save a map with debouncing. 
- * Multiple rapid calls will only trigger one save after the debounce period.
- */
+function shouldAutosave(): boolean {
+  return useAppSettingsStore.getState().savedSettings.autosaveEnabled;
+}
+
+function scheduleSavedReset(saveUnitId: string): void {
+  setTimeout(() => {
+    const tracked = useSaveStore.getState().saveUnits[saveUnitId];
+    if (!tracked) return;
+    if (tracked.status !== 'saved' || tracked.dirty) return;
+
+    useSaveStore.setState((state) =>
+      updateSaveUnit(state, saveUnitId, (unit) => ({
+        ...unit,
+        status: 'idle',
+      })),
+    );
+  }, SAVED_DISPLAY_DURATION);
+}
+
+export function getSaveUnitStatus(saveUnitId: string | null): SaveUnitState {
+  return getTrackedUnit(useSaveStore.getState(), saveUnitId);
+}
+
+export function getDirtySaveUnitIds(): string[] {
+  return Object.entries(useSaveStore.getState().saveUnits)
+    .filter(([, unit]) => unit.dirty)
+    .map(([saveUnitId]) => saveUnitId);
+}
+
+export function markSaveUnitDirty(saveUnitId: string): void {
+  useSaveStore.getState().markDirty(saveUnitId);
+}
+
+export function clearSaveUnit(saveUnitId: string): void {
+  useSaveStore.getState().clearUnit(saveUnitId);
+}
+
+export function cancelPendingSaveUnit(saveUnitId: string): void {
+  if (saveUnitId.startsWith('location:')) {
+    const mapId = saveUnitId.slice('location:'.length);
+    const existing = mapSaveTimers.get(mapId);
+    if (existing) {
+      clearTimeout(existing);
+      mapSaveTimers.delete(mapId);
+    }
+    return;
+  }
+
+  if (saveUnitId.startsWith('tileset:')) {
+    const tilesetId = saveUnitId.slice('tileset:'.length);
+    const existing = tilesetSaveTimers.get(tilesetId);
+    if (existing) {
+      clearTimeout(existing);
+      tilesetSaveTimers.delete(tilesetId);
+    }
+    return;
+  }
+
+  if ((saveUnitId === 'configuration' || saveUnitId === 'settings') && projectSaveTimer) {
+    clearTimeout(projectSaveTimer);
+    projectSaveTimer = null;
+  }
+}
+
 export function saveMapDebounced(map: GameMap): void {
-    useSaveStore.getState().setPendingMapSave(true);
+  const saveUnitId = `location:${map.id}`;
+  useSaveStore.getState().markDirty(saveUnitId);
 
-    if (mapSaveTimer) {
-        clearTimeout(mapSaveTimer);
-    }
+  if (!shouldAutosave()) {
+    return;
+  }
 
-    mapSaveTimer = setTimeout(async () => {
-        await saveMapImmediate(map);
-        mapSaveTimer = null;
-    }, DEBOUNCE_DELAY);
+  const existing = mapSaveTimers.get(map.id);
+  if (existing) clearTimeout(existing);
+
+  const timeoutId = setTimeout(async () => {
+    const latestMap = saveAccessors.getMapById?.(map.id) ?? map;
+    await saveMapImmediate(latestMap);
+    mapSaveTimers.delete(map.id);
+  }, DEBOUNCE_DELAY);
+
+  mapSaveTimers.set(map.id, timeoutId);
 }
 
-/**
- * Save a map immediately without debouncing.
- */
 export async function saveMapImmediate(map: GameMap): Promise<void> {
-    const store = useSaveStore.getState();
-    store.setStatus('saving');
-    store.setPendingMapSave(false);
+  const saveUnitId = `location:${map.id}`;
+  useSaveStore.getState().markSaving(saveUnitId);
 
-    try {
-        await fileSystem.saveJson('maps', `${map.id}.map.json`, map);
-        store.setLastSaved(new Date());
-
-        // Auto-reset to idle after showing "Saved"
-        setTimeout(() => {
-            if (useSaveStore.getState().status === 'saved') {
-                useSaveStore.getState().setStatus('idle');
-            }
-        }, SAVED_DISPLAY_DURATION);
-    } catch (e) {
-        console.error('Failed to save map:', e);
-        store.setStatus('error', e instanceof Error ? e.message : 'Unknown error');
-    }
+  try {
+    await fileSystem.saveJson('maps', `${map.id}.vmap`, {
+      $schema: '../../schemas/map.schema.json',
+      ...serializeMap(map),
+    });
+    useSaveStore.getState().markSaved(saveUnitId);
+    scheduleSavedReset(saveUnitId);
+  } catch (error) {
+    console.error('Failed to save map:', error);
+    useSaveStore
+      .getState()
+      .markError(saveUnitId, error instanceof Error ? error.message : 'Unknown error');
+  }
 }
 
-/**
- * Save project settings with debouncing.
- */
-export function saveProjectDebounced(project: Project): void {
-    useSaveStore.getState().setPendingProjectSave(true);
+export function saveProjectDebounced(
+  project: Project,
+  saveUnitId: 'configuration' | 'settings' = 'configuration',
+): void {
+  useSaveStore.getState().markDirty(saveUnitId);
 
-    if (projectSaveTimer) {
-        clearTimeout(projectSaveTimer);
-    }
+  if (!shouldAutosave()) {
+    return;
+  }
 
-    projectSaveTimer = setTimeout(async () => {
-        await saveProjectImmediate(project);
-        projectSaveTimer = null;
-    }, DEBOUNCE_DELAY);
+  if (projectSaveTimer) clearTimeout(projectSaveTimer);
+
+  projectSaveTimer = setTimeout(async () => {
+    const latestProject = saveAccessors.getProject?.() ?? project;
+    await saveProjectImmediate(latestProject, saveUnitId);
+    projectSaveTimer = null;
+  }, DEBOUNCE_DELAY);
 }
 
-/**
- * Save project settings immediately.
- */
-export async function saveProjectImmediate(project: Project): Promise<void> {
-    const store = useSaveStore.getState();
-    store.setStatus('saving');
-    store.setPendingProjectSave(false);
+export async function saveProjectImmediate(
+  project: Project,
+  saveUnitId: 'configuration' | 'settings' = 'configuration',
+): Promise<void> {
+  useSaveStore.getState().markSaving(saveUnitId);
 
-    try {
-        await fileSystem.saveJson('', 'project.json', project);
-        store.setLastSaved(new Date());
-
-        // Auto-reset to idle after showing "Saved"
-        setTimeout(() => {
-            if (useSaveStore.getState().status === 'saved') {
-                useSaveStore.getState().setStatus('idle');
-            }
-        }, SAVED_DISPLAY_DURATION);
-    } catch (e) {
-        console.error('Failed to save project:', e);
-        store.setStatus('error', e instanceof Error ? e.message : 'Unknown error');
-    }
+  try {
+    const { entityTypes: _legacyEntityTypes, ...projectToSave } = project;
+    await fileSystem.saveJson('', `${project.id}.vproj`, {
+      $schema: '../schemas/project.schema.json',
+      ...projectToSave,
+    });
+    useSaveStore.getState().markSaved(saveUnitId);
+    scheduleSavedReset(saveUnitId);
+  } catch (error) {
+    console.error('Failed to save project:', error);
+    useSaveStore
+      .getState()
+      .markError(saveUnitId, error instanceof Error ? error.message : 'Unknown error');
+  }
 }
 
-/**
- * Flush any pending saves immediately.
- * Pass the current map and/or project so in-flight debounces are not lost.
- */
-export async function flushPendingSaves(map?: GameMap | null, project?: Project | null): Promise<void> {
-    const hadMapTimer = mapSaveTimer !== null;
-    const hadProjectTimer = projectSaveTimer !== null;
+export function saveTilesetDebounced(tilesetId: string): void {
+  const saveUnitId = `tileset:${tilesetId}`;
+  useSaveStore.getState().markDirty(saveUnitId);
 
-    if (mapSaveTimer) {
-        clearTimeout(mapSaveTimer);
-        mapSaveTimer = null;
-    }
-    if (projectSaveTimer) {
-        clearTimeout(projectSaveTimer);
-        projectSaveTimer = null;
-    }
+  if (!shouldAutosave()) {
+    return;
+  }
 
-    // Execute the saves that were pending
-    if (hadMapTimer && map) {
-        await saveMapImmediate(map);
-    }
-    if (hadProjectTimer && project) {
-        await saveProjectImmediate(project);
-    }
+  const existing = tilesetSaveTimers.get(tilesetId);
+  if (existing) clearTimeout(existing);
+
+  const timeoutId = setTimeout(async () => {
+    const latestTileset = saveAccessors.getTilesetById?.(tilesetId);
+    if (latestTileset) await saveTilesetImmediate(latestTileset);
+    tilesetSaveTimers.delete(tilesetId);
+  }, DEBOUNCE_DELAY);
+
+  tilesetSaveTimers.set(tilesetId, timeoutId);
+}
+
+export async function saveTilesetImmediate(tileset: Tileset): Promise<void> {
+  const saveUnitId = `tileset:${tileset.id}`;
+  useSaveStore.getState().markSaving(saveUnitId);
+
+  try {
+    const snapshot = serializeTileset(JSON.parse(JSON.stringify(tileset)) as Tileset);
+    await fileSystem.saveJson('tilesets', `${tileset.id}.vts`, snapshot);
+    useSaveStore.getState().markSaved(saveUnitId);
+    scheduleSavedReset(saveUnitId);
+  } catch (error) {
+    console.error('Failed to save tileset:', error);
+    useSaveStore
+      .getState()
+      .markError(saveUnitId, error instanceof Error ? error.message : 'Unknown error');
+  }
+}
+
+export function saveDialogueDebounced(dialogue: DialogueDocument): void {
+  const existing = dialogueDocSaveTimers.get(dialogue.id);
+  if (existing) clearTimeout(existing);
+
+  const timeoutId = setTimeout(async () => {
+    await saveDialogueImmediate(dialogue);
+    dialogueDocSaveTimers.delete(dialogue.id);
+  }, DEBOUNCE_DELAY);
+
+  dialogueDocSaveTimers.set(dialogue.id, timeoutId);
+}
+
+export async function saveDialogueImmediate(dialogue: DialogueDocument): Promise<void> {
+  try {
+    await fileSystem.saveJson('dialogues', `${dialogue.id}.dialogue.json`, {
+      $schema: '../../schemas/dialogue.schema.json',
+      ...dialogue,
+    });
+  } catch (error) {
+    console.error('Failed to save dialogue document:', error);
+  }
+}
+
+export async function flushPendingSaves(): Promise<void> {
+  for (const timer of mapSaveTimers.values()) {
+    clearTimeout(timer);
+  }
+  mapSaveTimers.clear();
+  if (projectSaveTimer) {
+    clearTimeout(projectSaveTimer);
+    projectSaveTimer = null;
+  }
+
+  for (const timer of dialogueDocSaveTimers.values()) {
+    clearTimeout(timer);
+  }
+  dialogueDocSaveTimers.clear();
+
+  for (const timer of tilesetSaveTimers.values()) {
+    clearTimeout(timer);
+  }
+  tilesetSaveTimers.clear();
 }

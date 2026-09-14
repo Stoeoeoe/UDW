@@ -1,174 +1,234 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-
-/**
- * Resolve `segments` relative to `projectRoot` and verify the result stays
- * inside the project directory.  Throws on any path-traversal attempt.
- */
-function assertWithinProject(projectRoot: string, ...segments: string[]): string {
-    const root = path.resolve(projectRoot);
-    const resolved = path.resolve(root, ...segments);
-    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-        throw new Error(`Path traversal detected: "${resolved}" is outside project root "${root}"`);
-    }
-    return resolved;
-}
-
-/** Basic structural validation for a loaded project file. */
-function assertValidProject(obj: unknown): void {
-    if (!obj || typeof obj !== 'object') throw new Error('Invalid project: not an object');
-    const p = obj as Record<string, unknown>;
-    if (typeof p.name !== 'string' || p.name.trim() === '')
-        throw new Error('Invalid project: missing or empty "name"');
-    if (typeof p.tileSize !== 'number' || p.tileSize <= 0)
-        throw new Error('Invalid project: "tileSize" must be a positive number');
-    if (typeof p.defaultMapWidth !== 'number' || p.defaultMapWidth <= 0)
-        throw new Error('Invalid project: "defaultMapWidth" must be a positive number');
-    if (typeof p.defaultMapHeight !== 'number' || p.defaultMapHeight <= 0)
-        throw new Error('Invalid project: "defaultMapHeight" must be a positive number');
-}
+import chokidar from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 
 export function setupIpcHandlers(win: BrowserWindow | null) {
-    // IPC Handlers for Native File System
-    ipcMain.handle('app:open-project', async () => {
-        if (!win) return null;
-        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-            title: 'Select project.json',
-            filters: [{ name: 'Project File', extensions: ['json'] }],
-            properties: ['openFile']
-        });
+  // Map of active chokidar watchers per projectPath so we can stop them when switching projects
+  const activeWatchers: Map<string, FSWatcher[]> = new Map();
 
-        if (canceled || filePaths.length === 0) return null;
+  function stopAllWatchers() {
+    for (const projectPath of activeWatchers.keys()) {
+      stopWatchers(projectPath);
+    }
+  }
 
-        const filePath = filePaths[0];
-        if (!filePath.endsWith('project.json')) {
-            throw new Error('Please select the project.json file.');
-        }
+  function stopWatchers(projectPath: string) {
+    const arr = activeWatchers.get(projectPath) || [];
+    for (const w of arr) {
+      try {
+        // chokidar watcher.close() returns a Promise
+        const res = w.close();
+        if (res && typeof res.then === 'function') res.catch(() => {});
+      } catch (e) {
+        // ignore
+      }
+    }
+    activeWatchers.delete(projectPath);
+  }
 
-        const content = await fs.readFile(filePath, 'utf-8');
-        const project = JSON.parse(content);
-        assertValidProject(project);
-        const projectPath = path.dirname(filePath);
+  function startWatchingProject(projectPath: string) {
+    stopAllWatchers();
 
-        return { project, projectPath };
-    });
+    const watchers: FSWatcher[] = [];
 
-    ipcMain.handle('app:load-project-by-path', async (_event, projectPath) => {
-        const filePath = path.join(projectPath, 'project.json');
+    // Watch image/asset changes
+    try {
+      const assetsGlob =
+        path.join(projectPath, 'assets').replace(/\\/g, '/') + '/**/*.{png,jpg,jpeg,ase,aseprite}';
+      const wAssets = chokidar.watch(assetsGlob, {
+        ignoreInitial: true,
+        awaitWriteFinish: { stabilityThreshold: 200 },
+        usePolling: true,
+        interval: 100,
+      });
+      wAssets.on('all', (event: string, filePathChanged: string) => {
+        const rel = path.relative(projectPath, filePathChanged).replace(/\\/g, '/');
+        win?.webContents.send('app:asset-changed', { eventType: event, relativePath: rel });
+      });
+      watchers.push(wAssets);
+    } catch (e) {
+      // ignore
+    }
+
+    // Watch tileset JSON changes
+    try {
+      const tilesGlob = path.join(projectPath, 'tilesets').replace(/\\/g, '/') + '/**/*.vts';
+      const wTiles = chokidar.watch(tilesGlob, {
+        ignoreInitial: true,
+        awaitWriteFinish: { stabilityThreshold: 200 },
+        usePolling: true,
+        interval: 100,
+      });
+      wTiles.on('all', async (event: string, filePathChanged: string) => {
+        const rel = path.relative(projectPath, filePathChanged).replace(/\\/g, '/');
+        // Try to read and parse tileset JSON and send it to renderer
         try {
-            const content = await fs.readFile(filePath, 'utf-8');
-            const project = JSON.parse(content);
-            assertValidProject(project);
-            return { project, projectPath };
+          const content = await fs.readFile(filePathChanged, 'utf-8');
+          const parsed = JSON.parse(content);
+          win?.webContents.send('app:tileset-changed', {
+            eventType: event,
+            relativePath: rel,
+            tileset: parsed,
+          });
         } catch (e) {
-            throw new Error(`Failed to load project at ${projectPath}: ${(e as Error).message}`);
+          // On parse/read error, still notify that file changed
+          win?.webContents.send('app:tileset-changed', {
+            eventType: event,
+            relativePath: rel,
+            tileset: null,
+          });
         }
+      });
+      watchers.push(wTiles);
+    } catch (e) {
+      // ignore
+    }
+
+    if (watchers.length > 0) activeWatchers.set(projectPath, watchers);
+  }
+  // IPC Handlers for Native File System
+  ipcMain.handle('app:open-project', async () => {
+    if (!win) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Select .vproj',
+      filters: [{ name: 'Project File', extensions: ['vproj'] }],
+      properties: ['openFile'],
     });
 
-    ipcMain.handle('app:create-project', async (_event, projectConfig) => {
-        if (!win) return null;
-        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-            title: 'Select Directory for New Project',
-            properties: ['openDirectory', 'createDirectory']
-        });
+    if (canceled || filePaths.length === 0) return null;
 
-        if (canceled || filePaths.length === 0) return null;
+    const filePath = filePaths[0];
+    if (!filePath.endsWith('.vproj')) {
+      throw new Error('Please select the .vproj file.');
+    }
 
-        const projectPath = filePaths[0];
+    const content = await fs.readFile(filePath, 'utf-8');
+    const project = JSON.parse(content);
+    const projectPath = path.dirname(filePath);
+    // Start filesystem watchers for assets/tilesets in this project
+    startWatchingProject(projectPath);
 
-        // 1. Create subdirectories
-        await fs.mkdir(path.join(projectPath, 'maps'), { recursive: true });
-        await fs.mkdir(path.join(projectPath, 'tilesets'), { recursive: true });
-        await fs.mkdir(path.join(projectPath, 'assets'), { recursive: true });
+    return { project, projectPath };
+  });
 
-        // 2. Write project.json
-        await fs.writeFile(
-            path.join(projectPath, 'project.json'),
-            JSON.stringify(projectConfig, null, 2)
-        );
+  ipcMain.handle('app:load-project-by-path', async (_event, projectPath) => {
+    try {
+      // Prefer any file ending with '.vproj' inside the folder.
+      const files = await fs.readdir(projectPath);
+      const projFile = files.find((f) => f.endsWith('.vproj')) || 'project.vproj';
+      const filePath = path.join(projectPath, projFile);
+      const content = await fs.readFile(filePath, 'utf-8');
+      const project = JSON.parse(content);
+      // Start filesystem watchers for assets/tilesets in this project
+      startWatchingProject(projectPath);
+      return { project, projectPath };
+    } catch (e) {
+      throw new Error(`Failed to load project at ${projectPath}: ${(e as Error).message}`);
+    }
+  });
 
-        return { projectPath };
+  ipcMain.handle('app:create-project', async (_event, projectConfig) => {
+    if (!win) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Select Directory for New Project',
+      properties: ['openDirectory', 'createDirectory'],
     });
 
-    ipcMain.handle('app:fs-read-dir', async (_event, { projectPath, subDir }) => {
-        const dirPath = assertWithinProject(projectPath, subDir);
-        // Use directory-specific extensions to avoid reading stray files
-        const expectedExt = subDir === 'maps' ? '.map.json'
-                          : subDir === 'tilesets' ? '.tileset.json'
-                          : '.json';
-        try {
-            const files = await fs.readdir(dirPath);
-            const results = [];
-            for (const file of files) {
-                if (file.endsWith(expectedExt)) {
-                    const filePath = assertWithinProject(projectPath, subDir, file);
-                    const content = await fs.readFile(filePath, 'utf-8');
-                    results.push(JSON.parse(content));
-                }
-            }
-            return results;
-        } catch (e) {
-            return [];
+    if (canceled || filePaths.length === 0) return null;
+
+    const projectPath = filePaths[0];
+
+    // 1. Create subdirectories
+    await fs.mkdir(path.join(projectPath, 'maps'), { recursive: true });
+    await fs.mkdir(path.join(projectPath, 'tilesets'), { recursive: true });
+    await fs.mkdir(path.join(projectPath, 'actors'), { recursive: true });
+    await fs.mkdir(path.join(projectPath, 'dialogues'), { recursive: true });
+    await fs.mkdir(path.join(projectPath, 'assets'), { recursive: true });
+
+    // 2. Write <id>.vproj
+    await fs.writeFile(
+      path.join(projectPath, `${projectConfig.id}.vproj`),
+      JSON.stringify(projectConfig, null, 2),
+    );
+
+    // Start watchers for the newly created project
+    startWatchingProject(projectPath);
+
+    return { projectPath };
+  });
+
+  ipcMain.handle('app:fs-read-dir', async (_event, { projectPath, subDir }) => {
+    const fileExtensions = ['vproj', 'vmap', 'vts', 'vitm', 'json']; // Add other relevant extensions as needed
+    const dirPath = path.join(projectPath, subDir);
+    try {
+      const files = await fs.readdir(dirPath);
+      const results = [];
+      for (const file of files) {
+        if (fileExtensions.some((ext) => file.endsWith(`.${ext}`))) {
+          const content = await fs.readFile(path.join(dirPath, file), 'utf-8');
+          results.push(JSON.parse(content));
         }
+      }
+      return results;
+    } catch (e) {
+      return [];
+    }
+  });
+
+  ipcMain.handle('app:fs-write-json', async (_event, { projectPath, subDir, filename, data }) => {
+    const dirPath = path.join(projectPath, subDir);
+    await fs.mkdir(dirPath, { recursive: true });
+    await fs.writeFile(path.join(dirPath, filename), JSON.stringify(data, null, 2));
+  });
+
+  ipcMain.handle('app:fs-read-json', async (_event, { projectPath, subDir, filename }) => {
+    try {
+      const filePath = path.join(projectPath, subDir || '', filename);
+      const content = await fs.readFile(filePath, 'utf-8');
+      return JSON.parse(content);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('app:fs-delete-json', async (_event, { projectPath, subDir, filename }) => {
+    const filePath = path.join(projectPath, subDir, filename);
+    await fs.unlink(filePath);
+  });
+
+  ipcMain.handle('app:fs-write-asset', async (_event, { projectPath, filename, buffer }) => {
+    const dirPath = path.join(projectPath, 'assets');
+    await fs.mkdir(dirPath, { recursive: true });
+    // buffer is passed as Uint8Array
+    await fs.writeFile(path.join(dirPath, filename), Buffer.from(buffer));
+    return `assets/${filename}`;
+  });
+
+  ipcMain.handle('app:fs-read-asset', async (_event, { projectPath, relativePath }) => {
+    const filePath = path.join(projectPath, relativePath);
+    const data = await fs.readFile(filePath);
+    return data; // Electron will serialize this as a Buffer/Uint8Array
+  });
+
+  ipcMain.handle('app:select-asset', async () => {
+    if (!win) return null;
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Select Sprite Asset',
+      filters: [{ name: 'Sprites', extensions: ['png', 'jpg', 'jpeg', 'ase', 'aseprite'] }],
+      properties: ['openFile'],
     });
 
-    ipcMain.handle('app:fs-write-json', async (_event, { projectPath, subDir, filename, data }) => {
-        const dirPath = assertWithinProject(projectPath, subDir);
-        const filePath = assertWithinProject(projectPath, subDir, filename);
-        await fs.mkdir(dirPath, { recursive: true });
-        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-    });
+    if (canceled || filePaths.length === 0) return null;
+    return filePaths[0];
+  });
 
-    ipcMain.handle('app:fs-read-json', async (_event, { projectPath, subDir, filename }) => {
-        try {
-            const filePath = assertWithinProject(projectPath, subDir || '.', filename);
-            const content = await fs.readFile(filePath, 'utf-8');
-            return JSON.parse(content);
-        } catch (e) {
-            return null;
-        }
-    });
+  ipcMain.handle('app:read-file-buffer', async (_event, filePath) => {
+    return await fs.readFile(filePath);
+  });
 
-    ipcMain.handle('app:fs-delete-json', async (_event, { projectPath, subDir, filename }) => {
-        const filePath = assertWithinProject(projectPath, subDir, filename);
-        await fs.unlink(filePath);
-    });
-
-    ipcMain.handle('app:fs-write-asset', async (_event, { projectPath, filename, buffer }) => {
-        const dirPath = assertWithinProject(projectPath, 'assets');
-        const filePath = assertWithinProject(projectPath, 'assets', filename);
-        await fs.mkdir(dirPath, { recursive: true });
-        // buffer is passed as Uint8Array
-        await fs.writeFile(filePath, Buffer.from(buffer));
-        return `assets/${filename}`;
-    });
-
-    ipcMain.handle('app:fs-read-asset', async (_event, { projectPath, relativePath }) => {
-        const filePath = assertWithinProject(projectPath, relativePath);
-        const data = await fs.readFile(filePath);
-        return data; // Electron will serialize this as a Buffer/Uint8Array
-    });
-
-    ipcMain.handle('app:select-asset', async () => {
-        if (!win) return null;
-        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-            title: 'Select Image Asset',
-            filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
-            properties: ['openFile']
-        });
-
-        if (canceled || filePaths.length === 0) return null;
-        return filePaths[0];
-    });
-
-    ipcMain.handle('app:read-file-buffer', async (_event, filePath) => {
-        if (typeof filePath !== 'string') throw new Error('Invalid file path');
-        const ext = path.extname(filePath).toLowerCase();
-        const ALLOWED_IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'];
-        if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
-            throw new Error(`File type not allowed: only image files may be read via this channel`);
-        }
-        return await fs.readFile(filePath);
-    });
+  ipcMain.handle('app:stop-watching', async (_event, projectPath) => {
+    stopWatchers(projectPath);
+  });
 }

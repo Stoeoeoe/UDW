@@ -1,47 +1,155 @@
-import { StateCreator } from 'zustand';
 import { castDraft } from 'immer';
-import type { Tileset, TileDefinition } from '../../types/schema';
+import { StateCreator } from 'zustand';
+import { Tileset, TileDefinition } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
-import { useSaveStore } from '../../lib/saveManager';
-import { spriteObjectUrls } from '../storeHelpers';
+import { saveTilesetDebounced, saveTilesetImmediate } from '../../lib/saveManager';
+import type { EditorStore } from '../useEditorStore';
+
+type ImmerStateCreator<T> = StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  T
+>;
 
 export interface TilesetSlice {
+  tilesets: Map<string, Tileset>;
+  activeTilesetId: string | null;
+  selectedTileIndex: number | null;
+  selectedTileIndices: number[];
+  selectedObjectDefinitionId: string | null;
+  mapEditorSelectedTileIndex: number | null;
+  mapEditorSelectedTileIndices: number[];
+  tilesetEditorSelectedTileIndex: number | null;
+  tilesetEditorSelectedTileIndices: number[];
+  selectedTerrainId: string | null;
+  sampledPattern: {
+    tilesetId: string;
+    pattern: (number | null)[][];
+    width: number;
+    height: number;
+  } | null;
+
+  setActiveTileset: (id: string | null) => void;
+  setSelectedTile: (index: number | null) => void;
+  setSelectedTiles: (indexes: number[]) => void;
+  setSelectedObjectDefinition: (id: string | null) => void;
+  toggleSelectedTile: (index: number) => void;
+  setSelectedTerrain: (id: string | null) => void;
+  setSampledPattern: (
+    pattern: {
+      tilesetId: string;
+      pattern: (number | null)[][];
+      width: number;
+      height: number;
+    } | null,
+  ) => void;
   addTileset: (tileset: Tileset) => Promise<void>;
   updateTileset: (id: string, updates: Partial<Tileset>) => Promise<void>;
   deleteTileset: (id: string) => Promise<void>;
-  updateTileDefinition: (
-    tilesetId: string,
-    index: number,
-    definition: TileDefinition,
-  ) => void;
+  updateTileDefinition: (tilesetId: string, index: number, definition: TileDefinition) => void;
   setTileCornerTerrain: (
     tilesetId: string,
     index: number,
     corner: number,
     terrainId: string | null,
   ) => Promise<void>;
+  scheduleTilesetSave: (tilesetId: string) => void;
 }
 
-export const createTilesetSlice: StateCreator<any, any, [], TilesetSlice> = (set, get) => ({
-  addTileset: async (tileset) => {
-    useSaveStore.getState().setStatus('saving');
-    await fileSystem.saveJson(
-      'tilesets',
-      `${tileset.id}.tileset.json`,
-      tileset,
-    );
-    useSaveStore.getState().setStatus('saved');
-    setTimeout(() => {
-      if (useSaveStore.getState().status === 'saved')
-        useSaveStore.getState().setStatus('idle');
-    }, 2000);
+export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) => ({
+  tilesets: new Map(),
+  activeTilesetId: null,
+  selectedTileIndex: null,
+  selectedTileIndices: [],
+  selectedObjectDefinitionId: null,
+  mapEditorSelectedTileIndex: null,
+  mapEditorSelectedTileIndices: [],
+  tilesetEditorSelectedTileIndex: null,
+  tilesetEditorSelectedTileIndices: [],
+  selectedTerrainId: null,
+  sampledPattern: null,
 
-    set((state: any) => {
+  setActiveTileset: (id) =>
+    set((state) => {
+      state.activeTilesetId = id;
+      state.selectedTileIndex = null;
+      state.selectedTileIndices = [];
+      state.selectedObjectDefinitionId = null;
+      state.selectedTerrainId = null;
+    }),
+
+  setSelectedTile: (index) =>
+    set((state) => {
+      state.selectedTileIndex = index;
+      if (index !== null) state.selectedTerrainId = null;
+      state.selectedTileIndices = index !== null ? [index] : [];
+      if (state.tilesetToolMode !== 'objects') {
+        state.selectedObjectDefinitionId = null;
+      }
+      state.sampledPattern = null;
+    }),
+
+  setSelectedTiles: (indexes) =>
+    set((state) => {
+      state.selectedTileIndices = indexes.slice();
+      state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
+      if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+      if (state.tilesetToolMode !== 'objects') {
+        state.selectedObjectDefinitionId = null;
+      }
+      state.sampledPattern = null;
+    }),
+
+  setSelectedObjectDefinition: (id) =>
+    set((state) => {
+      state.selectedObjectDefinitionId = id;
+      if (id !== null) {
+        state.selectedTileIndex = null;
+        state.selectedTileIndices = [];
+        state.selectedTerrainId = null;
+      }
+    }),
+
+  toggleSelectedTile: (index) =>
+    set((state) => {
+      const idx = state.selectedTileIndices.indexOf(index);
+      if (idx === -1) state.selectedTileIndices.push(index);
+      else state.selectedTileIndices.splice(idx, 1);
+      state.selectedTileIndex =
+        state.selectedTileIndices.length > 0
+          ? state.selectedTileIndices[state.selectedTileIndices.length - 1]
+          : null;
+      if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
+      if (state.tilesetToolMode !== 'objects') {
+        state.selectedObjectDefinitionId = null;
+      }
+    }),
+
+  setSelectedTerrain: (id) =>
+    set((state) => {
+      state.selectedTerrainId = id;
+      if (id !== null) state.selectedTileIndex = null;
+    }),
+
+  setSampledPattern: (pattern) =>
+    set((state) => {
+      state.sampledPattern = pattern;
+      if (pattern) state.selectedTileIndices = [];
+    }),
+
+  scheduleTilesetSave: (tilesetId) => {
+    saveTilesetDebounced(tilesetId);
+  },
+
+  addTileset: async (tileset) => {
+    await saveTilesetImmediate(tileset);
+
+    set((state) => {
       state.tilesets.set(tileset.id, castDraft(tileset));
       if (!state.activeTilesetId) state.activeTilesetId = tileset.id;
     });
 
-    // Load sprite
     try {
       const blob = await fileSystem.loadAsset(tileset.spriteSheet);
       await get().loadSprite(tileset.spriteSheet, blob);
@@ -53,41 +161,29 @@ export const createTilesetSlice: StateCreator<any, any, [], TilesetSlice> = (set
   updateTileset: async (id, updates) => {
     let updatedTileset: Tileset | undefined;
 
-    set((state: any) => {
+    set((state) => {
       const ts = state.tilesets.get(id);
       if (ts) {
         Object.assign(ts, updates);
-        updatedTileset = JSON.parse(JSON.stringify(ts)); // Clone for safety
+        updatedTileset = JSON.parse(JSON.stringify(ts));
       }
     });
 
     if (updatedTileset) {
-      useSaveStore.getState().setStatus('saving');
-      await fileSystem.saveJson(
-        'tilesets',
-        `${id}.tileset.json`,
-        updatedTileset,
-      );
-      useSaveStore.getState().setStatus('saved');
-      setTimeout(() => {
-        if (useSaveStore.getState().status === 'saved')
-          useSaveStore.getState().setStatus('idle');
-      }, 2000);
+      saveTilesetDebounced(updatedTileset.id);
+      if ('spriteSheet' in updates && updatedTileset.spriteSheet) {
+        try {
+          const blob = await fileSystem.loadAsset(updatedTileset.spriteSheet);
+          await get().loadSprite(updatedTileset.spriteSheet, blob);
+        } catch (e) {
+          console.warn('Failed to reload sprite after update:', e);
+        }
+      }
     }
   },
 
   deleteTileset: async (id) => {
-    // Revoke the sprite object URL before removing the tileset
-    const tileset = get().tilesets.get(id) as Tileset | undefined;
-    if (tileset) {
-      const spriteUrl = spriteObjectUrls.get(tileset.spriteSheet);
-      if (spriteUrl) {
-        URL.revokeObjectURL(spriteUrl);
-        spriteObjectUrls.delete(tileset.spriteSheet);
-      }
-    }
-
-    set((state: any) => {
+    set((state) => {
       state.tilesets.delete(id);
       if (state.activeTilesetId === id) {
         state.activeTilesetId = null;
@@ -95,40 +191,42 @@ export const createTilesetSlice: StateCreator<any, any, [], TilesetSlice> = (set
       }
     });
 
-    useSaveStore.getState().setStatus('saving');
-    await fileSystem.deleteJson('tilesets', `${id}.tileset.json`);
-    useSaveStore.getState().setStatus('saved');
-    setTimeout(() => {
-      if (useSaveStore.getState().status === 'saved')
-        useSaveStore.getState().setStatus('idle');
-    }, 2000);
+    await fileSystem.deleteJson('tilesets', `${id}.vts`);
   },
 
-  updateTileDefinition: (tilesetId, index, definition) =>
-    set((state: any) => {
+  updateTileDefinition: (tilesetId, index, definition) => {
+    set((state) => {
       const ts = state.tilesets.get(tilesetId);
       if (ts) {
-        ts.tiles[index] = castDraft(definition);
+        const normalizedDefinition =
+          definition.pivotY === undefined
+            ? definition
+            : {
+                ...definition,
+                pivotY: Number.isFinite(definition.pivotY)
+                  ? Math.max(0, Math.round(definition.pivotY))
+                  : 1,
+              };
+        ts.tiles[index] = castDraft(normalizedDefinition);
       }
-    }),
+    });
+    get().scheduleTilesetSave(tilesetId);
+  },
 
   setTileCornerTerrain: async (tilesetId, index, corner, terrainId) => {
     let updatedTileset: Tileset | undefined;
 
-    set((state: any) => {
+    set((state) => {
       const ts = state.tilesets.get(tilesetId);
       if (!ts) return;
       const tile = ts.tiles[index] || ({} as TileDefinition);
-      if (!tile.terrainCorners)
-        tile.terrainCorners = [null, null, null, null];
+      if (!tile.terrainCorners) tile.terrainCorners = [null, null, null, null];
       tile.terrainCorners[corner] = terrainId;
 
-      // If terrainId is null, clear the terrain information for the corner
       if (terrainId === null) {
         const updatedCorners = [...tile.terrainCorners];
         updatedCorners[corner] = null;
-        // Check if all corners are null, and if so, remove the terrainCorners property
-        if (updatedCorners.every((corner) => corner === null)) {
+        if (updatedCorners.every((c) => c === null)) {
           delete tile.terrainCorners;
         } else {
           tile.terrainCorners = updatedCorners;
@@ -139,18 +237,6 @@ export const createTilesetSlice: StateCreator<any, any, [], TilesetSlice> = (set
       updatedTileset = JSON.parse(JSON.stringify(ts));
     });
 
-    if (updatedTileset) {
-      useSaveStore.getState().setStatus('saving');
-      await fileSystem.saveJson(
-        'tilesets',
-        `${tilesetId}.tileset.json`,
-        updatedTileset,
-      );
-      useSaveStore.getState().setStatus('saved');
-      setTimeout(() => {
-        if (useSaveStore.getState().status === 'saved')
-          useSaveStore.getState().setStatus('idle');
-      }, 2000);
-    }
+    if (updatedTileset) saveTilesetDebounced(updatedTileset.id);
   },
 });

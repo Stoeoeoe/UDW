@@ -11,6 +11,7 @@ import {
   InputLeftElement,
   Tooltip,
 } from '@chakra-ui/react';
+import PanelHeader from '../../../components/common/PanelHeader';
 import { SearchIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { EntityType } from '../../../types/schema';
@@ -22,16 +23,10 @@ import { EntityType } from '../../../types/schema';
  */
 export const EntityPalette: React.FC = () => {
   const entityTypes = useEditorStore((state) => state.entityTypes);
-  const selectedEntityTypeId = useEditorStore(
-    (state) => state.selectedEntityTypeId,
-  );
-  const setSelectedEntityType = useEditorStore(
-    (state) => state.setSelectedEntityType,
-  );
+  const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
+  const setSelectedEntityType = useEditorStore((state) => state.setSelectedEntityType);
   const [search, setSearch] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    new Set(),
-  );
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Filter by search
   const filtered = useMemo(() => {
@@ -74,31 +69,11 @@ export const EntityPalette: React.FC = () => {
 
   if (entityTypes.length === 0) {
     return (
-      <Flex direction="column" h="full" bg="editor.panelBg">
-        <Flex
-          p="3"
-          borderBottom="1px"
-          borderColor="editor.border"
-          bg="editor.headerBg"
-        >
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Entities
-          </Text>
-        </Flex>
+      <Flex direction="column" h="full" bg="editorPanelBg">
+        <PanelHeader title="Entities" />
         <VStack flex={1} justify="center" spacing={2} p={4}>
           <Text fontSize="2xl">🎯</Text>
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="center"
-            fontStyle="italic"
-          >
+          <Text fontSize="xs" color="gray.600" textAlign="center" fontStyle="italic">
             No entity types defined
           </Text>
           <Text fontSize="10px" color="gray.700" textAlign="center">
@@ -110,44 +85,27 @@ export const EntityPalette: React.FC = () => {
   }
 
   return (
-    <Flex direction="column" h="full" bg="editor.panelBg" overflow="hidden">
+    <Flex direction="column" h="full" bg="editorPanelBg" overflow="hidden">
       {/* Header */}
-      <Flex
-        p="3"
-        borderBottom="1px"
-        borderColor="editor.border"
-        align="center"
-        justify="space-between"
-        bg="editor.headerBg"
-        flexShrink={0}
-      >
-        <HStack spacing={2}>
-          <Text
-            fontSize="10px"
-            fontWeight="black"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="gray.500"
-          >
-            Entities
-          </Text>
-          <Badge fontSize="9px" colorScheme="gray" variant="subtle">
-            {entityTypes.length}
-          </Badge>
-        </HStack>
-      </Flex>
+      <PanelHeader
+        title="Entities"
+        actions={
+          <HStack spacing={2}>
+            <Badge fontSize="9px" colorScheme="gray" variant="subtle">
+              {entityTypes.length}
+            </Badge>
+          </HStack>
+        }
+      />
 
       {/* Search */}
       {entityTypes.length > 5 && (
-        <Box px={2} py={2} borderBottom="1px" borderColor="editor.border">
+        <Box px={2} py={2} borderBottom="1px" borderColor="editorShellBorder">
           <InputGroup size="xs">
             <InputLeftElement pointerEvents="none">
               <SearchIcon color="gray.600" fontSize="10px" />
             </InputLeftElement>
             <Input
-              bg="#0a0a0b"
-              borderColor="#1a1a2e"
-              color="white"
               placeholder="Filter entities..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -160,13 +118,7 @@ export const EntityPalette: React.FC = () => {
       {/* Grouped entity list */}
       <Box flex={1} overflowY="auto">
         {filtered.length === 0 && search && (
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            textAlign="center"
-            py={6}
-            fontStyle="italic"
-          >
+          <Text fontSize="xs" color="gray.600" textAlign="center" py={6} fontStyle="italic">
             No matching entities
           </Text>
         )}
@@ -257,8 +209,7 @@ export const EntityPalette: React.FC = () => {
                             </Text>
                             <Text fontSize="9px" color="gray.600" noOfLines={1}>
                               {et.category}
-                              {et.properties.length > 0 &&
-                                ` • ${et.properties.length} props`}
+                              {et.properties.length > 0 && ` • ${et.properties.length} props`}
                             </Text>
                           </VStack>
                         </HStack>
@@ -273,13 +224,7 @@ export const EntityPalette: React.FC = () => {
       </Box>
 
       {/* Help tip */}
-      <Box
-        px={3}
-        py={2}
-        borderTop="1px"
-        borderColor="editor.border"
-        flexShrink={0}
-      >
+      <Box px={3} py={2} borderTop="1px" borderColor="editorShellBorder" flexShrink={0}>
         <Text fontSize="9px" color="gray.600" textAlign="center">
           Select an entity, then click on the map to place it
         </Text>

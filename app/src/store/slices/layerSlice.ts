@@ -1,11 +1,18 @@
-import { StateCreator } from 'zustand';
 import { castDraft } from 'immer';
-import type { Layer, LayerDefinition } from '../../types/schema';
-import { persistProject } from '../storeHelpers';
+import { StateCreator } from 'zustand';
+import { Layer, Variation } from '../../types/schema';
+import { syncToolStateForSelectedLayer, withHistorySuppressed } from '../storeHelpers';
+import type { EditorStore } from '../useEditorStore';
+
+type ImmerStateCreator<T> = StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  T
+>;
 
 export interface LayerSlice {
-  layerDefinitions: LayerDefinition[];
-  selectedLayerDefinitionId: string | null;
+  selectedLayerId: string | null;
 
   addLayer: (layer: Layer) => void;
   removeLayer: (layerId: string) => void;
@@ -13,129 +20,89 @@ export interface LayerSlice {
   reorderLayer: (layerId: string, newZOrder: number) => void;
   toggleLayerVisibility: (layerId: string) => void;
   selectLayer: (layerId: string) => void;
-  setSelectedLayerDefinition: (id: string | null) => void;
-  addLayerDefinition: (definition: LayerDefinition) => Promise<void>;
-  updateLayerDefinition: (
-    id: string,
-    updates: Partial<LayerDefinition>,
-  ) => Promise<void>;
-  deleteLayerDefinition: (id: string) => Promise<void>;
+
+  setActiveVariation: (variationId: string | null) => void;
+  addVariation: (variation: Variation) => void;
+  updateVariation: (id: string, updates: Partial<Variation>) => void;
+  removeVariation: (id: string) => void;
 }
 
-export const createLayerSlice: StateCreator<any, any, [], LayerSlice> = (set, get) => ({
-  layerDefinitions: [],
-  selectedLayerDefinitionId: null,
+export const createLayerSlice: ImmerStateCreator<LayerSlice> = (set) => ({
+  selectedLayerId: null,
 
   addLayer: (layer) =>
-    set((state: any) => {
-      if (state.currentMap) {
-        state.currentMap.layers.push(castDraft(layer));
-      }
+    set((state) => {
+      if (state.currentMap) state.currentMap.layers.push(castDraft(layer));
     }),
 
   removeLayer: (layerId) =>
-    set((state: any) => {
+    set((state) => {
       if (state.currentMap) {
-        state.currentMap.layers = state.currentMap.layers.filter(
-          (l: Layer) => l.id !== layerId,
-        );
+        state.currentMap.layers = state.currentMap.layers.filter((l) => l.id !== layerId);
       }
-    }),
-
-  reorderLayer: (layerId, newZOrder) =>
-    set((state: any) => {
-      if (!state.currentMap) return;
-      const layer = state.currentMap.layers.find((l: Layer) => l.id === layerId);
-      if (layer) {
-        layer.zOrder = newZOrder;
-        // Stability: Sort layers by zOrder to keep indices predictable
-        state.currentMap.layers.sort((a: Layer, b: Layer) => a.zOrder - b.zOrder);
-      }
-    }),
-
-  toggleLayerVisibility: (layerId) =>
-    set((state: any) => {
-      const layer = state.currentMap?.layers.find((l: Layer) => l.id === layerId);
-      if (layer) {
-        layer.visible = !layer.visible;
-      }
-    }),
-
-  selectLayer: (layerId) =>
-    set((state: any) => {
-      state.selectedLayerId = layerId;
     }),
 
   updateLayer: (layerId, updates) =>
-    set((state: any) => {
-      const layer = state.currentMap?.layers.find((l: Layer) => l.id === layerId);
+    set((state) => {
+      const layer = state.currentMap?.layers.find((l) => l.id === layerId);
       if (layer) {
         Object.assign(layer, updates);
-        // Re-sort layers by zOrder if zOrder changed
         if (updates.zOrder !== undefined && state.currentMap) {
-          state.currentMap.layers.sort((a: Layer, b: Layer) => a.zOrder - b.zOrder);
+          state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
         }
       }
     }),
 
-  setSelectedLayerDefinition: (id) =>
-    set((state: any) => {
-      state.selectedLayerDefinitionId = id;
+  reorderLayer: (layerId, newZOrder) =>
+    set((state) => {
+      if (!state.currentMap) return;
+      const layer = state.currentMap.layers.find((l) => l.id === layerId);
+      if (layer) {
+        layer.zOrder = newZOrder;
+        state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
+      }
     }),
 
-  addLayerDefinition: async (definition) => {
-    set((state: any) => {
-      state.layerDefinitions.push(castDraft(definition));
-    });
-    const proj = get().project;
-    if (proj) {
-      const projectToSave = {
-        ...proj,
-        layerDefinitions: get().layerDefinitions,
-      };
-      await persistProject(projectToSave);
-      set((state: any) => {
-        state.project = castDraft(projectToSave);
-      });
-    }
-  },
+  toggleLayerVisibility: (layerId) =>
+    set((state) => {
+      const layer = state.currentMap?.layers.find((l) => l.id === layerId);
+      if (layer) layer.visible = !layer.visible;
+    }),
 
-  updateLayerDefinition: async (id, updates) => {
-    set((state: any) => {
-      const def = state.layerDefinitions.find((d: LayerDefinition) => d.id === id);
-      if (def) Object.assign(def, updates);
-    });
-    const proj = get().project;
-    if (proj) {
-      const projectToSave = {
-        ...proj,
-        layerDefinitions: get().layerDefinitions,
-      };
-      await persistProject(projectToSave);
-      set((state: any) => {
-        state.project = castDraft(projectToSave);
-      });
-    }
-  },
+  selectLayer: (layerId) =>
+    set((state) => {
+      const prevKind = state.currentMap?.layers.find((l) => l.id === state.selectedLayerId)?.kind;
+      const nextKind = state.currentMap?.layers.find((l) => l.id === layerId)?.kind;
+      state.selectedLayerId = layerId;
+      syncToolStateForSelectedLayer(state, { forceDefault: prevKind !== nextKind });
+    }),
 
-  deleteLayerDefinition: async (id) => {
-    set((state: any) => {
-      state.layerDefinitions = state.layerDefinitions.filter(
-        (d: LayerDefinition) => d.id !== id,
-      );
-      if (state.selectedLayerDefinitionId === id)
-        state.selectedLayerDefinitionId = null;
-    });
-    const proj = get().project;
-    if (proj) {
-      const projectToSave = {
-        ...proj,
-        layerDefinitions: get().layerDefinitions,
-      };
-      await persistProject(projectToSave);
-      set((state: any) => {
-        state.project = castDraft(projectToSave);
-      });
-    }
-  },
+  setActiveVariation: (variationId) =>
+    withHistorySuppressed(
+      () =>
+        set((state) => {
+          state.activeVariationId = variationId;
+        }),
+      { clearHistory: true },
+    ),
+
+  addVariation: (variation) =>
+    set((state) => {
+      if (!state.currentMap) return;
+      if (!state.currentMap.variations) state.currentMap.variations = [];
+      state.currentMap.variations.push(castDraft(variation));
+    }),
+
+  updateVariation: (id, updates) =>
+    set((state) => {
+      const variation = state.currentMap?.variations?.find((v) => v.id === id);
+      if (variation) Object.assign(variation, updates);
+    }),
+
+  removeVariation: (id) =>
+    set((state) => {
+      if (!state.currentMap) return;
+      state.currentMap.variations = state.currentMap.variations?.filter((v) => v.id !== id);
+      if (state.activeVariationId === id) state.activeVariationId = null;
+    }),
 });

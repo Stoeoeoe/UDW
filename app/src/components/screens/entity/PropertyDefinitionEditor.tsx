@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -19,13 +19,9 @@ import {
   NumberIncrementStepper,
   NumberDecrementStepper,
 } from '@chakra-ui/react';
-import {
-  AddIcon,
-  DeleteIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from '@chakra-ui/icons';
+import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { PropertyDefinition, PropertyType } from '../../../types/schema';
+import { FormLabel } from '../../common/FormLabel';
 
 const PROPERTY_TYPES: { value: PropertyType; label: string; icon: string }[] = [
   { value: 'string', label: 'String', icon: 'Aa' },
@@ -33,21 +29,47 @@ const PROPERTY_TYPES: { value: PropertyType; label: string; icon: string }[] = [
   { value: 'float', label: 'Float', icon: '#.' },
   { value: 'boolean', label: 'Boolean', icon: '⊘' },
   { value: 'enum', label: 'Enum', icon: '☰' },
+  { value: 'vector2', label: 'Vector2', icon: '↗' },
+  { value: 'color', label: 'Color', icon: '🎨' },
 ];
 
 interface PropertyDefinitionEditorProps {
   properties: PropertyDefinition[];
   onChange: (properties: PropertyDefinition[]) => void;
+  allowedTypes?: PropertyType[];
 }
 
 /**
  * PropertyDefinitionEditor – Inline editor for an entity type's property schema.
  * Supports add/remove/reorder with per-property type controls.
  */
-export const PropertyDefinitionEditor: React.FC<
-  PropertyDefinitionEditorProps
-> = ({ properties, onChange }) => {
+export const PropertyDefinitionEditor: React.FC<PropertyDefinitionEditorProps> = ({
+  properties,
+  onChange,
+  allowedTypes,
+}) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const idMapRef = useRef<Record<string, string>>({});
+
+  const genId = () => `pid_${Math.random().toString(36).slice(2, 9)}`;
+
+  for (const p of properties) {
+    if (!idMapRef.current[p.key]) idMapRef.current[p.key] = genId();
+  }
+
+  const ensureIds = () => {
+    for (const p of properties) {
+      if (!idMapRef.current[p.key]) idMapRef.current[p.key] = genId();
+    }
+  };
+  ensureIds();
+
+  const availablePropertyTypes = useMemo(() => {
+    if (!allowedTypes || allowedTypes.length === 0) return PROPERTY_TYPES;
+    const allowed = new Set<PropertyType>(allowedTypes);
+    const filtered = PROPERTY_TYPES.filter((t) => allowed.has(t.value));
+    return filtered.length > 0 ? filtered : PROPERTY_TYPES;
+  }, [allowedTypes]);
 
   const addProperty = useCallback(() => {
     const key = `prop_${Date.now()}`;
@@ -64,9 +86,7 @@ export const PropertyDefinitionEditor: React.FC<
 
   const updateProperty = useCallback(
     (key: string, updates: Partial<PropertyDefinition>) => {
-      onChange(
-        properties.map((p) => (p.key === key ? { ...p, ...updates } : p)),
-      );
+      onChange(properties.map((p) => (p.key === key ? { ...p, ...updates } : p)));
     },
     [properties, onChange],
   );
@@ -75,6 +95,7 @@ export const PropertyDefinitionEditor: React.FC<
     (key: string) => {
       onChange(properties.filter((p) => p.key !== key));
       if (expandedId === key) setExpandedId(null);
+      delete idMapRef.current[key];
     },
     [properties, onChange, expandedId],
   );
@@ -92,7 +113,9 @@ export const PropertyDefinitionEditor: React.FC<
     [properties, onChange],
   );
 
-  const getDefaultValueForType = (type: PropertyType): any => {
+  const getDefaultValueForType = (
+    type: PropertyType,
+  ): import('../../../types/schema').PropertyValue => {
     switch (type) {
       case 'string':
         return '';
@@ -106,6 +129,10 @@ export const PropertyDefinitionEditor: React.FC<
         return false;
       case 'enum':
         return '';
+      case 'vector2':
+        return [0, 0];
+      case 'color':
+        return '#ffffff';
       default:
         return '';
     }
@@ -142,7 +169,6 @@ export const PropertyDefinitionEditor: React.FC<
         </Tooltip>
       </Flex>
 
-      {/* Property list */}
       {properties.length === 0 && (
         <Box px={3} py={4} textAlign="center">
           <Text fontSize="xs" color="gray.600" fontStyle="italic">
@@ -156,9 +182,11 @@ export const PropertyDefinitionEditor: React.FC<
 
       {properties.map((prop, idx) => {
         const isExpanded = expandedId === prop.key;
+        const stableId = idMapRef.current[prop.key] || genId();
+        if (!idMapRef.current[prop.key]) idMapRef.current[prop.key] = stableId;
 
         return (
-          <Box key={prop.key} borderTop="1px" borderColor="whiteAlpha.50">
+          <Box key={stableId} borderTop="1px" borderColor="whiteAlpha.50">
             {/* Collapsed row */}
             <HStack
               px={3}
@@ -172,13 +200,7 @@ export const PropertyDefinitionEditor: React.FC<
               <Text fontSize="10px" color="gray.600" w="14px">
                 {isExpanded ? '▾' : '▸'}
               </Text>
-              <Text
-                fontSize="xs"
-                fontWeight="medium"
-                color="gray.200"
-                flex={1}
-                noOfLines={1}
-              >
+              <Text fontSize="xs" fontWeight="medium" color="gray.200" flex={1} noOfLines={1}>
                 {prop.label}
               </Text>
               <Badge
@@ -186,15 +208,15 @@ export const PropertyDefinitionEditor: React.FC<
                 colorScheme={
                   prop.type === 'string'
                     ? 'green'
-                    : prop.type === 'int' ||
-                        prop.type === 'float' ||
-                        prop.type === 'number'
+                    : prop.type === 'int' || prop.type === 'float' || prop.type === 'number'
                       ? 'blue'
                       : prop.type === 'boolean'
                         ? 'yellow'
                         : prop.type === 'enum'
                           ? 'purple'
-                          : 'gray'
+                          : prop.type === 'vector2'
+                            ? 'teal'
+                            : 'gray'
                 }
                 variant="subtle"
               >
@@ -228,52 +250,30 @@ export const PropertyDefinitionEditor: React.FC<
                   {/* Label & Key */}
                   <HStack spacing={3}>
                     <Box flex={1}>
-                      <Text
-                        fontSize="9px"
-                        color="gray.500"
-                        mb={1}
-                        fontWeight="bold"
-                      >
-                        LABEL
-                      </Text>
+                      <FormLabel>Label</FormLabel>
                       <Input
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         value={prop.label}
-                        onChange={(e) =>
-                          updateProperty(prop.key, { label: e.target.value })
-                        }
+                        onChange={(e) => updateProperty(prop.key, { label: e.target.value })}
                       />
                     </Box>
                     <Box flex={1}>
-                      <Text
-                        fontSize="9px"
-                        color="gray.500"
-                        mb={1}
-                        fontWeight="bold"
-                      >
-                        KEY
-                      </Text>
+                      <FormLabel>Key</FormLabel>
                       <Input
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         fontFamily="mono"
                         value={prop.key}
                         onChange={(e) => {
-                          const newKey = e.target.value.replace(
-                            /[^a-zA-Z0-9_]/g,
-                            '',
-                          );
-                          // Update key in the property
+                          const newKey = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
                           const updated = properties.map((p) =>
                             p.key === prop.key ? { ...p, key: newKey } : p,
                           );
+                          const oldId = idMapRef.current[prop.key];
+                          if (oldId) {
+                            idMapRef.current[newKey] = oldId;
+                            delete idMapRef.current[prop.key];
+                          }
                           onChange(updated);
-                          // Keep expanded on the new key
                           setExpandedId(newKey);
                         }}
                       />
@@ -283,19 +283,9 @@ export const PropertyDefinitionEditor: React.FC<
                   {/* Type & Required */}
                   <HStack spacing={3}>
                     <Box flex={1}>
-                      <Text
-                        fontSize="9px"
-                        color="gray.500"
-                        mb={1}
-                        fontWeight="bold"
-                      >
-                        TYPE
-                      </Text>
+                      <FormLabel>Type</FormLabel>
                       <Select
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
                         value={prop.type}
                         onChange={(e) => {
                           const newType = e.target.value as PropertyType;
@@ -303,73 +293,42 @@ export const PropertyDefinitionEditor: React.FC<
                             type: newType,
                             defaultValue: getDefaultValueForType(newType),
                             constraints:
-                              newType === 'enum'
-                                ? { options: ['option1', 'option2'] }
-                                : undefined,
+                              newType === 'enum' ? { options: ['option1', 'option2'] } : undefined,
                           });
                         }}
                       >
-                        {PROPERTY_TYPES.map((t) => (
-                          <option
-                            key={t.value}
-                            value={t.value}
-                            style={{ background: '#0a0a0b' }}
-                          >
+                        {availablePropertyTypes.map((t) => (
+                          <option key={t.value} value={t.value}>
                             {t.icon} {t.label}
                           </option>
                         ))}
                       </Select>
                     </Box>
                     <Box>
-                      <Text
-                        fontSize="9px"
-                        color="gray.500"
-                        mb={1}
-                        fontWeight="bold"
-                      >
-                        REQUIRED
-                      </Text>
+                      <FormLabel>Required</FormLabel>
                       <Switch
                         size="sm"
                         colorScheme="blue"
                         isChecked={prop.required}
-                        onChange={(e) =>
-                          updateProperty(prop.key, {
-                            required: e.target.checked,
-                          })
-                        }
+                        onChange={(e) => updateProperty(prop.key, { required: e.target.checked })}
                       />
                     </Box>
                   </HStack>
 
                   {/* Default value */}
                   <Box>
-                    <Text
-                      fontSize="9px"
-                      color="gray.500"
-                      mb={1}
-                      fontWeight="bold"
-                    >
-                      DEFAULT VALUE
-                    </Text>
+                    <FormLabel>Default Value</FormLabel>
                     {prop.type === 'string' && (
                       <Input
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={prop.defaultValue ?? ''}
-                        onChange={(e) =>
-                          updateProperty(prop.key, {
-                            defaultValue: e.target.value,
-                          })
-                        }
+                        value={typeof prop.defaultValue === 'string' ? prop.defaultValue : ''}
+                        onChange={(e) => updateProperty(prop.key, { defaultValue: e.target.value })}
                       />
                     )}
                     {prop.type === 'int' && (
                       <NumberInput
                         size="xs"
-                        value={prop.defaultValue ?? 0}
+                        value={typeof prop.defaultValue === 'number' ? prop.defaultValue : 0}
                         step={1}
                         precision={0}
                         onChange={(_, val) =>
@@ -378,11 +337,7 @@ export const PropertyDefinitionEditor: React.FC<
                           })
                         }
                       >
-                        <NumberInputField
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
-                        />
+                        <NumberInputField />
                         <NumberInputStepper>
                           <NumberIncrementStepper />
                           <NumberDecrementStepper />
@@ -392,20 +347,14 @@ export const PropertyDefinitionEditor: React.FC<
                     {(prop.type === 'float' || prop.type === 'number') && (
                       <NumberInput
                         size="xs"
-                        value={prop.defaultValue ?? 0}
+                        value={typeof prop.defaultValue === 'number' ? prop.defaultValue : 0}
                         step={0.1}
                         precision={2}
                         onChange={(_, val) =>
-                          updateProperty(prop.key, {
-                            defaultValue: isNaN(val) ? 0 : val,
-                          })
+                          updateProperty(prop.key, { defaultValue: isNaN(val) ? 0 : val })
                         }
                       >
-                        <NumberInputField
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
-                        />
+                        <NumberInputField />
                         <NumberInputStepper>
                           <NumberIncrementStepper />
                           <NumberDecrementStepper />
@@ -418,31 +367,68 @@ export const PropertyDefinitionEditor: React.FC<
                         colorScheme="green"
                         isChecked={!!prop.defaultValue}
                         onChange={(e) =>
-                          updateProperty(prop.key, {
-                            defaultValue: e.target.checked,
-                          })
+                          updateProperty(prop.key, { defaultValue: e.target.checked })
                         }
                       />
+                    )}
+                    {prop.type === 'vector2' && (
+                      <HStack spacing={2}>
+                        <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                          X
+                        </Text>
+                        <NumberInput
+                          size="xs"
+                          value={
+                            Array.isArray(prop.defaultValue) ? (prop.defaultValue[0] as number) : 0
+                          }
+                          step={0.1}
+                          onChange={(_, val) =>
+                            updateProperty(prop.key, {
+                              defaultValue: [
+                                isNaN(val) ? 0 : val,
+                                Array.isArray(prop.defaultValue)
+                                  ? (prop.defaultValue[1] as number)
+                                  : 0,
+                              ],
+                            })
+                          }
+                          flex={1}
+                        >
+                          <NumberInputField />
+                        </NumberInput>
+                        <Text fontSize="xs" color="gray.400" flexShrink={0}>
+                          Y
+                        </Text>
+                        <NumberInput
+                          size="xs"
+                          value={
+                            Array.isArray(prop.defaultValue) ? (prop.defaultValue[1] as number) : 0
+                          }
+                          step={0.1}
+                          onChange={(_, val) =>
+                            updateProperty(prop.key, {
+                              defaultValue: [
+                                Array.isArray(prop.defaultValue)
+                                  ? (prop.defaultValue[0] as number)
+                                  : 0,
+                                isNaN(val) ? 0 : val,
+                              ],
+                            })
+                          }
+                          flex={1}
+                        >
+                          <NumberInputField />
+                        </NumberInput>
+                      </HStack>
                     )}
                     {prop.type === 'enum' && (
                       <Select
                         size="xs"
-                        bg="#0a0a0b"
-                        borderColor="#1a1a2e"
-                        color="white"
-                        value={prop.defaultValue ?? ''}
-                        onChange={(e) =>
-                          updateProperty(prop.key, {
-                            defaultValue: e.target.value,
-                          })
-                        }
+                        value={typeof prop.defaultValue === 'string' ? prop.defaultValue : ''}
+                        onChange={(e) => updateProperty(prop.key, { defaultValue: e.target.value })}
                       >
                         {(prop.constraints?.options || []).map((opt) => (
-                          <option
-                            key={opt}
-                            value={opt}
-                            style={{ background: '#0a0a0b' }}
-                          >
+                          <option key={opt} value={opt}>
                             {opt}
                           </option>
                         ))}
@@ -453,63 +439,42 @@ export const PropertyDefinitionEditor: React.FC<
                   {/* Enum options editor */}
                   {prop.type === 'enum' && (
                     <Box>
-                      <Text
-                        fontSize="9px"
-                        color="gray.500"
-                        mb={1}
-                        fontWeight="bold"
-                      >
-                        ENUM OPTIONS
-                      </Text>
+                      <FormLabel>Enum Options</FormLabel>
                       <VStack spacing={1} align="stretch">
-                        {(prop.constraints?.options || []).map(
-                          (opt, optIdx) => (
-                            <HStack key={optIdx} spacing={1}>
-                              <Input
-                                size="xs"
-                                bg="#0a0a0b"
-                                borderColor="#1a1a2e"
-                                color="white"
-                                value={opt}
-                                onChange={(e) => {
-                                  const opts = [
-                                    ...(prop.constraints?.options || []),
-                                  ];
-                                  opts[optIdx] = e.target.value;
-                                  updateProperty(prop.key, {
-                                    constraints: {
-                                      ...prop.constraints,
-                                      options: opts,
-                                    },
-                                  });
-                                }}
-                              />
-                              <IconButton
-                                aria-label="Remove option"
-                                icon={<DeleteIcon fontSize="8px" />}
-                                size="xs"
-                                variant="ghost"
-                                color="gray.600"
-                                _hover={{ color: 'red.300' }}
-                                onClick={() => {
-                                  const opts = (
-                                    prop.constraints?.options || []
-                                  ).filter((_, i) => i !== optIdx);
-                                  updateProperty(prop.key, {
-                                    constraints: {
-                                      ...prop.constraints,
-                                      options: opts,
-                                    },
-                                    // Reset default if it was removed
-                                    ...(prop.defaultValue === opt
-                                      ? { defaultValue: opts[0] || '' }
-                                      : {}),
-                                  });
-                                }}
-                              />
-                            </HStack>
-                          ),
-                        )}
+                        {(prop.constraints?.options || []).map((opt, optIdx) => (
+                          <HStack key={optIdx} spacing={1}>
+                            <Input
+                              size="xs"
+                              value={opt}
+                              onChange={(e) => {
+                                const opts = [...(prop.constraints?.options || [])];
+                                opts[optIdx] = e.target.value;
+                                updateProperty(prop.key, {
+                                  constraints: { ...prop.constraints, options: opts },
+                                });
+                              }}
+                            />
+                            <IconButton
+                              aria-label="Remove option"
+                              icon={<DeleteIcon fontSize="8px" />}
+                              size="xs"
+                              variant="ghost"
+                              color="gray.600"
+                              _hover={{ color: 'red.300' }}
+                              onClick={() => {
+                                const opts = (prop.constraints?.options || []).filter(
+                                  (_, i) => i !== optIdx,
+                                );
+                                updateProperty(prop.key, {
+                                  constraints: { ...prop.constraints, options: opts },
+                                  ...(prop.defaultValue === opt
+                                    ? { defaultValue: opts[0] || '' }
+                                    : {}),
+                                });
+                              }}
+                            />
+                          </HStack>
+                        ))}
                         <Button
                           size="xs"
                           variant="ghost"
@@ -522,10 +487,7 @@ export const PropertyDefinitionEditor: React.FC<
                               `option_${(prop.constraints?.options?.length || 0) + 1}`,
                             ];
                             updateProperty(prop.key, {
-                              constraints: {
-                                ...prop.constraints,
-                                options: opts,
-                              },
+                              constraints: { ...prop.constraints, options: opts },
                             });
                           }}
                         >
@@ -536,19 +498,10 @@ export const PropertyDefinitionEditor: React.FC<
                   )}
 
                   {/* Numeric constraints */}
-                  {(prop.type === 'int' ||
-                    prop.type === 'float' ||
-                    prop.type === 'number') && (
+                  {(prop.type === 'int' || prop.type === 'float' || prop.type === 'number') && (
                     <HStack spacing={3}>
                       <Box flex={1}>
-                        <Text
-                          fontSize="9px"
-                          color="gray.500"
-                          mb={1}
-                          fontWeight="bold"
-                        >
-                          MIN
-                        </Text>
+                        <FormLabel>Min</FormLabel>
                         <NumberInput
                           size="xs"
                           value={prop.constraints?.min ?? ''}
@@ -561,23 +514,11 @@ export const PropertyDefinitionEditor: React.FC<
                             })
                           }
                         >
-                          <NumberInputField
-                            bg="#0a0a0b"
-                            borderColor="#1a1a2e"
-                            color="white"
-                            placeholder="—"
-                          />
+                          <NumberInputField placeholder="—" />
                         </NumberInput>
                       </Box>
                       <Box flex={1}>
-                        <Text
-                          fontSize="9px"
-                          color="gray.500"
-                          mb={1}
-                          fontWeight="bold"
-                        >
-                          MAX
-                        </Text>
+                        <FormLabel>Max</FormLabel>
                         <NumberInput
                           size="xs"
                           value={prop.constraints?.max ?? ''}
@@ -590,12 +531,7 @@ export const PropertyDefinitionEditor: React.FC<
                             })
                           }
                         >
-                          <NumberInputField
-                            bg="#0a0a0b"
-                            borderColor="#1a1a2e"
-                            color="white"
-                            placeholder="—"
-                          />
+                          <NumberInputField placeholder="—" />
                         </NumberInput>
                       </Box>
                     </HStack>
@@ -603,30 +539,18 @@ export const PropertyDefinitionEditor: React.FC<
 
                   {/* Description */}
                   <Box>
-                    <Text
-                      fontSize="9px"
-                      color="gray.500"
-                      mb={1}
-                      fontWeight="bold"
-                    >
-                      DESCRIPTION
-                    </Text>
+                    <FormLabel>Description</FormLabel>
                     <Input
                       size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
                       value={prop.description ?? ''}
                       onChange={(e) =>
-                        updateProperty(prop.key, {
-                          description: e.target.value || undefined,
-                        })
+                        updateProperty(prop.key, { description: e.target.value || undefined })
                       }
                       placeholder="Optional help text"
                     />
                   </Box>
 
-                  {/* Reorder buttons */}
+                  {/* Reorder */}
                   <HStack spacing={1} justify="flex-end">
                     <Tooltip label="Move Up" hasArrow>
                       <IconButton

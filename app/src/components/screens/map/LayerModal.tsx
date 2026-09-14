@@ -1,130 +1,233 @@
 import React from 'react';
+import { useForm } from '@tanstack/react-form';
 import {
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-    Button,
-    Input,
-    Select,
-    FormControl,
-    FormLabel,
-    Text,
-    VStack,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Select,
+  FormControl,
+  Text,
+  VStack,
 } from '@chakra-ui/react';
-import { LayerKind } from '../../../types/schema';
+import { LayerKind, SortingLayer } from '../../../types/schema';
 import { LAYER_ICONS } from './layerConstants';
+import { FieldLabel } from '../../common/Typography.tsx';
 
 export interface LayerFormData {
-    name: string;
-    kind: LayerKind;
-    zOrder: number;
-    icon: string;
+  name: string;
+  kind: LayerKind;
+  zOrder: number;
+  icon: string;
+  sortingLayer: SortingLayer;
 }
+
+const SORTING_LAYER_OPTIONS: { value: SortingLayer; label: string; description: string }[] = [
+  { value: 'ground', label: 'Ground', description: 'Flat, sorted by z-order (floors, paths)' },
+  { value: 'above', label: 'Above', description: 'Always on top (roofs, canopy)' },
+];
 
 export interface LayerModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: () => void;
-    formData: LayerFormData;
-    setFormData: (data: LayerFormData) => void;
-    isEditing: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: LayerFormData) => void;
+  initialData: LayerFormData;
+  isEditing: boolean;
+  /** When set, only these kinds are available in the type selector */
+  lockedKinds?: LayerKind[];
 }
 
+// locationlink is system-managed — never user-addable
+const ALL_KIND_OPTIONS: { value: LayerKind; label: string }[] = [
+  { value: 'terrain', label: 'Terrain (Autotiled)' },
+  { value: 'visual', label: 'Tile Layer' },
+  { value: 'object', label: 'Object Layer' },
+  { value: 'entity', label: 'Entity (Objects)' },
+  { value: 'collision', label: 'Collision' },
+  { value: 'navigation', label: 'Navigation' },
+  { value: 'metadata', label: 'Metadata' },
+];
+
 export const LayerModal: React.FC<LayerModalProps> = ({
-    isOpen,
-    onClose,
-    onSave,
-    formData,
-    setFormData,
-    isEditing,
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+  isEditing,
+  lockedKinds,
 }) => {
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
-            <ModalOverlay backdropFilter="blur(4px)" />
-            <ModalContent bg="gray.900" border="1px" borderColor="gray.700">
-                <ModalHeader fontSize="md" pb={2}>
-                    {isEditing ? 'Edit Layer' : 'Add Layer'}
-                </ModalHeader>
-                <ModalBody>
-                    <VStack spacing={4} align="stretch">
-                        <FormControl>
-                            <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
-                                Name
-                            </FormLabel>
-                            <Input
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="Layer name"
-                                size="sm"
-                                bg="gray.800"
-                                autoFocus
-                            />
-                        </FormControl>
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
+  const kindOptions =
+    lockedKinds && lockedKinds.length > 0
+      ? ALL_KIND_OPTIONS.filter((o) => lockedKinds.includes(o.value))
+      : ALL_KIND_OPTIONS;
 
-                        <FormControl>
-                            <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
-                                Type
-                            </FormLabel>
-                            <Select
-                                value={formData.kind}
-                                onChange={(e) => setFormData({ ...formData, kind: e.target.value as LayerKind })}
-                                size="sm"
-                                bg="gray.800"
-                            >
-                                <option value="visual">Visual (Tiles)</option>
-                                <option value="collision">Collision</option>
-                                <option value="navigation">Navigation</option>
-                                <option value="metadata">Metadata</option>
-                            </Select>
-                        </FormControl>
+  const form = useForm({
+    defaultValues: initialData,
+    onSubmit: async ({ value }) => {
+      onSave(value);
+    },
+  });
 
-                        <FormControl>
-                            <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
-                                Z-Order
-                            </FormLabel>
-                            <Input
-                                type="number"
-                                value={formData.zOrder}
-                                onChange={(e) => setFormData({ ...formData, zOrder: parseInt(e.target.value, 10) || 0 })}
-                                size="sm"
-                                bg="gray.800"
-                            />
-                            <Text fontSize="10px" color="gray.500" mt={1}>
-                                Lower values render first (behind higher values)
-                            </Text>
-                        </FormControl>
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered initialFocusRef={nameInputRef}>
+      <ModalOverlay backdropFilter="blur(4px)" />
+      <ModalContent bg="gray.900" border="1px" borderColor="editorBorderLight">
+        <ModalHeader fontSize="md" pb={2}>
+          {isEditing ? 'Edit Layer' : 'Add Layer'}
+        </ModalHeader>
+        <ModalBody>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void form.handleSubmit();
+            }}
+          >
+            <VStack spacing={4} align="stretch">
+              <form.Field name="name">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Name</FieldLabel>
+                    <Input
+                      ref={nameInputRef}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      placeholder="Layer name"
+                      size="sm"
+                      bg="gray.800"
+                    />
+                  </FormControl>
+                )}
+              </form.Field>
 
+              <form.Field name="kind">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Type</FieldLabel>
+                    <Select
+                      value={field.state.value}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value as LayerKind);
+                      }}
+                      onBlur={field.handleBlur}
+                      size="sm"
+                      bg="gray.800"
+                      isDisabled={kindOptions.length === 1}
+                    >
+                      {kindOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </form.Field>
+
+              <form.Field name="zOrder">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Z-Order</FieldLabel>
+                    <Input
+                      type="number"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(parseInt(e.target.value, 10) || 0)}
+                      onBlur={field.handleBlur}
+                      size="sm"
+                      bg="gray.800"
+                    />
+                    <Text fontSize="10px" color="gray.500" mt={1}>
+                      Lower values render first (behind higher values)
+                    </Text>
+                  </FormControl>
+                )}
+              </form.Field>
+
+              <form.Subscribe selector={(state) => state.values.kind}>
+                {(kind) =>
+                  kind !== 'object' &&
+                  kind !== 'entity' &&
+                  kind !== 'terrain' &&
+                  kind !== 'navigation' &&
+                  kind !== 'collision' &&
+                  kind !== 'metadata' ? (
+                    <form.Field name="sortingLayer">
+                      {(field) => (
                         <FormControl>
-                            <FormLabel fontSize="xs" fontWeight="bold" textTransform="uppercase" color="gray.500">
-                                Icon
-                            </FormLabel>
-                            <Select
-                                value={formData.icon}
-                                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                size="sm"
-                                bg="gray.800"
-                            >
-                                {LAYER_ICONS.map(icon => (
-                                    <option key={icon.value} value={icon.value}>{icon.label}</option>
-                                ))}
-                            </Select>
+                          <FieldLabel>Sorting Layer</FieldLabel>
+                          <Select
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value as SortingLayer)}
+                            onBlur={field.handleBlur}
+                            size="sm"
+                            bg="gray.800"
+                          >
+                            {SORTING_LAYER_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </Select>
+                          <Text fontSize="10px" color="gray.500" mt={1}>
+                            {SORTING_LAYER_OPTIONS.find((o) => o.value === field.state.value)
+                              ?.description ?? ''}
+                          </Text>
                         </FormControl>
-                    </VStack>
-                </ModalBody>
-                <ModalFooter pt={4}>
-                    <Button variant="ghost" size="sm" mr={2} onClick={onClose}>
-                        Cancel
-                    </Button>
-                    <Button colorScheme="blue" size="sm" onClick={onSave}>
-                        {isEditing ? 'Save Changes' : 'Create Layer'}
-                    </Button>
-                </ModalFooter>
-            </ModalContent>
-        </Modal>
-    );
+                      )}
+                    </form.Field>
+                  ) : null
+                }
+              </form.Subscribe>
+
+              <form.Field name="icon">
+                {(field) => (
+                  <FormControl>
+                    <FieldLabel>Icon</FieldLabel>
+                    <Select
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      size="sm"
+                      bg="gray.800"
+                    >
+                      {LAYER_ICONS.map((icon) => (
+                        <option key={icon.value} value={icon.value}>
+                          {icon.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </form.Field>
+            </VStack>
+          </form>
+        </ModalBody>
+        <ModalFooter pt={4}>
+          <Button variant="ghost" size="sm" mr={2} onClick={onClose}>
+            Cancel
+          </Button>
+          <form.Subscribe selector={(s) => s.canSubmit}>
+            {(canSubmit) => (
+              <Button
+                colorScheme="blue"
+                size="sm"
+                onClick={() => void form.handleSubmit()}
+                isDisabled={!canSubmit}
+              >
+                {isEditing ? 'Save Changes' : 'Create Layer'}
+              </Button>
+            )}
+          </form.Subscribe>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
 };
 
 export default LayerModal;

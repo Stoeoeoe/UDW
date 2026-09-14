@@ -1,113 +1,143 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box, useDisclosure, VStack } from '@chakra-ui/react';
-// icons
-import { useEditorStore } from '../../../store/useEditorStore';
+import { runEditorHistoryCommand, useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewportPixi } from './MapViewportPixi';
 import { MapCreator } from '../../dialogs/MapCreator';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
+import { LinkInspector } from './LinkInspector';
+import { AnchorInspector } from './AnchorInspector';
+import { TriggerInspector } from './TriggerInspector';
+import { CollisionInspector } from './CollisionInspector';
 import { TilesetPalette } from '../../tileset/TilesetPalette';
-import { MapBrowser } from './MapBrowser';
-import { EntityPalette } from '../entity/EntityPalette';
+import { ObjectPalette } from '../../tileset/ObjectPalette';
+import { EntityBottomPalette } from '../entity/EntityBottomPalette';
+import { NavigationBottomPanel } from './NavigationBottomPanel';
+import { NewLinkDialog } from './NewLinkDialog';
 import { EditorModal } from '../../common/EditorModal';
+import { resolveMapContext } from '../../../lib/mapUtils';
+import { MapWorldView } from './MapWorldView.tsx';
+import { LayersPanel } from './LayersPanel';
+import { VariationManager } from './VariationManager';
+import { MetadataDialog } from './MetadataDialog';
 
-/**
- * Combined right panel showing tool properties and entity inspector.
- * When using entity tools, shows the entity palette at the top.
- */
 const MapRightPanel: React.FC = () => {
-  const activeTool = useEditorStore((state) => state.activeTool);
-  const isEntityMode =
-    activeTool === 'entityPlace' || activeTool === 'entitySelect';
+  const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
+  const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
+  const selectedTriggerId = useEditorStore((state) => state.selectedTriggerId);
+  const selectedCollisionId = useEditorStore((state) => state.selectedCollisionId);
+  const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
+  const selectedObjectInstanceId = useEditorStore((state) => state.selectedObjectInstanceId);
+  const currentMap = useEditorStore((state) => state.currentMap);
+  const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
+
+  const selectedLayerKind = currentMap?.layers.find((l) => l.id === selectedLayerId)?.kind;
+  const showPropertiesInspector =
+    selectedLayerKind === 'entity' ||
+    selectedLayerKind === 'navigation' ||
+    selectedLayerKind === 'object';
 
   return (
-    <VStack align="stretch" spacing={0} h="full" overflow="hidden">
-      {isEntityMode ? (
-        <>
-          <Box flex={1} overflow="hidden" minH="200px">
-            <EntityPalette />
-          </Box>
-          <Box
-            borderTop="1px"
-            borderColor="editor.border"
-            maxH="40%"
-            overflow="auto"
-          >
-            <PropertiesPanel />
-          </Box>
-        </>
+    <VStack align="stretch" spacing={0} h="full" overflow="auto">
+      {selectedLinkId ? (
+        <LinkInspector />
+      ) : selectedAnchorId ? (
+        <AnchorInspector />
+      ) : selectedTriggerId ? (
+        <TriggerInspector />
+      ) : selectedCollisionId ? (
+        <CollisionInspector />
+      ) : selectedEntityId || selectedObjectInstanceId ? (
+        <PropertiesPanel />
       ) : (
-        <VStack align="stretch" spacing={0} flex={1} overflow="auto">
+        <>
           <ToolPropertiesPanel />
-          <PropertiesPanel />
-        </VStack>
+          {showPropertiesInspector && <PropertiesPanel />}
+        </>
       )}
     </VStack>
   );
 };
 
-/**
- * Combined left panel: Map browser (maps + variations) on top, layers on bottom
- */
 const MapLeftPanel: React.FC = () => {
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="hidden">
-      <MapBrowser />
+      <Box
+        flexShrink={0}
+        minH="16rem"
+        maxH="24rem"
+        borderBottom="1px"
+        borderColor="editorShellBorder"
+      >
+        <VariationManager />
+      </Box>
+      <Box flex={1} minH={0}>
+        <LayersPanel />
+      </Box>
     </VStack>
   );
 };
 
-/**
- * MapEditor - The complete map editing experience.
- * Provides: canvas viewport, layers panel, properties inspector, tileset palette.
- */
 export const MapEditor: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
-  const currentMapPath = useEditorStore((state) => state.currentMapPath);
-  const maps = useEditorStore((state) => state.maps);
-  const setActiveTool = useEditorStore((state) => state.setActiveTool);
+  const activeVariationId = useEditorStore((state) => state.activeVariationId);
+  const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
+  const pendingNewLinkId = useEditorStore((state) => state.pendingNewLinkId);
+  const clearPendingNewLink = useEditorStore((state) => state.clearPendingNewLink);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isMetadataOpen,
+    onOpen: onMetadataOpen,
+    onClose: onMetadataClose,
+  } = useDisclosure();
+  const [activeView] = React.useState<'canvas' | 'world'>('canvas');
+  const [metadataInitialTab, setMetadataInitialTab] = React.useState<'base' | 'variation'>('base');
 
-  // When a map becomes active (different map), switch to tile paint tool by default
-  // Use mapPath instead of map object to avoid triggering on every tile edit
-  useEffect(() => {
-    if (currentMapPath) {
-      setActiveTool('stamp');
-    }
-  }, [currentMapPath, setActiveTool]);
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isPrimaryModifier = event.ctrlKey || event.metaKey;
+      if (!isPrimaryModifier || event.altKey) {
+        return;
+      }
 
-  // No map loaded state — show map browser on left with empty content on right
+      const key = event.key.toLowerCase();
+      const command =
+        key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
+
+      if (!command) {
+        return;
+      }
+
+      if (runEditorHistoryCommand(command, event.target)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  React.useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent | undefined;
+      const focus = customEvent?.detail?.focus === 'variation' ? 'variation' : 'base';
+      setMetadataInitialTab(focus);
+      onMetadataOpen();
+    };
+
+    window.addEventListener('openMetadataDialog', handler as EventListener);
+    return () => window.removeEventListener('openMetadataDialog', handler as EventListener);
+  }, [onMetadataOpen]);
+
   if (!currentMap) {
-    // If we have maps, show the browser so user can select one
-    if (maps.length > 0) {
-      return (
-        <ResizableEditorLayout
-          header={{
-            title: 'Maps',
-            subtitle: `${maps.length} map${maps.length !== 1 ? 's' : ''} in project`,
-          }}
-          content={
-            <EmptyScreen
-              icon="👈"
-              title="Select a Map"
-              description="Choose a map from the browser to start editing."
-            />
-          }
-          leftPanel={<MapLeftPanel />}
-          leftPanelDefaultSize={20}
-        />
-      );
-    }
-
-    // No maps at all
     return (
       <>
         <EmptyScreen
-          icon="🗺️"
-          title="No Map Active"
-          description="Create a new map to start building your world."
+          icon="Map"
+          title="No Location Active"
+          description="Open a location from the explorer or create a new map to start building your world."
           buttonLabel="Create First Map"
           onCreate={onOpen}
         />
@@ -119,20 +149,59 @@ export const MapEditor: React.FC = () => {
     );
   }
 
+  const effectiveMap = resolveMapContext(currentMap, activeVariationId);
+  const activeVariation = currentMap.variations?.find(
+    (variation) => variation.id === activeVariationId,
+  );
+  const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
+  const selectedLayerKind = selectedLayer?.kind;
+  const isObjectLayer = selectedLayer?.kind === 'object';
+  const subtitleParts = [
+    `${currentMap.width}x${currentMap.height} tiles`,
+    `${currentMap.layers.length} layers`,
+  ];
+
+  if (selectedLayer) {
+    subtitleParts.push(isObjectLayer ? `${selectedLayer.name} - objects` : selectedLayer.name);
+  }
+
+  if (activeVariation) {
+    subtitleParts.push(activeVariation.displayName);
+  }
+
   return (
-    <ResizableEditorLayout
-      header={{
-        title: currentMap.name || 'Map',
-        subtitle: `${currentMap.width}×${currentMap.height} tiles • ${currentMap.layers.length} layers`,
-      }}
-      content={<MapViewportPixi />}
-      leftPanel={<MapLeftPanel />}
-      rightPanel={<MapRightPanel />}
-      bottomPanel={<TilesetPalette enableMultiSelect={true} />}
-      leftPanelDefaultSize={20}
-      rightPanelDefaultSize={20}
-      bottomPanelDefaultSize={25}
-    />
+    <>
+      <ResizableEditorLayout
+        header={{
+          title: activeView === 'world' ? 'World' : effectiveMap.name || 'Location',
+          subtitle: activeView === 'world' ? 'Location world view' : subtitleParts.join(' - '),
+        }}
+        content={activeView === 'world' ? <MapWorldView /> : <MapViewportPixi />}
+        leftPanel={<MapLeftPanel />}
+        rightPanel={activeView === 'world' ? undefined : <MapRightPanel />}
+        bottomPanel={
+          activeView === 'world' ? undefined : selectedLayerKind === 'entity' ? (
+            <EntityBottomPalette />
+          ) : selectedLayerKind === 'navigation' ? (
+            <NavigationBottomPanel />
+          ) : isObjectLayer ? (
+            <ObjectPalette />
+          ) : selectedLayerKind === 'terrain' ? null : (
+            <TilesetPalette enableMultiSelect={true} />
+          )
+        }
+        leftPanelDefaultSize={18}
+        rightPanelDefaultSize={22}
+        bottomPanelDefaultSize={25}
+      />
+
+      <NewLinkDialog linkId={pendingNewLinkId} onClose={clearPendingNewLink} />
+      <MetadataDialog
+        isOpen={isMetadataOpen}
+        onClose={onMetadataClose}
+        initialTab={metadataInitialTab}
+      />
+    </>
   );
 };
 

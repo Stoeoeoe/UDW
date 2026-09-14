@@ -34,6 +34,13 @@
       "type": "tile",
       "color": "#43283a",
       "zIndex": 10
+    },
+    {
+      "id": "layer-1775079949627",
+      "name": "Entity Layer",
+      "type": "entity",
+      "color": "#9bcb15",
+      "zIndex": 11
     }
   ],
   "entityTypes": [
