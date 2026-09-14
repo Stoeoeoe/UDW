@@ -330,18 +330,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
       // Helper to render brush erase
       const renderBrushErase = (cx: number, cy: number) => {
-        if (effectiveBrushSize <= 1) {
-          renderEraseAt(cx, cy);
-        } else {
-          const r = effectiveBrushSize - 1;
-          for (let dy = -r; dy <= r; dy++) {
-            for (let dx = -r; dx <= r; dx++) {
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist <= r) {
-                renderEraseAt(cx + dx, cy + dy);
-              }
-            }
-          }
+        for (const point of circularBrush(cx, cy, effectiveBrushSize)) {
+          renderEraseAt(point.x, point.y);
         }
       };
 
@@ -373,15 +363,16 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             }
           }
         } else if (effectiveEraseDrawMode === 'circle') {
-          const radius = Math.sqrt(Math.pow(ex - sx, 2) + Math.pow(ey - sy, 2));
+          const radiusSquared = (ex - sx) ** 2 + (ey - sy) ** 2;
+          const radius = Math.sqrt(radiusSquared);
           const minX = Math.floor(sx - radius);
           const maxX = Math.ceil(sx + radius);
           const minY = Math.floor(sy - radius);
           const maxY = Math.ceil(sy + radius);
           for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
-              const dist = Math.sqrt(Math.pow(x - sx, 2) + Math.pow(y - sy, 2));
-              if (dist <= radius) {
+              const distanceSquared = (x - sx) ** 2 + (y - sy) ** 2;
+              if (distanceSquared <= radiusSquared) {
                 renderEraseAt(x, y);
               }
             }
@@ -428,18 +419,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
       // Helper to render brush
       const renderBrushTerrain = (cx: number, cy: number) => {
-        if (effectiveBrushSize <= 1) {
-          renderTerrainAt(cx, cy);
-        } else {
-          const r = effectiveBrushSize - 1;
-          for (let dy = -r; dy <= r; dy++) {
-            for (let dx = -r; dx <= r; dx++) {
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist <= r) {
-                renderTerrainAt(cx + dx, cy + dy);
-              }
-            }
-          }
+        for (const point of circularBrush(cx, cy, effectiveBrushSize)) {
+          renderTerrainAt(point.x, point.y);
         }
       };
 
@@ -472,15 +453,16 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             }
           }
         } else if (effectiveTerrainDrawMode === 'circle') {
-          const radius = Math.sqrt(Math.pow(ex - sx, 2) + Math.pow(ey - sy, 2));
+          const radiusSquared = (ex - sx) ** 2 + (ey - sy) ** 2;
+          const radius = Math.sqrt(radiusSquared);
           const minX = Math.floor(sx - radius);
           const maxX = Math.ceil(sx + radius);
           const minY = Math.floor(sy - radius);
           const maxY = Math.ceil(sy + radius);
           for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
-              const dist = Math.sqrt(Math.pow(x - sx, 2) + Math.pow(y - sy, 2));
-              if (dist <= radius) {
+              const distanceSquared = (x - sx) ** 2 + (y - sy) ** 2;
+              if (distanceSquared <= radiusSquared) {
                 renderTerrainAt(x, y);
               }
             }

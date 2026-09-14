@@ -55,10 +55,10 @@ export function* circularBrush(
         return;
     }
     const r = radius - 1;
+    const radiusSquared = r * r;
     for (let dy = -r; dy <= r; dy++) {
         for (let dx = -r; dx <= r; dx++) {
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= r) {
+            if (dx * dx + dy * dy <= radiusSquared) {
                 yield { x: cx + dx, y: cy + dy };
             }
         }
@@ -101,6 +101,7 @@ export function* filledCircle(
     cy: number,
     radius: number
 ): Generator<{ x: number; y: number }> {
+    const radiusSquared = radius * radius;
     const minX = Math.floor(cx - radius);
     const maxX = Math.ceil(cx + radius);
     const minY = Math.floor(cy - radius);
@@ -108,8 +109,8 @@ export function* filledCircle(
 
     for (let y = minY; y <= maxY; y++) {
         for (let x = minX; x <= maxX; x++) {
-            const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-            if (dist <= radius) {
+            const distanceSquared = (x - cx) ** 2 + (y - cy) ** 2;
+            if (distanceSquared <= radiusSquared) {
                 yield { x, y };
             }
         }

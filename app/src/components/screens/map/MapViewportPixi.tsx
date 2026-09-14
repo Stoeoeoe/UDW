@@ -170,28 +170,64 @@ export const MapViewportPixi: React.FC = () => {
 
         // Subscribe to relevant state changes
         const unsubscribe = useEditorStore.subscribe((state, prevState) => {
-            // Re-render tiles when map data or variation changes
-            if (state.currentMap !== prevState.currentMap || state.activeVariationId !== prevState.activeVariationId) {
+            const map = state.currentMap;
+            const previousMap = prevState.currentMap;
+            const mapChanged = map?.id !== previousMap?.id;
+            const variationChanged =
+                state.activeVariationId !== prevState.activeVariationId ||
+                map?.variations !== previousMap?.variations;
+
+            // A tile edit should not rebuild unrelated entities or grid graphics.
+            const tilesChanged =
+                mapChanged ||
+                map?.layers !== previousMap?.layers ||
+                variationChanged ||
+                state.tilesets !== prevState.tilesets ||
+                state.loadedSprites !== prevState.loadedSprites;
+            if (tilesChanged) {
                 renderTiles();
+            }
+
+            const entitiesChanged =
+                mapChanged ||
+                map?.entities !== previousMap?.entities ||
+                variationChanged ||
+                state.entityTypes !== prevState.entityTypes ||
+                state.selectedEntityId !== prevState.selectedEntityId;
+            if (entitiesChanged) {
                 renderEntities();
+            }
+
+            if (
+                mapChanged ||
+                map?.width !== previousMap?.width ||
+                map?.height !== previousMap?.height
+            ) {
                 renderGrid();
             }
-            // Re-render entities when selection changes
-            if (state.selectedEntityId !== prevState.selectedEntityId) {
-                renderEntities();
-            }
+
             // Re-render hover on hover change
             if (state.hoveredTile !== prevState.hoveredTile) {
                 renderHover();
-                renderPreview();
             }
-            // Re-render preview on tool/tile selection/brush size/draw mode change
-            if (state.activeTool !== prevState.activeTool || 
+
+            const previewChanged =
+                state.hoveredTile !== prevState.hoveredTile ||
+                mapChanged ||
+                variationChanged ||
+                state.activeTool !== prevState.activeTool ||
+                state.activeTilesetId !== prevState.activeTilesetId ||
                 state.selectedTileIndex !== prevState.selectedTileIndex ||
                 state.selectedTileIndices !== prevState.selectedTileIndices ||
                 state.drawPreview !== prevState.drawPreview ||
                 state.brushSize !== prevState.brushSize ||
-                state.drawMode !== prevState.drawMode) {
+                state.drawMode !== prevState.drawMode ||
+                state.sampledPattern !== prevState.sampledPattern ||
+                state.selectedTerrainId !== prevState.selectedTerrainId ||
+                state.terrainTypes !== prevState.terrainTypes ||
+                state.tilesets !== prevState.tilesets ||
+                state.loadedSprites !== prevState.loadedSprites;
+            if (previewChanged) {
                 renderPreview();
             }
         });
