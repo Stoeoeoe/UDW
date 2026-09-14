@@ -1,5 +1,5 @@
 import { Tileset } from '../types/schema';
-import { decodeTileRef } from './tileRef';
+import { decodeTileRef, parseTileRef } from './tileRef';
 
 /**
  * Corner indices for terrainCorners array:
@@ -269,18 +269,13 @@ export function buildTerrainGridFromLayer(
             const tileRef = typeof encoded === 'string' ? encoded : decodeTileRef(encoded, tilesetRefs);
             if (!tileRef) continue;
 
-            // Parse tile reference "tilesetId:tileIndex"
-            const colonIdx = tileRef.lastIndexOf(':');
-            if (colonIdx <= 0) continue;
+            const parsed = parseTileRef(tileRef);
+            if (!parsed) continue;
 
-            const tilesetId = tileRef.substring(0, colonIdx);
-            const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
-            if (isNaN(tileIndex)) continue;
-
-            const tileset = tilesets.get(tilesetId);
+            const tileset = tilesets.get(parsed.tilesetId);
             if (!tileset) continue;
 
-            const tileDef = tileset.tiles[tileIndex];
+            const tileDef = tileset.tiles[parsed.tileIndex];
             if (!tileDef?.terrainCorners) continue;
 
             // Store each corner's terrain

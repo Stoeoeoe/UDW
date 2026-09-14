@@ -7,6 +7,7 @@ import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { buildPatternFromSelection, TilePattern } from '../../../lib/tileUtils';
 import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
+import { parseTileRef } from '../../../lib/tileRef';
 
 interface UseMapRendererProps {
   viewport: Viewport | null;
@@ -154,9 +155,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             );
             if (!tileRef) continue;
 
-            const [tsId, indexStr] = tileRef.split(':');
-            const index = parseInt(indexStr);
-            const tileset = tilesets.get(tsId);
+            const parsed = parseTileRef(tileRef);
+            if (!parsed) continue;
+
+            const tileset = tilesets.get(parsed.tilesetId);
 
             if (tileset) {
               let effectiveTileset = tileset;
@@ -165,14 +167,14 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
               );
               if (variation?.tilesetSuffix) {
                 const suffixed = tilesets.get(
-                  `${tsId}${variation.tilesetSuffix}`,
+                  `${parsed.tilesetId}${variation.tilesetSuffix}`,
                 );
                 if (suffixed) effectiveTileset = suffixed;
               }
 
               const texture = getTileTexture(
                 effectiveTileset.spriteSheet,
-                index,
+                parsed.tileIndex,
                 effectiveTileset.tileWidth,
                 effectiveTileset.tileHeight,
                 effectiveTileset.columns,

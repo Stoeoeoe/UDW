@@ -74,26 +74,3 @@ export function samplePatternAt(
     const py = ((dy % pattern.patternH) + pattern.patternH) % pattern.patternH;
     return pattern.pattern[py][px];
 }
-
-/**
- * Parse a tile reference string (format: "tilesetId:tileIndex")
- * @returns Object with tilesetId and tileIndex, or null if invalid
- */
-export function parseTileRef(tileRef: string | null): { tilesetId: string; tileIndex: number } | null {
-    if (!tileRef) return null;
-    const colonIdx = tileRef.lastIndexOf(':');
-    if (colonIdx <= 0) return null;
-    
-    const tilesetId = tileRef.substring(0, colonIdx);
-    const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
-    
-    if (isNaN(tileIndex)) return null;
-    return { tilesetId, tileIndex };
-}
-
-/**
- * Create a tile reference string
- */
-export function createTileRef(tilesetId: string, tileIndex: number): string {
-    return `${tilesetId}:${tileIndex}`;
-}

@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
     buildPatternFromSelection,
     samplePatternAt,
-    parseTileRef,
-    createTileRef,
 } from './tileUtils';
 import { Tileset } from '../types/schema';
 
@@ -100,52 +98,5 @@ describe('samplePatternAt', () => {
         expect(samplePatternAt(pattern, 10, 10, 10, 10)).toBe(0);
         expect(samplePatternAt(pattern, 10, 10, 11, 10)).toBe(1);
         expect(samplePatternAt(pattern, 10, 10, 10, 11)).toBe(4);
-    });
-});
-
-describe('parseTileRef', () => {
-    it('should return null for null input', () => {
-        expect(parseTileRef(null)).toBeNull();
-    });
-
-    it('should return null for empty string', () => {
-        expect(parseTileRef('')).toBeNull();
-    });
-
-    it('should return null for invalid format', () => {
-        expect(parseTileRef('invalid')).toBeNull();
-        expect(parseTileRef('noindex:')).toBeNull();
-        expect(parseTileRef(':5')).toBeNull();
-    });
-
-    it('should parse valid tile reference', () => {
-        const result = parseTileRef('village:42');
-        expect(result).toEqual({ tilesetId: 'village', tileIndex: 42 });
-    });
-
-    it('should handle tilesetId with colons', () => {
-        // Uses lastIndexOf, so should handle ids with colons
-        const result = parseTileRef('my:tileset:5');
-        expect(result).toEqual({ tilesetId: 'my:tileset', tileIndex: 5 });
-    });
-
-    it('should return null for non-numeric index', () => {
-        expect(parseTileRef('village:abc')).toBeNull();
-    });
-});
-
-describe('createTileRef', () => {
-    it('should create a tile reference string', () => {
-        expect(createTileRef('village', 42)).toBe('village:42');
-    });
-
-    it('should handle zero index', () => {
-        expect(createTileRef('test', 0)).toBe('test:0');
-    });
-
-    it('should roundtrip with parseTileRef', () => {
-        const ref = createTileRef('myTileset', 123);
-        const parsed = parseTileRef(ref);
-        expect(parsed).toEqual({ tilesetId: 'myTileset', tileIndex: 123 });
     });
 });

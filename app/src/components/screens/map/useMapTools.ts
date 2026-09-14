@@ -12,6 +12,7 @@ import {
 import { buildPatternFromSelection } from '../../../lib/tileUtils';
 import { sampleRandomTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
+import { parseTileRef } from '../../../lib/tileRef';
 
 interface UseMapToolsProps {
   viewport: Viewport | null;
@@ -909,14 +910,10 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
               activeVariationId,
             );
             if (tileRef) {
-              const colonIdx = tileRef.lastIndexOf(':');
-              if (colonIdx > 0) {
-                const tilesetId = tileRef.substring(0, colonIdx);
-                const tileIndex = parseInt(tileRef.substring(colonIdx + 1), 10);
-                if (!isNaN(tileIndex)) {
-                  setActiveTileset(tilesetId);
-                  setSelectedTile(tileIndex);
-                }
+              const parsed = parseTileRef(tileRef);
+              if (parsed) {
+                setActiveTileset(parsed.tilesetId);
+                setSelectedTile(parsed.tileIndex);
               }
             }
 
@@ -949,19 +946,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
                   activeVariationId,
                 );
                 if (tileRef) {
-                  const colonIdx = tileRef.lastIndexOf(':');
-                  if (colonIdx > 0) {
-                    const tilesetId = tileRef.substring(0, colonIdx);
-                    const tileIndex = parseInt(
-                      tileRef.substring(colonIdx + 1),
-                      10,
-                    );
-                    if (!isNaN(tileIndex)) {
-                      if (!firstTilesetId) firstTilesetId = tilesetId;
-                      // Only include tiles from the same tileset
-                      if (tilesetId === firstTilesetId) {
-                        pattern[ty - minY][tx - minX] = tileIndex;
-                      }
+                  const parsed = parseTileRef(tileRef);
+                  if (parsed) {
+                    if (!firstTilesetId) firstTilesetId = parsed.tilesetId;
+                    // Only include tiles from the same tileset
+                    if (parsed.tilesetId === firstTilesetId) {
+                      pattern[ty - minY][tx - minX] = parsed.tileIndex;
                     }
                   }
                 }

@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
 import { resolveTileAt } from '../../lib/mapUtils';
 import { sampleRandomTile } from '../../lib/randomUtils';
-import { samplePatternAt, createTileRef } from '../../lib/tileUtils';
+import { samplePatternAt } from '../../lib/tileUtils';
+import { createTileRef } from '../../lib/tileRef';
 import { floodFillCollect } from '../../lib/algorithms';
 import { setTileInState } from '../storeHelpers';
 
