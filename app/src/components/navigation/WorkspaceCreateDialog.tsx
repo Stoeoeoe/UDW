@@ -17,10 +17,9 @@ import {
   toRuntimeDialogue,
   type MetadataDraft,
 } from '../screens/dialogue/dialogueUtils';
-import { MapCreator } from '../dialogs/MapCreator';
+import { GuidedMapCreationDialog } from '../dialogs/GuidedMapCreationDialog';
 import { CreateTilesetDialog } from '../screens/tileset/CreateTilesetDialog';
 import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
-import { EditorModal } from '../common/EditorModal';
 
 export type CreateDialogState = {
   kind: NonNullable<WorkspaceTreeNode['resourceKind']>;
@@ -80,21 +79,19 @@ export const WorkspaceCreateDialog: React.FC<{
 
   if (createFlow === 'location') {
     return (
-      <EditorModal isOpen onClose={onClose}>
-        <MapCreator
-          onCreate={onClose}
-          onCancel={onClose}
-          folderPath={state.folderPath}
-          onCreatedMapId={(mapId) => {
-            const map = useEditorStore.getState().maps.find((entry) => entry.id === mapId);
-            if (!map) return;
-            onOpenDocument(
-              createEditorResourceDocument({ type: 'location', id: map.id, name: map.name }),
-              { pin: true },
-            );
-          }}
-        />
-      </EditorModal>
+      <GuidedMapCreationDialog
+        isOpen
+        onClose={onClose}
+        folderPath={state.folderPath}
+        onCreatedMapId={(mapId) => {
+          const map = useEditorStore.getState().maps.find((entry) => entry.id === mapId);
+          if (!map) return;
+          onOpenDocument(
+            createEditorResourceDocument({ type: 'location', id: map.id, name: map.name }),
+            { pin: true },
+          );
+        }}
+      />
     );
   }
 

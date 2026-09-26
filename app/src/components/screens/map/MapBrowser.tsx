@@ -12,7 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { MapCreator } from '../../dialogs/MapCreator';
+import { GuidedMapCreationDialog } from '../../dialogs/GuidedMapCreationDialog';
 import { EditorModal } from '../../common/EditorModal';
 import { EntityFormDialog } from '../common/EntityFormDialog';
 import { VariationManager } from './VariationManager';
@@ -274,9 +274,7 @@ export const MapBrowser: React.FC<MapBrowserProps> = ({ showEditingPanels = true
       )}
 
       {/* Map Creator Modal */}
-      <EditorModal isOpen={isMapCreatorOpen} onClose={onMapCreatorClose}>
-        <MapCreator onCreate={onMapCreatorClose} onCancel={onMapCreatorClose} />
-      </EditorModal>
+      <GuidedMapCreationDialog isOpen={isMapCreatorOpen} onClose={onMapCreatorClose} />
 
       <MetadataDialog
         isOpen={isMetadataOpen}

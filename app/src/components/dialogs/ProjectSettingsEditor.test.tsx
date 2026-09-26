@@ -60,4 +60,14 @@ describe('ProjectSettingsEditor', () => {
 
     expect(await screen.findByText(/Tile size should be power of 2/i)).toBeInTheDocument();
   });
+
+  it('renders create-project actions and allows cancellation', () => {
+    const onCancel = vi.fn();
+
+    renderWithChakra(<ProjectSettingsEditor onSave={() => {}} onCancel={onCancel} />);
+
+    expect(screen.getByRole('button', { name: 'Create Project' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
 });

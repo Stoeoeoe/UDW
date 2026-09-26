@@ -19,6 +19,7 @@ import { FormLabel } from '../common/FormLabel';
 interface ProjectSettingsEditorProps {
   initialProject?: Project;
   onSave: (project: Project) => void;
+  onCancel?: () => void;
 }
 
 const DEFAULT_PROJECT: Project = {
@@ -61,6 +62,7 @@ type FormData = z.infer<typeof schema>;
 export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
   initialProject,
   onSave,
+  onCancel,
 }) => {
   const {
     register,
@@ -209,6 +211,11 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
         <Divider borderColor="editorBorderSubtle" />
 
         <HStack justify="flex-end" spacing="3">
+          {onCancel && (
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
           <Button
             type="submit"
             colorScheme="blue"
@@ -216,7 +223,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
             fontWeight="bold"
             shadow="0 4px 12px rgba(49, 130, 206, 0.3)"
           >
-            Save Project
+            {initialProject ? 'Save Project' : 'Create Project'}
           </Button>
         </HStack>
       </VStack>

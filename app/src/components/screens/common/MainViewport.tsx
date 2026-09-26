@@ -6,8 +6,7 @@ import { MapViewportPixi } from '../map/MapViewportPixi';
 import { TilesetEditor } from '../tileset/TilesetEditor';
 import { ViewportShell } from '../../common/ViewportShell';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { MapCreator } from '../../dialogs/MapCreator';
-import { EditorModal } from '../../common/EditorModal';
+import { GuidedMapCreationDialog } from '../../dialogs/GuidedMapCreationDialog';
 
 interface MainViewportProps {
   mode: EditorMode;
@@ -35,9 +34,7 @@ export const MainViewport: React.FC<MainViewportProps> = ({ mode }) => {
               </Button>
             </VStack>
 
-            <EditorModal isOpen={isOpen} onClose={onClose}>
-              <MapCreator onCreate={onClose} onCancel={onClose} />
-            </EditorModal>
+            <GuidedMapCreationDialog isOpen={isOpen} onClose={onClose} />
           </Center>
         );
       }

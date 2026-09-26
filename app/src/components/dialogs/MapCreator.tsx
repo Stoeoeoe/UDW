@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
+  Box,
   VStack,
   HStack,
   Text,
-  Button,
   Input,
   FormControl,
   NumberInput,
@@ -13,18 +13,20 @@ import {
   NumberDecrementStepper,
   Select,
   useToast,
-  Heading,
+  Icon,
 } from '@chakra-ui/react';
+import { FiGrid } from 'react-icons/fi';
 import { useEditorStore } from '../../store/useEditorStore';
 import { FormLabel } from '../common/FormLabel';
-import { EditorCard } from '../common/Surfaces';
 import { CaptionText } from '../common/Typography.tsx';
+import { EntityFormDialog } from '../screens/common/EntityFormDialog';
 
 interface MapCreatorProps {
   onCreate?: () => void;
   onCancel?: () => void;
   folderPath?: string;
   onCreatedMapId?: (mapId: string) => void;
+  onRequestCreateTileset?: () => void;
 }
 
 export const MapCreator: React.FC<MapCreatorProps> = ({
@@ -32,6 +34,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({
   onCancel,
   folderPath,
   onCreatedMapId,
+  onRequestCreateTileset,
 }) => {
   const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
   const createNewMap = useEditorStore((state) => state.createNewMap);
@@ -42,6 +45,13 @@ export const MapCreator: React.FC<MapCreatorProps> = ({
   const [height, setHeight] = useState(32);
   const [tilesetId, setTilesetId] = useState(tilesets[0]?.id || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const needsTileset = tilesets.length === 0;
+
+  React.useEffect(() => {
+    if (!tilesetId && tilesets[0]) {
+      setTilesetId(tilesets[0].id);
+    }
+  }, [tilesetId, tilesets]);
 
   const handleCreate = async () => {
     if (!name || !tilesetId) {
@@ -75,105 +85,83 @@ export const MapCreator: React.FC<MapCreatorProps> = ({
   };
 
   return (
-    <EditorCard p={8} w="lg">
-      <VStack spacing={6} align="stretch">
-        <VStack align="start" spacing={1}>
-          <Heading size="md" color="white">
-            Create New Map
-          </Heading>
-          <Text color="gray.500" fontSize="sm">
-            Define the dimensions and base style of your new world.
-          </Text>
-        </VStack>
-
-        <VStack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel>Map Name</FormLabel>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              bg="editorPanelBg"
-              borderColor="editorBorderSubtle"
-              _focus={{ borderColor: 'blue.500' }}
-              color="white"
-            />
-          </FormControl>
-
-          <HStack spacing={4} w="full">
-            <FormControl isRequired>
-              <FormLabel>Width (Tiles)</FormLabel>
-              <NumberInput
-                value={width}
-                min={1}
-                max={256}
-                onChange={(_, v) => setWidth(v)}
-                color="white"
-              >
-                <NumberInputField bg="editorPanelBg" borderColor="editorBorderSubtle" />
-                <NumberInputStepper>
-                  <NumberIncrementStepper border="none" color="gray.600" />
-                  <NumberDecrementStepper border="none" color="gray.600" />
-                </NumberInputStepper>
-              </NumberInput>
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel>Height (Tiles)</FormLabel>
-              <NumberInput
-                value={height}
-                min={1}
-                max={256}
-                onChange={(_, v) => setHeight(v)}
-                color="white"
-              >
-                <NumberInputField bg="editorPanelBg" borderColor="editorBorderSubtle" />
-                <NumberInputStepper>
-                  <NumberIncrementStepper border="none" color="gray.600" />
-                  <NumberDecrementStepper border="none" color="gray.600" />
-                </NumberInputStepper>
-              </NumberInput>
-            </FormControl>
-          </HStack>
-
-          <FormControl isRequired>
-            <FormLabel>Base Tileset</FormLabel>
-            <Select
-              value={tilesetId}
-              onChange={(e) => setTilesetId(e.target.value)}
-              bg="editorPanelBg"
-              borderColor="editorBorderSubtle"
-              _focus={{ borderColor: 'blue.500' }}
-              color="white"
-            >
-              {tilesets.map((ts) => (
-                <option key={ts.id} value={ts.id} style={{ background: '#1a202c' }}>
-                  {ts.name}
-                </option>
-              ))}
-            </Select>
-            {tilesets.length === 0 && (
-              <CaptionText color="red.400" mt={1}>
-                No tilesets found. Please import a tileset first.
+    <EntityFormDialog
+      title="Create Map"
+      description="Define the dimensions and base style of your new world."
+      onCancel={onCancel ?? (() => undefined)}
+      onSubmit={needsTileset ? onRequestCreateTileset : handleCreate}
+      submitLabel={needsTileset ? 'Import Tileset' : isSubmitting ? 'Creating...' : 'Create Map'}
+      isSubmitDisabled={(needsTileset && !onRequestCreateTileset) || isSubmitting}
+      minWidth="512px"
+    >
+      {needsTileset ? (
+        <Box
+          bg="editorSectionBg"
+          border="1px"
+          borderColor="editorBorderSubtle"
+          borderRadius="lg"
+          p={5}
+        >
+          <HStack align="start" spacing={4}>
+            <Box bg="blue.900" color="blue.200" borderRadius="md" p={3} flexShrink={0}>
+              <Icon as={FiGrid} boxSize={5} />
+            </Box>
+            <VStack align="start" spacing={1}>
+              <Text color="editorText" fontWeight="semibold">
+                Create a tileset first
+              </Text>
+              <CaptionText fontSize="sm" color="editorMutedText">
+                Maps use a tileset for their grid and artwork. Import a sprite sheet, then
+                you&apos;ll return here to create your map.
               </CaptionText>
-            )}
-          </FormControl>
-        </VStack>
+            </VStack>
+          </HStack>
+        </Box>
+      ) : (
+        <>
+          <VStack spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Map Name</FormLabel>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </FormControl>
 
-        <HStack spacing={3} pt={4}>
-          <Button variant="ghost" flex={1} onClick={onCancel} color="gray.400">
-            Cancel
-          </Button>
-          <Button
-            colorScheme="blue"
-            flex={2}
-            onClick={handleCreate}
-            isLoading={isSubmitting}
-            isDisabled={tilesets.length === 0}
-          >
-            Create Map
-          </Button>
-        </HStack>
-      </VStack>
-    </EditorCard>
+            <HStack spacing={4} w="full">
+              <FormControl isRequired>
+                <FormLabel>Width (Tiles)</FormLabel>
+                <NumberInput value={width} min={1} max={256} onChange={(_, v) => setWidth(v)}>
+                  <NumberInputField />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper border="none" color="gray.600" />
+                    <NumberDecrementStepper border="none" color="gray.600" />
+                  </NumberInputStepper>
+                </NumberInput>
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Height (Tiles)</FormLabel>
+                <NumberInput value={height} min={1} max={256} onChange={(_, v) => setHeight(v)}>
+                  <NumberInputField />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper border="none" color="gray.600" />
+                    <NumberDecrementStepper border="none" color="gray.600" />
+                  </NumberInputStepper>
+                </NumberInput>
+              </FormControl>
+            </HStack>
+
+            <FormControl isRequired>
+              <FormLabel>Base Tileset</FormLabel>
+              <Select value={tilesetId} onChange={(e) => setTilesetId(e.target.value)}>
+                {tilesets.map((ts) => (
+                  <option key={ts.id} value={ts.id}>
+                    {ts.name}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+          </VStack>
+        </>
+      )}
+    </EntityFormDialog>
   );
 };

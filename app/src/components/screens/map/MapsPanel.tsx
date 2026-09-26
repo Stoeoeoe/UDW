@@ -11,9 +11,8 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
-import { MapCreator } from '../../dialogs/MapCreator';
+import { GuidedMapCreationDialog } from '../../dialogs/GuidedMapCreationDialog';
 import { LayersPanel } from './LayersPanel';
-import { EditorModal } from '../../common/EditorModal';
 import PanelHeader from '../../../components/common/PanelHeader';
 import { GhostIconButton } from '../../common/IconButtons';
 import { SurfaceSectionHeader } from '../../common/Surfaces';
@@ -153,9 +152,7 @@ export const MapsPanel: React.FC = () => {
       </VStack>
 
       {/* Map Creator Modal */}
-      <EditorModal isOpen={isOpen} onClose={onClose}>
-        <MapCreator onCreate={onClose} onCancel={onClose} />
-      </EditorModal>
+      <GuidedMapCreationDialog isOpen={isOpen} onClose={onClose} />
     </VStack>
   );
 };

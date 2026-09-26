@@ -1,17 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  VStack,
-  Heading,
-  Text,
-  SimpleGrid,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  Image,
-  useToast,
-} from '@chakra-ui/react';
+import { Box, VStack, Text, SimpleGrid, useDisclosure, Image, useToast } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { fileSystem } from '../../../lib/fileSystem';
 import { ProjectSettingsEditor } from '../../dialogs/ProjectSettingsEditor';
@@ -20,6 +8,8 @@ import { recentProjects, RecentProject } from '../../../lib/recentProjects';
 import { ActionCard } from './ActionCard';
 import { RecentProjectItem } from './RecentProjectItem';
 import { FcFolder, FcPlus } from 'react-icons/fc';
+import { EditorModal } from '../../common/EditorModal';
+import { EditorCard, SurfaceSectionHeader } from '../../common/Surfaces';
 
 export const LandingScreen: React.FC = () => {
   const loadProject = useEditorStore((state) => state.loadProject);
@@ -167,12 +157,14 @@ export const LandingScreen: React.FC = () => {
       </VStack>
 
       {/* New Project Dialog */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
-        <ModalOverlay backdropFilter="blur(8px)" bg="blackAlpha.800" />
-        <ModalContent bg="transparent" border="none" boxShadow="none">
-          <ProjectSettingsEditor onSave={handleCreateProject} />
-        </ModalContent>
-      </Modal>
+      <EditorModal isOpen={isOpen} onClose={onClose} size="2xl">
+        <EditorCard overflow="hidden">
+          <SurfaceSectionHeader title="Create Project" px={6} py={4} />
+          <Box p={6}>
+            <ProjectSettingsEditor onSave={handleCreateProject} onCancel={onClose} />
+          </Box>
+        </EditorCard>
+      </EditorModal>
     </Box>
   );
 };
