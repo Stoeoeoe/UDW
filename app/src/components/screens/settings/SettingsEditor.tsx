@@ -16,11 +16,56 @@ import {
 } from '@chakra-ui/react';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { ListPanel, ListPanelItem } from '../common';
+import { SectionLabel } from '../../common/Typography';
 import {
   useAppSettingsStore,
   AppSettings,
   SettingsCategory,
 } from '../../../store/useAppSettingsStore';
+
+const shortcutGroups = [
+  {
+    title: 'Application',
+    shortcuts: [
+      ['Ctrl + P', 'Open command palette'],
+      ['Ctrl + S', 'Save active document'],
+      ['Ctrl + Shift + S', 'Save all changed documents'],
+    ],
+  },
+  {
+    title: 'Map Editor',
+    shortcuts: [
+      ['B', 'Paint or place with the selected layer'],
+      ['E', 'Erase tiles'],
+      ['R', 'Random tile tool'],
+      ['G', 'Flood draw mode'],
+      ['V', 'Select tool'],
+      ['N', 'Place entity or object; link on navigation layers'],
+      ['M', 'Select or move entity or object'],
+      ['X', 'Delete entity or object tool'],
+      ['Middle drag', 'Pan map viewport'],
+      ['Scroll', 'Zoom map viewport'],
+      ['Delete / Backspace', 'Delete selected map object'],
+      ['Ctrl + Z', 'Undo'],
+      ['Ctrl + Y / Ctrl + Shift + Z', 'Redo'],
+      ['Ctrl + Shift + F', 'Toggle fullscreen map'],
+      ['Esc', 'Exit fullscreen map or cancel polygon drawing'],
+    ],
+  },
+  {
+    title: 'Tileset Editor',
+    shortcuts: [
+      ['Arrow keys', 'Move the selected tile within the tileset'],
+      ['C', 'Set full-tile collision'],
+      ['N', 'Remove collision'],
+      ['P', 'Set polygon collision'],
+      ['0–9', 'Set Sort Pivot Y on the selected tile'],
+      ['Middle drag / Alt + drag', 'Pan tileset viewport'],
+      ['Scroll', 'Zoom tileset viewport'],
+      ['Delete / Backspace', 'Delete selected object in Objects mode'],
+    ],
+  },
+] as const;
 
 /**
  * SettingsEditor - Global application settings.
@@ -250,33 +295,27 @@ export const SettingsEditor: React.FC = () => {
   );
 
   const renderShortcutsSettings = () => (
-    <VStack align="stretch" spacing={4}>
+    <VStack align="stretch" spacing={6}>
       <Text fontSize="xs" color="editorMutedText">
-        Keyboard shortcuts cannot be customized yet. Here are the current bindings:
+        Current bindings are fixed. Editor shortcuts apply while that editor is active.
       </Text>
-      <VStack align="stretch" spacing={0} divider={<Divider />}>
-        {[
-          ['B', 'Brush / Paint tool'],
-          ['E', 'Eraser tool'],
-          ['G', 'Bucket fill tool'],
-          ['V', 'Select tool'],
-          ['Space + Drag', 'Pan viewport'],
-          ['Scroll', 'Zoom in/out'],
-          ['Ctrl + Z', 'Undo'],
-          ['Ctrl + Shift + Z', 'Redo'],
-          ['Ctrl + S', 'Save project'],
-          ['Delete', 'Delete selected'],
-        ].map(([key, action]) => (
-          <HStack key={key} justify="space-between" py={2}>
-            <Text fontSize="sm" color="editorText">
-              {action}
-            </Text>
-            <Badge variant="editor" color="editorText" fontFamily="mono">
-              {key}
-            </Badge>
-          </HStack>
-        ))}
-      </VStack>
+      {shortcutGroups.map(({ title, shortcuts }) => (
+        <Box as="section" key={title}>
+          <SectionLabel mb={2}>{title}</SectionLabel>
+          <VStack align="stretch" spacing={0} divider={<Divider />}>
+            {shortcuts.map(([key, action]) => (
+              <HStack key={key} justify="space-between" align="start" gap={4} py={2}>
+                <Text fontSize="sm" color="editorText">
+                  {action}
+                </Text>
+                <Badge variant="editor" color="editorText" fontFamily="mono" flexShrink={0}>
+                  {key}
+                </Badge>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
+      ))}
     </VStack>
   );
 
@@ -312,8 +351,8 @@ export const SettingsEditor: React.FC = () => {
         subtitle: 'Configure application preferences',
       }}
       content={
-        <Box p={6} maxW="700px" mx="auto">
-          <VStack align="stretch" spacing={4}>
+        <Box h="full" overflowY="auto" p={6}>
+          <VStack align="stretch" spacing={4} maxW="700px" mx="auto">
             <Text fontSize="lg" fontWeight="bold" color="editorText">
               {categoryTitles[activeCategory]}
             </Text>
