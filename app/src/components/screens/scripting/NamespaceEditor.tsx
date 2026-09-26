@@ -8,8 +8,6 @@ import {
   VStack,
   HStack,
   Text,
-  Input,
-  Select,
   IconButton,
   Flex,
   Badge,
@@ -28,6 +26,11 @@ import {
   ScriptTable,
 } from '../../../types/schema';
 import { SectionLabel } from '../../common/Typography.tsx';
+import {
+  CompactInput as Input,
+  CompactSelect as Select,
+  InlineEditorCard,
+} from '../../common/Fields';
 
 // ─── Shared inline editors ──────────────────────────────────────────────────
 
@@ -47,14 +50,10 @@ const InlineFunction: React.FC<{
   };
 
   return (
-    <Box bg="#0a0a0b" borderRadius="md" border="1px" borderColor="#1a1a2e" p={2}>
+    <InlineEditorCard>
       <VStack spacing={2} align="stretch">
         <HStack spacing={1}>
           <Input
-            size="xs"
-            bg="#05060a"
-            borderColor="#1a1a2e"
-            color="white"
             fontFamily="mono"
             value={fn.name}
             flex={1}
@@ -62,10 +61,6 @@ const InlineFunction: React.FC<{
             placeholder="functionName"
           />
           <Select
-            size="xs"
-            bg="#05060a"
-            borderColor="#1a1a2e"
-            color="white"
             w="80px"
             value={fn.returnType}
             onChange={(e) => {
@@ -77,7 +72,7 @@ const InlineFunction: React.FC<{
             }}
           >
             {RETURN_TYPES.map((t) => (
-              <option key={t} value={t} style={{ background: '#0a0a0b' }}>
+              <option key={t} value={t}>
                 {t}
               </option>
             ))}
@@ -94,18 +89,12 @@ const InlineFunction: React.FC<{
         </HStack>
         {fn.returnType === 'table' && (
           <Select
-            size="xs"
-            bg="#05060a"
-            borderColor="#1a1a2e"
-            color="white"
             value={fn.returnTableId ?? ''}
             onChange={(e) => onChange({ returnTableId: e.target.value || undefined })}
           >
-            <option value="" style={{ background: '#0a0a0b' }}>
-              - select table -
-            </option>
+            <option value="">- select table -</option>
             {tables.map((table) => (
-              <option key={table.id} value={table.id} style={{ background: '#0a0a0b' }}>
+              <option key={table.id} value={table.id}>
                 {table.name}
               </option>
             ))}
@@ -133,10 +122,6 @@ const InlineFunction: React.FC<{
             {fn.params.map((p, pi) => (
               <HStack key={pi} spacing={1}>
                 <Input
-                  size="xs"
-                  bg="#05060a"
-                  borderColor="#1a1a2e"
-                  color="white"
                   fontFamily="mono"
                   value={p.name}
                   w="80px"
@@ -145,16 +130,12 @@ const InlineFunction: React.FC<{
                   }
                 />
                 <Select
-                  size="xs"
-                  bg="#05060a"
-                  borderColor="#1a1a2e"
-                  color="white"
                   w="75px"
                   value={p.type}
                   onChange={(e) => updateParam(pi, { type: e.target.value as ScriptPrimitiveType })}
                 >
                   {PARAM_TYPES.map((t) => (
-                    <option key={t} value={t} style={{ background: '#0a0a0b' }}>
+                    <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
@@ -173,17 +154,14 @@ const InlineFunction: React.FC<{
           </VStack>
         </Box>
         <Input
-          size="xs"
-          bg="#05060a"
-          borderColor="#1a1a2e"
-          color="gray.500"
+          color="editorMutedText"
           value={fn.description ?? ''}
           onChange={(e) => onChange({ description: e.target.value || undefined })}
           placeholder="Description"
           _placeholder={{ color: 'gray.700' }}
         />
       </VStack>
-    </Box>
+    </InlineEditorCard>
   );
 };
 
@@ -194,10 +172,6 @@ const InlineField: React.FC<{
 }> = ({ field, onChange, onDelete }) => (
   <HStack spacing={1}>
     <Input
-      size="xs"
-      bg="#05060a"
-      borderColor="#1a1a2e"
-      color="white"
       fontFamily="mono"
       value={field.key}
       flex={1}
@@ -205,10 +179,6 @@ const InlineField: React.FC<{
       placeholder="fieldName"
     />
     <Select
-      size="xs"
-      bg="#05060a"
-      borderColor="#1a1a2e"
-      color="white"
       w="85px"
       value={field.type}
       onChange={(e) => {
@@ -222,7 +192,7 @@ const InlineField: React.FC<{
       }}
     >
       {VAR_TYPES.map((t) => (
-        <option key={t} value={t} style={{ background: '#0a0a0b' }}>
+        <option key={t} value={t}>
           {t}
         </option>
       ))}
@@ -387,10 +357,6 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
                           NAME
                         </Text>
                         <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           fontFamily="mono"
                           value={ns.name}
                           onChange={(e) =>
@@ -404,10 +370,6 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
                           DESCRIPTION
                         </Text>
                         <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           value={ns.description ?? ''}
                           onChange={(e) =>
                             onUpdate(ns.id, { description: e.target.value || undefined })
@@ -549,10 +511,6 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
                           NAME
                         </Text>
                         <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           fontFamily="mono"
                           value={ns.name}
                           onChange={(e) =>
@@ -566,10 +524,6 @@ export const NamespaceEditor: React.FC<NamespaceEditorProps> = ({
                           DESCRIPTION
                         </Text>
                         <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           value={ns.description ?? ''}
                           onChange={(e) =>
                             onUpdate(ns.id, { description: e.target.value || undefined })

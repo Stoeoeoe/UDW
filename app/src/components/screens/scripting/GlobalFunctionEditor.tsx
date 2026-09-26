@@ -7,8 +7,6 @@ import {
   VStack,
   HStack,
   Text,
-  Input,
-  Select,
   IconButton,
   Flex,
   Badge,
@@ -23,6 +21,7 @@ import {
   ScriptTable,
 } from '../../../types/schema';
 import { SectionLabel } from '../../common/Typography.tsx';
+import { CompactInput as Input, CompactSelect as Select } from '../../common/Fields';
 
 const RETURN_TYPES: { value: ScriptPrimitiveType; label: string }[] = [
   { value: 'void', label: 'void' },
@@ -48,9 +47,6 @@ const ParamRow: React.FC<{
 }> = ({ param, onChange, onDelete }) => (
   <HStack spacing={1}>
     <Input
-      size="xs"
-      bg="editorFieldBg"
-      borderColor="editorInlineBorder"
       fontFamily="mono"
       value={param.name}
       onChange={(e) => onChange({ name: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
@@ -58,9 +54,6 @@ const ParamRow: React.FC<{
       w="90px"
     />
     <Select
-      size="xs"
-      bg="editorFieldBg"
-      borderColor="editorInlineBorder"
       value={param.type}
       w="90px"
       onChange={(e) => onChange({ type: e.target.value as ScriptPrimitiveType })}
@@ -149,9 +142,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
             Name
           </SectionLabel>
           <Input
-            size="xs"
-            bg="editorInlineBg"
-            borderColor="editorInlineBorder"
             fontFamily="mono"
             value={fn.name}
             onChange={(e) =>
@@ -165,9 +155,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
             Return Type
           </SectionLabel>
           <Select
-            size="xs"
-            bg="editorInlineBg"
-            borderColor="editorInlineBorder"
             value={fn.returnType}
             onChange={(e) => {
               const nextReturnType = e.target.value as ScriptPrimitiveType;
@@ -186,9 +173,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
           {fn.returnType === 'table' && (
             <Select
               mt={2}
-              size="xs"
-              bg="editorInlineBg"
-              borderColor="editorInlineBorder"
               value={fn.returnTableId ?? ''}
               onChange={(e) => onUpdate(fn.id, { returnTableId: e.target.value || undefined })}
             >
@@ -237,9 +221,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
             Description
           </SectionLabel>
           <Input
-            size="xs"
-            bg="editorInlineBg"
-            borderColor="editorInlineBorder"
             value={fn.description ?? ''}
             onChange={(e) => onUpdate(fn.id, { description: e.target.value || undefined })}
             placeholder="Optional"
@@ -368,10 +349,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
                           NAME
                         </Text>
                         <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           fontFamily="mono"
                           value={fn.name}
                           onChange={(e) =>
@@ -386,10 +363,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
                           RETURN TYPE
                         </Text>
                         <Select
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           value={fn.returnType}
                           onChange={(e) => {
                             const nextReturnType = e.target.value as ScriptPrimitiveType;
@@ -401,7 +374,7 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
                           }}
                         >
                           {RETURN_TYPES.map((t) => (
-                            <option key={t.value} value={t.value} style={{ background: '#0a0a0b' }}>
+                            <option key={t.value} value={t.value}>
                               {t.label}
                             </option>
                           ))}
@@ -409,10 +382,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
                         {fn.returnType === 'table' && (
                           <Select
                             mt={2}
-                            size="xs"
-                            bg="#0a0a0b"
-                            borderColor="#1a1a2e"
-                            color="white"
                             value={fn.returnTableId ?? ''}
                             onChange={(e) =>
                               onUpdate(fn.id, {
@@ -420,15 +389,9 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
                               })
                             }
                           >
-                            <option value="" style={{ background: '#0a0a0b' }}>
-                              - select table -
-                            </option>
+                            <option value="">- select table -</option>
                             {tables.map((table) => (
-                              <option
-                                key={table.id}
-                                value={table.id}
-                                style={{ background: '#0a0a0b' }}
-                              >
+                              <option key={table.id} value={table.id}>
                                 {table.name}
                               </option>
                             ))}
@@ -475,10 +438,6 @@ export const GlobalFunctionEditor: React.FC<GlobalFunctionEditorProps> = ({
                           DESCRIPTION
                         </Text>
                         <Input
-                          size="xs"
-                          bg="#0a0a0b"
-                          borderColor="#1a1a2e"
-                          color="white"
                           value={fn.description ?? ''}
                           onChange={(e) =>
                             onUpdate(fn.id, { description: e.target.value || undefined })

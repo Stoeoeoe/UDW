@@ -9,8 +9,6 @@ import {
   VStack,
   HStack,
   Text,
-  Input,
-  Select,
   IconButton,
   Flex,
   Badge,
@@ -28,6 +26,11 @@ import {
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { ScriptTable, TableField } from '../../../types/schema';
 import { SectionLabel } from '../../common/Typography.tsx';
+import {
+  CompactInput as Input,
+  CompactSelect as Select,
+  InlineEditorCard,
+} from '../../common/Fields';
 
 const FIELD_TYPES: { value: TableField['type']; label: string }[] = [
   { value: 'boolean', label: 'boolean' },
@@ -54,13 +57,10 @@ const InlineTableField: React.FC<{
   onChange: (updates: Partial<TableField>) => void;
   onDelete: () => void;
 }> = ({ field, onChange, onDelete }) => (
-  <Box bg="editorInlineBg" borderRadius="md" border="1px" borderColor="editorInlineBorder" p={2}>
+  <InlineEditorCard>
     <VStack spacing={2} align="stretch">
       <HStack spacing={1}>
         <Input
-          size="xs"
-          bg="editorFieldBg"
-          borderColor="editorInlineBorder"
           fontFamily="mono"
           value={field.key}
           flex={1}
@@ -68,9 +68,6 @@ const InlineTableField: React.FC<{
           placeholder="fieldName"
         />
         <Select
-          size="xs"
-          bg="editorFieldBg"
-          borderColor="editorInlineBorder"
           w="85px"
           value={field.type}
           onChange={(e) => {
@@ -124,11 +121,7 @@ const InlineTableField: React.FC<{
           value={typeof field.defaultValue === 'number' ? field.defaultValue : 0}
           onChange={(_, val) => onChange({ defaultValue: isNaN(val) ? 0 : val })}
         >
-          <NumberInputField
-            bg="editorFieldBg"
-            borderColor="editorInlineBorder"
-            placeholder="default"
-          />
+          <NumberInputField placeholder="default" />
           <NumberInputStepper>
             <NumberIncrementStepper />
             <NumberDecrementStepper />
@@ -137,9 +130,6 @@ const InlineTableField: React.FC<{
       )}
       {field.type === 'string' && (
         <Input
-          size="xs"
-          bg="editorFieldBg"
-          borderColor="editorInlineBorder"
           value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
           onChange={(e) => onChange({ defaultValue: e.target.value })}
           placeholder="default"
@@ -151,9 +141,6 @@ const InlineTableField: React.FC<{
             {(field.enumValues || []).map((opt, oi) => (
               <HStack key={oi} spacing={1}>
                 <Input
-                  size="xs"
-                  bg="editorFieldBg"
-                  borderColor="editorInlineBorder"
                   value={opt}
                   w="80px"
                   onChange={(e) => {
@@ -198,9 +185,6 @@ const InlineTableField: React.FC<{
             </Button>
           </HStack>
           <Select
-            size="xs"
-            bg="editorFieldBg"
-            borderColor="editorInlineBorder"
             value={typeof field.defaultValue === 'string' ? field.defaultValue : ''}
             onChange={(e) => onChange({ defaultValue: e.target.value })}
           >
@@ -214,17 +198,14 @@ const InlineTableField: React.FC<{
       )}
 
       <Input
-        size="xs"
-        bg="editorFieldBg"
-        borderColor="editorInlineBorder"
-        color="gray.500"
+        color="editorMutedText"
         value={field.description ?? ''}
         onChange={(e) => onChange({ description: e.target.value || undefined })}
         placeholder="Description"
         _placeholder={{ color: 'gray.700' }}
       />
     </VStack>
-  </Box>
+  </InlineEditorCard>
 );
 
 // ─── Main editor ────────────────────────────────────────────────────────────
@@ -389,10 +370,6 @@ export const TableEditor: React.FC<TableEditorProps> = ({
                       NAME
                     </Text>
                     <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
                       fontFamily="mono"
                       value={tbl.name}
                       onChange={(e) =>
@@ -406,10 +383,6 @@ export const TableEditor: React.FC<TableEditorProps> = ({
                       DESCRIPTION
                     </Text>
                     <Input
-                      size="xs"
-                      bg="#0a0a0b"
-                      borderColor="#1a1a2e"
-                      color="white"
                       value={tbl.description ?? ''}
                       onChange={(e) =>
                         onUpdate(tbl.id, { description: e.target.value || undefined })

@@ -41,6 +41,21 @@ const readOnlyFieldStyle = {
   },
 };
 
+const editorControlSizes = {
+  xs: {
+    field: {
+      h: 7,
+      px: 2,
+      fontSize: 'xs',
+    },
+  },
+  sm: {
+    field: {
+      h: 8,
+    },
+  },
+};
+
 export const theme = extendTheme({
   config,
   semanticTokens: {
@@ -76,28 +91,28 @@ export const theme = extendTheme({
         default: '#0b1116',
       },
       editorFieldBg: {
-        default: '#05060a',
+        default: '#0f1217',
       },
       editorFieldReadOnlyBg: {
-        default: '#0a0a0b',
+        default: '#111419',
       },
       editorFieldReadOnlyHoverBg: {
-        default: '#0d131a',
+        default: '#15191f',
       },
       editorFieldBorder: {
-        default: '#0b1116',
+        default: '#202630',
       },
       editorFieldBorderHover: {
-        default: '#1a2a39',
+        default: '#2b3b4d',
       },
       editorInlineBg: {
-        default: '#0a0a0b',
+        default: '#12151a',
       },
       editorInlineBorder: {
         default: '#1a1a2e',
       },
       editorInlineHoverBg: {
-        default: '#0b1016',
+        default: '#181c22',
       },
       editorHoverBg: {
         default: '#101723',
@@ -125,9 +140,9 @@ export const theme = extendTheme({
       headerBg: '#05060a',
       border: '#071018',
       viewportBg: '#0a0a0b',
-      inputBg: '#05060a',
-      inputBorder: '#0b1116',
-      inlineBg: '#0a0a0b',
+      inputBg: '#0f1217',
+      inputBorder: '#202630',
+      inlineBg: '#12151a',
       inlineBorder: '#1a1a2e',
     },
   },
@@ -211,20 +226,7 @@ export const theme = extendTheme({
           field: readOnlyFieldStyle,
         },
       },
-      sizes: {
-        xs: {
-          field: {
-            h: 7,
-            px: 2,
-            fontSize: 'xs',
-          },
-        },
-        sm: {
-          field: {
-            h: 8,
-          },
-        },
-      },
+      sizes: editorControlSizes,
       defaultProps: {
         size: 'sm',
         variant: 'editor',
@@ -242,6 +244,7 @@ export const theme = extendTheme({
           field: readOnlyFieldStyle,
         },
       },
+      sizes: editorControlSizes,
       defaultProps: {
         size: 'sm',
         variant: 'editor',
@@ -277,6 +280,7 @@ export const theme = extendTheme({
           },
         },
       },
+      sizes: editorControlSizes,
       defaultProps: {
         size: 'sm',
         variant: 'editor',

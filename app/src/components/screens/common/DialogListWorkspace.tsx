@@ -112,9 +112,9 @@ export const DialogListWorkspace: React.FC<DialogListWorkspaceProps> = ({
             justify="center"
             minH="320px"
             borderWidth="1px"
-            borderColor="editorInlineBorder"
+            borderColor="whiteAlpha.100"
             borderRadius="lg"
-            bg="editorInlineBg"
+            bg="editorSectionBg"
           >
             <Text fontSize="4xl">{emptyIcon}</Text>
             <Text color="gray.300" fontWeight="semibold">
