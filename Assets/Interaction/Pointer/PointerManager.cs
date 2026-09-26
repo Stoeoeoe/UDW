@@ -20,14 +20,22 @@ namespace Interaction.Pointer
         [SerializeField] protected Vector2 cursorHotspot = Vector2.zero;
 
         private LayerMask _interactableLayerMask;
+        private bool _hasAppliedCursor;
+        private PointerMode _appliedPointerMode;
 
         public AbstractInteractable CurrentInteractableUnderPointer { get; private set; }
         public TileData CurrentTileDataUnderPointer { get; private set; }
+
+#if UNITY_EDITOR
+        private bool _isMouseOverGameView = true;
+        private bool _suppressCustomCursor;
+#endif
 
         protected override void Awake()
         {
             base.Awake();
             _interactableLayerMask = LayerMask.GetMask("Interactable");
+            Cursor.lockState = CursorLockMode.Confined;
         }
 
         private void OnEnable()
@@ -41,6 +49,7 @@ namespace Interaction.Pointer
             PlayerInteractionContext.Instance.OnContextChanged -= HandleContextChange;
             Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
             Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
             LevelManager.Instance?.UnregisterLifecycle(this);
         }
 
@@ -69,7 +78,7 @@ namespace Interaction.Pointer
                     SetCursorMode(PointerMode.UseTool);
                     break;
                 case InteractionMode.DialogueReady:
-                    if (snapshot.CurrentInteractable is ShowDialogueInteractable)
+                    if (snapshot.CurrentInteractable is ShowVulcanusDialogueInteractable)
                     {
                         SetCursorMode(PointerMode.Dialogue);
                         break;
@@ -84,31 +93,46 @@ namespace Interaction.Pointer
         private void SetCursorMode(PointerMode pointerMode)
         {
             CurrentPointerMode = pointerMode;
-
-            switch (pointerMode)
-            {
-                case PointerMode.Default:
-                    ApplyCursorSprite(defaultCursor);
-                    break;
-                case PointerMode.PlaceItems:
-                    ApplyCursorSprite(placeItemCursor);
-                    break;
-                case PointerMode.GiftItems:
-                    ApplyCursorSprite(giftItemCursor);
-                    break;
-                case PointerMode.UseTool:
-                    ApplyCursorSprite(defaultCursor);
-                    break;
-                case PointerMode.Dialogue:
-                    ApplyCursorSprite(dialogueCursor);
-                    break;
-            }
+            ApplyCursorMode(pointerMode);
         }
 
-        private void ApplyCursorSprite(Texture2D cursorTexture)
+        private void ApplyCursorMode(PointerMode pointerMode, bool force = false)
         {
+#if UNITY_EDITOR
+            if (_suppressCustomCursor && !force)
+            {
+                return;
+            }
+#endif
+
+            if (!force && _hasAppliedCursor && _appliedPointerMode == pointerMode)
+            {
+                return;
+            }
+
+            Texture2D cursorTexture;
+            switch (pointerMode)
+            {
+                case PointerMode.PlaceItems:
+                    cursorTexture = placeItemCursor;
+                    break;
+                case PointerMode.GiftItems:
+                    cursorTexture = giftItemCursor;
+                    break;
+                case PointerMode.Dialogue:
+                    cursorTexture = dialogueCursor;
+                    break;
+                case PointerMode.Default:
+                case PointerMode.UseTool:
+                default:
+                    cursorTexture = defaultCursor;
+                    break;
+            }
+
             Cursor.SetCursor(cursorTexture, cursorHotspot, UnityEngine.CursorMode.Auto);
             Cursor.visible = true;
+            _appliedPointerMode = pointerMode;
+            _hasAppliedCursor = true;
         }
 
         private void Update()
@@ -116,6 +140,28 @@ namespace Interaction.Pointer
             if (Camera.main == null) return;
 
             var mouseScreenPos = Mouse.current.position.ReadValue();
+
+#if UNITY_EDITOR
+            bool inGameView = mouseScreenPos.x >= 0 && mouseScreenPos.x <= Screen.width &&
+                              mouseScreenPos.y >= 0 && mouseScreenPos.y <= Screen.height;
+            if (!inGameView)
+            {
+                if (_isMouseOverGameView)
+                {
+                    Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
+                    _isMouseOverGameView = false;
+                    _suppressCustomCursor = true;
+                }
+                return;
+            }
+            if (!_isMouseOverGameView)
+            {
+                _isMouseOverGameView = true;
+                _suppressCustomCursor = false;
+                ApplyCursorMode(CurrentPointerMode, true);
+            }
+#endif
+
             var worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
             var tileData = MapManager.Instance.GetTileDataAtWorldPosition(worldPos);
