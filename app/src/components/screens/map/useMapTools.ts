@@ -117,6 +117,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const collisionPolygonPointsRef = useRef<[number, number][] | null>(null);
   const isShiftHeldRef = useRef(false);
   const terrainGridRef = useRef<Map<string, string | null>>(new Map());
+  const terrainGridInitializedRef = useRef(false);
   const lastTerrainPaintRef = useRef<{ x: number; y: number } | null>(null);
   const isSamplingRef = useRef(false);
   const sampleStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -233,6 +234,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         end,
         terrainId,
         terrainGridRef: terrainGridRef.current,
+        terrainGridInitializedRef,
       });
     },
     [
@@ -1061,6 +1063,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         // Terrain brush: paint terrain at clicked position
         // Clear terrain grid cache when starting a new stroke
         terrainGridRef.current = new Map();
+        terrainGridInitializedRef.current = false;
         lastTerrainPaintRef.current = { x: tx, y: ty };
         isDrawingRef.current = true;
         drawStartRef.current = { x: tx, y: ty };

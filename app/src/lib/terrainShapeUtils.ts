@@ -37,6 +37,7 @@ export async function applyTerrainShape(params: {
   end: { x: number; y: number };
   terrainId: string | null;
   terrainGridRef: Map<string, string | null>;
+  terrainGridInitializedRef?: { current: boolean };
 }) {
   const {
     currentMap,
@@ -52,6 +53,7 @@ export async function applyTerrainShape(params: {
     end,
     terrainId,
     terrainGridRef,
+    terrainGridInitializedRef,
   } = params;
 
   if (!currentMap || !selectedLayerId || !activeTilesetId) return;
@@ -64,18 +66,21 @@ export async function applyTerrainShape(params: {
 
   const effectiveBrushSize = mode === 'point' || mode === 'line' ? brushSize : 1;
 
-  const collectBrush = (cx: number, cy: number, positions: Array<{ x: number; y: number }>) => {
-    for (const { x, y } of circularBrush(cx, cy, effectiveBrushSize)) {
-      if (x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
-        positions.push({ x, y });
-      }
+  const positions = new Map<number, { x: number; y: number }>();
+  const addPosition = (x: number, y: number) => {
+    if (x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
+      positions.set(y * currentMap.width + x, { x, y });
     }
   };
 
-  const positions: Array<{ x: number; y: number }> = [];
+  const collectBrush = (cx: number, cy: number) => {
+    for (const { x, y } of circularBrush(cx, cy, effectiveBrushSize)) {
+      addPosition(x, y);
+    }
+  };
 
   if (mode === 'point') {
-    collectBrush(end.x, end.y, positions);
+    collectBrush(end.x, end.y);
   } else if (mode === 'rect') {
     const minX = Math.min(start.x, end.x);
     const maxX = Math.max(start.x, end.x);
@@ -83,48 +88,48 @@ export async function applyTerrainShape(params: {
     const maxY = Math.max(start.y, end.y);
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
-        if (x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
-          positions.push({ x, y });
-        }
+        addPosition(x, y);
       }
     }
   } else if (mode === 'circle') {
-    const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+    const radiusSquared = (end.x - start.x) ** 2 + (end.y - start.y) ** 2;
+    const radius = Math.sqrt(radiusSquared);
     const minX = Math.floor(start.x - radius);
     const maxX = Math.ceil(start.x + radius);
     const minY = Math.floor(start.y - radius);
     const maxY = Math.ceil(start.y + radius);
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
-        const dist = Math.sqrt(Math.pow(x - start.x, 2) + Math.pow(y - start.y, 2));
-        if (dist <= radius && x >= 0 && x < currentMap.width && y >= 0 && y < currentMap.height) {
-          positions.push({ x, y });
+        if ((x - start.x) ** 2 + (y - start.y) ** 2 <= radiusSquared) {
+          addPosition(x, y);
         }
       }
     }
   } else if (mode === 'line') {
     for (const { x, y } of bresenhamLine(start.x, start.y, end.x, end.y)) {
-      collectBrush(x, y, positions);
+      collectBrush(x, y);
     }
   }
 
-  if (positions.length === 0) return;
+  if (positions.size === 0) return;
 
-  terrainGridRef.clear();
-  // Build terrain grid fresh for this operation
-  const built = buildTerrainGridFromLayer(layer.data ?? [], tilesets, currentMap.tilesetRefs);
-  for (const [k, v] of built.entries()) {
-    terrainGridRef.set(k, v);
+  if (!terrainGridInitializedRef?.current) {
+    terrainGridRef.clear();
+    const built = buildTerrainGridFromLayer(layer.data ?? [], tilesets, currentMap.tilesetRefs);
+    for (const [key, value] of built.entries()) {
+      terrainGridRef.set(key, value);
+    }
+    if (terrainGridInitializedRef) terrainGridInitializedRef.current = true;
   }
 
   const allTilesToUpdate = new Map<string, { tileX: number; tileY: number }>();
 
-  for (const pos of positions) {
+  for (const pos of positions.values()) {
     const tilesToUpdate = applyTerrainToTile(
       pos.x,
       pos.y,
       terrainId,
-      built,
+      terrainGridRef,
       currentMap.width,
       currentMap.height,
     );
@@ -139,7 +144,7 @@ export async function applyTerrainShape(params: {
   for (const { tileX, tileY } of allTilesToUpdate.values()) {
     if (tileX < 0 || tileX >= currentMap.width || tileY < 0 || tileY >= currentMap.height) continue;
 
-    const corners = getCornerTerrainsForTile(tileX, tileY, built);
+    const corners = getCornerTerrainsForTile(tileX, tileY, terrainGridRef);
     const matchingTile = findBestMatchingTileWithFallback(tileset, corners, true);
 
     if (matchingTile !== null) {
@@ -158,8 +163,8 @@ export async function applyTerrainShape(params: {
   if (tilesToErase.length > 0) eraseTilesBatch(selectedLayerId!, tilesToErase);
 
   // For terrain layers: persist the painted terrain ID so the layer can be re-resolved
-  if (paintTerrainDataBatch && positions.length > 0) {
-    const terrainCells = positions.map(({ x, y }) => ({ x, y, terrainId }));
+  if (paintTerrainDataBatch && positions.size > 0) {
+    const terrainCells = Array.from(positions.values(), ({ x, y }) => ({ x, y, terrainId }));
     paintTerrainDataBatch(selectedLayerId!, terrainCells);
   }
 }
