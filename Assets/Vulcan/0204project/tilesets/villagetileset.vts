@@ -1515,10 +1515,22 @@
       "id": "tile_8_11"
     },
     "361": {
-      "id": "tile_9_11"
+      "id": "tile_9_11",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "362": {
-      "id": "tile_10_11"
+      "id": "tile_10_11",
+      "terrainCorners": [
+        "grass",
+        null,
+        "grass",
+        null
+      ]
     },
     "363": {
       "id": "tile_11_11"
@@ -1611,10 +1623,22 @@
       "id": "tile_8_12"
     },
     "393": {
-      "id": "tile_9_12"
+      "id": "tile_9_12",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "394": {
-      "id": "tile_10_12"
+      "id": "tile_10_12",
+      "terrainCorners": [
+        "grass",
+        null,
+        "grass",
+        null
+      ]
     },
     "395": {
       "id": "tile_11_12"
