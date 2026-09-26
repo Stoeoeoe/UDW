@@ -19,6 +19,8 @@ import {
   FiPenTool,
   FiPlay,
   FiCircle,
+  FiMaximize2,
+  FiMinimize2,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import {
@@ -162,6 +164,8 @@ export const MapToolbarActions: React.FC = () => {
   const setShow3DLayerView = useEditorStore((state) => state.setShow3DLayerView);
   const showMapTestMode = useEditorStore((state) => state.showMapTestMode);
   const setShowMapTestMode = useEditorStore((state) => state.setShowMapTestMode);
+  const mapFullscreen = useEditorStore((state) => state.mapFullscreen);
+  const setMapFullscreen = useEditorStore((state) => state.setMapFullscreen);
   const reloadTerrainLayers = useEditorStore((state) => state.reloadTerrainLayers);
   const { canUndo, canRedo } = useEditorHistory((state) => ({
     canUndo: state.pastStates.length > 0,
@@ -277,6 +281,21 @@ export const MapToolbarActions: React.FC = () => {
           aria-label="Toggle map test mode"
         >
           <FiPlay />
+        </Button>
+      </Tooltip>
+
+      <Tooltip
+        label={mapFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen map (Ctrl+Shift+F)'}
+        fontSize="xs"
+      >
+        <Button
+          size="xs"
+          variant={mapFullscreen ? 'solid' : 'outline'}
+          colorScheme="blue"
+          onClick={() => setMapFullscreen(!mapFullscreen)}
+          aria-label={mapFullscreen ? 'Exit fullscreen map' : 'Fullscreen map'}
+        >
+          {mapFullscreen ? <FiMinimize2 /> : <FiMaximize2 />}
         </Button>
       </Tooltip>
     </HStack>

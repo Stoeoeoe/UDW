@@ -36,6 +36,7 @@ export interface ToolSlice {
   showTerrainOverlay: boolean;
   show3DLayerView: boolean;
   showMapTestMode: boolean;
+  mapFullscreen: boolean;
   timePreviewEnabled: boolean;
   timeOfDay: number;
   camera: EditorState['camera'];
@@ -50,6 +51,7 @@ export interface ToolSlice {
   setShowTerrainOverlay: (enabled: boolean) => void;
   setShow3DLayerView: (enabled: boolean) => void;
   setShowMapTestMode: (enabled: boolean) => void;
+  setMapFullscreen: (enabled: boolean) => void;
   reloadTerrainLayers: () => void;
   setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
   setBrushSize: (size: number) => void;
@@ -88,6 +90,7 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   showTerrainOverlay: false,
   show3DLayerView: false,
   showMapTestMode: false,
+  mapFullscreen: false,
   timePreviewEnabled: false,
   timeOfDay: 0.5,
   camera: { x: 0, y: 0, zoom: 1.5 },
@@ -137,6 +140,10 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   setShowMapTestMode: (enabled) =>
     set((state) => {
       state.showMapTestMode = enabled;
+    }),
+  setMapFullscreen: (enabled) =>
+    set((state) => {
+      state.mapFullscreen = enabled;
     }),
 
   reloadTerrainLayers: () =>

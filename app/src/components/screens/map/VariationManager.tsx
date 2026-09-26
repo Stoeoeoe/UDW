@@ -67,7 +67,8 @@ export const VariationManager: React.FC = () => {
   return (
     <>
       <Flex
-        p="3"
+        px="3"
+        py="2"
         borderBottom="1px"
         borderColor="editorShellBorder"
         align="center"
@@ -86,7 +87,7 @@ export const VariationManager: React.FC = () => {
           </Text>
 
           <Select
-            size="md"
+            size="xs"
             value={activeVariationId || ''}
             onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
               setActiveVariation(event.target.value || null);
@@ -94,7 +95,7 @@ export const VariationManager: React.FC = () => {
             bg="editorSectionBg"
             borderColor="transparent"
             color="gray.300"
-            width="220px"
+            width="180px"
           >
             {renderGroupedOptions()}
           </Select>
@@ -103,7 +104,7 @@ export const VariationManager: React.FC = () => {
             <IconButton
               aria-label="Edit Selected Variation or Map"
               icon={<EditIcon fontSize="10px" />}
-              size="md"
+              size="xs"
               variant="ghost"
               color="gray.400"
               _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
@@ -123,7 +124,7 @@ export const VariationManager: React.FC = () => {
             <IconButton
               aria-label="Create Variation"
               icon={<AddIcon fontSize="10px" />}
-              size="md"
+              size="xs"
               variant="ghost"
               color="gray.400"
               _hover={{ color: 'white', bg: 'whiteAlpha.100' }}

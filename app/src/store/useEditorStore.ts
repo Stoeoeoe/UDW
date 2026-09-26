@@ -368,6 +368,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.dialogues = new globalThis.Map();
                   state.selectedDialogueId = null;
                   state.selectedDialogueNodeId = null;
+                  state.mapFullscreen = false;
                 }),
               { clearHistory: true },
             );

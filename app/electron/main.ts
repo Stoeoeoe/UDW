@@ -118,6 +118,7 @@ function createWindow() {
 
   win = new BrowserWindow({
     icon: iconPath,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       contextIsolation: true,
@@ -131,6 +132,7 @@ function createWindow() {
   setupIpcHandlers(win);
   setupLuaLSHandlers(win);
   setupApplicationMenu();
+  win.setMenuBarVisibility(false);
 
   win.webContents.on('will-prevent-unload', (event) => {
     const choice = dialog.showMessageBoxSync(win!, {
@@ -147,10 +149,6 @@ function createWindow() {
   });
 
   // Test active push message to Renderer-process.
-  win.webContents.on('did-finish-load', () => {
-    //win?.webContents.send('main-process-message', new Date().toLocaleString());
-  });
-
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
     win.webContents.openDevTools();

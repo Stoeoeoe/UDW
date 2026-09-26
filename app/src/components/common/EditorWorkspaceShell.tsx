@@ -22,12 +22,14 @@ export interface EditorWorkspaceShellProps {
   viewportBackground?: boolean;
 }
 
-const ResizeHandle: React.FC<{ direction: 'horizontal' | 'vertical' }> = ({ direction }) => (
-  <PanelResizeHandle>
+export const EditorResizeHandle: React.FC<{ direction: 'horizontal' | 'vertical' }> = ({
+  direction,
+}) => (
+  <PanelResizeHandle aria-label={`Resize ${direction === 'horizontal' ? 'sidebar' : 'panel'}`}>
     <Box
-      w={direction === 'horizontal' ? '4px' : 'full'}
-      h={direction === 'horizontal' ? 'full' : '4px'}
-      bg="transparent"
+      w={direction === 'horizontal' ? '5px' : 'full'}
+      h={direction === 'horizontal' ? 'full' : '5px'}
+      bg="editorShellBorder"
       cursor={direction === 'horizontal' ? 'col-resize' : 'row-resize'}
       transition="background 0.15s"
       _hover={{ bg: 'blue.500' }}
@@ -94,7 +96,7 @@ export const EditorWorkspaceShell: React.FC<EditorWorkspaceShellProps> = ({
               <Panel defaultSize={leftPanelDefaultSize} minSize={leftPanelMinSize} order={1}>
                 <PanelSurface borderRight>{leftPanel}</PanelSurface>
               </Panel>
-              <ResizeHandle direction="horizontal" />
+              <EditorResizeHandle direction="horizontal" />
             </>
           )}
 
@@ -113,7 +115,7 @@ export const EditorWorkspaceShell: React.FC<EditorWorkspaceShellProps> = ({
 
               {bottomPanel && (
                 <>
-                  <ResizeHandle direction="vertical" />
+                  <EditorResizeHandle direction="vertical" />
                   <Panel
                     defaultSize={bottomPanelDefaultSize}
                     minSize={bottomPanelMinSize}
@@ -128,7 +130,7 @@ export const EditorWorkspaceShell: React.FC<EditorWorkspaceShellProps> = ({
 
           {rightPanel && (
             <>
-              <ResizeHandle direction="horizontal" />
+              <EditorResizeHandle direction="horizontal" />
               <Panel defaultSize={rightPanelDefaultSize} minSize={rightPanelMinSize} order={3}>
                 <PanelSurface borderLeft>{rightPanel}</PanelSurface>
               </Panel>

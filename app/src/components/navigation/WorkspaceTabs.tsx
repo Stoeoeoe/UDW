@@ -96,8 +96,8 @@ export const WorkspaceTabs: React.FC<WorkspaceTabsProps> = ({
   return (
     <HStack
       spacing={1}
-      px={3}
-      py={2}
+      px={2}
+      py={1}
       bg="editorHeaderBg"
       borderBottom="1px"
       borderColor="editorShellBorder"
@@ -115,8 +115,8 @@ export const WorkspaceTabs: React.FC<WorkspaceTabsProps> = ({
           <Tooltip key={tab.id} label={tab.document.label} hasArrow openDelay={300}>
             <HStack
               spacing={2}
-              px={3}
-              h="9"
+              px={2.5}
+              h="8"
               minW="0"
               maxW="280px"
               borderRadius="md"

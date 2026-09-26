@@ -4,7 +4,7 @@ import { runEditorHistoryCommand, useEditorStore } from '../../../store/useEdito
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewportPixi } from './MapViewportPixi';
-import { MapCreator } from '../../dialogs/MapCreator';
+import { GuidedMapCreationDialog } from '../../dialogs/GuidedMapCreationDialog';
 import { PropertiesPanel } from '../../panels/PropertiesPanel';
 import { ToolPropertiesPanel } from '../../panels/ToolPropertiesPanel';
 import { LinkInspector } from './LinkInspector';
@@ -16,8 +16,6 @@ import { ObjectPalette } from '../../tileset/ObjectPalette';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
 import { NavigationBottomPanel } from './NavigationBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
-import { EditorModal } from '../../common/EditorModal';
-import { resolveMapContext } from '../../../lib/mapUtils';
 import { MapWorldView } from './MapWorldView.tsx';
 import { LayersPanel } from './LayersPanel';
 import { VariationManager } from './VariationManager';
@@ -64,13 +62,7 @@ const MapRightPanel: React.FC = () => {
 const MapLeftPanel: React.FC = () => {
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="hidden">
-      <Box
-        flexShrink={0}
-        minH="16rem"
-        maxH="24rem"
-        borderBottom="1px"
-        borderColor="editorShellBorder"
-      >
+      <Box flexShrink={0} borderBottom="1px" borderColor="editorShellBorder">
         <VariationManager />
       </Box>
       <Box flex={1} minH={0}>
@@ -82,10 +74,11 @@ const MapLeftPanel: React.FC = () => {
 
 export const MapEditor: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
-  const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const pendingNewLinkId = useEditorStore((state) => state.pendingNewLinkId);
   const clearPendingNewLink = useEditorStore((state) => state.clearPendingNewLink);
+  const mapFullscreen = useEditorStore((state) => state.mapFullscreen);
+  const setMapFullscreen = useEditorStore((state) => state.setMapFullscreen);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
     isOpen: isMetadataOpen,
@@ -97,12 +90,24 @@ export const MapEditor: React.FC = () => {
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && mapFullscreen) {
+        event.preventDefault();
+        setMapFullscreen(false);
+        return;
+      }
+
       const isPrimaryModifier = event.ctrlKey || event.metaKey;
       if (!isPrimaryModifier || event.altKey) {
         return;
       }
 
       const key = event.key.toLowerCase();
+      if (key === 'f' && event.shiftKey) {
+        event.preventDefault();
+        setMapFullscreen(!mapFullscreen);
+        return;
+      }
+
       const command =
         key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
 
@@ -117,7 +122,7 @@ export const MapEditor: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [mapFullscreen, setMapFullscreen]);
 
   React.useEffect(() => {
     const handler = (event: Event) => {
@@ -142,45 +147,23 @@ export const MapEditor: React.FC = () => {
           onCreate={onOpen}
         />
 
-        <EditorModal isOpen={isOpen} onClose={onClose}>
-          <MapCreator onCreate={onClose} onCancel={onClose} />
-        </EditorModal>
+        <GuidedMapCreationDialog isOpen={isOpen} onClose={onClose} />
       </>
     );
   }
 
-  const effectiveMap = resolveMapContext(currentMap, activeVariationId);
-  const activeVariation = currentMap.variations?.find(
-    (variation) => variation.id === activeVariationId,
-  );
   const selectedLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
   const selectedLayerKind = selectedLayer?.kind;
   const isObjectLayer = selectedLayer?.kind === 'object';
-  const subtitleParts = [
-    `${currentMap.width}x${currentMap.height} tiles`,
-    `${currentMap.layers.length} layers`,
-  ];
-
-  if (selectedLayer) {
-    subtitleParts.push(isObjectLayer ? `${selectedLayer.name} - objects` : selectedLayer.name);
-  }
-
-  if (activeVariation) {
-    subtitleParts.push(activeVariation.displayName);
-  }
 
   return (
     <>
       <ResizableEditorLayout
-        header={{
-          title: activeView === 'world' ? 'World' : effectiveMap.name || 'Location',
-          subtitle: activeView === 'world' ? 'Location world view' : subtitleParts.join(' - '),
-        }}
         content={activeView === 'world' ? <MapWorldView /> : <MapViewportPixi />}
-        leftPanel={<MapLeftPanel />}
-        rightPanel={activeView === 'world' ? undefined : <MapRightPanel />}
+        leftPanel={mapFullscreen ? undefined : <MapLeftPanel />}
+        rightPanel={mapFullscreen || activeView === 'world' ? undefined : <MapRightPanel />}
         bottomPanel={
-          activeView === 'world' ? undefined : selectedLayerKind === 'entity' ? (
+          mapFullscreen || activeView === 'world' ? undefined : selectedLayerKind === 'entity' ? (
             <EntityBottomPalette />
           ) : selectedLayerKind === 'navigation' ? (
             <NavigationBottomPanel />

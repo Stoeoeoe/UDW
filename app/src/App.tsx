@@ -15,12 +15,15 @@ import { useWorkspaceStore } from './store/useWorkspaceStore';
 import { useWorkspaceInit, useBeforeUnloadGuard } from './hooks/useWorkspaceInit';
 import { useCommandPalette } from './hooks/useCommandPalette';
 import { useWorkspaceTabs } from './hooks/useWorkspaceTabs';
+import { Panel, PanelGroup } from 'react-resizable-panels';
+import { EditorResizeHandle } from './components/common/EditorWorkspaceShell';
 
 function App() {
   const project = useEditorStore((state) => state.project);
   const resourcesLoaded = useEditorStore((state) => state.resourcesLoaded);
   const resourceLoadingLabel = useEditorStore((state) => state.resourceLoadingLabel);
   const resourceLoadingProgress = useEditorStore((state) => state.resourceLoadingProgress);
+  const mapFullscreen = useEditorStore((state) => state.mapFullscreen);
 
   const expandedNodeIds = useWorkspaceStore((state) => state.expandedNodeIds);
   const toggleNode = useWorkspaceStore((state) => state.toggleNode);
@@ -54,6 +57,8 @@ function App() {
     openResult: handleOpenPaletteResult,
   } = useCommandPalette();
 
+  const isMapFullscreen = mapFullscreen && activeTab?.document.kind === 'location';
+
   if (!project) {
     return <LandingScreen />;
   }
@@ -79,38 +84,47 @@ function App() {
       <AppShell
         topBar={<TopBar />}
         workspace={
-          <Flex flex={1} overflow="hidden" minH={0} h="full">
-            <Box
-              w="72"
-              flexShrink={0}
-              borderRight="1px"
-              borderColor="editorShellBorder"
-              overflow="hidden"
-            >
-              <WorkspaceExplorer
-                nodes={treeNodes}
-                expandedNodeIds={expandedNodeIds}
-                activeTabId={activeTabId}
-                onToggleNode={toggleNode}
-                onOpenNode={handleOpenNode}
-                onOpenDocument={handleOpenDocument}
-                headerAction={<WorkspaceCommandPaletteButton onClick={openCommandPalette} />}
-              />
+          isMapFullscreen ? (
+            <Box h="full" overflow="hidden">
+              <ActiveWorkspaceDocument tab={activeTab} />
             </Box>
-            <Flex flex={1} overflow="hidden" minW={0} direction="column">
-              <WorkspaceTabs
-                tabs={tabs}
-                activeTabId={activeTabId}
-                onActivate={activateTab}
-                onPin={pinTab}
-                onReorder={reorderTabs}
-                onClose={(tabId) => void handleCloseTab(tabId)}
-              />
-              <Box flex={1} overflow="hidden" minH={0}>
-                <ActiveWorkspaceDocument tab={activeTab} />
-              </Box>
-            </Flex>
-          </Flex>
+          ) : (
+            <PanelGroup
+              direction="horizontal"
+              autoSaveId="workspace-sidebar"
+              style={{ height: '100%' }}
+            >
+              <Panel defaultSize={17} minSize={10} maxSize={28} order={1}>
+                <Box h="full" borderRight="1px" borderColor="editorShellBorder" overflow="hidden">
+                  <WorkspaceExplorer
+                    nodes={treeNodes}
+                    expandedNodeIds={expandedNodeIds}
+                    activeTabId={activeTabId}
+                    onToggleNode={toggleNode}
+                    onOpenNode={handleOpenNode}
+                    onOpenDocument={handleOpenDocument}
+                    headerAction={<WorkspaceCommandPaletteButton onClick={openCommandPalette} />}
+                  />
+                </Box>
+              </Panel>
+              <EditorResizeHandle direction="horizontal" />
+              <Panel order={2} minSize={50}>
+                <Flex h="full" overflow="hidden" minW={0} direction="column">
+                  <WorkspaceTabs
+                    tabs={tabs}
+                    activeTabId={activeTabId}
+                    onActivate={activateTab}
+                    onPin={pinTab}
+                    onReorder={reorderTabs}
+                    onClose={(tabId) => void handleCloseTab(tabId)}
+                  />
+                  <Box flex={1} overflow="hidden" minH={0}>
+                    <ActiveWorkspaceDocument tab={activeTab} />
+                  </Box>
+                </Flex>
+              </Panel>
+            </PanelGroup>
+          )
         }
       />
       <WorkspaceCommandPalette

@@ -8,11 +8,6 @@ import './index.css';
 
 enableMapSet();
 
-// Use contextBridge
-window.ipcRenderer.on('main-process-message', (_event, message) => {
-  console.log(message);
-});
-
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ChakraProvider theme={theme}>
@@ -20,8 +15,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ChakraProvider>
   </React.StrictMode>,
 );
-
-// Use contextBridge
-window.ipcRenderer.on('main-process-message', (_event, message) => {
-  console.log(message);
-});

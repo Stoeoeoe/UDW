@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Flex, Text } from '@chakra-ui/react';
+import { Box, Flex } from '@chakra-ui/react';
 
 export interface AppShellProps {
   topBar: React.ReactNode;
@@ -18,7 +18,7 @@ export const AppShell: React.FC<AppShellProps> = ({ topBar, workspace, status })
     userSelect="none"
   >
     <Box
-      h="12"
+      h="10"
       borderBottom="1px"
       borderColor="editorShellBorder"
       bg="editorPanelBg"
@@ -32,20 +32,22 @@ export const AppShell: React.FC<AppShellProps> = ({ topBar, workspace, status })
       {workspace}
     </Box>
 
-    <Flex
-      h="6"
-      bg="editorChromeBg"
-      borderTop="1px"
-      borderColor="editorShellBorder"
-      alignItems="center"
-      px="2"
-      fontSize="xs"
-      color="editorMutedText"
-      zIndex="20"
-      flexShrink={0}
-    >
-      {status ?? <Text>Ready</Text>}
-    </Flex>
+    {status && (
+      <Flex
+        h="6"
+        bg="editorChromeBg"
+        borderTop="1px"
+        borderColor="editorShellBorder"
+        alignItems="center"
+        px="2"
+        fontSize="xs"
+        color="editorMutedText"
+        zIndex="20"
+        flexShrink={0}
+      >
+        {status}
+      </Flex>
+    )}
   </Flex>
 );
 

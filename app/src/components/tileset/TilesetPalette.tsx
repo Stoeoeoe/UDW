@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Box, Text, Select, Flex, HStack, IconButton } from '@chakra-ui/react';
-import PanelHeader from '../common/PanelHeader';
 import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetCanvas } from './TilesetCanvas';
@@ -72,118 +71,114 @@ export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelec
 
   return (
     <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
-      {/* Header Row */}
-      <PanelHeader
-        left={
-          <HStack spacing={2}>
+      <Flex
+        justify="space-between"
+        align="center"
+        gap={2}
+        h="8"
+        px="2"
+        flexShrink={0}
+        bg="editorSectionBg"
+        borderBottom="1px"
+        borderColor="editorShellBorder"
+      >
+        <HStack spacing={2} minW={0}>
+          <Select
+            size="xs"
+            variant="filled"
+            bg="editorSectionBg"
+            borderColor="editorFieldBorder"
+            _hover={{ bg: 'editorPanelBg' }}
+            value={activeTilesetId || ''}
+            onChange={(e) => setActiveTileset(e.target.value)}
+            color="blue.300"
+            fontSize="10px"
+            fontWeight="bold"
+            h="6"
+            maxW="180px"
+          >
+            {tilesets.map((ts) => (
+              <option key={ts.id} value={ts.id} style={{ background: '#171923' }}>
+                {ts.name.toUpperCase()}
+              </option>
+            ))}
+          </Select>
+          {isObjectLayer && currentTileset?.objects && currentTileset.objects.length > 0 && (
             <Select
               size="xs"
               variant="filled"
-              bg="editorCanvasBg"
+              bg="editorSectionBg"
               borderColor="editorFieldBorder"
-              _hover={{ bg: 'editorShellBorder' }}
-              value={activeTilesetId || ''}
-              onChange={(e) => setActiveTileset(e.target.value)}
-              color="blue.300"
+              _hover={{ bg: 'editorPanelBg' }}
+              value={selectedObjectDefinitionId || ''}
+              onChange={(e) => handleObjectSelect(e.target.value)}
+              color="green.300"
               fontSize="10px"
               fontWeight="bold"
               h="6"
               maxW="180px"
             >
-              {tilesets.map((ts) => (
-                <option key={ts.id} value={ts.id} style={{ background: '#171923' }}>
-                  {ts.name.toUpperCase()}
+              <option value="" style={{ background: '#171923' }}>
+                TILES
+              </option>
+              {currentTileset.objects.map((objectDefinition) => (
+                <option
+                  key={objectDefinition.id}
+                  value={objectDefinition.id}
+                  style={{ background: '#171923' }}
+                >
+                  {objectDefinition.name.toUpperCase()}
                 </option>
               ))}
             </Select>
-            {isObjectLayer && currentTileset?.objects && currentTileset.objects.length > 0 && (
-              <Select
-                size="xs"
-                variant="filled"
-                bg="editorCanvasBg"
-                borderColor="editorFieldBorder"
-                _hover={{ bg: 'editorShellBorder' }}
-                value={selectedObjectDefinitionId || ''}
-                onChange={(e) => handleObjectSelect(e.target.value)}
-                color="green.300"
-                fontSize="10px"
-                fontWeight="bold"
-                h="6"
-                maxW="180px"
-              >
-                <option value="" style={{ background: '#171923' }}>
-                  TILES
-                </option>
-                {currentTileset.objects.map((objectDefinition) => (
-                  <option
-                    key={objectDefinition.id}
-                    value={objectDefinition.id}
-                    style={{ background: '#171923' }}
-                  >
-                    {objectDefinition.name.toUpperCase()}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </HStack>
-        }
-        actions={
-          <HStack spacing={2}>
-            <HStack spacing={0}>
-              <IconButton
-                aria-label="Zoom Out"
-                icon={<MinusIcon fontSize="8px" />}
-                size="xs"
-                variant="ghost"
-                h="5"
-                minW="5"
-                onClick={() => setZoom((z) => Math.max(0.5, z - 0.5))}
-              />
-              <Text fontSize="9px" fontWeight="bold" color="gray.400" w="8" textAlign="center">
-                {Math.round(zoom * 100)}%
-              </Text>
-              <IconButton
-                aria-label="Zoom In"
-                icon={<AddIcon fontSize="8px" />}
-                size="xs"
-                variant="ghost"
-                h="5"
-                minW="5"
-                onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
-              />
-            </HStack>
+          )}
+        </HStack>
 
-            {selectedObjectDefinitionId && currentTileset?.objects ? (
-              <HStack spacing={2}>
-                <Text fontSize="9px" fontWeight="black" color="green.400" textTransform="uppercase">
-                  {currentTileset.objects.find((entry) => entry.id === selectedObjectDefinitionId)
-                    ?.name ?? 'Object'}
-                </Text>
-              </HStack>
-            ) : enableMultiSelect && selectedTileIndices.length > 0 ? (
-              <HStack spacing={2}>
-                <Text fontSize="9px" fontWeight="black" color="blue.500" textTransform="uppercase">
-                  {selectedTileIndices.length} selected
-                </Text>
-              </HStack>
-            ) : selectedTileIndex !== null ? (
-              <HStack spacing={2}>
-                <Text fontSize="9px" fontWeight="black" color="blue.500" textTransform="uppercase">
-                  Tile {selectedTileIndex}
-                </Text>
-                <Text fontSize="9px" color="gray.600">
-                  {currentTileset
-                    ? `(${selectedTileIndex % currentTileset.columns}, ${Math.floor(selectedTileIndex / currentTileset.columns)})`
-                    : ''}
-                </Text>
-              </HStack>
-            ) : null}
+        <HStack spacing={2} flexShrink={0} minH="6">
+          {selectedObjectDefinitionId && currentTileset?.objects ? (
+            <Text fontSize="9px" fontWeight="black" color="green.400" textTransform="uppercase">
+              {currentTileset.objects.find((entry) => entry.id === selectedObjectDefinitionId)
+                ?.name ?? 'Object'}
+            </Text>
+          ) : enableMultiSelect && selectedTileIndices.length > 0 ? (
+            <Text fontSize="9px" fontWeight="black" color="blue.400" textTransform="uppercase">
+              {selectedTileIndices.length} selected
+            </Text>
+          ) : selectedTileIndex !== null ? (
+            <Text fontSize="9px" color="gray.400">
+              Tile {selectedTileIndex}
+              {currentTileset
+                ? ` (${selectedTileIndex % currentTileset.columns}, ${Math.floor(selectedTileIndex / currentTileset.columns)})`
+                : ''}
+            </Text>
+          ) : null}
+          <HStack spacing={0}>
+            <IconButton
+              aria-label="Zoom Out"
+              icon={<MinusIcon fontSize="8px" />}
+              size="xs"
+              variant="ghost"
+              h="5"
+              minW="5"
+              onClick={() => setZoom((z) => Math.max(0.5, z - 0.5))}
+            />
+            <Text fontSize="9px" fontWeight="bold" color="gray.400" w="8" textAlign="center">
+              {Math.round(zoom * 100)}%
+            </Text>
+            <IconButton
+              aria-label="Zoom In"
+              icon={<AddIcon fontSize="8px" />}
+              size="xs"
+              variant="ghost"
+              h="5"
+              minW="5"
+              onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
+            />
           </HStack>
-        }
-      />
+        </HStack>
+      </Flex>
 
-      {/* Scrollable Canvas */}
-      <Box flex={1} overflow="auto" bg="editorCanvasBg">
+      <Box flex={1} minH={0} overflow="auto" bg="editorCanvasBg">
         {currentTileset ? (
           <Box p={2}>
             <TilesetCanvas
