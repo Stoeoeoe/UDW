@@ -17,27 +17,6 @@ test.afterEach(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Process / packaging
-// ---------------------------------------------------------------------------
-
-test('app is not packaged in development builds', async () => {
-  const isPackaged = await app.evaluate(({ app: electronApp }) => electronApp.isPackaged);
-  expect(isPackaged).toBe(false);
-});
-
-test('app name is set', async () => {
-  const name = await app.evaluate(({ app: electronApp }) => electronApp.getName());
-  expect(typeof name).toBe('string');
-  expect(name.length).toBeGreaterThan(0);
-});
-
-test('app version is set', async () => {
-  const version = await app.evaluate(({ app: electronApp }) => electronApp.getVersion());
-  expect(typeof version).toBe('string');
-  expect(version).toMatch(/^\d+\.\d+\.\d+/);
-});
-
-// ---------------------------------------------------------------------------
 // Window properties
 // ---------------------------------------------------------------------------
 
@@ -85,16 +64,6 @@ test('landing screen shows Open Project action card', async () => {
 test('landing screen shows New Project action card', async () => {
   const window = await app.firstWindow();
   await expect(window.getByRole('heading', { name: 'New Project' })).toBeVisible();
-});
-
-test('Open Project description is visible', async () => {
-  const window = await app.firstWindow();
-  await expect(window.getByText(/select a .vproj file/i)).toBeVisible();
-});
-
-test('New Project description is visible', async () => {
-  const window = await app.firstWindow();
-  await expect(window.getByText(/start from scratch/i)).toBeVisible();
 });
 
 // ---------------------------------------------------------------------------

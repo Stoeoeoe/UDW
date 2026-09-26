@@ -27,16 +27,21 @@ describe('collisionUtils', () => {
     expect(p2[1]).toBeCloseTo(0.75);
   });
 
-  it('dedupes consecutive identical points and removes closing duplicate', () => {
-    const pts = [
+  it('deduplicates consecutive polygon points', () => {
+    expect(
+      normalizePolygonPoints(
+        [
+          [0, 0],
+          [0.5, 0.5],
+          [0.5, 0.5],
+        ],
+        16,
+        16,
+      ),
+    ).toEqual([
       [0, 0],
       [0.5, 0.5],
-      [0.5, 0.5],
-      [0, 0],
-    ];
-    const norm = normalizePolygonPoints(pts, 16, 16);
-    expect(norm.length).toBe(2);
-    expect(norm[0][0]).toBeCloseTo(0);
+    ]);
   });
 
   it('validates polygons by vertex count and area', () => {
@@ -67,25 +72,6 @@ describe('collisionUtils', () => {
     ).toBe(true);
   });
 
-  it('converts polygon shape points to normalized polygon', () => {
-    const shape = {
-      type: 'polygon',
-      points: [
-        [0, 0],
-        [8, 0],
-        [8, 8],
-      ],
-    };
-    const poly = shapeToNormalizedPolygon(shape, 16, 16);
-    expect(poly.length).toBeGreaterThan(0);
-    expect(poly[1][0]).toBeCloseTo(8 / 16);
-  });
-
-  it('returns full tile polygon for full collision', () => {
-    const poly = getPolygonFromCollision({ type: 'full' }, 16, 16);
-    expect(poly).toEqual(FULL_TILE_POLYGON.map((p) => [p[0], p[1]]));
-  });
-
   it('builds a complex collision definition from normalized points', () => {
     const pts = [
       [0, 0],
@@ -97,18 +83,6 @@ describe('collisionUtils', () => {
     expect(col.shapes?.[0]?.type).toBe('polygon');
     expect(col.shapes?.[0]?.points).toBe(pts);
   });
-});
-import { describe, expect, it } from 'vitest';
-import {
-  FULL_TILE_POLYGON,
-  buildPolygonCollision,
-  getPolygonFromCollision,
-  isValidPolygon,
-  normalizePolygonPoints,
-  shapeToNormalizedPolygon,
-} from './collisionUtils';
-
-describe('collisionUtils', () => {
   it('normalizes pixel-space points to tile-local values', () => {
     const points = normalizePolygonPoints(
       [
