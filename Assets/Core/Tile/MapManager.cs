@@ -47,25 +47,27 @@ namespace Core.Tile
 
         private readonly Dictionary<string, Dictionary<Vector2Int, FarmlandFlags>> _farmlandState = new();
 
-        // TODO: Fix calculation
         public Bounds CurrentBounds
         {
             get
             {
-                // If we have a terrain tilemap, compute bounds using its cellBounds and cellSize
+                // Tilemap.cellBounds max is already exclusive, so CellToWorld(max) gives us the
+                // outer map edge directly.
                 if (_terrainTilemap != null)
                 {
                     var cellBounds = _terrainTilemap.cellBounds;
-                    var cellSize = _terrainTilemap.cellSize;
+                    if (cellBounds.size == Vector3Int.zero)
+                        return new Bounds(Vector3.zero, Vector3.zero);
 
-                    // World position of the minimum cell corner
                     var worldMin = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMin, cellBounds.yMin, 0));
-                    // World position at the exclusive max indices; add cellSize to include the last cell area
-                    var worldMax = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMax, cellBounds.yMax, 0)) + (Vector3)cellSize;
+                    var worldMax = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMax, cellBounds.yMax, 0));
 
-                    var center = (worldMin + worldMax) * 0.5f;
-                    var size = worldMax - worldMin;
-                    return new Bounds(center, size);
+                    var min = Vector3.Min(worldMin, worldMax);
+                    var max = Vector3.Max(worldMin, worldMax);
+                    min.z = 0f;
+                    max.z = 0f;
+
+                    return new Bounds((min + max) * 0.5f, max - min);
                 }
 
                 // Fallback to map metadata if available
@@ -73,7 +75,9 @@ namespace Core.Tile
                 {
                     var width = Mathf.Max(1, _currentMap.Width);
                     var height = Mathf.Max(1, _currentMap.Height);
-                    return new Bounds(_currentMap.transform.position, new Vector3(width, height, 0f));
+                    var min = _currentMap.transform.position;
+                    var max = min + new Vector3(width, height, 0f);
+                    return new Bounds((min + max) * 0.5f, max - min);
                 }
 
                 return new Bounds(Vector3.zero, Vector3.zero);
@@ -613,4 +617,3 @@ namespace Core.Tile
         #endregion
     }
 }
-

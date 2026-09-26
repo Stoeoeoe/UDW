@@ -104,19 +104,25 @@ namespace Core.Camera
             // Ignore empty bounds
             if (bounds.size == Vector3.zero) return;
 
-            // Convert world-space center/size into the collider's local space (account for lossy scale)
             var colliderTransform = mapCollider.transform;
-            var localCenter = colliderTransform.InverseTransformPoint(bounds.center);
+            var worldMin = bounds.min;
+            var worldMax = bounds.max;
 
-            // BoxCollider2D.size is expressed in local space units. To convert from world size, divide by lossyScale.
-            var lossy = colliderTransform.lossyScale;
-            var localSize = new Vector2(
-                (lossy.x != 0f) ? bounds.size.x / lossy.x : bounds.size.x,
-                (lossy.y != 0f) ? bounds.size.y / lossy.y : bounds.size.y
-            );
+            var localBottomLeft = colliderTransform.InverseTransformPoint(new Vector3(worldMin.x, worldMin.y, 0f));
+            var localTopLeft = colliderTransform.InverseTransformPoint(new Vector3(worldMin.x, worldMax.y, 0f));
+            var localBottomRight = colliderTransform.InverseTransformPoint(new Vector3(worldMax.x, worldMin.y, 0f));
+            var localTopRight = colliderTransform.InverseTransformPoint(new Vector3(worldMax.x, worldMax.y, 0f));
 
-            mapCollider.size = localSize;
-            mapCollider.offset = localCenter; 
+            var localMin = Vector2.Min(
+                Vector2.Min((Vector2)localBottomLeft, (Vector2)localTopLeft),
+                Vector2.Min((Vector2)localBottomRight, (Vector2)localTopRight));
+            var localMax = Vector2.Max(
+                Vector2.Max((Vector2)localBottomLeft, (Vector2)localTopLeft),
+                Vector2.Max((Vector2)localBottomRight, (Vector2)localTopRight));
+
+            mapCollider.offset = (localMin + localMax) * 0.5f;
+            mapCollider.size = localMax - localMin;
+
             // TODO: Check if we really always need to call this? Expensive operation, apparently!
             confiner.InvalidateBoundingShapeCache();
             if (!confiner.BoundingShapeIsBaked)
