@@ -1,0 +1,178 @@
+.dialogue-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.dialogue-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(9, 12, 10, 0.28);
+}
+
+.dialogue-anchor {
+    flex-grow: 1;
+    justify-content: flex-end;
+    align-items: center;
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 28px;
+    padding-bottom: 28px;
+}
+
+.dialogue-panel {
+    width: 100%;
+    max-width: 860px;
+    padding-left: 26px;
+    padding-right: 26px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+    background-color: rgba(27, 33, 29, 0.96);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(212, 186, 136, 0.48);
+    border-right-color: rgba(212, 186, 136, 0.48);
+    border-top-color: rgba(212, 186, 136, 0.48);
+    border-bottom-color: rgba(212, 186, 136, 0.48);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+}
+
+.dialogue-ribbon {
+    align-self: flex-start;
+    margin-bottom: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    background-color: rgba(113, 91, 56, 0.56);
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.dialogue-ribbon-text {
+    color: rgba(245, 228, 194, 0.95);
+    font-size: 12px;
+    letter-spacing: 0.8px;
+    -unity-font-style: bold;
+}
+
+.dialogue-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.dialogue-speaker {
+    flex-grow: 1;
+    color: rgb(247, 240, 222);
+    font-size: 26px;
+    -unity-font-style: bold;
+    letter-spacing: 0.4px;
+}
+
+.dialogue-emotion {
+    margin-left: 16px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    color: rgb(255, 206, 141);
+    font-size: 13px;
+    background-color: rgba(95, 69, 42, 0.54);
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.dialogue-body {
+    color: rgb(234, 238, 229);
+    font-size: 21px;
+    white-space: normal;
+    margin-bottom: 16px;
+    -unity-text-align: upper-left;
+}
+
+.dialogue-choices {
+    margin-bottom: 14px;
+}
+
+.dialogue-choice {
+    min-height: 48px;
+    margin-bottom: 10px;
+    padding-left: 16px;
+    padding-right: 16px;
+    color: rgb(247, 244, 235);
+    font-size: 17px;
+    -unity-text-align: middle-left;
+    background-color: rgba(46, 60, 53, 0.96);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(190, 214, 188, 0.26);
+    border-right-color: rgba(190, 214, 188, 0.26);
+    border-top-color: rgba(190, 214, 188, 0.26);
+    border-bottom-color: rgba(190, 214, 188, 0.26);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.dialogue-choice:hover {
+    background-color: rgba(65, 83, 74, 0.98);
+}
+
+.dialogue-choice:active {
+    background-color: rgba(84, 103, 92, 1);
+}
+
+.dialogue-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dialogue-hint {
+    flex-grow: 1;
+    margin-right: 16px;
+    color: rgba(214, 220, 208, 0.72);
+    font-size: 13px;
+}
+
+.dialogue-continue {
+    min-width: 138px;
+    min-height: 40px;
+    padding-left: 18px;
+    padding-right: 18px;
+    color: rgb(36, 28, 20);
+    font-size: 16px;
+    -unity-font-style: bold;
+    background-color: rgb(241, 201, 129);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.dialogue-continue:hover {
+    background-color: rgb(251, 217, 156);
+}
+
+.dialogue-continue:active {
+    background-color: rgb(228, 184, 108);
+}

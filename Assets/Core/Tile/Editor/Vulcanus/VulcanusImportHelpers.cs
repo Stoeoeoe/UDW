@@ -74,6 +74,7 @@ namespace Core.Tile.Editor.Vulcanus
         public static string GetBaseName(string assetPath)
         {
             var fileName = Path.GetFileName(assetPath);
+            if (fileName.EndsWith(".runtime.dialogue.json", StringComparison.OrdinalIgnoreCase)) return fileName[..^".runtime.dialogue.json".Length];
             if (fileName.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)) return fileName[..^".entity.json".Length];
             if (fileName.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase)) return fileName[..^".vmap".Length];
             if (fileName.EndsWith(".vts", StringComparison.OrdinalIgnoreCase)) return fileName[..^".vts".Length];

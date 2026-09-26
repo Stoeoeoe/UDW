@@ -4,13 +4,19 @@ using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(3, new[] { "vproj", "vts", "vmap", "vitm", "entity.json" }, 6100)]
+    [ScriptedImporter(4, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
         {
             try
             {
+                if (ctx.assetPath.EndsWith(".runtime.dialogue.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    DialogueImporter.ImportDialogue(ctx);
+                    return;
+                }
+
                 if (ctx.assetPath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase))
                 {
                     EntityDefinitionImporter.ImportEntityDefinition(ctx);

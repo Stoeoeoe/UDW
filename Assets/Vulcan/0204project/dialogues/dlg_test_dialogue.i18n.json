@@ -1,0 +1,19 @@
+{
+  "dialogueId": "dlg_test_dialogue",
+  "dialogueName": "test_dialogue",
+  "generatedAt": "2026-05-01T21:47:13.433Z",
+  "messages": [
+    {
+      "msgKey": "dlg.dlg_test_dialogue.01",
+      "text": "Gaga",
+      "nodeId": "step_1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.dlg_test_dialogue.02",
+      "text": "Test 2",
+      "nodeId": "step_2",
+      "sourceType": "line"
+    }
+  ]
+}

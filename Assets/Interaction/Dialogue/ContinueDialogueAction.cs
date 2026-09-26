@@ -1,5 +1,6 @@
 using System.Collections;
 using Core.Context;
+using Core.Dialogue.Vulcanus;
 
 namespace Interaction.Dialogue
 {
@@ -8,7 +9,7 @@ namespace Interaction.Dialogue
 
         public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
         {
-            UrDialogueManager.Instance.ContinueOrFastForwardDialogue();
+            VulcanusDialogueRunner.Instance.TryAdvanceActiveDialogue();
             yield break;
         }
 

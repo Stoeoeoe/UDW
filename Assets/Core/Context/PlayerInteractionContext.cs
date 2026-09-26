@@ -1,5 +1,6 @@
 using System;
 using Character;
+using Core.Dialogue.Vulcanus;
 using Core.Location;
 using Core.TimeAndWeather;
 using Interaction.Pointer;
@@ -44,7 +45,7 @@ namespace Core.Context
                     character.CurrentlyHeldItem,
                     character.ConditionState,
                     character.MovementState,
-                    UrDialogueManager.Instance.CurrentConversation,
+                    ResolveCurrentConversation(),
                     (UrTimeManager.Instance)?.CurrentTime
                 );
 
@@ -63,6 +64,13 @@ namespace Core.Context
         private void LateUpdate()
         {
             UpdateContextSnapshot();
+        }
+
+        private static string ResolveCurrentConversation()
+        {
+            return VulcanusDialogueRunner.Instance != null
+                ? VulcanusDialogueRunner.Instance.CurrentDialogueId
+                : null;
         }
     }
 }

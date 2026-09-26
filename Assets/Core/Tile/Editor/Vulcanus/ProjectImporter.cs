@@ -40,6 +40,40 @@ namespace Core.Tile.Editor.Vulcanus
                 required = d.Required
             }).ToArray() ?? Array.Empty<VulcanusProject.PropertyDefinition>();
 
+            var dialogueTypes = dto.DialogueTypes?.Select(d => new VulcanusProject.DialogueTypeDefinition
+            {
+                id = d.Id,
+                name = d.Name,
+                description = d.Description,
+                contextTypeId = d.ContextTypeId
+            }).ToArray() ?? Array.Empty<VulcanusProject.DialogueTypeDefinition>();
+
+            var gameVariables = dto.GameVariables?.Select(MapScriptValueDefinition).ToArray()
+                                ?? Array.Empty<VulcanusProject.ScriptValueDefinition>();
+            var scriptFunctions = dto.ScriptFunctions?.Select(MapScriptFunctionDefinition).ToArray()
+                                  ?? Array.Empty<VulcanusProject.ScriptFunctionDefinition>();
+            var scriptNamespaces = dto.ScriptNamespaces?.Select(n => new VulcanusProject.ScriptNamespaceDefinition
+            {
+                id = n.Id,
+                name = n.Name,
+                description = n.Description,
+                fields = n.Fields?.Select(MapScriptValueDefinition).ToArray()
+                         ?? Array.Empty<VulcanusProject.ScriptValueDefinition>(),
+                functions = n.Functions?.Select(MapScriptFunctionDefinition).ToArray()
+                            ?? Array.Empty<VulcanusProject.ScriptFunctionDefinition>()
+            }).ToArray() ?? Array.Empty<VulcanusProject.ScriptNamespaceDefinition>();
+
+            var scriptContextTypes = dto.ScriptContextTypes?.Select(c => new VulcanusProject.ScriptContextTypeDefinition
+            {
+                id = c.Id,
+                name = c.Name,
+                description = c.Description,
+                fields = c.Fields?.Select(MapScriptValueDefinition).ToArray()
+                         ?? Array.Empty<VulcanusProject.ScriptValueDefinition>(),
+                functions = c.Functions?.Select(MapScriptFunctionDefinition).ToArray()
+                            ?? Array.Empty<VulcanusProject.ScriptFunctionDefinition>()
+            }).ToArray() ?? Array.Empty<VulcanusProject.ScriptContextTypeDefinition>();
+
             var previousProject = AssetDatabase.LoadAssetAtPath<VulcanusProject>(ctx.assetPath);
             var catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
 
@@ -62,6 +96,13 @@ namespace Core.Tile.Editor.Vulcanus
                 terrainDefs,
                 layerDefs,
                 metadataDefs);
+            project.ConfigureDialogueScripting(
+                dto.DefaultDialogueContextTypeId,
+                dialogueTypes,
+                gameVariables,
+                scriptFunctions,
+                scriptNamespaces,
+                scriptContextTypes);
 
             VulcanusProject.ItemClassMapping[] itemMappings = Array.Empty<VulcanusProject.ItemClassMapping>();
             if (dto.ItemClasses != null && dto.ItemClasses.Count > 0)
@@ -83,6 +124,40 @@ namespace Core.Tile.Editor.Vulcanus
 
             ctx.AddObjectToAsset("project", project);
             ctx.SetMainObject(project);
+        }
+
+        private static VulcanusProject.ScriptValueDefinition MapScriptValueDefinition(GameVariableDto value)
+        {
+            return new VulcanusProject.ScriptValueDefinition
+            {
+                key = value?.Key ?? string.Empty,
+                type = value?.Type ?? string.Empty,
+                category = value?.Category ?? string.Empty,
+                description = value?.Description ?? string.Empty,
+                defaultValue = value?.DefaultValue?.ToString(Newtonsoft.Json.Formatting.None) ?? string.Empty,
+                enumValues = value?.EnumValues?.ToArray() ?? Array.Empty<string>(),
+                tableId = value?.TableId ?? string.Empty,
+                folderPath = value?.FolderPath ?? string.Empty
+            };
+        }
+
+        private static VulcanusProject.ScriptFunctionDefinition MapScriptFunctionDefinition(ScriptFunctionDto function)
+        {
+            return new VulcanusProject.ScriptFunctionDefinition
+            {
+                id = function?.Id ?? string.Empty,
+                name = function?.Name ?? string.Empty,
+                description = function?.Description ?? string.Empty,
+                parameters = function?.Params?.Select(p => new VulcanusProject.ScriptParamDefinition
+                {
+                    name = p.Name,
+                    type = p.Type,
+                    description = p.Description,
+                    enumValues = p.EnumValues?.ToArray() ?? Array.Empty<string>()
+                }).ToArray() ?? Array.Empty<VulcanusProject.ScriptParamDefinition>(),
+                returnType = function?.ReturnType ?? string.Empty,
+                returnTableId = function?.ReturnTableId ?? string.Empty
+            };
         }
     }
 }

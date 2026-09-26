@@ -16,8 +16,8 @@ namespace Core.Context
             {
                 return context.CurrentInteractable switch
                 {
-                    ShowDialogueInteractable when string.IsNullOrEmpty(context.CurrentConversation) => InteractionMode.DialogueReady,
-                    ShowDialogueInteractable when !string.IsNullOrEmpty(context.CurrentConversation)=> InteractionMode.DialogueInProgress,
+                    ShowVulcanusDialogueInteractable when string.IsNullOrEmpty(context.CurrentConversation) => InteractionMode.DialogueReady,
+                    ShowVulcanusDialogueInteractable when !string.IsNullOrEmpty(context.CurrentConversation) => InteractionMode.DialogueInProgress,
                     _ => InteractionMode.Interact
                 };
             }

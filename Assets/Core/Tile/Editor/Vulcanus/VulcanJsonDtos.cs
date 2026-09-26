@@ -19,6 +19,12 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("entityTypes")] public List<EntityTypeDto> EntityTypes { get; set; } = new();
         [JsonProperty("tileMetadataDefinitions")] public List<PropertyDefinitionDto> TileMetadataDefinitions { get; set; } = new();
         [JsonProperty("itemClasses")] public List<ItemClassDto> ItemClasses { get; set; } = new();
+        [JsonProperty("defaultDialogueContextTypeId")] public string DefaultDialogueContextTypeId { get; set; }
+        [JsonProperty("dialogueTypes")] public List<DialogueTypeDto> DialogueTypes { get; set; } = new();
+        [JsonProperty("gameVariables")] public List<GameVariableDto> GameVariables { get; set; } = new();
+        [JsonProperty("scriptFunctions")] public List<ScriptFunctionDto> ScriptFunctions { get; set; } = new();
+        [JsonProperty("scriptNamespaces")] public List<ScriptNamespaceDto> ScriptNamespaces { get; set; } = new();
+        [JsonProperty("scriptContextTypes")] public List<ScriptContextTypeDto> ScriptContextTypes { get; set; } = new();
     }
 
     internal class ItemClassDto

@@ -21,8 +21,9 @@
     "version": { "type": "integer", "minimum": 1 },
     "id": { "type": "string" },
     "name": { "type": "string" },
+    "folderPath": { "type": "string" },
     "oneShot": { "type": "boolean" },
-    "entryCondition": { "type": "string" },
+    "dialogueTypeId": { "type": "string" },
     "startNodeId": { "type": "string" },
     "tags": {
       "type": "array",

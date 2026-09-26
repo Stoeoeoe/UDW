@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="dialogue-overlay" class="dialogue-overlay">
+        <ui:VisualElement name="dialogue-backdrop" class="dialogue-backdrop" />
+        <ui:VisualElement name="dialogue-anchor" class="dialogue-anchor">
+            <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
+                <ui:VisualElement class="dialogue-ribbon">
+                    <ui:Label class="dialogue-ribbon-text" text="Conversation" />
+                </ui:VisualElement>
+                <ui:VisualElement class="dialogue-header">
+                    <ui:Label name="dialogue-speaker" class="dialogue-speaker" />
+                    <ui:Label name="dialogue-emotion" class="dialogue-emotion" />
+                </ui:VisualElement>
+                <ui:Label name="dialogue-body" class="dialogue-body" />
+                <ui:VisualElement name="dialogue-choices" class="dialogue-choices" />
+                <ui:VisualElement class="dialogue-footer">
+                    <ui:Label name="dialogue-hint" class="dialogue-hint" />
+                    <ui:Button name="dialogue-continue" class="dialogue-continue" text="Continue" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

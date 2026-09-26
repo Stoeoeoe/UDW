@@ -1,0 +1,33 @@
+{
+  "$schema": "../../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "dlg_test_dialogue",
+  "name": "test_dialogue",
+  "oneShot": false,
+  "startNodeId": "step_1",
+  "tags": [],
+  "createdAt": "2026-04-28T19:26:55.161Z",
+  "updatedAt": "2026-05-01T21:47:12.724Z",
+  "nodes": [
+    {
+      "id": "step_3",
+      "type": "jump",
+      "targetDialogueId": null,
+      "targetNodeId": ""
+    },
+    {
+      "id": "step_1",
+      "type": "line",
+      "text": "Gaga",
+      "msgKey": "dlg.dlg_test_dialogue.01",
+      "next": "step_2"
+    },
+    {
+      "id": "step_2",
+      "type": "line",
+      "text": "Test 2",
+      "msgKey": "dlg.dlg_test_dialogue.02",
+      "next": null
+    }
+  ]
+}
