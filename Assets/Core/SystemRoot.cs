@@ -1,3 +1,4 @@
+using Core.Game;
 using UnityEngine;
 
 namespace Core
@@ -15,7 +16,11 @@ namespace Core
             }
 
             Instance = this;
-            DontDestroyOnLoad(gameObject); 
+            DontDestroyOnLoad(gameObject);
+
+            // Scene-specific test roots and the default prefab share the same state setup.
+            if (!TryGetComponent<GameStateManager>(out _))
+                gameObject.AddComponent<GameStateManager>();
         }
     }
 }
