@@ -70,7 +70,7 @@ export const TopBar: React.FC = () => {
     try {
       await saveAllDirtyWorkspaceUnits();
       toast({
-        title: 'All dirty documents saved',
+        title: 'All documents saved',
         status: 'success',
         duration: 1800,
       });
