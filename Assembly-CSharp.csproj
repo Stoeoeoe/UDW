@@ -103,6 +103,8 @@
     <Compile Include="Assets\Core\Events\EventBusExtensions.cs" />
     <Compile Include="Assets\Character\Abilities\CharacterAbility.cs" />
     <Compile Include="Assets\Core\PlayerStateManager.cs" />
+    <Compile Include="Assets\Core\Game\GameState.cs" />
+    <Compile Include="Assets\Core\Game\GameStateManager.cs" />
     <Compile Include="Assets\Core\Tile\TileHighlight\TileHighlighter.cs" />
     <Compile Include="Assets\Core\TimeAndWeather\UrTimeManager.cs" />
     <Compile Include="Assets\Interaction\InteractAction.cs" />
@@ -178,6 +180,7 @@
     <Compile Include="Assets\Interaction\Dialogue\TypewriterSound.cs" />
     <Compile Include="Assets\SensorToolkit\TriggerSensor2D.cs" />
     <Compile Include="Assets\Interaction\Dialogue\UrDialogueManager.cs" />
+    <Compile Include="Assets\Interaction\Dialogue\GameStateLuaBridge.cs" />
     <Compile Include="Assets\Interaction\InteractionSensor.cs" />
     <Compile Include="Assets\Core\Inventory\InventoryChangedEvent.cs" />
     <Compile Include="Assets\Core\Tile\TerrainType.cs" />

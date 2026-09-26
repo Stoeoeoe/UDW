@@ -23,10 +23,12 @@ public class UrDialogueManager : Singleton<UrDialogueManager>, IEventListener<Ur
     {
         this.Subscribe<UrDialogueLifecycleEvent>();
         this.Subscribe<DialogueCancelledEvent>();
+        GameStateLuaBridge.Register();
     }
 
     void OnDisable()
     {
+        GameStateLuaBridge.Unregister();
         this.Unsubscribe<UrDialogueLifecycleEvent>();
         this.Unsubscribe<DialogueCancelledEvent>();
     }

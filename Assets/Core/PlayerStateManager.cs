@@ -1,5 +1,6 @@
 using Character;
 using Core.Events;
+using Core.Game;
 using Core.Inventory;
 using Interaction.Tools;
 using Interaction.Tools.Stamina;
@@ -21,7 +22,6 @@ namespace Core
 
         int _currentStamina;
         bool _inventoryInitialized;
-        readonly CharacterSkills _skills = new CharacterSkills();
 
         protected override void OnAwake()
         {
@@ -41,7 +41,7 @@ namespace Core
         public void InitializeCharacter(GameCharacter character)
         {
             if (character is MainCharacter)
-                character.InitializeSkills(_skills);
+                character.InitializeSkills(GameState.Player.Skills);
 
             if (!_inventoryInitialized)
             {
