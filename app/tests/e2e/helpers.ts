@@ -5,6 +5,12 @@ import { fileURLToPath } from 'node:url';
 /** Absolute path to the app/ directory. */
 export const appDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
+function getElectronEnvironment(): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  delete environment.ELECTRON_RUN_AS_NODE;
+  return environment;
+}
+
 /**
  * Launch the Electron app against the production build (dist/).
  * DevTools are NOT opened (production mode has no VITE_DEV_SERVER_URL).
@@ -15,7 +21,7 @@ export async function launchApp(): Promise<{ app: ElectronApplication; window: P
     args: [path.join(appDir, 'dist-electron', 'main.js')],
     cwd: appDir,
     env: {
-      ...process.env,
+      ...getElectronEnvironment(),
       // Explicitly clear dev-server URL so production path is used.
       VITE_DEV_SERVER_URL: '',
       NODE_ENV: 'production',
