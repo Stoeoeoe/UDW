@@ -59,22 +59,17 @@ export const ItemEditor: React.FC = () => {
     return Array.from(cats).sort();
   }, [items]);
 
-  const emptyContent =
-    items.length === 0 ? (
-      <EmptyScreen
-        icon={<GiChest />}
-        title="No Items"
-        description="Define items that can be picked up, used, or traded in the game world."
-        buttonLabel="Create First Item"
-        onCreate={onOpen}
-      />
-    ) : (
-      <EmptyScreen
-        icon={<GiChest />}
-        title="No Item Selected"
-        description="Select an item from the list to edit its details."
-      />
-    );
+  const emptyContent = (
+    <EmptyScreen
+      icon={<GiChest />}
+      title={items.length ? 'No Item Selected' : 'No Items'}
+      description={items.length
+        ? 'Select an item from the list to edit its details.'
+        : 'Define items that can be picked up, used, or traded in the game world.'}
+      buttonLabel={items.length ? undefined : 'Create First Item'}
+      onCreate={items.length ? undefined : onOpen}
+    />
+  );
 
   const centerContent = selectedItem ? (
     <DetailPanel key={selectedItem.id} maxWidth="1240px">

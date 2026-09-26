@@ -35,22 +35,17 @@ export const ActorEditor: React.FC = () => {
 
   const selectedActor = actors.find((a) => a.id === selectedActorId);
 
-  const content =
-    actors.length === 0 ? (
-      <EmptyScreen
-        icon={<GiPerson />}
-        title="No Actors"
-        description="Define characters or named roles available to dialogue and gameplay systems."
-        buttonLabel="Create First Actor"
-        onCreate={onOpen}
-      />
-    ) : (
-      <EmptyScreen
-        icon={<GiPerson />}
-        title="No Actor Selected"
-        description="Select an actor from the list to edit details."
-      />
-    );
+  const content = (
+    <EmptyScreen
+      icon={<GiPerson />}
+      title={actors.length ? 'No Actor Selected' : 'No Actors'}
+      description={actors.length
+        ? 'Select an actor from the list to edit details.'
+        : 'Define characters or named roles available to dialogue and gameplay systems.'}
+      buttonLabel={actors.length ? undefined : 'Create First Actor'}
+      onCreate={actors.length ? undefined : onOpen}
+    />
+  );
 
   const centerContent = selectedActor ? (
     <DetailPanel key={selectedActor.id} maxWidth="1180px">

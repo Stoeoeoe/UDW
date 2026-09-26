@@ -65,22 +65,17 @@ export const EntityEditor: React.FC = () => {
     return Array.from(groups).sort();
   }, [entityTypes]);
 
-  const emptyContent =
-    entityTypes.length === 0 ? (
-      <EmptyScreen
-        icon={<GameIcon iconName="GiBox" size={48} />}
-        title="No Entity Types"
-        description="Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements."
-        buttonLabel="Create First Entity"
-        onCreate={onOpen}
-      />
-    ) : (
-      <EmptyScreen
-        icon={<GameIcon iconName="GiBox" size={48} />}
-        title="No Entity Type Selected"
-        description="Select an entity type from the list to edit its data and property schema."
-      />
-    );
+  const emptyContent = (
+    <EmptyScreen
+      icon={<GameIcon iconName="GiBox" size={48} />}
+      title={entityTypes.length ? 'No Entity Type Selected' : 'No Entity Types'}
+      description={entityTypes.length
+        ? 'Select an entity type from the list to edit its data and property schema.'
+        : 'Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements.'}
+      buttonLabel={entityTypes.length ? undefined : 'Create First Entity'}
+      onCreate={entityTypes.length ? undefined : onOpen}
+    />
+  );
 
   const centerContent = selectedType ? (
     <DetailPanel key={selectedType.id} maxWidth="1280px">
