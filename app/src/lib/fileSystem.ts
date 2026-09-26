@@ -137,96 +137,23 @@ export class FileSystemManager {
    * Load all maps from the maps/ directory
    */
   async loadAllMaps(): Promise<GameMap[]> {
-    if (this.isElectron()) {
-      const maps = (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'maps',
-      })) as GameMap[];
-      return maps.map((m) => deserializeMap(migrateMapToEncodedData(m)));
-    } else {
-      if (!this.projectRoot) throw new Error('No project open.');
-      const maps: GameMap[] = [];
-      const dir = await this.projectRoot.getDirectoryHandle('maps', { create: false });
-      for await (const entry of dir.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.vmap')) {
-          const file = await (entry as FileSystemFileHandle).getFile();
-          const mapData = JSON.parse(await file.text());
-          maps.push(deserializeMap(migrateMapToEncodedData(mapData)));
-        }
-      }
-      return maps;
-    }
+    const maps = await this.readDirectory<GameMap>('maps', '.vmap');
+    return maps.map((map) => deserializeMap(migrateMapToEncodedData(map)));
   }
 
   /**
    * Load all tilesets from the tilesets/ directory
    */
   async loadAllTilesets(): Promise<Tileset[]> {
-    if (this.isElectron()) {
-      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'tilesets',
-      })) as Tileset[];
-    } else {
-      if (!this.projectRoot) throw new Error('No project open.');
-      const tilesets: Tileset[] = [];
-      const dir = await this.projectRoot.getDirectoryHandle('tilesets', { create: false });
-      for await (const entry of dir.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.vts')) {
-          const file = await (entry as FileSystemFileHandle).getFile();
-          tilesets.push(JSON.parse(await file.text()));
-        }
-      }
-      return tilesets;
-    }
+    return this.readDirectory<Tileset>('tilesets', '.vts');
   }
 
   /**
    * Load all actors from actors/ (preferred) with legacy npcs/ fallback.
    */
   async loadAllActors(): Promise<Actor[]> {
-    if (this.isElectron()) {
-      const actors = (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'actors',
-      })) as Actor[];
-      if (actors.length > 0) return actors;
-
-      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'npcs',
-      })) as Actor[];
-    } else {
-      if (!this.projectRoot) throw new Error('No project open.');
-      const actors: Actor[] = [];
-      try {
-        const dir = await this.projectRoot.getDirectoryHandle('actors', { create: false });
-        for await (const entry of dir.values()) {
-          if (entry.kind === 'file' && entry.name.endsWith('.actor.json')) {
-            const file = await (entry as FileSystemFileHandle).getFile();
-            actors.push(JSON.parse(await file.text()));
-          }
-        }
-      } catch {
-        // actors/ directory may not exist yet
-      }
-
-      if (actors.length > 0) return actors;
-
-      try {
-        const dir = await this.projectRoot.getDirectoryHandle('npcs', { create: false });
-        for await (const entry of dir.values()) {
-          if (entry.kind === 'file' && entry.name.endsWith('.npc.json')) {
-            const file = await (entry as FileSystemFileHandle).getFile();
-            actors.push(JSON.parse(await file.text()));
-          }
-        }
-      } catch {
-        // legacy npcs/ directory may not exist
-      }
-
-      return actors;
-    }
+    const actors = await this.readDirectory<Actor>('actors', '.actor.json', true);
+    return actors.length > 0 ? actors : this.readDirectory<Actor>('npcs', '.npc.json', true);
   }
 
   /** @deprecated Use loadAllActors(). */
@@ -238,54 +165,14 @@ export class FileSystemManager {
    * Load all items from items/ directory.
    */
   async loadAllItems(): Promise<Item[]> {
-    if (this.isElectron()) {
-      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'items',
-      })) as Item[];
-    } else {
-      if (!this.projectRoot) throw new Error('No project open.');
-      const items: Item[] = [];
-      try {
-        const dir = await this.projectRoot.getDirectoryHandle('items', { create: false });
-        for await (const entry of dir.values()) {
-          if (entry.kind === 'file' && entry.name.endsWith('.vitm')) {
-            const file = await (entry as FileSystemFileHandle).getFile();
-            items.push(JSON.parse(await file.text()));
-          }
-        }
-      } catch {
-        // items/ directory may not exist yet
-      }
-      return items;
-    }
+    return this.readDirectory<Item>('items', '.vitm', true);
   }
 
   /**
    * Load all entity types from entities/ directory.
    */
   async loadAllEntityTypes(): Promise<EntityType[]> {
-    if (this.isElectron()) {
-      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'entities',
-      })) as EntityType[];
-    } else {
-      if (!this.projectRoot) throw new Error('No project open.');
-      const entityTypes: EntityType[] = [];
-      try {
-        const dir = await this.projectRoot.getDirectoryHandle('entities', { create: false });
-        for await (const entry of dir.values()) {
-          if (entry.kind === 'file' && entry.name.endsWith('.entity.json')) {
-            const file = await (entry as FileSystemFileHandle).getFile();
-            entityTypes.push(JSON.parse(await file.text()));
-          }
-        }
-      } catch {
-        // entities/ directory may not exist yet
-      }
-      return entityTypes;
-    }
+    return this.readDirectory<EntityType>('entities', '.entity.json', true);
   }
 
   async loadDialogueById(id: string): Promise<DialogueDocument | null> {
@@ -294,31 +181,13 @@ export class FileSystemManager {
   }
 
   async loadAllDialogues(): Promise<DialogueDocument[]> {
-    if (this.isElectron()) {
-      const entries = (await window.ipcRenderer.invoke('app:fs-read-dir', {
-        projectPath: this.projectPath,
-        subDir: 'dialogues',
-      })) as unknown[];
-      return entries.filter(isDialogueSourceDocument).map((entry) => entry as DialogueDocument);
-    }
-
-    if (!this.projectRoot) throw new Error('No project open.');
-    const dialogues: DialogueDocument[] = [];
-    try {
-      const dir = await this.projectRoot.getDirectoryHandle('dialogues', { create: false });
-      for await (const entry of dir.values()) {
-        if (entry.kind !== 'file' || !entry.name.endsWith('.dialogue.json')) continue;
-        if (entry.name.endsWith('.runtime.dialogue.json')) continue;
-        const file = await (entry as FileSystemFileHandle).getFile();
-        const parsed = JSON.parse(await file.text());
-        if (isDialogueSourceDocument(parsed)) {
-          dialogues.push(parsed as DialogueDocument);
-        }
-      }
-    } catch {
-      // dialogues/ directory may not exist yet
-    }
-    return dialogues;
+    const entries = await this.readDirectory<unknown>(
+      'dialogues',
+      '.dialogue.json',
+      true,
+      '.runtime.dialogue.json',
+    );
+    return entries.filter(isDialogueSourceDocument);
   }
 
   /**
@@ -446,6 +315,39 @@ export class FileSystemManager {
       return new Blob([data]);
     }
     throw new Error('Direct file reading from path is only supported in Electron.');
+  }
+
+  private async readDirectory<T>(
+    subDir: string,
+    extension: string,
+    optional = false,
+    excludedExtension?: string,
+  ): Promise<T[]> {
+    if (this.isElectron()) {
+      return (await window.ipcRenderer.invoke('app:fs-read-dir', {
+        projectPath: this.projectPath,
+        subDir,
+      })) as T[];
+    }
+
+    if (!this.projectRoot) throw new Error('No project open.');
+    const results: T[] = [];
+    try {
+      const dir = await this.projectRoot.getDirectoryHandle(subDir, { create: false });
+      for await (const entry of dir.values()) {
+        if (
+          entry.kind !== 'file' ||
+          !entry.name.endsWith(extension) ||
+          (excludedExtension && entry.name.endsWith(excludedExtension))
+        )
+          continue;
+        const file = await (entry as FileSystemFileHandle).getFile();
+        results.push(JSON.parse(await file.text()) as T);
+      }
+    } catch (error) {
+      if (!optional) throw error;
+    }
+    return results;
   }
 
   private async writeJSONWeb(
