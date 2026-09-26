@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Character;
 using Core.Events;
+using Core.Game;
 using Core.Items;
 using Core.Location;
 using Core.Tile.Vulcanus;
@@ -24,6 +26,7 @@ namespace Core.Tile
         [SerializeField] RuleTile irrigatedFarmlandTile;
 
         private const float InteractionDistance = 0.55f;
+        private const string FarmlandRecordType = "base:farmland";
 
         private VulcanusImportedMap _currentMap;
         private Tilemap _terrainTilemap;
@@ -34,18 +37,6 @@ namespace Core.Tile
         private GameObject _plantParentGameObject;
         private Dictionary<TerrainType, TerrainData> _terrainDataByType;
         private Dictionary<Vector2Int, TileData> _tileDataCache;
-
-
-        // Farmland state persisted across scene loads, keyed by locationId → tile coords
-        [Flags]
-        private enum FarmlandFlags
-        {
-            None = 0,
-            Plowed = 1,
-            Irrigated = 2
-        }
-
-        private readonly Dictionary<string, Dictionary<Vector2Int, FarmlandFlags>> _farmlandState = new();
 
         public Bounds CurrentBounds
         {
@@ -312,15 +303,31 @@ namespace Core.Tile
             var locationId = LevelManager.Instance.CurrentLocationData?.id;
             if (locationId == null) return;
 
-            if (!_farmlandState.TryGetValue(locationId, out var tileStates))
-                _farmlandState[locationId] = tileStates = new Dictionary<Vector2Int, FarmlandFlags>();
+            var objectId = FarmlandObjectId(coords);
+            if (!GameState.World.TryGet<FarmlandState>(locationId, objectId, FarmlandRecordType, out var state))
+                state = new FarmlandState();
 
-            var current = tileStates.GetValueOrDefault(coords);
-            if (plowed == true) current |= FarmlandFlags.Plowed;
-            if (plowed == false) current &= ~FarmlandFlags.Plowed;
-            if (irrigated == true) current |= FarmlandFlags.Irrigated;
-            if (irrigated == false) current &= ~FarmlandFlags.Irrigated;
-            tileStates[coords] = current;
+            if (plowed.HasValue) state.plowed = plowed.Value;
+            if (irrigated.HasValue) state.irrigated = irrigated.Value;
+
+            if (!state.plowed && !state.irrigated)
+                GameState.World.Remove(locationId, objectId, FarmlandRecordType);
+            else
+                GameState.World.Set(locationId, objectId, FarmlandRecordType, state);
+        }
+
+        private static string FarmlandObjectId(Vector2Int coords) =>
+            coords.x.ToString(CultureInfo.InvariantCulture) + "," + coords.y.ToString(CultureInfo.InvariantCulture);
+
+        private static Vector2Int ParseFarmlandObjectId(string objectId)
+        {
+            var parts = objectId.Split(',');
+            if (parts.Length != 2 ||
+                !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
+                !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
+                throw new FormatException($"Invalid farmland object ID '{objectId}'.");
+
+            return new Vector2Int(x, y);
         }
 
         #endregion
@@ -593,20 +600,22 @@ namespace Core.Tile
         private void RestoreFarmlandState()
         {
             var locationId = LevelManager.Instance.CurrentLocationData?.id;
-            if (locationId == null || !_farmlandState.TryGetValue(locationId, out var tileStates)) return;
+            if (locationId == null) return;
 
-            foreach (var (coords, flags) in tileStates)
+            foreach (var objectId in GameState.World.GetObjectIds(locationId, FarmlandRecordType))
             {
+                var coords = ParseFarmlandObjectId(objectId);
+                GameState.World.TryGet<FarmlandState>(locationId, objectId, FarmlandRecordType, out var state);
                 var tile = GetTileDataAtCoordinates(coords);
                 if (tile == null) continue;
 
-                if (flags.HasFlag(FarmlandFlags.Plowed))
+                if (state.plowed)
                 {
                     tile.FarmlandData?.Plow();
                     SetTileAt(_plowedTilemap, coords, plowedFarmlandTile);
                 }
 
-                if (flags.HasFlag(FarmlandFlags.Irrigated))
+                if (state.irrigated)
                 {
                     tile.FarmlandData?.Irrigate();
                     SetTileAt(_irrigatedTilemap, coords, irrigatedFarmlandTile);

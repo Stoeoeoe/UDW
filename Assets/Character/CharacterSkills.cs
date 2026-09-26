@@ -29,5 +29,27 @@ namespace Character
             SkillLevelChangedEvent.Trigger(this, skillId, newLevel);
             return true;
         }
+
+        internal IEnumerable<KeyValuePair<string, int>> GetLevels() => _levels;
+
+        internal void RestoreLevels(IEnumerable<KeyValuePair<string, int>> levels)
+        {
+            var previousLevels = new Dictionary<string, int>(_levels, StringComparer.Ordinal);
+            _levels.Clear();
+            foreach (var pair in levels)
+                _levels.Add(pair.Key, pair.Value);
+
+            var changes = new List<KeyValuePair<string, int>>();
+            foreach (var pair in previousLevels)
+                if (GetLevel(pair.Key) != pair.Value)
+                    changes.Add(new KeyValuePair<string, int>(pair.Key, GetLevel(pair.Key)));
+
+            foreach (var pair in _levels)
+                if (!previousLevels.ContainsKey(pair.Key))
+                    changes.Add(pair);
+
+            foreach (var pair in changes)
+                SkillLevelChangedEvent.Trigger(this, pair.Key, pair.Value);
+        }
     }
 }

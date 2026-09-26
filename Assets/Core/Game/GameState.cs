@@ -14,11 +14,8 @@ namespace Core.Game
         public static WorldState World => Manager.World;
         public static PlayerState Player => Manager.Player;
         public static StoryState Story => Manager.Story;
-    }
-
-    /// <summary>World-object records will live here once their identity and record types are defined.</summary>
-    public sealed class WorldState
-    {
+        public static void Save(string slot) => Manager.Save(slot);
+        public static bool Load(string slot) => Manager.Load(slot);
     }
 
     public sealed class PlayerState
@@ -35,5 +32,14 @@ namespace Core.Game
         public bool SetFlag(string flag) => _flags.Add(flag);
 
         public bool ClearFlag(string flag) => _flags.Remove(flag);
+
+        internal IEnumerable<string> GetFlags() => _flags;
+
+        internal void RestoreFlags(IEnumerable<string> flags)
+        {
+            _flags.Clear();
+            foreach (var flag in flags)
+                _flags.Add(flag);
+        }
     }
 }
