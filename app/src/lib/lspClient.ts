@@ -82,6 +82,10 @@ export class LuaLspClient {
   private onDiagnostics: ((uri: string, diagnostics: LspDiagnostic[]) => void) | null = null;
   private messageHandlers: MessageHandler[] = [];
   private openDocuments = new Map<string, { version: number; content: string }>();
+  private listening = false;
+  private readonly handleIpcMessage = (_event: unknown, msg: LspServerMessage) => {
+    this.handleServerMessage(msg);
+  };
 
   /** Register a diagnostics callback */
   setDiagnosticsHandler(handler: (uri: string, diagnostics: LspDiagnostic[]) => void) {
@@ -91,15 +95,26 @@ export class LuaLspClient {
   /** Start the language server and initialize the LSP session */
   async start(workspacePath?: string): Promise<boolean> {
     if (!isElectron()) return false;
+    if (this.initialized) return true;
 
     // Listen for server messages
-    window.ipcRenderer.on('lsp:message', (_event: unknown, msg: LspServerMessage) => {
-      this.handleServerMessage(msg);
-    });
+    if (!this.listening) {
+      window.ipcRenderer.on('lsp:message', this.handleIpcMessage);
+      this.listening = true;
+    }
 
     // Start the server process
-    const result = (await window.ipcRenderer.invoke('lsp:start', workspacePath)) as { ok: boolean };
-    if (!result.ok) return false;
+    let result: { ok: boolean };
+    try {
+      result = (await window.ipcRenderer.invoke('lsp:start', workspacePath)) as { ok: boolean };
+    } catch (error) {
+      this.removeIpcListener();
+      throw error;
+    }
+    if (!result.ok) {
+      this.removeIpcListener();
+      return false;
+    }
 
     // Send initialize request
     const initResult = await this.sendRequest('initialize', {
@@ -147,6 +162,7 @@ export class LuaLspClient {
       this.initialized = true;
     }
 
+    if (!this.initialized) this.removeIpcListener();
     return this.initialized;
   }
 
@@ -163,9 +179,19 @@ export class LuaLspClient {
       }
     }
 
-    await window.ipcRenderer.invoke('lsp:stop');
+    try {
+      await window.ipcRenderer.invoke('lsp:stop');
+    } finally {
+      this.removeIpcListener();
+    }
     this.initialized = false;
     this.openDocuments.clear();
+  }
+
+  private removeIpcListener() {
+    if (!this.listening) return;
+    window.ipcRenderer.off('lsp:message', this.handleIpcMessage);
+    this.listening = false;
   }
 
   /** Check if the LuaLS binary is available */

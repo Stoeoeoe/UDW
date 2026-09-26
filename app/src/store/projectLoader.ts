@@ -48,11 +48,13 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
         state.tilesets.set(migratedTileset.id, castDraft(normalized));
       });
 
-      try {
-        const blob = await fileSystem.loadAsset(migratedTileset.spriteSheet);
-        await get().loadSprite(migratedTileset.spriteSheet, blob);
-      } catch (e) {
-        console.warn(`Failed to load sprite for tileset ${migratedTileset.id}:`, e);
+      if (migratedTileset.spriteSheet && !get().loadedSprites.has(migratedTileset.spriteSheet)) {
+        try {
+          const blob = await fileSystem.loadAsset(migratedTileset.spriteSheet);
+          await get().loadSprite(migratedTileset.spriteSheet, blob);
+        } catch (e) {
+          console.warn(`Failed to load sprite for tileset ${migratedTileset.id}:`, e);
+        }
       }
     }
 
@@ -172,6 +174,7 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
     // 1.9 Entity type sprites
     for (const et of get().entityTypes) {
       if (!et.sprite?.path) continue;
+      if (get().loadedSprites.has(et.sprite.path)) continue;
       try {
         const path = et.sprite.path;
         const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);

@@ -444,19 +444,13 @@ if ('ipcRenderer' in window) {
           try {
             const blob = await fileSystem.loadAsset(relativePath);
             await state.loadSprite(relativePath, blob);
+            for (const [id, tileset] of state.tilesets) {
+              if (tileset.spriteSheet === relativePath) {
+                console.info('Tileset sprite changed for tileset:', id, relativePath);
+              }
+            }
           } catch (e) {
             console.warn('Failed to reload sprite asset', relativePath, e);
-          }
-        }
-        for (const [id, ts] of state.tilesets.entries()) {
-          try {
-            if (ts.spriteSheet === relativePath && state.loadedSprites.has(relativePath)) {
-              const blob = await fileSystem.loadAsset(relativePath);
-              await state.loadSprite(relativePath, blob);
-              console.info('Tileset sprite changed for tileset:', id, relativePath);
-            }
-          } catch (_e) {
-            /* ignore per-tileset errors */
           }
         }
       } catch (_e) {
@@ -487,7 +481,10 @@ if ('ipcRenderer' in window) {
           }
           return { tilesets: newMap };
         });
-        if (migratedTileset.spriteSheet) {
+        if (
+          migratedTileset.spriteSheet &&
+          !useEditorStore.getState().loadedSprites.has(migratedTileset.spriteSheet)
+        ) {
           try {
             const blob = await fileSystem.loadAsset(migratedTileset.spriteSheet);
             await useEditorStore.getState().loadSprite(migratedTileset.spriteSheet, blob);
