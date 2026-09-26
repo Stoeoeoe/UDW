@@ -11,6 +11,8 @@ const mockToast = vi.hoisted(() => vi.fn());
 const mockUseDisclosure = vi.hoisted(() =>
   vi.fn(() => ({ isOpen: false, onOpen: vi.fn(), onClose: vi.fn() })),
 );
+const mockTileSelection = vi.hoisted(() => ({ selectedTileIndex: null as number | null }));
+const mockHandleTileSelect = vi.hoisted(() => vi.fn());
 
 vi.mock('@chakra-ui/react', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
@@ -82,7 +84,10 @@ vi.mock('../../../hooks/useProject', () => ({
 }));
 
 vi.mock('../../../hooks/useTileSelection', () => ({
-  useTileSelection: () => ({ selectedTileIndex: null, handleTileSelect: vi.fn() }),
+  useTileSelection: () => ({
+    selectedTileIndex: mockTileSelection.selectedTileIndex,
+    handleTileSelect: mockHandleTileSelect,
+  }),
 }));
 
 import { TilesetEditor } from './TilesetEditor';
@@ -135,6 +140,8 @@ function setupNormalEditor() {
 
 describe('TilesetEditor', () => {
   beforeEach(() => {
+    mockTileSelection.selectedTileIndex = null;
+    mockHandleTileSelect.mockReset();
     mockToast.mockReset();
     mockUseDisclosure.mockReset();
     mockUseDisclosure.mockImplementation(() => ({
@@ -190,6 +197,96 @@ describe('TilesetEditor', () => {
     render(<TilesetEditor />);
 
     expect(screen.getByTestId('tileset-canvas')).toBeTruthy();
+  });
+
+  it('moves the selected tile with the arrow keys', () => {
+    mockTileSelection.selectedTileIndex = 11;
+    setupNormalEditor();
+
+    render(<TilesetEditor />);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(mockHandleTileSelect).toHaveBeenCalledWith(21);
+  });
+
+  it('adds a full collision to the selected tile when C is pressed', () => {
+    const updateTileDefinition = vi.fn();
+    mockTileSelection.selectedTileIndex = 4;
+    setupNormalEditor();
+    useEditorStore.setState({ updateTileDefinition });
+
+    render(<TilesetEditor />);
+    fireEvent.keyDown(window, { key: 'c' });
+
+    expect(updateTileDefinition).toHaveBeenCalledWith(
+      'village',
+      4,
+      expect.objectContaining({ collision: { type: 'full' } }),
+    );
+  });
+
+  it('sets the selected tile sort pivot when a number key is pressed', () => {
+    const updateTileDefinition = vi.fn();
+    mockTileSelection.selectedTileIndex = 4;
+    setupNormalEditor();
+    useEditorStore.setState({ updateTileDefinition });
+
+    render(<TilesetEditor />);
+    fireEvent.keyDown(window, { key: '3' });
+
+    expect(updateTileDefinition).toHaveBeenCalledWith(
+      'village',
+      4,
+      expect.objectContaining({ pivotY: 3 }),
+    );
+  });
+
+  it('removes collision from the selected tile when N is pressed', () => {
+    const updateTileDefinition = vi.fn();
+    mockTileSelection.selectedTileIndex = 4;
+    setupNormalEditor();
+    useEditorStore.setState((state) => {
+      state.tilesets = new Map([
+        [
+          'village',
+          {
+            ...baseTileset,
+            tiles: { 4: { collision: { type: 'full' } } },
+          } as never,
+        ],
+      ]);
+      state.updateTileDefinition = updateTileDefinition;
+    });
+
+    render(<TilesetEditor />);
+    fireEvent.keyDown(window, { key: 'n' });
+
+    expect(updateTileDefinition).toHaveBeenCalledWith(
+      'village',
+      4,
+      expect.objectContaining({ collision: { type: 'none' } }),
+    );
+  });
+
+  it('adds a polygon collision to the selected tile when P is pressed', () => {
+    const updateTileDefinition = vi.fn();
+    mockTileSelection.selectedTileIndex = 4;
+    setupNormalEditor();
+    useEditorStore.setState({ updateTileDefinition });
+
+    render(<TilesetEditor />);
+    fireEvent.keyDown(window, { key: 'p' });
+
+    expect(updateTileDefinition).toHaveBeenCalledWith(
+      'village',
+      4,
+      expect.objectContaining({
+        collision: expect.objectContaining({
+          type: 'complex',
+          shapes: [expect.objectContaining({ type: 'polygon' })],
+        }),
+      }),
+    );
   });
 
   it('shows tileset name in the editor header', () => {

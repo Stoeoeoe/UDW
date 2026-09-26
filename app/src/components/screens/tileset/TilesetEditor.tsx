@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Flex, Box, useDisclosure, useToast, Text, VStack, Button } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProject } from '../../../hooks/useProject';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -11,6 +10,11 @@ import TilesetMetadataDialog from '../../tileset/TilesetMetadataDialog';
 import { CreateTilesetDialog } from './CreateTilesetDialog';
 import { EmptyScreen } from '../common';
 import { useTileSelection } from '../../../hooks/useTileSelection';
+import {
+  buildPolygonCollision,
+  FULL_TILE_POLYGON,
+  getPolygonFromCollision,
+} from '../../../lib/collisionUtils';
 
 /**
  * TilesetEditor - The complete tileset editing experience.
@@ -21,6 +25,7 @@ export const TilesetEditor: React.FC = () => {
   const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
   const tilesets = useEditorStore((state) => state.tilesets);
   const resetSelectedTiles = useEditorStore((state) => state.resetSelectedTiles);
+  const updateTileDefinition = useEditorStore((state) => state.updateTileDefinition);
 
   const { selectedTileIndex, handleTileSelect } = useTileSelection();
   const { tileSize } = useProject();
@@ -44,6 +49,112 @@ export const TilesetEditor: React.FC = () => {
       resetSelectedTiles?.();
     }
   }, [activeTilesetId, resetSelectedTiles]);
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName.toLowerCase();
+      return (
+        target.isContentEditable ||
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target.closest('[contenteditable="true"]') !== null
+      );
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        isEditableTarget(event.target) ||
+        !activeTileset ||
+        selectedTileIndex === null
+      ) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const columns = Math.max(1, activeTileset.columns);
+      const column = selectedTileIndex % columns;
+      let nextTileIndex: number | null = null;
+
+      if (key === 'arrowleft' && column > 0) {
+        nextTileIndex = selectedTileIndex - 1;
+      } else if (
+        key === 'arrowright' &&
+        column < columns - 1 &&
+        selectedTileIndex + 1 < activeTileset.tileCount
+      ) {
+        nextTileIndex = selectedTileIndex + 1;
+      } else if (key === 'arrowup' && selectedTileIndex - columns >= 0) {
+        nextTileIndex = selectedTileIndex - columns;
+      } else if (key === 'arrowdown' && selectedTileIndex + columns < activeTileset.tileCount) {
+        nextTileIndex = selectedTileIndex + columns;
+      }
+
+      if (key.startsWith('arrow')) {
+        event.preventDefault();
+        if (nextTileIndex !== null) handleTileSelect(nextTileIndex);
+        return;
+      }
+
+      if (event.repeat) return;
+
+      const selectedTile = activeTileset.tiles[selectedTileIndex] ?? {};
+
+      if (key === 'c') {
+        if (selectedTile.collision?.type === 'full') return;
+
+        event.preventDefault();
+        updateTileDefinition(activeTileset.id, selectedTileIndex, {
+          ...selectedTile,
+          collision: { type: 'full' },
+        });
+        return;
+      }
+
+      if (key === 'n') {
+        if (!selectedTile.collision || selectedTile.collision.type === 'none') return;
+
+        event.preventDefault();
+        updateTileDefinition(activeTileset.id, selectedTileIndex, {
+          ...selectedTile,
+          collision: { type: 'none' },
+        });
+        return;
+      }
+
+      if (key === 'p') {
+        const existingPoints = getPolygonFromCollision(selectedTile.collision, tileSize);
+        if (selectedTile.collision?.type === 'complex' && existingPoints.length >= 3) return;
+
+        event.preventDefault();
+        updateTileDefinition(activeTileset.id, selectedTileIndex, {
+          ...selectedTile,
+          collision: buildPolygonCollision(
+            existingPoints.length >= 3 ? existingPoints : FULL_TILE_POLYGON,
+          ),
+        });
+        return;
+      }
+
+      if (!/^\d$/.test(key)) return;
+
+      const pivotY = Number(key);
+      if ((selectedTile.pivotY ?? 1) === pivotY) return;
+
+      event.preventDefault();
+      updateTileDefinition(activeTileset.id, selectedTileIndex, {
+        ...selectedTile,
+        pivotY,
+      });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTileset, handleTileSelect, selectedTileIndex, tileSize, updateTileDefinition]);
 
   // Extra store helpers for handling missing sprite replacement
   const loadedSprites = useEditorStore((s) => s.loadedSprites);

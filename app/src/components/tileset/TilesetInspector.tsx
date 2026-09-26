@@ -107,7 +107,7 @@ const PivotYField: React.FC<PivotYFieldProps> = ({
       <Text fontSize="9px" color="gray.500" mt={2}>
         Tile-heights from this tile to the ground contact point. 1 = ground tile (bottom of sprite).
         For tiles above the ground (e.g. tree crown 3 rows up): set to 3 so the sort depth lands at
-        the actual ground line.
+        the actual ground line. Press 0-9 to set this value for the selected tile.
       </Text>
     </FormControl>
   );

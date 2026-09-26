@@ -504,21 +504,21 @@ export const TileCollisionEditor: React.FC<TileCollisionEditorProps> = ({
           colorScheme={mode === 'none' ? 'orange' : undefined}
           variant={mode === 'none' ? 'solid' : 'outline'}
         >
-          None
+          None (N)
         </Button>
         <Button
           onClick={() => setModeAndEmit('full')}
           colorScheme={mode === 'full' ? 'orange' : undefined}
           variant={mode === 'full' ? 'solid' : 'outline'}
         >
-          Full Tile
+          Full Tile (C)
         </Button>
         <Button
           onClick={() => setModeAndEmit('polygon')}
           colorScheme={mode === 'polygon' ? 'orange' : undefined}
           variant={mode === 'polygon' ? 'solid' : 'outline'}
         >
-          Polygon
+          Polygon (P)
         </Button>
       </ButtonGroup>
 
