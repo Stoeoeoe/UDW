@@ -21,6 +21,7 @@ namespace Core
 
         int _currentStamina;
         bool _inventoryInitialized;
+        readonly CharacterSkills _skills = new CharacterSkills();
 
         protected override void OnAwake()
         {
@@ -39,6 +40,9 @@ namespace Core
         /// </summary>
         public void InitializeCharacter(GameCharacter character)
         {
+            if (character is MainCharacter)
+                character.InitializeSkills(_skills);
+
             if (!_inventoryInitialized)
             {
                 var inventory = SlotInventory.FindInventory("MainInventory", "Player1");

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38218316506c4ac49f1cb499b7e303de, type: 3}
+  m_Name: HammerMastery
+  m_EditorClassIdentifier: Assembly-CSharp::Character.SkillDefinition
+  skillId: base:hammer_mastery
+  displayName: Hammer Mastery
+  description: Make every hammer strike count when repairing structures.
+  icon: {fileID: 0}
+  levels:
+  - value: 0
+    title: Untrained
+    description: Repair with the usual amount of force.
+  - value: 1
+    title: Novice
+    description: Restore 1 additional point with each repair.
+  - value: 2
+    title: Apprentice
+    description: Restore 2 additional points with each repair.
+  - value: 3
+    title: Journeyman
+    description: Restore 3 additional points with each repair.
+  - value: 4
+    title: Expert
+    description: Restore 4 additional points with each repair.
+  - value: 5
+    title: Master
+    description: Restore 5 additional points with each repair.

@@ -78,6 +78,8 @@ namespace Character
 
         public SlotInventory MainInventory { get; private set; }
 
+        public CharacterSkills Skills { get; private set; } = new CharacterSkills();
+
         [CanBeNull] public TileData CurrentTileData { get; private set; }
 
         public Vector2Int CurrentTileCoordinates =>
@@ -253,6 +255,11 @@ namespace Character
             CurrentLifecycleState = LifecycleState.SceneUnloading;
             animator.OnLocationLeave(location);
             characterGraphicsGo.SetActive(false);
+        }
+
+        public void InitializeSkills(CharacterSkills skills)
+        {
+            Skills = skills ?? throw new ArgumentNullException(nameof(skills));
         }
     }
 }

@@ -95,6 +95,10 @@
     <Compile Include="Assets\Core\Items\ConsumableItem.cs" />
     <Compile Include="Assets\Core\Common\SpriteOrPrefab.cs" />
     <Compile Include="Assets\Character\GameCharacter.cs" />
+    <Compile Include="Assets\Character\CharacterSkills.cs" />
+    <Compile Include="Assets\Character\SkillDefinitions.cs" />
+    <Compile Include="Assets\Character\SkillDefinition.cs" />
+    <Compile Include="Assets\Character\SkillLevelChangedEvent.cs" />
     <Compile Include="Assets\Character\ConditionState.cs" />
     <Compile Include="Assets\Core\Events\EventBusExtensions.cs" />
     <Compile Include="Assets\Character\Abilities\CharacterAbility.cs" />
@@ -1641,6 +1645,9 @@
       <Project>{9c4df149-9033-433f-a013-1e58a1b4c57b}</Project>
       <Name>UnityEditor.UI</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\Core\Skill\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
