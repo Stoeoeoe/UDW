@@ -26,7 +26,7 @@ namespace Core.Tile
         [SerializeField] RuleTile irrigatedFarmlandTile;
 
         private const float InteractionDistance = 0.55f;
-        private const string FarmlandRecordType = "base:farmland";
+        private const string FarmlandObjectPrefix = "farmland:";
 
         private VulcanusImportedMap _currentMap;
         private Tilemap _terrainTilemap;
@@ -304,24 +304,27 @@ namespace Core.Tile
             if (locationId == null) return;
 
             var objectId = FarmlandObjectId(coords);
-            if (!GameState.World.TryGet<FarmlandState>(locationId, objectId, FarmlandRecordType, out var state))
+            if (!GameState.World.TryGet<FarmlandState>(locationId, objectId, out var state))
                 state = new FarmlandState();
 
             if (plowed.HasValue) state.plowed = plowed.Value;
             if (irrigated.HasValue) state.irrigated = irrigated.Value;
 
             if (!state.plowed && !state.irrigated)
-                GameState.World.Remove(locationId, objectId, FarmlandRecordType);
+                GameState.World.Remove(locationId, objectId);
             else
-                GameState.World.Set(locationId, objectId, FarmlandRecordType, state);
+                GameState.World.Set(locationId, objectId, state);
         }
 
         private static string FarmlandObjectId(Vector2Int coords) =>
-            coords.x.ToString(CultureInfo.InvariantCulture) + "," + coords.y.ToString(CultureInfo.InvariantCulture);
+            FarmlandObjectPrefix + coords.x.ToString(CultureInfo.InvariantCulture) + "," + coords.y.ToString(CultureInfo.InvariantCulture);
 
         private static Vector2Int ParseFarmlandObjectId(string objectId)
         {
-            var parts = objectId.Split(',');
+            if (!objectId.StartsWith(FarmlandObjectPrefix, StringComparison.Ordinal))
+                throw new FormatException($"Invalid farmland object ID '{objectId}'.");
+
+            var parts = objectId.Substring(FarmlandObjectPrefix.Length).Split(',');
             if (parts.Length != 2 ||
                 !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
                 !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
@@ -602,10 +605,10 @@ namespace Core.Tile
             var locationId = LevelManager.Instance.CurrentLocationData?.id;
             if (locationId == null) return;
 
-            foreach (var objectId in GameState.World.GetObjectIds(locationId, FarmlandRecordType))
+            foreach (var pair in GameState.World.GetStates<FarmlandState>(locationId))
             {
-                var coords = ParseFarmlandObjectId(objectId);
-                GameState.World.TryGet<FarmlandState>(locationId, objectId, FarmlandRecordType, out var state);
+                var coords = ParseFarmlandObjectId(pair.Key);
+                var state = pair.Value;
                 var tile = GetTileDataAtCoordinates(coords);
                 if (tile == null) continue;
 

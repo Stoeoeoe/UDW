@@ -31,7 +31,7 @@ namespace Core.Game
             foreach (var record in data.player.skills)
                 levels.Add(record.id, record.level);
 
-            World.RestoreRecords(data.world.records);
+            World.Restore(data.world);
             Story.RestoreFlags(data.story.flags);
             Player.Skills.RestoreLevels(levels);
             return true;
@@ -53,7 +53,7 @@ namespace Core.Game
             data.player.skills.Sort((a, b) => StringComparer.Ordinal.Compare(a.id, b.id));
             data.story.flags.AddRange(Story.GetFlags());
             data.story.flags.Sort(StringComparer.Ordinal);
-            data.world.records = World.CaptureRecords();
+            data.world = World.Capture();
             return data;
         }
     }

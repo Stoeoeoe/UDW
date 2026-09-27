@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text;
+using Sirenix.Serialization;
 using UnityEngine;
 
 namespace Core.Game
@@ -8,17 +8,20 @@ namespace Core.Game
     /// <summary>Reads and writes versioned game-state snapshots in Unity's persistent data folder.</summary>
     public static class GameSaveService
     {
-        private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
-
         public static void Save(string slot, GameSaveData data)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
             data.Validate();
 
+            // Save data must not depend on scene or asset instance references.
+            var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var unityObjects);
+            if (unityObjects.Count != 0)
+                throw new InvalidOperationException("Save data contains Unity object references; store stable IDs instead.");
+
             var path = GetSavePath(slot);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             var temporaryPath = path + ".tmp";
-            File.WriteAllText(temporaryPath, JsonUtility.ToJson(data, true), Utf8);
+            File.WriteAllBytes(temporaryPath, bytes);
 
             if (File.Exists(path))
                 File.Replace(temporaryPath, path, path + ".bak");
@@ -35,7 +38,7 @@ namespace Core.Game
                 return false;
             }
 
-            data = JsonUtility.FromJson<GameSaveData>(File.ReadAllText(path, Utf8));
+            data = SerializationUtility.DeserializeValue<GameSaveData>(File.ReadAllBytes(path), DataFormat.JSON);
             if (data == null) throw new FormatException("The save file is empty or invalid.");
             data.Validate();
             return true;

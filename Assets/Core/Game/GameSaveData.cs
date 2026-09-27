@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Core.Game
 {
-    /// <summary>Versioned, portable file format. No scene or Unity object references belong here.</summary>
+    /// <summary>Versioned, plain-data snapshot. </summary>
     [Serializable]
     public sealed class GameSaveData
     {
@@ -21,30 +21,26 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.skills == null || story?.flags == null || world?.records == null)
+            if (player?.skills == null || story?.flags == null || world?.locations == null)
                 throw new FormatException("The save is missing a required state section.");
 
             var skillIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var skill in player.skills)
-            {
                 if (skill == null || string.IsNullOrWhiteSpace(skill.id) || skill.level < 0 || !skillIds.Add(skill.id))
                     throw new FormatException("The save contains an invalid or duplicate skill level.");
-            }
 
             var storyFlags = new HashSet<string>(StringComparer.Ordinal);
             foreach (var flag in story.flags)
                 if (string.IsNullOrWhiteSpace(flag) || !storyFlags.Add(flag))
                     throw new FormatException("The save contains an invalid or duplicate story flag.");
 
-            var worldKeys = new HashSet<WorldStateKey>();
-            foreach (var record in world.records)
+            foreach (var location in world.locations)
             {
-                if (record == null || string.IsNullOrWhiteSpace(record.data))
-                    throw new FormatException("The save contains an invalid world record.");
-
-                var key = new WorldStateKey(record.locationId, record.objectId, record.recordType);
-                if (!worldKeys.Add(key))
-                    throw new FormatException("The save contains a duplicate world record.");
+                if (string.IsNullOrWhiteSpace(location.Key) || location.Value == null)
+                    throw new FormatException("The save contains an invalid world location.");
+                foreach (var obj in location.Value)
+                    if (string.IsNullOrWhiteSpace(obj.Key) || obj.Value == null)
+                        throw new FormatException("The save contains an invalid world object.");
             }
         }
     }
@@ -71,23 +67,6 @@ namespace Core.Game
     [Serializable]
     public sealed class WorldSaveData
     {
-        public List<WorldStateRecord> records = new();
-    }
-
-    [Serializable]
-    public sealed class WorldStateRecord
-    {
-        public string locationId;
-        public string objectId;
-        public string recordType;
-        public string data;
-
-        internal WorldStateRecord Copy() => new()
-        {
-            locationId = locationId,
-            objectId = objectId,
-            recordType = recordType,
-            data = data
-        };
+        public Dictionary<string, Dictionary<string, WorldObjectState>> locations = new(StringComparer.Ordinal);
     }
 }
