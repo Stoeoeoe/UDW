@@ -1,0 +1,105 @@
+{
+    "schemaVersion": 1,
+    "modules": [
+        {
+            "path": "GameState.Player.Skills",
+            "methods": [
+                {
+                    "name": "GetLevel",
+                    "parameters": [
+                        { "name": "skillId", "type": "string" }
+                    ],
+                    "returnType": "integer",
+                    "returnNullable": false,
+                    "writesState": false
+                },
+                {
+                    "name": "HasUnlocked",
+                    "parameters": [
+                        { "name": "skillId", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": false
+                },
+                {
+                    "name": "TryLevelUp",
+                    "parameters": [
+                        { "name": "skillId", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": true
+                }
+            ]
+        },
+        {
+            "path": "GameState.Story",
+            "methods": [
+                {
+                    "name": "ClearFlag",
+                    "parameters": [
+                        { "name": "flag", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": true
+                },
+                {
+                    "name": "HasFlag",
+                    "parameters": [
+                        { "name": "flag", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": false
+                },
+                {
+                    "name": "SetFlag",
+                    "parameters": [
+                        { "name": "flag", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": true
+                }
+            ]
+        },
+        {
+            "path": "GameState.World",
+            "methods": [
+                {
+                    "name": "GetFarmland",
+                    "parameters": [
+                        { "name": "locationId", "type": "string" },
+                        { "name": "objectId", "type": "string" }
+                    ],
+                    "returnType": "FarmlandLuaView",
+                    "returnNullable": true,
+                    "writesState": false
+                },
+                {
+                    "name": "SetFarmland",
+                    "parameters": [
+                        { "name": "locationId", "type": "string" },
+                        { "name": "objectId", "type": "string" },
+                        { "name": "plowed", "type": "boolean" },
+                        { "name": "irrigated", "type": "boolean" }
+                    ],
+                    "returnType": "nil",
+                    "returnNullable": false,
+                    "writesState": true
+                }
+            ]
+        }
+    ],
+    "tables": [
+        {
+            "name": "FarmlandLuaView",
+            "fields": [
+                { "name": "irrigated", "type": "boolean" },
+                { "name": "plowed", "type": "boolean" }
+            ]
+        }
+    ]
+}

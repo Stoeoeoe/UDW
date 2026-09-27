@@ -6,12 +6,6 @@ using UnityEngine;
 
 namespace Core.Dialogue.Vulcanus
 {
-    public interface IDialogueScriptEngine
-    {
-        bool EvaluateCondition(string conditionExpression, VulcanusDialogueExecutionContext context, out bool isVisible);
-        bool ExecuteAction(string luaChunk, VulcanusDialogueExecutionContext context);
-    }
-
     public interface IDialogueContextResolver
     {
         object ResolveSelf(VulcanusProject project, VulcanusDialogueAsset dialogue);

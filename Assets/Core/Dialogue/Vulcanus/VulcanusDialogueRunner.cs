@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Scripting;
 using UnityEngine;
 
 namespace Core.Dialogue.Vulcanus
@@ -12,14 +13,13 @@ namespace Core.Dialogue.Vulcanus
 
         [SerializeField] private VulcanusDialogueDatabase database;
         [SerializeField] private int maxStepsPerRun = 256;
-        [SerializeField] private UnityEngine.Object scriptEngine;
         [SerializeField] private UnityEngine.Object contextResolver;
         [SerializeField] private UnityEngine.Object presenter;
 
         private Coroutine _activeDialogueRoutine;
         private VulcanusDialogueExecutionContext _activeContext;
+        private readonly VulcanusLuaDialogueScriptEngine _scriptEngine = new(new VulcanusLuaEngine());
 
-        private IDialogueScriptEngine ScriptEngine => ResolveInterface<IDialogueScriptEngine>(scriptEngine);
         private IDialogueContextResolver ContextResolver => ResolveInterface<IDialogueContextResolver>(contextResolver);
         private IDialoguePresenter Presenter => ResolveInterface<IDialoguePresenter>(presenter);
         private IDialogueAdvanceHandler AdvanceHandler => ResolveInterface<IDialogueAdvanceHandler>(presenter);
@@ -241,14 +241,7 @@ namespace Core.Dialogue.Vulcanus
             if (string.IsNullOrWhiteSpace(actionNode.Lua))
                 return true;
 
-            if (ScriptEngine == null)
-            {
-                Debug.LogWarning(
-                    $"[VulcanusDialogueRunner] No script engine is assigned; skipping action node '{actionNode.Id}'.");
-                return true;
-            }
-
-            if (ScriptEngine.ExecuteAction(actionNode.Lua, _activeContext))
+            if (_scriptEngine.ExecuteAction(actionNode.Lua, _activeContext))
                 return true;
 
             Debug.LogError($"[VulcanusDialogueRunner] Action node '{actionNode.Id}' failed.");
@@ -312,14 +305,7 @@ namespace Core.Dialogue.Vulcanus
                     continue;
                 }
 
-                if (ScriptEngine == null)
-                {
-                    Debug.LogWarning(
-                        $"[VulcanusDialogueRunner] No script engine is assigned; hiding conditional option '{option.Id}'.");
-                    continue;
-                }
-
-                if (ScriptEngine.EvaluateCondition(option.Condition, _activeContext, out var isVisible) && isVisible)
+                if (_scriptEngine.EvaluateCondition(option.Condition, _activeContext, out var isVisible) && isVisible)
                     visibleOptions.Add(option);
             }
 
