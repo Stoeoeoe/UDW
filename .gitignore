@@ -107,7 +107,10 @@ Assets/Pixel Crushers/
 Assets/TopdownEngine/
 Assets/Packages/
 Assets/TextMesh Pro/
-Packages/
+Packages/*
+!Packages/manifest.json
+!Packages/packages-lock.json
+ProjectSettings/Packages/
 Editor/Aseprite
 Samples~/
 
