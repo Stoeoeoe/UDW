@@ -1257,7 +1257,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueRunner
   database: {fileID: 11400000, guid: 8d4612bd8c165594887406d67e3a2510, type: 2}
   maxStepsPerRun: 256
-  scriptEngine: {fileID: 0}
   contextResolver: {fileID: 1079771066}
   presenter: {fileID: 1079771068}
 --- !u!114 &1079771068
