@@ -26,7 +26,7 @@ namespace FlyingWormConsole3
 			EditorApplication.delayCall += LoadCorrectDLL;
 		}
 
-		static string[] ValidFolders = new string[] { "2021_3_Plus", "6000_3_Plus" };
+		static string[] ValidFolders = new string[] { "2022_3_Plus", "6000_3_Plus" };
 
 		static void LoadCorrectDLL()
 		{
@@ -48,6 +48,13 @@ namespace FlyingWormConsole3
 				{
 					Debug.Log($"#Console Pro# Found legacy DLL not in version folder, deleting: {assetPath}");
 					AssetDatabase.DeleteAsset(assetPath);
+
+					string folderPath = Path.GetDirectoryName(assetPath).Replace('\\', '/');
+					if (folderName.EndsWith("_Plus") && Directory.Exists(folderPath) && Directory.GetFileSystemEntries(folderPath).Length == 0)
+					{
+						Debug.Log($"#Console Pro# Removing empty legacy DLL folder: {folderPath}");
+						AssetDatabase.DeleteAsset(folderPath);
+					}
 				}
 			}
 
@@ -66,13 +73,13 @@ namespace FlyingWormConsole3
 	#if UNITY_6000_3_OR_NEWER
 		targetFolder = "6000_3_Plus";
 #else
-		targetFolder = "2021_3_Plus";
+		targetFolder = "2022_3_Plus";
 #endif
 
 
 			if (string.IsNullOrEmpty(targetFolder))
 			{
-				Debug.LogError($"#Console Pro# Could not determine correct DLL folder for Unity version {Application.unityVersion}. Minimum supported Unity version is 2021.3.0f1.");
+				Debug.LogError($"#Console Pro# Could not determine correct DLL folder for Unity version {Application.unityVersion}. Minimum supported Unity version is 2022.3.62f1.");
 				return;
 			}
 
