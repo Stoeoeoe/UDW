@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core.Location;
+using Core.TimeAndWeather;
 
 namespace Core.Game
 {
@@ -13,6 +14,7 @@ namespace Core.Game
         public WorldState World { get; } = new WorldState();
         public PlayerState Player { get; } = new PlayerState();
         public StoryState Story { get; } = new StoryState();
+        public GameTimeState Time { get; } = new GameTimeState();
 
         public void Save(string slot) => GameSaveService.Save(slot, Capture());
 
@@ -32,6 +34,9 @@ namespace Core.Game
                 levels.Add(record.id, record.level);
 
             World.Restore(data.world);
+            Time.Restore(data.time);
+            if (UrTimeManager.Instance != null)
+                UrTimeManager.Instance.ApplySavedTime();
             Story.RestoreFlags(data.story.flags);
             Player.Skills.RestoreLevels(levels);
             return true;
@@ -45,6 +50,7 @@ namespace Core.Game
                 worldBaselineVersion = WorldBaselineVersion,
                 player = new PlayerSaveData(),
                 story = new StorySaveData(),
+                time = Time.Capture(),
                 world = new WorldSaveData()
             };
             foreach (var pair in Player.Skills.GetLevels())

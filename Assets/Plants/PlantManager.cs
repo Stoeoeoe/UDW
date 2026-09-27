@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Core.Events;
+using Core.Game;
 using Core.Location;
 using Core.TimeAndWeather;
 using MoreMountains.Tools;
@@ -11,10 +14,7 @@ namespace Plants
     public class PlantManager : MMSingleton<PlantManager>,
         IEventListener<NewDayEvent>
     {
-        /// <summary>
-        /// List of all plant states (seeds, saplings, grown plants) by Location ID and position.
-        /// </summary>
-        protected Dictionary<string, Dictionary<Vector2Int, PlantState>> gamePlantStates = new();
+        private const string PlantObjectPrefix = "plant:";
 
         protected Dictionary<string, PlantData> plantData = new();
 
@@ -31,41 +31,32 @@ namespace Plants
 
         public void OnEvent(NewDayEvent e)
         {
-            foreach (var (locationId, plants) in gamePlantStates)
+            foreach (var entry in GameState.World.GetStates<PlantState>())
             {
-                foreach (var (pos, state) in plants)
-                {
-                    if (!plantData.TryGetValue(state.plantID, out var data)) continue;
+                var state = entry.State;
+                if (!plantData.TryGetValue(state.plantID, out var data)) continue;
 
-                    state.daysPassedSincePlanting++;
-                    var newStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
-                    if (newStageIndex != state.growthStageIndex)
-                    {
-                        state.growthStageIndex = newStageIndex;
-                        PlantGrowthEvent.Trigger(locationId, pos, newStageIndex);
-                    }
+                var oldStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
+                state.daysPassedSincePlanting++;
+                var newStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
+                if (newStageIndex != oldStageIndex)
+                {
+                    PlantGrowthEvent.Trigger(entry.LocationId, ParsePlantObjectId(entry.ObjectId), newStageIndex);
                 }
             }
         }
 
-        public Dictionary<Vector2Int, PlantState> GetPlantStatesInLocation(string locationId)
+        public IEnumerable<KeyValuePair<Vector2Int, PlantState>> GetPlantStatesInLocation(string locationId)
         {
-            if (gamePlantStates.ContainsKey(locationId))
-            {
-                return gamePlantStates[locationId];
-            }
-
-            return new Dictionary<Vector2Int, PlantState>();
+            foreach (var pair in GameState.World.GetStates<PlantState>(locationId))
+                yield return new KeyValuePair<Vector2Int, PlantState>(ParsePlantObjectId(pair.Key), pair.Value);
         }
 
         public PlantState GetPlantState(string locationId, Vector2Int position)
         {
-            if (gamePlantStates.ContainsKey(locationId) && gamePlantStates[locationId].ContainsKey(position))
-            {
-                return gamePlantStates[locationId][position];
-            }
-
-            return null;
+            return GameState.World.TryGet<PlantState>(locationId, PlantObjectId(position), out var state)
+                ? state
+                : null;
         }
 
         public void SowPlantOnCurrentMap(Vector2Int position, string plantId)
@@ -76,28 +67,40 @@ namespace Plants
 
         private void SowPlantOnMap(string locationId, Vector2Int position, string plantId)
         {
-            if (!gamePlantStates.TryGetValue(locationId, out Dictionary<Vector2Int, PlantState> value))
-            {
-                gamePlantStates[locationId] = new Dictionary<Vector2Int, PlantState>();
-            }
+            var objectId = PlantObjectId(position);
+            if (GameState.World.TryGet<PlantState>(locationId, objectId, out _)) return;
 
-            if (!gamePlantStates[locationId].ContainsKey(position))
-            {
-                gamePlantStates[locationId][position] = new PlantState(plantId);
-            }
-
+            GameState.World.Set(locationId, objectId, new PlantState(plantId));
             SowPlantEvent.Trigger(position, plantId, locationId);
         }
 
         public bool HasPlantAt(string locationId, Vector2Int position)
         {
-            return gamePlantStates.ContainsKey(locationId) && gamePlantStates[locationId].ContainsKey(position);
+            return GameState.World.TryGet<PlantState>(locationId, PlantObjectId(position), out _);
         }
 
         public bool HasPlantAtCurrentMap(Vector2Int position)
         {
             string locationId = LevelManager.Instance.CurrentLocationData.id;
             return HasPlantAt(locationId, position);
+        }
+
+        private static string PlantObjectId(Vector2Int position) =>
+            PlantObjectPrefix + position.x.ToString(CultureInfo.InvariantCulture) + "," +
+            position.y.ToString(CultureInfo.InvariantCulture);
+
+        private static Vector2Int ParsePlantObjectId(string objectId)
+        {
+            if (!objectId.StartsWith(PlantObjectPrefix, StringComparison.Ordinal))
+                throw new FormatException($"Invalid plant object ID '{objectId}'.");
+
+            var parts = objectId.Substring(PlantObjectPrefix.Length).Split(',');
+            if (parts.Length != 2 ||
+                !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
+                !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
+                throw new FormatException($"Invalid plant object ID '{objectId}'.");
+
+            return new Vector2Int(x, y);
         }
     }
 }

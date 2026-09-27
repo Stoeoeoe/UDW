@@ -7,6 +7,21 @@ namespace Core.Game
     [Serializable]
     public abstract class WorldObjectState { }
 
+    /// <summary>A changed object and the stable IDs that locate it in the world.</summary>
+    public readonly struct WorldStateEntry<T> where T : WorldObjectState
+    {
+        public string LocationId { get; }
+        public string ObjectId { get; }
+        public T State { get; }
+
+        public WorldStateEntry(string locationId, string objectId, T state)
+        {
+            LocationId = locationId;
+            ObjectId = objectId;
+            State = state;
+        }
+    }
+
     /// <summary>Only stores differences from the authored world, grouped by stable location and object IDs.</summary>
     public sealed class WorldState
     {
@@ -61,6 +76,15 @@ namespace Core.Game
             foreach (var pair in objects)
                 if (pair.Value is T state)
                     yield return new KeyValuePair<string, T>(pair.Key, state);
+        }
+
+        /// <summary>Enumerates this type across all locations, including unloaded ones.</summary>
+        public IEnumerable<WorldStateEntry<T>> GetStates<T>() where T : WorldObjectState
+        {
+            foreach (var location in _locations)
+                foreach (var pair in location.Value)
+                    if (pair.Value is T state)
+                        yield return new WorldStateEntry<T>(location.Key, pair.Key, state);
         }
 
         internal WorldSaveData Capture()

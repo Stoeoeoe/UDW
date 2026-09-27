@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Character;
+using Core.TimeAndWeather;
 
 namespace Core.Game
 {
@@ -14,6 +15,7 @@ namespace Core.Game
         public static WorldState World => Manager.World;
         public static PlayerState Player => Manager.Player;
         public static StoryState Story => Manager.Story;
+        public static GameTimeState Time => Manager.Time;
         public static void Save(string slot) => Manager.Save(slot);
         public static bool Load(string slot) => Manager.Load(slot);
     }
@@ -21,6 +23,40 @@ namespace Core.Game
     public sealed class PlayerState
     {
         public CharacterSkills Skills { get; } = new CharacterSkills();
+    }
+
+    [Serializable]
+    public sealed class GameTimeState
+    {
+        public bool initialized;
+        public int daysSinceStart;
+        public Season season;
+        public int dayOfSeason;
+        public int hour;
+        public int minute;
+        public float secondsTowardNextMinute;
+
+        internal GameTimeState Capture() => new GameTimeState
+        {
+            initialized = initialized,
+            daysSinceStart = daysSinceStart,
+            season = season,
+            dayOfSeason = dayOfSeason,
+            hour = hour,
+            minute = minute,
+            secondsTowardNextMinute = secondsTowardNextMinute
+        };
+
+        internal void Restore(GameTimeState saved)
+        {
+            initialized = saved.initialized;
+            daysSinceStart = saved.daysSinceStart;
+            season = saved.season;
+            dayOfSeason = saved.dayOfSeason;
+            hour = saved.hour;
+            minute = saved.minute;
+            secondsTowardNextMinute = saved.secondsTowardNextMinute;
+        }
     }
 
     public sealed class StoryState

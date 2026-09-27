@@ -1,7 +1,7 @@
 using System.Collections;
 using Character;
 using Core.Context;
-using Core.Tile.Overlay;
+using Core.Tile;
 using Interaction;
 using UnityEngine;
 
@@ -17,7 +17,7 @@ namespace Plants
             var character = snapshot.Character as MainCharacter;
             character!.MainInventory.UseItem(character.CurrentlyHeldItem, character.CurrentSelectedSlotIndex);
             
-            PlantManager.Current.SowPlantOnCurrentMap(
+            PlantManager.Instance.SowPlantOnCurrentMap(
                 snapshot.CurrentTileDataUnderPointer.Coordinates,
                 seedItem!.plantData.plantId
             );
@@ -31,12 +31,17 @@ namespace Plants
 
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot)
         {
-            // TODO: We're conflating overlay validity with sowing validity here. Consider separating these concerns.
-            // Use the overlay system to check if the target tile is valid
             var targetTile = snapshot.CurrentTileDataUnderPointer;
+            var characterTile = snapshot.TileUnderCharacter;
+            if (!(snapshot.CurrentlyHeldItem is SeedItem) || targetTile == null || characterTile == null)
+                return false;
 
-            return targetTile != null &&
-                   TileOverlayManager.Current.IsTileValidInCurrentOverlay(targetTile.Coordinates);
+            var offset = targetTile.Coordinates - characterTile.Coordinates;
+            return offset.sqrMagnitude <= sowRange * sowRange &&
+                   targetTile.FarmlandData != null &&
+                   targetTile.FarmlandData.IsPlowed &&
+                   !targetTile.PlacedObject &&
+                   !MapManager.Instance.IsTileOccupied(targetTile);
         }
 
         public override Vector2 GetActionExecutionLocation(PlayerInteractionContextSnapshot snapshot)

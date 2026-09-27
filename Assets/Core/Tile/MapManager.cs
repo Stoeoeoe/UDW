@@ -580,7 +580,9 @@ namespace Core.Tile
             {
                 var tileData = GetTileDataAtCoordinates(pos);
                 if (tileData == null) continue;
-                SpawnPlantInstance(state.plantID, pos, tileData, state.growthStageIndex);
+                if (!PlantManager.Current.PlantData.TryGetValue(state.plantID, out var plantData)) continue;
+                var stageIndex = plantData.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
+                SpawnPlantInstance(state.plantID, pos, tileData, stageIndex);
             }
         }
 

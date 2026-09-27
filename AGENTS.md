@@ -10,3 +10,8 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Save compatibility during prototyping
+
+- Save formats can evolve in place for now. Do not bump the save schema version or add migrations for backwards compatibility unless the user asks.
+- If a change to a fundamental state or save contract raises a compatibility question, ask the user before adding compatibility machinery.

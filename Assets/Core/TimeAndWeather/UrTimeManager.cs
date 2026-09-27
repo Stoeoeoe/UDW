@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Core.Game;
 using Core.TimeAndWeather.Seasons;
 using Core.TimeAndWeather.Weather;
 using MoreMountains.Feedbacks;
@@ -26,13 +27,7 @@ namespace Core.TimeAndWeather
         [SerializeField] protected int numberOfDaysInSeason = 14;
         [SerializeField] protected float secondsPerInGameMinute = 10f; // TODO: Probably wrong? Seems too fast
 
-        [Header("Current Time")] [MMReadOnly] [SerializeField]
-        protected float currentTotalTicks = 0f;
-
-        [MMReadOnly] [SerializeField] protected int currentDaysSinceStart = 0;
-        [MMReadOnly] [SerializeField] protected int currentMinutesInHour;
-        [MMReadOnly] [SerializeField] protected int currentHoursInDay;
-        [MMReadOnly] [SerializeField] protected int currentDaysInSeason = 0;
+        [Header("Current Conditions")]
         [MMReadOnly] [SerializeField] protected SeasonData currentSeasonData;
         [MMReadOnly] [SerializeField] protected WeatherData currentWeather;
 
@@ -45,13 +40,17 @@ namespace Core.TimeAndWeather
         // [SerializeField] protected Material _globalWeatherMaterial;
         protected WeatherRendererFeature weatherRendererFeature;
 
-        protected float TimeSinceLastUpdate = 0f;
-
         private Dictionary<Season, SeasonData> _seasonDataDict = new();
         private GameObject _weatherParentGo;
 
-        public UrTime CurrentTime => new(currentSeasonData.season, currentDaysInSeason, currentHoursInDay,
-                currentMinutesInHour);
+        public UrTime CurrentTime
+        {
+            get
+            {
+                var time = GameState.Time;
+                return new UrTime(time.season, time.dayOfSeason, time.hour, time.minute);
+            }
+        }
 
         // --- Time scale / MMTimeManager-like functionality copied/adapted ---
         [Header("Time Scale (Integrated)")]
@@ -108,7 +107,6 @@ namespace Core.TimeAndWeather
             //     Debug.LogWarning("UrTimeManager: The number of daylight color gradients does not match the number of seasons.");
             // }
 
-            // TODO: Load current time from save data
         }
 
 
@@ -127,11 +125,42 @@ namespace Core.TimeAndWeather
             _seasonDataDict = seasons.ToDictionary(d => d.season);
 
 
-            currentDaysInSeason = startingDay - 1; // Will be increased by StartNewDay
-            StartNewDay();
+            var time = GameState.Time;
+            if (time.initialized)
+            {
+                RefreshConditionsFromState();
+            }
+            else
+            {
+                // The starting date is not a day transition: existing plants must not grow.
+                time.daysSinceStart = 1;
+                StartSeason(startingSeason);
+                time.dayOfSeason = startingDay;
+                time.hour = startOfDay;
+                time.minute = 0;
+                time.secondsTowardNextMinute = 0f;
+                time.initialized = true;
+                StartCoroutine(UpdateWeather(currentSeasonData.weatherData.GetRandomItem()));
+            }
 
-            // Wait for one frame, TODO: Better way to do this?
             UpdateDayLight();
+            _started = true;
+        }
+
+        private bool _started;
+
+        /// <summary>Refreshes runtime conditions after GameState.Load, without advancing time.</summary>
+        public void ApplySavedTime()
+        {
+            if (!_started) return; // Start will read the restored state instead.
+            RefreshConditionsFromState();
+            UpdateDayLight();
+        }
+
+        private void RefreshConditionsFromState()
+        {
+            currentSeasonData = _seasonDataDict[GameState.Time.season];
+            StartCoroutine(UpdateWeather(currentSeasonData.weatherData.GetRandomItem()));
         }
 
 
@@ -202,29 +231,29 @@ namespace Core.TimeAndWeather
             }
             // --- end of integrated time scale logic ---
 
+            var time = GameState.Time;
             float deltaTime = Time.deltaTime * CurrentTimeScale;
-            currentTotalTicks += deltaTime;
-            TimeSinceLastUpdate += deltaTime;
+            time.secondsTowardNextMinute += deltaTime;
 
             // Instead of advancing minutes by 1, advance in 10-minute increments.
-            if (TimeSinceLastUpdate >= secondsPerInGameMinute)
+            if (time.secondsTowardNextMinute >= secondsPerInGameMinute)
             {
-                int increments = Mathf.FloorToInt(TimeSinceLastUpdate / secondsPerInGameMinute);
+                int increments = Mathf.FloorToInt(time.secondsTowardNextMinute / secondsPerInGameMinute);
                 // Each increment represents 10 in-game minutes
-                currentMinutesInHour += 10 * increments;
-                TimeSinceLastUpdate -= increments * secondsPerInGameMinute;
+                time.minute += 10 * increments;
+                time.secondsTowardNextMinute -= increments * secondsPerInGameMinute;
             }
 
             // Handle minute overflow into hours (may add multiple hours)
-            if (currentMinutesInHour >= 60)
+            if (time.minute >= 60)
             {
+                int hoursToAdd = time.minute / 60;
+                time.minute %= 60;
+                time.hour += hoursToAdd;
                 UpdateDayLight();
-                int hoursToAdd = currentMinutesInHour / 60;
-                currentMinutesInHour %= 60;
-                currentHoursInDay += hoursToAdd;
             }
 
-            if (currentHoursInDay >= endOfDay)
+            if (time.hour >= endOfDay)
             {
                 EndDay();
             }
@@ -240,28 +269,31 @@ namespace Core.TimeAndWeather
 
         public void StartNewDay()
         {
-            currentDaysSinceStart++;
-            currentHoursInDay = startOfDay;
-            currentMinutesInHour = 0;
-            TimeSinceLastUpdate = 0f;
+            var time = GameState.Time;
+            time.daysSinceStart++;
+            time.hour = startOfDay;
+            time.minute = 0;
+            time.secondsTowardNextMinute = 0f;
             if (!currentSeasonData)
             {
                 StartSeason(startingSeason);
+                time.dayOfSeason = 1;
             }
-            else if (currentDaysInSeason >= numberOfDaysInSeason)
+            else if (time.dayOfSeason >= numberOfDaysInSeason)
             {
                 StartSeason(seasons[currentSeasonData.index % seasons.Length].season);
+                time.dayOfSeason = 1;
             }
             else
             {
-                currentDaysInSeason++;
+                time.dayOfSeason++;
             }
 
             var newWeather = currentSeasonData.weatherData.GetRandomItem();
             StartCoroutine(UpdateWeather(newWeather));
             UpdateDayLight();
-            NewDayEvent.Trigger(currentDaysSinceStart);
-            Debug.Log("Starting day " + currentDaysSinceStart + " of season " + currentSeasonData.season);
+            NewDayEvent.Trigger(time.daysSinceStart);
+            Debug.Log("Starting day " + time.daysSinceStart + " of season " + time.season);
         }
 
         public IEnumerator UpdateWeather(WeatherData weather)
@@ -287,14 +319,16 @@ namespace Core.TimeAndWeather
 
         public void StartSeason(Season season)
         {
-            currentDaysInSeason = 0;
+            var time = GameState.Time;
+            time.dayOfSeason = 0;
+            time.season = season;
             currentSeasonData = _seasonDataDict?[season];
             SeasonStartEvent.Trigger(currentSeasonData);
         }
 
         private void UpdateDayLight()
         {
-            var dayProgress = (float)(currentHoursInDay - startOfDay) / (endOfDay - startOfDay);
+            var dayProgress = (float)(GameState.Time.hour - startOfDay) / (endOfDay - startOfDay);
             var daylightGradient = currentWeather.overrideDaylightColor
                 ? currentWeather.daylightColorGradient
                 : currentSeasonData.daylightColorGradient;
