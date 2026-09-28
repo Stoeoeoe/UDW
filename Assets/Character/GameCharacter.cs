@@ -50,6 +50,13 @@ namespace Character
         [PixelCrushers.DialogueSystem.ActorPopup(true)] [SerializeField] protected string actor;
         [field: SerializeField] protected Stamina Stamina { get; private set; }
 
+        [Header("Attributes")]
+        [SerializeField] private CharacterAttribute maxHealth = new CharacterAttribute(100f);
+        [SerializeField] private CharacterAttribute maxStamina = new CharacterAttribute(100f);
+        [SerializeField] private CharacterAttribute physicalDefense = new CharacterAttribute(0f);
+        [SerializeField] private CharacterAttribute walkSpeed = new CharacterAttribute(4f);
+        [SerializeField] private CharacterAttribute runSpeed = new CharacterAttribute(7f);
+
         // ── State ────────────────────────────────────────────────────────────────────
 
         public MovementState MovementState { get; private set; } = MovementState.Invalid;
@@ -79,6 +86,47 @@ namespace Character
         public SlotInventory MainInventory { get; private set; }
 
         public CharacterSkills Skills { get; private set; } = new CharacterSkills();
+
+        public int MaxHealth => Mathf.RoundToInt(maxHealth.Value);
+        public int MaxStamina => Mathf.RoundToInt(maxStamina.Value);
+        public int PhysicalDefense => Mathf.RoundToInt(physicalDefense.Value);
+        public float WalkSpeed => walkSpeed.Value;
+        public float RunSpeed => runSpeed.Value;
+
+        public void SetMaxHealthModifier(string sourceId, float flat = 0f, float percent = 0f) =>
+            maxHealth.SetModifier(sourceId, flat, percent);
+
+        public bool RemoveMaxHealthModifier(string sourceId) => maxHealth.RemoveModifier(sourceId);
+
+        public void SetPhysicalDefenseModifier(string sourceId, float flat = 0f, float percent = 0f) =>
+            physicalDefense.SetModifier(sourceId, flat, percent);
+
+        public bool RemovePhysicalDefenseModifier(string sourceId) => physicalDefense.RemoveModifier(sourceId);
+
+        public void SetMaxStaminaModifier(string sourceId, float flat = 0f, float percent = 0f)
+        {
+            var previous = MaxStamina;
+            maxStamina.SetModifier(sourceId, flat, percent);
+            if (MaxStamina != previous) Stamina?.RefreshMaximum();
+        }
+
+        public bool RemoveMaxStaminaModifier(string sourceId)
+        {
+            var previous = MaxStamina;
+            var removed = maxStamina.RemoveModifier(sourceId);
+            if (MaxStamina != previous) Stamina?.RefreshMaximum();
+            return removed;
+        }
+
+        public void SetWalkSpeedModifier(string sourceId, float flat = 0f, float percent = 0f) =>
+            walkSpeed.SetModifier(sourceId, flat, percent);
+
+        public bool RemoveWalkSpeedModifier(string sourceId) => walkSpeed.RemoveModifier(sourceId);
+
+        public void SetRunSpeedModifier(string sourceId, float flat = 0f, float percent = 0f) =>
+            runSpeed.SetModifier(sourceId, flat, percent);
+
+        public bool RemoveRunSpeedModifier(string sourceId) => runSpeed.RemoveModifier(sourceId);
 
         [CanBeNull] public TileData CurrentTileData { get; private set; }
 

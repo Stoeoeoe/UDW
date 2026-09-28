@@ -10,9 +10,6 @@ namespace Character.Abilities
     /// </summary>
     public class MovementAbility : CharacterAbility
     {
-        [SerializeField] float walkSpeed = 4f;
-        [SerializeField] float runSpeed  = 7f;
-
         [Header("Footsteps")]
         [SerializeField] float baseFootstepInterval = 0.4f;
         [SerializeField] float footstepVolume = 0.5f;
@@ -32,7 +29,7 @@ namespace Character.Abilities
 
             var input   = InputManager.Instance.Move;
             bool run    = InputManager.Instance.RunHeld;
-            float speed = run ? runSpeed : walkSpeed;
+            float speed = run ? Character.RunSpeed : Character.WalkSpeed;
 
             Controller.SetMovementInput(input, speed);
             Orientation.UpdateFromVelocity(Controller.CurrentVelocity);

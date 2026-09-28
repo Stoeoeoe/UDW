@@ -1,3 +1,4 @@
+using Character;
 using UnityEngine;
 
 namespace Interaction.Tools.Stamina
@@ -8,15 +9,23 @@ namespace Interaction.Tools.Stamina
     public class Stamina : MonoBehaviour
     {
         [field: SerializeField] public int StartStamina { get; private set; }
-        [field: SerializeField] public int MaxStamina { get; private set; }
+        private GameCharacter _character;
+
+        public int MaxStamina => _character != null ? _character.MaxStamina : 0;
 
         public int CurrentStamina { get; private set; }
 
-        public void SetMaxStamina(int maxStamina) => MaxStamina = maxStamina;
+        private void Awake() => _character = GetComponentInParent<GameCharacter>();
+
+        public void RefreshMaximum()
+        {
+            CurrentStamina = Mathf.Min(CurrentStamina, MaxStamina);
+            StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
+        }
 
         public void ConsumeStamina(int amount)
         {
-            CurrentStamina = Mathf.Max(CurrentStamina - amount, 0);
+            CurrentStamina = Mathf.Clamp(CurrentStamina - amount, 0, MaxStamina);
             StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
             if (CurrentStamina <= 0)
                 StaminaDepletedEvent.Trigger();
@@ -31,7 +40,7 @@ namespace Interaction.Tools.Stamina
         public void Initialize(int startStamina)
         {
             StartStamina = startStamina;
-            CurrentStamina = StartStamina;
+            CurrentStamina = Mathf.Clamp(StartStamina, 0, MaxStamina);
             StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
         }
     }
