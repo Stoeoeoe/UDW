@@ -1,0 +1,30 @@
+{
+  "$schema": "../schemas/project.schema.json",
+  "version": "1.0",
+  "id": "project-1789419923611",
+  "name": "New Project",
+  "tileSize": 16,
+  "defaultMapWidth": 32,
+  "defaultMapHeight": 32,
+  "metadata": {
+    "author": "",
+    "description": ""
+  },
+  "terrainTypes": [
+    {
+      "id": "grass",
+      "displayName": "Grass",
+      "color": "#30cf50"
+    },
+    {
+      "id": "dirt",
+      "displayName": "Dirt",
+      "color": "#64573a"
+    },
+    {
+      "id": "dark_grass",
+      "displayName": "Dark Grass",
+      "color": "#0d3608"
+    }
+  ]
+}
