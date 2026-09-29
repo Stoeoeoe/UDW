@@ -4,6 +4,7 @@ using System.Linq;
 using Character.Abilities;
 using Core;
 using Core.Inventory;
+using Core.GameplayTags;
 using Core.Location;
 using Core.Tile;
 using Core.Tile.TileHighlight;
@@ -87,6 +88,9 @@ namespace Character
 
         public CharacterSkills Skills { get; private set; } = new CharacterSkills();
 
+        /// <summary>Runtime tags derived from skill levels and other active grants.</summary>
+        public TagSet Tags { get; } = new();
+
         public int MaxHealth => Mathf.RoundToInt(maxHealth.Value);
         public int MaxStamina => Mathf.RoundToInt(maxStamina.Value);
         public int PhysicalDefense => Mathf.RoundToInt(physicalDefense.Value);
@@ -148,6 +152,7 @@ namespace Character
 
         protected virtual void Awake()
         {
+            Skills.BindTags(Tags);
             Controller = GetComponent<Controller2D>();
             Orientation = GetComponent<Orientation2D>();
 
@@ -167,6 +172,7 @@ namespace Character
 
         private void OnDestroy()
         {
+            Skills.UnbindTags(Tags);
             LevelManager.Instance?.UnregisterLifecycle(this);
         }
 
@@ -307,7 +313,11 @@ namespace Character
 
         public void InitializeSkills(CharacterSkills skills)
         {
-            Skills = skills ?? throw new ArgumentNullException(nameof(skills));
+            if (skills == null) throw new ArgumentNullException(nameof(skills));
+            if (ReferenceEquals(Skills, skills)) return;
+            Skills.UnbindTags(Tags);
+            Skills = skills;
+            Skills.BindTags(Tags);
         }
     }
 }

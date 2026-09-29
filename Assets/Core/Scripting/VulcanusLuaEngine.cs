@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Character;
 using Core.Game;
+using Core.GameplayTags;
 using MoonSharp.Interpreter;
 
 namespace Core.Scripting
@@ -12,26 +14,27 @@ namespace Core.Scripting
         private const int MaxSlices = 128;
 
         private readonly LuaBindingRegistry _bindings;
-        private readonly Dictionary<string, CompiledCondition> _conditions = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, DynValue> _conditions = new(StringComparer.Ordinal);
+        private Script _conditionScript;
 
         public VulcanusLuaEngine()
+            : this(() => GameState.Story, () => GameState.Player, () => GameState.World, null)
         {
-            _bindings = new LuaBindingRegistry(
-                new StoryLuaApi(() => GameState.Story),
-                new SkillsLuaApi(() => GameState.Player),
-                new WorldLuaApi(() => GameState.World));
         }
 
-        public VulcanusLuaEngine(StoryState story, PlayerState player, WorldState world)
+        public VulcanusLuaEngine(StoryState story, PlayerState player, WorldState world, Func<TagSet> playerTags = null)
+            : this(Fixed(story, nameof(story)), Fixed(player, nameof(player)), Fixed(world, nameof(world)), playerTags)
         {
-            if (story == null) throw new ArgumentNullException(nameof(story));
-            if (player == null) throw new ArgumentNullException(nameof(player));
-            if (world == null) throw new ArgumentNullException(nameof(world));
+        }
 
+        private VulcanusLuaEngine(Func<StoryState> story, Func<PlayerState> player, Func<WorldState> world,
+            Func<TagSet> playerTags)
+        {
             _bindings = new LuaBindingRegistry(
-                new StoryLuaApi(() => story),
-                new SkillsLuaApi(() => player),
-                new WorldLuaApi(() => world));
+                new StoryLuaApi(story),
+                new SkillsLuaApi(player),
+                new WorldLuaApi(world),
+                new CharacterTagLuaApi(playerTags ?? (() => MainCharacter.CurrentMainCharacter?.Tags)));
         }
 
         public LuaBindingManifest DescribeBindings() => _bindings.Describe();
@@ -41,14 +44,14 @@ namespace Core.Scripting
         {
             if (string.IsNullOrWhiteSpace(expression)) return true;
 
-            if (!_conditions.TryGetValue(expression, out var condition))
+            if (!_conditions.TryGetValue(expression, out var function))
             {
-                var script = CreateScript(false);
-                condition = new CompiledCondition(script, script.LoadString("return " + expression));
-                _conditions.Add(expression, condition);
+                _conditionScript ??= CreateScript(false);
+                function = _conditionScript.LoadString("return " + expression);
+                _conditions[expression] = function;
             }
 
-            return Run(condition.Script, condition.Function).CastToBool();
+            return Run(_conditionScript, function).CastToBool();
         }
 
         /// <summary>Executes a writable chunk in a fresh, non-persistent Lua environment.</summary>
@@ -80,16 +83,9 @@ namespace Core.Scripting
             throw new InvalidOperationException("Lua script exceeded its instruction budget.");
         }
 
-        private sealed class CompiledCondition
+        private static Func<T> Fixed<T>(T value, string name) where T : class
         {
-            public readonly Script Script;
-            public readonly DynValue Function;
-
-            public CompiledCondition(Script script, DynValue function)
-            {
-                Script = script;
-                Function = function;
-            }
+            return value == null ? throw new ArgumentNullException(name) : () => value;
         }
     }
 }

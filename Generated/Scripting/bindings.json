@@ -91,6 +91,38 @@
                     "writesState": true
                 }
             ]
+        },
+        {
+            "path": "Player.Tags",
+            "methods": [
+                {
+                    "name": "Has",
+                    "parameters": [
+                        { "name": "tag", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": false
+                },
+                {
+                    "name": "HasExact",
+                    "parameters": [
+                        { "name": "tag", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": false
+                },
+                {
+                    "name": "Matches",
+                    "parameters": [
+                        { "name": "expression", "type": "string" }
+                    ],
+                    "returnType": "boolean",
+                    "returnNullable": false,
+                    "writesState": false
+                }
+            ]
         }
     ],
     "tables": [

@@ -1,4 +1,5 @@
 using System;
+using Core.GameplayTags;
 using UnityEngine;
 
 namespace Character
@@ -41,9 +42,13 @@ namespace Character
         [SerializeField] private float value;
         [SerializeField] private string title;
         [TextArea(2, 4)] [SerializeField] private string description;
+        [Tooltip("Tags granted at this level and retained at higher levels.")]
+        [GameplayTagPicker]
+        [SerializeField] private string[] grantedTags = Array.Empty<string>();
 
         public float Value => value;
         public string Title => title;
         public string Description => description;
+        public string[] GrantedTags => grantedTags;
     }
 }
