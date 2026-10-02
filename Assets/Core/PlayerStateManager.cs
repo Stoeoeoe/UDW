@@ -41,7 +41,10 @@ namespace Core
         public void InitializeCharacter(GameCharacter character)
         {
             if (character is MainCharacter)
+            {
                 character.InitializeSkills(GameState.Player.Skills);
+                GameStateManager.Instance.DivineFavour.BindCharacter(character);
+            }
 
             if (!_inventoryInitialized)
             {

@@ -97,6 +97,32 @@ namespace Character
         public float WalkSpeed => walkSpeed.Value;
         public float RunSpeed => runSpeed.Value;
 
+        public void SetAttributeModifier(CharacterAttributeType attribute, string sourceId, float flat = 0f, float percent = 0f)
+        {
+            switch (attribute)
+            {
+                case CharacterAttributeType.MaxHealth: SetMaxHealthModifier(sourceId, flat, percent); break;
+                case CharacterAttributeType.MaxStamina: SetMaxStaminaModifier(sourceId, flat, percent); break;
+                case CharacterAttributeType.WalkSpeed: SetWalkSpeedModifier(sourceId, flat, percent); break;
+                case CharacterAttributeType.RunSpeed: SetRunSpeedModifier(sourceId, flat, percent); break;
+                case CharacterAttributeType.PhysicalDefense: SetPhysicalDefenseModifier(sourceId, flat, percent); break;
+                default: throw new ArgumentOutOfRangeException(nameof(attribute));
+            }
+        }
+
+        public bool RemoveAttributeModifier(CharacterAttributeType attribute, string sourceId)
+        {
+            return attribute switch
+            {
+                CharacterAttributeType.MaxHealth => RemoveMaxHealthModifier(sourceId),
+                CharacterAttributeType.MaxStamina => RemoveMaxStaminaModifier(sourceId),
+                CharacterAttributeType.WalkSpeed => RemoveWalkSpeedModifier(sourceId),
+                CharacterAttributeType.RunSpeed => RemoveRunSpeedModifier(sourceId),
+                CharacterAttributeType.PhysicalDefense => RemovePhysicalDefenseModifier(sourceId),
+                _ => throw new ArgumentOutOfRangeException(nameof(attribute))
+            };
+        }
+
         public void SetMaxHealthModifier(string sourceId, float flat = 0f, float percent = 0f) =>
             maxHealth.SetModifier(sourceId, flat, percent);
 
@@ -152,7 +178,7 @@ namespace Character
 
         protected virtual void Awake()
         {
-            Skills.BindTags(Tags);
+            Skills.BindCharacter(this);
             Controller = GetComponent<Controller2D>();
             Orientation = GetComponent<Orientation2D>();
 
@@ -172,7 +198,7 @@ namespace Character
 
         private void OnDestroy()
         {
-            Skills.UnbindTags(Tags);
+            Skills.UnbindCharacter(this);
             LevelManager.Instance?.UnregisterLifecycle(this);
         }
 
@@ -315,9 +341,9 @@ namespace Character
         {
             if (skills == null) throw new ArgumentNullException(nameof(skills));
             if (ReferenceEquals(Skills, skills)) return;
-            Skills.UnbindTags(Tags);
+            Skills.UnbindCharacter(this);
             Skills = skills;
-            Skills.BindTags(Tags);
+            Skills.BindCharacter(this);
         }
     }
 }

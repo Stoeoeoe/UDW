@@ -104,39 +104,51 @@ namespace Core.GameplayTags.Editor
             var grantedTags = levels.GetArrayElementAtIndex(1).FindPropertyRelative("grantedTags");
             grantedTags.arraySize = 1;
             grantedTags.GetArrayElementAtIndex(0).stringValue = "State.Trained";
+            var bonuses = levels.GetArrayElementAtIndex(1).FindPropertyRelative("attributeBonuses");
+            bonuses.arraySize = 1;
+            bonuses.GetArrayElementAtIndex(0).FindPropertyRelative("attribute").intValue = (int)CharacterAttributeType.PhysicalDefense;
+            bonuses.GetArrayElementAtIndex(0).FindPropertyRelative("flat").floatValue = 2;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             SkillDefinitions.Register(definition);
 
             var skills = new CharacterSkills();
-            var tags = new TagSet();
-            typeof(CharacterSkills).GetMethod("BindTags", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.Invoke(skills, new object[] { tags });
+            var gameObject = new GameObject("Skill grant test character");
+            gameObject.SetActive(false);
+            var character = gameObject.AddComponent<GameCharacter>();
+            var tags = character.Tags;
+            typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(skills, new object[] { character });
 
-            var observer = new SkillTagObserver(skills, tags);
+            var observer = new SkillTagObserver(skills, character);
             EventBus<SkillLevelChangedEvent>.Subscribe(observer);
             try
             {
                 Assert.That(skills.TryLevelUp(skillId), Is.True);
                 Assert.That(observer.SawUpgradeWithTag, Is.True);
+                Assert.That(character.PhysicalDefense, Is.EqualTo(2));
 
                 tags.SetSourceTags("boon:mercury", new[] { "State.Inspired" });
-                typeof(CharacterSkills).GetMethod("UnbindTags", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?.Invoke(skills, new object[] { tags });
+                typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.Invoke(skills, new object[] { character });
                 Assert.That(tags.Has("State.Trained"), Is.False);
                 Assert.That(tags.Has("State.Inspired"), Is.True);
-                typeof(CharacterSkills).GetMethod("BindTags", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?.Invoke(skills, new object[] { tags });
+                Assert.That(character.PhysicalDefense, Is.Zero);
+                typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.Invoke(skills, new object[] { character });
                 Assert.That(tags.Has("State.Trained"), Is.True);
+                Assert.That(character.PhysicalDefense, Is.EqualTo(2));
 
                 typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
                     ?.Invoke(skills, new object[] { Array.Empty<KeyValuePair<string, int>>() });
                 Assert.That(observer.SawResetWithoutTag, Is.True);
+                Assert.That(character.PhysicalDefense, Is.Zero);
             }
             finally
             {
                 EventBus<SkillLevelChangedEvent>.Unsubscribe(observer);
-                typeof(CharacterSkills).GetMethod("UnbindTags", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?.Invoke(skills, new object[] { tags });
+                typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.Invoke(skills, new object[] { character });
+                UnityEngine.Object.DestroyImmediate(gameObject);
                 UnityEngine.Object.DestroyImmediate(definition);
             }
         }
@@ -144,22 +156,22 @@ namespace Core.GameplayTags.Editor
         private sealed class SkillTagObserver : IEventListener<SkillLevelChangedEvent>
         {
             private readonly CharacterSkills _skills;
-            private readonly TagSet _tags;
+            private readonly GameCharacter _character;
 
             public bool SawUpgradeWithTag { get; private set; }
             public bool SawResetWithoutTag { get; private set; }
 
-            public SkillTagObserver(CharacterSkills skills, TagSet tags)
+            public SkillTagObserver(CharacterSkills skills, GameCharacter character)
             {
                 _skills = skills;
-                _tags = tags;
+                _character = character;
             }
 
             public void OnEvent(SkillLevelChangedEvent change)
             {
                 if (!ReferenceEquals(change.Skills, _skills)) return;
-                if (change.NewLevel == 1) SawUpgradeWithTag = _tags.Has("State.Trained");
-                if (change.NewLevel == 0) SawResetWithoutTag = !_tags.Has("State.Trained");
+                if (change.NewLevel == 1) SawUpgradeWithTag = _character.Tags.Has("State.Trained") && _character.PhysicalDefense == 2;
+                if (change.NewLevel == 0) SawResetWithoutTag = !_character.Tags.Has("State.Trained") && _character.PhysicalDefense == 0;
             }
         }
     }

@@ -62,6 +62,7 @@ namespace Core.Game.Editor
                 world = new WorldSaveData()
             };
             data.player.skills.Add(new SkillLevelRecord { id = "hammer-mastery", level = 3 });
+            data.player.favour.Add("mars", 12);
             data.story.flags.Add("met-blacksmith");
             data.world.locations.Add("farm", new Dictionary<string, WorldObjectState>
             {
@@ -85,6 +86,7 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.skills, Has.Count.EqualTo(1));
                 Assert.That(loaded.player.skills[0].id, Is.EqualTo("hammer-mastery"));
                 Assert.That(loaded.player.skills[0].level, Is.EqualTo(3));
+                Assert.That(loaded.player.favour["mars"], Is.EqualTo(12));
                 Assert.That(loaded.story.flags, Is.EquivalentTo(new[] { "met-blacksmith" }));
                 Assert.That(loaded.world.locations["farm"]["plot-1"], Is.TypeOf<FarmlandState>());
                 var plot = (FarmlandState)loaded.world.locations["farm"]["plot-1"];

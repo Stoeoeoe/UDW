@@ -45,10 +45,14 @@ namespace Character
         [Tooltip("Tags granted at this level and retained at higher levels.")]
         [GameplayTagPicker]
         [SerializeField] private string[] grantedTags = Array.Empty<string>();
+        [SerializeField] private AttributeBonus[] attributeBonuses = Array.Empty<AttributeBonus>();
 
         public float Value => value;
         public string Title => title;
         public string Description => description;
         public string[] GrantedTags => grantedTags;
+        public AttributeBonus[] AttributeBonuses => attributeBonuses;
+
+        public CharacterGrant Grant => new(grantedTags, attributeBonuses);
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core.Location;
+using Core.Divinity;
 using Core.TimeAndWeather;
 
 namespace Core.Game
@@ -15,6 +16,20 @@ namespace Core.Game
         public PlayerState Player { get; } = new PlayerState();
         public StoryState Story { get; } = new StoryState();
         public GameTimeState Time { get; } = new GameTimeState();
+
+        public DivineFavourManager DivineFavour { get; private set; }
+
+        protected override void OnAwake()
+        {
+            base.OnAwake();
+            DivineFavour = new DivineFavourManager(Player.Favour);
+        }
+
+        protected override void OnDestroy()
+        {
+            DivineFavour?.Dispose();
+            base.OnDestroy();
+        }
 
         public void Save(string slot) => GameSaveService.Save(slot, Capture());
 
@@ -38,6 +53,7 @@ namespace Core.Game
             if (UrTimeManager.Instance != null)
                 UrTimeManager.Instance.ApplySavedTime();
             Story.RestoreFlags(data.story.flags);
+            DivineFavour.Restore(data.player.favour);
             Player.Skills.RestoreLevels(levels);
             return true;
         }
@@ -48,7 +64,7 @@ namespace Core.Game
             {
                 schemaVersion = GameSaveData.CurrentVersion,
                 worldBaselineVersion = WorldBaselineVersion,
-                player = new PlayerSaveData(),
+                player = new PlayerSaveData { favour = Player.Favour.Capture() },
                 story = new StorySaveData(),
                 time = Time.Capture(),
                 world = new WorldSaveData()

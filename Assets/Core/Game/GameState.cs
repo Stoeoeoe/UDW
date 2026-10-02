@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Character;
+using Core.Divinity;
 using Core.TimeAndWeather;
 
 namespace Core.Game
@@ -23,6 +24,7 @@ namespace Core.Game
     public sealed class PlayerState
     {
         public CharacterSkills Skills { get; } = new CharacterSkills();
+        public DivineFavourState Favour { get; } = new DivineFavourState();
     }
 
     [Serializable]

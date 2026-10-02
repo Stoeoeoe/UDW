@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Core.GameplayTags;
 
 namespace Character
 {
@@ -8,8 +7,8 @@ namespace Character
     public sealed class CharacterSkills
     {
         private readonly Dictionary<string, int> _levels = new Dictionary<string, int>(StringComparer.Ordinal);
-        // Scene-bound projection target; only levels belong in saved state.
-        [NonSerialized] private TagSet _tags;
+        // Only levels belong in saved state; grants are applied to the bound character.
+        [NonSerialized] private GameCharacter _character;
 
         public int GetLevel(string skillId) => _levels.TryGetValue(skillId, out var level) ? level : 0;
 
@@ -29,53 +28,47 @@ namespace Character
 
             var newLevel = currentLevel + 1;
             _levels[skillId] = newLevel;
-            UpdateSkillTags(skillId, newLevel);
+            ApplyLevel(skillId, newLevel);
             SkillLevelChangedEvent.Trigger(this, skillId, newLevel);
             return true;
         }
 
         internal IEnumerable<KeyValuePair<string, int>> GetLevels() => _levels;
 
-        internal void BindTags(TagSet tags)
+        internal void BindCharacter(GameCharacter character)
         {
-            if (tags == null) throw new ArgumentNullException(nameof(tags));
-            if (_tags != null && !ReferenceEquals(_tags, tags))
-                _tags.RemoveSourcesWithPrefix("skill:");
-
-            _tags = tags;
-            _tags.RemoveSourcesWithPrefix("skill:");
+            if (!character) throw new ArgumentNullException(nameof(character));
+            if (ReferenceEquals(_character, character)) return;
+            if (_character) UnbindCharacter(_character);
+            _character = character;
             foreach (var pair in _levels)
-                UpdateSkillTags(pair.Key, pair.Value);
+                for (var level = 1; level <= pair.Value; level++)
+                    ApplyLevel(pair.Key, level);
         }
 
-        internal void UnbindTags(TagSet tags)
+        internal void UnbindCharacter(GameCharacter character)
         {
-            if (!ReferenceEquals(_tags, tags)) return;
-            _tags.RemoveSourcesWithPrefix("skill:");
-            _tags = null;
+            if (!ReferenceEquals(_character, character)) return;
+            if (_character)
+                foreach (var pair in _levels)
+                    for (var level = 1; level <= pair.Value; level++)
+                        RemoveLevel(pair.Key, level);
+            _character = null;
         }
 
-        private void UpdateSkillTags(string skillId, int level)
+        private void ApplyLevel(string skillId, int level)
         {
-            if (_tags == null) return;
-
-            var source = "skill:" + skillId;
-            if (level <= 0)
-            {
-                _tags.SetSourceTags(source, Array.Empty<string>());
-                return;
-            }
-
-            var definition = SkillDefinitions.Get(skillId);
-            var grantedTags = new List<string>();
-            for (var currentLevel = 1; currentLevel <= level; currentLevel++)
-            {
-                var levelTags = definition.GetLevelDefinition(currentLevel)?.GrantedTags;
-                if (levelTags != null) grantedTags.AddRange(levelTags);
-            }
-
-            _tags.SetSourceTags(source, grantedTags);
+            if (_character)
+                SkillDefinitions.Get(skillId).GetLevelDefinition(level)?.Grant.Apply(_character, Source(skillId, level));
         }
+
+        private void RemoveLevel(string skillId, int level)
+        {
+            if (_character)
+                SkillDefinitions.Get(skillId).GetLevelDefinition(level)?.Grant.Remove(_character, Source(skillId, level));
+        }
+
+        private static string Source(string skillId, int level) => $"skill:{skillId}:{level}";
 
         internal void RestoreLevels(IEnumerable<KeyValuePair<string, int>> levels)
         {
@@ -93,9 +86,15 @@ namespace Character
                 if (!previousLevels.ContainsKey(pair.Key))
                     changes.Add(pair);
 
-            // Restore every derived tag before any listener observes the restored skill state.
+            // Update grants before any listener observes the restored skill state.
             foreach (var pair in changes)
-                UpdateSkillTags(pair.Key, pair.Value);
+            {
+                var oldLevel = previousLevels.TryGetValue(pair.Key, out var old) ? old : 0;
+                for (var level = oldLevel; level > pair.Value; level--)
+                    RemoveLevel(pair.Key, level);
+                for (var level = oldLevel + 1; level <= pair.Value; level++)
+                    ApplyLevel(pair.Key, level);
+            }
 
             foreach (var pair in changes)
                 SkillLevelChangedEvent.Trigger(this, pair.Key, pair.Value);

@@ -22,7 +22,7 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.skills == null || story?.flags == null || time == null || world?.locations == null)
+            if (player?.skills == null || player.favour == null || story?.flags == null || time == null || world?.locations == null)
                 throw new FormatException("The save is missing a required state section.");
 
             if (!time.initialized || time.daysSinceStart < 1 ||
@@ -39,6 +39,9 @@ namespace Core.Game
                     throw new FormatException("The save contains an invalid or duplicate skill level.");
 
             var storyFlags = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var pair in player.favour)
+                Core.Divinity.DeityDefinitions.ValidateId(pair.Key);
             foreach (var flag in story.flags)
                 if (string.IsNullOrWhiteSpace(flag) || !storyFlags.Add(flag))
                     throw new FormatException("The save contains an invalid or duplicate story flag.");
@@ -58,6 +61,7 @@ namespace Core.Game
     public sealed class PlayerSaveData
     {
         public List<SkillLevelRecord> skills = new();
+        public Dictionary<string, int> favour = new(StringComparer.Ordinal);
     }
 
     [Serializable]

@@ -4,6 +4,15 @@ using UnityEngine;
 
 namespace Character
 {
+    public enum CharacterAttributeType
+    {
+        MaxHealth,
+        MaxStamina,
+        WalkSpeed,
+        RunSpeed,
+        PhysicalDefense
+    }
+
     /// <summary>An authored base value plus replaceable bonuses from skills, boons, or equipment.</summary>
     [Serializable]
     public sealed class CharacterAttribute
