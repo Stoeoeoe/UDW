@@ -116,3 +116,6 @@ Samples~/
 
 /graphify-out
 Assets/graphify-out
+
+# Work around a Codex-on-Windows cache path that may be created literally in the repo.
+/%SystemDrive%/
