@@ -6,6 +6,7 @@ using System.Reflection;
 using Character;
 using Core.Divinity;
 using Core.TimeAndWeather;
+using Interaction;
 using NUnit.Framework;
 using Plants;
 using Sirenix.Serialization;
@@ -44,6 +45,32 @@ namespace Core.Game.Editor
         }
 
         [Test]
+        public void CooldownUsesElapsedInGameHoursAcrossDayBoundary()
+        {
+            var time = new GameTimeState { initialized = true, daysSinceStart = 5, hour = 18, minute = 30 };
+            var state = new InteractableState { availableAtMinute = time.TotalMinutes + 24 * 60 };
+
+            time.daysSinceStart = 6;
+            time.hour = 6;
+            Assert.That(state.IsCoolingDown(time.TotalMinutes), Is.True);
+            time.hour = 18;
+            time.minute = 29;
+            Assert.That(state.IsCoolingDown(time.TotalMinutes), Is.True);
+            time.minute = 30;
+            Assert.That(state.IsCoolingDown(time.TotalMinutes), Is.False);
+        }
+
+        [Test]
+        public void LimitedUsesBecomeUsedUpAtTheConfiguredMaximum()
+        {
+            var state = new InteractableState { uses = 1 };
+
+            Assert.That(state.IsUsedUp(2), Is.False);
+            Assert.That(state.IsUsedUp(1), Is.True);
+            Assert.That(state.IsUsedUp(-1), Is.False);
+        }
+
+        [Test]
         public void SaveAndLoadRoundTripWorldPlayerAndStory()
         {
             var slot = "test-" + Guid.NewGuid().ToString("N");
@@ -65,6 +92,13 @@ namespace Core.Game.Editor
             data.story.SetFlag("met-blacksmith");
             data.world.Set("farm", "plot-1", new FarmlandState { plowed = true, irrigated = false });
             data.world.Set("farm", "plant:1,2", new PlantState("lentils") { daysPassedSincePlanting = 3 });
+            var prayerDeadline = new GameCalendar(6, 14, Season.Spring, Season.Summer, Season.Autumn, Season.Winter)
+                .GetNextBoundaryMinute(data.time, GameTimeBoundary.NextDay);
+            data.world.Set("farm", "interactable:shrine-1", new InteractableState
+            {
+                uses = 2,
+                availableAtMinute = prayerDeadline
+            });
 
             try
             {
@@ -90,6 +124,14 @@ namespace Core.Game.Editor
                 Assert.That(loaded.world.TryGet("farm", "plant:1,2", out PlantState plant), Is.True);
                 Assert.That(plant.plantID, Is.EqualTo("lentils"));
                 Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(3));
+                Assert.That(loaded.world.TryGet("farm", "interactable:shrine-1", out InteractableState interaction), Is.True);
+                Assert.That(interaction.uses, Is.EqualTo(2));
+                Assert.That(interaction.IsCoolingDown(loaded.time.TotalMinutes), Is.True);
+                Assert.That(interaction.availableAtMinute, Is.EqualTo(prayerDeadline));
+                loaded.time.daysSinceStart++;
+                loaded.time.hour = 6;
+                loaded.time.minute = 0;
+                Assert.That(interaction.IsCoolingDown(loaded.time.TotalMinutes), Is.False);
             }
             finally
             {

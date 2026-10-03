@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Interaction.Dialogue
 {
-    public class ShowVulcanusDialogueInteractable : BasicInteractable
+    public class ShowVulcanusDialogueInteractable : AbstractInteractable
     {
         [SerializeField] private string dialogueId;
         [SerializeField] private DialogueOptions options;
@@ -91,8 +91,9 @@ namespace Interaction.Dialogue
             _activeMonitor = null;
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             if (_activeMonitor != null)
             {
                 StopCoroutine(_activeMonitor);

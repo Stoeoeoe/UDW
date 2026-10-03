@@ -8,7 +8,7 @@ namespace Interaction
     /// <summary>
     /// Interactable that advances to the next in-game day (e.g. a bed).
     /// </summary>
-    public class AdvanceDayInteractable : BasicInteractable
+    public class AdvanceDayInteractable : AbstractInteractable
     {
         protected override void Interact(GameCharacter instigator)
         {

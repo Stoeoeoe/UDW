@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Interaction
 {
-    public class TestInteractable : BasicInteractable
+    public class TestInteractable : AbstractInteractable
     {
         public bool IsPlowingAllFields;
         public bool IsIrrigatingSomeFields;

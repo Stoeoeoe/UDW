@@ -1,5 +1,6 @@
 using System;
 using Character;
+using Core.Events;
 using SensorToolkit;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace Interaction
     /// Interactables that require a button press are additionally filtered by facing direction.
     /// Results are cached; InteractableChangedEvent fires only on actual change.
     /// </summary>
-    public class InteractionSensor : MonoBehaviour
+    public class InteractionSensor : MonoBehaviour, IEventListener<InteractableStateChangedEvent>
     {
         [SerializeField] private RangeSensor2D ambientSensor;
         [SerializeField] private TriggerSensor2D triggerSensor;
@@ -29,6 +30,12 @@ namespace Interaction
             triggerSensor.OnDetected.AddListener((_, __) => _dirty = true);
             triggerSensor.OnLostDetection.AddListener((_, __) => _dirty = true);
         }
+
+        private void OnEnable() => EventBus<InteractableStateChangedEvent>.Subscribe(this);
+
+        private void OnDisable() => EventBus<InteractableStateChangedEvent>.Unsubscribe(this);
+
+        public void OnEvent(InteractableStateChangedEvent change) => _dirty = true;
 
         private void Start()
         {

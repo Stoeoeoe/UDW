@@ -19,6 +19,7 @@ namespace Core.Location
     /// Persistent singleton - survives all scene loads. References to scene-specific objects (lights etc.)
     /// are re-acquired each time a new scene loads.
     /// </summary>
+    [DefaultExecutionOrder(-1000)]
     public class LevelManager : Singleton<LevelManager>, IEventListener<DayLightUpdateEvent>
     {
         [Header("Transition")] [SerializeField]
@@ -47,6 +48,7 @@ namespace Core.Location
         // - Lifecycle callbacks ---------------------------------------------------
 
         private readonly List<ILocationLifecycle> _lifecycleComponents = new();
+        private bool _locationEntered;
 
         protected override void OnAwake()
         {
@@ -121,9 +123,11 @@ namespace Core.Location
             // Ensure character runtime initialization
             character.EnsureRuntimeInitialized();
 
-            // Notify all registered lifecycle components
-            foreach (var component in _lifecycleComponents)
-                component.OnLocationEnter(locationData);
+            // A listener registered by an enter callback gets the same location immediately.
+            _locationEntered = true;
+            foreach (var component in _lifecycleComponents.ToArray())
+                if (_lifecycleComponents.Contains(component) && CanReceiveLocation(component, locationData))
+                    component.OnLocationEnter(locationData);
 
             // Fade in
             yield return Fade(0f);
@@ -168,15 +172,28 @@ namespace Core.Location
 
         public void RegisterLifecycle(ILocationLifecycle component)
         {
-            if (!_lifecycleComponents.Contains(component))
-            {
-                _lifecycleComponents.Add(component);
-            }
+            if (_lifecycleComponents.Contains(component)) return;
+            _lifecycleComponents.Add(component);
+            if (_locationEntered && CanReceiveLocation(component, CurrentLocationData))
+                component.OnLocationEnter(CurrentLocationData);
         }
 
         public void UnregisterLifecycle(ILocationLifecycle component)
         {
             _lifecycleComponents.Remove(component);
+        }
+
+        private bool CanReceiveLocation(ILocationLifecycle component, LocationData location)
+        {
+            if (location == null) return false;
+            if (component is not MonoBehaviour behaviour) return true;
+            if (!behaviour) return false;
+
+            var sceneName = behaviour.gameObject.scene.name;
+            // Objects in a location scene only receive that location. Managers in the
+            // persistent systems scene receive every location.
+            if (string.Equals(sceneName, location.id, StringComparison.OrdinalIgnoreCase)) return true;
+            return !_locationById.ContainsKey(sceneName);
         }
 
         // - Scene load routine ------------------------------------------------------
@@ -188,10 +205,10 @@ namespace Core.Location
             yield return Fade(1f);
 
             // Notify all lifecycle components before unloading the old scene
-            foreach (var component in _lifecycleComponents)
-            {
-                component.OnLocationLeave(CurrentLocationData);
-            }
+            _locationEntered = false;
+            foreach (var component in _lifecycleComponents.ToArray())
+                if (_lifecycleComponents.Contains(component) && CanReceiveLocation(component, CurrentLocationData))
+                    component.OnLocationLeave(CurrentLocationData);
 
             var previousScene = SceneManager.GetActiveScene();
 
