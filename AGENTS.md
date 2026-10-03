@@ -15,3 +15,11 @@ Rules:
 
 - Save formats can evolve in place for now. Do not bump the save schema version or add migrations for backwards compatibility unless the user asks.
 - If a change to a fundamental state or save contract raises a compatibility question, ask the user before adding compatibility machinery.
+
+## Persistent game state
+
+- `GameSaveData` is the live, Odin-serialized root. `GameState` exposes its `player`, `world`, `story`, and `time` sections through `GameStateManager`. Do not add a second capture/restore mapping in the manager.
+- Put every value that must survive a save/load in a field of that root or one of its state sections. Public serializable fields persist directly; mark private persistent fields with `[OdinSerialize]`. Mark runtime references, subscriptions, caches, and scene objects `[NonSerialized]` and rebuild or rebind them after load.
+- When adding a top-level section, add it to `GameSaveData` and expose it through `GameStateManager` and `GameState`. The editor test `EveryGameStateSectionIsPartOfTheSaveRoot` checks this relationship. Extend the save round-trip test with representative data from the new section.
+- Loading replaces the root before scene objects are initialized. Keep post-load runtime work explicit and ordered (for example, rebinding the favour manager and applying saved time); do not discover restore methods by reflection.
+- `PlayerStateManager` now keeps current stamina in `GameState.Player`. Inventory contents are still scene-owned and are **not yet saved**; the one-time starting-loadout flag is runtime bookkeeping. Add stable item-ID inventory state before treating inventory as persistent.

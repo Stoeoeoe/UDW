@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Core
 {
     /// <summary>
-    /// Persists player state (stamina, one-time inventory init) across scene loads.
+    /// Initializes player state and the starting loadout across scene loads.
     /// Lives on SystemRoot. Add starting tools/items here instead of on GameCharacter.
     /// </summary>
     public class PlayerStateManager : Singleton<PlayerStateManager>,
@@ -20,31 +20,39 @@ namespace Core
         [SerializeField] ToolData[] _startingTools;
         [SerializeField] ItemDefinition[] _startingItems;
 
-        int _currentStamina;
         bool _inventoryInitialized;
-
-        protected override void OnAwake()
-        {
-            base.OnAwake();
-            _currentStamina = _startingStamina;
-        }
 
         void OnEnable()  => this.Subscribe<StaminaChangedEvent>();
         void OnDisable() => this.Unsubscribe<StaminaChangedEvent>();
 
-        public void OnEvent(StaminaChangedEvent e) => _currentStamina = e.Current;
+        public void OnEvent(StaminaChangedEvent e)
+        {
+            if (e.Character is not MainCharacter) return;
+            GameState.Player.CurrentStamina = e.Current;
+            GameState.Player.StaminaInitialized = true;
+        }
 
         /// <summary>
-        /// Called by GameCharacter.Start() on every spawn.
-        /// Initializes inventory once, restores stamina every time.
+        /// Called during GameCharacter runtime initialization on every spawn.
+        /// Initializes the player loadout once and restores player stamina on each spawn.
         /// </summary>
         public void InitializeCharacter(GameCharacter character)
         {
-            if (character is MainCharacter)
+            if (character is not MainCharacter)
             {
-                character.InitializeSkills(GameState.Player.Skills);
-                GameStateManager.Instance.DivineFavour.BindCharacter(character);
+                character.InitializeStamina(_startingStamina);
+                return;
             }
+
+            var player = GameState.Player;
+            if (!player.StaminaInitialized)
+            {
+                player.CurrentStamina = _startingStamina;
+                player.StaminaInitialized = true;
+            }
+
+            character.InitializeSkills(player.Skills);
+            GameStateManager.Instance.DivineFavour.BindCharacter(character);
 
             if (!_inventoryInitialized)
             {
@@ -61,7 +69,7 @@ namespace Core
                 }
             }
 
-            character.InitializeStamina(_currentStamina);
+            character.InitializeStamina(player.CurrentStamina);
         }
     }
 }

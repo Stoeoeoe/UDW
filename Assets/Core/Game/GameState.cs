@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Character;
 using Core.Divinity;
 using Core.TimeAndWeather;
+using Sirenix.Serialization;
 
 namespace Core.Game
 {
@@ -21,10 +22,13 @@ namespace Core.Game
         public static bool Load(string slot) => Manager.Load(slot);
     }
 
+    [Serializable]
     public sealed class PlayerState
     {
-        public CharacterSkills Skills { get; } = new CharacterSkills();
-        public DivineFavourState Favour { get; } = new DivineFavourState();
+        [field: OdinSerialize] public CharacterSkills Skills { get; private set; } = new CharacterSkills();
+        [field: OdinSerialize] public DivineFavourState Favour { get; private set; } = new DivineFavourState();
+        public bool StaminaInitialized;
+        public int CurrentStamina;
     }
 
     [Serializable]
@@ -37,33 +41,12 @@ namespace Core.Game
         public int hour;
         public int minute;
         public float secondsTowardNextMinute;
-
-        internal GameTimeState Capture() => new GameTimeState
-        {
-            initialized = initialized,
-            daysSinceStart = daysSinceStart,
-            season = season,
-            dayOfSeason = dayOfSeason,
-            hour = hour,
-            minute = minute,
-            secondsTowardNextMinute = secondsTowardNextMinute
-        };
-
-        internal void Restore(GameTimeState saved)
-        {
-            initialized = saved.initialized;
-            daysSinceStart = saved.daysSinceStart;
-            season = saved.season;
-            dayOfSeason = saved.dayOfSeason;
-            hour = saved.hour;
-            minute = saved.minute;
-            secondsTowardNextMinute = saved.secondsTowardNextMinute;
-        }
     }
 
+    [Serializable]
     public sealed class StoryState
     {
-        private readonly HashSet<string> _flags = new HashSet<string>(StringComparer.Ordinal);
+        [OdinSerialize] private HashSet<string> _flags = new HashSet<string>(StringComparer.Ordinal);
 
         public bool HasFlag(string flag) => _flags.Contains(flag);
 
@@ -72,12 +55,5 @@ namespace Core.Game
         public bool ClearFlag(string flag) => _flags.Remove(flag);
 
         internal IEnumerable<string> GetFlags() => _flags;
-
-        internal void RestoreFlags(IEnumerable<string> flags)
-        {
-            _flags.Clear();
-            foreach (var flag in flags)
-                _flags.Add(flag);
-        }
     }
 }

@@ -2,9 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using Character;
+using Core.Divinity;
 using Core.TimeAndWeather;
 using NUnit.Framework;
 using Plants;
+using Sirenix.Serialization;
+using UnityEngine;
 
 namespace Core.Game.Editor
 {
@@ -43,32 +48,23 @@ namespace Core.Game.Editor
         {
             var slot = "test-" + Guid.NewGuid().ToString("N");
             var path = GameSaveService.GetSavePath(slot);
-            var data = new GameSaveData
-            {
-                schemaVersion = GameSaveData.CurrentVersion,
-                worldBaselineVersion = 1,
-                player = new PlayerSaveData(),
-                story = new StorySaveData(),
-                time = new GameTimeState
-                {
-                    initialized = true,
-                    daysSinceStart = 4,
-                    season = Season.Spring,
-                    dayOfSeason = 8,
-                    hour = 14,
-                    minute = 20,
-                    secondsTowardNextMinute = 2.5f
-                },
-                world = new WorldSaveData()
-            };
-            data.player.skills.Add(new SkillLevelRecord { id = "hammer-mastery", level = 3 });
-            data.player.favour.Add("mars", 12);
-            data.story.flags.Add("met-blacksmith");
-            data.world.locations.Add("farm", new Dictionary<string, WorldObjectState>
-            {
-                ["plot-1"] = new FarmlandState { plowed = true, irrigated = false },
-                ["plant:1,2"] = new PlantState("lentils") { daysPassedSincePlanting = 3 }
-            });
+            var data = new GameSaveData();
+            data.time.initialized = true;
+            data.time.daysSinceStart = 4;
+            data.time.season = Season.Spring;
+            data.time.dayOfSeason = 8;
+            data.time.hour = 14;
+            data.time.minute = 20;
+            data.time.secondsTowardNextMinute = 2.5f;
+            data.player.StaminaInitialized = true;
+            data.player.CurrentStamina = 42;
+            typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(data.player.Skills, new object[] { new[] { new KeyValuePair<string, int>("hammer-mastery", 3) } });
+            typeof(DivineFavourState).GetMethod("SetFavour", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(data.player.Favour, new object[] { "mars", 12 });
+            data.story.SetFlag("met-blacksmith");
+            data.world.Set("farm", "plot-1", new FarmlandState { plowed = true, irrigated = false });
+            data.world.Set("farm", "plant:1,2", new PlantState("lentils") { daysPassedSincePlanting = 3 });
 
             try
             {
@@ -83,17 +79,15 @@ namespace Core.Game.Editor
                 Assert.That(loaded.time.hour, Is.EqualTo(14));
                 Assert.That(loaded.time.minute, Is.EqualTo(20));
                 Assert.That(loaded.time.secondsTowardNextMinute, Is.EqualTo(2.5f));
-                Assert.That(loaded.player.skills, Has.Count.EqualTo(1));
-                Assert.That(loaded.player.skills[0].id, Is.EqualTo("hammer-mastery"));
-                Assert.That(loaded.player.skills[0].level, Is.EqualTo(3));
-                Assert.That(loaded.player.favour["mars"], Is.EqualTo(12));
-                Assert.That(loaded.story.flags, Is.EquivalentTo(new[] { "met-blacksmith" }));
-                Assert.That(loaded.world.locations["farm"]["plot-1"], Is.TypeOf<FarmlandState>());
-                var plot = (FarmlandState)loaded.world.locations["farm"]["plot-1"];
+                Assert.That(loaded.player.Skills.GetLevel("hammer-mastery"), Is.EqualTo(3));
+                Assert.That(loaded.player.Favour.GetFavour("mars"), Is.EqualTo(12));
+                Assert.That(loaded.player.StaminaInitialized, Is.True);
+                Assert.That(loaded.player.CurrentStamina, Is.EqualTo(42));
+                Assert.That(loaded.story.HasFlag("met-blacksmith"), Is.True);
+                Assert.That(loaded.world.TryGet("farm", "plot-1", out FarmlandState plot), Is.True);
                 Assert.That(plot.plowed, Is.True);
                 Assert.That(plot.irrigated, Is.False);
-                Assert.That(loaded.world.locations["farm"]["plant:1,2"], Is.TypeOf<PlantState>());
-                var plant = (PlantState)loaded.world.locations["farm"]["plant:1,2"];
+                Assert.That(loaded.world.TryGet("farm", "plant:1,2", out PlantState plant), Is.True);
                 Assert.That(plant.plantID, Is.EqualTo("lentils"));
                 Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(3));
             }
@@ -102,6 +96,75 @@ namespace Core.Game.Editor
                 File.Delete(path);
                 File.Delete(path + ".tmp");
                 File.Delete(path + ".bak");
+            }
+        }
+
+        [Test]
+        public void EveryGameStateSectionIsPartOfTheSaveRoot()
+        {
+            var facade = typeof(GameState);
+            foreach (var property in typeof(GameState).GetProperties(BindingFlags.Public | BindingFlags.Static))
+            {
+                var field = typeof(GameSaveData).GetField(property.Name.ToLowerInvariant(), BindingFlags.Public | BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null, $"GameState.{property.Name} has no persisted section.");
+                Assert.That(field.FieldType, Is.EqualTo(property.PropertyType));
+            }
+            foreach (var field in typeof(GameSaveData).GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (field.Name == nameof(GameSaveData.schemaVersion) || field.Name == nameof(GameSaveData.worldBaselineVersion))
+                    continue;
+                var name = char.ToUpperInvariant(field.Name[0]) + field.Name.Substring(1);
+                Assert.That(facade.GetProperty(name, BindingFlags.Public | BindingFlags.Static), Is.Not.Null,
+                    $"Save section '{field.Name}' is not exposed through GameState.");
+            }
+
+            AssertSerializableFields(typeof(GameSaveData), new HashSet<Type>());
+        }
+
+        [Test]
+        public void SavingBoundSkillsDoesNotSerializeTheSceneCharacter()
+        {
+            var slot = "test-" + Guid.NewGuid().ToString("N");
+            var path = GameSaveService.GetSavePath(slot);
+            var data = new GameSaveData();
+            data.time.initialized = true;
+            data.time.daysSinceStart = 1;
+            data.time.dayOfSeason = 1;
+            var gameObject = new GameObject("Save test character");
+            gameObject.SetActive(false);
+            var character = gameObject.AddComponent<GameCharacter>();
+            typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(data.player.Skills, new object[] { character });
+            try
+            {
+                GameSaveService.Save(slot, data);
+                Assert.That(GameSaveService.TryLoad(slot, out var loaded), Is.True);
+                Assert.That(loaded.player.Skills, Is.Not.Null);
+            }
+            finally
+            {
+                typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.Invoke(data.player.Skills, new object[] { character });
+                UnityEngine.Object.DestroyImmediate(gameObject);
+                File.Delete(path);
+                File.Delete(path + ".tmp");
+                File.Delete(path + ".bak");
+            }
+        }
+
+        private static void AssertSerializableFields(Type type, HashSet<Type> visited)
+        {
+            if (type.IsEnum || !visited.Add(type)) return;
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic |
+                                                 BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                var persisted = field.IsPublic || field.IsDefined(typeof(OdinSerializeAttribute), false);
+                if (field.IsPublic)
+                    Assert.That(field.IsNotSerialized, Is.False, $"Public state field {type.Name}.{field.Name} must be persisted.");
+                Assert.That(persisted || field.IsNotSerialized, Is.True,
+                    $"{type.Name}.{field.Name} must be persisted or marked [NonSerialized].");
+                if (persisted && field.FieldType.Assembly == typeof(GameSaveData).Assembly)
+                    AssertSerializableFields(field.FieldType, visited);
             }
         }
     }

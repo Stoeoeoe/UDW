@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sirenix.Serialization;
 
 namespace Core.Game
 {
@@ -23,9 +24,10 @@ namespace Core.Game
     }
 
     /// <summary>Only stores differences from the authored world, grouped by stable location and object IDs.</summary>
+    [Serializable]
     public sealed class WorldState
     {
-        private readonly Dictionary<string, Dictionary<string, WorldObjectState>> _locations = new(StringComparer.Ordinal);
+        [OdinSerialize] private Dictionary<string, Dictionary<string, WorldObjectState>> _locations = new(StringComparer.Ordinal);
 
         public void Set(string locationId, string objectId, WorldObjectState state)
         {
@@ -87,20 +89,7 @@ namespace Core.Game
                         yield return new WorldStateEntry<T>(location.Key, pair.Key, state);
         }
 
-        internal WorldSaveData Capture()
-        {
-            var result = new WorldSaveData();
-            foreach (var location in _locations)
-                result.locations.Add(location.Key, new Dictionary<string, WorldObjectState>(location.Value, StringComparer.Ordinal));
-            return result;
-        }
-
-        internal void Restore(WorldSaveData data)
-        {
-            _locations.Clear();
-            foreach (var location in data.locations)
-                _locations.Add(location.Key, new Dictionary<string, WorldObjectState>(location.Value, StringComparer.Ordinal));
-        }
+        internal Dictionary<string, Dictionary<string, WorldObjectState>> GetLocations() => _locations;
 
         private static void CheckId(string id, string parameterName)
         {

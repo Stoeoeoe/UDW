@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Core.Location;
 using Core.Divinity;
 using Core.TimeAndWeather;
@@ -9,13 +8,15 @@ namespace Core.Game
     /// <summary>Owns the current game session's state across location scene loads.</summary>
     public sealed class GameStateManager : Singleton<GameStateManager>
     {
-        // Increment this when authored world IDs or baselines change, then provide a migration.
+        // Identifies the authored world baseline used by the current save format.
         private const int WorldBaselineVersion = 1;
 
-        public WorldState World { get; } = new WorldState();
-        public PlayerState Player { get; } = new PlayerState();
-        public StoryState Story { get; } = new StoryState();
-        public GameTimeState Time { get; } = new GameTimeState();
+        private GameSaveData _data = new GameSaveData();
+
+        public WorldState World => _data.world;
+        public PlayerState Player => _data.player;
+        public StoryState Story => _data.story;
+        public GameTimeState Time => _data.time;
 
         public DivineFavourManager DivineFavour { get; private set; }
 
@@ -31,7 +32,12 @@ namespace Core.Game
             base.OnDestroy();
         }
 
-        public void Save(string slot) => GameSaveService.Save(slot, Capture());
+        public void Save(string slot)
+        {
+            _data.schemaVersion = GameSaveData.CurrentVersion;
+            _data.worldBaselineVersion = WorldBaselineVersion;
+            GameSaveService.Save(slot, _data);
+        }
 
         /// <summary>Returns false for a missing slot. Validates the save envelope before replacing live state.</summary>
         public bool Load(string slot)
@@ -43,40 +49,13 @@ namespace Core.Game
             if (data.worldBaselineVersion != WorldBaselineVersion)
                 throw new NotSupportedException($"World baseline version {data.worldBaselineVersion} needs a migration to {WorldBaselineVersion}.");
 
-            // Parse and validate before mutating live state. Restore skills last because it raises events.
-            var levels = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var record in data.player.skills)
-                levels.Add(record.id, record.level);
-
-            World.Restore(data.world);
-            Time.Restore(data.time);
+            // The deserialized root is the live state; there is no second field-by-field restore path.
+            DivineFavour?.Dispose();
+            _data = data;
+            DivineFavour = new DivineFavourManager(Player.Favour);
             if (UrTimeManager.Instance != null)
                 UrTimeManager.Instance.ApplySavedTime();
-            Story.RestoreFlags(data.story.flags);
-            DivineFavour.Restore(data.player.favour);
-            Player.Skills.RestoreLevels(levels);
             return true;
-        }
-
-        private GameSaveData Capture()
-        {
-            var data = new GameSaveData
-            {
-                schemaVersion = GameSaveData.CurrentVersion,
-                worldBaselineVersion = WorldBaselineVersion,
-                player = new PlayerSaveData { favour = Player.Favour.Capture() },
-                story = new StorySaveData(),
-                time = Time.Capture(),
-                world = new WorldSaveData()
-            };
-            foreach (var pair in Player.Skills.GetLevels())
-                data.player.skills.Add(new SkillLevelRecord { id = pair.Key, level = pair.Value });
-
-            data.player.skills.Sort((a, b) => StringComparer.Ordinal.Compare(a.id, b.id));
-            data.story.flags.AddRange(Story.GetFlags());
-            data.story.flags.Sort(StringComparer.Ordinal);
-            data.world = World.Capture();
-            return data;
         }
     }
 }

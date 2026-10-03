@@ -3,18 +3,18 @@ using System.Collections.Generic;
 
 namespace Core.Game
 {
-    /// <summary>Versioned, plain-data snapshot. </summary>
+    /// <summary>The persisted game state. Runtime services operate on these sections directly.</summary>
     [Serializable]
     public sealed class GameSaveData
     {
         public const int CurrentVersion = 1;
 
-        public int schemaVersion;
-        public int worldBaselineVersion;
-        public PlayerSaveData player;
-        public StorySaveData story;
-        public GameTimeState time;
-        public WorldSaveData world;
+        public int schemaVersion = CurrentVersion;
+        public int worldBaselineVersion = 1;
+        public PlayerState player = new();
+        public StoryState story = new();
+        public GameTimeState time = new();
+        public WorldState world = new();
 
         public void Validate()
         {
@@ -22,7 +22,8 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.skills == null || player.favour == null || story?.flags == null || time == null || world?.locations == null)
+            if (player?.Skills?.GetLevels() == null || player.Favour?.GetScores() == null ||
+                story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
 
             if (!time.initialized || time.daysSinceStart < 1 ||
@@ -33,20 +34,19 @@ namespace Core.Game
                 time.secondsTowardNextMinute < 0)
                 throw new FormatException("The save contains invalid game time.");
 
-            var skillIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var skill in player.skills)
-                if (skill == null || string.IsNullOrWhiteSpace(skill.id) || skill.level < 0 || !skillIds.Add(skill.id))
-                    throw new FormatException("The save contains an invalid or duplicate skill level.");
+            foreach (var skill in player.Skills.GetLevels())
+                if (string.IsNullOrWhiteSpace(skill.Key) || skill.Value < 0)
+                    throw new FormatException("The save contains an invalid skill level.");
+
+            foreach (var pair in player.Favour.GetScores())
+                Core.Divinity.DeityDefinitions.ValidateId(pair.Key);
 
             var storyFlags = new HashSet<string>(StringComparer.Ordinal);
-
-            foreach (var pair in player.favour)
-                Core.Divinity.DeityDefinitions.ValidateId(pair.Key);
-            foreach (var flag in story.flags)
+            foreach (var flag in story.GetFlags())
                 if (string.IsNullOrWhiteSpace(flag) || !storyFlags.Add(flag))
                     throw new FormatException("The save contains an invalid or duplicate story flag.");
 
-            foreach (var location in world.locations)
+            foreach (var location in world.GetLocations())
             {
                 if (string.IsNullOrWhiteSpace(location.Key) || location.Value == null)
                     throw new FormatException("The save contains an invalid world location.");
@@ -57,29 +57,4 @@ namespace Core.Game
         }
     }
 
-    [Serializable]
-    public sealed class PlayerSaveData
-    {
-        public List<SkillLevelRecord> skills = new();
-        public Dictionary<string, int> favour = new(StringComparer.Ordinal);
-    }
-
-    [Serializable]
-    public sealed class SkillLevelRecord
-    {
-        public string id;
-        public int level;
-    }
-
-    [Serializable]
-    public sealed class StorySaveData
-    {
-        public List<string> flags = new();
-    }
-
-    [Serializable]
-    public sealed class WorldSaveData
-    {
-        public Dictionary<string, Dictionary<string, WorldObjectState>> locations = new(StringComparer.Ordinal);
-    }
 }

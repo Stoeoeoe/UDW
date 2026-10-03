@@ -15,9 +15,11 @@ MonoBehaviour:
   skillId: TestSkill
   displayName: Test Skill
   description: First test skill!
-  icon: {fileID: 0}
+  icon: {fileID: 3822943744217882247, guid: b96499e88dc757a42872b11250a02a5d, type: 3}
   levels:
   - value: 0
-    title: 
+    title: First Level
     description: 
-    grantedTags: []
+    grantedTags:
+    - Weapon.Spear.asd
+    - Weapon.Spear

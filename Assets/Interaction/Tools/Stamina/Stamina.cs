@@ -20,13 +20,13 @@ namespace Interaction.Tools.Stamina
         public void RefreshMaximum()
         {
             CurrentStamina = Mathf.Min(CurrentStamina, MaxStamina);
-            StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
+            StaminaChangedEvent.Trigger(_character, CurrentStamina, MaxStamina);
         }
 
         public void ConsumeStamina(int amount)
         {
             CurrentStamina = Mathf.Clamp(CurrentStamina - amount, 0, MaxStamina);
-            StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
+            StaminaChangedEvent.Trigger(_character, CurrentStamina, MaxStamina);
             if (CurrentStamina <= 0)
                 StaminaDepletedEvent.Trigger();
         }
@@ -34,14 +34,14 @@ namespace Interaction.Tools.Stamina
         public void RestoreStamina(int amount)
         {
             CurrentStamina = Mathf.Min(CurrentStamina + amount, MaxStamina);
-            StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
+            StaminaChangedEvent.Trigger(_character, CurrentStamina, MaxStamina);
         }
 
         public void Initialize(int startStamina)
         {
             StartStamina = startStamina;
             CurrentStamina = Mathf.Clamp(StartStamina, 0, MaxStamina);
-            StaminaChangedEvent.Trigger(CurrentStamina, MaxStamina);
+            StaminaChangedEvent.Trigger(_character, CurrentStamina, MaxStamina);
         }
     }
 }

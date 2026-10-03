@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Core.Game
 {
-    /// <summary>Reads and writes versioned game-state snapshots in Unity's persistent data folder.</summary>
+    /// <summary>Reads and writes the versioned game-state root in Unity's persistent data folder.</summary>
     public static class GameSaveService
     {
         public static void Save(string slot, GameSaveData data)

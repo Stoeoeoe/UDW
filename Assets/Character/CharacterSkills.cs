@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Sirenix.Serialization;
 
 namespace Character
 {
     /// <summary>Current skill levels for one character.</summary>
+    [Serializable]
     public sealed class CharacterSkills
     {
-        private readonly Dictionary<string, int> _levels = new Dictionary<string, int>(StringComparer.Ordinal);
+        [OdinSerialize] private Dictionary<string, int> _levels = new Dictionary<string, int>(StringComparer.Ordinal);
         // Only levels belong in saved state; grants are applied to the bound character.
         [NonSerialized] private GameCharacter _character;
 

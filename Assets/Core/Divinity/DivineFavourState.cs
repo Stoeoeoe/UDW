@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Sirenix.Serialization;
 
 namespace Core.Divinity
 {
     /// <summary>Saved favour scores only. Active boons and attribute modifiers are derived at runtime.</summary>
+    [Serializable]
     public sealed class DivineFavourState
     {
-        private readonly Dictionary<string, int> _scores = new(StringComparer.Ordinal);
+        [OdinSerialize] private Dictionary<string, int> _scores = new(StringComparer.Ordinal);
 
         public int GetFavour(string deityId) => _scores.TryGetValue(deityId, out var score) ? score : 0;
 
