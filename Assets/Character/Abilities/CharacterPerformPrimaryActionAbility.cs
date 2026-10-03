@@ -39,7 +39,7 @@ namespace Character.Abilities
             if (!AbilityAuthorized && ActionExecutor.State != ActionExecutionState.Preparing) return;
 
             // Only block starting a new action when the pointer is over UI.
-            if (input.PerformPrimaryActionDown && ActionExecutor.IsIdle && !pointerOverUI)
+            if (snapshot.SceneReady && input.PerformPrimaryActionDown && ActionExecutor.IsIdle && !pointerOverUI)
             {
                 var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
                 if (action) StartCoroutine(ActionExecutor.Run(action, !action.HasPreparationPhase));

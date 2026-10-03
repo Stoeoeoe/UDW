@@ -5,12 +5,12 @@ namespace Interaction.Dialogue
 {
     public class StartDialogueAction : PrimaryAction
     {
+        public override bool CanExecute(PlayerInteractionContextSnapshot snapshot) =>
+            snapshot.SceneReady && snapshot.ActionableInteractable is ShowVulcanusDialogueInteractable;
+
         public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
         {
-            var interactable =
-                snapshot.InteractableUnderPointer ?? snapshot.CurrentInteractable;
-
-            interactable.TriggerInteraction(this.Owner);
+            snapshot.ActionableInteractable?.TriggerInteraction(this.Owner);
             yield break;
         }
 

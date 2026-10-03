@@ -58,7 +58,13 @@ namespace Interaction.Pointer
             this.enabled = true;
         }
 
-        public void OnLocationLeave(LocationData location) { }
+        public void OnLocationLeave(LocationData location)
+        {
+            CurrentInteractableUnderPointer = null;
+            CurrentTileDataUnderPointer = null;
+            PointerInteractableChangedEvent.Trigger(null);
+            TileDataUnderPointerChangedEvent.Trigger(null);
+        }
 
         private void HandleContextChange(PlayerInteractionContextSnapshot snapshot)
         {
@@ -78,7 +84,7 @@ namespace Interaction.Pointer
                     SetCursorMode(PointerMode.UseTool);
                     break;
                 case InteractionMode.DialogueReady:
-                    if (snapshot.CurrentInteractable is ShowVulcanusDialogueInteractable)
+                    if (snapshot.ActionableInteractable is ShowVulcanusDialogueInteractable)
                     {
                         SetCursorMode(PointerMode.Dialogue);
                         break;
@@ -137,7 +143,7 @@ namespace Interaction.Pointer
 
         private void Update()
         {
-            if (Camera.main == null) return;
+            if (LevelManager.Instance == null || !LevelManager.Instance.SceneReady || Camera.main == null) return;
 
             var mouseScreenPos = Mouse.current.position.ReadValue();
 
@@ -175,8 +181,10 @@ namespace Interaction.Pointer
             var raycastHit = Physics2D.GetRayIntersection(ray, Mathf.Infinity, _interactableLayerMask);
 
             var interactable = raycastHit.collider != null
-                ? raycastHit.collider.GetComponent<AbstractInteractable>()
+                ? raycastHit.collider.GetComponentInParent<AbstractInteractable>()
                 : null;
+            if (interactable && !interactable.CanInteract)
+                interactable = null;
             if (interactable != CurrentInteractableUnderPointer)
             {
                 CurrentInteractableUnderPointer = interactable;

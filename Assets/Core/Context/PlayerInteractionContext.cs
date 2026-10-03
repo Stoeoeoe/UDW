@@ -35,11 +35,11 @@ namespace Core.Context
             var snapshot = !character
                 ? PlayerInteractionContextSnapshot.Empty()
                 : PlayerInteractionContextSnapshot.Create(
-                    LevelManager.Instance.SceneReady,
+                    LevelManager.Instance != null && LevelManager.Instance.SceneReady,
                     character,
                     character.CurrentInteractable,
-                    PointerManager.Instance.CurrentTileDataUnderPointer,
-                    PointerManager.Instance.CurrentInteractableUnderPointer,
+                    PointerManager.Instance != null ? PointerManager.Instance.CurrentTileDataUnderPointer : null,
+                    PointerManager.Instance != null ? PointerManager.Instance.CurrentInteractableUnderPointer : null,
                     character.CurrentTileData,
                     character.CurrentTool,
                     character.CurrentlyHeldItem,

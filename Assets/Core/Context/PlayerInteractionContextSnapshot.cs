@@ -23,6 +23,11 @@ namespace Core.Context
         InteractionMode Mode
     )
     {
+        /// <summary>Pointer has priority, but an unavailable target cannot block a ready nearby one.</summary>
+        public AbstractInteractable ActionableInteractable =>
+            InteractableUnderPointer && InteractableUnderPointer.CanInteract ? InteractableUnderPointer :
+            CurrentInteractable && CurrentInteractable.CanInteract ? CurrentInteractable : null;
+
         public static PlayerInteractionContextSnapshot Empty()
         {
             return new PlayerInteractionContextSnapshot(

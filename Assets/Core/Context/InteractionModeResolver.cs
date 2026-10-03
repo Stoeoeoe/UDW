@@ -8,13 +8,14 @@ namespace Core.Context
         public static InteractionMode Resolve(PlayerInteractionContextSnapshot context)
         {
             // Nothing to do if no character
-            if (context.Character == null)
+            if (!context.SceneReady || context.Character == null)
                 return InteractionMode.None;
 
-            // Priority: interactables in front 
-            if (context.CurrentInteractable)
+            // The same target is used by the action: ready pointer target, then ready proximity target.
+            var interactable = context.ActionableInteractable;
+            if (interactable)
             {
-                return context.CurrentInteractable switch
+                return interactable switch
                 {
                     ShowVulcanusDialogueInteractable when string.IsNullOrEmpty(context.CurrentConversation) => InteractionMode.DialogueReady,
                     ShowVulcanusDialogueInteractable when !string.IsNullOrEmpty(context.CurrentConversation) => InteractionMode.DialogueInProgress,
