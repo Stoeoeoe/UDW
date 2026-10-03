@@ -20,63 +20,11 @@
       "id": "dirt",
       "displayName": "Dirt",
       "color": "#8b5955"
-    }
-  ],
-  "entityTypes": [
-    {
-      "id": "torch",
-      "displayName": "Torch",
-      "category": "object",
-      "icon": "GiTorch",
-      "group": "Light",
-      "description": "A simple light",
-      "placeholderColor": "#000000",
-      "properties": [
-        {
-          "key": "lightColor",
-          "label": "Light Color",
-          "type": "color",
-          "defaultValue": "#ffffff",
-          "required": false
-        },
-        {
-          "key": "intensity",
-          "label": "Intensity",
-          "type": "float",
-          "defaultValue": 12,
-          "required": false
-        },
-        {
-          "key": "innterRadius",
-          "label": "Inner Radius",
-          "type": "float",
-          "defaultValue": 1,
-          "required": false
-        },
-        {
-          "key": "outerRadius",
-          "label": "Outer Radius",
-          "type": "float",
-          "defaultValue": 10,
-          "required": false
-        }
-      ],
-      "defaultSize": [
-        16,
-        16
-      ]
     },
     {
-      "id": "hello_world",
-      "displayName": "hello world",
-      "category": "object",
-      "icon": "GiYinYang",
-      "placeholderColor": "#3182ce",
-      "properties": [],
-      "defaultSize": [
-        1,
-        1
-      ]
+      "id": "dark_grass",
+      "displayName": "Dark Grass",
+      "color": "#194805"
     }
   ],
   "gameVariables": [

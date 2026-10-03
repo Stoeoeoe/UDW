@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/item.schema.json",
   "id": "gugu",
-  "name": "gagaga",
+  "name": "Test Item",
   "category": "",
   "icon": "",
   "description": "",

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/actor.schema.json",
   "id": "sadsad",
-  "name": "sadsad",
+  "name": "Test Actor",
   "icon": "GiPerson",
   "emotions": []
 }

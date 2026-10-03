@@ -1175,16 +1175,40 @@
       "id": "tile_15_8"
     },
     "272": {
-      "id": "tile_16_8"
+      "id": "tile_16_8",
+      "terrainCorners": [
+        "dark_grass",
+        "dark_grass",
+        "dark_grass",
+        "dark_grass"
+      ]
     },
     "273": {
-      "id": "tile_17_8"
+      "id": "tile_17_8",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "dark_grass"
+      ]
     },
     "274": {
-      "id": "tile_18_8"
+      "id": "tile_18_8",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "dark_grass",
+        "dark_grass"
+      ]
     },
     "275": {
-      "id": "tile_19_8"
+      "id": "tile_19_8",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "dark_grass",
+        "grass"
+      ]
     },
     "276": {
       "id": "tile_20_8"
@@ -1296,16 +1320,40 @@
       "id": "tile_15_9"
     },
     "304": {
-      "id": "tile_16_9"
+      "id": "tile_16_9",
+      "terrainCorners": [
+        "dark_grass",
+        "dark_grass",
+        "dark_grass",
+        "dark_grass"
+      ]
     },
     "305": {
-      "id": "tile_17_9"
+      "id": "tile_17_9",
+      "terrainCorners": [
+        "grass",
+        "dark_grass",
+        "grass",
+        "dark_grass"
+      ]
     },
     "306": {
-      "id": "tile_18_9"
+      "id": "tile_18_9",
+      "terrainCorners": [
+        "dark_grass",
+        "dark_grass",
+        "dark_grass",
+        "dark_grass"
+      ]
     },
     "307": {
-      "id": "tile_19_9"
+      "id": "tile_19_9",
+      "terrainCorners": [
+        "dark_grass",
+        "grass",
+        "dark_grass",
+        "grass"
+      ]
     },
     "308": {
       "id": "tile_20_9"
@@ -1419,13 +1467,31 @@
       "id": "tile_16_10"
     },
     "337": {
-      "id": "tile_17_10"
+      "id": "tile_17_10",
+      "terrainCorners": [
+        "grass",
+        "dark_grass",
+        "grass",
+        "grass"
+      ]
     },
     "338": {
-      "id": "tile_18_10"
+      "id": "tile_18_10",
+      "terrainCorners": [
+        "dark_grass",
+        "dark_grass",
+        "grass",
+        "grass"
+      ]
     },
     "339": {
-      "id": "tile_19_10"
+      "id": "tile_19_10",
+      "terrainCorners": [
+        "dark_grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "340": {
       "id": "tile_20_10"
@@ -1551,13 +1617,31 @@
       "id": "tile_16_11"
     },
     "369": {
-      "id": "tile_17_11"
+      "id": "tile_17_11",
+      "terrainCorners": [
+        "dark_grass",
+        "dark_grass",
+        "dark_grass",
+        "grass"
+      ]
     },
     "370": {
-      "id": "tile_18_11"
+      "id": "tile_18_11",
+      "terrainCorners": [
+        "dark_grass",
+        "dark_grass",
+        "grass",
+        "dark_grass"
+      ]
     },
     "371": {
-      "id": "tile_19_11"
+      "id": "tile_19_11",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "372": {
       "id": "tile_20_11"
@@ -1659,13 +1743,31 @@
       "id": "tile_16_12"
     },
     "401": {
-      "id": "tile_17_12"
+      "id": "tile_17_12",
+      "terrainCorners": [
+        "dark_grass",
+        "grass",
+        "dark_grass",
+        "dark_grass"
+      ]
     },
     "402": {
-      "id": "tile_18_12"
+      "id": "tile_18_12",
+      "terrainCorners": [
+        "grass",
+        "dark_grass",
+        "dark_grass",
+        "dark_grass"
+      ]
     },
     "403": {
-      "id": "tile_19_12"
+      "id": "tile_19_12",
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "404": {
       "id": "tile_20_12"
@@ -3531,7 +3633,7 @@
   "objects": [
     {
       "id": "tree",
-      "name": "Tree",
+      "name": "Pine Tree",
       "tiles": [
         {
           "x": 0,
@@ -3582,6 +3684,16 @@
           "x": 1,
           "y": 4,
           "tileIndex": 157
+        },
+        {
+          "x": 0,
+          "y": 5,
+          "tileIndex": 188
+        },
+        {
+          "x": 1,
+          "y": 5,
+          "tileIndex": 189
         }
       ]
     }
