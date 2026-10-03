@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Core.Game;
 using Core.TimeAndWeather.Seasons;
 using Core.TimeAndWeather.Weather;
@@ -9,7 +8,6 @@ using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 // TODO: Probably the whole weather management can be simplified. It appears that a lot of the problems stemmed from being run too early (before renderer is ready).
 
@@ -37,11 +35,16 @@ namespace Core.TimeAndWeather
 
         [Header("Weather")] [SerializeField] protected Material noWeatherMaterial;
 
-        // [SerializeField] protected Material _globalWeatherMaterial;
-        protected WeatherRendererFeature weatherRendererFeature;
-
         private Dictionary<Season, SeasonData> _seasonDataDict = new();
         private GameObject _weatherParentGo;
+        private GameCalendar _calendar;
+
+        private GameCalendar Calendar => _calendar ??= new GameCalendar(
+            startOfDay, numberOfDaysInSeason, seasons.Select(data => data.season).ToArray());
+
+        public long GetNextBoundaryMinute(GameTimeBoundary boundary) =>
+            Calendar.GetNextBoundaryMinute(GameState.Time, boundary);
+        private int _weatherUpdateVersion;
 
         public UrTime CurrentTime
         {
@@ -91,21 +94,6 @@ namespace Core.TimeAndWeather
 
             // Initialize timescale stack (pre-initialization from MMTimeManager)
             PreInitialization();
-
-            var renderer = (GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset).GetRenderer(0);
-            var property =
-                typeof(ScriptableRenderer).GetProperty("rendererFeatures",
-                    BindingFlags.NonPublic | BindingFlags.Instance);
-            List<ScriptableRendererFeature> features = property.GetValue(renderer) as List<ScriptableRendererFeature>;
-            weatherRendererFeature =
-                features.FirstOrDefault(f => f is WeatherRendererFeature) as WeatherRendererFeature;
-
-            // weatherRendererFeature.Initialize(_globalWeatherMaterial);
-
-            // if(daylightColorGradients.Length != Enum.GetNames(typeof(SeasonData)).Length)
-            // {
-            //     Debug.LogWarning("UrTimeManager: The number of daylight color gradients does not match the number of seasons.");
-            // }
 
         }
 
@@ -220,6 +208,8 @@ namespace Core.TimeAndWeather
                             {
                                 _lerpingBackToNormal = false;
                                 _timeScaleProperties.Pop();
+                                _currentProperty = default;
+                                _resetProperty = default;
                             }    
                         }
                     }
@@ -232,7 +222,8 @@ namespace Core.TimeAndWeather
             // --- end of integrated time scale logic ---
 
             var time = GameState.Time;
-            float deltaTime = Time.deltaTime * CurrentTimeScale;
+            var previousMinute = time.TotalMinutes;
+            float deltaTime = Time.deltaTime;
             time.secondsTowardNextMinute += deltaTime;
 
             // Instead of advancing minutes by 1, advance in 10-minute increments.
@@ -256,7 +247,10 @@ namespace Core.TimeAndWeather
             if (time.hour >= endOfDay)
             {
                 EndDay();
+                return; // StartNewDay publishes the final clock value.
             }
+            if (time.TotalMinutes != previousMinute)
+                GameTimeChangedEvent.Trigger(time.TotalMinutes);
         }
 
         private void EndDay()
@@ -281,7 +275,7 @@ namespace Core.TimeAndWeather
             }
             else if (time.dayOfSeason >= numberOfDaysInSeason)
             {
-                StartSeason(seasons[currentSeasonData.index % seasons.Length].season);
+                StartSeason(Calendar.GetNextSeason(time.season));
                 time.dayOfSeason = 1;
             }
             else
@@ -293,11 +287,13 @@ namespace Core.TimeAndWeather
             StartCoroutine(UpdateWeather(newWeather));
             UpdateDayLight();
             NewDayEvent.Trigger(time.daysSinceStart);
+            GameTimeChangedEvent.Trigger(time.TotalMinutes);
             Debug.Log("Starting day " + time.daysSinceStart + " of season " + time.season);
         }
 
         public IEnumerator UpdateWeather(WeatherData weather)
         {
+            var version = ++_weatherUpdateVersion;
             currentWeather = weather;
             postProcessingVolume.profile =
                 weather.postProcessingProfile ? weather.postProcessingProfile : defaultVolumeProfile;
@@ -314,7 +310,8 @@ namespace Core.TimeAndWeather
             }
 
             yield return null;
-            WeatherUpdateEvent.Trigger(weather);
+            if (version == _weatherUpdateVersion)
+                WeatherUpdateEvent.Trigger(weather);
         }
 
         public void StartSeason(Season season)
@@ -374,11 +371,20 @@ namespace Core.TimeAndWeather
         protected virtual void SetTimeScale(float newTimeScale)
         {
             _timeScaleProperties.Clear();
+            _lerpingBackToNormal = false;
+            _currentProperty = default;
+            _resetProperty = default;
             ApplyTimeScale(newTimeScale);
         }
 
         protected virtual void SetTimeScale(MoreMountains.Feedbacks.TimeScaleProperties timeScaleProperties)
         {
+            if (_lerpingBackToNormal)
+            {
+                // A new request supersedes the pending return-to-normal transition.
+                _timeScaleProperties.Clear();
+                _lerpingBackToNormal = false;
+            }
             if (timeScaleProperties.TimeScaleLerp &&
                 timeScaleProperties.TimeScaleLerpMode == MoreMountains.Feedbacks.MMTimeScaleLerpModes.Duration)
             {
@@ -405,9 +411,9 @@ namespace Core.TimeAndWeather
             {
                 if (_resetProperty.TimeScaleLerp && _resetProperty.TimeScaleLerpMode == MoreMountains.Feedbacks.MMTimeScaleLerpModes.Duration && _resetProperty.TimeScaleLerpOnUnfreeze)
                 {
-                    _lerpingBackToNormal = true;
                     MoreMountains.Feedbacks.MMTimeScaleEvent.Trigger(MoreMountains.Feedbacks.MMTimeScaleMethods.For, NormalTimeScale, _resetProperty.TimeScaleLerpDurationOnUnfreeze, _resetProperty.TimeScaleLerp, 
-                        _resetProperty.LerpSpeed, true, MoreMountains.Feedbacks.MMTimeScaleLerpModes.Duration, _resetProperty.TimeScaleLerpCurveOnUnfreeze, _resetProperty.TimeScaleLerpDurationOnUnfreeze);    
+                        _resetProperty.LerpSpeed, true, MoreMountains.Feedbacks.MMTimeScaleLerpModes.Duration, _resetProperty.TimeScaleLerpCurveOnUnfreeze, _resetProperty.TimeScaleLerpDurationOnUnfreeze);
+                    _lerpingBackToNormal = _timeScaleProperties.Count > 0;
                 }
                 else
                 {
@@ -433,7 +439,7 @@ namespace Core.TimeAndWeather
             timeScaleProperty.Infinite = infinite;
             timeScaleProperty.TimeScaleLerpOnUnfreeze = timeScaleLerpOnUnfreeze;
             timeScaleProperty.TimeScaleLerpCurveOnUnfreeze = timeScaleLerpCurveOnUnfreeze;
-            timeScaleProperty.TimeScaleLerpDurationOnUnfreeze = timeScaleLerpDuration;
+            timeScaleProperty.TimeScaleLerpDurationOnUnfreeze = timeScaleLerpDurationOnUnfreeze;
             timeScaleProperty.TimeScaleLerpMode = timeScaleLerpMode;
             timeScaleProperty.TimeScaleLerpCurve = timeScaleLerpCurve;
             timeScaleProperty.TimeScaleLerpDuration = timeScaleLerpDuration;

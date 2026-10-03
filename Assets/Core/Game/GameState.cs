@@ -41,6 +41,9 @@ namespace Core.Game
         public int hour;
         public int minute;
         public float secondsTowardNextMinute;
+
+        /// <summary>Monotonic in-game clock used by persisted cooldowns.</summary>
+        public long TotalMinutes => ((long)daysSinceStart - 1) * 24 * 60 + hour * 60 + minute;
     }
 
     [Serializable]
