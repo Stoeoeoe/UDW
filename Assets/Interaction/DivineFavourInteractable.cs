@@ -20,7 +20,7 @@ namespace Interaction
 
         protected override void Interact(GameCharacter instigator)
         {
-            DivineFavour.AddFavour(deity, favourPoints);
+            DivineFavour.AddFavour(deity.Id, favourPoints);
         }
     }
 }

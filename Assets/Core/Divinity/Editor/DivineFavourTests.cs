@@ -128,6 +128,45 @@ namespace Core.Divinity.Editor
         }
 
         [Test]
+        public void QuietDaysDoNotRebuildBoonsOrPublishChanges()
+        {
+            var deity = CreateDeity("test:" + Guid.NewGuid().ToString("N"), "QuietDay", 0,
+                CreateBoon(CharacterAttributeType.PhysicalDefense, 2));
+            DeityDefinitions.Register(deity);
+            var state = new DivineFavourState();
+            var manager = CreateManager(state);
+            manager.BindCharacter(CreateCharacter());
+            manager.AddFavour(deity.Id, 10);
+            var field = typeof(DivineFavourManager).GetField("_activeBoons", BindingFlags.NonPublic | BindingFlags.Instance);
+            var before = field.GetValue(manager);
+            var notifications = 0;
+            var listener = new FavourObserver(change =>
+            {
+                if (ReferenceEquals(change.State, state)) notifications++;
+            });
+            EventBus<DivineFavourChangedEvent>.Subscribe(listener);
+            try
+            {
+                manager.AdvanceDays(1);
+                Assert.That(field.GetValue(manager), Is.SameAs(before));
+                Assert.That(notifications, Is.Zero);
+                Assert.That(manager.GetFavour(deity.Id), Is.EqualTo(10));
+            }
+            finally { EventBus<DivineFavourChangedEvent>.Unsubscribe(listener); }
+        }
+
+        [Test]
+        public void UnknownScoresCanBeReadAndOddModIdsCanBeRestored()
+        {
+            var manager = CreateManager(new DivineFavourState());
+            Assert.That(manager.GetFavour("test:unregistered"), Is.Zero);
+            var id = "mod:old god\t";
+            manager.Restore(new Dictionary<string, int> { [id] = 7 });
+            manager.AdvanceDays(1);
+            Assert.That(manager.GetFavour(id), Is.EqualTo(7));
+        }
+
+        [Test]
         public void GeneratedNamesAreStableAndDoNotDependOnDisplayNamesOrInputOrder()
         {
             var mars = CreateDeity("mars", "Mars", 0);

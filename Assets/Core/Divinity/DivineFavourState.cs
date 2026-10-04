@@ -20,7 +20,7 @@ namespace Core.Divinity
 
         internal Dictionary<string, int> Capture() => new(_scores, StringComparer.Ordinal);
 
-        internal IEnumerable<KeyValuePair<string, int>> GetScores() => _scores;
+        internal IReadOnlyDictionary<string, int> Scores => _scores;
 
         internal void Restore(IReadOnlyDictionary<string, int> scores)
         {

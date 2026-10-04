@@ -10,7 +10,7 @@ namespace Core.Divinity
     public sealed class DivineFavourManager : IDisposable, IEventListener<NewDayEvent>
     {
         private readonly DivineFavourState _state;
-        private readonly Dictionary<string, BoonDefinition> _activeBoons = new(StringComparer.Ordinal);
+        private Dictionary<string, BoonDefinition> _activeBoons = new(StringComparer.Ordinal);
         private GameCharacter _character;
 
         public DivineFavourManager(DivineFavourState state)
@@ -26,19 +26,13 @@ namespace Core.Divinity
         {
             DeityDefinitions.Get(deityId);
             var previous = GetFavour(deityId);
-            var current = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, (long)previous + points));
+            var current = previous + points;
             if (previous == current) return current;
             _state.SetFavour(deityId, current);
             RefreshBoons();
             // Notifications describe a completed change: observers see current attributes.
             DivineFavourChangedEvent.Trigger(_state, deityId, previous, current);
             return current;
-        }
-
-        public int AddFavour(DeityDefinition deity, int points)
-        {
-            if (!deity) throw new ArgumentNullException(nameof(deity));
-            return AddFavour(deity.Id, points);
         }
 
         public void BindCharacter(GameCharacter character)
@@ -60,7 +54,7 @@ namespace Core.Divinity
             if (days < 0) throw new ArgumentOutOfRangeException(nameof(days));
             if (days == 0) return;
             var previous = _state.Capture();
-            var changed = new List<string>();
+            var changed = new List<DivineFavourChangedEvent>();
             foreach (var pair in previous)
             {
                 if (!DeityDefinitions.TryGet(pair.Key, out var deity)) continue;
@@ -70,11 +64,15 @@ namespace Core.Divinity
                     : (int)Math.Min(0, pair.Value + decay);
                 if (score == pair.Value) continue;
                 _state.SetFavour(pair.Key, score);
-                changed.Add(pair.Key);
+                changed.Add(new DivineFavourChangedEvent
+                {
+                    State = _state, DeityId = pair.Key, PreviousFavour = pair.Value, NewFavour = score
+                });
             }
+            if (changed.Count == 0) return;
             RefreshBoons();
-            foreach (var id in changed)
-                DivineFavourChangedEvent.Trigger(_state, id, previous[id], _state.GetFavour(id));
+            foreach (var change in changed)
+                EventBus<DivineFavourChangedEvent>.Raise(change);
         }
 
         /// <summary>Restores a save without advancing time or publishing gameplay-change events.</summary>
@@ -96,14 +94,14 @@ namespace Core.Divinity
         {
             if (!_character) return;
             var desired = new Dictionary<string, BoonDefinition>(StringComparer.Ordinal);
-            foreach (var pair in _state.GetScores())
+            foreach (var pair in _state.Scores)
             {
                 // Keep unknown mod IDs in saves even when their definitions are unavailable.
                 if (!DeityDefinitions.TryGet(pair.Key, out var deity)) continue;
                 for (var levelIndex = 0; levelIndex < deity.Levels.Count; levelIndex++)
                 {
                     var level = deity.Levels[levelIndex];
-                    if (level == null || pair.Value < level.RequiredPoints) continue;
+                    if (pair.Value < level.RequiredPoints) continue;
                     for (var boonIndex = 0; boonIndex < level.Boons.Count; boonIndex++)
                     {
                         var boon = level.Boons[boonIndex];
@@ -122,8 +120,7 @@ namespace Core.Divinity
             foreach (var grant in desired)
                 if (!_activeBoons.TryGetValue(grant.Key, out var definition) || definition != grant.Value)
                     grant.Value.Apply(_character, grant.Key);
-            _activeBoons.Clear();
-            foreach (var grant in desired) _activeBoons.Add(grant.Key, grant.Value);
+            _activeBoons = desired;
         }
 
         private void ClearBoons()

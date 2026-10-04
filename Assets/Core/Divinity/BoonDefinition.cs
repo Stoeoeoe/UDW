@@ -12,16 +12,22 @@ namespace Core.Divinity
         [SerializeField] private string displayName;
         [TextArea(2, 4)] [SerializeField] private string description;
         [SerializeField] private Sprite icon;
-        [GameplayTagPicker] [SerializeField] private string[] grantedTags = Array.Empty<string>();
-        [SerializeField] private AttributeBonus[] attributes = Array.Empty<AttributeBonus>();
+        [GameplayTagPicker] [SerializeField] private string[] grantedTags;
+        [SerializeField] private AttributeBonus[] attributes;
 
         public string DisplayName => displayName;
         public string Description => description;
         public Sprite Icon => icon;
-        public IReadOnlyList<string> GrantedTags => grantedTags;
-        public IReadOnlyList<AttributeBonus> Attributes => attributes;
+        public IReadOnlyList<string> GrantedTags => grantedTags ?? Array.Empty<string>();
+        public IReadOnlyList<AttributeBonus> Attributes => attributes ?? Array.Empty<AttributeBonus>();
 
-        private CharacterGrant Grant => new(grantedTags, attributes);
+        [NonSerialized] private CharacterGrant? _grant;
+        private CharacterGrant Grant => _grant ??= new CharacterGrant(grantedTags, attributes);
+
+        private void OnEnable() => _grant = null;
+#if UNITY_EDITOR
+        private void OnValidate() => _grant = null;
+#endif
 
         internal void Apply(GameCharacter character, string source)
             => Grant.Apply(character, source);

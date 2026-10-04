@@ -28,7 +28,7 @@ namespace Core.Divinity
         public static void Register(DeityDefinition deity)
         {
             EnsureLoaded();
-            Add(deity);
+            AddTo(_byId, deity);
         }
 
         private static void EnsureLoaded()
@@ -37,31 +37,22 @@ namespace Core.Divinity
             // Build locally so an invalid definition cannot leave a partially initialized registry.
             var definitions = new Dictionary<string, DeityDefinition>(StringComparer.Ordinal);
             foreach (var deity in Resources.LoadAll<DeityDefinition>("Deities"))
-            {
-                ValidateId(deity.Id);
-                if (definitions.ContainsKey(deity.Id))
-                    throw new InvalidOperationException($"Duplicate deity ID '{deity.Id}'.");
-                definitions.Add(deity.Id, deity);
-            }
+                AddTo(definitions, deity);
             _byId = definitions;
         }
 
-        private static void Add(DeityDefinition deity)
+        private static void AddTo(Dictionary<string, DeityDefinition> map, DeityDefinition deity)
         {
             if (!deity) throw new ArgumentNullException(nameof(deity));
             ValidateId(deity.Id);
-            if (_byId.ContainsKey(deity.Id))
+            if (!map.TryAdd(deity.Id, deity))
                 throw new InvalidOperationException($"Duplicate deity ID '{deity.Id}'.");
-            _byId.Add(deity.Id, deity);
         }
 
         public static void ValidateId(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("A stable deity ID is required.", nameof(id));
-            foreach (var character in id)
-                if (char.IsWhiteSpace(character) || char.IsControl(character))
-                    throw new ArgumentException("Deity IDs cannot contain whitespace or control characters.", nameof(id));
         }
     }
 }

@@ -12,6 +12,5 @@ namespace Core.Divinity
         public static int GetFavour(string deityId) => Manager.GetFavour(deityId);
         public static int GetFavour(DeityDefinition deity) => Manager.GetFavour(deity.Id);
         public static int AddFavour(string deityId, int points) => Manager.AddFavour(deityId, points);
-        public static int AddFavour(DeityDefinition deity, int points) => Manager.AddFavour(deity, points);
     }
 }

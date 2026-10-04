@@ -22,7 +22,7 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.Skills?.GetLevels() == null || player.Favour?.GetScores() == null ||
+            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null ||
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
 
@@ -37,9 +37,6 @@ namespace Core.Game
             foreach (var skill in player.Skills.GetLevels())
                 if (string.IsNullOrWhiteSpace(skill.Key) || skill.Value < 0)
                     throw new FormatException("The save contains an invalid skill level.");
-
-            foreach (var pair in player.Favour.GetScores())
-                Core.Divinity.DeityDefinitions.ValidateId(pair.Key);
 
             var storyFlags = new HashSet<string>(StringComparer.Ordinal);
             foreach (var flag in story.GetFlags())
