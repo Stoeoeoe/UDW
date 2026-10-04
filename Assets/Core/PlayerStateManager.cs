@@ -52,6 +52,7 @@ namespace Core
             }
 
             character.InitializeSkills(player.Skills);
+            character.Wallet.Bind(player.Wallet);
             GameStateManager.Instance.DivineFavour.BindCharacter(character);
 
             if (!_inventoryInitialized)

@@ -27,6 +27,7 @@ namespace Core.Game
     {
         [field: OdinSerialize] public CharacterSkills Skills { get; private set; } = new CharacterSkills();
         [field: OdinSerialize] public DivineFavourState Favour { get; private set; } = new DivineFavourState();
+        [field: OdinSerialize] public WalletState Wallet { get; private set; } = new WalletState();
         public bool StaminaInitialized;
         public int CurrentStamina;
     }

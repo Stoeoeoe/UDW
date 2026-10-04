@@ -85,6 +85,7 @@ namespace Character
         public ToolActionRegistry ToolActionRegistry => toolActionRegistry;
 
         public SlotInventory MainInventory { get; private set; }
+        public Wallet Wallet { get; private set; }
 
         public CharacterSkills Skills { get; private set; } = new CharacterSkills();
 
@@ -178,6 +179,7 @@ namespace Character
 
         protected virtual void Awake()
         {
+            Wallet = new Wallet(this);
             Skills.BindCharacter(this);
             Controller = GetComponent<Controller2D>();
             Orientation = GetComponent<Orientation2D>();

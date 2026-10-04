@@ -150,6 +150,8 @@ namespace Core.Game.Editor
             data.time.secondsTowardNextMinute = 2.5f;
             data.player.StaminaInitialized = true;
             data.player.CurrentStamina = 42;
+            typeof(WalletState).GetMethod("SetBalance", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(data.player.Wallet, new object[] { 1234L });
             typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?.Invoke(data.player.Skills, new object[] { new[] { new KeyValuePair<string, int>("hammer-mastery", 3) } });
             typeof(DivineFavourState).GetMethod("SetFavour", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -193,6 +195,7 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Favour.GetFavour("mars"), Is.EqualTo(12));
                 Assert.That(loaded.player.StaminaInitialized, Is.True);
                 Assert.That(loaded.player.CurrentStamina, Is.EqualTo(42));
+                Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(1234));
                 Assert.That(loaded.story.HasFlag("met-blacksmith"), Is.True);
                 Assert.That(loaded.world.TryGet("farm", "plot-1", out FarmlandState plot), Is.True);
                 Assert.That(plot.plowed, Is.True);

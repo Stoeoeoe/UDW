@@ -22,7 +22,7 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null ||
+            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null ||
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
 

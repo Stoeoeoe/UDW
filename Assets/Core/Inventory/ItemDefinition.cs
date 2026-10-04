@@ -16,6 +16,12 @@ namespace Core.Inventory
         [field: SerializeField] public string Description { get; private set; }
         [field: SerializeField] public int    MaxStackSize { get; private set; } = 99;
 
+        [Header("Trading")]
+        [Tooltip("Base price per item paid by the buyer.")]
+        [field: SerializeField, Min(0)] public int BuyBasePrice { get; private set; }
+        [Tooltip("Base price per item received by the seller. Zero-value items should not be sold automatically.")]
+        [field: SerializeField, Min(0)] public int SellBasePrice { get; private set; }
+
         [Header("World Item")]
         [Tooltip("Visual prefab spawned as a child of WorldItem. If null a default sprite child is created from Icon.")]
         [field: SerializeField] public GameObject WorldRepresentationPrefab { get; private set; }
