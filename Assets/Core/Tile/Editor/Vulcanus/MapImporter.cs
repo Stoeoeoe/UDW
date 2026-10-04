@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Location;
+using Core.Spawning;
+using Core.Spawning.Editor;
 using Core.Tile.Vulcanus;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -20,6 +22,8 @@ namespace Core.Tile.Editor.Vulcanus
         public static void ImportMap(AssetImportContext ctx)
         {
             var dto = VulcanusImportHelpers.LoadDto<MapDto>(ctx.assetPath);
+            VulcanusImportHelpers.AddDependency(ctx, SpawnableCatalogEditor.CatalogPath);
+            var spawnCatalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>(SpawnableCatalogEditor.CatalogPath);
 
             var projectAssetPath = VulcanusImportHelpers.FindProjectAssetPath(ctx.assetPath);
             VulcanusProject project = null;
@@ -68,6 +72,7 @@ namespace Core.Tile.Editor.Vulcanus
             Tilemap terrainTilemap = null;
             Tilemap farmlandTilemap = null;
             var terrainCells = new List<VulcanusImportedMap.TerrainCell>();
+            var persistentEntities = new List<AuthoredSpawnPlacement>();
 
             foreach (var layer in dto.Layers)
             {
@@ -82,7 +87,7 @@ namespace Core.Tile.Editor.Vulcanus
                 if (layer.Data == null)
                 {
                     SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize,
-                        catalog, ctx);
+                        catalog, spawnCatalog, ctx, persistentEntities);
                     continue;
                 }
 
@@ -104,11 +109,11 @@ namespace Core.Tile.Editor.Vulcanus
 
                 if (isTerrain) ExtractTerrainCells(layer, height, terrainCells, project);
 
-                SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog,
-                    ctx);
+                SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog, spawnCatalog,
+                    ctx, persistentEntities);
             }
 
-            SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, ctx);
+            SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
 
             var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(
                 mapRoot.transform,
@@ -140,6 +145,7 @@ namespace Core.Tile.Editor.Vulcanus
             mapComponent.Configure(mapId, mapName, width, height, tileSize);
             mapComponent.SetTilemaps(terrainTilemap, farmlandTilemap, plowedTilemap, irrigatedTilemap, overlayTilemap);
             mapComponent.SetTerrainCells(terrainCells.ToArray());
+            mapComponent.SetPersistentEntities(persistentEntities.ToArray());
 
             ctx.AddObjectToAsset("map", mapRoot);
             ctx.SetMainObject(mapRoot);
@@ -270,7 +276,9 @@ namespace Core.Tile.Editor.Vulcanus
             int mapHeight,
             int tileSize,
             VulcanusWorldCatalog catalog,
-            AssetImportContext ctx)
+            SpawnableCatalog spawnCatalog,
+            AssetImportContext ctx,
+            List<AuthoredSpawnPlacement> persistentEntities)
         {
             if (entities == null || entities.Count == 0) return;
 
@@ -278,7 +286,7 @@ namespace Core.Tile.Editor.Vulcanus
             group.transform.SetParent(mapRoot, false);
 
             foreach (var dto in entities)
-                SpawnEntityInstance(group.transform, dto, mapHeight, tileSize, catalog, ctx);
+                SpawnEntityInstance(group.transform, dto, mapHeight, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
         }
 
         private static void SpawnEntityInstance(
@@ -287,7 +295,9 @@ namespace Core.Tile.Editor.Vulcanus
             int mapHeight,
             int tileSize,
             VulcanusWorldCatalog catalog,
-            AssetImportContext ctx)
+            SpawnableCatalog spawnCatalog,
+            AssetImportContext ctx,
+            List<AuthoredSpawnPlacement> persistentEntities)
         {
             var px = dto.Position != null && dto.Position.Count > 0 ? dto.Position[0] : 0f;
             var py = dto.Position != null && dto.Position.Count > 1 ? dto.Position[1] : 0f;
@@ -307,19 +317,51 @@ namespace Core.Tile.Editor.Vulcanus
             var worldPos = new Vector3(px / ts, (mapHeight * ts - py) / ts, 0f);
             var worldRot = Quaternion.Euler(0f, 0f, -entityData.rotationDegrees);
 
-            GameObject prefab = null;
-            catalog?.TryGetEntityPrefab(entityData.typeId, out prefab);
+            // Persistent type IDs resolve from the same catalog used after a restart.
+            var spawnable = spawnCatalog?.Prefabs.FirstOrDefault(p => p && p.PrefabId == entityData.typeId);
+            GameObject prefab = spawnable ? spawnable.gameObject : null;
+            if (!prefab) catalog?.TryGetEntityPrefab(entityData.typeId, out prefab);
 
             if (prefab != null)
             {
+                var persistent = prefab.GetComponent<SpawnedObject>();
+                if (persistent && (spawnCatalog == null || !spawnCatalog.Prefabs.Contains(persistent)))
+                    throw new InvalidOperationException($"Persistent entity prefab '{prefab.name}' must be registered in SpawnableCatalog.");
+                if (persistent && !prefab.activeSelf)
+                    throw new InvalidOperationException($"Persistent entity prefab '{prefab.name}' needs an active root; its template parent supplies inactivity.");
+                if (persistent && string.IsNullOrWhiteSpace(dto.Id))
+                    throw new InvalidOperationException($"Persistent entity '{dto.TypeId}' needs an authored instance ID; random import IDs cannot be saved reliably.");
+                if (persistent && persistentEntities.Any(p => p.id == dto.Id))
+                    throw new InvalidOperationException($"Duplicate persistent entity ID '{dto.Id}' in this map.");
+                var targetParent = parent;
+                if (persistent)
+                {
+                    var templates = parent.Find("Persistent Templates");
+                    if (!templates)
+                    {
+                        var holder = new GameObject("Persistent Templates");
+                        holder.SetActive(false);
+                        holder.transform.SetParent(parent, false);
+                        templates = holder.transform;
+                    }
+                    targetParent = templates;
+                }
                 // Ensure the prefab itself is declared as a dependency so Unity doesn't strip
                 // references when the instantiated object is embedded into the imported asset.
                 VulcanusImportHelpers.AddDependency(ctx, AssetDatabase.GetAssetPath(prefab));
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, targetParent);
                 instance.name = $"{prefab.name}_{entityData.id}";
                 instance.transform.localPosition = worldPos;
                 instance.transform.localRotation = worldRot;
                 VulcanusEntityInitializer.InitializeEntity(instance, entityData);
+                if (persistent)
+                {
+                    // JSON properties configure gameplay fields, never the shared prefab identity.
+                    var serialized = new SerializedObject(instance.GetComponent<SpawnedObject>());
+                    serialized.FindProperty("prefabId").stringValue = persistent.PrefabId;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                    persistentEntities.Add(new AuthoredSpawnPlacement { id = dto.Id, template = instance.GetComponent<SpawnedObject>() });
+                }
                 return;
             }
 

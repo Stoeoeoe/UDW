@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.Game;
 using Core.TimeAndWeather.Seasons;
-using Core.TimeAndWeather.Weather;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using UnityEngine;
@@ -275,7 +274,7 @@ namespace Core.TimeAndWeather
             }
             else if (time.dayOfSeason >= numberOfDaysInSeason)
             {
-                StartSeason(Calendar.GetNextSeason(time.season));
+                StartSeason(seasons[currentSeasonData.index % seasons.Length].season);
                 time.dayOfSeason = 1;
             }
             else

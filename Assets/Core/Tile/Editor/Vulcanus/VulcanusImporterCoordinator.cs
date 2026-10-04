@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(4, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
+    [ScriptedImporter(5, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)

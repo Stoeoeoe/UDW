@@ -1,8 +1,8 @@
+using System;
 using System.Collections;
 using Character;
 using Core.Events;
 using Core.Game;
-using Core.Location;
 using Core.TimeAndWeather;
 using MoreMountains.Feedbacks;
 using Sirenix.OdinInspector;
@@ -12,7 +12,7 @@ namespace Interaction
 {
     /// <summary>Contact, availability, persistence and feedback for an interactable.</summary>
     [RequireComponent(typeof(Collider2D))]
-    public abstract class AbstractInteractable : MonoBehaviour, IEventListener<GameTimeChangedEvent>, ILocationLifecycle
+    public abstract class AbstractInteractable : MonoBehaviour, IEventListener<GameTimeChangedEvent>
     {
         [Header("Interaction")]
         [Tooltip("If false, triggers on contact (walk-in portals). If true, player must press Interact.")]
@@ -36,8 +36,8 @@ namespace Interaction
         [ShowIf(nameof(cooldownMode), InteractionCooldownMode.UntilTime)]
         [LabelText("Until")]
         [SerializeField] protected GameTimeBoundary cooldownBoundary;
-        [Tooltip("Stable ID unique to this placed object within its location. Required for limited uses, in-game hours or a calendar cooldown.")]
-        [SerializeField] private string persistentId;
+        [Tooltip("Stable object name plus a globally unique UUID. Renaming the GameObject does not change this ID. Regenerate after duplication; never change it for an existing saved object.")]
+        [ReadOnly] [SerializeField] private string persistentId;
 
         [Header("Feedbacks")]
         [SerializeField] protected MMFeedbacks ActivationFeedback;
@@ -53,8 +53,8 @@ namespace Interaction
         private InteractableVisuals _visuals;
         private InteractionState? _lastState;
         private int _lastRemainingUses;
-        private string _locationId;
         private bool _destroyQueued;
+        private InteractableState _bound;
 
         private bool UsesSecondsCooldown => cooldownMode == InteractionCooldownMode.GameplaySeconds ||
                                             cooldownMode == InteractionCooldownMode.RealTimeSeconds;
@@ -62,7 +62,41 @@ namespace Interaction
             cooldownMode == InteractionCooldownMode.InGameHours && inGameHourCooldown > 0;
         private bool NeedsSavedState => !UnlimitedActivations || UsesSavedCooldown;
         private float SecondsClock => cooldownMode == InteractionCooldownMode.RealTimeSeconds ? Time.unscaledTime : Time.time;
-        private string StateObjectId => "interactable:" + persistentId;
+
+        public string PersistentId => persistentId;
+        public event Action Depleted;
+
+        /// <summary>The spawner supplies identity and the entity-owned interaction record before enabling.</summary>
+        internal void BindSpawnedState(string id, InteractableState state)
+        {
+            if (gameObject.activeInHierarchy)
+                throw new InvalidOperationException("Bind a spawned interactable before enabling it.");
+            persistentId = id;
+            _bound = state;
+        }
+
+#if UNITY_EDITOR
+        protected virtual void OnValidate()
+        {
+            if (_bound != null) return; // Authored map IDs are stable strings, not necessarily UUIDs.
+            // Keep valid stored IDs unchanged, even if the GameObject is renamed.
+            if (!Guid.TryParseExact(persistentId, "N", out _) &&
+                (string.IsNullOrEmpty(persistentId) || persistentId.Length < 36 ||
+                 !Guid.TryParseExact(persistentId.Substring(persistentId.Length - 36), "D", out _)))
+                persistentId = CreatePersistentId();
+        }
+
+        private string CreatePersistentId() => $"{gameObject.name.Replace(' ', '_')}_{Guid.NewGuid():D}";
+
+        [Button("Regenerate Persistent UUID")]
+        private void RegeneratePersistentId()
+        {
+            UnityEditor.Undo.RecordObject(this, "Regenerate interactable UUID");
+            persistentId = CreatePersistentId();
+            UnityEditor.EditorUtility.SetDirty(this);
+            UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(this);
+        }
+#endif
 
         public virtual bool RequiresButtonPress => requiresButtonPress;
         public virtual bool CanInteract => EvaluateState(out _) == InteractionState.Ready;
@@ -88,7 +122,6 @@ namespace Interaction
         {
             if (UsesSavedCooldown)
                 EventBus<GameTimeChangedEvent>.Subscribe(this);
-            LevelManager.Instance?.RegisterLifecycle(this);
             ScheduleCooldownRefresh();
             RefreshState();
         }
@@ -96,25 +129,11 @@ namespace Interaction
         protected virtual void OnDisable()
         {
             EventBus<GameTimeChangedEvent>.Unsubscribe(this);
-            LevelManager.Instance?.UnregisterLifecycle(this);
-            _locationId = null;
             CancelInvoke(nameof(OnCooldownExpired));
             if (_realTimeCooldownRefresh != null)
                 StopCoroutine(_realTimeCooldownRefresh);
             _realTimeCooldownRefresh = null;
             _visuals?.Show(InteractionState.Unavailable);
-        }
-
-        public void OnLocationEnter(LocationData location)
-        {
-            _locationId = location?.id;
-            RefreshState();
-        }
-
-        public void OnLocationLeave(LocationData location)
-        {
-            _locationId = null;
-            RefreshState();
         }
 
         public void OnEvent(GameTimeChangedEvent change) => RefreshState();
@@ -135,11 +154,9 @@ namespace Interaction
         private InteractionState EvaluateState(out int remainingUses)
         {
             remainingUses = UnlimitedActivations ? -1 : 0;
-            if (LevelManager.Instance != null && string.IsNullOrEmpty(_locationId))
-                return InteractionState.Unavailable;
             if (NeedsSavedState)
             {
-                if (!TryGetSavedState(out _, out var savedState)) return InteractionState.Unavailable;
+                if (!TryGetSavedState(out var savedState)) return InteractionState.Unavailable;
                 if (!UnlimitedActivations)
                 {
                     remainingUses = Mathf.Max(0, MaxNumberOfActivations - (savedState?.uses ?? 0));
@@ -159,31 +176,26 @@ namespace Interaction
                 ? InteractionState.CoolingDown : InteractionState.Ready;
         }
 
-        private bool TryGetSavedState(out string locationId, out InteractableState state)
+        private bool TryGetSavedState(out InteractableState state)
         {
-            locationId = _locationId;
-            state = null;
-            if (GameStateManager.Instance == null || string.IsNullOrWhiteSpace(persistentId) ||
-                string.IsNullOrWhiteSpace(locationId)) return false;
-            GameState.World.TryGet(locationId, StateObjectId, out state);
+            state = _bound;
+            if (GameStateManager.Instance == null || string.IsNullOrWhiteSpace(persistentId)) return false;
+            if (state == null) GameState.World.TryGet(persistentId, out state);
             return true;
         }
 
         private void RecordActivation()
         {
             if (!NeedsSavedState) return;
-            TryGetSavedState(out var locationId, out var previous);
-            var state = new InteractableState
+            TryGetSavedState(out var state);
+            if (state == null) GameState.World.Set(persistentId, state = new InteractableState());
+            state.uses++;
+            state.availableAtMinute = cooldownMode switch
             {
-                availableAtMinute = cooldownMode switch
-                {
-                    InteractionCooldownMode.InGameHours => GameState.Time.TotalMinutes + (long)inGameHourCooldown * 60,
-                    InteractionCooldownMode.UntilTime => UrTimeManager.Instance.GetNextBoundaryMinute(cooldownBoundary),
-                    _ => 0
-                }
+                InteractionCooldownMode.InGameHours => GameState.Time.TotalMinutes + (long)inGameHourCooldown * 60,
+                InteractionCooldownMode.UntilTime => UrTimeManager.Instance.GetNextBoundaryMinute(cooldownBoundary),
+                _ => 0
             };
-            state.uses = (previous?.uses ?? 0) + 1;
-            GameState.World.Set(locationId, StateObjectId, state);
         }
 
         private void StartCooldown()
@@ -228,7 +240,8 @@ namespace Interaction
                 if (!_destroyQueued)
                 {
                     _destroyQueued = true;
-                    Destroy(gameObject);
+                    if (Depleted != null) Depleted();
+                    else Destroy(gameObject);
                 }
             }
             else

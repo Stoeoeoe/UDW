@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Core.Spawning;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -30,6 +31,7 @@ namespace Core.Tile.Vulcanus
 
         [Header("Terrain")]
         [SerializeField] private TerrainCell[] terrainCells;
+        [SerializeField] private AuthoredSpawnPlacement[] persistentEntities = System.Array.Empty<AuthoredSpawnPlacement>();
 
         private Dictionary<Vector2Int, TerrainType> _terrainByCoord;
 
@@ -38,6 +40,8 @@ namespace Core.Tile.Vulcanus
         public int Width => width;
         public int Height => height;
         public int TileSize => tileSize;
+        public IReadOnlyList<AuthoredSpawnPlacement> PersistentEntities => persistentEntities;
+        public void SetPersistentEntities(AuthoredSpawnPlacement[] placements) => persistentEntities = placements;
 
         public Tilemap TerrainTilemap => terrainTilemap;
         public Tilemap FarmlandTilemap => farmlandTilemap;

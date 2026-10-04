@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Character;
 using Core.Divinity;
+using Core.Spawning;
 using Core.TimeAndWeather;
 using Interaction;
 using NUnit.Framework;
@@ -16,6 +17,70 @@ namespace Core.Game.Editor
 {
     public sealed class WorldStatePersistenceTests
     {
+        [Test]
+        public void GlobalObjectsCanBeStoredEnumeratedAndRemovedWithoutALocation()
+        {
+            var world = new WorldState();
+            var id = Guid.NewGuid().ToString("D");
+            world.Set(id, new InteractableState { uses = 2 });
+            Assert.That(world.TryGet(id, out InteractableState state), Is.True);
+            Assert.That(state.uses, Is.EqualTo(2));
+            var entry = world.GetStates<InteractableState>().Single();
+            Assert.That(entry.LocationId, Is.Null);
+            Assert.That(entry.ObjectId, Is.EqualTo(id));
+            Assert.That(entry.State, Is.SameAs(state));
+            Assert.That(world.Remove(id), Is.True);
+            Assert.That(world.TryGet(id, out InteractableState _), Is.False);
+        }
+
+        [Test]
+        public void GlobalIdsDoNotCollideWithLocationScopedObjectIds()
+        {
+            var world = new WorldState();
+            var id = Guid.NewGuid().ToString("D");
+            world.Set(id, new InteractableState { uses = 2 });
+            world.Set("farm", id, new FarmlandState { plowed = true });
+            Assert.That(world.TryGet(id, out InteractableState interaction), Is.True);
+            Assert.That(interaction.uses, Is.EqualTo(2));
+            Assert.That(world.TryGet("farm", id, out FarmlandState farmland), Is.True);
+            Assert.That(farmland.plowed, Is.True);
+            Assert.Throws<InvalidOperationException>(() => world.Set(id, new FarmlandState()));
+            Assert.That(world.TryGet(id, out FarmlandState _), Is.False);
+        }
+
+        [Test]
+        public void GlobalWrappersUseTheSameStoreAndRemoveTheEmptyBucket()
+        {
+            var world = new WorldState();
+            var state = new InteractableState { uses = 1 };
+            world.Set("object", state);
+            Assert.That(world.TryGet(WorldState.Global, "object", out InteractableState found), Is.True);
+            Assert.That(found, Is.SameAs(state));
+            Assert.That(world.GetStates<InteractableState>(WorldState.Global).Single().Value, Is.SameAs(state));
+            Assert.That(world.Remove("object"), Is.True);
+            var locations = (Dictionary<string, Dictionary<string, WorldObjectState>>)typeof(WorldState)
+                .GetField("_locations", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(world);
+            Assert.That(locations.ContainsKey(WorldState.Global), Is.False);
+        }
+
+        [Test]
+        public void LookupsSkipMissingWrongAndNullTypesWithoutThrowing()
+        {
+            var world = new WorldState();
+            world.Set("object", new InteractableState());
+            Assert.That(world.TryGet("object", out FarmlandState _), Is.False);
+            Assert.That(world.TryGet("", out InteractableState _), Is.False);
+            Assert.That(world.Remove(""), Is.False);
+            var locations = (Dictionary<string, Dictionary<string, WorldObjectState>>)typeof(WorldState)
+                .GetField("_locations", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(world);
+            locations[WorldState.Global]["object"] = null;
+            Assert.That(world.TryGet("object", out InteractableState _), Is.False);
+            Assert.That(world.GetStates<InteractableState>(), Is.Empty);
+            world.Set("object", new InteractableState { uses = 3 });
+            Assert.That(world.TryGet("object", out InteractableState repaired), Is.True);
+            Assert.That(repaired.uses, Is.EqualTo(3));
+        }
+
         [Test]
         public void SetAndTryGetPreserveTheConcreteStateType()
         {
@@ -94,11 +159,22 @@ namespace Core.Game.Editor
             data.world.Set("farm", "plant:1,2", new PlantState("lentils") { daysPassedSincePlanting = 3 });
             var prayerDeadline = new GameCalendar(6, 14, Season.Spring, Season.Summer, Season.Autumn, Season.Winter)
                 .GetNextBoundaryMinute(data.time, GameTimeBoundary.NextDay);
-            data.world.Set("farm", "interactable:shrine-1", new InteractableState
+            var shrineId = Guid.NewGuid().ToString("D");
+            data.world.Set(shrineId, new InteractableState
             {
                 uses = 2,
                 availableAtMinute = prayerDeadline
             });
+            var chestId = Guid.NewGuid().ToString("D");
+            data.world.Set("farm", chestId, new TestChestState
+            {
+                prefabId = "base:test-chest", position = new Vector3(3, 5, 0),
+                rotation = Quaternion.Euler(0, 0, 45), authored = true,
+                coins = 12, interaction = new InteractableState { uses = 1, availableAtMinute = prayerDeadline }
+            });
+
+            data.world.Set("farm", "removed-authored", new SpawnedObjectState
+                { prefabId = "base:test-chest", authored = true, removed = true });
 
             try
             {
@@ -124,10 +200,20 @@ namespace Core.Game.Editor
                 Assert.That(loaded.world.TryGet("farm", "plant:1,2", out PlantState plant), Is.True);
                 Assert.That(plant.plantID, Is.EqualTo("lentils"));
                 Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(3));
-                Assert.That(loaded.world.TryGet("farm", "interactable:shrine-1", out InteractableState interaction), Is.True);
+                Assert.That(loaded.world.TryGet(shrineId, out InteractableState interaction), Is.True);
                 Assert.That(interaction.uses, Is.EqualTo(2));
                 Assert.That(interaction.IsCoolingDown(loaded.time.TotalMinutes), Is.True);
                 Assert.That(interaction.availableAtMinute, Is.EqualTo(prayerDeadline));
+                Assert.That(loaded.world.TryGet("farm", chestId, out TestChestState chest), Is.True);
+                Assert.That(chest.prefabId, Is.EqualTo("base:test-chest"));
+                Assert.That(chest.position, Is.EqualTo(new Vector3(3, 5, 0)));
+                Assert.That(chest.authored, Is.True);
+                Assert.That(Quaternion.Angle(chest.rotation, Quaternion.Euler(0, 0, 45)), Is.LessThan(0.01f));
+                Assert.That(loaded.world.TryGet("farm", "removed-authored", out SpawnedObjectState removed), Is.True);
+                Assert.That(removed.removed, Is.True);
+                Assert.That(chest.coins, Is.EqualTo(12));
+                Assert.That(chest.interaction.uses, Is.EqualTo(1));
+                Assert.That(chest.interaction.availableAtMinute, Is.EqualTo(prayerDeadline));
                 loaded.time.daysSinceStart++;
                 loaded.time.hour = 6;
                 loaded.time.minute = 0;
@@ -208,6 +294,12 @@ namespace Core.Game.Editor
                 if (persisted && field.FieldType.Assembly == typeof(GameSaveData).Assembly)
                     AssertSerializableFields(field.FieldType, visited);
             }
+        }
+
+        [Serializable]
+        public sealed class TestChestState : SpawnedObjectState
+        {
+            public int coins;
         }
     }
 }

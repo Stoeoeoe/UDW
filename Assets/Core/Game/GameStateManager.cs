@@ -34,6 +34,7 @@ namespace Core.Game
 
         public void Save(string slot)
         {
+            Core.Spawning.WorldObjectSpawner.Instance?.SavePositions();
             _data.schemaVersion = GameSaveData.CurrentVersion;
             _data.worldBaselineVersion = WorldBaselineVersion;
             GameSaveService.Save(slot, _data);

@@ -29,6 +29,7 @@ namespace Core.Tile
         private const string FarmlandObjectPrefix = "farmland:";
 
         private VulcanusImportedMap _currentMap;
+        public VulcanusImportedMap CurrentMap => _currentMap;
         private Tilemap _terrainTilemap;
         private Tilemap _farmlandTilemap;
         private Tilemap _plowedTilemap;
