@@ -1,4 +1,5 @@
 using System;
+using Core.Common;
 using Core.GameplayTags;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ namespace Character
     public sealed class SkillDefinition : ScriptableObject
     {
         [Tooltip("Stable namespaced ID, for example base:hammer_mastery. Do not change after saving games with this skill.")]
+        [NamespacedId]
         [SerializeField] private string skillId;
         [SerializeField] private string displayName;
         [TextArea(2, 4)] [SerializeField] private string description;
