@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Core.Divinity;
 using Core.Inventory;
+using Interaction.Dialog;
 using Plants;
 using UnityEditor;
 using UnityEngine;
@@ -23,6 +24,7 @@ namespace Core.Catalogs.Editor
             Create<SkillCatalog>(folder, SkillCatalog.ResourceName, created);
             Create<DeityCatalog>(folder, DeityCatalog.ResourceName, created);
             Create<PlantCatalog>(folder, PlantCatalog.ResourceName, created);
+            Create<TypewriterSoundCatalog>(folder, TypewriterSoundCatalog.ResourceName, created);
             return created.AsReadOnly();
         }
 

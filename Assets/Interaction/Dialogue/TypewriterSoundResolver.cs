@@ -1,4 +1,3 @@
-using System;
 using Core.Dialogue.Vulcanus;
 using PixelCrushers.DialogueSystem;
 using DialogueActor = PixelCrushers.DialogueSystem.Wrappers.DialogueActor;
@@ -43,26 +42,9 @@ namespace Interaction.Dialog
             if (DataManager.Current == null)
                 return defaultSound;
 
-            if (!string.IsNullOrWhiteSpace(speakerId))
-            {
-                if (DataManager.Current.TypewriterSounds != null &&
-                    DataManager.Current.TypewriterSounds.TryGetValue(speakerId, out var mappedByName) &&
-                    mappedByName != null)
-                    return mappedByName;
-
-                if (DataManager.Current.typewriterSounds != null)
-                {
-                    for (var i = 0; i < DataManager.Current.typewriterSounds.Count; i++)
-                    {
-                        var candidate = DataManager.Current.typewriterSounds[i];
-                        if (candidate != null &&
-                            string.Equals(candidate.ActorId, speakerId, StringComparison.OrdinalIgnoreCase))
-                            return candidate;
-                    }
-                }
-            }
-
-            return defaultSound;
+            var catalog = DataManager.Current.TypewriterSounds;
+            var sound = catalog ? catalog.Get(speakerId) : null;
+            return sound ? sound : defaultSound;
         }
     }
 }

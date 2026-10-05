@@ -17,7 +17,7 @@ The strongest next step is to unify **authoring validation, identity policy, and
 
 ### 1. Season progression has two conflicting sources of truth — high priority
 
-**Implementation status (5 October 2026):** rollover now calls `GameCalendar.GetNextSeason(time.season)`. The unused legacy `SeasonData.index` field and the index-specific manager regression test were removed by the user. Existing calendar-order tests remain. Runtime/editor compilation passed before that cleanup; tests have not been executed. Configuration validation remains a separate follow-up.
+**Implementation status (5 October 2026):** rollover now calls `GameCalendar.GetNextSeason(time.season)`. The unused legacy `SeasonData.index` field and the index-specific manager regression test were removed by the user. Existing calendar-order tests remain. Runtime/editor compilation passed after that cleanup; tests have not been executed. Configuration validation remains a separate follow-up.
 
 At the initial review, [UrTimeManager.StartNewDay](../Assets/Core/TimeAndWeather/UrTimeManager.cs:263) selected the next season with `seasons[currentSeasonData.index % seasons.Length]`. [GameCalendar.GetNextSeason](../Assets/Core/TimeAndWeather/GameCalendar.cs:20) used configured array order and was called only by its tests.
 
@@ -29,6 +29,8 @@ The shipped SystemRoot order is Spring, Summer, Autumn, Winter. Their authored `
 
 ### 2. Imported definitions do not trigger automatic catalog refresh — medium priority
 
+**Implementation status:** `.vitm` imports, moves and deletions now schedule the shared delayed refresh. An integration test covers initial import, changed IDs and deletion without a manual catalog refresh. Runtime/editor compilation passed; Unity test execution remains pending. The original evidence follows.
+
 [CatalogDiscovery.OnPostprocessAllAssets](../Assets/Core/Catalogs/Editor/CatalogDiscovery.cs:63) schedules refresh only for `.asset` and `.prefab` paths. [ItemImporter](../Assets/Core/Tile/Editor/Vulcanus/ItemImporter.cs:87) creates an `ItemDefinition` as the main object of a `.vitm` import. The hook ignores that source extension, including its deletion and movement.
 
 **Consequence:** importing a new `.vitm` alone can leave the catalog stale until another qualifying asset change, save, manual refresh, or the pre-play/pre-build refresh. Those later refreshes make this a freshness gap, not a claim that imported items can never be discovered. An import-time error also falls back to TextAsset, which can silently remove the definition on the next refresh.
@@ -39,6 +41,8 @@ The shipped SystemRoot order is Spring, Summer, Autumn, Winter. Their authored `
 
 ### 3. A legacy hoe asset points to an abstract game item script — medium priority
 
+**Implementation status:** the obsolete hoe asset and its metadata were removed by the user. The evidence below records the original review snapshot.
+
 [HoeInventoryItem.asset](../Assets/Interaction/Tools/Hoe/HoeInventoryItem.asset:12) references GUID `2c045c4cb91b40bc945c2007b82ef9e9`, which now belongs to [EquippableItem.cs](../Assets/Core/Items/EquippableItem.cs:9), an abstract class. Its stored class identifier and fields still describe MoreMountains `BaseItem` (`ItemID`, `MaximumStack`, `Quantity`, etc.), rather than the current `ItemDefinition` layout.
 
 This is an obsolete serialization binding, not a valid second implementation of the new item model. Whether Unity presents it as a missing/unloadable script needs editor verification. No reference to the asset's GUID was found in scanned `.prefab`, `.unity`, or `.asset` files.
@@ -46,6 +50,8 @@ This is an obsolete serialization binding, not a valid second implementation of 
 **Action:** inspect it in Unity and either replace it with a correctly authored concrete `ToolData`, or retire it after a full AssetDatabase dependency check. Do not adapt the game's inventory back to vendor item state to keep this one asset working. Do not delete it based only on this static scan.
 
 ### 4. Typewriter lookup uses two different identities and duplicates resolution logic — medium priority
+
+**Implementation status:** the default `TypewriterSoundCatalog` indexes `ActorId` with ordinal case-insensitive matching and matching duplicate validation. `DataManager` exposes the catalog without a Start-time scan or copied collections; the Vulcan presenter delegates to the shared resolver. Tests cover asset-name independence, case matching, disabled entries and conflicting actor IDs. Runtime/editor compilation passed; Unity test execution remains pending. Pitch validation remains part of the broader definition-validation follow-up. The original evidence follows.
 
 [DataManager](../Assets/Core/Data/DataManager.cs:24) scans Resources in `Start` and creates a dictionary keyed by asset **name**. Both [TypewriterSoundResolver](../Assets/Interaction/Dialogue/TypewriterSoundResolver.cs:41) and [VulcanusDialogueUGUIPresenter](../Assets/Core/Dialogue/Vulcanus/VulcanusDialogueUGUIPresenter.cs:362) then look up a speaker ID and fall back to scanning the list by **ActorId**, ignoring case.
 

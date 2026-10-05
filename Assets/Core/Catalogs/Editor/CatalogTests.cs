@@ -1,12 +1,16 @@
 using System;
+using System.Collections;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Core.Inventory;
 using Core.Inventory.Editor;
 using Core.Spawning;
+using Interaction.Dialog;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
@@ -166,6 +170,81 @@ namespace Core.Catalogs.Editor
                 Assert.That(copy.Get("second"), Is.SameAs(_second));
             }
             finally { Object.DestroyImmediate(copy); }
+        }
+
+        [Test]
+        public void SpeakerIdentityLookupIgnoresAssetNamesAndPreservesCaseInsensitiveMatching()
+        {
+            var catalog = ScriptableObject.CreateInstance<TypewriterSoundCatalog>();
+            var sound = ScriptableObject.CreateInstance<TypewriterSound>();
+            try
+            {
+                sound.name = "Different asset name";
+                sound.ActorId = "Player";
+                catalog.Synchronize(new Object[] { sound });
+                Assert.That(catalog.Get("player"), Is.SameAs(sound));
+                Assert.That(catalog.Get(sound.name), Is.Null);
+                catalog.SetEnabled(sound, false);
+                Assert.That(catalog.Get("PLAYER"), Is.Null);
+            }
+            finally { Object.DestroyImmediate(catalog); Object.DestroyImmediate(sound); }
+        }
+
+        [Test]
+        public void SpeakerIdsThatDifferOnlyInCaseAreRejectedBeforeLookup()
+        {
+            var catalog = ScriptableObject.CreateInstance<TypewriterSoundCatalog>();
+            var first = ScriptableObject.CreateInstance<TypewriterSound>();
+            var second = ScriptableObject.CreateInstance<TypewriterSound>();
+            try
+            {
+                first.ActorId = "Player";
+                second.ActorId = "player";
+                Assert.Throws<InvalidOperationException>(() =>
+                    CatalogValidation.Validate(catalog, new Object[] { first, second }));
+            }
+            finally
+            {
+                Object.DestroyImmediate(catalog);
+                Object.DestroyImmediate(first);
+                Object.DestroyImmediate(second);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ImportedItemsRefreshCatalogAndInvalidateIdsWithoutManualRefresh()
+        {
+            AssetDatabase.CreateAsset(_catalog, _folder + "/Catalog.asset");
+            var projectPath = _folder + "/Project.vproj";
+            File.WriteAllText(projectPath,
+                "{\"itemClasses\":[{\"id\":\"test\",\"className\":\"Core.Inventory.Editor.InventoryTestItem\"}]}");
+            AssetDatabase.ImportAsset(projectPath, ImportAssetOptions.ForceSynchronousImport);
+            var itemPath = _folder + "/Imported.vitm";
+            WriteImportedItem(itemPath, "imported");
+            yield return WaitFor(() => _catalog.Get("imported"));
+            Assert.That(_catalog.Get("imported").ItemName, Is.EqualTo("Imported item"));
+
+            WriteImportedItem(itemPath, "updated");
+            yield return WaitFor(() => _catalog.Get("updated"));
+            Assert.That(_catalog.Get("imported"), Is.Null);
+
+            Assert.That(AssetDatabase.DeleteAsset(itemPath), Is.True);
+            yield return WaitFor(() => _catalog.Entries.Count == 1);
+            Assert.That(_catalog.Get("updated"), Is.Null);
+        }
+
+        private static void WriteImportedItem(string path, string id)
+        {
+            File.WriteAllText(path,
+                $"{{\"id\":\"{id}\",\"name\":\"Imported item\",\"classId\":\"test\",\"maxStackSize\":99}}");
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        private static IEnumerator WaitFor(Func<bool> ready)
+        {
+            var deadline = EditorApplication.timeSinceStartup + 10;
+            while (!ready() && EditorApplication.timeSinceStartup < deadline) yield return null;
+            Assert.That(ready(), Is.True, "The delayed automatic catalog refresh did not complete.");
         }
     }
 }

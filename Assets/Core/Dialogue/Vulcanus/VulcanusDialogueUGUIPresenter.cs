@@ -359,33 +359,8 @@ namespace Core.Dialogue.Vulcanus
                 pitch: pitch);
         }
 
-        private TypewriterSound ResolveTypewriterSound(string speakerId)
-        {
-            if (DataManager.Current == null || string.IsNullOrWhiteSpace(speakerId))
-                return defaultTypewriterSound;
-
-            if (DataManager.Current.TypewriterSounds != null &&
-                DataManager.Current.TypewriterSounds.TryGetValue(speakerId, out var mappedByName) &&
-                mappedByName != null)
-            {
-                return mappedByName;
-            }
-
-            if (DataManager.Current.typewriterSounds == null)
-                return defaultTypewriterSound;
-
-            for (var i = 0; i < DataManager.Current.typewriterSounds.Count; i++)
-            {
-                var candidate = DataManager.Current.typewriterSounds[i];
-                if (candidate != null &&
-                    string.Equals(candidate.ActorId, speakerId, StringComparison.OrdinalIgnoreCase))
-                {
-                    return candidate;
-                }
-            }
-
-            return defaultTypewriterSound;
-        }
+        private TypewriterSound ResolveTypewriterSound(string speakerId) =>
+            TypewriterSoundResolver.ResolveTypewriterSound(speakerId, defaultTypewriterSound);
 
         private void SetSpeakerPortraitStub(string speaker, string emotion)
         {

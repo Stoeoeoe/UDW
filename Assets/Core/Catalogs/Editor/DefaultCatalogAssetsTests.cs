@@ -25,7 +25,7 @@ namespace Core.Catalogs.Editor
         {
             var created = DefaultCatalogAssets.CreateMissingCatalogs(_folder);
             Assert.That(created.Select(catalog => catalog.GetType().Name),
-                Is.EqualTo(new[] { "ItemCatalog", "SkillCatalog", "DeityCatalog", "PlantCatalog" }));
+                Is.EqualTo(new[] { "ItemCatalog", "SkillCatalog", "DeityCatalog", "PlantCatalog", "TypewriterSoundCatalog" }));
             Assert.That(DefaultCatalogAssets.CreateMissingCatalogs(_folder), Is.Empty);
             foreach (var catalog in created)
                 Assert.That(AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(catalog)), Is.SameAs(catalog));

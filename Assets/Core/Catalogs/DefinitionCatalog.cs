@@ -27,6 +27,7 @@ namespace Core.Catalogs
         /// <summary>Project folder searched recursively by editor discovery, including Assets/.</summary>
         public abstract string Path { get; }
         public abstract Type DefinitionType { get; }
+        public virtual StringComparer IdComparer => StringComparer.Ordinal;
         public IReadOnlyList<CatalogEntry> Entries => entries;
         public abstract string GetId(Object definition);
 
@@ -35,7 +36,7 @@ namespace Core.Catalogs
             if (string.IsNullOrEmpty(id)) return null;
             if (_byId == null)
             {
-                var index = new Dictionary<string, Object>(StringComparer.Ordinal);
+                var index = new Dictionary<string, Object>(IdComparer);
                 foreach (var entry in entries)
                     if (entry.Enabled && entry.Definition) index.Add(GetId(entry.Definition), entry.Definition);
                 _byId = index;

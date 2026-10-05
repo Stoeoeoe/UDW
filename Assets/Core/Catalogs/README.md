@@ -10,10 +10,10 @@ protected override string GetDefinitionId(MyDefinition definition) => definition
 Create its catalog asset (normally via its `CreateAssetMenu`). The shared editor
 discovery finds every catalog asset and recursively discovers definitions of its
 type under `Path`. No runtime folder scanning occurs. Items, skills, deities,
-plants and spawnables use this pipeline. Items and plants search `Assets` because their
+plants, typewriter sounds and spawnables use this pipeline. Items and plants search `Assets` because their
 definitions live in multiple folders; skills/deities keep their existing
 Resources authoring folders, and spawnables search `Assets/Content/Spawnables`.
-`DefaultCatalogAssets.CreateMissingCatalogs()` creates the four default Resources
+`DefaultCatalogAssets.CreateMissingCatalogs()` creates the five default Resources
 catalog assets when absent and returns only those it created. Existing assets
 and enabled selections are not overwritten. **Tools > Catalogs > Create Missing
 Catalogs** reports the result and schedules discovery separately. The same API
@@ -81,3 +81,9 @@ carry gameplay meaning and must not become a sorted flat catalog.
   override layer; never edit the original ScriptableObject during Play Mode.
 - Decide how disabled content affects direct consumers before promising a global
   "disable this mechanic/item" switch. No profiles or runtime overrides exist yet.
+
+## Speaker audio and comparison rules
+
+`TypewriterSoundCatalog` discovers sounds throughout `Assets` and indexes `ActorId`, not asset names. It preserves case-insensitive speaker matching through `IdComparer`; flat catalogs otherwise retain ordinal comparison. Shared duplicate validation uses the same comparer as lookup, so `Player` and `player` cannot coexist in the speaker catalog. `DataManager` exposes this catalog directly, and all presenters use `TypewriterSoundResolver`; there is no Resources folder scan or copied list/dictionary.
+
+The delayed import hook also covers `.vitm` imports, moves and deletions, so imported item definitions and changed IDs update automatically without entering play. Catalog writes remain excluded from import-triggered scheduling to avoid refresh loops.

@@ -63,7 +63,9 @@ namespace Core.Catalogs.Editor
         private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
             if (imported.Concat(deleted).Concat(moved).Concat(movedFrom).Any(path =>
-                (path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)) &&
+                (path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase)) &&
                 !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) Schedule();
         }
 
