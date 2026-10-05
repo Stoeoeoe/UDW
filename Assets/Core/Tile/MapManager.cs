@@ -581,7 +581,7 @@ namespace Core.Tile
             {
                 var tileData = GetTileDataAtCoordinates(pos);
                 if (tileData == null) continue;
-                if (!PlantManager.Current.PlantData.TryGetValue(state.plantID, out var plantData)) continue;
+                if (!PlantManager.Current.TryGetPlantData(state.plantID, out var plantData)) continue;
                 var stageIndex = plantData.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
                 SpawnPlantInstance(state.plantID, pos, tileData, stageIndex);
             }
@@ -589,7 +589,7 @@ namespace Core.Tile
 
         private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData, int stageIndex = 0)
         {
-            if (!PlantManager.Current.PlantData.TryGetValue(plantId, out var plantData)) return;
+            if (!PlantManager.Current.TryGetPlantData(plantId, out var plantData)) return;
 
             var go = new GameObject(plantData.label + "_" + plantId);
             go.transform.SetParent(_plantParentGameObject.transform);

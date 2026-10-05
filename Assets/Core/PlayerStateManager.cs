@@ -1,4 +1,6 @@
 using Character;
+using System;
+using System.Linq;
 using Core.Events;
 using Core.Game;
 using Core.Inventory;
@@ -19,8 +21,6 @@ namespace Core
         [SerializeField] int _startingStamina = 100;
         [SerializeField] ToolData[] _startingTools;
         [SerializeField] ItemDefinition[] _startingItems;
-
-        bool _inventoryInitialized;
 
         void OnEnable()  => this.Subscribe<StaminaChangedEvent>();
         void OnDisable() => this.Unsubscribe<StaminaChangedEvent>();
@@ -55,19 +55,18 @@ namespace Core
             character.Wallet.Bind(player.Wallet);
             GameStateManager.Instance.DivineFavour.BindCharacter(character);
 
-            if (!_inventoryInitialized)
+            var inventory = SlotInventory.FindInventory("MainInventory", "Player1");
+            if (inventory == null)
             {
-                var inventory = SlotInventory.FindInventory("MainInventory", "Player1");
-                if (inventory == null)
-                {
-                    Debug.LogWarning("[PlayerStateManager] MainInventory not found yet. Starting loadout initialization will retry on the next character initialization.");
-                }
-                else
-                {
-                    foreach (var tool in _startingTools)  inventory.AddItem(tool, 1);
-                    foreach (var item in _startingItems)  inventory.AddItem(item, 1);
-                    _inventoryInitialized = true;
-                }
+                Debug.LogWarning("[PlayerStateManager] MainInventory not found yet. Inventory binding will retry on the next character initialization.");
+            }
+            else
+            {
+                inventory.Bind(player.Inventory);
+                var loadout = (_startingTools ?? Array.Empty<ToolData>()).Cast<ItemDefinition>()
+                    .Concat(_startingItems ?? Array.Empty<ItemDefinition>());
+                if (!inventory.ApplyStartingLoadout(loadout))
+                    Debug.LogError("[PlayerStateManager] Starting loadout contains invalid items or does not fit. Nothing was added.");
             }
 
             character.InitializeStamina(player.CurrentStamina);

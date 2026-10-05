@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Core.Catalogs;
 using Core.Events;
 using Core.Game;
 using Core.Location;
@@ -16,14 +17,19 @@ namespace Plants
     {
         private const string PlantObjectPrefix = "plant:";
 
-        protected Dictionary<string, PlantData> plantData = new();
+        private PlantCatalog _catalog;
 
-        public Dictionary<string, PlantData> PlantData => plantData;
+        public bool TryGetPlantData(string id, out PlantData data)
+        {
+            data = _catalog ? _catalog.Get(id) : null;
+            return data;
+        }
 
         protected override void Awake()
         {
             base.Awake();
-            plantData = Resources.LoadAll<PlantData>("Plants").ToDictionary(d => d.plantId);
+            _catalog = CatalogResources.Load<PlantCatalog>(PlantCatalog.ResourceName);
+            if (!_catalog) throw new InvalidOperationException("The default PlantCatalog is missing. Refresh catalogs in the editor.");
         }
 
         protected void OnEnable() => this.Subscribe<NewDayEvent>();
@@ -34,7 +40,7 @@ namespace Plants
             foreach (var entry in GameState.World.GetStates<PlantState>())
             {
                 var state = entry.State;
-                if (!plantData.TryGetValue(state.plantID, out var data)) continue;
+                if (!TryGetPlantData(state.plantID, out var data)) continue;
 
                 var oldStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
                 state.daysPassedSincePlanting++;

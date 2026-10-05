@@ -1,52 +1,45 @@
 using System;
 using System.Collections.Generic;
+using Core.Catalogs;
 using UnityEngine;
 
 namespace Core.Divinity
 {
-    /// <summary>Built-in deities live in Resources/Deities; mods can register definitions at runtime.</summary>
+    /// <summary>Built-in deities come from a catalog; mods can register definitions at runtime.</summary>
     public static class DeityDefinitions
     {
-        private static Dictionary<string, DeityDefinition> _byId;
+        private static readonly Dictionary<string, DeityDefinition> Mods = new(StringComparer.Ordinal);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void Reset() => _byId = null;
+        private static void Reset() => Mods.Clear();
 
         public static DeityDefinition Get(string id)
         {
-            EnsureLoaded();
-            if (_byId.TryGetValue(id, out var deity)) return deity;
+            if (TryGet(id, out var deity)) return deity;
             throw new InvalidOperationException($"No deity definition registered for '{id}'.");
         }
 
         public static bool TryGet(string id, out DeityDefinition deity)
         {
-            EnsureLoaded();
-            return _byId.TryGetValue(id, out deity);
+            var catalog = GetCatalog();
+            if (Mods.TryGetValue(id, out deity)) return true;
+            deity = catalog.Get(id);
+            return deity;
         }
 
         public static void Register(DeityDefinition deity)
         {
-            EnsureLoaded();
-            AddTo(_byId, deity);
-        }
-
-        private static void EnsureLoaded()
-        {
-            if (_byId != null) return;
-            // Build locally so an invalid definition cannot leave a partially initialized registry.
-            var definitions = new Dictionary<string, DeityDefinition>(StringComparer.Ordinal);
-            foreach (var deity in Resources.LoadAll<DeityDefinition>("Deities"))
-                AddTo(definitions, deity);
-            _byId = definitions;
-        }
-
-        private static void AddTo(Dictionary<string, DeityDefinition> map, DeityDefinition deity)
-        {
             if (!deity) throw new ArgumentNullException(nameof(deity));
             ValidateId(deity.Id);
-            if (!map.TryAdd(deity.Id, deity))
+            if (GetCatalog().Get(deity.Id) || !Mods.TryAdd(deity.Id, deity))
                 throw new InvalidOperationException($"Duplicate deity ID '{deity.Id}'.");
+        }
+
+        private static DeityCatalog GetCatalog()
+        {
+            var catalog = CatalogResources.Load<DeityCatalog>(DeityCatalog.ResourceName);
+            if (!catalog) throw new InvalidOperationException("The default DeityCatalog is missing. Refresh catalogs in the editor.");
+            return catalog;
         }
 
         public static void ValidateId(string id)

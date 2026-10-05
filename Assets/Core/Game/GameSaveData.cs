@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Core.Game
 {
@@ -22,9 +23,16 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null ||
+            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory == null ||
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
+
+            if (player.Inventory.StartingLoadoutApplied && player.Inventory.Slots == null)
+                throw new FormatException("The initialized inventory is missing its slots.");
+            if (player.Inventory.Slots != null)
+                foreach (var slot in player.Inventory.Slots.Concat(new[] { player.Inventory.HeldSlot }))
+                    if (slot.Quantity < 0 || (slot.Quantity > 0 && string.IsNullOrWhiteSpace(slot.ItemId)))
+                        throw new FormatException("The save contains an invalid inventory slot.");
 
             if (!time.initialized || time.daysSinceStart < 1 ||
                 !Enum.IsDefined(typeof(Core.TimeAndWeather.Season), time.season) ||

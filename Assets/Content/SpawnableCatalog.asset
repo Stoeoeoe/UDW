@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0b8a6efd5f7424b92029aaf323d947d, type: 3}
   m_Name: SpawnableCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.SpawnableCatalog
-  prefabs:
-  - {fileID: 1531555327375799097, guid: bef8951bb68ccef42b9e7ff75bbd7422, type: 3}
+  entries:
+  - definition: {fileID: 1531555327375799097, guid: bef8951bb68ccef42b9e7ff75bbd7422, type: 3}
+    enabled: 1

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Catalogs;
 using Core.Tile.Vulcanus;
 using UnityEngine;
 
@@ -53,19 +54,8 @@ namespace Core.Dialogue.Vulcanus
 
         private void RebuildCache()
         {
-            _dialogueById = new Dictionary<string, VulcanusDialogueAsset>(StringComparer.OrdinalIgnoreCase);
-            if (dialogues == null)
-                return;
-
-            for (var i = 0; i < dialogues.Length; i++)
-            {
-                var dialogue = dialogues[i];
-                if (dialogue == null || string.IsNullOrWhiteSpace(dialogue.DialogueId))
-                    continue;
-
-                if (!_dialogueById.ContainsKey(dialogue.DialogueId))
-                    _dialogueById.Add(dialogue.DialogueId, dialogue);
-            }
+            _dialogueById = IdIndex.FirstWins(dialogues, dialogue => dialogue ? dialogue.DialogueId : null,
+                StringComparer.OrdinalIgnoreCase);
         }
     }
 }

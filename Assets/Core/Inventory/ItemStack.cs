@@ -11,6 +11,9 @@ namespace Core.Inventory
     {
         public ItemDefinition Item;
         public int            Quantity;
+        // Retains an unresolved saved ID while Item remains null (not usable by gameplay/UI).
+        public string ItemId;
+        public bool IsOccupied => Quantity > 0 && (Item != null || !string.IsNullOrEmpty(ItemId));
 
         public static ItemStack Empty => new ItemStack { Item = null, Quantity = 0 };
 
@@ -20,6 +23,7 @@ namespace Core.Inventory
         {
             Item     = item;
             Quantity = quantity;
+            ItemId = item != null ? item.ItemId : null;
         }
 
         public static bool IsNull(ItemStack stack) => stack.IsEmpty;

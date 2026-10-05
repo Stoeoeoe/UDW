@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Catalogs;
 using UnityEngine;
 
 namespace Character
@@ -7,29 +8,31 @@ namespace Character
     /// <summary>Discovers built-in definitions and accepts definitions loaded by mods.</summary>
     public static class SkillDefinitions
     {
-        private static Dictionary<string, SkillDefinition> _byId;
+        private static readonly Dictionary<string, SkillDefinition> Mods = new(StringComparer.Ordinal);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Reset() => Mods.Clear();
 
         public static SkillDefinition Get(string skillId)
         {
-            EnsureLoaded();
-            if (_byId.TryGetValue(skillId, out var result)) return result;
+            var catalog = GetCatalog();
+            if (Mods.TryGetValue(skillId, out var result)) return result;
+            result = catalog.Get(skillId);
+            if (result) return result;
             throw new InvalidOperationException($"No skill definition registered for '{skillId}'.");
         }
 
         /// <summary>Call when a mod loads a SkillDefinition from an asset bundle.</summary>
         public static void Register(SkillDefinition definition)
         {
-            EnsureLoaded();
             Add(definition);
         }
 
-        private static void EnsureLoaded()
+        private static SkillCatalog GetCatalog()
         {
-            if (_byId != null) return;
-
-            _byId = new Dictionary<string, SkillDefinition>(StringComparer.Ordinal);
-            foreach (var definition in Resources.LoadAll<SkillDefinition>("Skills"))
-                Add(definition);
+            var catalog = CatalogResources.Load<SkillCatalog>(SkillCatalog.ResourceName);
+            if (!catalog) throw new InvalidOperationException("The default SkillCatalog is missing. Refresh catalogs in the editor.");
+            return catalog;
         }
 
         private static void Add(SkillDefinition definition)
@@ -46,10 +49,10 @@ namespace Character
                 if (char.IsWhiteSpace(character))
                     throw new ArgumentException($"Skill ID '{id}' cannot contain whitespace.");
 
-            if (_byId.ContainsKey(id))
+            if (GetCatalog().Get(id) || Mods.ContainsKey(id))
                 throw new InvalidOperationException($"Duplicate skill ID '{id}'.");
 
-            _byId.Add(id, definition);
+            Mods.Add(id, definition);
         }
     }
 }

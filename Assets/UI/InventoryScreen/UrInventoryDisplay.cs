@@ -58,9 +58,17 @@ namespace UI.InventoryScreen
         protected bool _initialized = false;
         protected bool _isOpen = false;
 
-        // Held item state - this persists even when inventory is closed
-        protected ItemStack _heldStack;
-        protected int _heldItemSourceIndex = -1;
+        // The dragged stack remains part of the player's saved inventory, not this UI's lifetime.
+        protected ItemStack _heldStack
+        {
+            get => TargetInventory != null ? TargetInventory.HeldStack : ItemStack.Empty;
+            set => TargetInventory.HeldStack = value;
+        }
+        protected int _heldItemSourceIndex
+        {
+            get => TargetInventory != null ? TargetInventory.HeldSourceIndex : -1;
+            set => TargetInventory.HeldSourceIndex = value;
+        }
 
         // Selected slot for action buttons
         protected int _selectedSlotIndex = -1;
@@ -88,7 +96,7 @@ namespace UI.InventoryScreen
         /// <summary>
         /// Whether an item is currently being held
         /// </summary>
-        public bool IsHoldingItem => !_heldStack.IsEmpty;
+        public bool IsHoldingItem => _heldStack.IsOccupied;
 
         /// <summary>
         /// The currently held item
@@ -158,6 +166,7 @@ namespace UI.InventoryScreen
             CreateSlots();
             _initialized = true;
             RefreshAllSlots();
+            PublishHeldItem();
         }
 
         /// <summary>
@@ -202,18 +211,19 @@ namespace UI.InventoryScreen
         public virtual void RefreshAllSlots()
         {
             if (TargetInventory == null || _slots == null) return;
+            var content = TargetInventory.Content;
 
             // Resize slots if inventory size changed
-            if (_slots.Length != TargetInventory.Content.Length)
+            if (_slots.Length != content.Length)
             {
                 CreateSlots();
             }
 
             for (int i = 0; i < _slots.Length; i++)
             {
-                if (i < TargetInventory.Content.Length)
+                if (i < content.Length)
                 {
-                    _slots[i].UpdateDisplay(TargetInventory.Content[i]);
+                    _slots[i].UpdateDisplay(content[i]);
                 }
                 else
                 {
@@ -372,7 +382,7 @@ namespace UI.InventoryScreen
 
             _heldStack           = stack;
             _heldItemSourceIndex = slotIndex;
-            TargetInventory.SetSlot(slotIndex, ItemStack.Empty);
+            TargetInventory.SetSlotSilently(slotIndex, ItemStack.Empty);
             NotifyChange();
         }
 
@@ -391,7 +401,7 @@ namespace UI.InventoryScreen
 
             _heldStack           = new ItemStack(stack.Item, pickUpAmount);
             _heldItemSourceIndex = slotIndex;
-            TargetInventory.SetSlot(slotIndex, remaining > 0
+            TargetInventory.SetSlotSilently(slotIndex, remaining > 0
                 ? new ItemStack(stack.Item, remaining)
                 : ItemStack.Empty);
             NotifyChange();
@@ -412,9 +422,11 @@ namespace UI.InventoryScreen
 
             ItemStack target = TargetInventory.Content[slotIndex];
 
+            if (target.IsOccupied && target.Item == null) return; // Missing definition: keep the reserved slot.
+
             if (target.IsEmpty)
             {
-                TargetInventory.SetSlot(slotIndex, _heldStack);
+                TargetInventory.SetSlotSilently(slotIndex, _heldStack);
                 ClearHeldItem();
             }
             else if (target.Item == _heldStack.Item && target.Item.MaxStackSize > 1)
@@ -424,7 +436,7 @@ namespace UI.InventoryScreen
 
                 if (toAdd > 0)
                 {
-                    TargetInventory.SetSlot(slotIndex, new ItemStack(target.Item, target.Quantity + toAdd));
+                    TargetInventory.SetSlotSilently(slotIndex, new ItemStack(target.Item, target.Quantity + toAdd));
                     int remaining = _heldStack.Quantity - toAdd;
                     if (remaining <= 0)
                         ClearHeldItem();
@@ -452,7 +464,7 @@ namespace UI.InventoryScreen
         /// </summary>
         protected virtual void SwapWithHeldItem(int slotIndex, ItemStack target)
         {
-            TargetInventory.SetSlot(slotIndex, _heldStack);
+            TargetInventory.SetSlotSilently(slotIndex, _heldStack);
             _heldStack           = target;
             _heldItemSourceIndex = slotIndex;
             InventoryHeldItemEvent.Trigger(_heldStack.Item, _heldStack.Quantity, slotIndex);
@@ -468,14 +480,16 @@ namespace UI.InventoryScreen
 
             ItemStack target = TargetInventory.Content[slotIndex];
 
+            if (target.IsOccupied && target.Item == null) return;
+
             if (target.IsEmpty)
             {
-                TargetInventory.SetSlot(slotIndex, new ItemStack(_heldStack.Item, 1));
+                TargetInventory.SetSlotSilently(slotIndex, new ItemStack(_heldStack.Item, 1));
                 DecreaseHeld();
             }
             else if (target.Item == _heldStack.Item && target.Quantity < target.Item.MaxStackSize)
             {
-                TargetInventory.SetSlot(slotIndex, new ItemStack(target.Item, target.Quantity + 1));
+                TargetInventory.SetSlotSilently(slotIndex, new ItemStack(target.Item, target.Quantity + 1));
                 DecreaseHeld();
             }
 
@@ -509,9 +523,16 @@ namespace UI.InventoryScreen
         /// </summary>
         protected virtual void NotifyChange()
         {
+            InventoryChangedEvent.Trigger(TargetInventory);
             RefreshAllSlots();
+            PublishHeldItem();
+        }
+
+        private void PublishHeldItem()
+        {
             if (!_heldStack.IsEmpty)
                 InventoryHeldItemEvent.Trigger(_heldStack.Item, _heldStack.Quantity, _heldItemSourceIndex);
+            else InventoryHeldItemEvent.TriggerClear();
         }
 
         #endregion
@@ -555,7 +576,10 @@ namespace UI.InventoryScreen
         public void OnEvent(InventoryChangedEvent e)
         {
             if (e.InventoryRef == TargetInventory)
+            {
                 RefreshAllSlots();
+                PublishHeldItem();
+            }
         }
 
         #endregion

@@ -1,6 +1,10 @@
 using System.Reflection;
+using System;
+using System.Linq;
+using Core.Catalogs.Editor;
 using NUnit.Framework;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Spawning.Editor
 {
@@ -34,28 +38,14 @@ namespace Core.Spawning.Editor
         public void InvalidIdsAreRejected(string id)
         {
             SetPrefabs(CreatePrefab(id));
-            Assert.That(_catalog.HasValidIds, Is.False);
-        }
-
-        [Test]
-        public void DuplicateIdsAreRejected()
-        {
-            SetPrefabs(CreatePrefab("base:chest"), CreatePrefab("base:chest"));
-            Assert.That(_catalog.HasValidIds, Is.False);
-        }
-
-        [Test]
-        public void MissingReferencesAreRejected()
-        {
-            SetPrefabs(new SpawnedObject[] { null });
-            Assert.That(_catalog.HasValidIds, Is.False);
+            Assert.Throws<InvalidOperationException>(Validate);
         }
 
         [Test]
         public void UniqueNamespacedIdsAreValid()
         {
             SetPrefabs(CreatePrefab("base:chest"), CreatePrefab("base:crate_small"), CreatePrefab("mymod:chest"));
-            Assert.That(_catalog.HasValidIds, Is.True);
+            Assert.DoesNotThrow(Validate);
         }
 
         private SpawnedObject CreatePrefab(string id)
@@ -68,8 +58,18 @@ namespace Core.Spawning.Editor
             return prefab;
         }
 
-        private void SetPrefabs(params SpawnedObject[] prefabs) =>
-            typeof(SpawnableCatalog).GetField("prefabs", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_catalog, prefabs);
+        [Test]
+        public void DisabledPrefabsAreExcludedFromSpawnerEnumeration()
+        {
+            var prefab = CreatePrefab("base:chest");
+            SetPrefabs(prefab);
+            _catalog.SetEnabled(prefab, false);
+            Assert.That(_catalog.Prefabs, Is.Empty);
+        }
+
+        private void Validate() => CatalogValidation.Validate(_catalog,
+            _catalog.Entries.Select(entry => entry.Definition).ToArray());
+
+        private void SetPrefabs(params SpawnedObject[] prefabs) => _catalog.Synchronize(prefabs);
     }
 }

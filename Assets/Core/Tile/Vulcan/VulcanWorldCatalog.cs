@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Catalogs;
 using Core.Location;
 using UnityEngine;
 
@@ -188,28 +189,11 @@ namespace Core.Tile.Vulcanus
 
         private void RebuildCaches()
         {
-            _bindingByMapId = new Dictionary<string, MapBinding>(StringComparer.OrdinalIgnoreCase);
-            _bindingByLocationId = new Dictionary<string, MapBinding>(StringComparer.OrdinalIgnoreCase);
-
-            if (mapBindings == null)
-                return;
-
-            for (var i = 0; i < mapBindings.Length; i++)
-            {
-                var binding = mapBindings[i];
-                if (binding == null || string.IsNullOrWhiteSpace(binding.mapId))
-                    continue;
-
-                if (!_bindingByMapId.ContainsKey(binding.mapId))
-                    _bindingByMapId.Add(binding.mapId, binding);
-
-                var locationId = binding.locationData != null ? binding.locationData.id : null;
-                if (string.IsNullOrWhiteSpace(locationId))
-                    continue;
-
-                if (!_bindingByLocationId.ContainsKey(locationId))
-                    _bindingByLocationId.Add(locationId, binding);
-            }
+            _bindingByMapId = IdIndex.FirstWins(mapBindings, binding => binding?.mapId,
+                StringComparer.OrdinalIgnoreCase);
+            _bindingByLocationId = IdIndex.FirstWins(mapBindings, binding =>
+                binding != null && !string.IsNullOrWhiteSpace(binding.mapId) && binding.locationData
+                    ? binding.locationData.id : null, StringComparer.OrdinalIgnoreCase);
         }
     }
 }

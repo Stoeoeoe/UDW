@@ -52,6 +52,7 @@ namespace Core.Shops.Editor
             Invoke(_manager, "Awake");
             GameState.Time.daysSinceStart = 1;
             _item = ScriptableObject.CreateInstance<ShopTestItem>();
+            Set(_item, "<ItemId>k__BackingField", "test:shop-item");
             Set(_item, "<BuyBasePrice>k__BackingField", 10);
             Set(_item, "<SellBasePrice>k__BackingField", 4);
             _daily = new ShopOffering { id = "daily", item = _item, minStock = 5, maxStock = 5, priceMultiplier = 1.5f };
@@ -86,6 +87,35 @@ namespace Core.Shops.Editor
             Object.DestroyImmediate(_definition);
             Object.DestroyImmediate(_item);
             UnityEngine.Random.state = _random;
+        }
+
+        [Test]
+        public void BuySellAndReloadRoundTripInventoryWalletAndVendorStockTogether()
+        {
+            _inventory.Bind(GameState.Player.Inventory, id => id == _item.ItemId ? _item : null);
+            _inventory.ApplyStartingLoadout(Array.Empty<ItemDefinition>());
+            typeof(Wallet).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(_wallet, new object[] { GameState.Player.Wallet });
+            _wallet.Add(100);
+            Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
+            Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
+            var data = (GameSaveData)typeof(GameStateManager).GetField("_data", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(_manager);
+            data.time.initialized = true;
+            data.time.dayOfSeason = 1;
+            data.time.hour = 6;
+            data.Validate();
+            var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var references);
+            Assert.That(references, Is.Empty);
+            var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
+            loaded.Validate();
+            _inventory.Bind(loaded.player.Inventory, id => id == _item.ItemId ? _item : null);
+            Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(74));
+            Assert.That(_inventory.Content[0].Item, Is.SameAs(_item));
+            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(1));
+            Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);
+            Assert.That(loaded.world.TryGet(_shop.Id, out ShopState stock), Is.True);
+            Assert.That(stock.offerings["daily"].quantity, Is.EqualTo(3));
         }
 
         [Test]

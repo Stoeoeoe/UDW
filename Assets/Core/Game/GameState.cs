@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Character;
 using Core.Divinity;
+using Core.Inventory;
 using Core.TimeAndWeather;
 using Sirenix.Serialization;
 
@@ -28,6 +29,7 @@ namespace Core.Game
         [field: OdinSerialize] public CharacterSkills Skills { get; private set; } = new CharacterSkills();
         [field: OdinSerialize] public DivineFavourState Favour { get; private set; } = new DivineFavourState();
         [field: OdinSerialize] public WalletState Wallet { get; private set; } = new WalletState();
+        [field: OdinSerialize] public InventoryState Inventory { get; private set; } = new();
         public bool StaminaInitialized;
         public int CurrentStamina;
     }

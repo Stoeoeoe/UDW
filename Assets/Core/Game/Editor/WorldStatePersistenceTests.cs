@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Character;
 using Core.Divinity;
+using Core.Inventory;
 using Core.Spawning;
 using Core.Shops;
 using Core.TimeAndWeather;
@@ -151,6 +152,12 @@ namespace Core.Game.Editor
             data.time.secondsTowardNextMinute = 2.5f;
             data.player.StaminaInitialized = true;
             data.player.CurrentStamina = 42;
+            data.player.Inventory.StartingLoadoutApplied = true;
+            data.player.Inventory.Slots = new[]
+            {
+                new InventorySlotState("base:hammer", 1), default,
+                new InventorySlotState("missing-mod:item", 7)
+            };
             typeof(WalletState).GetMethod("SetBalance", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(data.player.Wallet, new object[] { 1234L });
             typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -203,6 +210,12 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Favour.GetFavour("mars"), Is.EqualTo(12));
                 Assert.That(loaded.player.StaminaInitialized, Is.True);
                 Assert.That(loaded.player.CurrentStamina, Is.EqualTo(42));
+                Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);
+                Assert.That(loaded.player.Inventory.Slots.Length, Is.EqualTo(3));
+                Assert.That(loaded.player.Inventory.Slots[0].ItemId, Is.EqualTo("base:hammer"));
+                Assert.That(loaded.player.Inventory.Slots[1].Quantity, Is.Zero);
+                Assert.That(loaded.player.Inventory.Slots[2].ItemId, Is.EqualTo("missing-mod:item"));
+                Assert.That(loaded.player.Inventory.Slots[2].Quantity, Is.EqualTo(7));
                 Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(1234));
                 Assert.That(loaded.story.HasFlag("met-blacksmith"), Is.True);
                 Assert.That(loaded.world.TryGet("base:grocer", out ShopState shop), Is.True);
