@@ -43,9 +43,19 @@ namespace Core.Inventory
         /// <summary>Adds quantity of item to first available/stackable slot. Returns true on success.</summary>
         public bool AddItem(ItemDefinition item, int quantity)
         {
-            if (item == null || quantity <= 0) return false;
+            if (!TryPrepareAddition(item, quantity, out var updatedContent)) return false;
+            CommitContent(updatedContent);
+            InventoryChangedEvent.Trigger(this);
+            return true;
+        }
 
-            var updatedContent = (ItemStack[])Content.Clone();
+        // Trading prepares the complete inventory change before committing money or stock.
+        internal bool TryPrepareAddition(ItemDefinition item, int quantity, out ItemStack[] updatedContent)
+        {
+            updatedContent = null;
+            if (item == null || quantity <= 0 || Content == null) return false;
+
+            updatedContent = (ItemStack[])Content.Clone();
             var remaining = quantity;
 
             // Try to stack onto existing slots first
@@ -79,14 +89,15 @@ namespace Core.Inventory
             if (remaining > 0)
                 return false; // Inventory full
 
-            Content = updatedContent;
-            InventoryChangedEvent.Trigger(this);
             return true;
         }
+
+        internal void CommitContent(ItemStack[] content) => Content = content;
 
         /// <summary>Removes items from a specific slot index.</summary>
         public void RemoveItemAt(int slotIndex, int quantity = 1)
         {
+            if (quantity <= 0) return;
             if (slotIndex < 0 || slotIndex >= Content.Length) return;
             var stack = Content[slotIndex];
             if (stack.IsEmpty) return;
