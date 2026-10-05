@@ -274,7 +274,7 @@ namespace Core.TimeAndWeather
             }
             else if (time.dayOfSeason >= numberOfDaysInSeason)
             {
-                StartSeason(seasons[currentSeasonData.index % seasons.Length].season);
+                StartSeason(Calendar.GetNextSeason(time.season));
                 time.dayOfSeason = 1;
             }
             else

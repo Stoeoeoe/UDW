@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Common;
 using UnityEngine;
 
 namespace Core.Divinity
@@ -8,7 +9,7 @@ namespace Core.Divinity
     public sealed class DeityDefinition : ScriptableObject
     {
         [Tooltip("Stable save ID, independent of the display name.")]
-        [SerializeField] private string id;
+        [NamespacedId][SerializeField] private string id;
         [Tooltip("C# member generated for this deity, for example Mars. Leave empty to derive it from the ID.")]
         [SerializeField] private string codeName;
         [SerializeField] private string displayName;
