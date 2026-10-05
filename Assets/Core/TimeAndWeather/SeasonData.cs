@@ -3,7 +3,7 @@ using Util;
 
 namespace Core.TimeAndWeather
 {
-    [CreateAssetMenu(fileName = "SeasonData", menuName = "Game/SeasonData")]
+    [CreateAssetMenu(fileName = "Season Data", menuName = "Game/Time/Season")]
     public class SeasonData : ScriptableObject
     {
         public string label;

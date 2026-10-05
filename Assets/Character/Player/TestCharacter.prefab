@@ -47,8 +47,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.MovementAbility
   baseFootstepInterval: 0.4
   footstepVolume: 0.5
-  pitchMin: 0.8
-  pitchMax: 1.2
 --- !u!114 &6138255719784877473
 MonoBehaviour:
   m_ObjectHideFlags: 0

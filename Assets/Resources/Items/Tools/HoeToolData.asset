@@ -13,14 +13,13 @@ MonoBehaviour:
   m_Name: HoeToolData
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
   <ItemId>k__BackingField: HoeToolData
-  <ItemName>k__BackingField: 
+  <ItemName>k__BackingField: Hoe
   <Icon>k__BackingField: {fileID: 21300000, guid: c0c3b91584690fd4692faf1638a03621,
     type: 3}
   <Description>k__BackingField: 
   <MaxStackSize>k__BackingField: 99
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
   <PickupSound>k__BackingField: {fileID: 0}
-  toolName: Hoe
   maxCharge: 0
   chargePerUsage: 0
   staminaCost: 5

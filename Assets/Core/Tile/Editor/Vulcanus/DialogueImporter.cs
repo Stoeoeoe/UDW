@@ -64,14 +64,12 @@ namespace Core.Tile.Editor.Vulcanus
 
             var importedMessages = (i18nDto?.Messages ?? new List<DialogueI18nMessageDto>())
                 .Where(message => message != null && !string.IsNullOrWhiteSpace(message.MsgKey))
-                .Select(message => new VulcanusDialogueAsset.ImportedMessage
-                {
-                    msgKey = message.MsgKey,
-                    text = message.Text ?? string.Empty,
-                    nodeId = message.NodeId ?? string.Empty,
-                    sourceType = message.SourceType ?? string.Empty,
-                    optionId = message.OptionId ?? string.Empty
-                })
+                .Select(message => new VulcanusDialogueAsset.ImportedMessage(
+                    message.MsgKey,
+                    message.Text ?? string.Empty,
+                    message.NodeId ?? string.Empty,
+                    message.SourceType ?? string.Empty,
+                    message.OptionId ?? string.Empty))
                 .ToArray();
 
             asset.Configure(

@@ -12,15 +12,19 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private VulcanusProject project;
         [SerializeField] private VulcanusDialogueAsset[] dialogues = Array.Empty<VulcanusDialogueAsset>();
 
-        private Dictionary<string, VulcanusDialogueAsset> _dialogueById;
+        [NonSerialized] private Dictionary<string, VulcanusDialogueAsset> _dialogueById;
 
         public VulcanusProject Project => project;
-        public VulcanusDialogueAsset[] Dialogues => dialogues;
+        public VulcanusDialogueAsset[] Dialogues => dialogues == null
+            ? Array.Empty<VulcanusDialogueAsset>()
+            : (VulcanusDialogueAsset[])dialogues.Clone();
 
         public void Configure(VulcanusProject sourceProject, VulcanusDialogueAsset[] importedDialogues)
         {
             project = sourceProject;
-            dialogues = importedDialogues ?? Array.Empty<VulcanusDialogueAsset>();
+            dialogues = importedDialogues == null
+                ? Array.Empty<VulcanusDialogueAsset>()
+                : (VulcanusDialogueAsset[])importedDialogues.Clone();
             RebuildCache();
         }
 

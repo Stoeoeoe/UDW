@@ -30,8 +30,8 @@ namespace Plants
         private void SetVisual(int stageIndex)
         {
             if (_visualInstance) Destroy(_visualInstance);
-            if (stageIndex >= _plantData.growthStages.Count) return;
-            _visualInstance = _plantData.growthStages[stageIndex].representation.CreateInstance(transform);
+            if (stageIndex >= _plantData.GrowthStages.Count) return;
+            _visualInstance = _plantData.GrowthStages[stageIndex].Representation.CreateInstance(transform);
             _visualInstance.transform.localPosition = Vector3.zero;
         }
     }

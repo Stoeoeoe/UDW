@@ -12,11 +12,27 @@ namespace Core.Dialogue.Vulcanus
         [Serializable]
         public class ImportedMessage
         {
-            public string msgKey;
-            public string text;
-            public string nodeId;
-            public string sourceType;
-            public string optionId;
+            [SerializeField] private string msgKey;
+            [SerializeField] private string text;
+            [SerializeField] private string nodeId;
+            [SerializeField] private string sourceType;
+            [SerializeField] private string optionId;
+
+            public string MsgKey => msgKey;
+            public string Text => text;
+            public string NodeId => nodeId;
+            public string SourceType => sourceType;
+            public string OptionId => optionId;
+
+            public ImportedMessage() { }
+            public ImportedMessage(string msgKey, string text, string nodeId, string sourceType, string optionId)
+            {
+                this.msgKey = msgKey;
+                this.text = text;
+                this.nodeId = nodeId;
+                this.sourceType = sourceType;
+                this.optionId = optionId;
+            }
         }
 
         [SerializeField] private VulcanusProject project;
@@ -34,9 +50,10 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private string[] importDiagnostics = Array.Empty<string>();
         [SerializeReference] private VulcanusDialogueNode[] nodes = Array.Empty<VulcanusDialogueNode>();
 
-        private Dictionary<string, VulcanusDialogueNode> _nodeById;
-        private Dictionary<string, int> _nodeIndexById;
-        private Dictionary<string, ImportedMessage> _messageByKey;
+        [NonSerialized] private Dictionary<string, VulcanusDialogueNode> _nodeById;
+        [NonSerialized] private Dictionary<string, int> _nodeIndexById;
+        [NonSerialized] private Dictionary<string, ImportedMessage> _messageByKey;
+        [NonSerialized] private IReadOnlyList<VulcanusDialogueNode> _nodesView;
 
         public VulcanusProject Project => project;
         public int Version => version;
@@ -46,12 +63,14 @@ namespace Core.Dialogue.Vulcanus
         public bool OneShot => oneShot;
         public string DialogueTypeId => dialogueTypeId;
         public string StartNodeId => startNodeId;
-        public string[] Tags => tags;
+        public string[] Tags => tags == null ? Array.Empty<string>() : (string[])tags.Clone();
         public string CreatedAt => createdAt;
         public string UpdatedAt => updatedAt;
-        public ImportedMessage[] ImportedMessages => importedMessages;
-        public string[] ImportDiagnostics => importDiagnostics;
-        public IReadOnlyList<VulcanusDialogueNode> Nodes => nodes;
+        public ImportedMessage[] ImportedMessages => importedMessages == null
+            ? Array.Empty<ImportedMessage>()
+            : (ImportedMessage[])importedMessages.Clone();
+        public string[] ImportDiagnostics => importDiagnostics == null ? Array.Empty<string>() : (string[])importDiagnostics.Clone();
+        public IReadOnlyList<VulcanusDialogueNode> Nodes => _nodesView ?? Array.Empty<VulcanusDialogueNode>();
 
         public void Configure(
             VulcanusProject sourceProject,
@@ -77,12 +96,12 @@ namespace Core.Dialogue.Vulcanus
             oneShot = isOneShot;
             dialogueTypeId = typeId ?? string.Empty;
             startNodeId = entryNodeId ?? string.Empty;
-            tags = dialogueTags ?? Array.Empty<string>();
+            tags = dialogueTags == null ? Array.Empty<string>() : (string[])dialogueTags.Clone();
             createdAt = created ?? string.Empty;
             updatedAt = updated ?? string.Empty;
-            nodes = importedNodes ?? Array.Empty<VulcanusDialogueNode>();
-            importedMessages = messages ?? Array.Empty<ImportedMessage>();
-            importDiagnostics = diagnostics ?? Array.Empty<string>();
+            nodes = importedNodes == null ? Array.Empty<VulcanusDialogueNode>() : (VulcanusDialogueNode[])importedNodes.Clone();
+            importedMessages = messages == null ? Array.Empty<ImportedMessage>() : (ImportedMessage[])messages.Clone();
+            importDiagnostics = diagnostics == null ? Array.Empty<string>() : (string[])diagnostics.Clone();
             RebuildCaches();
         }
 
@@ -137,8 +156,8 @@ namespace Core.Dialogue.Vulcanus
             RebuildCachesIfNeeded();
             if (!string.IsNullOrWhiteSpace(msgKey) &&
                 _messageByKey.TryGetValue(msgKey, out var message) &&
-                !string.IsNullOrEmpty(message.text))
-                return message.text;
+                !string.IsNullOrEmpty(message.Text))
+                return message.Text;
 
             return fallbackText ?? string.Empty;
         }
@@ -166,6 +185,7 @@ namespace Core.Dialogue.Vulcanus
 
         private void RebuildCaches()
         {
+            _nodesView = Array.AsReadOnly(nodes ?? Array.Empty<VulcanusDialogueNode>());
             _nodeById = new Dictionary<string, VulcanusDialogueNode>(StringComparer.OrdinalIgnoreCase);
             _nodeIndexById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             _messageByKey = new Dictionary<string, ImportedMessage>(StringComparer.OrdinalIgnoreCase);
@@ -189,10 +209,10 @@ namespace Core.Dialogue.Vulcanus
             if (importedMessages == null)
                 return;
 
-            foreach (var message in importedMessages.Where(m => m != null && !string.IsNullOrWhiteSpace(m.msgKey)))
+            foreach (var message in importedMessages.Where(m => m != null && !string.IsNullOrWhiteSpace(m.MsgKey)))
             {
-                if (!_messageByKey.ContainsKey(message.msgKey))
-                    _messageByKey.Add(message.msgKey, message);
+                if (!_messageByKey.ContainsKey(message.MsgKey))
+                    _messageByKey.Add(message.MsgKey, message);
             }
         }
     }
@@ -262,7 +282,9 @@ namespace Core.Dialogue.Vulcanus
     {
         [SerializeField] private VulcanusDialogueChoiceOption[] options = Array.Empty<VulcanusDialogueChoiceOption>();
 
-        public VulcanusDialogueChoiceOption[] Options => options;
+        public VulcanusDialogueChoiceOption[] Options => options == null
+            ? Array.Empty<VulcanusDialogueChoiceOption>()
+            : (VulcanusDialogueChoiceOption[])options.Clone();
         public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.Choice;
 
         public VulcanusDialogueChoiceNode()

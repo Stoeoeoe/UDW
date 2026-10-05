@@ -118,7 +118,12 @@ namespace Core.Tile.Editor.Vulcanus
             if (dto.ClassProperties != null && dto.ClassProperties.Count > 0)
             {
                 foreach (var kv in dto.ClassProperties)
-                    VulcanusImportHelpers.TryApplyPropertyToObject(item, kv.Key, kv.Value);
+                {
+                    if (!VulcanusImportHelpers.TryApplyPropertyToObject(item, kv.Key, kv.Value))
+                        Debug.LogWarning(
+                            $"[VulcanusJsonImporter] Could not apply property '{kv.Key}' to item '{dto.Id}' ({itemType.FullName}); the imported value was ignored.",
+                            item);
+                }
             }
 
             ctx.AddObjectToAsset("item", item);

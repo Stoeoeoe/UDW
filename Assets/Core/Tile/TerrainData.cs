@@ -3,7 +3,7 @@ using UnityEngine.Serialization;
 
 namespace Core.Tile
 {
-    [CreateAssetMenu(fileName = "Tile Data", menuName = "Game/TileData", order = 0)]
+    [CreateAssetMenu(fileName = "Terrain Data", menuName = "Game/World/Terrain", order = 0)]
     public class TerrainData : ScriptableObject
     {
         [SerializeField] private TerrainType terrainType;

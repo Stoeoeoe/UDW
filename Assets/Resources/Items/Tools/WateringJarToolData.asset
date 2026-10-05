@@ -13,14 +13,13 @@ MonoBehaviour:
   m_Name: WateringJarToolData
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
   <ItemId>k__BackingField: WateringJarToolData
-  <ItemName>k__BackingField: 
+  <ItemName>k__BackingField: Watering Jar
   <Icon>k__BackingField: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715,
     type: 3}
   <Description>k__BackingField: 
   <MaxStackSize>k__BackingField: 99
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
   <PickupSound>k__BackingField: {fileID: 0}
-  toolName: Hoe
   maxCharge: 0
   chargePerUsage: 0
   staminaCost: 5

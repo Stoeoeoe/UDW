@@ -31,17 +31,17 @@ namespace Core.Catalogs.Editor
 
         private static void ValidatePlant(PlantData plant)
         {
-            var stages = plant.growthStages;
-            if (stages == null || stages.Count == 0 || stages[0] == null || stages[0].daysToReachStage != 0)
+            var stages = plant.GrowthStages;
+            if (stages.Count == 0 || stages[0] == null || stages[0].DaysToReachStage != 0)
                 throw new InvalidOperationException($"Plant '{plant.name}' needs a day-zero seed stage.");
 
             var previousDay = -1;
             for (var index = 0; index < stages.Count; index++)
             {
                 var stage = stages[index];
-                if (stage == null || stage.daysToReachStage < 0 || stage.daysToReachStage <= previousDay)
+                if (stage == null || stage.DaysToReachStage < 0 || stage.DaysToReachStage <= previousDay)
                     throw new InvalidOperationException($"Plant '{plant.name}' growth stages need strictly increasing, nonnegative day thresholds.");
-                var representation = stage.representation;
+                var representation = stage.Representation;
                 UnityEngine.Object asset = null;
                 if (representation != null)
                 {
@@ -50,7 +50,7 @@ namespace Core.Catalogs.Editor
                 }
                 if (!asset)
                     throw new InvalidOperationException($"Plant '{plant.name}' growth stage {index} needs a valid sprite or prefab representation.");
-                previousDay = stage.daysToReachStage;
+                previousDay = stage.DaysToReachStage;
             }
         }
     }

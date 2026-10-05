@@ -12,9 +12,21 @@ namespace Core.Tile.Vulcanus
         [Serializable]
         public class MapBinding
         {
-            public string mapId;
-            public GameObject mapPrefab;
-            public LocationData locationData;
+            [SerializeField] private string mapId;
+            [SerializeField] private GameObject mapPrefab;
+            [SerializeField] private LocationData locationData;
+
+            public string MapId => mapId;
+            public GameObject MapPrefab => mapPrefab;
+            public LocationData LocationData => locationData;
+
+            public MapBinding() { }
+            public MapBinding(string mapId, GameObject mapPrefab, LocationData locationData)
+            {
+                this.mapId = mapId;
+                this.mapPrefab = mapPrefab;
+                this.locationData = locationData;
+            }
         }
 
         [Header("Source")]
@@ -27,22 +39,24 @@ namespace Core.Tile.Vulcanus
         [Header("Map Prefabs")]
         [SerializeField] private MapBinding[] mapBindings = Array.Empty<MapBinding>();
 
-        private Dictionary<string, MapBinding> _bindingByMapId;
-        private Dictionary<string, MapBinding> _bindingByLocationId;
+        [NonSerialized] private Dictionary<string, MapBinding> _bindingByMapId;
+        [NonSerialized] private Dictionary<string, MapBinding> _bindingByLocationId;
 
         public VulcanusProject Project => project;
-        public VulcanusProject.EntityPrefabMapping[] EntityPrefabMappings => entityPrefabMappings;
-        public VulcanusProject.MapLocationMapping[] LocationMappings => locationMappings;
-        public MapBinding[] MapBindings => mapBindings;
+        public VulcanusProject.EntityPrefabMapping[] EntityPrefabMappings => CloneOrEmpty(entityPrefabMappings);
+        public VulcanusProject.MapLocationMapping[] LocationMappings => CloneOrEmpty(locationMappings);
+        public MapBinding[] MapBindings => CloneOrEmpty(mapBindings);
+
+        private static T[] CloneOrEmpty<T>(T[] source) => source == null ? Array.Empty<T>() : (T[])source.Clone();
 
         public void ApplySyncData(
             VulcanusProject.EntityPrefabMapping[] entityMappings,
             VulcanusProject.MapLocationMapping[] locations,
             MapBinding[] bindings)
         {
-            entityPrefabMappings = entityMappings ?? Array.Empty<VulcanusProject.EntityPrefabMapping>();
-            locationMappings = locations ?? Array.Empty<VulcanusProject.MapLocationMapping>();
-            mapBindings = bindings ?? Array.Empty<MapBinding>();
+            entityPrefabMappings = CloneOrEmpty(entityMappings);
+            locationMappings = CloneOrEmpty(locations);
+            mapBindings = CloneOrEmpty(bindings);
             RebuildCaches();
         }
 
@@ -73,9 +87,9 @@ namespace Core.Tile.Vulcanus
                 return false;
 
             EnsureCaches();
-            if (_bindingByMapId != null && _bindingByMapId.TryGetValue(mapId, out var binding) && binding.locationData != null)
+            if (_bindingByMapId != null && _bindingByMapId.TryGetValue(mapId, out var binding) && binding.LocationData != null)
             {
-                locationData = binding.locationData;
+                locationData = binding.LocationData;
                 return true;
             }
 
@@ -104,7 +118,7 @@ namespace Core.Tile.Vulcanus
             EnsureCaches();
             if (_bindingByMapId != null && _bindingByMapId.TryGetValue(mapId, out var binding))
             {
-                mapPrefab = binding.mapPrefab;
+                mapPrefab = binding.MapPrefab;
                 return mapPrefab != null;
             }
 
@@ -121,7 +135,7 @@ namespace Core.Tile.Vulcanus
 
             if (!string.IsNullOrWhiteSpace(location.id) && _bindingByLocationId != null && _bindingByLocationId.TryGetValue(location.id, out var byIdBinding))
             {
-                mapPrefab = byIdBinding.mapPrefab;
+                mapPrefab = byIdBinding.MapPrefab;
                 if (mapPrefab != null)
                     return true;
             }
@@ -131,10 +145,10 @@ namespace Core.Tile.Vulcanus
                 for (var i = 0; i < mapBindings.Length; i++)
                 {
                     var binding = mapBindings[i];
-                    if (binding == null || !ReferenceEquals(binding.locationData, location))
+                    if (binding == null || !ReferenceEquals(binding.LocationData, location))
                         continue;
 
-                    mapPrefab = binding.mapPrefab;
+                    mapPrefab = binding.MapPrefab;
                     return mapPrefab != null;
                 }
             }
@@ -160,7 +174,7 @@ namespace Core.Tile.Vulcanus
             {
                 for (var i = 0; i < mapBindings.Length; i++)
                 {
-                    var location = mapBindings[i]?.locationData;
+                    var location = mapBindings[i]?.LocationData;
                     if (location != null)
                         set.Add(location);
                 }
@@ -189,11 +203,11 @@ namespace Core.Tile.Vulcanus
 
         private void RebuildCaches()
         {
-            _bindingByMapId = IdIndex.FirstWins(mapBindings, binding => binding?.mapId,
+            _bindingByMapId = IdIndex.FirstWins(mapBindings, binding => binding?.MapId,
                 StringComparer.OrdinalIgnoreCase);
             _bindingByLocationId = IdIndex.FirstWins(mapBindings, binding =>
-                binding != null && !string.IsNullOrWhiteSpace(binding.mapId) && binding.locationData
-                    ? binding.locationData.id : null, StringComparer.OrdinalIgnoreCase);
+                binding != null && !string.IsNullOrWhiteSpace(binding.MapId) && binding.LocationData
+                    ? binding.LocationData.id : null, StringComparer.OrdinalIgnoreCase);
         }
     }
 }

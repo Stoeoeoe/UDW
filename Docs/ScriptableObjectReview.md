@@ -112,23 +112,29 @@ The two inspected plant assets have day-zero stages and ordered thresholds; this
 
 ### 8. Transient transition data is serialized into a shared asset — medium priority, lifecycle risk
 
-[TransitionContext](../Assets/Core/Location/TransitionContext.cs:11) contains mutable public serialized fields. `LevelManager` sets them before a transition and clears them after the fade/placement. There is no explicit session reset in the asset. A failed/interrupted transition or play session can leave stale data for the next consumer; ordinary asset lifetime is not itself a reset policy.
+**Implementation status (5 October 2026):** pending entry/facing values now travel as `LevelManager` method arguments and never live in an asset. Initial editor-preview values are serialized on the manager; the mutable `TransitionContext` asset and its reference have been removed. Runtime/editor compilation passed; tests have not been run.
 
-**Unify ownership:** prefer a plain runtime transition request owned by the persistent `LevelManager`, or explicitly use nonserialized session data with initialization/cleanup. If editor preview data is valuable, keep authored preview defaults separate from the pending runtime request; indiscriminately clearing the asset in `Awake` would break the existing preview intent.
+Before this fix, the `TransitionContext` asset held mutable public fields. `LevelManager` set them before a transition and cleared them after placement, so a failed/interrupted transition or play session could leave stale data. The request now travels through `LevelManager` method arguments.
+
+**Ownership:** keep authored initial preview values on `LevelManager` and pass each pending request through the load call. Do not move this transient data into `GameSaveData`.
 
 Do not move pending transition data into `GameSaveData` unless it should survive save/load. For overlapping scene loads, a latest-wins counter alone is insufficient: earlier loads have scene side effects and need cancellation/serialization/cleanup.
 
 ### 9. Surface pitch settings are disconnected from playback — low to medium priority
 
+**Implementation status (5 October 2026):** footstep pitch now uses the selected `SurfaceSound` range, with neutral pitch when no surface profile is assigned. The duplicate pitch range was removed from `MovementAbility`. Runtime/editor compilation passed; tests have not been run.
+
 [SurfaceSound](../Assets/Core/Tile/SurfaceSound.cs:6) stores `minPitch`/`maxPitch`, but [MovementAbility](../Assets/Character/Abilities/MovementAbility.cs:50) uses its own `pitchMin`/`pitchMax` instead. Editing surface pitch therefore has no effect on this playback path.
 
 The expression `terrain?.SurfaceSound.walkSound` also protects against a missing terrain, but not a missing `SurfaceSound` on an existing terrain. Current terrain assets inspected have assigned sound references; this is a validation/null-handling gap.
 
-**Unify:** choose which object owns pitch, or define an explicit ability override. A small reusable serializable pitch/range or clip-selection value is enough if both footsteps and typewriter sounds need it. Keep their sound assets separate because one models walk/run and the other models per-speaker character audio. A global sound catalog is unnecessary for directly referenced surface profiles.
+**Unify:** `SurfaceSound` owns footstep pitch because the range varies with terrain. Keep typewriter pitch on `TypewriterSound`; the two sound assets model different audio behavior. Keep their sound assets separate because one models walk/run and the other models per-speaker character audio. A global sound catalog is unnecessary for directly referenced surface profiles.
 
 ### 10. Public mutation APIs can bypass definition cache invalidation — low priority, preventive
 
-`PlantData.growthStages`, `ShopOffering` members, imported arrays, and `SkillLevelDefinition.GrantedTags` expose mutable authored data. `VulcanusWorldCatalog`, `VulcanusDialogueDatabase`, and `VulcanusDialogueAsset` build caches on enable/validate/configuration. Mutating an exposed array element at runtime can leave those caches inconsistent with the data.
+**Implementation status (5 October 2026):** plant growth-stage authoring fields are serialized privately and exposed through read-only accessors; importer catalog getters return array snapshots, and derived dictionaries are explicitly runtime-only. Mutable referenced mapping/message records and other unrelated definitions remain outside this pass.
+
+`PlantData` now exposes its stage list and stage fields read-only. `VulcanWorldCatalog`, `VulcanusDialogueDatabase`, and `VulcanusDialogueAsset` return array snapshots; cached world map bindings and imported dialogue messages use read-only properties, and runtime dictionaries are explicitly nonserialized. `ShopOffering`, `SkillLevelDefinition.GrantedTags`, nested `SpriteOrPrefab`, and project mapping records still expose mutable data, so full deep immutability remains out of scope.
 
 **Unify:** private serialized authoring fields with read-only public access; mutations only through importer/editor configuration APIs that invalidate indexes. `IReadOnlyList` reduces accidental writes but is not deep immutability if contained objects remain mutable. Make runtime cache intent explicit, using `[NonSerialized]` where appropriate for consistency with the save/runtime conventions; ordinary Unity does not serialize these plain dictionaries already.
 
@@ -136,18 +142,24 @@ Do not move serialized fields into a new base class just to standardize names. P
 
 ### 11. Imported property schemas and diagnostics can share utilities — low priority
 
+**Implementation status (5 October 2026):** item import now warns with the item ID, property key and target type when a class property cannot be applied. The two serialized property schema structs remain separate to avoid changing their asset type identities; shared importer diagnostics/schema design remains a follow-up.
+
 [VulcanusProject.PropertyDefinition](../Assets/Core/Tile/Vulcan/VulcanProject.cs:31) and [VulcanEntityDefinition.PropertyDefinition](../Assets/Core/Tile/Vulcan/VulcanEntityDefinition.cs:10) repeat the same key/label/type/default/required shape. Import configuration and diagnostic plumbing repeat across the imported assets.
 
 [ItemImporter](../Assets/Core/Tile/Editor/Vulcanus/ItemImporter.cs:118) ignores the return value from `TryApplyPropertyToObject`. The actual `gugu.vitm` contains `numberOfDays`, which the current `SeedItem` does not declare. Exact class resolution depends on project mapping, so successful import of that example is unverified; when the class resolves, an unsupported property can disappear without a field-specific diagnostic.
 
-**Unify:** shared serializable schema records where their external semantics really match; common diagnostic records and reporting; validate a typed imported definition after configuring it. Report unknown/unassignable properties rather than silently swallowing all setter failures. Keep the reflection-based conversion confined to import time. Imported fields with special meanings still belong to their domain types.
+**Unify:** shared serializable schema records where their external semantics really match; common diagnostic records and reporting; validate a typed imported definition after configuring it. Report unknown/unassignable properties rather than silently swallowing all setter failures; item import now logs the class-property failures, while other importer paths need a separate diagnostic pass. Keep the reflection-based conversion confined to import time. Imported fields with special meanings still belong to their domain types.
 
 ### 12. Remaining asset-authoring inconsistencies — low priority or informational
 
+**Implementation status (5 October 2026):** removed the unused duplicate `ToolData.toolName` field, populated inherited item names for the hoe and watering jar, and grouped tool, plant, terrain and season asset menus under consistent categories. Other informational authoring observations below remain unchanged.
+
+**Implementation status (5 October 2026):** removed the unused duplicate `ToolData.toolName` field, populated inherited item names for the hoe and watering jar, and grouped tool, plant, terrain and season asset menus under consistent categories. Other informational authoring observations below remain unchanged.
+
 - The four default Resources catalog `.asset` files were absent at review time. [DefaultCatalogAssets](../Assets/Core/Catalogs/Editor/DefaultCatalogAssets.cs:17) creates them automatically, including before play/build. Confirm their generated contents and intended source-control policy after Unity imports the current changes. Absence alone is not a runtime defect if bootstrapping runs successfully.
 - [TestSkill.asset](../Assets/Skills/TestSkill.asset:15) has ID `TestSkill` and lives outside `SkillCatalog.Path` (`Assets/Resources/Skills`). It will not be discovered by that default catalog. If this is intended shipped content, give it a valid authored ID and put/import it within the chosen discovery scope; if it is a deliberate fixture, document that. Do not automatically broaden all catalog scopes just for an unused test asset.
-- [ToolData.toolName](../Assets/Interaction/Tools/ToolData.cs:13) duplicates `ItemName`; both hoe and watering-jar assets contain `toolName: Hoe`. No C# read was found. Prefer inherited `ItemName` if these names are the same concept; otherwise document what the second name controls.
-- Asset menu naming is inconsistent: `Game/ToolData`, `Game/TileData` for `TerrainData`, `Game/Items/Plants/PlantItem` for `SeedItem`, and `Game/SeasonData`. Standardize menus and suggested filenames as a small authoring improvement, without changing existing save IDs.
+- `ToolData.toolName` was removed as an unused duplicate of inherited `ItemName`; the two shipped tool assets now have distinct inherited display names.
+- Tool, plant, terrain and season creation menus now use grouped categories under `Game/Items`, `Game/World` and `Game/Time`.
 - `WeatherData.locationFilter`, `playMusic`, `weatherMusic`, and `weatherRendererFeature` have no C# consumer found in the project source scan; `weatherMaterial` is consumed by the weather renderer feature. Verify external/serialized integrations before removing dormant fields or promising their behavior. Weather selection is rerolled on saved-time refresh; the save root does not currently hold a selected weather ID. Decide whether weather continuity is required before adding persistent weather state.
 
 ## Complete game asset inventory
@@ -169,7 +181,6 @@ Counts are matching on-disk `.asset` records, not imported subassets or runtime-
 | [PlantData](../Assets/Plants/PlantData.cs:9) | 2 | Species/growth definition; unify stage selection and validation. |
 | [ShopDefinition](../Assets/Core/Shops/ShopDefinition.cs:25) | 0 | Ordered offerings; keep stock in `ShopState`, not this asset. No catalog needed until global definition lookup is required. |
 | [LocationData](../Assets/Core/Location/LocationData.cs:7) | 2 | Location identity/type/label; good candidate for a flat `LocationCatalog`. |
-| [TransitionContext](../Assets/Core/Location/TransitionContext.cs:11) | 1 | Transient runtime carrier; needs explicit ownership/reset policy. |
 | [TerrainData](../Assets/Core/Tile/TerrainData.cs:7) | 4 | Terrain enum → surface profile; validate configured set. A terrain catalog is optional. |
 | [SurfaceSound](../Assets/Core/Tile/SurfaceSound.cs:6) | 2 | Shared walk/run audio profile; direct references are sufficient. |
 | [TypewriterSound](../Assets/Interaction/Dialogue/TypewriterSound.cs:8) | 1 | Speaker → audio mapping; good flat-catalog candidate. |

@@ -1,20 +1,22 @@
+using System;
 using System.Collections.Generic;
 using Items.Plants;
 using UnityEngine;
 
 namespace Plants
 {
-    [CreateAssetMenu(fileName = "PlantData", menuName = "Game/Plant Data")]
+    [CreateAssetMenu(fileName = "Plant Data", menuName = "Game/Items/Plants/Plant Data")]
     public class PlantData : ScriptableObject
     {
         public string plantId;
         public string label;
         public string description;
-        public List<GrowthStage> growthStages;
+        [SerializeField] private List<GrowthStage> growthStages;
+        public IReadOnlyList<GrowthStage> GrowthStages => growthStages == null ? Array.Empty<GrowthStage>() : growthStages.AsReadOnly();
         
         public GrowthStage GetSeedStage()
         {
-            return growthStages != null && growthStages.Count > 0 && growthStages[0]?.daysToReachStage == 0
+            return growthStages != null && growthStages.Count > 0 && growthStages[0]?.DaysToReachStage == 0
                 ? growthStages[0]
                 : null;
         }
@@ -27,14 +29,14 @@ namespace Plants
 
         public int GetGrowthStageIndexByDays(int daysPassedSincePlanting)
         {
-            if (growthStages == null || growthStages.Count == 0 || growthStages[0] == null || growthStages[0].daysToReachStage != 0)
+            if (growthStages == null || growthStages.Count == 0 || growthStages[0] == null || growthStages[0].DaysToReachStage != 0)
                 return -1;
 
             var best = 0;
             for (var i = 1; i < growthStages.Count; i++)
             {
                 var stage = growthStages[i];
-                if (stage == null || stage.daysToReachStage > daysPassedSincePlanting) break;
+                if (stage == null || stage.DaysToReachStage > daysPassedSincePlanting) break;
                 best = i;
             }
             return best;

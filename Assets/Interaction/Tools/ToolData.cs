@@ -6,11 +6,10 @@ using UnityEngine;
 
 namespace Interaction.Tools
 {
-    [CreateAssetMenu(fileName = "Tool Data", menuName = "Game/ToolData", order = 0)]
+    [CreateAssetMenu(fileName = "Tool", menuName = "Game/Items/Tools/Tool", order = 0)]
     [InlineEditor]
     public class ToolData : EquippableItem
     {
-        public string toolName;
         public int maxCharge = 0;
         public int chargePerUsage = 0;
         public int staminaCost = 5;

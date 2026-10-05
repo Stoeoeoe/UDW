@@ -107,7 +107,7 @@ namespace Core.Tile.Editor.Vulcanus
             discoveredMapCount = 0;
             unresolvedMapPrefabs = 0;
 
-            var existingByMapId = Index(existingBindings, b => b.mapId);
+            var existingByMapId = Index(existingBindings, b => b.MapId);
             var locationByMapId = Index(
                 existingLocationMappings,
                 m => m.mapId,
@@ -147,12 +147,8 @@ namespace Core.Tile.Editor.Vulcanus
                         .OfType<LocationData>()
                         .FirstOrDefault();
 
-                    result.Add(new VulcanusWorldCatalog.MapBinding
-                    {
-                        mapId = mapId,
-                        mapPrefab = mapPrefab,
-                        locationData = subAssetLocation ?? oldBinding?.locationData ?? mappedLocation
-                    });
+                    result.Add(new VulcanusWorldCatalog.MapBinding(
+                        mapId, mapPrefab, subAssetLocation ?? oldBinding?.LocationData ?? mappedLocation));
                     existingByMapId.Remove(mapId);
                 }
             }
@@ -161,7 +157,7 @@ namespace Core.Tile.Editor.Vulcanus
             foreach (var leftover in existingByMapId.Values.Where(b => b != null))
                 result.Add(leftover);
 
-            result.Sort((a, b) => string.Compare(a?.mapId, b?.mapId, StringComparison.OrdinalIgnoreCase));
+            result.Sort((a, b) => string.Compare(a?.MapId, b?.MapId, StringComparison.OrdinalIgnoreCase));
             return result.ToArray();
         }
 
@@ -173,11 +169,11 @@ namespace Core.Tile.Editor.Vulcanus
 
             foreach (var binding in mapBindings ?? Array.Empty<VulcanusWorldCatalog.MapBinding>())
             {
-                if (binding == null || string.IsNullOrWhiteSpace(binding.mapId)) continue;
-                byMapId[binding.mapId] = new VulcanusProject.MapLocationMapping
+                if (binding == null || string.IsNullOrWhiteSpace(binding.MapId)) continue;
+                byMapId[binding.MapId] = new VulcanusProject.MapLocationMapping
                 {
-                    mapId = binding.mapId,
-                    locationData = binding.locationData
+                    mapId = binding.MapId,
+                    locationData = binding.LocationData
                 };
             }
 

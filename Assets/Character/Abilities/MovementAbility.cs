@@ -13,8 +13,6 @@ namespace Character.Abilities
         [Header("Footsteps")]
         [SerializeField] float baseFootstepInterval = 0.4f;
         [SerializeField] float footstepVolume = 0.5f;
-        [SerializeField] float pitchMin = 0.8f;
-        [SerializeField] float pitchMax = 1.2f;
 
         float _footstepTimer;
         float _nextFootstepTime;
@@ -49,12 +47,14 @@ namespace Character.Abilities
             {
                 if (_footstepTimer >= _nextFootstepTime)
                 {
-                    var terrain = Character.CurrentTileData?.TerrainData;
+                    var surfaceSound = Character.CurrentTileData?.TerrainData?.SurfaceSound;
                     var sound   = state == MovementState.Walking
-                        ? terrain?.SurfaceSound.walkSound
-                        : terrain?.SurfaceSound.runSound;
+                        ? surfaceSound?.walkSound
+                        : surfaceSound?.runSound;
 
-                    float pitch = Random.Range(pitchMin, pitchMax);
+                    float pitch = surfaceSound != null
+                        ? Random.Range(Mathf.Min(surfaceSound.minPitch, surfaceSound.maxPitch), Mathf.Max(surfaceSound.minPitch, surfaceSound.maxPitch))
+                        : 1f;
                     MMSoundManagerSoundPlayEvent.Trigger(sound, MMSoundManager.MMSoundManagerTracks.Sfx,
                         transform.position, false, pitch: pitch, volume: footstepVolume);
 
