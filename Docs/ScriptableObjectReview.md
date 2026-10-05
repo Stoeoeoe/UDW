@@ -63,6 +63,8 @@ Do not silently choose case-sensitive lookup when moving to `DefinitionCatalog`,
 
 ### 5. Definition identity checks are embedded in a generic catalog validator — medium priority
 
+**Implementation status (5 October 2026):** shared ID predicates now cover nonblank, namespaced and strict lowercase namespaced forms. Catalog authoring checks and skill mod registration use the appropriate shared rule; deity registration uses the shared nonblank rule. Per-type validation remains at the authoring boundary. Compilation passed; tests have not been run.
+
 [CatalogValidation](../Assets/Core/Catalogs/Editor/CatalogValidation.cs:13) knows specific gameplay types (`SkillDefinition`, `SpawnedObject`). Skill mod registration separately repeats its namespace/whitespace checks. Deity mod registration only requires a nonblank ID. Items default a missing ID to asset name; plants accept any nonblank ID. Locations show the namespaced-ID drawer but currently contain legacy unnamespaced IDs.
 
 Lookup policies also differ deliberately: flat catalogs and saved state use ordinal keys; Vulcan world/dialogue bindings and location resolution are case-insensitive and first-wins. Skill validation allows more forms than the strict lowercase spawnable regex. An Inspector drawer is authoring assistance, not validation.
@@ -72,6 +74,8 @@ Lookup policies also differ deliberately: flat catalogs and saved state use ordi
 This does **not** justify rewriting all IDs to `base:*`: saved keys and external formats already use different conventions. Existing stable IDs remain stable; stricter rules can apply to new content without introducing save migrations.
 
 ### 6. Validation is mostly about IDs, not whether definitions can execute — medium priority
+
+**Implementation status (5 October 2026):** plant catalogs now reject missing stages, stages without a day-zero seed, non-increasing or negative thresholds, and missing or invalid sprite/prefab representations. Other type-specific checks in the table remain follow-up work. Compilation passed; tests have not been run.
 
 Examples of missing authoring checks:
 
@@ -95,6 +99,8 @@ Examples of missing authoring checks:
 Avoid runtime folder scans and validation on every lookup. Keep any necessary runtime/mod-boundary checks focused on incoming data.
 
 ### 7. Plant growth selection should have one implementation — medium priority, partly latent
+
+**Implementation status (5 October 2026):** stage and index access now share one threshold-based selection method; authored list order defines progression, and malformed stage data is rejected during catalog discovery. Compilation passed; tests have not been run.
 
 [PlantData](../Assets/Plants/PlantData.cs:14) has three overlapping ways to select a stage. `GetGrowthStageByDays` calls LINQ `Max` on `GrowthStage` objects, but [GrowthStage](../Assets/Plants/GrowthStage.cs:8) implements no comparison. With multiple eligible stages this attempts to compare non-comparable records. No current call site to that method was found, so this is a latent defect rather than a demonstrated active failure.
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core.Catalogs;
+using Core.Common;
 using UnityEngine;
 
 namespace Core.Divinity
@@ -44,8 +45,7 @@ namespace Core.Divinity
 
         public static void ValidateId(string id)
         {
-            if (string.IsNullOrWhiteSpace(id))
-                throw new ArgumentException("A stable deity ID is required.", nameof(id));
+            if (!DefinitionIdRules.IsPresent(id)) throw new ArgumentException("A stable deity ID is required.", nameof(id));
         }
     }
 }

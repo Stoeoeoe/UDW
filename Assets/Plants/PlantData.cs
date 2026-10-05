@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Items.Plants;
 using UnityEngine;
 
@@ -15,21 +14,28 @@ namespace Plants
         
         public GrowthStage GetSeedStage()
         {
-            return growthStages.FirstOrDefault(g => g.daysToReachStage <= 0);
+            return growthStages != null && growthStages.Count > 0 && growthStages[0]?.daysToReachStage == 0
+                ? growthStages[0]
+                : null;
         }
 
         public GrowthStage GetGrowthStageByDays(int daysPassedSincePlanting)
         {
-            return growthStages.Max(g => g.daysToReachStage <= daysPassedSincePlanting ? g : null);
+            var index = GetGrowthStageIndexByDays(daysPassedSincePlanting);
+            return index >= 0 ? growthStages[index] : null;
         }
 
         public int GetGrowthStageIndexByDays(int daysPassedSincePlanting)
         {
-            int best = 0;
-            for (int i = 0; i < growthStages.Count; i++)
+            if (growthStages == null || growthStages.Count == 0 || growthStages[0] == null || growthStages[0].daysToReachStage != 0)
+                return -1;
+
+            var best = 0;
+            for (var i = 1; i < growthStages.Count; i++)
             {
-                if (growthStages[i].daysToReachStage <= daysPassedSincePlanting)
-                    best = i;
+                var stage = growthStages[i];
+                if (stage == null || stage.daysToReachStage > daysPassedSincePlanting) break;
+                best = i;
             }
             return best;
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core.Catalogs;
+using Core.Common;
 using UnityEngine;
 
 namespace Character
@@ -41,13 +42,8 @@ namespace Character
                 throw new ArgumentNullException(nameof(definition));
 
             var id = definition.SkillId;
-            var separator = id?.IndexOf(':') ?? -1;
-            if (separator <= 0 || separator == id.Length - 1)
+            if (!DefinitionIdRules.IsNamespaced(id))
                 throw new ArgumentException($"Skill '{definition.name}' needs a namespaced ID such as base:hammer_mastery.");
-
-            foreach (var character in id)
-                if (char.IsWhiteSpace(character))
-                    throw new ArgumentException($"Skill ID '{id}' cannot contain whitespace.");
 
             if (GetCatalog().Get(id) || Mods.ContainsKey(id))
                 throw new InvalidOperationException($"Duplicate skill ID '{id}'.");
