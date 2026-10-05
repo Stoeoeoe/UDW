@@ -7,6 +7,7 @@ using Character;
 using Core.Divinity;
 using Core.Inventory;
 using Core.Spawning;
+using Core.Shops;
 using Core.TimeAndWeather;
 using Interaction;
 using NUnit.Framework;
