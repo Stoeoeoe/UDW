@@ -7,6 +7,7 @@ using Core.Events;
 using Core.Game;
 using Core.Location;
 using Core.TimeAndWeather;
+using Core.Tile;
 using MoreMountains.Tools;
 using UnityEngine;
 
@@ -37,19 +38,52 @@ namespace Plants
 
         public void OnEvent(NewDayEvent e)
         {
-            foreach (var entry in GameState.World.GetStates<PlantState>())
+            var growthEvents = new List<PlantGrowthEvent>();
+            var conditionEvents = new List<PlantConditionChangedEvent>();
+            var dryEvents = new List<FarmlandDriedEvent>();
+            // One owner consumes yesterday's irrigation before drying every location.
+            // Commit the whole daily update before callbacks can mutate the live store.
+            foreach (var entry in GameState.World.GetStates<PlantState>().ToArray())
             {
                 var state = entry.State;
-                if (!TryGetPlantData(state.plantID, out var data)) continue;
+                if (state.condition != PlantCondition.Healthy || !TryGetPlantData(state.plantID, out var data)) continue;
 
+                var position = ParsePlantObjectId(entry.ObjectId);
+                var irrigated = GameState.World.TryGet<FarmlandState>(entry.LocationId ?? WorldState.Global,
+                    MapManager.FarmlandObjectId(position), out var land) && land.plowed && land.irrigated;
                 var oldStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
-                state.daysPassedSincePlanting++;
+                var previousCondition = state.condition;
+                state.AdvanceDay(irrigated, data.DaysWithoutWaterUntilWilt);
                 var newStageIndex = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
                 if (newStageIndex != oldStageIndex)
-                {
-                    PlantGrowthEvent.Trigger(entry.LocationId, ParsePlantObjectId(entry.ObjectId), newStageIndex);
-                }
+                    growthEvents.Add(new PlantGrowthEvent
+                    {
+                        LocationId = entry.LocationId, Position = position, NewStageIndex = newStageIndex
+                    });
+                if (state.condition != previousCondition)
+                    conditionEvents.Add(new PlantConditionChangedEvent
+                    {
+                        LocationId = entry.LocationId, Position = position,
+                        PreviousCondition = previousCondition, Condition = state.condition
+                    });
             }
+
+            foreach (var entry in GameState.World.GetStates<FarmlandState>().ToArray())
+            {
+                if (!entry.State.irrigated) continue;
+                entry.State.irrigated = false;
+                // Empty/unplowed records need no saved override once dry.
+                if (!entry.State.plowed)
+                    GameState.World.Remove(entry.LocationId ?? WorldState.Global, entry.ObjectId);
+                dryEvents.Add(new FarmlandDriedEvent
+                {
+                    LocationId = entry.LocationId, ObjectId = entry.ObjectId
+                });
+            }
+
+            foreach (var dry in dryEvents) EventBus<FarmlandDriedEvent>.Raise(dry);
+            foreach (var growth in growthEvents) EventBus<PlantGrowthEvent>.Raise(growth);
+            foreach (var change in conditionEvents) EventBus<PlantConditionChangedEvent>.Raise(change);
         }
 
         public IEnumerable<KeyValuePair<Vector2Int, PlantState>> GetPlantStatesInLocation(string locationId)

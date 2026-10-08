@@ -19,7 +19,7 @@ using UnityEngine.Tilemaps;
 namespace Core.Tile
 {
     public class MapManager : Singleton<MapManager>,
-        IEventListener<SowPlantEvent>
+        IEventListener<SowPlantEvent>, IEventListener<FarmlandDriedEvent>
     {
         [SerializeField] private TerrainData[] tileDataTypes;
         [SerializeField] RuleTile plowedFarmlandTile;
@@ -103,11 +103,13 @@ namespace Core.Tile
         protected void OnEnable()
         {
             this.Subscribe<SowPlantEvent>();
+            this.Subscribe<FarmlandDriedEvent>();
         }
 
         protected void OnDisable()
         {
             this.Unsubscribe<SowPlantEvent>();
+            this.Unsubscribe<FarmlandDriedEvent>();
         }
 
         #endregion
@@ -230,7 +232,7 @@ namespace Core.Tile
         private Vector3 GetWorldPositionFromTileCoordinates(Vector2Int coordinates)
         {
             var cellPosition = new Vector3Int(coordinates.x, coordinates.y, 0);
-            return _terrainTilemap.CellToWorld(cellPosition) + _terrainTilemap.cellSize / 2;
+            return _terrainTilemap.GetCellCenterWorld(cellPosition);
         }
 
         public bool TryGetAnchor(string anchorId, out VulcanusMapAnchor anchor)
@@ -264,8 +266,7 @@ namespace Core.Tile
 
         public void PlowTile(TileData tile)
         {
-            if (!tile.IsFarmable) return;
-            tile.FarmlandData?.Plow();
+            if (!tile.TryPlow()) return;
             SetTileAt(_plowedTilemap, tile.Coordinates, plowedFarmlandTile);
             UpdateFarmlandState(tile.Coordinates, plowed: true);
         }
@@ -275,13 +276,14 @@ namespace Core.Tile
             if (!tile.IsFarmable) return;
             tile.FarmlandData?.Unplow();
             SetTileAt(_plowedTilemap, tile.Coordinates, null);
-            UpdateFarmlandState(tile.Coordinates, plowed: false);
+            SetTileAt(_irrigatedTilemap, tile.Coordinates, null);
+            UpdateFarmlandState(tile.Coordinates, plowed: false, irrigated: false);
         }
 
         public void IrrigateTile(TileData tile)
         {
-            if (!tile.IsFarmable) return;
-            tile.FarmlandData?.Irrigate();
+            if (!tile.IsFarmable || tile.FarmlandData is not { IsPlowed: true }) return;
+            tile.TryWater();
             SetTileAt(_irrigatedTilemap, tile.Coordinates, irrigatedFarmlandTile);
             UpdateFarmlandState(tile.Coordinates, irrigated: true);
         }
@@ -317,10 +319,10 @@ namespace Core.Tile
                 GameState.World.Set(locationId, objectId, state);
         }
 
-        private static string FarmlandObjectId(Vector2Int coords) =>
+        internal static string FarmlandObjectId(Vector2Int coords) =>
             FarmlandObjectPrefix + coords.x.ToString(CultureInfo.InvariantCulture) + "," + coords.y.ToString(CultureInfo.InvariantCulture);
 
-        private static Vector2Int ParseFarmlandObjectId(string objectId)
+        internal static Vector2Int ParseFarmlandObjectId(string objectId)
         {
             if (!objectId.StartsWith(FarmlandObjectPrefix, StringComparison.Ordinal))
                 throw new FormatException($"Invalid farmland object ID '{objectId}'.");
@@ -374,11 +376,26 @@ namespace Core.Tile
 
         public void OnEvent(SowPlantEvent sowPlantEvent)
         {
+            if (sowPlantEvent.LocationId != LevelManager.Instance.CurrentLocationData?.id) return;
+
             var tileData = GetTileDataAtCoordinates(sowPlantEvent.Position);
             if (tileData == null)
                 throw new Exception($"Missing tile data for sowing plant at {sowPlantEvent.Position}");
 
             SpawnPlantInstance(sowPlantEvent.PlantId, sowPlantEvent.Position, tileData);
+        }
+
+        public void OnEvent(FarmlandDriedEvent e)
+        {
+            if (e.LocationId != LevelManager.Instance.CurrentLocationData?.id) return;
+            // WorldState also permits farmland records that do not identify a map cell.
+            if (!e.ObjectId.StartsWith(FarmlandObjectPrefix, StringComparison.Ordinal)) return;
+            var position = ParseFarmlandObjectId(e.ObjectId);
+            // A prior callback may already have watered the tile for the new day.
+            if (GameState.World.TryGet<FarmlandState>(e.LocationId, e.ObjectId, out var state)
+                && state.irrigated) return;
+            GetTileDataAtCoordinates(position)?.DryOut();
+            SetTileAt(_irrigatedTilemap, position, null);
         }
 
         private void InitializeMap()
@@ -583,11 +600,12 @@ namespace Core.Tile
                 if (tileData == null) continue;
                 if (!PlantManager.Current.TryGetPlantData(state.plantID, out var plantData)) continue;
                 var stageIndex = plantData.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
-                SpawnPlantInstance(state.plantID, pos, tileData, stageIndex);
+                SpawnPlantInstance(state.plantID, pos, tileData, stageIndex, state.condition);
             }
         }
 
-        private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData, int stageIndex = 0)
+        private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData, int stageIndex = 0,
+            PlantCondition condition = PlantCondition.Healthy)
         {
             if (!PlantManager.Current.TryGetPlantData(plantId, out var plantData)) return;
 
@@ -596,7 +614,7 @@ namespace Core.Tile
             go.transform.position = tileData.WorldPosition;
 
             var locationId = LevelManager.Instance.CurrentLocationData?.id;
-            go.AddComponent<FarmablePlant>().Initialize(locationId, pos, plantData, stageIndex);
+            go.AddComponent<FarmablePlant>().Initialize(locationId, pos, plantData, stageIndex, condition);
         }
 
         #endregion
@@ -613,7 +631,7 @@ namespace Core.Tile
                 var coords = ParseFarmlandObjectId(pair.Key);
                 var state = pair.Value;
                 var tile = GetTileDataAtCoordinates(coords);
-                if (tile == null) continue;
+                if (tile == null || !tile.IsFarmable) continue;
 
                 if (state.plowed)
                 {
@@ -621,7 +639,7 @@ namespace Core.Tile
                     SetTileAt(_plowedTilemap, coords, plowedFarmlandTile);
                 }
 
-                if (state.irrigated)
+                if (state.irrigated && state.plowed)
                 {
                     tile.FarmlandData?.Irrigate();
                     SetTileAt(_irrigatedTilemap, coords, irrigatedFarmlandTile);

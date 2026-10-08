@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Items.Plants;
+using Core.Common;
 using UnityEngine;
 
 namespace Plants
@@ -11,6 +12,10 @@ namespace Plants
         public string plantId;
         public string label;
         public string description;
+        [SerializeField, Min(1)] private int daysWithoutWaterUntilWilt = 5;
+        [SerializeField] private SpriteOrPrefab wiltedRepresentation;
+        public int DaysWithoutWaterUntilWilt => Mathf.Max(1, daysWithoutWaterUntilWilt);
+        public SpriteOrPrefab WiltedRepresentation => wiltedRepresentation;
         [SerializeField] private List<GrowthStage> growthStages;
         public IReadOnlyList<GrowthStage> GrowthStages => growthStages == null ? Array.Empty<GrowthStage>() : growthStages.AsReadOnly();
         
