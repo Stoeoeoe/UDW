@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/tileset.schema.json",
   "version": 1,
-  "id": "villagetileset",
+  "id": "base:villagetileset",
   "name": "VillageTileset Test",
-  "spriteSheet": "assets/VillageTileset.png",
+  "spriteSheet": "assets/VillageTileset.aseprite",
   "columns": 32,
   "tileCount": 1024,
   "tiles": {

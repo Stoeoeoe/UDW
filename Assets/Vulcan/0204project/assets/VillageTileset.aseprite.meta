@@ -129,7 +129,7 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: VillageTileset
     originalName: 
-    pivot: {x: 0.502947, y: 0}
+    pivot: {x: 0.503937, y: 0}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     customData: 
@@ -137,7 +137,7 @@ ScriptedImporter:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 509
+      width: 508
       height: 512
     spriteID: 92b8e6cf66301f248b692a8ee09dcf74
     spriteBone: []
@@ -169,7 +169,7 @@ ScriptedImporter:
       cellRect:
         x: 0
         y: 0
-        width: 509
+        width: 508
         height: 512
       spriteId: 92b8e6cf66301f248b692a8ee09dcf74
     linkedCells: []
