@@ -1,12 +1,49 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(5, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
+    [ScriptedImporter(6, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
+        // Declare source-derived artifact dependencies before Unity chooses import order.
+        // A fresh project must import its project and tileset assets before its maps.
+        internal static string[] GatherDependenciesFromSourceFile(string assetPath)
+        {
+            var isMap = assetPath.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase);
+            var isTileset = assetPath.EndsWith(".vts", StringComparison.OrdinalIgnoreCase);
+            if (!isMap && !isTileset) return Array.Empty<string>();
+            var dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var projectPath = VulcanusImportHelpers.FindProjectAssetPath(assetPath);
+                if (!string.IsNullOrEmpty(projectPath)) dependencies.Add(projectPath);
+                if (isMap)
+                {
+                    var paths = VulcanusImportHelpers.BuildTilesetIndex(assetPath, projectPath);
+                    foreach (var id in VulcanusImportHelpers.LoadDto<MapDto>(assetPath).TilesetRefs)
+                        if (!string.IsNullOrWhiteSpace(id) && paths.TryGetValue(id, out var path)) dependencies.Add(path);
+                }
+                else
+                {
+                    var sheet = VulcanusImportHelpers.LoadDto<TilesetDto>(assetPath).SpriteSheet;
+                    var path = VulcanusImportHelpers.ResolveAssetReferencePath(assetPath, sheet, projectPath);
+                    if (path != null) dependencies.Add(path);
+                }
+            }
+            catch (Exception ex) when (ex is Newtonsoft.Json.JsonException || ex is IOException || ex is InvalidOperationException)
+            {
+                // OnImportAsset reports malformed or missing required content with its source path.
+            }
+            var result = new string[dependencies.Count];
+            dependencies.CopyTo(result);
+            Array.Sort(result, StringComparer.OrdinalIgnoreCase);
+            return result;
+        }
+
         public override void OnImportAsset(AssetImportContext ctx)
         {
             try
@@ -51,8 +88,7 @@ namespace Core.Tile.Editor.Vulcanus
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[VulcanusImporterCoordinator] Failed importing '{ctx.assetPath}'.\n{ex}");
-                VulcanusImportHelpers.ImportAsText(ctx);
+                ctx.LogImportError($"[VulcanusImporterCoordinator] Failed importing '{ctx.assetPath}': {ex.Message}");
             }
         }
     }

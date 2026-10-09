@@ -22,8 +22,7 @@ namespace Core.Tile.Editor.Vulcanus
         // ── Entity prefabs ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Tries every known init method on each MonoBehaviour of the instance,
-        /// then applies JSON properties by name matching.
+        /// Applies JSON property overrides to prefab components at import time.
         /// </summary>
         public static void InitializeEntity(GameObject instance, VulcanusEntityInstanceData data)
         {
@@ -31,9 +30,6 @@ namespace Core.Tile.Editor.Vulcanus
             foreach (var behaviour in behaviours)
             {
                 if (behaviour == null) continue;
-                TryInvokeInitMethod(behaviour, "ApplyVulcanusEntityData", data);
-                TryInvokeInitMethod(behaviour, "InitializeFromVulcanus", data);
-                TryInvokeInitMethod(behaviour, "ConfigureFromVulcanus", data);
                 ApplyJsonProperties(behaviour, data.propertiesJson);
             }
 
@@ -51,26 +47,6 @@ namespace Core.Tile.Editor.Vulcanus
             EditorUtility.SetDirty(instance);
         }
 
-        // ── Init method dispatch ──────────────────────────────────────────────────
-
-        private static void TryInvokeInitMethod(object target, string methodName, VulcanusEntityInstanceData data)
-        {
-            var type = target.GetType();
-
-            var byData = type.GetMethod(methodName, MemberFlags, null,
-                new[] { typeof(VulcanusEntityInstanceData) }, null);
-            if (byData != null)
-            {
-                byData.Invoke(target, new object[] { data });
-                return;
-            }
-
-            var byJson = type.GetMethod(methodName, MemberFlags, null,
-                new[] { typeof(string) }, null);
-            byJson?.Invoke(target, new object[] { data.propertiesJson });
-        }
-
-        // ── JSON property application ─────────────────────────────────────────────
 
         private static void ApplyJsonProperties(object target, string propertiesJson)
         {

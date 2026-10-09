@@ -44,6 +44,9 @@ namespace Core.Tile.Editor.Vulcanus
                 ? AssetDatabase.LoadAssetAtPath<Texture2D>(spriteSheetAssetPath)
                 : null;
 
+            if (!texture && (tileCount > 0 || dto.Objects.Count > 0))
+                throw new InvalidOperationException($"Tileset '{tilesetId}' requires sprite sheet '{dto.SpriteSheet}'. Check its owner-relative or project-relative path.");
+
             var tiles = new VulcanusTile[tileCount];
             for (var i = 0; i < tileCount; i++)
             {

@@ -37,6 +37,7 @@ namespace Core.Tile.Editor.Vulcanus
                     ? Mathf.Max(1, project.TileSize)
                     : VulcanusImportHelpers.GetProjectTileSize(projectAssetPath);
                 catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(projectAssetPath);
+                if (catalog) VulcanusImportHelpers.AddDependency(ctx, AssetDatabase.GetAssetPath(catalog));
             }
 
             var mapId = !string.IsNullOrEmpty(dto.Id) ? dto.Id : VulcanusImportHelpers.GetBaseName(ctx.assetPath);
@@ -44,118 +45,123 @@ namespace Core.Tile.Editor.Vulcanus
             var width = Math.Max(1, dto.Width);
             var height = Math.Max(1, dto.Height);
 
+            var tilesetPaths = VulcanusImportHelpers.BuildTilesetIndex(ctx.assetPath, projectAssetPath);
             var tilesetsByIndex = new List<VulcanusTilesetAsset>();
             foreach (var refId in dto.TilesetRefs)
             {
-                var tilesetAssetPath =
-                    VulcanusImportHelpers.FindTilesetById(ctx.assetPath, refId, projectAssetPath);
-                if (!string.IsNullOrEmpty(tilesetAssetPath))
-                {
-                    VulcanusImportHelpers.AddDependency(ctx, tilesetAssetPath);
-                    tilesetsByIndex.Add(AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(tilesetAssetPath));
-                }
-                else
-                {
-                    tilesetsByIndex.Add(null);
-                }
+                if (string.IsNullOrWhiteSpace(refId) || !tilesetPaths.TryGetValue(refId, out var tilesetAssetPath))
+                    throw new InvalidOperationException($"Map '{mapId}' references missing tileset '{refId}'.");
+                VulcanusImportHelpers.AddDependency(ctx, tilesetAssetPath);
+                var tileset = AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(tilesetAssetPath);
+                if (!tileset)
+                    throw new InvalidOperationException($"Tileset '{refId}' at '{tilesetAssetPath}' has not imported successfully.");
+                tilesetsByIndex.Add(tileset);
             }
 
             var mapRoot = new GameObject(string.IsNullOrEmpty(mapName) ? mapId : mapName);
-            var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
-
-            var gridGo = new GameObject("Grid");
-            gridGo.transform.SetParent(mapRoot.transform, false);
-            var grid = gridGo.AddComponent<Grid>();
-            grid.cellLayout = GridLayout.CellLayout.Rectangle;
-            grid.cellSize = Vector3.one;
-
-            Tilemap terrainTilemap = null;
-            Tilemap farmlandTilemap = null;
-            var terrainCells = new List<VulcanusImportedMap.TerrainCell>();
-            var persistentEntities = new List<AuthoredSpawnPlacement>();
-
-            foreach (var layer in dto.Layers)
+            try
             {
-                if (!layer.Visible) continue;
+                var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
 
-                if (string.Equals(layer.Kind, "object", StringComparison.OrdinalIgnoreCase))
+                var gridGo = new GameObject("Grid");
+                gridGo.transform.SetParent(mapRoot.transform, false);
+                var grid = gridGo.AddComponent<Grid>();
+                grid.cellLayout = GridLayout.CellLayout.Rectangle;
+                grid.cellSize = Vector3.one;
+
+                Tilemap terrainTilemap = null;
+                Tilemap farmlandTilemap = null;
+                var terrainCells = new List<VulcanusImportedMap.TerrainCell>();
+                var persistentEntities = new List<AuthoredSpawnPlacement>();
+
+                foreach (var layer in dto.Layers)
                 {
-                    SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, tilesetsByIndex, ctx);
-                    continue;
+                    if (!layer.Visible) continue;
+
+                    if (string.Equals(layer.Kind, "object", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, tilesetsByIndex);
+                        continue;
+                    }
+
+                    if (layer.Data == null)
+                    {
+                        SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize,
+                            catalog, spawnCatalog, ctx, persistentEntities);
+                        continue;
+                    }
+
+                    var hasTileCollision = layer.Kind.Equals("visual", StringComparison.OrdinalIgnoreCase) ||
+                                           layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
+                    var tilemap = CreateTilemapLayer(
+                        gridGo.transform,
+                        layer.Name,
+                        layer.ZOrder,
+                        layer.Opacity,
+                        layer.SortingLayer,
+                        hasTileCollision);
+                    PopulateTileLayer(tilemap, layer.Data, height, tilesetsByIndex);
+
+                    var isTerrain = layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
+                    if (terrainTilemap == null && isTerrain) terrainTilemap = tilemap;
+                    if (farmlandTilemap == null && layer.Name.Equals("FarmLand", StringComparison.OrdinalIgnoreCase))
+                        farmlandTilemap = tilemap;
+
+                    if (isTerrain) ExtractTerrainCells(layer, height, terrainCells, project);
+
+                    SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog, spawnCatalog,
+                        ctx, persistentEntities);
                 }
 
-                if (layer.Data == null)
-                {
-                    SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize,
-                        catalog, spawnCatalog, ctx, persistentEntities);
-                    continue;
-                }
+                SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
 
-                var hasTileCollision = layer.Kind.Equals("visual", StringComparison.OrdinalIgnoreCase) ||
-                                       layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
-                var tilemap = CreateTilemapLayer(
-                    gridGo.transform,
-                    layer.Name,
-                    layer.ZOrder,
-                    layer.Opacity,
-                    layer.SortingLayer,
-                    hasTileCollision);
-                PopulateTileLayer(tilemap, layer.Data, height, tilesetsByIndex);
+                var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(
+                    mapRoot.transform,
+                    dto.SpatialPrimitives?.Anchors,
+                    height,
+                    tileSize);
+                VulcanusMapTriggerImporter.SpawnTriggers(
+                    mapRoot.transform,
+                    dto.LocationLinks,
+                    dto.SpatialPrimitives?.Triggers,
+                    anchorsById,
+                    height,
+                    tileSize,
+                    catalog);
+                VulcanusMapTriggerImporter.SpawnColliders(
+                    mapRoot.transform,
+                    dto.SpatialPrimitives?.Collisions,
+                    height,
+                    tileSize);
 
-                var isTerrain = layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
-                if (terrainTilemap == null && isTerrain) terrainTilemap = tilemap;
-                if (farmlandTilemap == null && layer.Name.Equals("FarmLand", StringComparison.OrdinalIgnoreCase))
-                    farmlandTilemap = tilemap;
+                var plowedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Plowed", 10, DefaultOverlayAlpha);
+                var irrigatedTilemap =
+                    CreateTilemapLayer(gridGo.transform, "FarmLand_Irrigated", 11, DefaultOverlayAlpha);
+                var overlayTilemap = CreateTilemapLayer(gridGo.transform, "Overlay", 999, DefaultOverlayAlpha);
 
-                if (isTerrain) ExtractTerrainCells(layer, height, terrainCells, project);
+                if (terrainTilemap == null)
+                    terrainTilemap = CreateTilemapLayer(gridGo.transform, "Terrain", 0, 1f);
 
-                SpawnEntities(mapRoot.transform, layer.Entities, $"{layer.Name}_Entities", height, tileSize, catalog, spawnCatalog,
-                    ctx, persistentEntities);
+                mapComponent.Configure(mapId, mapName, width, height, tileSize);
+                mapComponent.SetTilemaps(terrainTilemap, farmlandTilemap, plowedTilemap, irrigatedTilemap, overlayTilemap);
+                mapComponent.SetTerrainCells(terrainCells.ToArray());
+                mapComponent.SetPersistentEntities(persistentEntities.ToArray());
+
+                ctx.AddObjectToAsset("map", mapRoot);
+                ctx.SetMainObject(mapRoot);
+
+                ctx.AddObjectToAsset("locationData", BuildLocationData(mapId, mapName, dto.Metadata, ctx.assetPath));
             }
-
-            SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
-
-            var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(
-                mapRoot.transform,
-                dto.SpatialPrimitives?.Anchors,
-                height,
-                tileSize);
-            VulcanusMapTriggerImporter.SpawnTriggers(
-                mapRoot.transform,
-                dto.LocationLinks,
-                dto.SpatialPrimitives?.Triggers,
-                anchorsById,
-                height,
-                tileSize,
-                catalog);
-            VulcanusMapTriggerImporter.SpawnColliders(
-                mapRoot.transform,
-                dto.SpatialPrimitives?.Collisions,
-                height,
-                tileSize);
-
-            var plowedTilemap = CreateTilemapLayer(gridGo.transform, "FarmLand_Plowed", 10, DefaultOverlayAlpha);
-            var irrigatedTilemap =
-                CreateTilemapLayer(gridGo.transform, "FarmLand_Irrigated", 11, DefaultOverlayAlpha);
-            var overlayTilemap = CreateTilemapLayer(gridGo.transform, "Overlay", 999, DefaultOverlayAlpha);
-
-            if (terrainTilemap == null)
-                terrainTilemap = CreateTilemapLayer(gridGo.transform, "Terrain", 0, 1f);
-
-            mapComponent.Configure(mapId, mapName, width, height, tileSize);
-            mapComponent.SetTilemaps(terrainTilemap, farmlandTilemap, plowedTilemap, irrigatedTilemap, overlayTilemap);
-            mapComponent.SetTerrainCells(terrainCells.ToArray());
-            mapComponent.SetPersistentEntities(persistentEntities.ToArray());
-
-            ctx.AddObjectToAsset("map", mapRoot);
-            ctx.SetMainObject(mapRoot);
-
-            ctx.AddObjectToAsset("locationData", BuildLocationData(mapId, mapName, dto.Metadata));
+            catch
+            {
+                UnityEngine.Object.DestroyImmediate(mapRoot);
+                throw;
+            }
         }
 
         // ── Location data ─────────────────────────────────────────────────────
 
-        private static LocationData BuildLocationData(string mapId, string mapName, MapMetadataDto metadata)
+        private static LocationData BuildLocationData(string mapId, string mapName, MapMetadataDto metadata, string mapAssetPath)
         {
             var locationData = ScriptableObject.CreateInstance<LocationData>();
             locationData.name = "LocationData_" + mapId;
@@ -168,6 +174,9 @@ namespace Core.Tile.Editor.Vulcanus
                     VulcanusImportHelpers.TryApplyPropertyToObject(locationData, key, token);
             }
 
+            // Source metadata can configure gameplay, but identity and scene routing are importer-owned.
+            locationData.id = mapId;
+            locationData.scenePath = VulcanusMapScenePostprocessor.GetScenePath(mapAssetPath);
             return locationData;
         }
 
@@ -380,92 +389,28 @@ namespace Core.Tile.Editor.Vulcanus
             LayerDto layer,
             int mapHeight,
             int tileSize,
-            IList<VulcanusTilesetAsset> tilesetsByIndex,
-            AssetImportContext ctx)
+            IList<VulcanusTilesetAsset> tilesetsByIndex)
         {
             if (layer.ObjectInstances == null || layer.ObjectInstances.Count == 0) return;
 
             var group = new GameObject(layer.Name);
             group.transform.SetParent(mapRoot, false);
 
-            // Build a lookup from tilesetId → asset for the tilesets referenced in this map.
-            var tilesetById = new Dictionary<string, VulcanusTilesetAsset>();
-            foreach (var ts in tilesetsByIndex)
-            {
-                if (ts != null && !tilesetById.ContainsKey(ts.TilesetId))
-                    tilesetById[ts.TilesetId] = ts;
-            }
-
+            var tilesetById = Core.Catalogs.IdIndex.FirstWins(tilesetsByIndex,
+                tileset => tileset ? tileset.TilesetId : null, StringComparer.OrdinalIgnoreCase);
             foreach (var inst in layer.ObjectInstances)
             {
-                if (!tilesetById.TryGetValue(inst.TilesetId, out var tileset)) continue;
-                if (!tileset.TryGetObjectDefinition(inst.ObjectDefinitionId, out var def)) continue;
+                if (string.IsNullOrWhiteSpace(inst.TilesetId) || !tilesetById.TryGetValue(inst.TilesetId, out var tileset))
+                    throw new InvalidOperationException($"Object '{inst.Id}' references missing tileset '{inst.TilesetId}'.");
+                if (!tileset.TryGetObjectDefinition(inst.ObjectDefinitionId, out var def) || !def.prefab)
+                    throw new InvalidOperationException($"Object '{inst.Id}' requires imported prefab '{inst.ObjectDefinitionId}' from tileset '{inst.TilesetId}'. Reimport the tileset.");
 
-                var objHeightTiles = def.heightTiles > 0
-                    ? def.heightTiles
-                    : (def.tiles?.Length > 0 ? def.tiles.Max(t => t.y) - def.tiles.Min(t => t.y) + 1 : 1);
-                var objWidthTiles = def.widthTiles > 0
-                    ? def.widthTiles
-                    : (def.tiles?.Length > 0 ? def.tiles.Max(t => t.x) - def.tiles.Min(t => t.x) + 1 : 1);
-
-                var worldX = inst.X / (float)tileSize + objWidthTiles * 0.5f;
-                var worldY = mapHeight - inst.Y / (float)tileSize - objHeightTiles;
-
-                if (def.prefab != null)
-                {
-                    var instance = UnityEngine.Object.Instantiate(def.prefab, group.transform);
-                    instance.name = $"{def.id}_{inst.Id}";
-                    instance.transform.localPosition = new Vector3(worldX, worldY, 0f);
-                    ApplyObjectSorting(instance, layer.ZOrder);
-                    continue;
-                }
-
-                // If the tileset importer created a baked sprite for this object definition,
-                // use the shared sprite (stored on the tileset) instead of baking per-map.
-                if (def.sprite != null)
-                {
-                    var go = new GameObject($"{def.id}_{inst.Id}");
-                    go.transform.SetParent(group.transform, false);
-                    go.transform.localPosition = new Vector3(worldX, worldY, 0f);
-
-                    var sr = go.AddComponent<SpriteRenderer>();
-                    sr.sprite = def.sprite;
-                    sr.sortingLayerName = "Objects";
-                    sr.sortingOrder = layer.ZOrder;
-                    sr.spriteSortPoint = SpriteSortPoint.Pivot;
-
-                    // Add collision based on tileset tile collision definitions.
-                    if (def.tiles != null && def.tiles.Length > 0)
-                    {
-                        var hasCollision = false;
-                        foreach (var ot in def.tiles)
-                        {
-                            if (tileset.TryGetTile(ot.tileIndex, out var vtile) &&
-                                vtile.CollisionKind != VulcanusCollisionKind.None)
-                            {
-                                hasCollision = true;
-                                break;
-                            }
-                        }
-
-                        if (hasCollision)
-                        {
-                            var bc = go.AddComponent<BoxCollider2D>();
-                            bc.size = new Vector2(objWidthTiles, objHeightTiles);
-                            bc.offset = new Vector2(0f, objHeightTiles * 0.5f);
-                        }
-                    }
-
-                    var sortingGroup = go.AddComponent<SortingGroup>();
-                    sortingGroup.sortingLayerName = "Objects";
-
-                    var ySort = go.AddComponent<YSortByPosition>();
-                    ySort.Offset = -16;
-                }
-                else
-                {
-                    SpawnBakedInstance(group.transform, inst, def, tileset, mapHeight, tileSize, layer.ZOrder, ctx);
-                }
+                var instance = UnityEngine.Object.Instantiate(def.prefab, group.transform);
+                instance.name = $"{def.id}_{inst.Id}";
+                instance.transform.localPosition = new Vector3(
+                    inst.X / (float)tileSize + def.widthTiles * 0.5f,
+                    mapHeight - inst.Y / (float)tileSize - def.heightTiles, 0f);
+                ApplyObjectSorting(instance, layer.ZOrder);
             }
         }
 
@@ -484,199 +429,6 @@ namespace Core.Tile.Editor.Vulcanus
                 sortingGroup.sortingOrder = sortingOrder;
             }
         }
-
-        private static void SpawnBakedInstance(
-            Transform parent,
-            MapObjectInstanceDto inst,
-            VulcanusTilesetAsset.ObjectDefinition def,
-            VulcanusTilesetAsset tileset,
-            int mapHeight,
-            int tileSize,
-            int sortingOrder,
-            AssetImportContext ctx)
-        {
-            if (def.tiles == null || def.tiles.Length == 0) return;
-
-            // Bounding box in object-local tile coords.
-            var minX = int.MaxValue; var maxX = int.MinValue;
-            var minY = int.MaxValue; var maxY = int.MinValue;
-            foreach (var t in def.tiles)
-            {
-                if (t.x < minX) minX = t.x; if (t.x > maxX) maxX = t.x;
-                if (t.y < minY) minY = t.y; if (t.y > maxY) maxY = t.y;
-            }
-
-            var bakeWidth = (maxX - minX + 1) * tileSize;
-            var bakeHeight = (maxY - minY + 1) * tileSize;
-
-            var baked = new Texture2D(bakeWidth, bakeHeight, TextureFormat.RGBA32, false);
-            baked.SetPixels32(new Color32[bakeWidth * bakeHeight]);
-
-            var srcTexture = tileset.SpriteSheet;
-            if (srcTexture != null && !srcTexture.isReadable)
-            {
-                Debug.LogWarning($"[VulcanusImporter] '{srcTexture.name}' is not readable — reimport the tileset to fix this.");
-                srcTexture = null;
-            }
-
-            foreach (var t in def.tiles)
-            {
-                if (srcTexture == null) break;
-
-                // Pixel rect of this tile in the sprite sheet (bottom-left origin).
-                var col = t.tileIndex % tileset.Columns;
-                var row = t.tileIndex / tileset.Columns;
-                var srcX = col * tileSize;
-                var srcY = srcTexture.height - (row + 1) * tileSize;
-                if (srcX < 0 || srcY < 0 || srcX + tileSize > srcTexture.width || srcY + tileSize > srcTexture.height)
-                    continue;
-
-                var pixels = srcTexture.GetPixels(srcX, srcY, tileSize, tileSize);
-
-                // Object-local y=0 is the top row; baked texture y=0 is bottom.
-                var dstX = (t.x - minX) * tileSize;
-                var dstY = (maxY - t.y) * tileSize;
-                baked.SetPixels(dstX, dstY, tileSize, tileSize, pixels);
-            }
-
-            baked.Apply();
-            baked.filterMode = FilterMode.Point;
-
-            // Pivot at bottom-center — this world position is used for Y-sort depth.
-            var sprite = Sprite.Create(
-                baked,
-                new Rect(0, 0, bakeWidth, bakeHeight),
-                new Vector2(0.5f, 0f),
-                tileSize, 0, SpriteMeshType.FullRect);
-
-            // inst.X/Y are top-left pixel coords in map space (Y down).
-            // Convert to Unity world space: worldY = mapHeight - (inst.Y / tileSize + objectHeightInTiles).
-            var objHeightTiles = maxY - minY + 1;
-            var worldX = inst.X / (float)tileSize + (maxX - minX + 1) * 0.5f;
-            var worldY = mapHeight - inst.Y / (float)tileSize - objHeightTiles;
-
-            var go = new GameObject($"{def.id}_{inst.Id}");
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(worldX, worldY, 0f);
-
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.sortingLayerName = "Objects";
-            sr.sortingOrder = sortingOrder;
-            sr.spriteSortPoint = SpriteSortPoint.Pivot;
-
-            // Add collision based on tiles used by this object instance.
-            try
-            {
-                var hasFull = false;
-                var hasComplex = false;
-                foreach (var t in def.tiles)
-                {
-                    if (tileset.TryGetTile(t.tileIndex, out var vtile))
-                    {
-                        if (vtile.CollisionKind == VulcanusCollisionKind.Full) hasFull = true;
-                        else if (vtile.CollisionKind == VulcanusCollisionKind.Complex) hasComplex = true;
-                    }
-                }
-
-                if (hasFull)
-                {
-                    var worldW = bakeWidth / (float)tileSize;
-                    var worldH = bakeHeight / (float)tileSize;
-                    var bc = go.AddComponent<BoxCollider2D>();
-                    bc.size = new Vector2(worldW, worldH);
-                    bc.offset = new Vector2(0f, worldH * 0.5f);
-                }
-                else if (hasComplex)
-                {
-                    // Build composite collider from per-tile shapes where available.
-                    var rb = go.AddComponent<Rigidbody2D>();
-                    rb.bodyType = RigidbodyType2D.Static;
-                    var comp = go.AddComponent<CompositeCollider2D>();
-                    comp.geometryType = CompositeCollider2D.GeometryType.Polygons;
-
-                    var tileMinX = minX; var tileMaxY = maxY;
-                    var widthTiles = maxX - minX + 1;
-
-                    foreach (var t in def.tiles)
-                    {
-                        if (!tileset.TryGetTile(t.tileIndex, out var vtile2)) continue;
-                        var shapes = vtile2.CollisionShapes;
-                        var localTileCenterX = (t.x - tileMinX) - (widthTiles * 0.5f) + 0.5f;
-                        var localTileCenterY = (tileMaxY - t.y) + 0.5f;
-
-                        if (shapes == null || shapes.Length == 0)
-                        {
-                            // fallback per-tile box
-                            var bc = go.AddComponent<BoxCollider2D>();
-                            bc.size = Vector2.one;
-                            bc.offset = new Vector2(localTileCenterX, localTileCenterY);
-                            bc.usedByComposite = true;
-                            continue;
-                        }
-
-                        foreach (var sh in shapes)
-                        {
-                            try
-                            {
-                                if (string.Equals(sh.type, "polygon", StringComparison.OrdinalIgnoreCase) && sh.points != null && sh.points.Length > 0)
-                                {
-                                    var pc = go.AddComponent<PolygonCollider2D>();
-                                    var pts = new Vector2[sh.points.Length];
-                                    for (int pi = 0; pi < sh.points.Length; pi++)
-                                    {
-                                        var p = sh.points[pi];
-                                        pts[pi] = new Vector2(localTileCenterX + (p.x - 0.5f), localTileCenterY + (p.y - 0.5f));
-                                    }
-                                    pc.SetPath(0, pts);
-                                    pc.usedByComposite = true;
-                                }
-                                else if (string.Equals(sh.type, "rectangle", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    var bc2 = go.AddComponent<BoxCollider2D>();
-                                    var w = sh.width > 0 ? sh.width : 1f;
-                                    var h = sh.height > 0 ? sh.height : 1f;
-                                    var cx = sh.x + w * 0.5f - 0.5f;
-                                    var cy = sh.y + h * 0.5f - 0.5f;
-                                    bc2.size = new Vector2(w, h);
-                                    bc2.offset = new Vector2(localTileCenterX + cx, localTileCenterY + cy);
-                                    bc2.usedByComposite = true;
-                                }
-                                else if (string.Equals(sh.type, "circle", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    var cc = go.AddComponent<CircleCollider2D>();
-                                    var r = (sh.width > 0 ? sh.width : 1f) * 0.5f;
-                                    var cx = sh.x + (sh.width > 0 ? sh.width * 0.5f : 0.5f) - 0.5f;
-                                    var cy = sh.y + (sh.height > 0 ? sh.height * 0.5f : 0.5f) - 0.5f;
-                                    cc.radius = r;
-                                    cc.offset = new Vector2(localTileCenterX + cx, localTileCenterY + cy);
-                                    cc.usedByComposite = true;
-                                }
-                            }
-                            catch { }
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            // Ensure baked texture and sprite are included in the imported asset so
-            // references don't get lost after import.
-            try
-            {
-                if (ctx != null)
-                {
-                    ctx.AddObjectToAsset($"bakedTexture_{def.id}_{inst.Id}", baked);
-                    ctx.AddObjectToAsset($"bakedSprite_{def.id}_{inst.Id}", sprite);
-                }
-            }
-            catch
-            {
-                // Non-fatal: if adding sub-assets fails for any reason, the import will still continue.
-            }
-        }
-
-        // ── Tilemap helpers ───────────────────────────────────────────────────
 
         private static Tilemap CreateTilemapLayer(Transform parent, string layerName, int sortingOrder, float opacity, string sortingLayerHint = null, bool addCollider = false)
         {

@@ -93,7 +93,8 @@ namespace Core.Tile.Editor.Vulcanus
             var normalizedAbsolute = Path.GetFullPath(absolutePath).Replace('\\', '/');
             var assetsRoot = Path.GetFullPath(Application.dataPath).Replace('\\', '/');
 
-            if (normalizedAbsolute.StartsWith(assetsRoot, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(normalizedAbsolute, assetsRoot, StringComparison.OrdinalIgnoreCase) ||
+                normalizedAbsolute.StartsWith(assetsRoot + "/", StringComparison.OrdinalIgnoreCase))
             {
                 assetPath = "Assets" + normalizedAbsolute[assetsRoot.Length..];
                 return true;
@@ -148,35 +149,25 @@ namespace Core.Tile.Editor.Vulcanus
             }
         }
 
-        public static string FindTilesetById(string mapAssetPath, string tilesetId, string projectAssetPath)
+        // Scan and deserialize once per map import, independent of filenames and namespaces.
+        public static Dictionary<string, string> BuildTilesetIndex(string mapAssetPath, string projectAssetPath)
         {
-            if (string.IsNullOrEmpty(tilesetId)) return null;
-
             var mapFolder = Path.GetDirectoryName(ToAbsolutePath(mapAssetPath));
             var projectRoot = !string.IsNullOrEmpty(projectAssetPath)
                 ? Path.GetDirectoryName(ToAbsolutePath(projectAssetPath))
                 : Path.GetDirectoryName(mapFolder) ?? mapFolder;
-
-            var canonical = Path.Combine(projectRoot, "tilesets", $"{tilesetId}.vts");
-            if (File.Exists(canonical) && TryAbsoluteToAssetPath(canonical, out var canonicalAssetPath))
-                return canonicalAssetPath;
-
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var filePath in Directory.GetFiles(projectRoot, "*.vts", SearchOption.AllDirectories)
-                         .OrderBy(p => p))
+                         .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
-                try
-                {
-                    var dto = LoadDto<TilesetDto>(filePath);
-                    if (!string.Equals(dto.Id, tilesetId, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (TryAbsoluteToAssetPath(filePath, out var path)) return path;
-                }
-                catch
-                {
-                    /* ignore malformed tileset candidates */
-                }
+                TilesetDto dto;
+                try { dto = LoadDto<TilesetDto>(filePath); }
+                catch (Newtonsoft.Json.JsonException) { continue; }
+                if (string.IsNullOrWhiteSpace(dto?.Id) || !TryAbsoluteToAssetPath(filePath, out var path)) continue;
+                if (!result.TryAdd(dto.Id, path))
+                    throw new InvalidOperationException($"Duplicate tileset ID '{dto.Id}' in '{result[dto.Id]}' and '{path}'.");
             }
-
-            return null;
+            return result;
         }
 
         public static string ResolveAssetReferencePath(string ownerAssetPath, string relativePath,
@@ -186,23 +177,6 @@ namespace Core.Tile.Editor.Vulcanus
             if (TryResolveRelative(ownerAssetPath, relativePath, out var byOwner)) return byOwner;
             if (!string.IsNullOrEmpty(projectAssetPath) &&
                 TryResolveRelative(projectAssetPath, relativePath, out var byProject)) return byProject;
-
-            if (!string.IsNullOrEmpty(projectAssetPath))
-            {
-                var projectRoot = Path.GetDirectoryName(ToAbsolutePath(projectAssetPath));
-                var targetFileName = Path.GetFileName(relativePath);
-                if (!string.IsNullOrWhiteSpace(projectRoot) && !string.IsNullOrWhiteSpace(targetFileName) &&
-                    Directory.Exists(projectRoot))
-                {
-                    var candidate = Directory
-                        .GetFiles(projectRoot, targetFileName, SearchOption.AllDirectories)
-                        .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                        .FirstOrDefault(p => TryAbsoluteToAssetPath(p, out _));
-
-                    if (candidate != null && TryAbsoluteToAssetPath(candidate, out var fallbackPath))
-                        return fallbackPath;
-                }
-            }
 
             return null;
         }

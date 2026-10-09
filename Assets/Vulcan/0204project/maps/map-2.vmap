@@ -5,9 +5,9 @@
   "name": "Map 2",
   "width": 32,
   "height": 32,
-  "baseTilesetId": "villagetileset",
+  "baseTilesetId": "base:villagetileset",
   "tilesetRefs": [
-    "villagetileset"
+    "base:villagetileset"
   ],
   "layers": [
     {
@@ -2359,14 +2359,14 @@
     {
       "id": "link-1776461756445",
       "triggerId": "trigger-1776461238492",
-      "targetMapId": "map-1",
+      "targetMapId": "base:map-1",
       "targetAnchorId": "anchor-1776461296590",
       "label": "Link to Map 1"
     },
     {
       "id": "link-1776497301976",
       "triggerId": "trigger-1776497212328",
-      "targetMapId": "map-1",
+      "targetMapId": "base:map-1",
       "targetAnchorId": "anchor-1776461296590",
       "label": "dadsa"
     }

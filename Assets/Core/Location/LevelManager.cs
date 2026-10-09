@@ -45,6 +45,7 @@ namespace Core.Location
 
         List<LocationData> _allLocations = new();
         Dictionary<string, LocationData> _locationById = new();
+        Dictionary<string, LocationData> _locationByScenePath = new(StringComparer.OrdinalIgnoreCase);
 
         // - Lifecycle callbacks ---------------------------------------------------
 
@@ -73,6 +74,8 @@ namespace Core.Location
                 .Where(l => l != null && !string.IsNullOrWhiteSpace(l.id))
                 .GroupBy(l => l.id, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            _locationByScenePath = Core.Catalogs.IdIndex.FirstWins(_allLocations,
+                location => location ? location.ScenePath : null, StringComparer.OrdinalIgnoreCase);
         }
 
         void OnEnable() => this.Subscribe();
@@ -90,7 +93,8 @@ namespace Core.Location
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 var scene = SceneManager.GetSceneAt(i);
-                if (_locationById.TryGetValue(scene.name, out var mappedLocation))
+                var mappedLocation = GetLocationForScene(scene);
+                if (mappedLocation != null)
                     return mappedLocation;
             }
 
@@ -136,7 +140,7 @@ namespace Core.Location
 
         public void LoadLocation(LocationData location, string entryKey, Vector2 facingDirection)
         {
-            StartCoroutine(LoadRoutine(location.id, location, entryKey, facingDirection));
+            StartCoroutine(LoadRoutine(location.ScenePath, location, entryKey, facingDirection));
         }
 
         public bool TransitionWithinCurrentLocation(string entryKey, Vector2 facingDirection)
@@ -182,14 +186,25 @@ namespace Core.Location
             if (component is not MonoBehaviour behaviour) return true;
             if (!behaviour) return false;
 
-            var sceneName = behaviour.gameObject.scene.name;
+            var sceneLocation = GetLocationForScene(behaviour.gameObject.scene);
             // Objects in a location scene only receive that location. Managers in the
             // persistent systems scene receive every location.
-            if (string.Equals(sceneName, location.id, StringComparison.OrdinalIgnoreCase)) return true;
-            return !_locationById.ContainsKey(sceneName);
+            return sceneLocation == null || string.Equals(sceneLocation.id, location.id, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private LocationData GetLocationForScene(Scene scene)
+        {
+            if (_locationByScenePath.TryGetValue(scene.path, out var location)) return location;
+            return _locationByScenePath.TryGetValue(scene.name, out location) ? location : null;
         }
 
         // - Scene load routine ------------------------------------------------------
+
+        private static Scene GetLoadedScene(string scenePath)
+        {
+            var scene = SceneManager.GetSceneByPath(scenePath);
+            return scene.IsValid() ? scene : SceneManager.GetSceneByName(scenePath);
+        }
 
         IEnumerator LoadRoutine(string sceneName, LocationData locationData, string entryKey = null, Vector2 facingDirection = default)
         {
@@ -206,7 +221,7 @@ namespace Core.Location
             var previousScene = SceneManager.GetActiveScene();
 
             yield return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
-            SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
+            SceneManager.SetActiveScene(GetLoadedScene(sceneName));
 
             yield return SceneManager.UnloadSceneAsync(previousScene);
             yield return null; // Allow new scene's OnEnable to fire so components can register

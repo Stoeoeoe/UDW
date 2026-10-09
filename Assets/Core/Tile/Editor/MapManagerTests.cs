@@ -18,6 +18,7 @@ namespace Core.Tile.Editor
     public sealed class MapManagerTests
     {
         private GameObject _root;
+        private GameObject _gridRoot;
         private GameStateManager _state;
         private LevelManager _level;
         private MapManager _map;
@@ -58,7 +59,10 @@ namespace Core.Tile.Editor
                 terrainTypes.Add(type, data);
             }
             Set(_map, "_terrainDataByType", terrainTypes);
-            _grid = _root.AddComponent<Grid>();
+            // Grid needs an active hierarchy for Unity to initialize its cell transform.
+            // Keep managers inactive so scene loading and gameplay callbacks stay isolated.
+            _gridRoot = new GameObject("Map test grid");
+            _grid = _gridRoot.AddComponent<Grid>();
             _terrain = Tilemap("Terrain");
             _farmland = Tilemap("Farmland");
             _plowed = Tilemap("Plowed");
@@ -82,6 +86,7 @@ namespace Core.Tile.Editor
                 typeof(Core.Singleton<LevelManager>).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)
                     .SetValue(null, null);
             Object.DestroyImmediate(_root);
+            Object.DestroyImmediate(_gridRoot);
             foreach (var asset in _assets) Object.DestroyImmediate(asset);
             _assets.Clear();
         }
@@ -159,8 +164,8 @@ namespace Core.Tile.Editor
         [Test]
         public void CachedWorldCentersAndWorldQueriesHonorGridTranslationScaleAndCellSize()
         {
-            _root.transform.position = new Vector3(10, -5);
-            _root.transform.localScale = new Vector3(2, 3, 1);
+            _gridRoot.transform.position = new Vector3(10, -5);
+            _gridRoot.transform.localScale = new Vector3(2, 3, 1);
             _grid.cellSize = new Vector3(2, 1, 1);
             var cell = new Vector3Int(-2, 3);
             _terrain.SetTile(cell, Tile(TerrainType.Grass));
@@ -175,8 +180,8 @@ namespace Core.Tile.Editor
         [Test]
         public void BoundsUseTheExclusiveMaximumCellAndGridTransform()
         {
-            _root.transform.position = new Vector3(10, -5);
-            _root.transform.localScale = new Vector3(2, 3, 1);
+            _gridRoot.transform.position = new Vector3(10, -5);
+            _gridRoot.transform.localScale = new Vector3(2, 3, 1);
             _terrain.SetTile(new Vector3Int(-2, -1), Tile(TerrainType.Grass));
             _terrain.SetTile(new Vector3Int(1, 2), Tile(TerrainType.Grass));
             _terrain.CompressBounds();
@@ -371,7 +376,7 @@ namespace Core.Tile.Editor
         private Tilemap Tilemap(string name)
         {
             var go = new GameObject(name);
-            go.transform.SetParent(_root.transform, false);
+            go.transform.SetParent(_gridRoot.transform, false);
             return go.AddComponent<Tilemap>();
         }
 

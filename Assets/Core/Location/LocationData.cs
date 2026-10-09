@@ -9,5 +9,10 @@ namespace Core.Location
         [NamespacedId] public string id;
         public string label;
         public LocationType locationType = LocationType.Outdoor;
+        [Tooltip("Scene asset path. Imported maps set this independently of the map ID and display name.")]
+        public string scenePath;
+
+        // Hand-authored locations may still use a scene name as their ID.
+        public string ScenePath => string.IsNullOrWhiteSpace(scenePath) ? id : scenePath;
     }
 }

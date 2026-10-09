@@ -59,13 +59,6 @@ namespace Core.Tile.Vulcanus
         }
 
         [Serializable]
-        public class MapLocationMapping
-        {
-            public string mapId;
-            public LocationData locationData;
-        }
-
-        [Serializable]
         public struct DialogueTypeDefinition
         {
             public string id;
@@ -144,7 +137,6 @@ namespace Core.Tile.Vulcanus
 
         [Header("Mappings")]
         [SerializeField] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
-        [SerializeField] private MapLocationMapping[] locationMappings = Array.Empty<MapLocationMapping>();
 
         [Header("Importer Diagnostics")]
         [SerializeField] private string[] mappingWarnings = Array.Empty<string>();
@@ -164,7 +156,6 @@ namespace Core.Tile.Vulcanus
         public ScriptNamespaceDefinition[] ScriptNamespaces => scriptNamespaces;
         public ScriptContextTypeDefinition[] ScriptContextTypes => scriptContextTypes;
         public ItemClassMapping[] ItemClassMappings => itemClassMappings;
-        public MapLocationMapping[] LocationMappings => locationMappings;
         public string[] MappingWarnings => mappingWarnings;
 
         public void Configure(
@@ -204,12 +195,10 @@ namespace Core.Tile.Vulcanus
         }
 
         public void SetMappings(
-            MapLocationMapping[] mapLocations,
             ItemClassMapping[] itemMappings,
             string[] warnings)
         {
             itemClassMappings = itemMappings ?? Array.Empty<ItemClassMapping>();
-            locationMappings = mapLocations ?? Array.Empty<MapLocationMapping>();
             mappingWarnings = warnings ?? Array.Empty<string>();
         }
 
@@ -235,28 +224,6 @@ namespace Core.Tile.Vulcanus
                     terrainType = terrain.mappedTerrainType;
                     return true;
                 }
-            }
-
-            return false;
-        }
-
-        public bool TryGetLocationData(string mapId, out LocationData locationData)
-        {
-            locationData = null;
-            if (string.IsNullOrWhiteSpace(mapId) || locationMappings == null)
-                return false;
-
-            for (int i = 0; i < locationMappings.Length; i++)
-            {
-                var mapping = locationMappings[i];
-                if (mapping == null)
-                    continue;
-
-                if (!string.Equals(mapping.mapId, mapId, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                locationData = mapping.locationData;
-                return locationData != null;
             }
 
             return false;

@@ -74,16 +74,7 @@ namespace Core.Tile.Editor.Vulcanus
                             ?? Array.Empty<VulcanusProject.ScriptFunctionDefinition>()
             }).ToArray() ?? Array.Empty<VulcanusProject.ScriptContextTypeDefinition>();
 
-            var previousProject = AssetDatabase.LoadAssetAtPath<VulcanusProject>(ctx.assetPath);
-            var catalog = VulcanusProjectRegistry.FindWorldCatalogForProject(ctx.assetPath);
-
             var warnings = new System.Collections.Generic.List<string>();
-
-            var locationMappings = (catalog != null ? catalog.LocationMappings : previousProject?.LocationMappings)
-                                   ?? Array.Empty<VulcanusProject.MapLocationMapping>();
-
-            if (catalog != null)
-                VulcanusImportHelpers.AddDependency(ctx, AssetDatabase.GetAssetPath(catalog));
 
             var project = ScriptableObject.CreateInstance<VulcanusProject>();
             project.name = VulcanusImportHelpers.GetBaseName(ctx.assetPath);
@@ -120,7 +111,7 @@ namespace Core.Tile.Editor.Vulcanus
                     .ToArray();
             }
 
-            project.SetMappings(locationMappings, itemMappings, warnings.ToArray());
+            project.SetMappings(itemMappings, warnings.ToArray());
 
             ctx.AddObjectToAsset("project", project);
             ctx.SetMainObject(project);

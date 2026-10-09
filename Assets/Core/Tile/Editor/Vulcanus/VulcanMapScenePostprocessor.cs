@@ -15,6 +15,9 @@ namespace Core.Tile.Editor.Vulcanus
     {
         private const string SceneOutputFolder = "Assets/Scenes/Maps";
 
+        internal static string GetScenePath(string mapAssetPath) =>
+            $"{SceneOutputFolder}/{Path.GetFileNameWithoutExtension(mapAssetPath)}.unity";
+
         static void OnPostprocessAllAssets(
             string[] importedAssets,
             string[] deletedAssets,
@@ -36,31 +39,35 @@ namespace Core.Tile.Editor.Vulcanus
                 if (mapPrefab == null)
                     continue;
 
-                // Name is set to mapId/mapName during import by VulcanusJsonImporter.
-                var mapId = mapPrefab.name.Replace(".vmap", "");
-                var scenePath = $"{SceneOutputFolder}/{mapId}.unity";
+                var scenePath = GetScenePath(mapAssetPath);
 
                 // Never touch an existing scene.
                 if (File.Exists(Path.GetFullPath(scenePath)))
+                {
+                    // Repair registration without rewriting authored scene contents.
+                    scenesAdded |= EnsureInBuildSettings(scenePath);
                     continue;
+                }
 
                 if (!AssetDatabase.IsValidFolder(SceneOutputFolder))
                     CreateFolderRecursive(SceneOutputFolder);
 
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
 
-                // Place the map prefab inside the scene so it isn't empty and is visible in-editor.
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(mapPrefab, scene);
-                instance.name = mapPrefab.name;
-
-                EditorSceneManager.SaveScene(scene, scenePath);
-                EditorSceneManager.CloseScene(scene, true);
+                try
+                {
+                    // Place the imported prefab inside the generated wrapper.
+                    var instance = (GameObject)PrefabUtility.InstantiatePrefab(mapPrefab, scene);
+                    instance.name = mapPrefab.name;
+                    if (!EditorSceneManager.SaveScene(scene, scenePath))
+                        throw new System.InvalidOperationException($"Could not save map scene '{scenePath}'.");
+                }
+                finally { EditorSceneManager.CloseScene(scene, true); }
 
                 AssetDatabase.ImportAsset(scenePath);
-
                 scenesAdded |= EnsureInBuildSettings(scenePath);
 
-                Debug.Log($"[VulcanusMapScenePostprocessor] Created scene '{scenePath}' for map '{mapId}'.");
+                Debug.Log($"[VulcanusMapScenePostprocessor] Created scene '{scenePath}' for map '{mapAssetPath}'.");
             }
 
             if (scenesAdded)

@@ -5,9 +5,9 @@
   "name": "New Map",
   "width": 4,
   "height": 4,
-  "baseTilesetId": "villagetileset",
+  "baseTilesetId": "base:villagetileset",
   "tilesetRefs": [
-    "villagetileset"
+    "base:villagetileset"
   ],
   "layers": [
     {
