@@ -7499,6 +7499,9 @@ MonoBehaviour:
   volume: 1
   pitchMin: 0.9
   pitchMax: 1.1
+  droppedItemPrefab: {fileID: 8082679006293740525, guid: 841241708f7d8b64389d6730a6a89c8f, type: 3}
+  dropOffset: {x: 0, y: -1}
+  dropPickupDelay: 2
 --- !u!1 &2485211263405546162
 GameObject:
   m_ObjectHideFlags: 0

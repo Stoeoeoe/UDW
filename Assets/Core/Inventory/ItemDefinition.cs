@@ -16,6 +16,10 @@ namespace Core.Inventory
         [field: SerializeField] public string Description { get; private set; }
         [field: SerializeField] public int    MaxStackSize { get; private set; } = 99;
 
+        [Tooltip("Protect essential tools and quest items from being left on the ground. Redundant, replaceable items can remain droppable.")]
+        [SerializeField] private bool _preventDropping;
+        public bool PreventDropping => _preventDropping;
+
         [Header("Trading")]
         [Tooltip("Base price per item paid by the buyer.")]
         [field: SerializeField, Min(0)] public int BuyBasePrice { get; private set; }

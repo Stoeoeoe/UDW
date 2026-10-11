@@ -1,4 +1,5 @@
 using Core;
+using Core.Inventory;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -28,6 +29,36 @@ namespace Core.Items
         [SerializeField] private float           volume   = 1f;
         [SerializeField] [Range(0f, 2f)] private float pitchMin = 0.9f;
         [SerializeField] [Range(0f, 2f)] private float pitchMax = 1.1f;
+        [Header("Dropping")]
+        [SerializeField] private WorldItem droppedItemPrefab;
+        [SerializeField] private Vector2 dropOffset = new(0f, -1f);
+        [SerializeField, Min(0f)] private float dropPickupDelay = 2f;
+
+        public static WorldItem PrepareDrop(ItemDefinition item, int quantity, Vector3 position, float pickupDelay = 0f)
+        {
+            var manager = Instance;
+            return WorldItem.CreateInactive(item, quantity, position, manager ? manager.droppedItemPrefab : null, pickupDelay);
+        }
+
+        public bool TryDrop(SlotInventory inventory, int slot, Vector3 position)
+        {
+            var content = inventory ? inventory.Content : null;
+            if (!droppedItemPrefab || content == null || slot < 0 || slot >= content.Length) return false;
+            var stack = content[slot];
+            if (stack.IsEmpty || !stack.Item || stack.Item.PreventDropping || inventory.HeldStack.IsOccupied) return false;
+            var dropped = PrepareDrop(stack.Item, stack.Quantity, position + (Vector3)dropOffset, dropPickupDelay);
+            content[slot] = ItemStack.Empty;
+            try { inventory.CommitContent(content); }
+            catch
+            {
+                if (Application.isPlaying) Destroy(dropped.gameObject);
+                else DestroyImmediate(dropped.gameObject);
+                throw;
+            }
+            dropped.gameObject.SetActive(true);
+            InventoryChangedEvent.Trigger(inventory);
+            return true;
+        }
 
         public float          MagnetRadius      => magnetRadius;
         public float          PickupRadius      => pickupRadius;
