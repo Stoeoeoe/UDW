@@ -11,6 +11,14 @@ fail import. Sprite-sheet paths resolve relative to their source file or project
 There is no recursive filename fallback. Missing required tilesets, textures, or object
 prefabs produce import errors instead of partial maps or text assets.
 
+Aseprite sources referenced by `.vts` files are automatically imported as Sprite Sheet,
+with merged layers, zero packing padding, and read/write enabled. Tile IDs depend on
+the original canvas grid; animation atlas packing can otherwise leave populated maps
+invisible. Unreferenced Aseprite animation assets retain their settings. For an existing
+source imported before its `.vts` reference was added, reimport the Aseprite file once.
+The tileset importer reports incompatible packing or undersized/cropped textures rather
+than accepting them silently. Keep static tileset canvases at their authored grid size.
+
 Object artwork and colliders are created once by the tileset importer. The map importer
 places instances of those prefabs and applies layer sorting. Terrain, anchors, triggers,
 and entity property overrides remain baked into the map. Persistent entities retain

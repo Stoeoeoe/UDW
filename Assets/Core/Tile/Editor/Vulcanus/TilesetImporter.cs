@@ -4,6 +4,7 @@ using System.Linq;
 using Core.Tile.Vulcanus;
 using UnityEditor;
 using UnityEditor.AssetImporters;
+using UnityEditor.U2D.Aseprite;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -46,6 +47,10 @@ namespace Core.Tile.Editor.Vulcanus
 
             if (!texture && (tileCount > 0 || dto.Objects.Count > 0))
                 throw new InvalidOperationException($"Tileset '{tilesetId}' requires sprite sheet '{dto.SpriteSheet}'. Check its owner-relative or project-relative path.");
+
+            if (texture && AssetImporter.GetAtPath(spriteSheetAssetPath) is AsepriteImporter &&
+                (texture.width < columns * tileSize || texture.height < ((tileCount + columns - 1) / columns) * tileSize))
+                throw new InvalidOperationException($"Tileset '{tilesetId}' needs a {columns * tileSize}x{((tileCount + columns - 1) / columns) * tileSize} sheet, but Aseprite imported {texture.width}x{texture.height}. Check transparent canvas cropping, frame count and texture size limits; tile indices require the original grid.");
 
             var tiles = new VulcanusTile[tileCount];
             for (var i = 0; i < tileCount; i++)
@@ -545,7 +550,18 @@ namespace Core.Tile.Editor.Vulcanus
 
         internal static void EnsureTextureReadable(string assetPath)
         {
-            var ti = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            var importer = AssetImporter.GetAtPath(assetPath);
+            if (importer is AsepriteImporter aseprite)
+            {
+                // Tile IDs address the original canvas grid. AnimatedSprite packs cels
+                // into an atlas, which changes both their coordinates and texture size.
+                if (aseprite.importMode != FileImportModes.SpriteSheet ||
+                    aseprite.layerImportMode != LayerImportModes.MergeFrame ||
+                    aseprite.mosaicPadding != 0 || aseprite.spritePadding != 0)
+                    throw new InvalidOperationException($"Tileset sheet '{assetPath}' uses a packed Aseprite import mode. Reimport the Aseprite source to apply Vulcanus sprite-sheet settings.");
+                return;
+            }
+            var ti = importer as TextureImporter;
             if (ti == null || ti.isReadable) return;
             ti.isReadable = true;
             ti.SaveAndReimport();
