@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/map.schema.json",
   "version": 1,
-  "id": "map-2",
+  "id": "base:map-2",
   "name": "Map 2",
   "width": 32,
   "height": 32,
@@ -2345,14 +2345,14 @@
     {
       "id": "link-1776458309765",
       "triggerId": "trigger-1776458223237",
-      "targetMapId": "map-2",
+      "targetMapId": "base:map-2",
       "targetAnchorId": "anchor-1776458212419",
       "label": "Go to Location 2"
     },
     {
       "id": "link-1776458330010",
       "triggerId": "trigger-1776458240368",
-      "targetMapId": "map-2",
+      "targetMapId": "base:map-2",
       "targetAnchorId": "anchor-1776458178417",
       "label": "Go to 1"
     },

@@ -25,11 +25,7 @@ MonoBehaviour:
     mapPrefab: {fileID: -1433788042044329938, guid: d0b207797bae4d244bf3348ac6ee6098, type: 3}
     locationData: {fileID: 447913706122126786, guid: d0b207797bae4d244bf3348ac6ee6098, type: 3}
     sourceAssetGuid: d0b207797bae4d244bf3348ac6ee6098
-  - mapId: map-2
+  - mapId: base:map-2
     mapPrefab: {fileID: -5252562787932730757, guid: ef40c5f321e7ffe43b545e477b7f6c57, type: 3}
     locationData: {fileID: 447913706122126786, guid: ef40c5f321e7ffe43b545e477b7f6c57, type: 3}
     sourceAssetGuid: ef40c5f321e7ffe43b545e477b7f6c57
-  - mapId: new-map
-    mapPrefab: {fileID: -678225615432937206, guid: 00682469cf093b94bbbe6c2edabe5dfc, type: 3}
-    locationData: {fileID: 447913706122126786, guid: 00682469cf093b94bbbe6c2edabe5dfc, type: 3}
-    sourceAssetGuid: 00682469cf093b94bbbe6c2edabe5dfc
