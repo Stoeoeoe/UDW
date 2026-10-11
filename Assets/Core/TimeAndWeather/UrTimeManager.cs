@@ -136,6 +136,17 @@ namespace Core.TimeAndWeather
 
         private bool _started;
 
+        public WeatherData CurrentWeather => currentWeather;
+
+        /// <summary>Changes weather without advancing the day or changing seasonal weather weights.</summary>
+        public void SetWeather(WeatherData weather)
+        {
+            if (!weather) throw new System.ArgumentNullException(nameof(weather));
+            if (!_started || !isActiveAndEnabled)
+                throw new System.InvalidOperationException("The time and weather manager is not ready.");
+            StartCoroutine(UpdateWeather(weather));
+        }
+
         /// <summary>Refreshes runtime conditions after GameState.Load, without advancing time.</summary>
         public void ApplySavedTime()
         {
@@ -310,7 +321,10 @@ namespace Core.TimeAndWeather
 
             yield return null;
             if (version == _weatherUpdateVersion)
+            {
+                UpdateDayLight();
                 WeatherUpdateEvent.Trigger(weather);
+            }
         }
 
         public void StartSeason(Season season)
