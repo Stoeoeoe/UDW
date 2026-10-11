@@ -105,7 +105,6 @@ namespace Core.Divinity
                     for (var boonIndex = 0; boonIndex < level.Boons.Count; boonIndex++)
                     {
                         var boon = level.Boons[boonIndex];
-                        if (!boon) continue;
                         var source = $"divine-favour:{pair.Key}:{levelIndex}:{boonIndex}";
                         desired.Add(source, boon);
                     }

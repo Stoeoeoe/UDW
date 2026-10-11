@@ -1,4 +1,5 @@
 using System;
+using Core.Common;
 using UnityEngine;
 
 namespace Tools
@@ -6,7 +7,7 @@ namespace Tools
     [Serializable]
     public class ToolEffectConfiguration
     {
-        public Vector2Int[] AffectedTileOffsets;
+        [Validation.Required("Assign a nonnull offset array; an empty array is allowed.")] public Vector2Int[] AffectedTileOffsets;
         public bool IsGlobalEffect;
     }
 }

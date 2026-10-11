@@ -98,7 +98,7 @@ namespace Core.GameplayTags.Editor
             var definition = ScriptableObject.CreateInstance<SkillDefinition>();
             var skillId = "test:tag_order_" + Guid.NewGuid().ToString("N");
             var serialized = new SerializedObject(definition);
-            serialized.FindProperty("skillId").stringValue = skillId;
+            serialized.FindProperty("_skillId").stringValue = skillId;
             var levels = serialized.FindProperty("levels");
             levels.arraySize = 2;
             var grantedTags = levels.GetArrayElementAtIndex(1).FindPropertyRelative("grantedTags");

@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Character;
 using Core.Events;
 using Core.TimeAndWeather;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Core.Divinity.Editor
@@ -173,7 +175,7 @@ namespace Core.Divinity.Editor
             var river = CreateDeity("mod:river_god", "", 0);
             var original = DeityCodeGenerator.GenerateSource(new[] { mars, river });
             var serialized = new SerializedObject(mars);
-            serialized.FindProperty("displayName").stringValue = "A different label";
+            serialized.FindProperty("_displayName").stringValue = "A different label";
             serialized.ApplyModifiedPropertiesWithoutUndo();
             Assert.That(DeityCodeGenerator.GenerateSource(new[] { river, mars }), Is.EqualTo(original));
             Assert.That(original, Does.Contain("public const string Mars = \"mars\";"));
@@ -205,6 +207,8 @@ namespace Core.Divinity.Editor
         [Test]
         public void GeneratorDoesNotInspectGameplayDataOrEnforceRegistryIdentity()
         {
+            // The asset authoring hook reports these errors; code generation only inspects identity.
+            LogAssert.Expect(LogType.Error, new Regex("_dailyDecay: Must be nonnegative"));
             var first = CreateDeity("mars", "Mars", -1);
             var serialized = new SerializedObject(first);
             var levels = serialized.FindProperty("levels");
@@ -213,6 +217,9 @@ namespace Core.Divinity.Editor
             var boons = levels.GetArrayElementAtIndex(0).FindPropertyRelative("boons");
             boons.arraySize = 1;
             boons.GetArrayElementAtIndex(0).objectReferenceValue = null;
+            LogAssert.Expect(LogType.Error, new Regex("_dailyDecay: Must be nonnegative"));
+            LogAssert.Expect(LogType.Error, new Regex(@"levels\[0\]\.requiredPoints: Must be at least 1"));
+            LogAssert.Expect(LogType.Error, new Regex(@"levels\[0\]\.boons\[0\]: Assign"));
             serialized.ApplyModifiedPropertiesWithoutUndo();
             var duplicate = CreateDeity("mars", "Other", 0);
 
@@ -276,9 +283,9 @@ namespace Core.Divinity.Editor
             var deity = ScriptableObject.CreateInstance<DeityDefinition>();
             _objects.Add(deity);
             var serialized = new SerializedObject(deity);
-            serialized.FindProperty("id").stringValue = id;
-            serialized.FindProperty("codeName").stringValue = codeName;
-            serialized.FindProperty("dailyDecay").intValue = dailyDecay;
+            serialized.FindProperty("_id").stringValue = id;
+            serialized.FindProperty("_codeName").stringValue = codeName;
+            serialized.FindProperty("_dailyDecay").intValue = dailyDecay;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             if (boon) AddLevel(deity, 10, boon);
             return deity;

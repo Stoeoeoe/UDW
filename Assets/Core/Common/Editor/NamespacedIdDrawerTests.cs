@@ -29,11 +29,11 @@ namespace Core.Common.Editor
                 SetId(first, "base:one");
                 SetId(second, "mymod:two");
                 var targets = new Object[] { first, second };
-                NamespacedIdDrawer.AssignParts(targets, "skillId", null, "three");
+                NamespacedIdDrawer.AssignParts(targets, "_skillId", null, "three");
                 Assert.That(first.SkillId, Is.EqualTo("base:three"));
                 Assert.That(second.SkillId, Is.EqualTo("mymod:three"));
                 SetId(second, "mymod:two");
-                NamespacedIdDrawer.AssignParts(targets, "skillId", "other", null);
+                NamespacedIdDrawer.AssignParts(targets, "_skillId", "other", null);
                 Assert.That(first.SkillId, Is.EqualTo("other:three"));
                 Assert.That(second.SkillId, Is.EqualTo("other:two"));
             }
@@ -50,9 +50,9 @@ namespace Core.Common.Editor
             var skill = ScriptableObject.CreateInstance<SkillDefinition>();
             try
             {
-                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "skillId", null, "chest");
+                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "_skillId", null, "chest");
                 Assert.That(skill.SkillId, Is.EqualTo("base:chest"));
-                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "skillId", "my:mod", "cr:ate");
+                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "_skillId", "my:mod", "cr:ate");
                 Assert.That(skill.SkillId, Is.EqualTo("mymod:crate"));
             }
             finally { Object.DestroyImmediate(skill); }
@@ -61,7 +61,7 @@ namespace Core.Common.Editor
         private static void SetId(SkillDefinition skill, string id)
         {
             var serialized = new SerializedObject(skill);
-            serialized.FindProperty("skillId").stringValue = id;
+            serialized.FindProperty("_skillId").stringValue = id;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }

@@ -61,13 +61,13 @@ namespace Character
         private void ApplyLevel(string skillId, int level)
         {
             if (_character)
-                SkillDefinitions.Get(skillId).GetLevelDefinition(level)?.Grant.Apply(_character, Source(skillId, level));
+                SkillDefinitions.Get(skillId).GetLevelDefinition(level).Grant.Apply(_character, Source(skillId, level));
         }
 
         private void RemoveLevel(string skillId, int level)
         {
             if (_character)
-                SkillDefinitions.Get(skillId).GetLevelDefinition(level)?.Grant.Remove(_character, Source(skillId, level));
+                SkillDefinitions.Get(skillId).GetLevelDefinition(level).Grant.Remove(_character, Source(skillId, level));
         }
 
         private static string Source(string skillId, int level) => $"skill:{skillId}:{level}";

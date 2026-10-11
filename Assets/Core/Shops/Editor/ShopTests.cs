@@ -52,9 +52,9 @@ namespace Core.Shops.Editor
             Invoke(_manager, "Awake");
             GameState.Time.daysSinceStart = 1;
             _item = ScriptableObject.CreateInstance<ShopTestItem>();
-            Set(_item, "<ItemId>k__BackingField", "test:shop-item");
-            Set(_item, "<BuyBasePrice>k__BackingField", 10);
-            Set(_item, "<SellBasePrice>k__BackingField", 4);
+            Set(_item, "_itemId", "test:shop-item");
+            Set(_item, "_buyBasePrice", 10);
+            Set(_item, "_sellBasePrice", 4);
             _daily = new ShopOffering { id = "daily", item = _item, minStock = 5, maxStock = 5, priceMultiplier = 1.5f };
             _never = new ShopOffering { id = "never", item = _item, restock = ShopRestockMode.Never, minStock = 3, maxStock = 3 };
             _definition = ScriptableObject.CreateInstance<ShopDefinition>();
@@ -111,8 +111,8 @@ namespace Core.Shops.Editor
             loaded.Validate();
             _inventory.Bind(loaded.player.Inventory, id => id == _item.ItemId ? _item : null);
             Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(74));
-            Assert.That(_inventory.Content[0].Item, Is.SameAs(_item));
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(1));
+            Assert.That(_inventory.GetSlot(0).Item, Is.SameAs(_item));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
             Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);
             Assert.That(loaded.world.TryGet(_shop.Id, out ShopState stock), Is.True);
             Assert.That(stock.offerings["daily"].quantity, Is.EqualTo(3));
@@ -178,7 +178,7 @@ namespace Core.Shops.Editor
             Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(5));
             _wallet.TrySpend(100);
             Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.InsufficientFunds));
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(_item.MaxStackSize));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(_item.MaxStackSize));
         }
 
         [Test]
@@ -200,7 +200,7 @@ namespace Core.Shops.Editor
                 _wallet.Add(1);
             }
             if (!_checkTrade || change.Wallet != _wallet) return;
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(2));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(2));
             Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(_expectedStock));
             Assert.That(change.Current, Is.EqualTo(70));
             Assert.That(change.Wallet.Balance, Is.EqualTo(change.Current));
@@ -333,11 +333,11 @@ namespace Core.Shops.Editor
             Assert.That(_shop.Sell(0, _wallet, _inventory, 4), Is.EqualTo(ShopTradeResult.OutOfStock));
             Assert.That(_shop.Sell(0, _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(_wallet.Balance, Is.EqualTo(108));
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(1));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
             Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(5));
             _wallet.Add(int.MaxValue);
             Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.WalletFull));
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(1));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
         }
 
         private static void Set(object target, string field, object value)

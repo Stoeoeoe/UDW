@@ -1,4 +1,5 @@
 using System;
+using Core.Common;
 using Core.GameplayTags;
 using UnityEngine;
 
@@ -36,10 +37,10 @@ namespace Character
     [Serializable]
     public sealed class AttributeBonus
     {
-        [SerializeField] private CharacterAttributeType attribute;
-        [SerializeField] private float flat;
+        [SerializeField, Validation.DefinedEnum("Select a defined character attribute.")] private CharacterAttributeType attribute;
+        [SerializeField, Validation.Finite("Must be finite; negative modifiers are allowed.")] private float flat;
         [Tooltip("0.1 means a ten percent bonus. Percentages add together.")]
-        [SerializeField] private float percent;
+        [SerializeField, Validation.Finite("Must be finite; negative modifiers are allowed.")] private float percent;
 
         public CharacterAttributeType Attribute => attribute;
         public float Flat => flat;

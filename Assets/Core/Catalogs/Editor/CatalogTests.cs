@@ -1,3 +1,4 @@
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections;
 using System.IO;
@@ -44,7 +45,7 @@ namespace Core.Catalogs.Editor
         private static InventoryTestItem CreateItem(string id)
         {
             var item = ScriptableObject.CreateInstance<InventoryTestItem>();
-            typeof(ItemDefinition).GetField("<ItemId>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(ItemDefinition).GetField("_itemId", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(item, id);
             return item;
         }
@@ -102,7 +103,7 @@ namespace Core.Catalogs.Editor
         public void InvalidDiscoveryDoesNotReplaceExistingEntries()
         {
             _catalog.Synchronize(CatalogDiscovery.Discover(_catalog));
-            typeof(ItemDefinition).GetField("<ItemId>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(ItemDefinition).GetField("_itemId", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(_second, "first");
             AssetDatabase.CreateAsset(_second, _folder + "/Second.asset");
             Assert.Throws<InvalidOperationException>(() => CatalogDiscovery.Refresh(_catalog));
@@ -180,7 +181,7 @@ namespace Core.Catalogs.Editor
             try
             {
                 sound.name = "Different asset name";
-                sound.ActorId = "Player";
+                TestConfiguration.Set(sound, "ActorId", "Player");
                 catalog.Synchronize(new Object[] { sound });
                 Assert.That(catalog.Get("player"), Is.SameAs(sound));
                 Assert.That(catalog.Get(sound.name), Is.Null);
@@ -198,8 +199,8 @@ namespace Core.Catalogs.Editor
             var second = ScriptableObject.CreateInstance<TypewriterSound>();
             try
             {
-                first.ActorId = "Player";
-                second.ActorId = "player";
+                TestConfiguration.Set(first, "ActorId", "Player");
+                TestConfiguration.Set(second, "ActorId", "player");
                 Assert.Throws<InvalidOperationException>(() =>
                     CatalogValidation.Validate(catalog, new Object[] { first, second }));
             }

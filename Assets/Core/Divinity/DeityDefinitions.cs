@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Core.Catalogs;
-using Core.Common;
 using UnityEngine;
 
 namespace Core.Divinity
@@ -31,7 +30,7 @@ namespace Core.Divinity
         public static void Register(DeityDefinition deity)
         {
             if (!deity) throw new ArgumentNullException(nameof(deity));
-            ValidateId(deity.Id);
+            deity.RequireValidConfiguration(); // Validate mod content once before registration.
             if (GetCatalog().Get(deity.Id) || !Mods.TryAdd(deity.Id, deity))
                 throw new InvalidOperationException($"Duplicate deity ID '{deity.Id}'.");
         }
@@ -43,9 +42,5 @@ namespace Core.Divinity
             return catalog;
         }
 
-        public static void ValidateId(string id)
-        {
-            if (!DefinitionIdRules.IsPresent(id)) throw new ArgumentException("A stable deity ID is required.", nameof(id));
-        }
     }
 }

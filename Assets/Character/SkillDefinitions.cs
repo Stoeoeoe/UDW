@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Core.Catalogs;
-using Core.Common;
 using UnityEngine;
 
 namespace Character
@@ -41,9 +40,8 @@ namespace Character
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
+            definition.RequireValidConfiguration(); // New mod content enters the validated configuration boundary here.
             var id = definition.SkillId;
-            if (!DefinitionIdRules.IsNamespaced(id))
-                throw new ArgumentException($"Skill '{definition.name}' needs a namespaced ID such as base:hammer_mastery.");
 
             if (GetCatalog().Get(id) || Mods.ContainsKey(id))
                 throw new InvalidOperationException($"Duplicate skill ID '{id}'.");

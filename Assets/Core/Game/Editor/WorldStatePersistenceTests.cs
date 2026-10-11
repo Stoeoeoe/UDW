@@ -153,6 +153,9 @@ namespace Core.Game.Editor
             data.player.StaminaInitialized = true;
             data.player.CurrentStamina = 42;
             data.player.Inventory.StartingLoadoutApplied = true;
+            data.player.Inventory.Toolbelt = new[] { "base:hammer", null, null };
+            data.player.Inventory.SelectedItemId = "base:hammer";
+            data.player.Inventory.Equipment["base:head"] = new InventorySlotState("test:hat", 1);
             data.player.Inventory.Slots = new[]
             {
                 new InventorySlotState("base:hammer", 1), default,
@@ -211,6 +214,9 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.StaminaInitialized, Is.True);
                 Assert.That(loaded.player.CurrentStamina, Is.EqualTo(42));
                 Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);
+                Assert.That(loaded.player.Inventory.Toolbelt[0], Is.EqualTo("base:hammer"));
+                Assert.That(loaded.player.Inventory.SelectedItemId, Is.EqualTo("base:hammer"));
+                Assert.That(loaded.player.Inventory.Equipment["base:head"].ItemId, Is.EqualTo("test:hat"));
                 Assert.That(loaded.player.Inventory.Slots.Length, Is.EqualTo(3));
                 Assert.That(loaded.player.Inventory.Slots[0].ItemId, Is.EqualTo("base:hammer"));
                 Assert.That(loaded.player.Inventory.Slots[1].Quantity, Is.Zero);

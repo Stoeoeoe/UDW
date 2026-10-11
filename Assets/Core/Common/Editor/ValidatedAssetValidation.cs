@@ -26,15 +26,33 @@ namespace Core.Common.Editor
             return errors.AsReadOnly();
         }
 
+        [InitializeOnLoadMethod]
+        private static void Initialize()
+        {
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state != PlayModeStateChange.ExitingEditMode) return;
+                var errors = ValidateProject();
+                if (errors.Count == 0) return;
+                LogErrors(errors);
+                EditorApplication.isPlaying = false;
+            };
+        }
+
+        private static void LogErrors(IReadOnlyList<ConfigurationError> errors)
+        {
+            // Keep Console navigation on the offending asset rather than this command's source.
+            foreach (var error in errors)
+                Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, error.Asset, "{0}", error);
+            Debug.LogError($"ScriptableObject configuration validation failed: {errors.Count} error(s). See asset errors above.");
+        }
+
         [MenuItem("Tools/Validation/Validate ScriptableObject Configuration")]
         public static void ValidateProjectCommand()
         {
             var errors = ValidateProject();
-            // Keep Console navigation on the offending asset rather than this command's source.
-            foreach (var error in errors)
-                Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, error.Asset, "{0}", error);
             if (errors.Count == 0) Debug.Log("ScriptableObject configuration validation passed.");
-            else Debug.LogError($"ScriptableObject configuration validation failed: {errors.Count} error(s). See asset errors above.");
+            else LogErrors(errors);
         }
 
         public void OnPreprocessBuild(BuildReport report)

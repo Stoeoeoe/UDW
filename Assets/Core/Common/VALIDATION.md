@@ -1,5 +1,10 @@
 # ScriptableObject configuration validation
 
+> Gameplay trusts validated contracts. Missing required services or invalid
+> definitions are broken setup: reject them at authoring, registration or
+> initialization boundaries. Keep runtime guards for expected gameplay states.
+> See the core axiom in [AGENTS.md](../../../AGENTS.md).
+
 Use `ValidatedScriptableObject<TValidator>` for assets whose configuration must be
 checked at authoring and build boundaries. The validator derives from
 `ScriptableObjectValidator<TAsset>` and implements `CollectConfigurationErrors`.
@@ -8,11 +13,14 @@ Validators must be stateless: each generic asset base shares one validator insta
 ```csharp
 public sealed class ExampleDefinition : ValidatedScriptableObject<ExampleValidator>
 {
-    [field: SerializeField, Validation.Id("Assign a permanent ID.")]
-    public string Id { get; private set; }
+    [SerializeField, Validation.Id("Assign a permanent ID.")]
+    private string _id;
 
-    [field: SerializeField, Validation.Min(1)]
-    public int Quantity { get; private set; } = 1;
+    [SerializeField, Validation.Min(1)]
+    private int _quantity = 1;
+
+    public string Id => _id;
+    public int Quantity => _quantity;
 }
 
 public sealed class ExampleValidator : ScriptableObjectValidator<ExampleDefinition>
@@ -43,6 +51,7 @@ asset again inside the specialized validator.
 - `OnValidate` logs errors with their asset context and no call-site stack trace.
 - **Tools > Validation > Validate ScriptableObject Configuration** scans validated
   assets under `Assets`, including unreferenced assets and sub-assets.
+- Entering Play Mode runs the same scan and cancels entry if any asset is invalid.
 - A pre-build callback runs the same scan and rejects builds with all errors and paths.
 
 Errors contain the owning asset, setting path, and actionable message. Automatic
@@ -55,9 +64,9 @@ inherited fields are included; overridden properties inherit their rules. Getter
 must be side-effect-free. Reflection metadata is cached, while values and errors
 are read afresh on every validation.
 
-Put Inspector and validation attributes on an auto-property's generated field using
-`[field: ...]`, as shown above. Explicit serialized fields remain useful for collections
-exposed through read-only views. Every rule accepts an optional custom message as its
+Put Inspector and validation attributes on private serialized fields, then group
+public read-only getters below the configuration. Serialized auto-properties remain
+supported through `[field: ...]` when needed. Every rule accepts an optional custom message as its
 final constructor argument or named `Message` property. Messages do not interpolate
 expressions; omitted messages use defaults.
 
@@ -88,8 +97,10 @@ On collections it checks each reference; collection presence is a separate rule.
 [SerializeField, Validation.NotEmpty, Validation.RequiredElements, Validation.Nested]
 private EntryConfiguration[] entries;
 
-[field: SerializeField, Validation.ValidReference]
-public ExampleDefinition RelatedDefinition { get; private set; }
+[SerializeField, Validation.ValidReference]
+private ExampleDefinition relatedDefinition;
+
+public ExampleDefinition RelatedDefinition => relatedDefinition;
 ```
 
 Traversal never follows unannotated members, scene objects, or asset references
