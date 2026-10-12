@@ -8,14 +8,15 @@ using Core.Location;
 using Items;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UI.Shared;
 
 namespace UI.Hotbar
 {
     /// <summary>
-    /// Lightweight hotbar component that displays the first N items from an inventory
+    /// Toolbelt shortcuts reference carried tools independently of bag slot positions
     /// and provides quick-use functionality via input actions or mouse clicks
     /// </summary>
-    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, ILocationLifecycle
+    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, IEventListener<ItemSelectedEvent>, ILocationLifecycle
     {
         [Header("Inventory Binding")] [Tooltip("The name of the inventory to display in the hotbar")]
         public string TargetInventoryName = "MainInventory";
@@ -84,7 +85,8 @@ namespace UI.Hotbar
         protected virtual void InitializeHotbar()
         {
             if (_initialized) return;
-            if (TargetInventory == null) return;
+            if (!TargetInventory || !SlotContainer || !SlotPrefab) return;
+            HotbarSize = TargetInventory.Loadout.ToolbeltSize;
 
             // Clear existing slots
             var existingDesignHotbarSlots = SlotContainer.transform.GetComponentsInChildren<HotbarSlot>().ToList();
@@ -121,11 +123,6 @@ namespace UI.Hotbar
             // Initial refresh
             RefreshAllSlots();
 
-            // Set initial selection
-            if (_hotbarSlots.Count > 0 && TargetInventory?.Content?.Any(s => !s.IsEmpty) == true)
-            {
-                SetSelectedSlot(CurrentSelectedIndex);
-            }
         }
 
         /// <summary>
@@ -155,18 +152,10 @@ namespace UI.Hotbar
 
             for (int i = 0; i < _hotbarSlots.Count; i++)
             {
-                if (i < TargetInventory.Content.Length)
-                {
-                    _hotbarSlots[i].UpdateDisplay(TargetInventory.Content[i]);
-                }
-                else
-                {
-                    _hotbarSlots[i].UpdateDisplay(ItemStack.Empty);
-                }
+                var tool = TargetInventory.Loadout.GetToolbeltTool(i);
+                _hotbarSlots[i].UpdateDisplay(tool ? new ItemStack(tool, 1) : ItemStack.Empty);
             }
-
-            // To make sure the selected item is equipped on refresh e.g. if we use up an item or we get a new item
-            SwitchSlotItem(CurrentSelectedIndex);
+            SetSelectedSlot(TargetInventory.Loadout.ActiveToolbeltSlot);
         }
 
         /// <summary>
@@ -174,12 +163,8 @@ namespace UI.Hotbar
         /// </summary>
         public virtual void OnSlotActionTriggered(int slotIndex)
         {
+            if (UrGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
             if (slotIndex < 0 || slotIndex >= _hotbarSlots.Count)
-            {
-                return;
-            }
-
-            if (TargetInventory.Content[slotIndex].IsEmpty)
             {
                 return;
             }
@@ -193,21 +178,12 @@ namespace UI.Hotbar
         /// </summary>
         public virtual void SwitchSlotItem(int slotIndex)
         {
-            if (TargetInventory == null || slotIndex < 0 || slotIndex >= TargetInventory.Content.Length)
+            if (TargetInventory == null || slotIndex < 0 || slotIndex >= TargetInventory.Loadout.ToolbeltSize)
             {
                 return;
             }
 
-            ItemStack stack = TargetInventory.Content[slotIndex];
-
-            if (stack.IsEmpty)
-            {
-                ItemSelectedEvent.Trigger(null, slotIndex);
-            }
-            else if (stack.Item is EquippableItem equippableItem)
-            {
-                ItemSelectedEvent.Trigger(equippableItem, slotIndex);
-            }
+            TargetInventory.Loadout.SelectToolbeltSlot(slotIndex);
         }
 
 
@@ -216,6 +192,7 @@ namespace UI.Hotbar
         /// </summary>
         protected virtual void SelectNextSlot()
         {
+            if (_hotbarSlots.Count == 0) return;
             int nextIndex = (CurrentSelectedIndex + 1) % _hotbarSlots.Count;
             SetSelectedSlot(nextIndex);
             SwitchSlotItem(nextIndex);
@@ -226,6 +203,7 @@ namespace UI.Hotbar
         /// </summary>
         protected virtual void SelectPreviousSlot()
         {
+            if (_hotbarSlots.Count == 0) return;
             int prevIndex = CurrentSelectedIndex - 1;
             if (prevIndex < 0)
             {
@@ -241,7 +219,7 @@ namespace UI.Hotbar
         /// </summary>
         protected virtual void SetSelectedSlot(int index)
         {
-            if (index < 0 || index >= _hotbarSlots.Count)
+            if (index < -1 || index >= _hotbarSlots.Count)
             {
                 return;
             }
@@ -254,7 +232,7 @@ namespace UI.Hotbar
 
             // Select the new slot
             CurrentSelectedIndex = index;
-            _hotbarSlots[index].SetSelected(true);
+            if (index >= 0) _hotbarSlots[index].SetSelected(true);
         }
 
         /// <summary>
@@ -262,6 +240,9 @@ namespace UI.Hotbar
         /// </summary>
         protected virtual void Update()
         {
+            if (SlotContainer) SlotContainer.gameObject.SetActive(!UrGUIManager.HasOpenScreens);
+            if (UrGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
+            if (!_initialized) InitializeHotbar();
             if (!_initialized) return;
 
             // TODO: This looks extremly wrong???
@@ -295,6 +276,8 @@ namespace UI.Hotbar
                 e.InventoryRef?.PlayerID != PlayerId)
                 return;
 
+            _targetInventory = e.InventoryRef;
+            InitializeHotbar();
             RefreshAllSlots();
         }
 
@@ -308,6 +291,7 @@ namespace UI.Hotbar
             PreviousSlotAction.action?.Enable();
 
             this.Subscribe<InventoryChangedEvent>();
+            this.Subscribe<ItemSelectedEvent>();
             LevelManager.Instance?.RegisterLifecycle(this);
         }
 
@@ -321,12 +305,20 @@ namespace UI.Hotbar
             PreviousSlotAction.action?.Disable();
 
             this.Unsubscribe<InventoryChangedEvent>();
+            this.Unsubscribe<ItemSelectedEvent>();
             LevelManager.Instance?.UnregisterLifecycle(this);
         }
 
         public void OnLocationEnter(LocationData location)
         {
+            _targetInventory = null;
             InitializeHotbar();
+            RefreshAllSlots();
+        }
+
+        public void OnEvent(ItemSelectedEvent e)
+        {
+            if (e.Inventory == TargetInventory) SetSelectedSlot(TargetInventory.Loadout.ActiveToolbeltSlot);
         }
 
         public void OnLocationLeave(LocationData location) { }

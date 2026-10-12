@@ -66,7 +66,7 @@ namespace Character
         public event Action<MovementState> OnMovementStateChanged;
         public event Action<ConditionState> OnConditionStateChanged;
 
-        public bool IsFrozen => ConditionState == ConditionState.Frozen;
+        public bool IsFrozen => ConditionState == ConditionState.Frozen || UI.Shared.UrGUIManager.IsCharacterPaused(this);
         public bool IsRuntimeInitialized { get; private set; }
         public LifecycleState CurrentLifecycleState { get; private set; } = LifecycleState.Booting;
 
@@ -214,7 +214,10 @@ namespace Character
             if (IsRuntimeInitialized)
                 return;
 
-            MainInventory = SlotInventory.FindInventory("MainInventory", "Player1");
+            MainInventory = SlotInventory.FindInventory("MainInventory", "Player1")
+                ?? throw new InvalidOperationException("Character requires a registered MainInventory.");
+            if (this is MainCharacter && !MainInventory.Configuration)
+                throw new InvalidOperationException("MainCharacter requires an inventory configuration.");
 
             toolActionRegistry.Initialize(this);
             actionRegistry.Initialize(this);
@@ -309,6 +312,9 @@ namespace Character
         // ── Energy API ────────────────────────────────────────────────────────────────
 
         public void ConsumeStamina(int amount) => Stamina?.ConsumeStamina(amount);
+        public int CurrentStamina => Stamina ? Stamina.CurrentStamina : 0;
+        public bool CanRestoreStamina => Stamina;
+        public void RestoreStamina(int amount) => Stamina?.RestoreStamina(amount);
         public void InitializeStamina(int value) => Stamina?.Initialize(value);
 
         // ── Tile tracking ─────────────────────────────────────────────────────────────

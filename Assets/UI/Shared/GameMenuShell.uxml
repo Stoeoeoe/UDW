@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="GameMenuShell.uss" />
+    <ui:VisualElement name="menuOverlay" class="game-menu-overlay" focusable="true">
+        <ui:VisualElement name="menuBackdrop" class="game-menu-backdrop" />
+        <ui:VisualElement class="game-menu-frame">
+            <ui:VisualElement class="game-menu-panel">
+                <ui:VisualElement class="game-menu-header">
+                    <ui:Label name="screenTitle" text="Menu" class="game-menu-title" />
+                    <ui:Button name="closeButton" text="Close" class="game-menu-close" />
+                </ui:VisualElement>
+                <ui:ScrollView mode="Horizontal" class="menu-tab-scroll">
+                    <ui:VisualElement name="menuTabs" class="menu-tabs" />
+                </ui:ScrollView>
+                <ui:ScrollView class="menu-page-scroll" vertical-scroller-visibility="AlwaysVisible">
+                    <ui:VisualElement name="menuContent" class="menu-content" />
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

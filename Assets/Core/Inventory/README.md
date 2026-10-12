@@ -1,36 +1,57 @@
-# Player inventory persistence
+# Inventory
 
-`GameState.Player.Inventory` owns ordered slots (stable `ItemId` + quantity), capacity,
-the UI-held stack, and `StartingLoadoutApplied`. It contains no asset references. `SlotInventory.Bind`
-connects the scene inventory to this live state on each player spawn. NPC/other
-inventories remain runtime-local unless explicitly bound to saved state.
+`InventoryState` is the live saved data: ordered item-ID/quantity slots, capacity
+(the slots array length), held stack and source index, toolbelt shortcuts, selected
+item ID, equipment and `StartingLoadoutApplied`. It stores no Unity references.
 
-`PlayerStateManager` keeps the existing starting tools/items configuration. The
-complete loadout is prepared before committing anything; overflow or missing IDs
-leave both contents and marker untouched. The marker is saved before notifications.
-Emptying an initialized inventory, loading, and changing scenes do not grant it again.
-Starting a new game with a fresh root does.
+Responsibilities:
+- `InventoryStorage` is a plain C# model for slots, stacking, adding/removing,
+  swapping and sorting. It binds directly to saved slots and has no events.
+- `InventoryInteraction` transfers items between slots and the saved held stack.
+  Its `TryPickUp`, `TryPlaceHeld` and `TryReturnHeld` operations finish all writes
+  before asking `SlotInventory` to publish notifications. Held state is read-only
+  through the public API.
+- `SlotInventory` initializes, registers, binds state and publishes notifications.
+- `CharacterLoadout` owns toolbelt assignment, selection and equipment.
+- `InventoryActions` coordinates equipment exchanges, consumption and upgrades.
 
-The shared catalog discovery populates `Assets/Resources/ItemCatalog.asset` from
-item definitions under `ItemCatalog.Path` (currently `Assets`), after import,
-saving definition edits, and before builds. You can also
-use **Tools > Inventory > Rebuild Item Catalog**, or **Tools > Catalogs** to search
-and enable/disable entries. Refresh preserves these selections. This is one explicit runtime
-catalog, not a runtime scan. IDs must be unique and non-empty; renaming an existing
-ID breaks its save references. Add new items as ordinary definition assets; no
-additional prefab or manager wiring is needed.
+Use `Capacity` and `GetSlot(index)` for individual reads. `GetSnapshot()` explicitly
+allocates a detached resolved array; changing it never changes saved slots. Ordinary
+mutations update individual saved slots, preserving the array. Sorting and
+all-or-nothing transactions prepare snapshots; internal commits write them back
+without notifications. Commit inventory, money, equipment and stock before
+publishing callbacks. Failed gameplay operations leave all participants unchanged.
 
-Unknown item IDs retain their slots and quantities. They cannot be used or sold;
-adding other items cannot overwrite them. The existing UI treats unresolved items
-as unavailable/empty visually; a missing-item placeholder is a future UI task.
-The drag-held stack and its source index are saved too. Drag/drop finishes updating
-both the held stack and slots before notifying listeners.
+Item definitions and loaded save data must satisfy the project's validation and
+migration contracts. Missing definitions in occupied slots fail clearly. Invalid
+programming arguments throw; full inventories, empty-slot pickups and incompatible
+placement remain normal rejections. No migration framework is implemented here.
 
-`Content` returns a resolved snapshot, not mutable authoritative storage. Use
-`AddItem`, `RemoveItemAt`, `MoveItem`, or `SetSlot`. Shop transactions use the internal
-prepare/commit path so all inventory, wallet and stock changes precede notifications.
-Do not shrink loaded capacity to the current prefab's default slot count.
+`SlotInventory.Bind` connects the player inventory to `GameState.Player.Inventory`
+on every spawn. NPC inventories stay local unless explicitly bound. Capacity for
+new state is configuration columns times starting rows (or the legacy slot count
+for inventories without a configuration). Saved capacity always takes precedence.
+`IsInitialized` explicitly distinguishes an unbound component from an empty bag.
+Storage, interaction, loadout and actions retain their identity when binding a new
+save root; all use the replacement live state.
 
-Editor tests cover loadout idempotence/overflow, empty initialized saves, missing
-definitions, slot order, shared-state rebinding, root serialization, and trading
-round trips. No backwards-compatibility migrations are provided during prototyping.
+`PlayerStateManager` supplies starting tools/items. The full loadout is prepared
+before committing; overflow leaves contents and marker untouched. The saved marker
+is set before callbacks. Emptying the bag or changing scenes never grants it again.
+The player's registered inventory and its configuration are required setup.
+
+The toolbelt stores tool-ID shortcuts independent of capacity and slot order.
+Assigning or clearing one never moves items. Removed tools leave empty shortcuts;
+shortcuts cannot create items. Starting tools are assigned once. Seeds can be selected
+from the bag without occupying toolbelt cells. Equipment and held items remain save-owned.
+
+Shared discovery populates `Assets/Resources/ItemCatalog.asset` from definitions
+under `ItemCatalog.Path` (currently `Assets`) after import/save and before play/build.
+Use **Tools > Inventory > Rebuild Item Catalog** or **Tools > Catalogs** for authoring.
+Runtime resolves IDs through this single catalog and never scans assets. IDs must
+be unique, non-empty and stable. Renaming them breaks saved references.
+
+Tests cover stack limits, atomic additions, direct mutation, detached snapshots,
+split/partial merges, swaps, full-bag returns, transaction failures, notification
+ordering, starting-loadout idempotence, equipment, toolbelt and held-stack save/load.
+See [UI setup](../../UI/InventoryScreen/SETUP_GUIDE.md).

@@ -1,0 +1,32 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="InventoryScreen.uss" />
+    <ui:VisualElement class="bag-page">
+      <ui:VisualElement name="bagBody" class="bag-body">
+       <ui:VisualElement class="bag-items">
+        <ui:Label name="capacityLabel" class="inventory-kicker" />
+        <ui:VisualElement name="inventoryScroll" class="inventory-scroll">
+            <ui:VisualElement name="slotGrid" class="inventory-grid" />
+        </ui:VisualElement>
+        </ui:VisualElement>
+            <ui:VisualElement class="inventory-item-details">
+                <ui:VisualElement name="selectedIcon" class="selected-item-icon" picking-mode="Ignore" />
+                <ui:Label name="selectionLabel" text="Select an item" class="inventory-selection" />
+                <ui:Label name="itemDescription" class="inventory-description" />
+                <ui:Label name="itemState" class="inventory-hint" />
+                <ui:Button name="useButton" text="Put in hand" class="inventory-action primary-action" />
+                <ui:VisualElement name="quickChoices" class="quick-choices" />
+                <ui:VisualElement class="item-secondary-actions">
+                    <ui:Button name="beltButton" text="Assign to toolbelt" class="quiet-action" />
+                    <ui:Button name="splitButton" text="Split stack" class="quiet-action" />
+                    <ui:Button name="discardButton" text="Leave on ground…" class="quiet-action" />
+                </ui:VisualElement>
+                <ui:VisualElement name="contextMenu" class="inventory-prompt" />
+            </ui:VisualElement>
+      </ui:VisualElement>
+        <ui:VisualElement class="inventory-header">
+            <ui:Label name="moneyLabel" class="inventory-selection" />
+            <ui:Button name="sortButton" text="Tidy bag" class="quiet-action" />
+        </ui:VisualElement>
+        <ui:Label text="Drag to move · Space to pick up / place · Esc to return / close" class="inventory-hint" />
+    </ui:VisualElement>
+</ui:UXML>

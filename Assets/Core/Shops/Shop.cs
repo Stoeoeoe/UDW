@@ -117,12 +117,12 @@ namespace Core.Shops
             if (price < 0) return ShopTradeResult.InvalidPrice;
             var total = (long)price * quantity;
             if (total > wallet.Balance) return ShopTradeResult.InsufficientFunds;
-            if (!inventory.TryPrepareAddition(offering.item, quantity, out var content))
+            if (!inventory.Storage.TryPrepareAddition(offering.item, quantity, out var content))
                 return ShopTradeResult.InventoryFull;
             var previous = wallet.Balance;
             var stockBefore = stock.quantity;
             wallet.TrySpend((int)total, false);
-            inventory.CommitContent(content);
+            inventory.Storage.CommitContent(content);
             stock.quantity -= quantity;
             var purchase = new ShopPurchaseEvent
             {
@@ -141,20 +141,19 @@ namespace Core.Shops
         public ShopTradeResult Sell(int slotIndex, Wallet wallet, SlotInventory inventory, int quantity = 1)
         {
             if (quantity <= 0) return ShopTradeResult.InvalidQuantity;
-            if (!definition.acceptsSales || inventory.Content == null ||
-                slotIndex < 0 || slotIndex >= inventory.Content.Length) return ShopTradeResult.NotAccepted;
-            var stack = inventory.Content[slotIndex];
+            if (!definition.acceptsSales ||
+                slotIndex < 0 || slotIndex >= inventory.Capacity) return ShopTradeResult.NotAccepted;
+            var stack = inventory.GetSlot(slotIndex);
             if (stack.IsEmpty || stack.Item.SellBasePrice <= 0) return ShopTradeResult.NotAccepted;
             if (quantity > stack.Quantity) return ShopTradeResult.OutOfStock;
             var price = GetSellPrice(stack.Item);
             if (price <= 0) return ShopTradeResult.NotAccepted;
             var total = (long)price * quantity;
             if (total > WalletState.MaximumBalance - wallet.Balance) return ShopTradeResult.WalletFull;
-            var content = (ItemStack[])inventory.Content.Clone();
-            content[slotIndex] = quantity == stack.Quantity ? ItemStack.Empty : new ItemStack(stack.Item, stack.Quantity - quantity);
+            var remaining = quantity == stack.Quantity ? ItemStack.Empty : new ItemStack(stack.Item, stack.Quantity - quantity);
             var previous = wallet.Balance;
             wallet.TryAdd((int)total, false);
-            inventory.CommitContent(content);
+            inventory.Storage.SetSlot(slotIndex, remaining);
             var sale = new ShopSaleEvent
             {
                 Shop = this, Seller = wallet.Owner, Wallet = wallet, Inventory = inventory,
@@ -180,7 +179,8 @@ namespace Core.Shops
         private static int GetPrice(int basePrice, float multiplier)
         {
             var price = Math.Round((double)basePrice * multiplier, MidpointRounding.AwayFromZero);
-            return double.IsNaN(price) || price < 0 || price > int.MaxValue ? -1 : (int)price;
+            // Configuration guarantees finite, nonnegative inputs; the computed price can still overflow.
+            return price > int.MaxValue ? -1 : (int)price;
         }
     }
 }

@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="InventoryScreen.uss" />
+    <ui:VisualElement>
+        <ui:Label text="Worn equipment" class="inventory-kicker" />
+        <ui:VisualElement name="equipmentSlots" class="inventory-equipment" />
+        <ui:Label name="equipmentChoiceTitle" text="Choose a worn slot" class="inventory-kicker" />
+        <ui:ScrollView name="equipmentChoices" class="equipment-choices" />
+        <ui:Label name="equipmentStatus" class="inventory-description" />
+        <ui:Button name="unequipButton" text="Return to bag" class="quiet-action" />
+        <ui:Label text="Choose a slot to see what you can wear there" class="inventory-hint" />
+    </ui:VisualElement>
+</ui:UXML>

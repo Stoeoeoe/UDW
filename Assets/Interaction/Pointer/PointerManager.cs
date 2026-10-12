@@ -68,6 +68,19 @@ namespace Interaction.Pointer
 
         private void HandleContextChange(PlayerInteractionContextSnapshot snapshot)
         {
+            if (snapshot.WorldInteractionBlocked)
+            {
+                if (CurrentInteractableUnderPointer != null)
+                {
+                    CurrentInteractableUnderPointer = null;
+                    PointerInteractableChangedEvent.Trigger(null);
+                }
+                if (CurrentTileDataUnderPointer != null)
+                {
+                    CurrentTileDataUnderPointer = null;
+                    TileDataUnderPointerChangedEvent.Trigger(null);
+                }
+            }
             var mode = snapshot.Mode;
             switch (mode)
             {
@@ -143,6 +156,7 @@ namespace Interaction.Pointer
 
         private void Update()
         {
+            if (PlayerInteractionContext.Instance.CurrentSnapshot.WorldInteractionBlocked) return;
             if (LevelManager.Instance == null || !LevelManager.Instance.SceneReady || Camera.main == null) return;
 
             var mouseScreenPos = Mouse.current.position.ReadValue();

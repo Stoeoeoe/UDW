@@ -7,6 +7,7 @@ using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UI.Shared;
 
 // TODO: Probably the whole weather management can be simplified. It appears that a lot of the problems stemmed from being run too early (before renderer is ready).
 
@@ -230,6 +231,9 @@ namespace Core.TimeAndWeather
                 }
             }
             // --- end of integrated time scale logic ---
+
+            // Modal screens pause the calendar without changing gameplay time-scale requests.
+            if (UrGUIManager.IsGameClockPaused) return;
 
             var time = GameState.Time;
             var previousMinute = time.TotalMinutes;

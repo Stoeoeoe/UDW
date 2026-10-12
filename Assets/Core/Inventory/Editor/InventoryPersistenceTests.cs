@@ -42,7 +42,7 @@ namespace Core.Inventory.Editor
             typeof(SlotInventory).GetField("_numberOfSlots", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_inventory, 2);
             typeof(SlotInventory).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_inventory, null);
             _item = ScriptableObject.CreateInstance<InventoryTestItem>();
-            typeof(ItemDefinition).GetField("<ItemId>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+            typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_item, "test:grain");
             _state = new InventoryState();
             _inventory.Bind(_state, id => id == _item.ItemId ? _item : null);
@@ -76,23 +76,23 @@ namespace Core.Inventory.Editor
             _checkMarker = true;
             Assert.That(_inventory.ApplyStartingLoadout(new[] { _item, _item }), Is.True);
             Assert.That(_events, Is.EqualTo(1));
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(2));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(2));
             _inventory.RemoveItemAt(0, 2);
             var bytes = SerializationUtility.SerializeValue(_state, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             _state = SerializationUtility.DeserializeValue<InventoryState>(bytes, DataFormat.JSON);
             _inventory.Bind(_state);
             Assert.That(_inventory.ApplyStartingLoadout(new[] { _item }), Is.True);
-            Assert.That(_inventory.Content[0].IsOccupied, Is.False);
+            Assert.That(_inventory.GetSlot(0).IsOccupied, Is.False);
         }
 
         [Test]
         public void OverflowAndInvalidLoadoutsDoNotPartiallyAddOrMarkInitialized()
         {
-            typeof(ItemDefinition).GetField("<MaxStackSize>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+            typeof(ItemDefinition).GetField("_maxStackSize", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_item, 1);
             Assert.That(_inventory.ApplyStartingLoadout(new[] { _item, _item, _item }), Is.False);
-            Assert.That(_inventory.ApplyStartingLoadout(new ItemDefinition[] { _item, null }), Is.False);
+            Assert.Throws<ArgumentNullException>(() => _inventory.ApplyStartingLoadout(new ItemDefinition[] { _item, null }));
             Assert.That(_state.StartingLoadoutApplied, Is.False);
             Assert.That(_state.Slots[0].Quantity, Is.Zero);
             Assert.That(_events, Is.Zero);
@@ -101,24 +101,17 @@ namespace Core.Inventory.Editor
         }
 
         [Test]
-        public void MissingItemsReserveSlotsAndSurviveAddingMovingAndRoundTrip()
+        public void SavedSlotsPreserveCapacityOrderAndResolveOnRebinding()
         {
-            _state.Slots[0] = new InventorySlotState("missing:item", 4);
-            Assert.That(_inventory.AddItem(_item, 3), Is.True);
-            Assert.That(_state.Slots[0].ItemId, Is.EqualTo("missing:item"));
-            _inventory.MoveItem(0, 1);
-            Assert.That(_state.Slots[1].ItemId, Is.EqualTo("missing:item"));
-            var bytes = SerializationUtility.SerializeValue(_state, DataFormat.JSON);
+            _inventory.SetSlot(1, new ItemStack(_item, 4));
+            var bytes = SerializationUtility.SerializeValue(_state, DataFormat.JSON, out var references);
+            Assert.That(references, Is.Empty);
             var restored = SerializationUtility.DeserializeValue<InventoryState>(bytes, DataFormat.JSON);
             _inventory.Bind(restored, id => id == _item.ItemId ? _item : null);
-            Assert.That(_inventory.Content[0].Item, Is.SameAs(_item));
-            Assert.That(_inventory.Content[1].Item, Is.Null);
-            Assert.That(_inventory.Content[1].IsOccupied, Is.True);
-            Assert.That(_inventory.Content[1].Quantity, Is.EqualTo(4));
-            Assert.That(_inventory.AddItem(_item, _item.MaxStackSize), Is.False);
-            // A later resolver can restore access without changing saved contents.
-            _inventory.Bind(restored, id => _item);
-            Assert.That(_inventory.Content[1].Item, Is.SameAs(_item));
+            Assert.That(_inventory.Capacity, Is.EqualTo(2));
+            Assert.That(_inventory.GetSlot(0).IsEmpty, Is.True);
+            Assert.That(_inventory.GetSlot(1).Item, Is.SameAs(_item));
+            Assert.That(_inventory.GetSlot(1).Quantity, Is.EqualTo(4));
         }
 
         [Test]
@@ -143,8 +136,8 @@ namespace Core.Inventory.Editor
         [Test]
         public void DraggedStackRemainsSaveOwnedAcrossRoundTripAndSceneRebinding()
         {
-            _inventory.HeldStack = new ItemStack(_item, 3);
-            _inventory.HeldSourceIndex = 1;
+            _inventory.SetSlot(1, new ItemStack(_item, 3));
+            Assert.That(_inventory.Interaction.TryPickUp(1, 3), Is.True);
             var bytes = SerializationUtility.SerializeValue(_state, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var restored = SerializationUtility.DeserializeValue<InventoryState>(bytes, DataFormat.JSON);
@@ -158,12 +151,13 @@ namespace Core.Inventory.Editor
         public void SceneInventoryCannotMutateTheSavedSlotsThroughItsContentSnapshot()
         {
             _inventory.AddItem(_item, 2);
-            _inventory.Content[0] = ItemStack.Empty;
+            var snapshot = _inventory.GetSnapshot();
+            snapshot[0] = ItemStack.Empty;
             Assert.That(_state.Slots[0].Quantity, Is.EqualTo(2));
             var other = _root.AddComponent<SlotInventory>();
             other.Bind(_state, id => _item);
             other.RemoveItemAt(0);
-            Assert.That(_inventory.Content[0].Quantity, Is.EqualTo(1));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
         }
     }
 }

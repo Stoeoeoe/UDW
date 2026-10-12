@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f099f2ad68b04f22a2c363b37d0a75b8, type: 3}
   m_Name: RavenFlower
   m_EditorClassIdentifier: Assembly-CSharp::Items.Plants.PlantItem
-  <ItemId>k__BackingField: RavenFlower
-  <ItemName>k__BackingField: Raven Flower
-  <Icon>k__BackingField: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582,
+  _itemId: RavenFlower
+  _itemName: Raven Flower
+  _icon: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582,
     type: 3}
-  <Description>k__BackingField: 
-  <MaxStackSize>k__BackingField: 99
-  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
-  <PickupSound>k__BackingField: {fileID: 8300000, guid: 59a2ea91da9a6e04a8192fa7e4f59c3f,
+  _description: 
+  _maxStackSize: 99
+  _worldRepresentationPrefab: {fileID: 0}
+  _pickupSound: {fileID: 8300000, guid: 59a2ea91da9a6e04a8192fa7e4f59c3f,
     type: 3}
   placeableOnTerrainTypes: 01000000
-  plantData: {fileID: 11400000, guid: 9c87864bb7deaf14494c7822d7b9fed4, type: 2}
+  _plantData: {fileID: 11400000, guid: 9c87864bb7deaf14494c7822d7b9fed4, type: 2}

@@ -8,6 +8,8 @@ namespace Interaction.Dialog
     {
         [Tooltip("if this is set to true, the character will be able to move while dialogue is in progress")]
         public bool CanMoveWhileTalking = false;
+        [Tooltip("Pause the in-game calendar while talking. UI animations and gameplay time-scale effects keep running.")]
+        public bool PauseGameClockWhileTalking = true;
     
         [Tooltip("")]
         public bool RotateDialogueStarterTowardsTarget = true;

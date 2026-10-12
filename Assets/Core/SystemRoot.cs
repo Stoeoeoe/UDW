@@ -1,4 +1,5 @@
 using Core.Game;
+using UI.Shared;
 using UnityEngine;
 
 namespace Core
@@ -21,6 +22,8 @@ namespace Core
             // Scene-specific test roots and the default prefab share the same state setup.
             if (!TryGetComponent<GameStateManager>(out _))
                 gameObject.AddComponent<GameStateManager>();
+            if (!TryGetComponent<UrGUIManager>(out _))
+                gameObject.AddComponent<UrGUIManager>();
         }
     }
 }

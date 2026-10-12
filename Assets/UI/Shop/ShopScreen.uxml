@@ -1,0 +1,42 @@
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="ShopScreen.uss" />
+    <ui:VisualElement name="shopOverlay" class="shop-overlay is-hidden" focusable="true">
+        <ui:VisualElement name="shopBackdrop" class="shop-backdrop" />
+        <ui:VisualElement class="shop-frame">
+            <ui:VisualElement class="shop-panel">
+                <ui:VisualElement class="shop-header">
+                    <ui:VisualElement>
+                        <ui:Label text="GENERAL STORE" class="shop-kicker" />
+                        <ui:Label name="shopTitle" text="Shop" class="shop-title" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="shop-header-actions">
+                        <ui:Label name="walletBalance" text="0g" class="wallet-balance" />
+                        <ui:Button name="closeButton" text="×" class="close-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label name="shopSubtitle" text="Take a look at today's goods." class="shop-subtitle" />
+                <ui:VisualElement class="shop-columns">
+                    <ui:VisualElement class="shop-column">
+                        <ui:VisualElement class="column-heading">
+                            <ui:Label text="FOR SALE" class="column-title" />
+                            <ui:Label text="Buy one" class="column-caption" />
+                        </ui:VisualElement>
+                        <ui:ScrollView name="offerList" class="shop-list" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="shop-column sell-column">
+                        <ui:VisualElement class="column-heading">
+                            <ui:Label text="YOUR GOODS" class="column-title" />
+                            <ui:Label text="Sell one" class="column-caption" />
+                        </ui:VisualElement>
+                        <ui:ScrollView name="inventoryList" class="shop-list" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="shop-footer">
+                    <ui:Label name="statusLabel" text="" class="shop-status" />
+                    <ui:Label text="ESC   CLOSE" class="shop-hint" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
+

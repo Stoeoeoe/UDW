@@ -3,11 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
     [RequireComponent(typeof(UIDocument))]
-    public class VulcanusDialogueUIDocumentPresenter : MonoBehaviour, IDialoguePresenter, IDialogueAdvanceHandler
+    public class VulcanusDialogueUIDocumentPresenter : ManagedUIScreen, IDialoguePresenter, IDialogueAdvanceHandler
     {
         [Header("Layout")]
         [SerializeField] private UIDocument document;
@@ -15,7 +16,6 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private StyleSheet styleSheet;
 
         [Header("Behavior")]
-        [SerializeField] private bool hideWhenInactive = true;
         [SerializeField] private string continueButtonText = "Continue";
         [SerializeField] private string choicePromptText = "Choose a response";
         [SerializeField] private string missingLayoutMessage = "Dialogue UI layout is missing.";
@@ -29,6 +29,7 @@ namespace Core.Dialogue.Vulcanus
         private VisualElement _choiceContainer;
         private Button _continueButton;
         private bool _isBuilt;
+        private VisualElement _boundRoot;
         private bool _waitingForAdvance;
         private bool _waitingForChoice;
         private VulcanusDialogueChoiceOption _selectedOption;
@@ -37,7 +38,7 @@ namespace Core.Dialogue.Vulcanus
         public void OnDialogueStarted(VulcanusDialogueExecutionContext context)
         {
             EnsureBuilt();
-            ShowOverlay(true);
+            OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(string.Empty, string.Empty);
             SetBody(string.Empty);
             SetHint(string.Empty);
@@ -48,7 +49,7 @@ namespace Core.Dialogue.Vulcanus
         public IEnumerator PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context)
         {
             EnsureBuilt();
-            ShowOverlay(true);
+            OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, node.Emotion);
             SetBody(localizedText);
             SetHint("Click, press Enter, or press Space");
@@ -64,7 +65,7 @@ namespace Core.Dialogue.Vulcanus
             VulcanusDialogueExecutionContext context, Action<VulcanusDialogueChoiceOption> onSelected)
         {
             EnsureBuilt();
-            ShowOverlay(true);
+            OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(string.Empty, string.Empty);
             SetBody(choicePromptText);
             SetHint("Click a choice or press 1-9");
@@ -89,7 +90,7 @@ namespace Core.Dialogue.Vulcanus
             SetHint(string.Empty);
             SetSpeaker(string.Empty, string.Empty);
             SetContinueVisible(false);
-            ShowOverlay(!hideWhenInactive);
+            CloseScreen();
         }
 
         public bool TryAdvanceDialogue()
@@ -114,14 +115,18 @@ namespace Core.Dialogue.Vulcanus
         private void Awake()
         {
             EnsureBuilt();
-            ShowOverlay(!hideWhenInactive);
+            if (_overlay != null)
+                _overlay.style.display = DisplayStyle.None;
+        }
+
+        private void OnEnable()
+        {
+            EnsureBuilt();
+            if (_overlay != null) _overlay.style.display = DisplayStyle.None;
         }
 
         private void EnsureBuilt()
         {
-            if (_isBuilt)
-                return;
-
             document = document != null ? document : GetComponent<UIDocument>();
             if (document == null)
             {
@@ -130,6 +135,9 @@ namespace Core.Dialogue.Vulcanus
             }
 
             var root = document.rootVisualElement;
+            if (root == null || !document.isActiveAndEnabled) return;
+            if (_isBuilt && ReferenceEquals(root, _boundRoot)) return;
+            _boundRoot = root;
             root.Clear();
             if (styleSheet != null)
                 root.styleSheets.Add(styleSheet);
@@ -163,6 +171,7 @@ namespace Core.Dialogue.Vulcanus
             if (_continueButton != null)
                 _continueButton.clicked += ContinueRequested;
 
+            RebindRoot(_overlay);
             _isBuilt = true;
         }
 
@@ -214,11 +223,15 @@ namespace Core.Dialogue.Vulcanus
 
         private void ContinueRequested()
         {
+            if (!_waitingForAdvance) return;
+            PlayUISound(UISoundCue.Click);
             _waitingForAdvance = false;
         }
 
         private void SelectOption(VulcanusDialogueChoiceOption option)
         {
+            if (!_waitingForChoice) return;
+            PlayUISound(UISoundCue.Click);
             _selectedOption = option;
             _waitingForChoice = false;
         }
@@ -295,14 +308,6 @@ namespace Core.Dialogue.Vulcanus
 
             _continueButton.text = continueButtonText;
             _continueButton.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
-        }
-
-        private void ShowOverlay(bool isVisible)
-        {
-            if (_overlay == null)
-                return;
-
-            _overlay.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void FocusOverlay()

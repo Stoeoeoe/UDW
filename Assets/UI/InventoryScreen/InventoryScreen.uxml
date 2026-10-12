@@ -1,0 +1,15 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="InventoryScreen.uss" />
+    <ui:Template name="MenuShell" src="../Shared/GameMenuShell.uxml" />
+    <ui:Template name="Bag" src="BagPage.uxml" />
+    <ui:Template name="Equipment" src="EquipmentPage.uxml" />
+    <ui:Instance template="MenuShell" class="game-menu-host" picking-mode="Ignore" />
+    <ui:VisualElement name="pageStaging" class="inventory-hidden">
+        <ui:Instance template="Bag" name="bagPage" />
+        <ui:Instance template="Equipment" name="equipmentPage" />
+    </ui:VisualElement>
+        <ui:VisualElement name="heldCursor" class="held-cursor" picking-mode="Ignore">
+            <ui:VisualElement name="heldIcon" class="inventory-icon" picking-mode="Ignore" />
+            <ui:Label name="heldQuantity" class="held-cursor-quantity" picking-mode="Ignore" />
+        </ui:VisualElement>
+</ui:UXML>

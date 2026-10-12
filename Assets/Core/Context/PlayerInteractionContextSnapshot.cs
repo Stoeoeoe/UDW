@@ -23,8 +23,12 @@ namespace Core.Context
         InteractionMode Mode
     )
     {
+        public bool WorldInteractionBlocked { get; init; }
+        public bool CanInteractWithWorld => SceneReady && !WorldInteractionBlocked;
+
         /// <summary>Pointer has priority, but an unavailable target cannot block a ready nearby one.</summary>
         public AbstractInteractable ActionableInteractable =>
+            !CanInteractWithWorld ? null :
             InteractableUnderPointer && InteractableUnderPointer.CanInteract ? InteractableUnderPointer :
             CurrentInteractable && CurrentInteractable.CanInteract ? CurrentInteractable : null;
 
@@ -47,7 +51,8 @@ namespace Core.Context
             ConditionState? condition,
             MovementState? movement,
             string conversation, 
-            UrTime currentTime)
+            UrTime currentTime,
+            bool worldInteractionBlocked = false)
         {
             var baseSnapshot = new PlayerInteractionContextSnapshot(
                 sceneReady,
@@ -63,7 +68,7 @@ namespace Core.Context
                 conversation,
                 currentTime,
                 default
-            );
+            ) { WorldInteractionBlocked = worldInteractionBlocked };
 
             return baseSnapshot with
             {

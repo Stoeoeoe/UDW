@@ -151,7 +151,7 @@ namespace Core.Items
             // ── Fade ─────────────────────────────────────────────────────────────────
             if (dist <= mgr.FadeStartDistance)
             {
-                var canPickUp = _character.MainInventory && _character.MainInventory.TryPrepareAddition(item, quantity, out _);
+                var canPickUp = _character.MainInventory.Storage.CanAdd(item, quantity);
                 if (!canPickUp) CancelFade();
                 else if (!_isFading)
                     StartFade(mgr.FadeDuration);
@@ -184,7 +184,6 @@ namespace Core.Items
         private void TryPickup()
         {
             if (!item || _character == null) return;
-            if (_character.MainInventory == null) return;
             if (!_character.MainInventory.AddItem(item, quantity))
             {
                 CancelFade(); // Capacity may change after the approach fade began. Keep the drop visible.

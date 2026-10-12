@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Core.Inventory
 {
@@ -11,6 +12,9 @@ namespace Core.Inventory
         public bool StartingLoadoutApplied;
         public InventorySlotState HeldSlot;
         public int HeldSourceIndex = -1;
+        public string[] Toolbelt;
+        public string SelectedItemId;
+        public Dictionary<string, InventorySlotState> Equipment = new();
     }
 
     [Serializable]

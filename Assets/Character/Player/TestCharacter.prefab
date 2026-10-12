@@ -137,6 +137,7 @@ MonoBehaviour:
   toolActionPrefabs:
   - {fileID: 4949040840317661943, guid: ec7049a9783de6647939729c449dca73, type: 3}
   - {fileID: 2463901313240589972, guid: e76e17c5c8538cf4c84f10f20dbee9f5, type: 3}
+  - {fileID: 6132007388190710486, guid: 217dbd65ccf8d3e4fbaae48f3d2c5213, type: 3}
 --- !u!1 &2653541153906028773
 GameObject:
   m_ObjectHideFlags: 0
@@ -184,53 +185,7 @@ MonoBehaviour:
   _inventoryName: MainInventory
   _playerID: Player1
   _numberOfSlots: 10
---- !u!1 &3143340380000758005
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2292141682013633021}
-  - component: {fileID: 4998161563553484580}
-  m_Layer: 10
-  m_Name: ToolInventory
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2292141682013633021
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3143340380000758005}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6490586568447708027}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4998161563553484580
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3143340380000758005}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3c69d9b7470a16b4eb79fb7d6150bf76, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Core.Inventory.SlotInventory
-  _inventoryName: ToolInventory
-  _playerID: Player1
-  _numberOfSlots: 10
+  configuration: {fileID: 11400000, guid: 16359b172594fe340b9cc9b35876ed8a, type: 2}
 --- !u!1 &4035038567304184448
 GameObject:
   m_ObjectHideFlags: 0
@@ -309,7 +264,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 483139891687268983}
-  - {fileID: 2292141682013633021}
   m_Father: {fileID: 2334998026169977668}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4615591558409814390
@@ -906,8 +860,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Character.UrCharacterAnimator
   animancer: {fileID: 8160659729119610378}
   character: {fileID: 1754888933028988936}
-  asepriteFile: {fileID: -2253911629886400664, guid: 8f32b111b27a2594b9244d77b4d0742c,
-    type: 3}
+  asepriteFile: {fileID: -2253911629886400664, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
   walkPrefix: Walk
   idlePrefix: Idle
   preparePrefix: PrepTool
@@ -924,8 +877,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3020538a7d2826d45a2e627f186c3d58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.TileHighlight.TileHighlighter
-  _tileHighlightPrefab: {fileID: 7113988650912272901, guid: a832bdcb8d18c5b4daabcde2284fd1af,
-    type: 3}
+  _tileHighlightPrefab: {fileID: 7113988650912272901, guid: a832bdcb8d18c5b4daabcde2284fd1af, type: 3}
 --- !u!114 &4654039551551919212
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1093,7 +1045,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2434293032161368707
 SpriteRenderer:
-  serializedVersion: 2
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1140,8 +1092,7 @@ SpriteRenderer:
   m_SortingLayer: 5
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -6145153117917986877, guid: 8f32b111b27a2594b9244d77b4d0742c,
-    type: 3}
+  m_Sprite: {fileID: -6145153117917986877, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1151,6 +1102,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 1
+  m_BlendShapeWeights: []
 --- !u!114 &8160659729119610378
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -8,7 +8,7 @@ namespace Core.Context
         public static InteractionMode Resolve(PlayerInteractionContextSnapshot context)
         {
             // Nothing to do if no character
-            if (!context.SceneReady || context.Character == null)
+            if (!context.CanInteractWithWorld || context.Character == null)
                 return InteractionMode.None;
 
             // The same target is used by the action: ready pointer target, then ready proximity target.

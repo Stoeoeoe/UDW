@@ -232,8 +232,8 @@ The actions you create directly in the Inspector work immediately. Just make sur
    - **Content Size**: Must be at least as large as `HotbarSize`
 
 3. The hotbar will automatically display the **first N items** from this inventory
-   - Slot 0 = Inventory.Content[0]
-   - Slot 1 = Inventory.Content[1]
+   - Slot 0 = Inventory.GetSlot(0)
+   - Slot 1 = Inventory.GetSlot(1)
    - etc.
 
 ### Handling the EquipRequest Event

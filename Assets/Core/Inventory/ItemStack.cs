@@ -11,13 +11,13 @@ namespace Core.Inventory
     {
         public ItemDefinition Item;
         public int            Quantity;
-        // Retains an unresolved saved ID while Item remains null (not usable by gameplay/UI).
+        // Stable ID of the resolved definition; only InventoryState stores save data.
         public string ItemId;
-        public bool IsOccupied => Quantity > 0 && (Item != null || !string.IsNullOrEmpty(ItemId));
+        public bool IsOccupied => Quantity > 0;
 
         public static ItemStack Empty => new ItemStack { Item = null, Quantity = 0 };
 
-        public bool IsEmpty => Item == null || Quantity <= 0;
+        public bool IsEmpty => Quantity == 0;
 
         public ItemStack(ItemDefinition item, int quantity)
         {

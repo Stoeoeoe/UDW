@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using Core.Tile.Vulcanus;
 using UnityEngine;
+using Character;
+using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
@@ -36,5 +38,7 @@ namespace Core.Dialogue.Vulcanus
         public VulcanusDialogueNode CurrentNode { get; internal set; }
         public object Self { get; internal set; }
         public int StepsExecuted { get; internal set; }
+        public GameCharacter Instigator { get; internal set; }
+        public ScreenPauseMode? PauseWhileOpen { get; internal set; }
     }
 }

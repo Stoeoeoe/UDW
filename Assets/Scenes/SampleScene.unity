@@ -1188,10 +1188,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2768686e2007b84fbf549c44fafe5e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueUIDocumentPresenter
+  pauseWhileOpen: 3
+  soundOverrides: {fileID: 0}
   document: {fileID: 1079771065}
   layoutAsset: {fileID: 9197481963319205126, guid: 63af131c2305b2949b9a347cc475d06a, type: 3}
   styleSheet: {fileID: 7433441132597879392, guid: e2bb6efa14f45ae45b96836df65e7585, type: 3}
-  hideWhenInactive: 1
   continueButtonText: Continue
   choicePromptText: Choose a response
   missingLayoutMessage: Dialogue UI layout is missing.
@@ -1207,8 +1208,8 @@ MonoBehaviour:
   m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
-  m_PanelSettings: {fileID: 11400000, guid: 354d3ceb169652343b4d5165d106bca7, type: 2}
-  m_ParentUI: {fileID: 0}
+  m_PanelSettings: {fileID: 11400000, guid: 2af599cf247cb8b47b48d33b6f225ad3, type: 2}
+  m_ParentUI: {fileID: 1950090813}
   sourceAsset: {fileID: 9197481963319205126, guid: 63af131c2305b2949b9a347cc475d06a, type: 3}
   m_SortingOrder: 0
   m_Position: 0
@@ -1258,6 +1259,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba5a4619c879aba49ad7c356e8d3c72a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueUGUIPresenter
+  pauseWhileOpen: 3
+  soundOverrides: {fileID: 0}
   canvasGroup: {fileID: 1473801720}
   rootObject: {fileID: 1473801717}
   defaultSelection: {fileID: 0}
@@ -1272,7 +1275,6 @@ MonoBehaviour:
   charactersPerSecond: 48
   useUnscaledTime: 1
   defaultTypewriterSound: {fileID: 11400000, guid: 75bc8f6fa67ce7c4d8d3db2483af3a98, type: 2}
-  hideWhenInactive: 1
 --- !u!1 &1146330433
 GameObject:
   m_ObjectHideFlags: 0
@@ -1771,6 +1773,7 @@ MonoBehaviour:
   dialogueId: dlg_test_dialogue
   options:
     CanMoveWhileTalking: 0
+    PauseGameClockWhileTalking: 1
     RotateDialogueStarterTowardsTarget: 1
     RotateTargetTowardsDialogueStarter: 1
     ReturnDialogueStarterRotationAfterDialogue: 0
@@ -3272,6 +3275,17 @@ PrefabInstance:
       addedObject: {fileID: 1473801718}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+--- !u!114 &1950090813 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7410992665882482011, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+  m_PrefabInstance: {fileID: 1950090812}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
 --- !u!1001 &1965629768
 PrefabInstance:
   m_ObjectHideFlags: 0

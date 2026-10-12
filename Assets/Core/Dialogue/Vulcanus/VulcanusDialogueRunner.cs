@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.Scripting;
 using UnityEngine;
+using Character;
+using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
@@ -51,7 +53,9 @@ namespace Core.Dialogue.Vulcanus
                 Instance = null;
         }
 
-        public bool StartDialogue(string dialogueId)
+        private void OnDisable() => CancelDialogue();
+
+        public bool StartDialogue(string dialogueId, GameCharacter instigator = null, ScreenPauseMode? pauseWhileOpen = null)
         {
             if (database == null)
             {
@@ -68,7 +72,7 @@ namespace Core.Dialogue.Vulcanus
             if (_activeDialogueRoutine != null)
                 StopCoroutine(_activeDialogueRoutine);
 
-            _activeDialogueRoutine = StartCoroutine(RunDialogue(dialogue));
+            _activeDialogueRoutine = StartCoroutine(RunDialogue(dialogue, instigator, pauseWhileOpen));
             return true;
         }
 
@@ -89,7 +93,7 @@ namespace Core.Dialogue.Vulcanus
             return AdvanceHandler != null && AdvanceHandler.TryAdvanceDialogue();
         }
 
-        private IEnumerator RunDialogue(VulcanusDialogueAsset startingDialogue)
+        private IEnumerator RunDialogue(VulcanusDialogueAsset startingDialogue, GameCharacter instigator, ScreenPauseMode? pauseWhileOpen)
         {
             _activeContext = new VulcanusDialogueExecutionContext
             {
@@ -101,7 +105,9 @@ namespace Core.Dialogue.Vulcanus
                         : null,
                 CurrentDialogue = startingDialogue,
                 Self = ResolveSelf(startingDialogue),
-                StepsExecuted = 0
+                StepsExecuted = 0,
+                Instigator = instigator,
+                PauseWhileOpen = pauseWhileOpen
             };
 
             Presenter?.OnDialogueStarted(_activeContext);

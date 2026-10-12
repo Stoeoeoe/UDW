@@ -19,8 +19,8 @@ namespace Core
         IEventListener<StaminaChangedEvent>
     {
         [SerializeField] int _startingStamina = 100;
-        [SerializeField] ToolData[] _startingTools;
-        [SerializeField] ItemDefinition[] _startingItems;
+        [SerializeField] ToolData[] _startingTools = Array.Empty<ToolData>();
+        [SerializeField] ItemDefinition[] _startingItems = Array.Empty<ItemDefinition>();
 
         void OnEnable()  => this.Subscribe<StaminaChangedEvent>();
         void OnDisable() => this.Unsubscribe<StaminaChangedEvent>();
@@ -51,25 +51,21 @@ namespace Core
                 player.StaminaInitialized = true;
             }
 
+            // Attribute/equipment rebinding can publish maximum-stamina changes. Preserve
+            // the saved amount until the final maximum is available, then restore it once.
+            var savedStamina = player.CurrentStamina;
             character.InitializeSkills(player.Skills);
             character.Wallet.Bind(player.Wallet);
             GameStateManager.Instance.DivineFavour.BindCharacter(character);
 
-            var inventory = SlotInventory.FindInventory("MainInventory", "Player1");
-            if (inventory == null)
-            {
-                Debug.LogWarning("[PlayerStateManager] MainInventory not found yet. Inventory binding will retry on the next character initialization.");
-            }
-            else
-            {
-                inventory.Bind(player.Inventory);
-                var loadout = (_startingTools ?? Array.Empty<ToolData>()).Cast<ItemDefinition>()
-                    .Concat(_startingItems ?? Array.Empty<ItemDefinition>());
-                if (!inventory.ApplyStartingLoadout(loadout))
-                    Debug.LogError("[PlayerStateManager] Starting loadout contains invalid items or does not fit. Nothing was added.");
-            }
+            var inventory = character.MainInventory;
+            inventory.Bind(player.Inventory);
+            var loadout = _startingTools.Cast<ItemDefinition>().Concat(_startingItems);
+            if (!inventory.ApplyStartingLoadout(loadout))
+                throw new InvalidOperationException("The configured starting loadout does not fit the player's inventory.");
 
-            character.InitializeStamina(player.CurrentStamina);
+            ((MainCharacter)character).RefreshInventoryState();
+            character.InitializeStamina(savedStamina);
         }
     }
 }

@@ -42,19 +42,11 @@ namespace Core.Items
 
         public bool TryDrop(SlotInventory inventory, int slot, Vector3 position)
         {
-            var content = inventory ? inventory.Content : null;
-            if (!droppedItemPrefab || content == null || slot < 0 || slot >= content.Length) return false;
-            var stack = content[slot];
-            if (stack.IsEmpty || !stack.Item || stack.Item.PreventDropping || inventory.HeldStack.IsOccupied) return false;
+            if (!droppedItemPrefab) throw new System.InvalidOperationException("ItemManager requires a dropped-item prefab.");
+            var stack = inventory.GetSlot(slot);
+            if (stack.IsEmpty || stack.Item.PreventDropping || inventory.HeldStack.IsOccupied) return false;
             var dropped = PrepareDrop(stack.Item, stack.Quantity, position + (Vector3)dropOffset, dropPickupDelay);
-            content[slot] = ItemStack.Empty;
-            try { inventory.CommitContent(content); }
-            catch
-            {
-                if (Application.isPlaying) Destroy(dropped.gameObject);
-                else DestroyImmediate(dropped.gameObject);
-                throw;
-            }
+            inventory.Storage.SetSlot(slot, ItemStack.Empty);
             dropped.gameObject.SetActive(true);
             InventoryChangedEvent.Trigger(inventory);
             return true;

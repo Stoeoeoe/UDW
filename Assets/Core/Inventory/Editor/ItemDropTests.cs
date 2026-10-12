@@ -35,8 +35,8 @@ namespace Core.Inventory.Editor
                 typeof(ItemManager).GetField("droppedItemPrefab", flags).SetValue(manager, prefab);
                 Assert.That(bag.AddItem(item, 4), Is.True);
                 Assert.That(manager.TryDrop(bag, 0, Vector3.zero), Is.False);
-                Assert.That(bag.Content[0].Item, Is.SameAs(item));
-                Assert.That(bag.Content[0].Quantity, Is.EqualTo(4));
+                Assert.That(bag.GetSlot(0).Item, Is.SameAs(item));
+                Assert.That(bag.GetSlot(0).Quantity, Is.EqualTo(4));
             }
             finally
             {

@@ -39,6 +39,8 @@ namespace Interaction
 
             RefreshSnapshot();
 
+            if (!_currentSnapshot.CanInteractWithWorld) yield break;
+
             if (!action.CanExecute(_currentSnapshot))
             {
                 yield return RunPhase(action.FailureFeedback, action.OnFailure);
@@ -55,6 +57,12 @@ namespace Interaction
 
             // Context may have changed during preparation (player moved aim, etc.)
             RefreshSnapshot();
+
+            if (!_currentSnapshot.CanInteractWithWorld)
+            {
+                Cancel();
+                yield break;
+            }
 
             if (!action.CanExecuteAfterPreparation(_currentSnapshot))
             {
@@ -153,6 +161,7 @@ namespace Interaction
         {
             _currentSnapshot = _snapshotProvider();
             CurrentAction?.Interrupt(_currentSnapshot);
+            Cleanup();
             Reset();
         }
 

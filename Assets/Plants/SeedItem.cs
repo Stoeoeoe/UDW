@@ -1,3 +1,4 @@
+using Core.Common;
 using System;
 using Core.Items;
 using UnityEngine;
@@ -9,35 +10,18 @@ namespace Plants
     [CreateAssetMenu(fileName = "Seed", menuName = "Game/Items/Plants/Seed", order = 1)]
     public class SeedItem : PlaceableItem
     {
-        public PlantData plantData;
+        private static readonly SeedItemValidator Validator = new();
+        protected override IScriptableObjectValidator ConfigurationValidator => Validator;
+
+        [SerializeField, Validation.ValidReference]
+        private PlantData _plantData;
+
+        public PlantData plantData => _plantData;
 
         public override GameObject GetPlaceableRepresentation()
         {
             var seedStage = plantData.GetSeedStage();
-            if (seedStage == null)
-            {
-                throw new Exception("No seed stage (daysToReachStage = 0) defined for plant item " + name);
-            }
             return seedStage.Representation.CreateInstance();
         }
-        
-        
-        // public override bool Use(string playerID)
-        // { 
-        //     var character = (UrLevelManager.Current as UrLevelManager)!.GetPlayerById(playerID);
-        //     var tileInFrontOfPlayer = character.TileDataInFront;
-        //     if (tileInFrontOfPlayer == null)
-        //     {
-        //         Debug.LogError("PlaceableItem.Drop: No tile in front of character to place item on.");
-        //         return false;
-        //     }
-        //     /// placeableOnTerrainTypes.Contains(tileInFrontOfPlayer.TerrainData.TerrainType
-        //     if (true)
-        //     {
-        //         PlantManager.Current.SowPlantOnCurrentMap(tileInFrontOfPlayer.Coordinates, plantData.plantId);
-        //         return true;
-        //     }
-        //     return false;
-        // }
     }
 }

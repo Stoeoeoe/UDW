@@ -24,7 +24,7 @@ namespace Interaction.Tools.WateringJar
 
         public override bool CanBeUsedOnTile(TileData tile)
         {
-            return tile.IsFarmable && tile.FarmlandData is { IsPlowed: true };
+            return tile != null && tile.IsFarmable && tile.FarmlandData is { IsPlowed: true, IsIrrigated: false };
         }
     }
 }

@@ -1,174 +1,38 @@
-# UrInventoryDisplay Setup Guide
+# Inventory setup and authoring
 
-This guide explains how to set up the UGUI inventory system for a Stardew Valley-like game.
+The current runtime view is composed by `InventoryScreen.uxml`, driven by `UrInventoryUIDocumentPresenter` on the `SystemRoot` prefab. It instantiates the reusable `GameMenuShell.uxml` and separate `BagPage.uxml` / `EquipmentPage.uxml` content. The scene and shared prefabs are already configured; no manual component setup is needed. Press **I** in Play mode to open it. It uses the project's `OpenInventory` action and registers with `UrGUIManager` while open. The menu opens on **Bag**, with separate **Equipment** and configurable additional tabs. World, Journal, Skills, Relationships and Settings begin as explicit placeholders. See [tabbed menu authoring](../Shared/README.md) to add or implement pages without changing the shell. Tab changes return carried items first; if there is no room, stay on Bag to resolve the carried stack.
 
-## Components Overview
+Click a slot to inspect it; drag to move, merge or swap a stack. Item details and the useful primary action stay on the bag page. Split Stack opens an inline quantity prompt. Use selects a carried tool; Plant selects seeds and closes into planting preview, without moving either in the bag. The separate Assign to Toolbelt action configures tool shortcuts. Keyboard users navigate with arrows or Tab, inspect with Enter, and pick/place with Space. Escape cancels an inline prompt or held stack before closing. Releasing a drag outside a slot returns it safely.
 
-### 1. UrInventoryDisplay
-The main inventory controller that manages the inventory grid and item interactions.
+`PlayerInventoryConfiguration.asset` is assigned to the player's main `SlotInventory`. It defines columns, initial rows, capacity tiers, toolbelt size, and supported equipment slots. The shipped setup uses ten columns and capacities 10/20/30. Bag upgrades cannot be purchased from this menu; a merchant upgrade interaction is not implemented yet. Existing capacity configuration and loaded capacity are retained. Pickups fill compatible stacks, then free cells in every bag row. Tidy Bag sorts every bag slot. Occupied slots require valid, resolvable definitions.
 
-### 2. UrInventorySlot
-Individual slot prefab that displays an item's icon and quantity.
+Inspecting an item never changes the hand. A hand label marks the active item while an outline marks the inspected item. The bag uses a grid beside item details, stacking the details underneath on narrow displays. The toolbelt HUD hides while a modal screen is open.
 
-### 3. InventoryHeldItemDisplay
-Shows the currently held item icon near the cursor when picking up items.
+## Toolbelt shortcuts
 
-### 4. InventoryHeldItemEvent
-Event system for communicating held item state changes.
+The existing `ToolHotbar` on SystemRoot displays dedicated toolbelt cells with the authored number-key and next/previous bindings. Each cell references a carried tool by its stable item ID; belt cells are separate from bag slots and do not add capacity. Select a tool in the bag and choose **Assign to toolbelt** to assign, replace or clear a shortcut. **Use** selects the tool directly without moving it. Only `ToolData` items belong on the belt; selecting seeds with **Plant** closes the bag and enters planting mode. Tools and seeds follow their item IDs through sorting and bag moves. Missing tools cannot be created or used through a shortcut.
 
----
+There is no automatic farm-action selection, radial action wheel or seed-picker HUD. The player chooses a held tool explicitly. Ready interactables retain the shared pointer/proximity targeting rule. Starting loadouts assign carried tools to belt cells once; assignments and the selected item persist in the live save root.
 
-## Interaction Model (Stardew Valley-like)
+Create worn gear using **Create > Game > Equipment > Item**. Assign compatible slot definition assets and optional character attribute modifiers; gear ownership is saved under the same inventory state. Select a worn slot on Equipment to see only compatible replacements. Return to Bag explicitly removes the selected worn item. The bag's Wear action opens Equipment with a compatible slot selected. Full-bag failures leave both owners unchanged and show a message. No new gear content has been invented for the starting loadout.
 
-| Action | Empty Slot | Same Item (Stackable) | Different Item |
-|--------|------------|----------------------|----------------|
-| **Left-click (not holding)** | Nothing | Pick up entire stack | Pick up entire stack |
-| **Left-click (holding)** | Place entire stack | Stack as much as possible | Swap items |
-| **Right-click (not holding)** | Nothing | Pick up half stack | Pick up half stack |
-| **Right-click (holding)** | Place one item | Add one to stack | Nothing |
+Create supported food using **Create > Game > Items > Stamina Consumable**, then configure its restoration amount. Eat is enabled when the definition can apply its effect to the current character. Other consumable definitions implement the same validation/effect contract.
 
-**Note:** Items held persist when closing inventory - just like Stardew Valley!
+Enable **Prevent Dropping** on essential item definitions. The shipped hoe, watering jar and scythe are protected; replaceable definitions can remain droppable. The drop-spawning API enforces this rule too. Ordinary items expose a quiet Leave on Ground action with an inline confirmation showing the item and complete stack quantity; Keep in Bag receives initial focus. No item is destroyed as a fallback.
 
----
+SystemRoot's ItemManager references `DroppedItem.prefab` and exposes drop offset/pickup delay. Dropped pickups currently use the existing runtime `WorldItem` system: they are not saved world entities and do not survive unloading their scene. Bag slots, equipment, toolbelt shortcuts, selected item, capacity and the carried stack are saved. Closing attempts to return carried items; if the bag cannot accept them, the saved carried stack remains intact for reopening.
 
-## Setup Steps
+SystemRoot's UI input module references the existing UI actions individually (Point, Click, RightClick, Navigate, Submit, Cancel and ScrollWheel). **Tools > UI > Validate Input Wiring** checks loaded scene modules, and build validation checks the shared prefab. The Play scene provides the end-to-end check that UI actions reach the inventory screen.
 
-### Step 1: Create the Inventory UI Panel
+The screen's **Pause While Open** defaults to **Character And Clock**. Select **None**, **Character**, or **Game Clock** for a different policy; overlapping requests are owned by the common manager. See [screen pause setup](../Shared/README.md).
 
-1. Create a new Canvas (or use existing UI Canvas)
-2. Create a Panel as child and name it `InventoryPanel`
-3. Add `UrInventoryDisplay` component to the panel
-4. Add `CanvasGroup` component to the panel (if not auto-added)
+## Configured assets
 
-### Step 2: Create the Slot Container
+- `Assets/Resources/SystemRoot.prefab`: inventory presenter/document, UI input actions, common UI manager, sound profile and dropped-item prefab. Bootstrapper supplies this root in scenes that have no authored instance.
+- `Assets/Character/Player/TestCharacter.prefab`: main inventory references `PlayerInventoryConfiguration.asset`; SampleScene uses this player prefab.
+- `Assets/UI/InventoryScreen/InventoryPanelSettings.asset`: inventory-owned panel settings, independent of the third-party dialogue panel.
+- `Assets/UI/InventoryScreen/InventoryScreen.uxml` and `.uss`: layout and styling.
 
-1. Inside `InventoryPanel`, create an empty GameObject named `SlotContainer`
-2. Add `GridLayoutGroup` component with these settings:
-   - Cell Size: (64, 64) or your preferred slot size
-   - Spacing: (4, 4)
-   - Start Corner: Upper Left
-   - Start Axis: Horizontal
-   - Child Alignment: Upper Left
-   - Constraint: Fixed Column Count
-   - Constraint Count: 5 (or match your inventory columns)
-3. Add `ContentSizeFitter` component:
-   - Horizontal Fit: Preferred Size
-   - Vertical Fit: Preferred Size
+The earlier manual Canvas/slot-prefab steps described the legacy uGUI implementation. They are unnecessary for the current screen.
 
-### Step 3: Create the Slot Prefab
-
-1. Create a new UI Panel and name it `InventorySlotPrefab`
-2. Set size to match GridLayoutGroup cell size (e.g., 64x64)
-3. Add these child elements:
-   - **BackgroundImage**: Image component for slot background
-   - **IconImage**: Image component for item icon (centered, slightly smaller)
-   - **HighlightImage**: Image component for selection highlight (overlay)
-   - **QuantityText**: TextMeshPro text for item quantity (bottom-right corner)
-4. Add `UrInventorySlot` component to the root
-5. Assign the references in the inspector
-6. Save as prefab in your prefabs folder
-7. Delete the scene instance
-
-### Step 4: Create the Held Item Display
-
-1. Create a new UI Panel at the Canvas root level named `HeldItemDisplay`
-2. Set the anchor to center-center (it will follow the cursor)
-3. Set size to your item icon size (e.g., 48x48)
-4. Add these child elements:
-   - **ItemIcon**: Image component for the item icon
-   - **QuantityText**: TextMeshPro text for quantity
-5. Add `InventoryHeldItemDisplay` component
-6. Add `CanvasGroup` component
-7. Assign references and set cursor offset (e.g., 20, -20)
-8. Ensure this is on top of other UI (higher sibling index or sorting)
-
-### Step 5: Create Action Buttons (Optional)
-
-1. Inside `InventoryPanel`, create buttons:
-   - **UseButton**: Button labeled "Use" (for consumables)
-   - **DestroyButton**: Button labeled "Destroy" (to trash items)
-2. Style as desired
-
-### Step 6: Configure UrInventoryDisplay
-
-1. Select the InventoryPanel
-2. In the UrInventoryDisplay inspector, assign:
-   - **Target Inventory Name**: "MainInventory" (same as ToolHotbar)
-   - **Player Id**: "Player1" (same as ToolHotbar)
-   - **Slot Prefab**: Your slot prefab
-   - **Slot Container**: The SlotContainer transform
-   - **Held Item Display**: The InventoryHeldItemDisplay component
-   - **Use Button**: The Use button (optional)
-   - **Destroy Button**: The Destroy button (optional)
-   - **Open Inventory Action**: Link to your InputSystem OpenInventory action
-   - **Inventory Canvas Group**: Auto-assigned or assign the panel's CanvasGroup
-
----
-
-## Input System Setup
-
-1. Ensure your InputSystem_Actions asset has an "OpenInventory" action (it already does)
-2. In the UrInventoryDisplay, set the `OpenInventoryAction` to reference this action
-3. Default binding is typically `Tab` or `E` key
-
----
-
-## How It Works with the Hotbar
-
-The inventory and hotbar share the **same inventory** (`MainInventory`). The hotbar displays slots 0-4 (or however many you configure), while the full inventory display shows ALL slots.
-
-When you move items in the inventory:
-1. The inventory triggers `MMInventoryEvent.ContentChanged`
-2. Both the hotbar and inventory display listen to this event
-3. Both refresh their displays automatically
-
-If the currently selected hotbar slot changes content, the hotbar will re-equip/unequip accordingly.
-
----
-
-## Usage
-
-### Opening/Closing Inventory
-- Press the assigned key (e.g., Tab) to toggle
-- Or call `UrInventoryDisplay.OpenInventory()` / `CloseInventory()` / `ToggleInventory()`
-
-### Picking Up Items
-- **Left-click**: Pick up the entire stack
-- **Right-click**: Pick up half the stack (rounded up)
-
-### Placing Items
-- **Left-click empty slot**: Place entire held stack
-- **Left-click same item**: Stack items (excess stays held)
-- **Left-click different item**: Swap items
-- **Right-click empty slot**: Place just one item
-- **Right-click same item**: Add one to the stack
-
-### Using Items
-- Select a slot by clicking
-- Click the "Use" button for usable/consumable items
-
-### Destroying Items
-- Select a slot by clicking
-- Click the "Destroy" button to permanently remove the item
-
----
-
-## Events
-
-The system fires these events:
-
-- `InventoryHeldItemEvent`: When picking up or putting down items in the UI
-- `MMInventoryEvent.ContentChanged`: When inventory content changes (listened by Hotbar too)
-
----
-
-## Customization
-
-### Styling Slots
-Modify the slot prefab's colors and layout. Configure colors in `UrInventorySlot`:
-- Empty Slot Color
-- Filled Slot Color  
-- Highlight Color
-
-### Dynamic Inventory Size
-The system automatically creates/destroys slots when `TargetInventory.Content.Length` changes.
+`InventoryScreenView` shares inventory binding, selected-cell state and managed-screen behavior between views. The UI Toolkit presenter is independent of the legacy Canvas display. Stack mutations belong to `SlotInventory`; inventory and shop event bursts refresh their views once in `LateUpdate`. Both bag drops and scythe harvests use `ItemManager.PrepareDrop`, which returns an initialized inactive pickup for activation after state is committed.

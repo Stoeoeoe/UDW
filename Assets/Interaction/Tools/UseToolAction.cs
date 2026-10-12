@@ -81,6 +81,8 @@ namespace Interaction.Tools
             {
                 toolAction.HideTileHighlighter(snapshot);
             }
+            CleanupToolAction(toolAction);
+            _activeToolAction = null;
         }
 
         public override IEnumerator OnFinish(PlayerInteractionContextSnapshot snapshot)

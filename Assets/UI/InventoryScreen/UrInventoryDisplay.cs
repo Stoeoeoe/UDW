@@ -1,10 +1,9 @@
 using Core.Equipment;
-using Core.Events;
 using Core.Inventory;
 using Items;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UI.Shared;
 
 namespace UI.InventoryScreen
 {
@@ -17,15 +16,8 @@ namespace UI.InventoryScreen
     /// - Right-click: Pick up half stack / Place one item from held stack
     /// - Items held persist when closing inventory
     /// </summary>
-    public class UrInventoryDisplay : MonoBehaviour, IEventListener<InventoryChangedEvent>
+    public class UrInventoryDisplay : InventoryScreenView
     {
-        [Header("Inventory Binding")]
-        [Tooltip("The name of the inventory to display")]
-        public string TargetInventoryName = "MainInventory";
-
-        [Tooltip("The player ID to match for inventory lookup")]
-        public string PlayerId = "Player1";
-
         [Header("Slot Configuration")]
         [Tooltip("The prefab to instantiate for each inventory slot")]
         public GameObject SlotPrefab;
@@ -44,69 +36,12 @@ namespace UI.InventoryScreen
         [Tooltip("Button to destroy the currently selected item")]
         public Button DestroyButton;
 
-        [Header("Input Actions")]
-        [Tooltip("Input action to open/close inventory")]
-        public InputActionProperty OpenInventoryAction;
-
         [Header("Canvas Group")]
         [Tooltip("Canvas group for showing/hiding the inventory")]
         public CanvasGroup InventoryCanvasGroup;
 
-        // Protected state
-        protected SlotInventory _targetInventory;
         protected UrInventorySlot[] _slots;
-        protected bool _initialized = false;
-        protected bool _isOpen = false;
-
-        // The dragged stack remains part of the player's saved inventory, not this UI's lifetime.
-        protected ItemStack _heldStack
-        {
-            get => TargetInventory != null ? TargetInventory.HeldStack : ItemStack.Empty;
-            set => TargetInventory.HeldStack = value;
-        }
-        protected int _heldItemSourceIndex
-        {
-            get => TargetInventory != null ? TargetInventory.HeldSourceIndex : -1;
-            set => TargetInventory.HeldSourceIndex = value;
-        }
-
-        // Selected slot for action buttons
-        protected int _selectedSlotIndex = -1;
-
-        /// <summary>
-        /// Gets the target inventory by name and player ID
-        /// </summary>
-        public virtual SlotInventory TargetInventory
-        {
-            get
-            {
-                if (_targetInventory == null)
-                {
-                    _targetInventory = SlotInventory.FindInventory(TargetInventoryName, PlayerId);
-                }
-                return _targetInventory;
-            }
-        }
-
-        /// <summary>
-        /// Whether the inventory is currently open
-        /// </summary>
-        public bool IsOpen => _isOpen;
-
-        /// <summary>
-        /// Whether an item is currently being held
-        /// </summary>
-        public bool IsHoldingItem => _heldStack.IsOccupied;
-
-        /// <summary>
-        /// The currently held item
-        /// </summary>
-        public ItemDefinition HeldItem => _heldStack.Item;
-
-        /// <summary>
-        /// The quantity of the held item
-        /// </summary>
-        public int HeldItemQuantity => _heldStack.Quantity;
+        protected bool _initialized;
 
         protected virtual void Awake()
         {
@@ -121,31 +56,35 @@ namespace UI.InventoryScreen
             }
         }
 
+        protected override void OnInputActiveChanged(bool active)
+        {
+            InventoryCanvasGroup.interactable = active;
+            InventoryCanvasGroup.blocksRaycasts = active;
+        }
+
         protected virtual void Start()
         {
             SetupButtons();
-            CloseInventory();
+            HideInventory();
 
             // Delayed initialization to ensure inventory is ready
             Invoke(nameof(InitializeInventory), 0.1f);
         }
 
-        protected virtual void OnEnable()
+        protected override void OnEnable()
         {
-            OpenInventoryAction.action?.Enable();
-            this.Subscribe<InventoryChangedEvent>();
+            base.OnEnable();
         }
 
-        protected virtual void OnDisable()
+        protected override void OnDisable()
         {
-            OpenInventoryAction.action?.Disable();
-            this.Unsubscribe<InventoryChangedEvent>();
+            base.OnDisable();
         }
 
         protected virtual void Update()
         {
             // Handle open/close input
-            if (OpenInventoryAction.action != null && OpenInventoryAction.action.triggered)
+            if (Input.InputManager.Instance.OpenInventoryPressed && (!UrGUIManager.HasOpenScreens || ReceivesInput))
             {
                 ToggleInventory();
             }
@@ -166,7 +105,6 @@ namespace UI.InventoryScreen
             CreateSlots();
             _initialized = true;
             RefreshAllSlots();
-            PublishHeldItem();
         }
 
         /// <summary>
@@ -186,7 +124,7 @@ namespace UI.InventoryScreen
                 }
             }
 
-            int slotCount = TargetInventory.Content.Length;
+            int slotCount = TargetInventory.Capacity;
             _slots = new UrInventorySlot[slotCount];
 
             for (int i = 0; i < slotCount; i++)
@@ -208,10 +146,12 @@ namespace UI.InventoryScreen
         /// <summary>
         /// Refreshes the display of all slots
         /// </summary>
-        public virtual void RefreshAllSlots()
+        public override void RefreshAllSlots()
         {
-            if (TargetInventory == null || _slots == null) return;
-            var content = TargetInventory.Content;
+            ClearRefreshRequest();
+            if (!TargetInventory || !SlotPrefab || !SlotContainer) return;
+            if (_slots == null) CreateSlots();
+            var content = TargetInventory.GetSnapshot();
 
             // Resize slots if inventory size changed
             if (_slots.Length != content.Length)
@@ -259,8 +199,8 @@ namespace UI.InventoryScreen
         {
             bool hasSelectedItem = _selectedSlotIndex >= 0 &&
                                    TargetInventory != null &&
-                                   _selectedSlotIndex < TargetInventory.Content.Length &&
-                                   !TargetInventory.Content[_selectedSlotIndex].IsEmpty;
+                                   _selectedSlotIndex < TargetInventory.Capacity &&
+                                   !TargetInventory.GetSlot(_selectedSlotIndex).IsEmpty;
 
             if (UseButton != null)
                 UseButton.interactable = hasSelectedItem;
@@ -272,52 +212,33 @@ namespace UI.InventoryScreen
         #region Open/Close
 
         /// <summary>
-        /// Toggles the inventory open/closed
-        /// </summary>
-        public virtual void ToggleInventory()
-        {
-            if (_isOpen)
-            {
-                CloseInventory();
-            }
-            else
-            {
-                OpenInventory();
-            }
-        }
-
-        /// <summary>
         /// Opens the inventory
         /// </summary>
-        public virtual void OpenInventory()
+        public override void OpenInventory()
         {
-            _isOpen = true;
-
-            if (InventoryCanvasGroup != null)
-            {
-                InventoryCanvasGroup.alpha = 1f;
-                InventoryCanvasGroup.interactable = true;
-                InventoryCanvasGroup.blocksRaycasts = true;
-            }
-
+            if (!OpenScreen(ShowInventory, HideInventory)) return;
             RefreshAllSlots();
         }
 
         /// <summary>
         /// Closes the inventory (item remains held - Stardew Valley style)
         /// </summary>
-        public virtual void CloseInventory()
+        public override void CloseInventory() => CloseScreen();
+
+        private void ShowInventory()
         {
-            _isOpen = false;
+            if (InventoryCanvasGroup == null) return;
+            InventoryCanvasGroup.alpha = 1f;
+            InventoryCanvasGroup.interactable = true;
+            InventoryCanvasGroup.blocksRaycasts = true;
+        }
 
-            if (InventoryCanvasGroup != null)
-            {
-                InventoryCanvasGroup.alpha = 0f;
-                InventoryCanvasGroup.interactable = false;
-                InventoryCanvasGroup.blocksRaycasts = false;
-            }
-
-            _selectedSlotIndex = -1;
+        private void HideInventory()
+        {
+            if (InventoryCanvasGroup == null) return;
+            InventoryCanvasGroup.alpha = 0f;
+            InventoryCanvasGroup.interactable = false;
+            InventoryCanvasGroup.blocksRaycasts = false;
         }
 
         #endregion
@@ -330,7 +251,8 @@ namespace UI.InventoryScreen
         /// </summary>
         public virtual void OnSlotLeftClicked(int slotIndex)
         {
-            if (TargetInventory == null) return;
+            if (!ReceivesInput || !TargetInventory) return;
+            PlayUISound(UISoundCue.Click);
 
             _selectedSlotIndex = slotIndex;
             UpdateActionButtons();
@@ -351,7 +273,8 @@ namespace UI.InventoryScreen
         /// </summary>
         public virtual void OnSlotRightClicked(int slotIndex)
         {
-            if (TargetInventory == null) return;
+            if (!ReceivesInput || !TargetInventory) return;
+            PlayUISound(UISoundCue.Click);
 
             _selectedSlotIndex = slotIndex;
             UpdateActionButtons();
@@ -368,174 +291,20 @@ namespace UI.InventoryScreen
 
         #endregion
 
-        #region Pick Up Items
-
-        /// <summary>
-        /// Picks up the entire stack at the specified slot
-        /// </summary>
         protected virtual void PickUpEntireStack(int slotIndex)
         {
-            if (slotIndex < 0 || slotIndex >= TargetInventory.Content.Length) return;
-
-            ItemStack stack = TargetInventory.Content[slotIndex];
-            if (stack.IsEmpty) return;
-
-            _heldStack           = stack;
-            _heldItemSourceIndex = slotIndex;
-            TargetInventory.SetSlotSilently(slotIndex, ItemStack.Empty);
-            NotifyChange();
+            var stack = TargetInventory.GetSlot(slotIndex);
+            if (stack.IsOccupied) TargetInventory.Interaction.TryPickUp(slotIndex, stack.Quantity);
         }
 
-        /// <summary>
-        /// Picks up half the stack at the specified slot (rounded up)
-        /// </summary>
         protected virtual void PickUpHalfStack(int slotIndex)
         {
-            if (slotIndex < 0 || slotIndex >= TargetInventory.Content.Length) return;
-
-            ItemStack stack = TargetInventory.Content[slotIndex];
-            if (stack.IsEmpty) return;
-
-            int pickUpAmount = Mathf.CeilToInt(stack.Quantity / 2f);
-            int remaining    = stack.Quantity - pickUpAmount;
-
-            _heldStack           = new ItemStack(stack.Item, pickUpAmount);
-            _heldItemSourceIndex = slotIndex;
-            TargetInventory.SetSlotSilently(slotIndex, remaining > 0
-                ? new ItemStack(stack.Item, remaining)
-                : ItemStack.Empty);
-            NotifyChange();
+            var stack = TargetInventory.GetSlot(slotIndex);
+            if (stack.IsOccupied) TargetInventory.Interaction.TryPickUp(slotIndex, stack.Quantity / 2 + stack.Quantity % 2);
         }
 
-        #endregion
-
-        #region Place Items
-
-        /// <summary>
-        /// Places the held item at the specified slot.
-        /// Handles stacking, swapping, and placing in empty slots.
-        /// </summary>
-        protected virtual void PlaceHeldItem(int slotIndex)
-        {
-            if (_heldStack.IsEmpty) return;
-            if (slotIndex < 0 || slotIndex >= TargetInventory.Content.Length) return;
-
-            ItemStack target = TargetInventory.Content[slotIndex];
-
-            if (target.IsOccupied && target.Item == null) return; // Missing definition: keep the reserved slot.
-
-            if (target.IsEmpty)
-            {
-                TargetInventory.SetSlotSilently(slotIndex, _heldStack);
-                ClearHeldItem();
-            }
-            else if (target.Item == _heldStack.Item && target.Item.MaxStackSize > 1)
-            {
-                int space = target.Item.MaxStackSize - target.Quantity;
-                int toAdd = Mathf.Min(_heldStack.Quantity, space);
-
-                if (toAdd > 0)
-                {
-                    TargetInventory.SetSlotSilently(slotIndex, new ItemStack(target.Item, target.Quantity + toAdd));
-                    int remaining = _heldStack.Quantity - toAdd;
-                    if (remaining <= 0)
-                        ClearHeldItem();
-                    else
-                    {
-                        _heldStack = new ItemStack(_heldStack.Item, remaining);
-                        InventoryHeldItemEvent.Trigger(_heldStack.Item, _heldStack.Quantity, _heldItemSourceIndex);
-                    }
-                }
-                else
-                {
-                    SwapWithHeldItem(slotIndex, target);
-                }
-            }
-            else
-            {
-                SwapWithHeldItem(slotIndex, target);
-            }
-
-            NotifyChange();
-        }
-
-        /// <summary>
-        /// Swaps the target slot item with the held item
-        /// </summary>
-        protected virtual void SwapWithHeldItem(int slotIndex, ItemStack target)
-        {
-            TargetInventory.SetSlotSilently(slotIndex, _heldStack);
-            _heldStack           = target;
-            _heldItemSourceIndex = slotIndex;
-            InventoryHeldItemEvent.Trigger(_heldStack.Item, _heldStack.Quantity, slotIndex);
-        }
-
-        /// <summary>
-        /// Places one item from the held stack into the specified slot
-        /// </summary>
-        protected virtual void PlaceOneItem(int slotIndex)
-        {
-            if (_heldStack.IsEmpty) return;
-            if (slotIndex < 0 || slotIndex >= TargetInventory.Content.Length) return;
-
-            ItemStack target = TargetInventory.Content[slotIndex];
-
-            if (target.IsOccupied && target.Item == null) return;
-
-            if (target.IsEmpty)
-            {
-                TargetInventory.SetSlotSilently(slotIndex, new ItemStack(_heldStack.Item, 1));
-                DecreaseHeld();
-            }
-            else if (target.Item == _heldStack.Item && target.Quantity < target.Item.MaxStackSize)
-            {
-                TargetInventory.SetSlotSilently(slotIndex, new ItemStack(target.Item, target.Quantity + 1));
-                DecreaseHeld();
-            }
-
-            NotifyChange();
-        }
-
-        void DecreaseHeld()
-        {
-            int remaining = _heldStack.Quantity - 1;
-            if (remaining <= 0)
-                ClearHeldItem();
-            else
-            {
-                _heldStack = new ItemStack(_heldStack.Item, remaining);
-                InventoryHeldItemEvent.Trigger(_heldStack.Item, _heldStack.Quantity, _heldItemSourceIndex);
-            }
-        }
-
-        /// <summary>
-        /// Clears the held item
-        /// </summary>
-        protected virtual void ClearHeldItem()
-        {
-            _heldStack           = ItemStack.Empty;
-            _heldItemSourceIndex = -1;
-            InventoryHeldItemEvent.TriggerClear();
-        }
-
-        /// <summary>
-        /// Notifies that inventory content changed and refreshes display
-        /// </summary>
-        protected virtual void NotifyChange()
-        {
-            InventoryChangedEvent.Trigger(TargetInventory);
-            RefreshAllSlots();
-            PublishHeldItem();
-        }
-
-        private void PublishHeldItem()
-        {
-            if (!_heldStack.IsEmpty)
-                InventoryHeldItemEvent.Trigger(_heldStack.Item, _heldStack.Quantity, _heldItemSourceIndex);
-            else InventoryHeldItemEvent.TriggerClear();
-        }
-
-        #endregion
+        protected virtual void PlaceHeldItem(int slotIndex) => TargetInventory.Interaction.TryPlaceHeld(slotIndex);
+        protected virtual void PlaceOneItem(int slotIndex) => TargetInventory.Interaction.TryPlaceHeld(slotIndex, true);
 
         #region Action Buttons
 
@@ -544,12 +313,13 @@ namespace UI.InventoryScreen
         /// </summary>
         protected virtual void OnUseButtonClicked()
         {
-            if (_selectedSlotIndex < 0 || _selectedSlotIndex >= TargetInventory.Content.Length) return;
+            if (_selectedSlotIndex < 0 || _selectedSlotIndex >= TargetInventory.Capacity) return;
 
-            ItemStack stack = TargetInventory.Content[_selectedSlotIndex];
+            ItemStack stack = TargetInventory.GetSlot(_selectedSlotIndex);
             if (stack.IsEmpty) return;
 
-            ItemSelectedEvent.Trigger(stack.Item as EquippableItem, _selectedSlotIndex);
+            TargetInventory.Loadout.SelectItem(_selectedSlotIndex);
+            PlayUISound(UISoundCue.Click);
             RefreshAllSlots();
         }
 
@@ -558,9 +328,10 @@ namespace UI.InventoryScreen
         /// </summary>
         protected virtual void OnDestroyButtonClicked()
         {
-            if (_selectedSlotIndex < 0 || _selectedSlotIndex >= TargetInventory.Content.Length) return;
-            if (TargetInventory.Content[_selectedSlotIndex].IsEmpty) return;
+            if (_selectedSlotIndex < 0 || _selectedSlotIndex >= TargetInventory.Capacity) return;
+            if (TargetInventory.GetSlot(_selectedSlotIndex).IsEmpty) return;
 
+            PlayUISound(UISoundCue.Click);
             TargetInventory.SetSlot(_selectedSlotIndex, ItemStack.Empty);
             _selectedSlotIndex = -1;
             RefreshAllSlots();
@@ -568,20 +339,5 @@ namespace UI.InventoryScreen
 
         #endregion
 
-        #region Event Handling
-
-        /// <summary>
-        /// Responds to inventory events
-        /// </summary>
-        public void OnEvent(InventoryChangedEvent e)
-        {
-            if (e.InventoryRef == TargetInventory)
-            {
-                RefreshAllSlots();
-                PublishHeldItem();
-            }
-        }
-
-        #endregion
     }
 }

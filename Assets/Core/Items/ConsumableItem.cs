@@ -4,7 +4,12 @@ namespace Items
 {
     /// <summary>
     /// Base class for all consumable items.
-    /// Behavior is defined in the ItemRegistry (TODO!).
+    /// Definitions provide validation and effects; inventory removal is committed before applying them.
     /// </summary>
-    public abstract class ConsumableItem : ItemDefinition { }
+    public abstract class ConsumableItem : ItemDefinition
+    {
+        public abstract bool CanConsume(Character.GameCharacter character);
+        // Effects publish only after inventory ownership has been committed.
+        public abstract void Apply(Character.GameCharacter character);
+    }
 }

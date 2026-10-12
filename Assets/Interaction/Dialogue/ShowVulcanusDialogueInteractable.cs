@@ -3,20 +3,20 @@ using Character;
 using Core.Dialogue.Vulcanus;
 using Interaction.Dialog;
 using UnityEngine;
+using UI.Shared;
 
 namespace Interaction.Dialogue
 {
     public class ShowVulcanusDialogueInteractable : AbstractInteractable
     {
         [SerializeField] private string dialogueId;
-        [SerializeField] private DialogueOptions options;
+        [SerializeField] private DialogueOptions options = new();
         [SerializeField] private VulcanusDialogueRunner dialogueRunner;
         [SerializeField] private Transform dialogueTarget;
         [SerializeField] private bool autoFindRunner = true;
         [SerializeField] private bool emitLifecycleEvents = true;
 
         private Coroutine _activeMonitor;
-        private GameCharacter _frozenInstigator;
 
         public string DialogueId => dialogueId;
         public DialogueOptions Options => options;
@@ -39,17 +39,10 @@ namespace Interaction.Dialogue
             if (runner.IsDialogueActive)
                 return;
 
-            if (!options.CanMoveWhileTalking)
-            {
-                instigator.Freeze();
-                _frozenInstigator = instigator;
-            }
-
-            if (!runner.StartDialogue(dialogueId))
-            {
-                ReleaseInstigatorIfNeeded();
-                return;
-            }
+            var pause = ScreenPauseMode.None;
+            if (!options.CanMoveWhileTalking) pause |= ScreenPauseMode.Character;
+            if (options.PauseGameClockWhileTalking) pause |= ScreenPauseMode.GameClock;
+            if (!runner.StartDialogue(dialogueId, instigator, pause)) return;
 
             if (emitLifecycleEvents)
             {
@@ -87,7 +80,6 @@ namespace Interaction.Dialogue
                 UrDialogueLifecycleEvent.Trigger(dialogueId, target, UrDialogueLifecycleEvent.UrDialogueLifecycleEventType.Finished, options);
             }
 
-            ReleaseInstigatorIfNeeded();
             _activeMonitor = null;
         }
 
@@ -100,16 +92,6 @@ namespace Interaction.Dialogue
                 _activeMonitor = null;
             }
 
-            ReleaseInstigatorIfNeeded();
-        }
-
-        private void ReleaseInstigatorIfNeeded()
-        {
-            if (_frozenInstigator == null)
-                return;
-
-            _frozenInstigator.UnFreeze();
-            _frozenInstigator = null;
         }
     }
 }

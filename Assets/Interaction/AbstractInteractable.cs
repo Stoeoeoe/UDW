@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Character;
+using Core.Context;
 using Core.Events;
 using Core.Game;
 using Core.TimeAndWeather;
@@ -140,6 +141,9 @@ namespace Interaction
 
         public virtual void TriggerInteraction(GameCharacter instigator)
         {
+            if (instigator == MainCharacter.CurrentMainCharacter &&
+                PlayerInteractionContext.Instance != null &&
+                PlayerInteractionContext.Instance.CurrentSnapshot.WorldInteractionBlocked) return;
             if (!CanInteract) { DeniedFeedback?.PlayFeedbacks(); return; }
 
             RecordActivation();

@@ -12,31 +12,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: WateringJarToolData
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
-  <ItemId>k__BackingField: WateringJarToolData
-  <ItemName>k__BackingField: Watering Jar
-  <Icon>k__BackingField: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715,
+  _itemId: WateringJarToolData
+  _itemName: Watering Jar
+  _icon: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715,
     type: 3}
-  <Description>k__BackingField: 
-  <MaxStackSize>k__BackingField: 99
-  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
-  <PickupSound>k__BackingField: {fileID: 0}
-  maxCharge: 0
-  chargePerUsage: 0
-  staminaCost: 5
-  consumeStaminaOnFailure: 1
-  isInInventory: 1
-  showTileHighlighterOnPrepare: 1
-  actionDuration: 0.2
-  cooldownDuration: 0.2
-  toolEffectConfiguration:
+  _description: Water your planted crops.
+  _maxStackSize: 99
+  _worldRepresentationPrefab: {fileID: 0}
+  _pickupSound: {fileID: 0}
+  _preventDropping: 1
+  _maxCharge: 0
+  _chargePerUsage: 0
+  _staminaCost: 5
+  _consumeStaminaOnFailure: 1
+  _isInInventory: 1
+  _showTileHighlighterOnPrepare: 1
+  _actionDuration: 0.2
+  _cooldownDuration: 0.2
+  _toolEffectConfiguration:
     AffectedTileOffsets:
     - {x: 0, y: 1}
     IsGlobalEffect: 0
-  prepareUseUpAnimationClip: {fileID: 0}
-  prepareUseRightAnimationClip: {fileID: 0}
-  prepareUseDownAnimationClip: {fileID: 0}
-  prepareUseLeftAnimationClip: {fileID: 0}
-  useUpAnimationClip: {fileID: 0}
-  useRightAnimationClip: {fileID: 0}
-  useDownAnimationClip: {fileID: 0}
-  useLeftAnimationClip: {fileID: 0}
+  _prepareUseUpAnimationClip: {fileID: 0}
+  _prepareUseRightAnimationClip: {fileID: 0}
+  _prepareUseDownAnimationClip: {fileID: 0}
+  _prepareUseLeftAnimationClip: {fileID: 0}
+  _useUpAnimationClip: {fileID: 0}
+  _useRightAnimationClip: {fileID: 0}
+  _useDownAnimationClip: {fileID: 0}
+  _useLeftAnimationClip: {fileID: 0}

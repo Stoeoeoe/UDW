@@ -4,6 +4,7 @@ using Core.Dialogue.Vulcanus;
 using Core.Location;
 using Core.TimeAndWeather;
 using Interaction.Pointer;
+using UI.Shared;
 
 namespace Core.Context
 {
@@ -22,10 +23,9 @@ namespace Core.Context
         public void OnLocationEnter(LocationData location) => this.enabled = true;
         public void OnLocationLeave(LocationData location) { }
 
-        private void Start()
-        {
-            UpdateContextSnapshot();
-        }
+        private void Start() => UpdateContextSnapshot();
+
+        public void Refresh() => UpdateContextSnapshot();
 
         private void UpdateContextSnapshot()
         {
@@ -33,7 +33,7 @@ namespace Core.Context
             // e.g. during scene transitions, the character reference may be null. In that case, reset to an empty snapshot
             // instead of null so listeners can handle the cleared state safely.
             var snapshot = !character
-                ? PlayerInteractionContextSnapshot.Empty()
+                ? PlayerInteractionContextSnapshot.Empty() with { WorldInteractionBlocked = UrGUIManager.HasOpenScreens }
                 : PlayerInteractionContextSnapshot.Create(
                     LevelManager.Instance != null && LevelManager.Instance.SceneReady,
                     character,
@@ -46,18 +46,20 @@ namespace Core.Context
                     character.ConditionState,
                     character.MovementState,
                     ResolveCurrentConversation(),
-                    (UrTimeManager.Instance)?.CurrentTime
+                    (UrTimeManager.Instance)?.CurrentTime,
+                    UrGUIManager.HasOpenScreens
                 );
 
             if (CurrentSnapshot == snapshot)
                 return;
 
-            if (snapshot.Mode != CurrentSnapshot.Mode)
+            var modeChanged = snapshot.Mode != CurrentSnapshot.Mode;
+            CurrentSnapshot = snapshot;
+            if (modeChanged)
             {
                 OnModeChanged?.Invoke(snapshot.Mode);
             }
 
-            CurrentSnapshot = snapshot;
             OnContextChanged?.Invoke(CurrentSnapshot);
         }
 

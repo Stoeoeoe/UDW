@@ -24,7 +24,8 @@ namespace Interaction.Tools.Hoe
 
         public override bool CanBeUsedOnTile(TileData tile)
         {
-            return tile.IsFarmable;
+            return tile != null && tile.IsFarmable && tile.FarmlandData is not { IsPlowed: true } &&
+                !tile.PlacedObject && !MapManager.Instance.IsTileOccupied(tile);
         }
     }
 }

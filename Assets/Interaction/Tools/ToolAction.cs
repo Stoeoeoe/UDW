@@ -74,9 +74,9 @@ namespace Interaction.Tools
         /// </summary>
         private List<TileData> ComputeAffectedTiles(PlayerInteractionContextSnapshot snapshot = null)
         {
-            if (ToolData?.toolEffectConfiguration == null) 
+            if (!ToolData)
                 return new List<TileData>();
-            
+
             return MapManager.Instance
                 .GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration)
                 .Where(CanBeUsedOnTile)

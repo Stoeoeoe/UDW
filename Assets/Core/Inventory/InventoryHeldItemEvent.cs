@@ -1,10 +1,9 @@
 using Core.Events;
-using Core.Inventory;
 
-namespace UI.InventoryScreen
+namespace Core.Inventory
 {
     /// <summary>
-    /// Event triggered when an item is picked up or put down in the inventory UI.
+    /// Event published after the saved held stack changes. UI displays subscribe to it.
     /// </summary>
     public struct InventoryHeldItemEvent
     {

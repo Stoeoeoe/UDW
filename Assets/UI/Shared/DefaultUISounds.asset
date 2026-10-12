@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0603eafebd73d3a4291ef27c1a690b3d, type: 3}
+  m_Name: DefaultUISounds
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Shared.UISoundProfile
+  sounds:
+  - cue: 0
+    clips:
+    - {fileID: 8300000, guid: f7d17df6340791b40827777abcf28842, type: 3}
+    mixerGroup: {fileID: -3783893103257190392, guid: 7e984f512e89b60468e829489e8883e3, type: 2}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+  - cue: 1
+    clips:
+    - {fileID: 8300000, guid: 1aa529445d882c449ac96f1abad24ed6, type: 3}
+    mixerGroup: {fileID: -3783893103257190392, guid: 7e984f512e89b60468e829489e8883e3, type: 2}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+  - cue: 2
+    clips:
+    - {fileID: 8300000, guid: 151b2cf0faad3634188b0fbfebac4109, type: 3}
+    mixerGroup: {fileID: -3783893103257190392, guid: 7e984f512e89b60468e829489e8883e3, type: 2}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+  - cue: 3
+    clips:
+    - {fileID: 8300000, guid: 7aa9a32bbce3947488d9c72142c1eb03, type: 3}
+    mixerGroup: {fileID: -3783893103257190392, guid: 7e984f512e89b60468e829489e8883e3, type: 2}
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}

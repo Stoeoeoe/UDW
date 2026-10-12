@@ -7,10 +7,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
-    public class VulcanusDialogueUGUIPresenter : MonoBehaviour, IDialoguePresenter, IDialogueAdvanceHandler
+    public class VulcanusDialogueUGUIPresenter : ManagedUIScreen, IDialoguePresenter, IDialogueAdvanceHandler
     {
         [Header("Root")]
         [SerializeField] private CanvasGroup canvasGroup;
@@ -38,9 +39,6 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private bool useUnscaledTime = true;
         [SerializeField] private TypewriterSound defaultTypewriterSound;
 
-        [Header("Behavior")]
-        [SerializeField] private bool hideWhenInactive = true;
-
         private bool _waitingForAdvance;
         private bool _waitingForChoice;
         private bool _isTyping;
@@ -53,7 +51,7 @@ namespace Core.Dialogue.Vulcanus
         public void OnDialogueStarted(VulcanusDialogueExecutionContext context)
         {
             EnsureWired();
-            Show(true);
+            OpenScreen(() => Show(true), () => Show(false), context.Instigator, context.PauseWhileOpen);
             StopTypewriter(resetText: true);
             SetSpeaker(null, null);
             SetSpeakerPortraitStub(null, null);
@@ -64,7 +62,7 @@ namespace Core.Dialogue.Vulcanus
         public IEnumerator PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context)
         {
             EnsureWired();
-            Show(true);
+            OpenScreen(() => Show(true), () => Show(false), context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, null);
             SetSpeakerPortraitStub(node.Speaker, node.Emotion);
             ClearChoices();
@@ -78,7 +76,7 @@ namespace Core.Dialogue.Vulcanus
             VulcanusDialogueExecutionContext context, Action<VulcanusDialogueChoiceOption> onSelected)
         {
             EnsureWired();
-            Show(true);
+            OpenScreen(() => Show(true), () => Show(false), context.Instigator, context.PauseWhileOpen);
             SetSpeaker(null, null);
             SetSpeakerPortraitStub(null, null);
             SetBody(string.Empty);
@@ -103,13 +101,15 @@ namespace Core.Dialogue.Vulcanus
             SetSpeaker(null, null);
             SetSpeakerPortraitStub(null, null);
             SetBody(string.Empty);
-            Show(!hideWhenInactive);
+            CloseScreen();
         }
 
         public bool TryAdvanceDialogue()
         {
+            if (!ReceivesInput) return false;
             if (_isTyping)
             {
+                PlayUISound(UISoundCue.Click);
                 CompleteTypewriter();
                 return true;
             }
@@ -134,7 +134,7 @@ namespace Core.Dialogue.Vulcanus
         private void Awake()
         {
             EnsureWired();
-            Show(!hideWhenInactive);
+            Show(false);
         }
 
         private void OnEnable()
@@ -142,8 +142,9 @@ namespace Core.Dialogue.Vulcanus
             EnsureWired();
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             StopTypewriter(resetText: false);
         }
 
@@ -158,6 +159,8 @@ namespace Core.Dialogue.Vulcanus
 
         private void SelectChoice(VulcanusDialogueChoiceOption option)
         {
+            if (!_waitingForChoice || !ReceivesInput) return;
+            PlayUISound(UISoundCue.Click);
             _selectedOption = option;
             _waitingForChoice = false;
         }
@@ -208,6 +211,12 @@ namespace Core.Dialogue.Vulcanus
                 bodyText.text = text ?? string.Empty;
         }
 
+        protected override void OnInputActiveChanged(bool active)
+        {
+            canvasGroup.interactable = active;
+            canvasGroup.blocksRaycasts = active;
+        }
+
         private void Show(bool isVisible)
         {
             if (rootObject != null)
@@ -239,6 +248,8 @@ namespace Core.Dialogue.Vulcanus
 
         private void AdvanceAfterLine()
         {
+            if (!_waitingForAdvance || !ReceivesInput) return;
+            PlayUISound(UISoundCue.Click);
             _waitingForAdvance = false;
         }
 
@@ -348,7 +359,7 @@ namespace Core.Dialogue.Vulcanus
                 return;
 
             var clip = _currentTypewriterSound.audioClips[UnityEngine.Random.Range(0, _currentTypewriterSound.audioClips.Length)];
-            if (clip == null || MMSoundManager.Current == null)
+            if (MMSoundManager.Current == null)
                 return;
 
             var pitch = UnityEngine.Random.Range(_currentTypewriterSound.pitchMin, _currentTypewriterSound.pitchMax);

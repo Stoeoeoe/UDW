@@ -4,12 +4,16 @@ using Core.Location;
 using Input;
 using Interaction;
 using UnityEngine.EventSystems;
+using UnityEngine;
 
 namespace Character.Abilities
 {
     public class CharacterPerformPrimaryActionAbility : CharacterAbility
     {
         public ActionExecutor ActionExecutor { get; private set; }
+        private Coroutine _runningAction;
+        private PlayerInteractionContext _context;
+        private bool _suppressPrimaryUntilRelease;
 
         protected override void Awake()
         {
@@ -18,12 +22,47 @@ namespace Character.Abilities
                 Character,
                 () => PlayerInteractionContext.Instance.CurrentSnapshot
             );
+            BindContext();
+        }
+
+        private void BindContext()
+        {
+            var context = PlayerInteractionContext.Instance;
+            if (_context == context) return;
+            if (_context) _context.OnContextChanged -= HandleContextChanged;
+            _context = context;
+            if (_context) _context.OnContextChanged += HandleContextChanged;
+        }
+
+        private void OnDestroy()
+        {
+            if (_context) _context.OnContextChanged -= HandleContextChanged;
+        }
+
+        private void HandleContextChanged(PlayerInteractionContextSnapshot snapshot)
+        {
+            if (!snapshot.CanInteractWithWorld) _suppressPrimaryUntilRelease = true;
+            // Stop the coroutine too: resetting the executor alone releases its preparation wait.
+            if (!snapshot.CanInteractWithWorld && ActionExecutor.State == ActionExecutionState.Preparing)
+                InterruptAction();
         }
 
         public override void Tick()
         {
-            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
+            BindContext();
+            if (!_context) return;
+            var snapshot = _context.CurrentSnapshot;
             var input = InputManager.Instance;
+            if (!snapshot.CanInteractWithWorld)
+            {
+                if (ActionExecutor.State == ActionExecutionState.Preparing) InterruptAction();
+                return;
+            }
+            if (_suppressPrimaryUntilRelease)
+            {
+                if (input.PerformPrimaryActionHeld) return;
+                _suppressPrimaryUntilRelease = false;
+            }
             var pointerOverUI = EventSystem.current && EventSystem.current.IsPointerOverGameObject();
 
             // Always allow release to continue from prepare so the executor doesn't get stuck
@@ -39,16 +78,23 @@ namespace Character.Abilities
             if (!AbilityAuthorized && ActionExecutor.State != ActionExecutionState.Preparing) return;
 
             // Only block starting a new action when the pointer is over UI.
-            if (snapshot.SceneReady && input.PerformPrimaryActionDown && ActionExecutor.IsIdle && !pointerOverUI)
+            if (input.PerformPrimaryActionDown && ActionExecutor.IsIdle && !pointerOverUI)
             {
                 var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
-                if (action) StartCoroutine(ActionExecutor.Run(action, !action.HasPreparationPhase));
+                if (action) _runningAction = StartCoroutine(ActionExecutor.Run(action, !action.HasPreparationPhase));
             }
         }
 
         public override void OnLocationLeave(LocationData location)
         {
             base.OnLocationLeave(location);
+            InterruptAction();
+        }
+
+        private void InterruptAction()
+        {
+            if (_runningAction != null) StopCoroutine(_runningAction);
+            _runningAction = null;
             ActionExecutor.InterruptCurrentAction();
         }
     }
