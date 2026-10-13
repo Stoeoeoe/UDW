@@ -15,6 +15,7 @@ namespace Core.Spawning.Editor
     public sealed class WorldObjectSpawnerTests
     {
         private GameObject _systems;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private GameObject _prefab;
         private WorldObjectSpawner _spawner;
         private SpawnedObject _prefabComponent;
@@ -27,12 +28,9 @@ namespace Core.Spawning.Editor
         {
             Assert.That(GameStateManager.Instance, Is.Null, "Run these isolated EditMode tests outside a game session.");
             Assert.That(WorldObjectSpawner.Instance, Is.Null);
-            _systems = new GameObject("Spawner test systems");
-            _systems.SetActive(false);
-            var manager = _systems.AddComponent<GameStateManager>();
-            _spawner = _systems.AddComponent<WorldObjectSpawner>();
-            // EditMode does not run the normal scene initialization lifecycle.
-            InvokeAwake(manager);
+            _fixture = new Core.Common.Editor.GameTestFixture("Spawner test systems");
+            _systems = _fixture.Root;
+            _fixture.AddSingleton<GameStateManager>();
             _prefabHolder = new GameObject("Inactive prefab holder");
             _prefabHolder.SetActive(false);
             _prefab = new GameObject("Chest prefab");
@@ -41,11 +39,10 @@ namespace Core.Spawning.Editor
             typeof(SpawnedObject).GetField("prefabId", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(_prefabComponent, "base:test-chest");
             _catalog = ScriptableObject.CreateInstance<SpawnableCatalog>();
-            typeof(SpawnableCatalog).GetField("prefabs", BindingFlags.NonPublic | BindingFlags.Instance)
-                .SetValue(_catalog, new[] { _prefabComponent });
-            typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Instance)
-                .SetValue(_spawner, _catalog);
-            InvokeAwake(_spawner);
+            _catalog.Synchronize(new[] { _prefabComponent });
+            _spawner = _fixture.AddSingleton<WorldObjectSpawner>(spawner =>
+                typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .SetValue(spawner, _catalog));
             _location = ScriptableObject.CreateInstance<LocationData>();
             _location.id = "farm";
             _spawner.OnLocationEnter(_location);
@@ -55,10 +52,7 @@ namespace Core.Spawning.Editor
         public void TearDown()
         {
             if (_spawner) _spawner.OnLocationLeave(_location);
-            // Match the manual Awake above for objects that never became active in EditMode.
-            if (_spawner) InvokeDestroy(_spawner);
-            if (_systems) InvokeDestroy(_systems.GetComponent<GameStateManager>());
-            Object.DestroyImmediate(_systems);
+            _fixture?.Dispose();
             Object.DestroyImmediate(_prefab);
             Object.DestroyImmediate(_prefabHolder);
             Object.DestroyImmediate(_location);
@@ -143,6 +137,7 @@ namespace Core.Spawning.Editor
         [Test]
         public void SpawnedInteractableWritesIntoItsEntityRecord()
         {
+            _prefab.AddComponent<BoxCollider2D>().isTrigger = true;
             var template = _prefab.AddComponent<TestInteractable>();
             typeof(AbstractInteractable).GetField("UnlimitedActivations", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(template, false);
@@ -218,10 +213,5 @@ namespace Core.Spawning.Editor
             Assert.That(GameState.World.TryGet(_location.id, "missing", out SpawnedObjectState _), Is.True);
         }
 
-        private static void InvokeAwake(Component component) => component.GetType()
-            .GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(component, null);
-
-        private static void InvokeDestroy(Component component) => component.GetType()
-            .GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(component, null);
     }
 }

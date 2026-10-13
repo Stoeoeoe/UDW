@@ -12,6 +12,7 @@ namespace UI.Shared.Editor
     public sealed class UIScreenInputMapTests
     {
         private GameObject _root;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private Input.InputManager _input;
         private UrGUIManager _manager;
         private PauseTestScreen _first, _second;
@@ -19,12 +20,12 @@ namespace UI.Shared.Editor
         [SetUp]
         public void SetUp()
         {
-            _root = new GameObject("Screen input maps");
-            _input = UIScreenPauseTests.CreateScreenServices(_root);
-            _input.Actions.AddActionMap("Inspection").AddAction("Inspect", InputActionType.Button);
-            _manager = _root.AddComponent<UrGUIManager>();
-            UIScreenPauseTests.Invoke(_manager, "Awake");
-            UIScreenPauseTests.Invoke(_manager, "OnEnable");
+            _fixture = new Core.Common.Editor.GameTestFixture("Screen input maps");
+            _root = _fixture.Root;
+            _root.SetActive(true);
+            _input = UIScreenPauseTests.CreateScreenServices(_fixture,
+                actions => actions.AddActionMap("Inspection").AddAction("Inspect", InputActionType.Button));
+            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
             _first = _root.AddComponent<PauseTestScreen>();
             _second = _root.AddComponent<PauseTestScreen>();
             _first.PauseWhileOpen = _second.PauseWhileOpen = ScreenPauseMode.None;
@@ -33,11 +34,8 @@ namespace UI.Shared.Editor
         [TearDown]
         public void TearDown()
         {
-            _manager.CloseAll();
-            UIScreenPauseTests.Invoke(_manager, "OnDisable");
-            UIScreenPauseTests.Invoke(_manager, "OnDestroy");
-            UIScreenPauseTests.ReleaseScreenServices(_root);
-            Object.DestroyImmediate(_root);
+            _manager?.CloseAll();
+            _fixture?.Dispose();
         }
 
         [Test]

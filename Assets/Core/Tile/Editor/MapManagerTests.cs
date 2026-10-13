@@ -18,6 +18,7 @@ namespace Core.Tile.Editor
     public sealed class MapManagerTests
     {
         private GameObject _root;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private GameObject _gridRoot;
         private GameStateManager _state;
         private LevelManager _level;
@@ -38,19 +39,14 @@ namespace Core.Tile.Editor
             Assert.That(GameStateManager.Instance, Is.Null, "Run outside a game session.");
             Assert.That(LevelManager.Instance, Is.Null, "Run outside a game session.");
             Assert.That(MapManager.Instance, Is.Null, "Run outside a game session.");
-            _root = new GameObject("Map manager tests");
-            _root.SetActive(false);
-            _state = _root.AddComponent<GameStateManager>();
-            typeof(Core.Singleton<GameStateManager>).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_state, null);
-            _level = _root.AddComponent<LevelManager>();
-            // Register only the isolated location provider; do not initialize scene loading.
-            typeof(Core.Singleton<LevelManager>).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)
-                .SetValue(null, _level);
+            _fixture = new Core.Common.Editor.GameTestFixture("Map manager tests");
+            _root = _fixture.Root;
+            _state = _fixture.AddSingleton<GameStateManager>();
+            // These tests supply a location directly without initializing scene loading.
+            _level = _fixture.RegisterSingleton<LevelManager>();
             _location = Asset<LocationData>();
             _location.id = "test:farm";
             Set(_level, "<CurrentLocationData>k__BackingField", _location);
-            _map = _root.AddComponent<MapManager>();
             var terrainTypes = new Dictionary<TerrainType, TerrainData>();
             foreach (var type in new[] { TerrainType.Dirt, TerrainType.Grass, TerrainType.Sand, TerrainType.Water })
             {
@@ -58,7 +54,8 @@ namespace Core.Tile.Editor
                 Set(data, "terrainType", type);
                 terrainTypes.Add(type, data);
             }
-            Set(_map, "_terrainDataByType", terrainTypes);
+            _map = _fixture.AddSingleton<MapManager>(map =>
+                Set(map, "tileDataTypes", terrainTypes.Values.ToArray()));
             // Grid needs an active hierarchy for Unity to initialize its cell transform.
             // Keep managers inactive so scene loading and gameplay callbacks stay isolated.
             _gridRoot = new GameObject("Map test grid");
@@ -80,12 +77,7 @@ namespace Core.Tile.Editor
         [TearDown]
         public void TearDown()
         {
-            if (_state) typeof(GameStateManager).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_state, null);
-            if (_level && LevelManager.Instance == _level)
-                typeof(Core.Singleton<LevelManager>).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)
-                    .SetValue(null, null);
-            Object.DestroyImmediate(_root);
+            _fixture?.Dispose();
             Object.DestroyImmediate(_gridRoot);
             foreach (var asset in _assets) Object.DestroyImmediate(asset);
             _assets.Clear();
@@ -325,30 +317,21 @@ namespace Core.Tile.Editor
             data.plantId = "test:crop";
             var catalog = Asset<PlantCatalog>();
             catalog.Synchronize(new Object[] { data });
-            var plants = _root.AddComponent<PlantManager>();
+            var plants = _fixture.AddSingleton<PlantManager>();
             Set(plants, "_catalog", catalog);
             var plant = new PlantState(data.plantId);
             GameState.World.Set(_location.id, "plant:0,0", plant);
-            Invoke(_map, "OnEnable");
-            Invoke(plants, "OnEnable");
-            try
-            {
-                NewDayEvent.Trigger(1);
-                Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
-                Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
-                Assert.That(tile.FarmlandData.IsPlowed, Is.True);
-                Assert.That(tile.FarmlandData.IsIrrigated, Is.False);
-                Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.Null);
-                Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
-                NewDayEvent.Trigger(2);
-                Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
-                Assert.That(plant.consecutiveDaysWithoutWater, Is.EqualTo(1));
-            }
-            finally
-            {
-                Invoke(plants, "OnDisable");
-                Invoke(_map, "OnDisable");
-            }
+            NewDayEvent.Trigger(1);
+            Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
+            Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
+            Assert.That(tile.FarmlandData.IsPlowed, Is.True);
+            Assert.That(tile.FarmlandData.IsIrrigated, Is.False);
+            Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.Null);
+            Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
+            NewDayEvent.Trigger(2);
+            Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
+            Assert.That(plant.consecutiveDaysWithoutWater, Is.EqualTo(1));
+
         }
 
         [Test]

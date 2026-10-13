@@ -18,7 +18,7 @@ namespace Plants.Editor
         IEventListener<PlantConditionChangedEvent>, IEventListener<FarmlandDriedEvent>
     {
         private GameObject _root;
-        private GameStateManager _stateManager;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private PlantManager _plants;
         private PlantCatalog _catalog;
         private PlantData _data;
@@ -31,19 +31,16 @@ namespace Plants.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(GameStateManager.Instance, Is.Null, "Run outside a game session.");
+            _fixture = new Core.Common.Editor.GameTestFixture();
+            _fixture.AddSingleton<GameStateManager>();
+            _fixture.AddSingleton<PlantManager>();
             _growth.Clear();
             _sown.Clear();
             _conditionChanges.Clear();
             _dried.Clear();
             _onGrowth = null;
-            _root = new GameObject("Plant manager tests");
-            _root.SetActive(false);
-            _stateManager = _root.AddComponent<GameStateManager>();
-            typeof(Core.Singleton<GameStateManager>).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_stateManager, null);
-            // Keep the manager inactive: use an isolated catalog without changing Resources or singletons.
-            _plants = _root.AddComponent<PlantManager>();
+            _root = _fixture.Root;
+            _plants = PlantManager.Instance;
             _data = ScriptableObject.CreateInstance<PlantData>();
             _data.plantId = "test:crop";
             typeof(PlantData).GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -65,9 +62,7 @@ namespace Plants.Editor
             EventBus<SowPlantEvent>.Unsubscribe(this);
             EventBus<PlantConditionChangedEvent>.Unsubscribe(this);
             EventBus<FarmlandDriedEvent>.Unsubscribe(this);
-            if (_stateManager) typeof(GameStateManager).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_stateManager, null);
-            Object.DestroyImmediate(_root);
+            _fixture?.Dispose();
             Object.DestroyImmediate(_catalog);
             Object.DestroyImmediate(_data);
         }
@@ -172,7 +167,7 @@ namespace Plants.Editor
             Assert.That(references, Is.Empty);
             var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
             typeof(GameStateManager).GetField("_data", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_stateManager, loaded);
+                .SetValue(GameStateManager.Instance, loaded);
             var position = new Vector2Int(-1, 2);
             Assert.That(_plants.GetPlantState("farm", position).daysPassedSincePlanting, Is.EqualTo(4));
             Assert.That(_plants.GetPlantState("village", position).plantID, Is.EqualTo("missing:crop"));

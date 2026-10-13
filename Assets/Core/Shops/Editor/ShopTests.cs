@@ -20,6 +20,7 @@ namespace Core.Shops.Editor
         IEventListener<ShopPurchaseEvent>, IEventListener<ShopSaleEvent>, IEventListener<ShopRestockedEvent>
     {
         private GameObject _root;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private GameStateManager _manager;
         private Shop _shop;
         private SlotInventory _inventory;
@@ -46,10 +47,9 @@ namespace Core.Shops.Editor
             _purchases.Clear();
             _sales.Clear();
             _restocks.Clear();
-            _root = new GameObject("Shop tests");
-            _root.SetActive(false);
-            _manager = _root.AddComponent<GameStateManager>();
-            Invoke(_manager, "Awake");
+            _fixture = new Core.Common.Editor.GameTestFixture("Shop tests");
+            _root = _fixture.Root;
+            _manager = _fixture.AddSingleton<GameStateManager>();
             GameState.Time.daysSinceStart = 1;
             _item = ScriptableObject.CreateInstance<ShopTestItem>();
             Set(_item, "_itemId", "test:shop-item");
@@ -82,8 +82,7 @@ namespace Core.Shops.Editor
             EventBus<ShopSaleEvent>.Unsubscribe(this);
             EventBus<ShopRestockedEvent>.Unsubscribe(this);
             if (_shop) Invoke(_shop, "OnDisable");
-            if (_manager) Invoke(_manager, "OnDestroy");
-            Object.DestroyImmediate(_root);
+            _fixture?.Dispose();
             Object.DestroyImmediate(_definition);
             Object.DestroyImmediate(_item);
             UnityEngine.Random.state = _random;

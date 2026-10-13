@@ -15,8 +15,8 @@ namespace Core.Inventory.Editor
         [Test]
         public void EssentialDropIsRejectedByTheSpawnerWithoutRemovingOwnership()
         {
-            var root = new GameObject("Drop test");
-            root.SetActive(false);
+            using var fixture = new Core.Common.Editor.GameTestFixture("Drop test");
+            var root = fixture.Root;
             var item = ScriptableObject.CreateInstance<DropTestItem>();
             try
             {
@@ -28,11 +28,11 @@ namespace Core.Inventory.Editor
                 typeof(ItemDefinition).GetField("_preventDropping", flags).SetValue(item, true);
                 var bag = root.AddComponent<SlotInventory>();
                 bag.Bind(new InventoryState { Slots = new InventorySlotState[1] });
-                var manager = root.AddComponent<ItemManager>();
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Core/Items/DroppedItem.prefab")
                     .GetComponent<WorldItem>();
                 Assert.That(prefab, Is.Not.Null);
-                typeof(ItemManager).GetField("droppedItemPrefab", flags).SetValue(manager, prefab);
+                var manager = fixture.AddSingleton<ItemManager>(value =>
+                    typeof(ItemManager).GetField("droppedItemPrefab", flags).SetValue(value, prefab));
                 Assert.That(bag.AddItem(item, 4), Is.True);
                 Assert.That(manager.TryDrop(bag, 0, Vector3.zero), Is.False);
                 Assert.That(bag.GetSlot(0).Item, Is.SameAs(item));
@@ -40,7 +40,6 @@ namespace Core.Inventory.Editor
             }
             finally
             {
-                Object.DestroyImmediate(root);
                 Object.DestroyImmediate(item);
             }
         }

@@ -13,6 +13,7 @@ namespace UI.Shared.Editor
     public sealed class UISoundTests
     {
         private GameObject _root;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private UrGUIManager _manager;
         private PauseTestScreen _screen;
         private AudioClip _clip;
@@ -28,11 +29,11 @@ namespace UI.Shared.Editor
         {
             Assert.That(UrGUIManager.Instance, Is.Null);
             _played.Clear();
-            _root = new GameObject("UI sound tests");
-            UIScreenPauseTests.CreateScreenServices(_root);
-            _manager = _root.AddComponent<UrGUIManager>();
-            UIScreenPauseTests.Invoke(_manager, "Awake");
-            UIScreenPauseTests.Invoke(_manager, "OnEnable");
+            _fixture = new Core.Common.Editor.GameTestFixture("UI sound tests");
+            _root = _fixture.Root;
+            _root.SetActive(true);
+            UIScreenPauseTests.CreateScreenServices(_fixture);
+            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
             _screen = _root.AddComponent<PauseTestScreen>();
             _clip = AudioClip.Create("UI cue", 32, 1, 44100, false);
             _assets.Add(_clip);
@@ -43,10 +44,7 @@ namespace UI.Shared.Editor
         public void TearDown()
         {
             MMSoundManagerSoundPlayEvent.Unregister(Capture);
-            UIScreenPauseTests.Invoke(_manager, "OnDisable");
-            UIScreenPauseTests.Invoke(_manager, "OnDestroy");
-            UIScreenPauseTests.ReleaseScreenServices(_root);
-            Object.DestroyImmediate(_root);
+            _fixture?.Dispose();
             foreach (var asset in _assets) Object.DestroyImmediate(asset);
             _assets.Clear();
         }

@@ -23,6 +23,7 @@ namespace UI.Shared.Editor
     public sealed class UIScreenDocumentTests : IEventListener<ItemSelectedEvent>
     {
         private GameObject _root;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private GameObject _screenRoot;
         private UrGUIManager _manager;
         private UIDocument _document;
@@ -37,11 +38,11 @@ namespace UI.Shared.Editor
             Assert.That(UrGUIManager.Instance, Is.Null, "Run outside a game session.");
             _selectionEvents = 0;
             _selected = default;
-            _root = new GameObject("UI document tests");
-            UIScreenPauseTests.CreateScreenServices(_root);
-            _manager = _root.AddComponent<UrGUIManager>();
-            UIScreenPauseTests.Invoke(_manager, "Awake");
-            UIScreenPauseTests.Invoke(_manager, "OnEnable");
+            _fixture = new Core.Common.Editor.GameTestFixture("UI document tests");
+            _root = _fixture.Root;
+            _root.SetActive(true);
+            UIScreenPauseTests.CreateScreenServices(_fixture);
+            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
             var inventoryRoot = new GameObject("Test inventory");
             inventoryRoot.transform.SetParent(_root.transform);
             inventoryRoot.SetActive(false);
@@ -66,11 +67,8 @@ namespace UI.Shared.Editor
                 if (screen) typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(screen, null);
             }
-            _manager.CloseAll();
-            UIScreenPauseTests.Invoke(_manager, "OnDisable");
-            UIScreenPauseTests.Invoke(_manager, "OnDestroy");
-            UIScreenPauseTests.ReleaseScreenServices(_root);
-            Object.DestroyImmediate(_root);
+            _manager?.CloseAll();
+            _fixture?.Dispose();
             Object.DestroyImmediate(_tool);
         }
 
@@ -251,8 +249,8 @@ namespace UI.Shared.Editor
             presenter.SelectSlot(0);
             Submit(_document.rootVisualElement.Q<Button>("useButton"));
             Assert.That(_selectionEvents, Is.EqualTo(3));
-            Assert.That(_document.rootVisualElement.Q<Button>("discardButton").enabledSelf, Is.False,
-                "Dropping requires an initialized character and item spawner; never destroy items as a fallback.");
+            Assert.That(_document.rootVisualElement.Q<Button>("discardButton").enabledSelf, Is.True,
+                "A droppable item exposes its drop action after rebinding.");
             Assert.That(_inventory.GetSlot(0).IsOccupied, Is.True);
         }
 
@@ -364,8 +362,8 @@ namespace UI.Shared.Editor
             Assert.That(_document.rootVisualElement, Is.Not.SameAs(oldRoot));
             var overlay = _document.rootVisualElement.Q("shopOverlay");
             typeof(ManagedUIScreen).GetMethod("OpenScreen", BindingFlags.Instance | BindingFlags.NonPublic,
-                null, new[] { typeof(VisualElement), typeof(GameCharacter), typeof(ScreenPauseMode?) }, null)
-                .Invoke(presenter, new object[] { overlay, null, ScreenPauseMode.GameClock });
+                null, new[] { typeof(GameCharacter), typeof(ScreenPauseMode?) }, null)
+                .Invoke(presenter, new object[] { null, ScreenPauseMode.GameClock });
             Assert.That(_manager.IsOpen(presenter), Is.True);
             Submit(_document.rootVisualElement.Q<Button>("closeButton"));
             Assert.That(_manager.IsOpen(presenter), Is.False);

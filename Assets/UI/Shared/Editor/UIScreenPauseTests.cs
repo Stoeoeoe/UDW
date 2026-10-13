@@ -45,6 +45,7 @@ namespace UI.Shared.Editor
     public sealed class UIScreenPauseTests
     {
         private GameObject _root;
+        private Core.Common.Editor.GameTestFixture _fixture;
         private UrGUIManager _manager;
         private PauseTestScreen _first;
         private PauseTestScreen _second;
@@ -56,11 +57,11 @@ namespace UI.Shared.Editor
         {
             Assert.That(UrGUIManager.Instance, Is.Null, "Run outside a game session.");
             _timeScale = Time.timeScale;
-            _root = new GameObject("Screen pause tests");
-            CreateScreenServices(_root);
-            _manager = _root.AddComponent<UrGUIManager>();
-            Invoke(_manager, "Awake");
-            Invoke(_manager, "OnEnable");
+            _fixture = new Core.Common.Editor.GameTestFixture("Screen pause tests");
+            _root = _fixture.Root;
+            _root.SetActive(true);
+            CreateScreenServices(_fixture);
+            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
             _first = _root.AddComponent<PauseTestScreen>();
             _second = _root.AddComponent<PauseTestScreen>();
             var characterRoot = new GameObject("Uninitialized test character");
@@ -72,11 +73,8 @@ namespace UI.Shared.Editor
         [TearDown]
         public void TearDown()
         {
-            _manager.CloseAll();
-            Invoke(_manager, "OnDisable");
-            Invoke(_manager, "OnDestroy");
-            ReleaseScreenServices(_root);
-            Object.DestroyImmediate(_root);
+            _manager?.CloseAll();
+            _fixture?.Dispose();
             Time.timeScale = _timeScale;
         }
 
@@ -327,9 +325,7 @@ namespace UI.Shared.Editor
         public void NonPausingMenusBlockWorldContextImmediatelyUntilTheLastScreenCloses()
         {
             Assert.That(PlayerInteractionContext.Instance, Is.Null);
-            var context = _root.AddComponent<PlayerInteractionContext>();
-            typeof(Core.Singleton<PlayerInteractionContext>)
-                .GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(context, null);
+            var context = _fixture.AddSingleton<PlayerInteractionContext>();
             _first.Open(_character, ScreenPauseMode.None);
             _second.Open(_character, ScreenPauseMode.None);
             Assert.That(context.CurrentSnapshot.WorldInteractionBlocked, Is.True);
@@ -370,32 +366,22 @@ namespace UI.Shared.Editor
         public void TheCalendarResumesWhileANonPausingScreenRemainsOpen()
         {
             Assert.That(GameStateManager.Instance, Is.Null);
-            var stateRoot = new GameObject("Isolated game clock");
-            stateRoot.SetActive(false);
-            var state = stateRoot.AddComponent<GameStateManager>();
-            typeof(Core.Singleton<GameStateManager>).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(state, null);
-            var clock = stateRoot.AddComponent<UrTimeManager>();
-            try
-            {
-                GameState.Time.hour = 6;
-                GameState.Time.minute = 0;
-                GameState.Time.secondsTowardNextMinute = 10;
-                _first.Open(_character, ScreenPauseMode.GameClock);
-                _second.Open(_character, ScreenPauseMode.None);
-                Invoke(clock, "Update");
-                Assert.That(GameState.Time.minute, Is.Zero);
-                Assert.That(GameState.Time.secondsTowardNextMinute, Is.EqualTo(10));
-                _first.Close();
-                Invoke(clock, "Update");
-                Assert.That(GameState.Time.minute, Is.GreaterThan(0));
-                Assert.That(_second.Visible, Is.True);
-            }
-            finally
-            {
-                typeof(GameStateManager).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(state, null);
-                Object.DestroyImmediate(stateRoot);
-            }
+            using var services = new Core.Common.Editor.GameTestFixture("Isolated game clock");
+            services.AddSingleton<GameStateManager>();
+            var clock = services.AddSingleton<UrTimeManager>();
+            GameState.Time.hour = 6;
+            GameState.Time.minute = 0;
+            GameState.Time.secondsTowardNextMinute = 10;
+            _first.Open(_character, ScreenPauseMode.GameClock);
+            _second.Open(_character, ScreenPauseMode.None);
+            Invoke(clock, "Update");
+            Assert.That(GameState.Time.minute, Is.Zero);
+            Assert.That(GameState.Time.secondsTowardNextMinute, Is.EqualTo(10));
+            _first.Close();
+            Invoke(clock, "Update");
+            Assert.That(GameState.Time.minute, Is.GreaterThan(0));
+            Assert.That(_second.Visible, Is.True);
+
         }
 
         [Test]
@@ -403,11 +389,8 @@ namespace UI.Shared.Editor
         {
             Assert.That(LevelManager.Instance, Is.Null);
             Invoke(_manager, "OnEnable");
-            var levelRoot = new GameObject("Late location manager");
-            levelRoot.SetActive(false);
-            var level = levelRoot.AddComponent<LevelManager>();
-            typeof(Core.Singleton<LevelManager>).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)
-                .SetValue(null, level);
+            using var services = new Core.Common.Editor.GameTestFixture("Late location manager");
+            var level = services.RegisterSingleton<LevelManager>();
             try
             {
                 Invoke(_manager, "Start");
@@ -420,46 +403,26 @@ namespace UI.Shared.Editor
             finally
             {
                 level.UnregisterLifecycle(_manager);
-                typeof(Core.Singleton<LevelManager>).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic)
-                    .SetValue(null, null);
-                Object.DestroyImmediate(levelRoot);
+
             }
         }
 
-        internal static Input.InputManager CreateScreenServices(GameObject parent)
+        internal static Input.InputManager CreateScreenServices(Core.Common.Editor.GameTestFixture fixture,
+            Action<UnityEngine.InputSystem.InputActionAsset> configureActions = null)
         {
-            var characterRoot = new GameObject("Character owner");
-            characterRoot.transform.SetParent(parent.transform);
-            var characters = characterRoot.AddComponent<CharacterManager>();
-            Invoke(characters, "Awake");
-            var root = new GameObject("Input owner");
-            root.transform.SetParent(parent.transform);
-            root.SetActive(false);
-            var player = root.AddComponent<UnityEngine.InputSystem.PlayerInput>();
-            var authored = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>(
-                "Assets/InputSystem_Actions.inputactions");
-            player.actions = Object.Instantiate(authored);
-            player.defaultActionMap = "PlayerControls";
-            var input = root.AddComponent<Input.InputManager>();
-            root.SetActive(true);
-            Invoke(input, "Awake");
-            return input;
+            fixture.AddSingleton<CharacterManager>();
+            return fixture.AddSingleton<Input.InputManager>(input =>
+            {
+                var player = input.GetComponent<UnityEngine.InputSystem.PlayerInput>();
+                var authored = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>(
+                    "Assets/InputSystem_Actions.inputactions");
+                player.actions = fixture.Own(Object.Instantiate(authored));
+                configureActions?.Invoke(player.actions);
+                player.defaultActionMap = "PlayerControls";
+                input.gameObject.SetActive(true);
+            });
         }
 
-        internal static void ReleaseScreenServices(GameObject parent)
-        {
-            var characters = parent.GetComponentInChildren<CharacterManager>(true);
-            Invoke(characters, "OnDestroy");
-            Object.DestroyImmediate(characters.gameObject);
-            var input = parent.GetComponentInChildren<Input.InputManager>(true);
-            var asset = input.Actions;
-            typeof(Core.Singleton<Input.InputManager>).GetMethod("OnDestroy",
-                BindingFlags.Instance | BindingFlags.NonPublic).Invoke(input, null);
-            Object.DestroyImmediate(input.gameObject);
-            Object.DestroyImmediate(asset);
-        }
-
-        internal static void Invoke(object target, string method) => target.GetType()
-            .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, null);
+        internal static void Invoke(object target, string method) => Core.Common.Editor.GameTestFixture.Invoke(target, method);
     }
 }
