@@ -1,8 +1,9 @@
 using MoreMountains.Tools;
 using Core.Catalogs;
 using Interaction.Dialog;
+using Core;
 
-public class DataManager : MMSingleton<DataManager>
+public class DataManager : Singleton<DataManager>
 {
     // Expose the shared catalog directly; no definition copies or Start-time Resources scan.
     public TypewriterSoundCatalog TypewriterSounds =>

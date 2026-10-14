@@ -8,7 +8,7 @@ namespace Core.Tile.Overlay
     /// <summary>
     /// Manages tile overlays. Attach overlays as children and assign the tilemap in inspector.
     /// </summary>
-    public class TileOverlayManager : MMSingleton<TileOverlayManager>
+    public class TileOverlayManager : Singleton<TileOverlayManager>
     {
         [SerializeField] private int defaultRadius = 3;
 
@@ -64,6 +64,7 @@ namespace Core.Tile.Overlay
 
             // Find first overlay that wants to show
             _activeOverlay = null;
+            if (!snapshot.CanInteractWithWorld) return;
             foreach (var overlay in _overlays)
             {
                 if (overlay.ShouldShow(snapshot))

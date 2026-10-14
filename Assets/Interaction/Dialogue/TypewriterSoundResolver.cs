@@ -39,10 +39,7 @@ namespace Interaction.Dialog
 
         public static TypewriterSound ResolveTypewriterSound(string speakerId, TypewriterSound defaultSound)
         {
-            if (DataManager.Current == null)
-                return defaultSound;
-
-            var catalog = DataManager.Current.TypewriterSounds;
+            var catalog = DataManager.Instance.TypewriterSounds;
             var sound = catalog ? catalog.Get(speakerId) : null;
             return sound ? sound : defaultSound;
         }
