@@ -5,8 +5,7 @@ using UnityEngine;
 
 namespace Plants
 {
-    // TODO: Maybe take apart seed, growth stages and plant item into separate classes...
-
+    /// <summary>Inventory seed definition linking a plantable item to its crop data and seed-stage visual.</summary>
     [CreateAssetMenu(fileName = "Seed", menuName = "Game/Items/Plants/Seed", order = 1)]
     public class SeedItem : PlaceableItem
     {

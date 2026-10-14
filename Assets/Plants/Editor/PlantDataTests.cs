@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Core.TimeAndWeather;
 using Items.Plants;
 using NUnit.Framework;
 using UnityEngine;
@@ -35,23 +36,6 @@ namespace Plants.Editor
         }
 
         [Test]
-        public void MissingOrEmptyStagesReturnNoStage()
-        {
-            AssertNoStage();
-            SetStages(new List<GrowthStage>());
-            AssertNoStage();
-        }
-
-        [Test]
-        public void MissingOrNonzeroSeedStageInvalidatesTheGrowthSequence()
-        {
-            SetStages(new List<GrowthStage> { null, Stage(2) });
-            AssertNoStage();
-            SetStages(Stages(1, 2));
-            AssertNoStage();
-        }
-
-        [Test]
         public void ASeedOnlyPlantRemainsAtItsSeedStage()
         {
             SetStages(Stages(0));
@@ -73,11 +57,61 @@ namespace Plants.Editor
             Assert.That(_data.DaysWithoutWaterUntilWilt, Is.EqualTo(5));
         }
 
-        private void AssertNoStage()
+        [TestCase(Season.Spring)]
+        [TestCase(Season.Summer)]
+        [TestCase(Season.Autumn)]
+        [TestCase(Season.Winter)]
+        public void DefaultCropDefinitionsGrowInEverySeason(Season season)
         {
-            Assert.That(_data.GetSeedStage(), Is.Null);
-            Assert.That(_data.GetGrowthStageIndexByDays(100), Is.EqualTo(-1));
-            Assert.That(_data.GetGrowthStageByDays(100), Is.Null);
+            Assert.That(_data.CanGrowInSeason(season), Is.True);
+        }
+
+        [Test]
+        public void AllowedSeasonsAreExplicitAndAnEmptySelectionNeverGrows()
+        {
+            var field = typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic);
+            field.SetValue(_data, new[] { Season.Spring, Season.Autumn });
+            Assert.That(_data.CanGrowInSeason(Season.Spring), Is.True);
+            Assert.That(_data.CanGrowInSeason(Season.Autumn), Is.True);
+            Assert.That(_data.CanGrowInSeason(Season.Winter), Is.False);
+            field.SetValue(_data, Array.Empty<Season>());
+            Assert.That(_data.CanGrowInSeason(Season.Spring), Is.False);
+        }
+
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(int.MaxValue - 1)]
+        public void EqualHarvestBoundsAlwaysProduceThatQuantity(int quantity)
+        {
+            SetQuantityRange(quantity, quantity);
+            Assert.That(_data.RollHarvestQuantity(), Is.EqualTo(quantity));
+        }
+
+        [Test]
+        public void HarvestQuantityRollIncludesBothEndpointsAndStaysWithinBounds()
+        {
+            SetQuantityRange(2, 5);
+            var previousRandomState = UnityEngine.Random.state;
+            try
+            {
+                UnityEngine.Random.InitState(123);
+                var quantities = new HashSet<int>();
+                for (var i = 0; i < 128; i++)
+                {
+                    var quantity = _data.RollHarvestQuantity();
+                    Assert.That(quantity, Is.InRange(2, 5));
+                    quantities.Add(quantity);
+                }
+                Assert.That(quantities, Does.Contain(2));
+                Assert.That(quantities, Does.Contain(5));
+            }
+            finally { UnityEngine.Random.state = previousRandomState; }
+        }
+
+        private void SetQuantityRange(int min, int max)
+        {
+            typeof(PlantData).GetField("_minHarvestQuantity", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_data, min);
+            typeof(PlantData).GetField("_maxHarvestQuantity", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_data, max);
         }
 
         private void SetStages(List<GrowthStage> stages) => typeof(PlantData)
@@ -93,7 +127,7 @@ namespace Plants.Editor
         private static GrowthStage Stage(int day)
         {
             var stage = new GrowthStage();
-            typeof(GrowthStage).GetField("daysToReachStage", BindingFlags.Instance | BindingFlags.NonPublic)
+            typeof(GrowthStage).GetField("_daysToReachStage", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(stage, day);
             return stage;
         }

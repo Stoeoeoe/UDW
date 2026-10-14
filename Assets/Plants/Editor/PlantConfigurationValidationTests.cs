@@ -72,6 +72,35 @@ namespace Plants.Editor
         }
 
         [Test]
+        public void UnitySerializationPreservesAnOmittedWiltedRepresentation()
+        {
+            var restored = ScriptableObject.CreateInstance<PlantData>();
+            try
+            {
+                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(_plant), restored);
+                Assert.That(restored.WiltedRepresentation, Is.Null);
+                Assert.That(restored.ValidateConfiguration(), Is.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(restored);
+            }
+        }
+
+        [Test]
+        public void SuppliedWiltClearingFeedbackMustAutoplayAndOwnCleanup()
+        {
+            var feedback = _visual.AddComponent<MoreMountains.Feedbacks.MMF_Player>();
+            Set(_plant, "_wiltedFeedbackPrefab", feedback);
+            Assert.That(_plant.ValidateConfiguration().Any(e => e.Setting == "_wiltedFeedbackPrefab"), Is.True);
+            feedback.AutoPlayOnStart = true;
+            var cleanup = _visual.AddComponent<MoreMountains.Tools.MMTimedDestruction>();
+            Assert.That(_plant.ValidateConfiguration(), Is.Empty);
+            cleanup.TimeBeforeDestruction = 0;
+            Assert.That(_plant.ValidateConfiguration().Any(e => e.Setting == "_wiltedFeedbackPrefab"), Is.True);
+        }
+
+        [Test]
         public void StandaloneValidatorAndGenericAssetHookReturnTheSameErrors()
         {
             Set(_plant, "_harvestItem", null);

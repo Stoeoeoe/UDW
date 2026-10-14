@@ -13,7 +13,13 @@ MonoBehaviour:
   m_Name: ItemCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Core.Inventory.ItemCatalog
   entries:
+  - definition: {fileID: 11400000, guid: 8e403280a1ffeb94f9b64b93b2b7e5e6, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 2c7aacda969659e4797be086f244d844, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: befbbffacc5d44e40bdd09263c206f87, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 78cb6b0e43f405644834fc76d126c613, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: 1a33eade62799804887ef18ac2aaab4a, type: 2}
     enabled: 1

@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Plants
 {
+    /// <summary>Discovered plant definitions and their enabled ID lookup for runtime crop resolution.</summary>
     [CreateAssetMenu(menuName = "Game/Catalogs/Plants")]
     public sealed class PlantCatalog : DefinitionCatalog<PlantData>
     {

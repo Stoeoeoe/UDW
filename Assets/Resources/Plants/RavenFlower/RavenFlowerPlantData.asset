@@ -12,13 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a0a485f742f4553884da6ca441525ba, type: 3}
   m_Name: RavenFlowerPlantData
   m_EditorClassIdentifier: Assembly-CSharp::Items.Plants.PlantData
-  plantId: RavenFlower
-  label: Raven Flower
-  description: A blue flower, mysterious
+  _plantId: RavenFlower
+  _label: Raven Flower
+  _description: A blue flower, mysterious
+  growingSeasons: 00000000010000000200000003000000i
   growthStages:
-  - daysToReachStage: 0
-    isHarvestable: 0
-    representation:
+  - _daysToReachStage: 0
+    _isHarvestable: 0
+    _representation:
       type: 0
       sprite: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582, type: 3}
       prefab: {fileID: 0}
+  _harvestMethod: 0
+  _harvestItem: {fileID: 11400000, guid: 78cb6b0e43f405644834fc76d126c613, type: 2}
+  _minHarvestQuantity: 1
+  _maxHarvestQuantity: 1
+  _regrowthStageIndex: -1
+  _daysWithoutWaterUntilWilt: 5
+  _wiltedRepresentation:
+    rid: -2
+  _daysWiltedUntilRemoval: 5
+  _wiltedFeedbackPrefab: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

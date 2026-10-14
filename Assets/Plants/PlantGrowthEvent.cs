@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Plants
 {
+    /// <summary>Announces a saved crop's growth-stage change after the daily update has committed.</summary>
     public struct PlantGrowthEvent
     {
         public string LocationId;

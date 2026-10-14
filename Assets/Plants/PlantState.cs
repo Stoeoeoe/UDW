@@ -1,8 +1,10 @@
 using System;
 using Core.Game;
+using Core.TimeAndWeather;
 
 namespace Plants
 {
+    /// <summary>Saved crop identity, growth age and water history, with rules for advancing its condition each day.</summary>
     [Serializable]
     public class PlantState : WorldObjectState
     {
@@ -10,6 +12,7 @@ namespace Plants
         public int daysPassedSincePlanting;
         public int consecutiveDaysWithoutWater;
         public PlantCondition condition = PlantCondition.Healthy;
+        public int daysSinceWilted;
         
         public PlantState(string plantID)
         {
@@ -18,18 +21,23 @@ namespace Plants
         }
 
         /// <summary>Growth days count watered days. Wilting is terminal until the crop is removed.</summary>
-        public void AdvanceDay(bool irrigated, int daysWithoutWaterUntilWilt)
+        public void AdvanceDay(PlantData definition, Season currentSeason, bool wasWatered)
         {
+            if (condition == PlantCondition.Wilted)
+            {
+                daysSinceWilted++;
+                return;
+            }
             if (condition != PlantCondition.Healthy) return;
-            if (irrigated)
+            if (wasWatered)
             {
                 consecutiveDaysWithoutWater = 0;
-                daysPassedSincePlanting++;
+                if (definition.CanGrowInSeason(currentSeason)) daysPassedSincePlanting++;
             }
             else
             {
                 consecutiveDaysWithoutWater++;
-                if (consecutiveDaysWithoutWater >= Math.Max(1, daysWithoutWaterUntilWilt))
+                if (consecutiveDaysWithoutWater >= definition.DaysWithoutWaterUntilWilt)
                     condition = PlantCondition.Wilted;
             }
         }

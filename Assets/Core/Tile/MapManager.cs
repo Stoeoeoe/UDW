@@ -171,7 +171,7 @@ namespace Core.Tile
             var collider = Physics2D.OverlapBox(tileData.WorldPosition, new Vector2(1, 1), 0);
             if (collider != null) return true;
 
-            if (PlantManager.Current.HasPlantAtCurrentMap(tileData.Coordinates))
+            if (PlantManager.Instance.HasPlantAtCurrentMap(tileData.Coordinates))
                 return true;
 
             // TODO: Also check for other items placed on the tile...
@@ -594,27 +594,27 @@ namespace Core.Tile
             var locationId = LevelManager.Instance.CurrentLocationData?.id;
             if (locationId == null) return;
 
-            foreach (var (pos, state) in PlantManager.Current.GetPlantStatesInLocation(locationId))
+            foreach (var (pos, state) in PlantManager.Instance.GetPlantStatesInLocation(locationId))
             {
                 var tileData = GetTileDataAtCoordinates(pos);
                 if (tileData == null) continue;
-                if (!PlantManager.Current.TryGetPlantData(state.plantID, out var plantData)) continue;
-                var stageIndex = plantData.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
-                SpawnPlantInstance(state.plantID, pos, tileData, stageIndex, state.condition);
+                SpawnPlantInstance(state.plantID, pos, tileData);
             }
         }
 
-        private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData, int stageIndex = 0,
-            PlantCondition condition = PlantCondition.Healthy)
+        private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData)
         {
-            if (!PlantManager.Current.TryGetPlantData(plantId, out var plantData)) return;
+            var manager = PlantManager.Instance;
+            if (!manager.TryGetPlantData(plantId, out var plantData)) return;
 
             var go = new GameObject(plantData.label + "_" + plantId);
+            go.SetActive(false);
             go.transform.SetParent(_plantParentGameObject.transform);
             go.transform.position = tileData.WorldPosition;
 
-            var locationId = LevelManager.Instance.CurrentLocationData?.id;
-            go.AddComponent<FarmablePlant>().Initialize(locationId, pos, plantData, stageIndex, condition);
+            var locationId = LevelManager.Instance.CurrentLocationData.id;
+            go.AddComponent<FarmablePlant>().Bind(locationId, pos, plantData, manager.GetPlantState(locationId, pos));
+            go.SetActive(true);
         }
 
         #endregion

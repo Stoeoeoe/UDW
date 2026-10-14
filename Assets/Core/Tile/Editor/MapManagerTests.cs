@@ -1,3 +1,4 @@
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -314,7 +315,16 @@ namespace Core.Tile.Editor
             _map.PlowTile(tile);
             _map.IrrigateTile(tile);
             var data = Asset<PlantData>();
-            data.plantId = "test:crop";
+            TestConfiguration.Set(data, "plantId", "test:crop");
+            var produce = Asset<ProduceItem>();
+            typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(produce, "test:produce");
+            Set(data, "_harvestItem", produce);
+            var seedStage = new global::Items.Plants.GrowthStage();
+            Set(seedStage, "_representation", new Core.Common.SpriteOrPrefab
+                { type = Core.Common.SpriteOrPrefab.SpriteOrPrefabType.Prefab, prefab = _gridRoot });
+            Set(data, "growthStages", new List<global::Items.Plants.GrowthStage> { seedStage });
+            Assert.That(data.ValidateConfiguration(), Is.Empty);
             var catalog = Asset<PlantCatalog>();
             catalog.Synchronize(new Object[] { data });
             var plants = _fixture.AddSingleton<PlantManager>();

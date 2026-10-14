@@ -1,3 +1,4 @@
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,13 +43,13 @@ namespace Plants.Editor
             _root = _fixture.Root;
             _plants = PlantManager.Instance;
             _data = ScriptableObject.CreateInstance<PlantData>();
-            _data.plantId = "test:crop";
+            TestConfiguration.Set(_data, "plantId", "test:crop");
             typeof(PlantData).GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, PlantDataTests.Stages(0, 2, 5));
             _catalog = ScriptableObject.CreateInstance<PlantCatalog>();
             _catalog.Synchronize(new Object[] { _data });
             typeof(PlantManager).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_plants, _catalog);
+                .SetValue(PlantManager.Instance, _catalog);
             EventBus<PlantGrowthEvent>.Subscribe(this);
             EventBus<SowPlantEvent>.Subscribe(this);
             EventBus<PlantConditionChangedEvent>.Subscribe(this);
@@ -89,6 +90,34 @@ namespace Plants.Editor
             Assert.That(_sown[0].LocationId, Is.EqualTo("farm"));
             Assert.That(_sown[0].Position, Is.EqualTo(position));
             Assert.That(_sown[0].PlantId, Is.EqualTo(_data.plantId));
+        }
+
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(5)]
+        public void WiltedCropsExpireAfterTheConfiguredNumberOfFurtherDaysInUnloadedLocations(int threshold)
+        {
+            typeof(PlantData).GetField("_daysWiltedUntilRemoval", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(_data, threshold);
+            var crop = new PlantState(_data.plantId) { condition = PlantCondition.Wilted };
+            GameState.World.Set("unloaded", "plant:1,2", crop);
+            for (var day = 1; day <= threshold; day++)
+            {
+                _plants.OnEvent(new NewDayEvent());
+                Assert.That(crop.daysSinceWilted, Is.EqualTo(day));
+                Assert.That(_plants.HasPlantAt("unloaded", new Vector2Int(1, 2)), Is.EqualTo(day < threshold));
+            }
+        }
+
+        [Test]
+        public void TheDayACropWiltsDoesNotCountTowardsItsRemovalDelay()
+        {
+            var crop = new PlantState(_data.plantId) { consecutiveDaysWithoutWater = 4 };
+            GameState.World.Set("farm", "plant:1,2", crop);
+            _plants.OnEvent(new NewDayEvent());
+            Assert.That(crop.condition, Is.EqualTo(PlantCondition.Wilted));
+            Assert.That(crop.daysSinceWilted, Is.Zero);
+            Assert.That(_plants.HasPlantAt("farm", new Vector2Int(1, 2)), Is.True);
         }
 
         [Test]
@@ -203,7 +232,7 @@ namespace Plants.Editor
         [TestCase(5)]
         public void WiltUsesTheCropThresholdAndIsAnnouncedExactlyOnce(int threshold)
         {
-            typeof(PlantData).GetField("daysWithoutWaterUntilWilt", BindingFlags.Instance | BindingFlags.NonPublic)
+            typeof(PlantData).GetField("_daysWithoutWaterUntilWilt", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, threshold);
             var plant = Store("village", "plant:-3,4", 1, false);
             for (var day = 1; day <= threshold; day++)
@@ -284,6 +313,78 @@ namespace Plants.Editor
         private void Sow(string location, Vector2Int position, string id) => typeof(PlantManager)
             .GetMethod("SowPlantOnMap", BindingFlags.Instance | BindingFlags.NonPublic)
             .Invoke(_plants, new object[] { location, position, id });
+
+        [Test]
+        public void OutOfSeasonPlantsStayPlantedAndResumeGrowthAfterTheSeasonChanges()
+        {
+            typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(_data, new[] { Season.Spring });
+            GameState.Time.season = Season.Winter;
+            Sow("unloaded-farm", Vector2Int.zero, _data.plantId);
+            var plant = _plants.GetPlantState("unloaded-farm", Vector2Int.zero);
+            plant.daysPassedSincePlanting = 1;
+            plant.consecutiveDaysWithoutWater = 4;
+            GameState.World.Set("unloaded-farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
+            _plants.OnEvent(new NewDayEvent());
+            Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
+            Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
+            Assert.That(plant.condition, Is.EqualTo(PlantCondition.Healthy));
+            Assert.That(_plants.HasPlantAt("unloaded-farm", Vector2Int.zero), Is.True);
+            Assert.That(_growth, Is.Empty);
+            Assert.That(GameState.World.TryGet("unloaded-farm", "farmland:0,0", out FarmlandState land), Is.True);
+            Assert.That(land.irrigated, Is.False);
+            GameState.Time.season = Season.Spring;
+            land.irrigated = true;
+            _plants.OnEvent(new NewDayEvent());
+            Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(2));
+            Assert.That(_growth.Single().NewStageIndex, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void OutOfSeasonDryCropsStillWilt()
+        {
+            typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(_data, new[] { Season.Spring });
+            GameState.Time.season = Season.Winter;
+            var plant = Store("farm", "plant:0,0", 1);
+            plant.consecutiveDaysWithoutWater = 4;
+            GameState.World.TryGet("farm", "farmland:0,0", out FarmlandState land);
+            land.irrigated = false;
+            _plants.OnEvent(new NewDayEvent());
+            Assert.That(plant.condition, Is.EqualTo(PlantCondition.Wilted));
+            Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
+        }
+
+        [Test]
+        [Category("Planting")]
+        public void PlantingConsumesExactlyOneSeedAndRejectsAnOccupiedPlot()
+        {
+            var seed = ScriptableObject.CreateInstance<SeedItem>();
+            try
+            {
+                TestConfiguration.Set(seed, "plantData", _data);
+                typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .SetValue(seed, "test:seed");
+                var inventory = _root.AddComponent<Core.Inventory.SlotInventory>();
+                inventory.Bind(new Core.Inventory.InventoryState { Slots = new Core.Inventory.InventorySlotState[2] });
+                inventory.SetSlot(1, new Core.Inventory.ItemStack(seed, 2));
+                var tile = new TileData(null, 0, 0, null, Vector3.zero, true);
+                Assert.That(_plants.TrySowCarriedSeed("farm", tile, inventory, 1), Is.False);
+                Assert.That(inventory.GetSlot(1).Quantity, Is.EqualTo(2));
+                tile.TryPlow();
+                Assert.That(_plants.TrySowCarriedSeed("farm", tile, inventory, 1), Is.True);
+                Assert.That(inventory.GetSlot(1).Quantity, Is.EqualTo(1));
+                Assert.That(_sown.Count, Is.EqualTo(1));
+                Assert.That(_plants.TrySowCarriedSeed("farm", tile, inventory, 1), Is.False);
+                Assert.That(inventory.GetSlot(1).Quantity, Is.EqualTo(1));
+                var second = new TileData(null, 1, 0, null, Vector3.zero, true);
+                second.TryPlow();
+                Assert.That(_plants.TrySowCarriedSeed("farm", second, inventory, 1), Is.True);
+                Assert.That(inventory.GetSlot(1).IsOccupied, Is.False);
+                Assert.That(_plants.TrySowCarriedSeed("farm", second, inventory, 1), Is.False);
+            }
+            finally { Object.DestroyImmediate(seed); }
+        }
 
         public void OnEvent(PlantGrowthEvent e)
         {

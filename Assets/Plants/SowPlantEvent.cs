@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Plants
 {
+    /// <summary>Announces a newly stored crop so the loaded map can create its scene view.</summary>
     public struct SowPlantEvent
     {
         public string PlantId;

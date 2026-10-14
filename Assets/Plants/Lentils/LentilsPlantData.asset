@@ -12,43 +12,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a0a485f742f4553884da6ca441525ba, type: 3}
   m_Name: LentilsPlantData
   m_EditorClassIdentifier: Assembly-CSharp::Plants.PlantData
-  plantId: lentils
-  label: Lentils
-  description: Lentils
+  _plantId: lentils
+  _label: Lentils
+  _description: Lentils
+  growingSeasons: 0000000001000000i
   growthStages:
-  - daysToReachStage: 0
-    isHarvestable: 0
-    representation:
+  - _daysToReachStage: 0
+    _isHarvestable: 0
+    _representation:
       type: 0
       sprite: {fileID: 1696136838, guid: 1b6131edcb846d44ba2e33dd5fc8f36e, type: 3}
       prefab: {fileID: 0}
-  - daysToReachStage: 2
-    isHarvestable: 0
-    representation:
+  - _daysToReachStage: 2
+    _isHarvestable: 0
+    _representation:
       type: 0
       sprite: {fileID: 1870664119, guid: 1b6131edcb846d44ba2e33dd5fc8f36e, type: 3}
       prefab: {fileID: 0}
-  - daysToReachStage: 4
-    isHarvestable: 0
-    representation:
+  - _daysToReachStage: 4
+    _isHarvestable: 0
+    _representation:
       type: 0
       sprite: {fileID: -1867841432, guid: 1b6131edcb846d44ba2e33dd5fc8f36e, type: 3}
       prefab: {fileID: 0}
-  - daysToReachStage: 6
-    isHarvestable: 0
-    representation:
+  - _daysToReachStage: 6
+    _isHarvestable: 0
+    _representation:
       type: 0
       sprite: {fileID: 1076634755, guid: 1b6131edcb846d44ba2e33dd5fc8f36e, type: 3}
       prefab: {fileID: 0}
-  - daysToReachStage: 8
-    isHarvestable: 0
-    representation:
+  - _daysToReachStage: 8
+    _isHarvestable: 0
+    _representation:
       type: 0
       sprite: {fileID: -1770093811, guid: 1b6131edcb846d44ba2e33dd5fc8f36e, type: 3}
       prefab: {fileID: 0}
-  - daysToReachStage: 10
-    isHarvestable: 1
-    representation:
+  - _daysToReachStage: 10
+    _isHarvestable: 1
+    _representation:
       type: 0
       sprite: {fileID: -1700781690, guid: 1b6131edcb846d44ba2e33dd5fc8f36e, type: 3}
       prefab: {fileID: 0}
+  _harvestMethod: 1
+  _harvestItem: {fileID: 11400000, guid: befbbffacc5d44e40bdd09263c206f87, type: 2}
+  _minHarvestQuantity: 1
+  _maxHarvestQuantity: 3
+  _regrowthStageIndex: -1
+  _daysWithoutWaterUntilWilt: 5
+  _wiltedRepresentation:
+    rid: -2
+  _daysWiltedUntilRemoval: 5
+  _wiltedFeedbackPrefab: {fileID: 7772630229047509412, guid: 6f5d1b8356311e744a6b9f724aeb9631, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

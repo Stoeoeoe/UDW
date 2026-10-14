@@ -5,15 +5,22 @@ using UnityEngine;
 
 namespace Items.Plants
 {
+    /// <summary>Defines a crop stage's watered-day threshold, visual representation and harvest availability.</summary>
     [Serializable]
     public class GrowthStage
     {
-        [SerializeField] private int daysToReachStage;
-        [SerializeField] private bool isHarvestable;
-        [InlineProperty, SerializeField] private SpriteOrPrefab representation;
+        [SerializeField]
+        private int _daysToReachStage;
 
-        public int DaysToReachStage => daysToReachStage;
-        public bool IsHarvestable => isHarvestable;
-        public SpriteOrPrefab Representation => representation;
+        [SerializeField]
+        private bool _isHarvestable;
+
+        [InlineProperty, SerializeField, Validation.Required, Validation.Nested]
+        private SpriteOrPrefab _representation;
+
+        public int DaysToReachStage => _daysToReachStage;
+        public bool IsHarvestable => _isHarvestable;
+        public SpriteOrPrefab Representation => _representation;
+
     }
 }
