@@ -39,6 +39,29 @@ namespace UI.Shared.Editor
         }
 
         [Test]
+        public void KeyboardMovementResolvesWithTheAuthoredControlSchemeAfterClosingAMenu()
+        {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            try
+            {
+                _input.Actions.devices = new InputDevice[] { keyboard };
+                var scheme = _input.Actions.FindControlScheme("Keyboard&Mouse").Value;
+                _input.Actions.bindingMask = InputBinding.MaskByGroup(scheme.bindingGroup);
+                var move = _input.PlayerControls.FindAction("PrimaryMovement", true);
+                Assert.That(move.controls.Count, Is.GreaterThan(0), "The active control scheme must resolve WASD bindings.");
+
+                _first.Open(null);
+                _first.Close();
+                Assert.That(move.enabled, Is.True);
+                Assert.That(move.controls, Does.Contain(keyboard.dKey));
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(keyboard);
+            }
+        }
+
+        [Test]
         public void ScreensUseThePlayerInputAssetAndRestoreTheUnderlyingMap()
         {
             var player = _input.GetComponent<PlayerInput>();

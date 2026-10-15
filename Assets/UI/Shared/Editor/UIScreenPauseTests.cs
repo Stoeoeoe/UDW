@@ -51,12 +51,15 @@ namespace UI.Shared.Editor
         private PauseTestScreen _second;
         private GameCharacter _character;
         private float _timeScale;
+        private float _fixedDeltaTime, _maximumDeltaTime;
 
         [SetUp]
         public void SetUp()
         {
             Assert.That(UrGUIManager.Instance, Is.Null, "Run outside a game session.");
             _timeScale = Time.timeScale;
+            _fixedDeltaTime = Time.fixedDeltaTime;
+            _maximumDeltaTime = Time.maximumDeltaTime;
             _fixture = new Core.Common.Editor.GameTestFixture("Screen pause tests");
             _root = _fixture.Root;
             _root.SetActive(true);
@@ -76,6 +79,8 @@ namespace UI.Shared.Editor
             _manager?.CloseAll();
             _fixture?.Dispose();
             Time.timeScale = _timeScale;
+            Time.maximumDeltaTime = _maximumDeltaTime;
+            Time.fixedDeltaTime = _fixedDeltaTime;
         }
 
         private MainCharacter CreateMainCharacter(string name)
@@ -369,6 +374,11 @@ namespace UI.Shared.Editor
             using var services = new Core.Common.Editor.GameTestFixture("Isolated game clock");
             services.AddSingleton<GameStateManager>();
             var clock = services.AddSingleton<UrTimeManager>();
+            // This isolated clock skips Start, which normally captures these physics baselines.
+            typeof(UrTimeManager).GetField("_initialFixedDeltaTime", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(clock, _fixedDeltaTime);
+            typeof(UrTimeManager).GetField("_initialMaximumDeltaTime", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(clock, _maximumDeltaTime);
             GameState.Time.hour = 6;
             GameState.Time.minute = 0;
             GameState.Time.secondsTowardNextMinute = 10;
