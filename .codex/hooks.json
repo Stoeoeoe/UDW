@@ -1,0 +1,17 @@
+{
+  "description": "Reinforce the required-setup axiom before every user turn; reminder only.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s\\n' 'Required setup must be valid before gameplay. Enforce invariants at boundaries; never hide missing services or invalid definitions with gameplay fallbacks.'",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"Write-Output 'Required setup must be valid before gameplay. Enforce invariants at boundaries; never hide missing services or invalid definitions with gameplay fallbacks.'\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

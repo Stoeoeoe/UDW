@@ -1762,14 +1762,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Dialogue.ShowVulcanusDialogueInteractable
   requiresButtonPress: 1
-  maxActivations: -1
-  cooldown: 0
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
+  cooldownMode: 0
+  cooldown: 0
+  inGameHourCooldown: 0
+  cooldownBoundary: 0
+  persistentId: ActivationZone_bc9f4aae-2d41-44e4-97f5-ac1fd67951d8
   ActivationFeedback: {fileID: 0}
   DeniedFeedback: {fileID: 0}
   EnterFeedback: {fileID: 0}
   ExitFeedback: {fileID: 0}
+  DestroyWhenUsedUp: 0
   dialogueId: dlg_test_dialogue
   options:
     CanMoveWhileTalking: 0
@@ -2455,14 +2459,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.TestInteractable
   requiresButtonPress: 1
-  maxActivations: -1
-  cooldown: 0
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
+  cooldownMode: 0
+  cooldown: 0
+  inGameHourCooldown: 0
+  cooldownBoundary: 0
+  persistentId: ActivationZone_2410a36f-7885-436f-9573-7f64f18c0de6
   ActivationFeedback: {fileID: 1599735011}
   DeniedFeedback: {fileID: 0}
   EnterFeedback: {fileID: 0}
   ExitFeedback: {fileID: 0}
+  DestroyWhenUsedUp: 0
   IsPlowingAllFields: 1
   IsIrrigatingSomeFields: 1
 --- !u!61 &1599735013

@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7852c8b6806eb54799c1b035351c53b, type: 3}
   m_Name: Mars
   m_EditorClassIdentifier: Assembly-CSharp::Core.Divinity.DeityDefinition
-  id: mars
-  codeName: Mars
-  displayName: Mars
-  description: Honour Mars through courage and service.
-  icon: {fileID: 0}
-  dailyDecay: 0
+  _id: mars
+  _codeName: Mars
+  _displayName: Mars
+  _description: Honour Mars through courage and service.
+  _icon: {fileID: 0}
+  _dailyDecay: 0
   levels:
   - requiredPoints: 10
     title: Acknowledged

@@ -2018,10 +2018,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d9e779395af4a0098f4f297947555d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DataManager
-  typewriterSounds: []
-  CharacterDataPath: CharacterData
-  CharacterExpressionDataPath: CharacterExpressions
-  TypewriterSoundDataPath: TypewriterSounds
 --- !u!1 &733462093749315021
 GameObject:
   m_ObjectHideFlags: 0
@@ -7997,11 +7993,6 @@ MonoBehaviour:
   endOfDay: 23
   numberOfDaysInSeason: 14
   secondsPerInGameMinute: 5
-  currentTotalTicks: 0
-  currentDaysSinceStart: 0
-  currentMinutesInHour: 0
-  currentHoursInDay: 0
-  currentDaysInSeason: 0
   currentSeasonData: {fileID: 0}
   currentWeather: {fileID: 0}
   seasons:

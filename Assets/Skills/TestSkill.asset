@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38218316506c4ac49f1cb499b7e303de, type: 3}
   m_Name: TestSkill
   m_EditorClassIdentifier: Assembly-CSharp::Character.SkillDefinition
-  skillId: TestSkill
-  displayName: Test Skill
-  description: First test skill!
-  icon: {fileID: 3822943744217882247, guid: b96499e88dc757a42872b11250a02a5d, type: 3}
+  _skillId: base:testSkill
+  _displayName: Test Skill
+  _description: First test skill!
+  _icon: {fileID: 3822943744217882247, guid: b96499e88dc757a42872b11250a02a5d, type: 3}
   levels:
   - value: 0
     title: First Level
@@ -23,3 +23,4 @@ MonoBehaviour:
     grantedTags:
     - Weapon.Spear.asd
     - Weapon.Spear
+    attributeBonuses: []

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74ac98f34e408f64492c721297830b16, type: 3}
   m_Name: MartialResolve
   m_EditorClassIdentifier: Assembly-CSharp::Core.Divinity.BoonDefinition
-  displayName: Martial Resolve
-  description: An example boon granting two points of physical defense.
-  icon: {fileID: 0}
+  _displayName: Martial Resolve
+  _description: An example boon granting two points of physical defense.
+  _icon: {fileID: 0}
   attributes:
   - attribute: 4
     flat: 2

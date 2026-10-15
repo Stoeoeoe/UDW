@@ -211,10 +211,10 @@ namespace Core.Tile.Editor.Vulcanus
             if (field == null)
             {
                 prop = type.GetProperty(key, flags);
-                if (prop == null)
+                if (prop == null || !prop.CanWrite)
                 {
-                    var backingName = $"<{key}>k__BackingField";
-                    backingField = type.GetField(backingName, flags);
+                    backingField = FindBackingField(type, key, flags);
+                    prop = null;
                 }
             }
 
@@ -273,10 +273,10 @@ namespace Core.Tile.Editor.Vulcanus
             if (field == null)
             {
                 prop = type.GetProperty(key, flags);
-                if (prop == null)
+                if (prop == null || !prop.CanWrite)
                 {
-                    var backingName = $"<{key}>k__BackingField";
-                    backingField = type.GetField(backingName, flags);
+                    backingField = FindBackingField(type, key, flags);
+                    prop = null;
                 }
             }
 
@@ -306,6 +306,18 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 return false;
             }
+        }
+
+        private static FieldInfo FindBackingField(Type type, string key, BindingFlags flags)
+        {
+            var serializedName = "_" + char.ToLowerInvariant(key[0]) + key.Substring(1);
+            for (var current = type; current != null; current = current.BaseType)
+            {
+                var field = current.GetField(serializedName, flags | BindingFlags.DeclaredOnly)
+                    ?? current.GetField($"<{key}>k__BackingField", flags | BindingFlags.DeclaredOnly);
+                if (field != null) return field;
+            }
+            return null;
         }
 
         private static object ConvertIfNeeded(object value, Type targetType)

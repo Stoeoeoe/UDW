@@ -1,3 +1,62 @@
+# Core axiom: broken setup must fail before gameplay
+
+**Missing required services, singletons, components, references, IDs or invalid
+required definition data mean the game is broken. Establish and verify these
+contracts before gameplay; gameplay code must rely on them.**
+
+Before each response and code change, silently check: **Is this an expected game
+state, or am I hiding broken setup?** Apply this rule when reviewing existing code
+as well as when adding new code.
+
+- Validate authored data in asset/import/scene validators and before Play Mode or
+  builds. Validate dynamic/mod content when registering it. Establish required
+  runtime dependencies at initialization/binding; report a clear failure there.
+- Do not turn missing required dependencies into `false`, a no-op, empty arrays,
+  fallback objects or ordinary failed-action feedback. Do not repair invalid
+  authored values with gameplay clamps/defaults or invent missing IDs at runtime.
+  Examples: guarding every call with `ItemManager.Instance && ...`, skipping null
+  entries in a required definition list, or returning no growth stages for a
+  malformed plant. Fix the setup and its validation instead.
+- Keep checks for expected gameplay outcomes: full bags, insufficient money,
+  unavailable targets, external-input rejection and explicit optional features.
+  Invalid arguments to internal inventory operations are programming errors. An
+  intentionally empty configuration allowed by its validator is valid.
+  Inventory assets and loaded save data must satisfy validation/migration contracts;
+  missing definitions in occupied inventory slots are broken setup, not empty slots.
+  Handle scene-loading/destruction boundaries explicitly instead of
+  making required dependencies optional throughout gameplay.
+- Tests must build valid fixtures and verify boundary failures. Do not weaken
+  production contracts to accommodate incomplete test scenes or assets. Nullable
+  annotations must describe actual optionality, not excuse missing initialization.
+- When authoring/serialization contracts change, update affected assets and fixtures
+  together; use an explicit editor migration script when needed. Validate supported
+  save input before binding it. Follow the prototyping rule below: do not add save
+  compatibility migrations or schema bumps unless requested.
+- Before finishing, inspect new guards, null-conditionals, clamps and fallback
+  returns. Every one must represent an expected runtime condition or an explicit
+  boundary check. Otherwise remove it and enforce the invariant at its owner.
+
+## Every change needs a concrete reason
+
+**Implement complexity only to solve an identified project problem or support an
+actual use case. Possibility alone is not a requirement.**
+
+- Before implementation, identify the concrete problem, the existing caller or
+  supported workflow that needs the change, and why the simplest existing approach
+  is insufficient. State that reason briefly before nontrivial structural changes.
+- Prefer established project conventions. A refactor should remove duplication or
+  make a demonstrated operation easier to understand; do not invent extra behavior
+  while carrying it out.
+- Do not add abstractions, configuration, lifecycle states, extension points or
+  defensive branches for hypothetical future scenarios. Tests that merely encode
+  a newly invented behavior do not establish a product requirement.
+- Keep scope tied to the user's request. Distinguish required behavior from optional
+  improvements, and leave speculative improvements out. This reasoning check is
+  not an additional permission or approval step.
+- Before finishing, check each added responsibility and branch against its concrete
+  reason. Remove complexity that has no supported use case. Required setup invariants
+  still belong at validation, registration or initialization boundaries.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
@@ -29,11 +88,20 @@ Rules:
 - Put every value that must survive a save/load in a field of that root or one of its state sections. Public serializable fields persist directly; mark private persistent fields with `[OdinSerialize]`. Mark runtime references, subscriptions, caches, and scene objects `[NonSerialized]` and rebuild or rebind them after load.
 - When adding a top-level section, add it to `GameSaveData` and expose it through `GameStateManager` and `GameState`. The editor test `EveryGameStateSectionIsPartOfTheSaveRoot` checks this relationship. Extend the save round-trip test with representative data from the new section.
 - Loading replaces the root before scene objects are initialized. Keep post-load runtime work explicit and ordered (for example, rebinding the favour manager and applying saved time); do not discover restore methods by reflection.
-- `PlayerStateManager` binds the main inventory to `GameState.Player.Inventory` on every character initialization. `InventoryState` owns ordered item-ID/quantity slots, saved capacity, and `StartingLoadoutApplied`. Prepare the entire starting loadout before committing; set the saved marker before publishing notifications. Never infer initialization from whether inventory is empty. NPC inventories remain runtime-local unless explicitly bound. `SlotInventory.Content` is a resolved snapshot; use mutation methods, not array writes. Unknown item IDs retain occupied slots and cannot be overwritten by additions or UI placement. See `Assets/Core/Inventory/README.md`.
+- `PlayerStateManager` binds the main inventory to `GameState.Player.Inventory` on every character initialization. `InventoryState` owns ordered item-ID/quantity slots, saved capacity, and `StartingLoadoutApplied`. Prepare the entire starting loadout before committing; set the saved marker before publishing notifications. Never infer initialization from whether inventory is empty. NPC inventories remain runtime-local unless explicitly bound. `SlotInventory.Capacity` and `GetSlot` provide individual access; `GetSnapshot` explicitly allocates a detached resolved snapshot. Use mutation methods, not snapshot writes. Occupied slots require resolvable definitions; missing definitions fail clearly instead of being skipped. See `Assets/Core/Inventory/README.md`.
 - Shared catalog discovery automatically maintains `Assets/Resources/ItemCatalog.asset` from authored item definitions on editor startup/import/save and before play/build. Runtime loads that single catalog to resolve saved IDs, without scanning assets. Keep item IDs unique, non-empty, and stable; item asset creation needs no manager wiring. Do not persist ScriptableObject references in inventory state.
 - New flat asset catalogs derive from `Core.Catalogs.DefinitionCatalog<T>` and override `Path` (an Assets-relative discovery folder) and `GetDefinitionId`. Items, skills, deities, plants and spawnables use shared editor `CatalogDiscovery`, preserving enabled selections and refreshing before play/build. `DefaultCatalogAssets` bootstraps default Resources assets; add a registration there only when a new catalog needs an automatically created default. `Tools > Catalogs` is the generic Odin browser. Runtime loads individual catalogs through `CatalogResources`; skill/deity mod registration remains explicit. Select enabled content before play; active registries are not live-reconfigured. Disabled means excluded from lookup, not globally blocked or stripped. Specialized map/dialogue catalogs keep their relationships and share `IdIndex.FirstWins`; editor-only `CatalogAssetDiscovery` is reusable without inheritance. Preserve calendar ordering and weather weights. Test profiles/runtime overrides are deferred in `Assets/Core/Catalogs/README.md`.
 - The inventory UI's drag-held stack/source index also belong to `InventoryState`, not the display. Slot/held changes must be complete before publishing inventory or held-item events. Internal silent slot writes are only for these grouped UI updates; normal gameplay mutations notify immediately.
 - `GameCharacter.Wallet` is a plain C# object, created with its character owner in `Awake`; it is not a component and needs no prefab wiring. For the main character, `PlayerStateManager` binds it directly to `GameState.Player.Wallet`; NPC wallets are runtime-local unless explicitly bound to persistent entity state. The wallet limits balances to 0–9,999,999 and publishes `WalletChangedEvent` after mutations. Rewards use capped `Add`; trading uses all-or-nothing `TrySpend`/`TryAdd`. `ItemDefinition.BuyBasePrice`/`SellBasePrice` are per-unit prices, not a shop stock list. Player money, inventory slots, and shop stock persist; shop UI is not implemented.
+
+- Inventory responsibility boundaries: `SlotInventory` is the scene adapter for
+  initialization, registration, binding and notifications. Plain C# `InventoryStorage`
+  owns slots, stacking, adding/removing, swaps and sorting; `InventoryInteraction`
+  owns pickup, placement and return of the saved held stack. Held state is read-only
+  to callers. `CharacterLoadout` owns shortcuts, selection and equipment;
+  `InventoryActions` coordinates gear, consumption and wallet-funded upgrades. All
+  operate on the same live `InventoryState`. Do not recreate a partial-class grab
+  bag, duplicate saved state, or make core storage depend on UI event definitions.
 
 ## Catalog authoring and lookup
 

@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38218316506c4ac49f1cb499b7e303de, type: 3}
   m_Name: HammerMastery
   m_EditorClassIdentifier: Assembly-CSharp::Character.SkillDefinition
-  skillId: base:hammer_mastery
-  displayName: Hammer Mastery
-  description: Make every hammer strike count when repairing structures.
-  icon: {fileID: 0}
+  _skillId: base:hammer_mastery
+  _displayName: Hammer Mastery
+  _description: Make every hammer strike count when repairing structures.
+  _icon: {fileID: 0}
   levels:
   - value: 0
     title: Untrained
