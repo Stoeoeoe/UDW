@@ -1,13 +1,15 @@
 using Core.Equipment;
 using Core.Events;
 using Core.Inventory;
+using Core.TimeAndWeather;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Character
 {
-    public class MainCharacter : GameCharacter, IEventListener<ItemSelectedEvent>, IEventListener<InventoryChangedEvent>
+    public class MainCharacter : GameCharacter, IEventListener<ItemSelectedEvent>, IEventListener<InventoryChangedEvent>,
+        IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
     {
         private static MainCharacter _currentMainCharacter;
 
@@ -23,6 +25,8 @@ namespace Character
 
         public int CurrentSelectedSlotIndex { get; protected set; }
         private readonly Dictionary<string, WornEquipmentItem> _appliedEquipment = new();
+        private bool _dayTransitionActive;
+        private ConditionState _conditionBeforeDayTransition;
 
         protected override void Awake()
         {
@@ -40,12 +44,40 @@ namespace Character
         {
             this.Subscribe<ItemSelectedEvent>();
             this.Subscribe<InventoryChangedEvent>();
+            this.Subscribe<DayTransitionStarted>();
+            this.Subscribe<DayTransitionFinished>();
         }
 
         protected virtual void OnDisable()
         {
             this.Unsubscribe<ItemSelectedEvent>();
             this.Unsubscribe<InventoryChangedEvent>();
+            this.Unsubscribe<DayTransitionStarted>();
+            this.Unsubscribe<DayTransitionFinished>();
+            FinishDayTransition();
+        }
+
+        /// <summary>Stops this character while their day transition is presented.</summary>
+        public void OnEvent(DayTransitionStarted change)
+        {
+            if (change.Character != this) return;
+            _conditionBeforeDayTransition = ConditionState;
+            _dayTransitionActive = true;
+            Freeze();
+            SetMovementState(MovementState.Idle);
+        }
+
+        /// <summary>Restores the previous condition unless gameplay changed it during the transition.</summary>
+        public void OnEvent(DayTransitionFinished change)
+        {
+            if (change.Character == this) FinishDayTransition();
+        }
+
+        private void FinishDayTransition()
+        {
+            if (!_dayTransitionActive) return;
+            _dayTransitionActive = false;
+            if (ConditionState == ConditionState.Frozen) SetConditionState(_conditionBeforeDayTransition);
         }
 
         public void OnEvent(ItemSelectedEvent e)

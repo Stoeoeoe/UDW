@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using Core;
 using Core.Location;
+using Core.Events;
+using Core.TimeAndWeather;
 using UnityEngine;
 
 namespace Input
@@ -12,12 +15,15 @@ namespace Input
     /// </summary>
     [RequireComponent(typeof(PlayerInput))]
     [DefaultExecutionOrder(100)]
-    public class InputManager : Singleton<InputManager>, ILocationLifecycle
+    public class InputManager : Singleton<InputManager>, ILocationLifecycle,
+        IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
     {
         private PlayerInput _player;
         private InputActionAsset _actions;
         private InputActionMap _playerControls, _ui, _global, _screenMap;
-        private bool _inputEnabled = true;
+        private readonly HashSet<InputBlockContext> _blocks = new();
+
+        private enum InputBlockContext { Location, DayTransition }
         public InputActionAsset Actions => _actions;
         public InputActionMap PlayerControls => _playerControls;
         public string ActiveMapName => (_screenMap ?? _playerControls).name;
@@ -65,6 +71,35 @@ namespace Input
                 throw new ArgumentException("A modal screen cannot use gameplay or global input.", nameof(name));
         }
 
+        private void OnEnable()
+        {
+            this.Subscribe<DayTransitionStarted>();
+            this.Subscribe<DayTransitionFinished>();
+            ApplyMaps();
+        }
+
+        private void OnDisable()
+        {
+            this.Unsubscribe<DayTransitionStarted>();
+            this.Unsubscribe<DayTransitionFinished>();
+            SetContextBlocked(InputBlockContext.DayTransition, false);
+            _actions.Disable();
+        }
+
+        /// <summary>Blocks all action maps for the overnight interval without changing the location's gate.</summary>
+        public void OnEvent(DayTransitionStarted change) => SetContextBlocked(InputBlockContext.DayTransition, true);
+
+        /// <summary>Releases only the overnight input block.</summary>
+        public void OnEvent(DayTransitionFinished change) => SetContextBlocked(InputBlockContext.DayTransition, false);
+
+        // Each lifecycle context is active or inactive, even if its notification repeats.
+        private void SetContextBlocked(InputBlockContext context, bool blocked)
+        {
+            if (blocked) _blocks.Add(context);
+            else _blocks.Remove(context);
+            if (isActiveAndEnabled) ApplyMaps();
+        }
+
         public void SetScreenMap(string name)
         {
             if (name != null) ValidateScreenMap(name);
@@ -77,16 +112,15 @@ namespace Input
         private void ApplyMaps()
         {
             _actions.Disable();
-            _player.currentActionMap = _inputEnabled ? _screenMap ?? _playerControls : null;
-            if (!_inputEnabled) return;
+            _player.currentActionMap = _blocks.Count == 0 ? _screenMap ?? _playerControls : null;
+            if (_blocks.Count > 0) return;
             _global.Enable();
             // Standard UI navigation also serves the HUD and screens with extra actions.
             _ui.Enable();
         }
 
-        public void DisableInput() { _inputEnabled = false; ApplyMaps(); }
-        public void EnableInput() { _inputEnabled = true; ApplyMaps(); }
-        public void OnLocationEnter(LocationData location) => EnableInput();
-        public void OnLocationLeave(LocationData location) => DisableInput();
+        public void OnLocationEnter(LocationData location) => SetContextBlocked(InputBlockContext.Location, false);
+
+        public void OnLocationLeave(LocationData location) => SetContextBlocked(InputBlockContext.Location, true);
     }
 }

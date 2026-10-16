@@ -397,6 +397,12 @@ namespace UI.Shared.Editor
         [Test]
         public void LocationRegistrationRetriesAfterAllManagersHaveAwakened()
         {
+            var faderObject = new GameObject("Required transition fader", typeof(RectTransform), typeof(ScreenFader));
+            faderObject.transform.SetParent(_root.transform);
+            var fader = faderObject.GetComponent<ScreenFader>();
+            Invoke(fader, "Awake");
+            typeof(UrGUIManager).GetField("screenFader", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(_manager, fader);
             Assert.That(LevelManager.Instance, Is.Null);
             Invoke(_manager, "OnEnable");
             using var services = new Core.Common.Editor.GameTestFixture("Late location manager");

@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Game;
+using Core.Events;
+using Core.Location;
 using Core.TimeAndWeather.Seasons;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
@@ -25,6 +27,11 @@ namespace Core.TimeAndWeather
         [SerializeField] protected int numberOfDaysInSeason = 14;
         [SerializeField] protected float secondsPerInGameMinute = 10f; // TODO: Probably wrong? Seems too fast
 
+        [Header("Day transition")]
+        [SerializeField, Min(0f)] private float dayBlackoutDuration = 0.6f;
+        [Tooltip("Optional sound played while the screen is covered.")]
+        [SerializeField] private AudioClip newDayJingle;
+
         [Header("Current Conditions")]
         [MMReadOnly] [SerializeField] protected SeasonData currentSeasonData;
         [MMReadOnly] [SerializeField] protected WeatherData currentWeather;
@@ -38,6 +45,7 @@ namespace Core.TimeAndWeather
         private Dictionary<Season, SeasonData> _seasonDataDict = new();
         private GameObject _weatherParentGo;
         private GameCalendar _calendar;
+        private IEnumerator _dayTransitionRoutine;
 
         private GameCalendar Calendar => _calendar ??= new GameCalendar(
             startOfDay, numberOfDaysInSeason, seasons.Select(data => data.season).ToArray());
@@ -233,7 +241,7 @@ namespace Core.TimeAndWeather
             // --- end of integrated time scale logic ---
 
             // Modal screens pause the calendar without changing gameplay time-scale requests.
-            if (UrGUIManager.IsGameClockPaused) return;
+            if (_dayTransitionRoutine != null || UrGUIManager.IsGameClockPaused) return;
 
             var time = GameState.Time;
             var previousMinute = time.TotalMinutes;
@@ -261,20 +269,59 @@ namespace Core.TimeAndWeather
             if (time.hour >= endOfDay)
             {
                 EndDay();
-                return; // StartNewDay publishes the final clock value.
+                return; // The transition publishes the next morning's clock after fading to black.
             }
             if (time.TotalMinutes != previousMinute)
                 GameTimeChangedEvent.Trigger(time.TotalMinutes);
         }
 
-        private void EndDay()
+        /// <summary>Fades through the next morning, stopping the clock and player controls during the transition.</summary>
+        public void EndDay()
         {
-            // SetTimeScaleTo(0);
-            // To test, we just start a new day immediately
-            StartNewDay();
-            // TODO: Throw event
+            if (_dayTransitionRoutine != null || !LevelManager.Instance.SceneReady) return;
+            var character = CharacterManager.Instance.MainCharacter;
+            if (!character)
+                throw new System.InvalidOperationException("Ending the day requires a registered main character.");
+            _dayTransitionRoutine = TransitionToNextDay(character);
+            StartCoroutine(_dayTransitionRoutine);
         }
 
+        private IEnumerator TransitionToNextDay(Character.MainCharacter character)
+        {
+            var gui = UrGUIManager.Instance;
+            try
+            {
+                gui.TransitionInterrupted += CancelDayTransition;
+                EventBus<DayTransitionStarted>.Raise(new DayTransitionStarted(character));
+                yield return gui.CoverScene(character.transform);
+                // NewDayEvent listeners run only after the screen is completely covered.
+                StartNewDay();
+                yield return gui.RevealScene(character.transform, dayBlackoutDuration, newDayJingle);
+            }
+            finally
+            {
+                try
+                {
+                    gui.TransitionInterrupted -= CancelDayTransition;
+                    gui.ResetTransition();
+                    EventBus<DayTransitionFinished>.Raise(new DayTransitionFinished(character));
+                }
+                finally { _dayTransitionRoutine = null; }
+            }
+        }
+
+        /// <summary>Cancels the overnight sequence and releases its listeners' transition state.</summary>
+        public void CancelDayTransition()
+        {
+            if (_dayTransitionRoutine == null) return;
+            var routine = _dayTransitionRoutine;
+            StopCoroutine(routine);
+            // Stop scheduling first, then dispose this compiler-generated iterator to run its pending finally.
+            // Stopping a Unity coroutine alone is not a cleanup contract for its suspended iterator.
+            ((System.IDisposable)routine).Dispose();
+        }
+
+        /// <summary>Advances the calendar and daily systems immediately; normal bedtime uses EndDay.</summary>
         public void StartNewDay()
         {
             var time = GameState.Time;
@@ -496,6 +543,7 @@ namespace Core.TimeAndWeather
 
         void OnDisable()
         {
+            CancelDayTransition();
             MoreMountains.Feedbacks.MMFreezeFrameEvent.Unregister(OnMMFreezeFrameEvent);
             MoreMountains.Feedbacks.MMTimeScaleEvent.Unregister(OnTimeScaleEvent);
         }

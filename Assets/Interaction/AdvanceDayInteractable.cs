@@ -10,16 +10,6 @@ namespace Interaction
     /// </summary>
     public class AdvanceDayInteractable : AbstractInteractable
     {
-        protected override void Interact(GameCharacter instigator)
-        {
-            var timeManager = UrTimeManager.Instance;
-            if (timeManager == null)
-            {
-                Debug.LogWarning("[AdvanceDayInteractable] No UrTimeManager found in scene.");
-                return;
-            }
-
-            timeManager.StartNewDay();
-        }
+        protected override void Interact(GameCharacter instigator) => UrTimeManager.Instance.EndDay();
     }
 }

@@ -1,19 +1,23 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Character;
 using Core;
 using Core.Context;
 using Core.Events;
 using Core.Location;
+using Core.TimeAndWeather;
+using DG.Tweening;
 using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace UI.Shared
 {
-    /// <summary>Manages modal screen order, pause requests, input routing, and shared UI sounds.</summary>
+    /// <summary>Manages modal screen order, pause requests, input routing, shared UI sounds, and screen transitions.</summary>
     [DefaultExecutionOrder(200)]
-    public sealed class UrGUIManager : Singleton<UrGUIManager>, ILocationLifecycle, IEventListener<MainCharacterChangedEvent>
+    public sealed class UrGUIManager : Singleton<UrGUIManager>, ILocationLifecycle, IEventListener<MainCharacterChangedEvent>,
+        IEventListener<DayTransitionStarted>
     {
         private Input.InputManager _input;
         private MainCharacter _mainCharacter;
@@ -38,6 +42,12 @@ namespace UI.Shared
         /// <param name="screen">Screen to check.</param>
         public bool IsTopScreen(ManagedUIScreen screen) => _screenOrder.Count > 0 && _screenOrder[^1] == screen;
         [SerializeField] private UISoundProfile soundProfile;
+        [Header("Screen transitions")]
+        [SerializeField] private ScreenFader screenFader;
+        private Tween _transitionTween;
+
+        /// <summary>Raised when disabling the GUI interrupts presentation; sequence owners cancel their own work.</summary>
+        public event Action TransitionInterrupted;
 
         /// <summary>Shared fallback sounds used when a screen has no cue override.</summary>
         public UISoundProfile SoundProfile { get => soundProfile; set => soundProfile = value; }
@@ -62,6 +72,7 @@ namespace UI.Shared
         private void OnEnable()
         {
             this.Subscribe<MainCharacterChangedEvent>();
+            this.Subscribe<DayTransitionStarted>();
             BindMainCharacter(CharacterManager.Instance.MainCharacter);
             LevelManager.Instance?.RegisterLifecycle(this);
         }
@@ -87,14 +98,57 @@ namespace UI.Shared
             if (condition == ConditionState.Dead) CloseAll();
         }
 
-        private void Start() => LevelManager.Instance?.RegisterLifecycle(this);
+        private void Start()
+        {
+            if (!screenFader) throw new InvalidOperationException("UrGUIManager requires the shared screen fader.");
+            LevelManager.Instance?.RegisterLifecycle(this);
+        }
 
         private void OnDisable()
         {
+            if (_transitionTween != null)
+            {
+                ResetTransition();
+                TransitionInterrupted?.Invoke();
+            }
             this.Unsubscribe<MainCharacterChangedEvent>();
+            this.Unsubscribe<DayTransitionStarted>();
             BindMainCharacter(null);
             LevelManager.Instance?.UnregisterLifecycle(this);
             CloseAll();
+        }
+
+        /// <summary>Closes menus before the overnight presentation starts.</summary>
+        public void OnEvent(DayTransitionStarted change) => CloseAll();
+
+        /// <summary>Covers the scene around the supplied subject; the caller waits before changing gameplay state.</summary>
+        public IEnumerator CoverScene(Transform focus)
+        {
+            _transitionTween = screenFader.FadeOut(focus);
+            yield return _transitionTween.WaitForCompletion(true);
+        }
+
+        /// <summary>Reveals the scene, optionally playing a cue and holding the cover first.</summary>
+        public IEnumerator RevealScene(Transform focus, float holdDuration = 0f, AudioClip cue = null)
+        {
+            if (cue)
+            {
+                var options = MMSoundManagerPlayOptions.Default;
+                options.MmSoundManagerTrack = MMSoundManager.MMSoundManagerTracks.UI;
+                MMSoundManagerSoundPlayEvent.Trigger(cue, options);
+            }
+            if (holdDuration > 0f) yield return new WaitForSecondsRealtime(holdDuration);
+            _transitionTween = screenFader.FadeIn(focus);
+            yield return _transitionTween.WaitForCompletion(true);
+            _transitionTween = null;
+        }
+
+        /// <summary>Stops presentation and reveals the scene immediately when the owning sequence ends or is cancelled.</summary>
+        public void ResetTransition()
+        {
+            _transitionTween?.Kill();
+            _transitionTween = null;
+            screenFader.ShowSceneImmediately();
         }
 
         /// <summary>Whether this manager currently owns <paramref name="screen"/>.</summary>

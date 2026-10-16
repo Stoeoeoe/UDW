@@ -1,8 +1,31 @@
 # Screen transitions
 
 The shared `ScreenFader` on `Assets/Resources/SystemRoot.prefab` supports Opacity,
-Mosaic and Iris. Choose the effect before entering Play Mode. Location changes
-use the configured duration and easing.
+Mosaic and Iris. Choose the effect before entering Play Mode. Beds and location
+changes use the same configuration, duration and easing.
+
+`UrTimeManager.EndDay` owns the overnight sequence: publish
+`DayTransitionStarted`, await the GUI cover, advance the day, await the GUI reveal,
+then publish `DayTransitionFinished` even on cancellation. Crop and shop updates
+continue to listen to `NewDayEvent` while the screen is covered. Input and the
+character subscribe to the transition events and manage their own state.
+`UrTimeManager` configures the overnight blackout duration and optional jingle.
+`UrGUIManager.CoverScene` and `RevealScene` provide the shared presentation API
+for both overnight and location transitions. Reveal can play a supplied cue and
+hold the cover before fading in; location transitions use neither option.
+`ScreenFader` remains the visual-effect implementation, referenced only by the
+GUI manager. There is no separate day-transition component to configure.
+
+The GUI reports interrupted presentation when disabled. The overnight sequence
+subscribes while running and cancels its own coroutine; the GUI does not call
+back into the time manager. Sequence cleanup calls `ResetTransition` to kill the
+current fade and reveal the scene immediately.
+
+Input suppression tracks active location-loading and day-transition contexts in
+a set. Any active context blocks all action maps. Releasing one context leaves
+input blocked until every context has ended; repeated activation of the same
+context has no additional effect. Screen-map changes still select which map
+resumes once the contexts have cleared.
 
 Iris closes around the main character and opens around their destination position.
 Leaving **Iris Mask** empty gives a circular opening. To use a silhouette, assign a

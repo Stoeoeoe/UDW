@@ -1,5 +1,6 @@
 using System;
 using Core.Location;
+using Core.TimeAndWeather;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -104,11 +105,32 @@ namespace UI.Shared.Editor
             _input.OnLocationEnter(null);
             Assert.That(_input.ActiveMapName, Is.EqualTo("UI"));
             Assert.That(_input.PlayerControls.enabled, Is.False);
-            _input.DisableInput();
+            _input.OnLocationLeave(null);
             _first.Close();
             Assert.That(_input.Actions.enabled, Is.False);
-            _input.EnableInput();
+            _input.OnLocationEnter(null);
             Assert.That(_input.PlayerControls.enabled, Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void OverlappingContextsStayBlockedUntilBothEnd(bool endDayFirst)
+        {
+            _input.OnLocationLeave(null);
+            _input.OnLocationLeave(null);
+            _input.OnEvent(new DayTransitionStarted(null));
+            _input.OnEvent(new DayTransitionStarted(null));
+            Assert.That(_input.Actions.enabled, Is.False);
+
+            if (endDayFirst) _input.OnEvent(new DayTransitionFinished(null));
+            else _input.OnLocationEnter(null);
+            Assert.That(_input.Actions.enabled, Is.False);
+
+            if (endDayFirst) _input.OnLocationEnter(null);
+            else _input.OnEvent(new DayTransitionFinished(null));
+            Assert.That(_input.PlayerControls.enabled, Is.True);
+            Assert.That(_input.Actions.FindActionMap("UI").enabled, Is.True);
+            Assert.That(_input.Actions.FindActionMap("Global").enabled, Is.True);
         }
 
         [TestCase("Missing")]

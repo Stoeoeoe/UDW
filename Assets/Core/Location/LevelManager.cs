@@ -7,7 +7,7 @@ using Core.Events;
 using Core.Tile;
 using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
-using DG.Tweening;
+using UI.Shared;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -26,7 +26,6 @@ namespace Core.Location
         [SerializeField] private string _initialEntryKey;
         [SerializeField] private Vector2 _initialFacingDirection;
 
-        [SerializeField] ScreenFader _fader;
         [SerializeField] MainCharacter _mainCharacterPrefab;
 
         [Header("Vulcanus")] [SerializeField] VulcanusWorldCatalog _VulcanusWorldCatalog;
@@ -131,7 +130,7 @@ namespace Core.Location
                     component.OnLocationEnter(locationData);
 
             // Fade in
-            yield return Fade(0f, character);
+            yield return UrGUIManager.Instance.RevealScene(character.transform);
             
             SceneReady = true;
         }
@@ -211,7 +210,7 @@ namespace Core.Location
             SceneReady = false;
             var character = MainCharacter.CurrentMainCharacter;
             character.Freeze();
-            yield return Fade(1f, character);
+            yield return UrGUIManager.Instance.CoverScene(character.transform);
 
             // Notify all lifecycle components before unloading the old scene
             _locationEntered = false;
@@ -297,19 +296,6 @@ namespace Core.Location
         static Vector2 ResolveFacingDirection(Vector2 facingDirection) =>
             facingDirection != Vector2.zero ? facingDirection : Vector2.down;
 
-
-        // - Fade --------------------------------------------------------------------
-
-        IEnumerator Fade(float targetAlpha, MainCharacter character)
-        {
-            if (_fader == null)
-                yield break;
-
-            // Startup already resolved the character, but its Start-time registration may still be pending.
-            var focus = character.transform;
-            Tween tween = targetAlpha >= 1f ? _fader.FadeOut(focus) : _fader.FadeIn(focus);
-            yield return tween.WaitForCompletion();
-        }
 
         // - Day/night ---------------------------------------------------------------
 

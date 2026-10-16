@@ -2584,6 +2584,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Shared.UrGUIManager
   soundProfile: {fileID: 11400000, guid: 812a529a441725f48a097bbdb6a486b5, type: 2}
+  screenFader: {fileID: 2128117698243013595}
 --- !u!114 &7410992665882482011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7993,6 +7994,8 @@ MonoBehaviour:
   endOfDay: 23
   numberOfDaysInSeason: 14
   secondsPerInGameMinute: 5
+  dayBlackoutDuration: 0.6
+  newDayJingle: {fileID: 0}
   currentSeasonData: {fileID: 0}
   currentWeather: {fileID: 0}
   seasons:
@@ -24559,7 +24562,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbc304537018a3f4ca1b4b5a9c840b2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Location.LevelManager
-  _fader: {fileID: 2128117698243013595}
   _mainCharacterPrefab: {fileID: 1754888933028988936, guid: 204dcfde5843dd14b8cca533c2b59858, type: 3}
   _VulcanusWorldCatalog: {fileID: 0}
   _defaultSpawnKey: Default
