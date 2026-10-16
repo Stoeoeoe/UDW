@@ -24449,6 +24449,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Location.ScreenFader
   _duration: 0.3
   _ease: 5
+  _effect: 2
+  _wipeMaterial: {fileID: 2100000, guid: 8fdc03a20ef9db548bb91eb832846cd5, type: 2}
+  _tileSize: 32
+  _mosaicOrder: 0
+  _irisMask: {fileID: 2800000, guid: 4f8abad717f1859449511e460d889728, type: 3}
 --- !u!1 &8286577582146441384
 GameObject:
   m_ObjectHideFlags: 0

@@ -2864,6 +2864,14 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2128117698243013595, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+      propertyPath: _effect
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2128117698243013595, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
+      propertyPath: _irisMask
+      value: 
+      objectReference: {fileID: 2800000, guid: 4f8abad717f1859449511e460d889728, type: 3}
     - target: {fileID: 2455835121611948886, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
