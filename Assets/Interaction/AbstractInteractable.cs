@@ -144,16 +144,20 @@ namespace Interaction
             if (instigator == MainCharacter.CurrentMainCharacter &&
                 PlayerInteractionContext.Instance != null &&
                 PlayerInteractionContext.Instance.CurrentSnapshot.WorldInteractionBlocked) return;
-            if (!CanInteract) { DeniedFeedback?.PlayFeedbacks(); return; }
+            if (!CanInteract || !Interact(instigator))
+            {
+                if (DeniedFeedback) DeniedFeedback.PlayFeedbacks();
+                return;
+            }
 
             RecordActivation();
             StartCooldown();
-            ActivationFeedback?.PlayFeedbacks();
-            Interact(instigator);
+            if (ActivationFeedback) ActivationFeedback.PlayFeedbacks();
             RefreshState(forceNotify: true);
         }
 
-        protected abstract void Interact(GameCharacter instigator);
+        /// <summary>Attempts the action; only success consumes a use, starts cooldown and plays activation feedback.</summary>
+        protected abstract bool Interact(GameCharacter instigator);
 
         private InteractionState EvaluateState(out int remainingUses)
         {

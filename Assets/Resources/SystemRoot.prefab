@@ -2622,29 +2622,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI.InventoryScreen.UrInventoryUIDocumentPresenter
   pauseWhileOpen: 3
   soundOverrides: {fileID: 0}
+  inputActionMap: UI
   TargetInventoryName: MainInventory
   PlayerId: Player1
-  SlotPrefab: {fileID: 0}
-  SlotContainer: {fileID: 0}
-  HeldItemDisplay: {fileID: 0}
-  UseButton: {fileID: 0}
-  DestroyButton: {fileID: 0}
-  OpenInventoryAction:
-    m_UseReference: 0
-    m_Action:
-      m_Name: 
-      m_Type: 0
-      m_ExpectedControlType: 
-      m_Id: ced8608e-876e-452f-8ad7-adda73ff4b00
-      m_Processors: 
-      m_Interactions: 
-      m_SingletonActionBindings: []
-      m_Flags: 0
-      m_Priority: 0
-    m_Reference: {fileID: 0}
-  InventoryCanvasGroup: {fileID: 0}
   document: {fileID: 7410992665882482011}
   layoutAsset: {fileID: 9197481963319205126, guid: b087ac3c0bd94e20a5e5d88dd8c6ba3a, type: 3}
+  menuPages:
+  - Id: world
+    Title: World
+    Layout: {fileID: 0}
+    Placeholder: The world map is not available yet.
+  - Id: journal
+    Title: Journal
+    Layout: {fileID: 0}
+    Placeholder: Your journal is not available yet.
+  - Id: skills
+    Title: Skills
+    Layout: {fileID: 0}
+    Placeholder: Your skills are not available yet.
+  - Id: relationships
+    Title: Relationships
+    Layout: {fileID: 0}
+    Placeholder: Relationships are not available yet.
+  - Id: settings
+    Title: Settings
+    Layout: {fileID: 0}
+    Placeholder: Settings are not available yet.
 --- !u!1 &1124810803398170432
 GameObject:
   m_ObjectHideFlags: 0
@@ -24562,6 +24565,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbc304537018a3f4ca1b4b5a9c840b2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Location.LevelManager
+  _initialEntryKey: 
+  _initialFacingDirection: {x: 0, y: 0}
   _mainCharacterPrefab: {fileID: 1754888933028988936, guid: 204dcfde5843dd14b8cca533c2b59858, type: 3}
   _VulcanusWorldCatalog: {fileID: 0}
   _defaultSpawnKey: Default

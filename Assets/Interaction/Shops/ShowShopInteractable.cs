@@ -9,22 +9,23 @@ namespace Interaction.Shops
     {
         [SerializeField] private Shop shop;
 
-        protected override void Interact(GameCharacter instigator)
+        protected override bool Interact(GameCharacter instigator)
         {
             if (!shop) shop = GetComponent<Shop>();
             if (!shop)
             {
                 Debug.LogWarning($"[ShowShopInteractable] No Shop is assigned on '{gameObject.name}'.", this);
-                return;
+                return false;
             }
 
             if (!ShopUIDocumentPresenter.Instance)
             {
                 Debug.LogWarning("[ShowShopInteractable] No active ShopUIDocumentPresenter was found.", this);
-                return;
+                return false;
             }
 
             ShopUIDocumentPresenter.Instance.Open(shop, instigator);
+            return true;
         }
     }
 }

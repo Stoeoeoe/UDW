@@ -40,13 +40,13 @@ namespace Core.Location
         }
 
 
-        protected override void Interact(GameCharacter instigator)
+        protected override bool Interact(GameCharacter instigator)
         {
             var levelManager = LevelManager.Instance;
             if (!levelManager)
             {
                 Debug.LogWarning($"[LocationLink] {gameObject.name} has no LevelManager available.");
-                return;
+                return false;
             }
 
             var entryKey = string.IsNullOrWhiteSpace(targetEntryKey)
@@ -56,9 +56,10 @@ namespace Core.Location
 
             if (TargetsCurrentLocation(levelManager))
             {
-                if (!levelManager.TransitionWithinCurrentLocation(entryKey, transitionFacing))
+                var transitioned = levelManager.TransitionWithinCurrentLocation(entryKey, transitionFacing);
+                if (!transitioned)
                     Debug.LogWarning($"[LocationLink] {gameObject.name} could not resolve local target '{entryKey}'.");
-                return;
+                return transitioned;
             }
 
             var resolvedTarget = targetLocation;
@@ -68,10 +69,11 @@ namespace Core.Location
             if (!resolvedTarget)
             {
                 Debug.LogWarning($"[LocationLink] {gameObject.name} could not resolve target location '{targetLocationId}'.");
-                return;
+                return false;
             }
 
             levelManager.LoadLocation(resolvedTarget, entryKey, transitionFacing);
+            return true;
         }
 
         private bool TargetsCurrentLocation(LevelManager levelManager)

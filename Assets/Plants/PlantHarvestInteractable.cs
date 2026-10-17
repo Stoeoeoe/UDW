@@ -55,19 +55,19 @@ namespace Plants
         // in the base entry point does not apply; feedback depends on inventory success.
         public override void TriggerInteraction(GameCharacter instigator) => Interact(instigator);
 
-        protected override void Interact(GameCharacter instigator)
+        protected override bool Interact(GameCharacter instigator)
         {
             if (CanClearWilted)
             {
-                TryClearWilted();
-                return;
+                return TryClearWilted();
             }
             if (!CanInteract || !TryHarvest(instigator.MainInventory))
             {
                 DeniedFeedback?.PlayFeedbacks();
-                return;
+                return false;
             }
             ActivationFeedback?.PlayFeedbacks();
+            return true;
         }
     }
 }

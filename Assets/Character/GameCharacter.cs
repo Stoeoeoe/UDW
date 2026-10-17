@@ -21,6 +21,7 @@ namespace Character
     /// Base class for all characters. 
     /// Owns state, components, and game-specific data. Drives nothing itself — abilities do that.
     /// </summary>
+    [RequireComponent(typeof(CharacterOccupation))]
     public class GameCharacter : MonoBehaviour, ILocationLifecycle
     {
         public enum LifecycleState
@@ -66,13 +67,17 @@ namespace Character
         public event Action<MovementState> OnMovementStateChanged;
         public event Action<ConditionState> OnConditionStateChanged;
 
-        public bool IsFrozen => ConditionState == ConditionState.Frozen || UI.Shared.UrGUIManager.IsCharacterPaused(this);
+        /// <summary>The required component owning slot use and its character presentation.</summary>
+        public CharacterOccupation Occupation => GetComponent<CharacterOccupation>();
+
+        public bool IsFrozen => Occupation.IsOccupied || ConditionState == ConditionState.Frozen || UI.Shared.UrGUIManager.IsCharacterPaused(this);
         public bool IsRuntimeInitialized { get; private set; }
         public LifecycleState CurrentLifecycleState { get; private set; } = LifecycleState.Booting;
 
         // ── Game data accessors ──────────────────────────────────────────────────────
 
         public UrCharacterAnimator Animator => animator;
+        public Transform Graphics => characterGraphicsGo.transform;
         public InteractionSensor InteractionSensor => interactionSensor;
         public TileHighlighter TileHighlighter => tileHighlighter;
         public Transform ToolInteractionAnchor => toolInteractionAnchor;

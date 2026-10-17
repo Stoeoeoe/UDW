@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Animancer;
+using Character.Animations;
 using Core.Context;
 using Core.Location;
 using Interaction;
@@ -13,6 +14,7 @@ using UnityEditor;
 
 namespace Character
 {
+    /// <summary>Plays locomotion, tool animations and occupied animation sets, with playback state owned per character.</summary>
     public class UrCharacterAnimator : MonoBehaviour
     {
         [SerializeField] private NamedAnimancerComponent animancer;
@@ -37,6 +39,11 @@ namespace Character
         // Collected clips from aseprite subresources keyed by name
         private readonly Dictionary<string, AnimationClip> _asepriteClips = new();
         private bool _isBound;
+        private bool _interactionAnimationActive;
+        private CharacterAnimationSet _interactionSet;
+        private AnimancerState _interactionState;
+        private bool _playingVariation;
+        private float _variationDelay;
 
 
         // [Header("Run Animations")] [SerializeField]
@@ -58,7 +65,24 @@ namespace Character
 
         private void OnDisable()
         {
+            ClearInteractionAnimation();
             Unbind();
+        }
+
+        private void Update()
+        {
+            if (!_interactionSet) return; // Single animations and sets without variations need no scheduling.
+            if (_playingVariation)
+            {
+                if (_interactionState.NormalizedTime < 1f) return;
+                PlayInteractionBase(_interactionSet.BaseAnimation);
+                return;
+            }
+            _variationDelay -= Time.deltaTime;
+            if (_variationDelay > 0f) return;
+            _interactionState = animancer.Play(_interactionSet.SelectVariation(UnityEngine.Random.value).Clip);
+            _interactionState.Time = 0;
+            _playingVariation = true;
         }
 
         private void TryBind()
@@ -91,6 +115,7 @@ namespace Character
 
         private void OnFacingDirectionChanged(Vector2 newDirection)
         {
+            if (_interactionAnimationActive) return;
             var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
             if (snapshot == null) return;
 
@@ -123,6 +148,7 @@ namespace Character
 
         private void OnMovementStateChanged(MovementState newState)
         {
+            if (_interactionAnimationActive) return;
             var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
             if (snapshot == null) return;
             // Snapshot.MovementState may be stale (LateUpdate hasn't run yet), so use the live value.
@@ -184,6 +210,7 @@ namespace Character
 
         private void UpdateAnimator(PlayerInteractionContextSnapshot playerInteractionContextSnapshot)
         {
+            if (_interactionAnimationActive) return;
             var facingDirection = character.Orientation.FacingDirection;
             var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
             var mainCharacter = MainCharacter.CurrentMainCharacter;
@@ -220,6 +247,40 @@ namespace Character
                     PlayWalkAnimation(facingDirection);
                     break;
             }
+        }
+
+        /// <summary>Plays one animation or a base/variation set while suppressing ordinary movement/tool updates.</summary>
+        public void PlayInteractionAnimation(CharacterAnimationDefinition animation)
+        {
+            _interactionAnimationActive = true;
+            _interactionSet = animation is CharacterAnimationSet set && set.Variations.Count > 0 ? set : null;
+            PlayInteractionBase(animation.BaseAnimation);
+        }
+
+        private void PlayInteractionBase(CharacterAnimation animation)
+        {
+            _interactionState = animancer.Play(animation.Clip);
+            _interactionState.Time = 0;
+            _playingVariation = false;
+            if (_interactionSet)
+                _variationDelay = UnityEngine.Random.Range(_interactionSet.VariationDelay.x, _interactionSet.VariationDelay.y);
+        }
+
+        private void ClearInteractionAnimation()
+        {
+            _interactionAnimationActive = false;
+            _interactionSet = null;
+            _interactionState = null;
+            _playingVariation = false;
+        }
+
+        /// <summary>Returns animation ownership to normal locomotion when leaving an interaction slot.</summary>
+        public void EndInteractionAnimation()
+        {
+            if (!_interactionAnimationActive) return;
+            ClearInteractionAnimation();
+            if (!isActiveAndEnabled) return; // Disabling a character releases its slot without restarting its animation graph.
+            PlayIdleAnimation(character.Orientation.FacingDirection);
         }
 
         private void PlayInvalidAnimation()
@@ -277,6 +338,7 @@ namespace Character
 
         public void OnLocationLeave(LocationData location)
         {
+            ClearInteractionAnimation();
             Unbind();
         }
     }

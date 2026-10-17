@@ -9,10 +9,11 @@ namespace Interaction
         public bool IsPlowingAllFields;
         public bool IsIrrigatingSomeFields;
 
-        protected override void Interact(GameCharacter instigator)
+        protected override bool Interact(GameCharacter instigator)
         {
             Debug.Log($"{instigator.name} interacted with {name} at {Time.time}");
             PlowFields();
+            return true;
         }
 
         private void PlowFields()

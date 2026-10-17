@@ -11,6 +11,8 @@ namespace Core.Context
             if (!context.CanInteractWithWorld || context.Character == null)
                 return InteractionMode.None;
 
+            if (context.Character.Occupation.IsOccupied) return InteractionMode.None;
+
             // The same target is used by the action: ready pointer target, then ready proximity target.
             var interactable = context.ActionableInteractable;
             if (interactable)

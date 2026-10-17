@@ -18,9 +18,10 @@ namespace Interaction
             cooldownBoundary = Core.TimeAndWeather.GameTimeBoundary.NextDay;
         }
 
-        protected override void Interact(GameCharacter instigator)
+        protected override bool Interact(GameCharacter instigator)
         {
             DivineFavour.AddFavour(deity.Id, favourPoints);
+            return true;
         }
     }
 }

@@ -21,28 +21,28 @@ namespace Interaction.Dialogue
         public string DialogueId => dialogueId;
         public DialogueOptions Options => options;
 
-        protected override void Interact(GameCharacter instigator)
+        protected override bool Interact(GameCharacter instigator)
         {
             if (string.IsNullOrWhiteSpace(dialogueId))
             {
                 Debug.LogWarning($"[ShowVulcanusDialogueInteractable] No dialogue id is assigned on '{gameObject.name}'.");
-                return;
+                return false;
             }
 
             var runner = ResolveRunner();
             if (runner == null)
             {
                 Debug.LogError($"[ShowVulcanusDialogueInteractable] No VulcanusDialogueRunner could be found for '{dialogueId}'.");
-                return;
+                return false;
             }
 
             if (runner.IsDialogueActive)
-                return;
+                return false;
 
             var pause = ScreenPauseMode.None;
             if (!options.CanMoveWhileTalking) pause |= ScreenPauseMode.Character;
             if (options.PauseGameClockWhileTalking) pause |= ScreenPauseMode.GameClock;
-            if (!runner.StartDialogue(dialogueId, instigator, pause)) return;
+            if (!runner.StartDialogue(dialogueId, instigator, pause)) return false;
 
             if (emitLifecycleEvents)
             {
@@ -54,6 +54,7 @@ namespace Interaction.Dialogue
                 StopCoroutine(_activeMonitor);
 
             _activeMonitor = StartCoroutine(MonitorDialogue(runner));
+            return true;
         }
 
         private VulcanusDialogueRunner ResolveRunner()

@@ -10,6 +10,10 @@ namespace Interaction
     /// </summary>
     public class AdvanceDayInteractable : AbstractInteractable
     {
-        protected override void Interact(GameCharacter instigator) => UrTimeManager.Instance.EndDay();
+        protected override bool Interact(GameCharacter instigator)
+        {
+            UrTimeManager.Instance.EndDay();
+            return true;
+        }
     }
 }

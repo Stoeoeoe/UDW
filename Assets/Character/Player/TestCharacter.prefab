@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 3262557976627158511}
   - component: {fileID: 6763626666985662137}
   - component: {fileID: 6138255719784877473}
+  - component: {fileID: 8600181278805858138}
   m_Layer: 10
   m_Name: Abilities
   m_TagString: Untagged
@@ -59,6 +60,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce94515ad334573ab4f4b9f3ea9725b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.CharacterPerformPrimaryActionAbility
+--- !u!114 &8600181278805858138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 949958667771556574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e05175464b382ef4e98cd4efe09bce4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.CharacterOccupationInputAbility
 --- !u!1 &2203920392029053715
 GameObject:
   m_ObjectHideFlags: 0
@@ -690,6 +703,7 @@ GameObject:
   - component: {fileID: 4211830286840800522}
   - component: {fileID: 1818461748592574796}
   - component: {fileID: 5522847340107149325}
+  - component: {fileID: 8924394137492448784}
   m_Layer: 10
   m_Name: TestCharacter
   m_TagString: Player
@@ -931,6 +945,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Character.YSortByPosition
   offset: 0
   precision: 100
+--- !u!114 &8924394137492448784
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7329059664347269403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92d9711c0c9514446940a933a3cfb74e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Character.CharacterOccupation
 --- !u!1 &7803843678168213874
 GameObject:
   m_ObjectHideFlags: 0
