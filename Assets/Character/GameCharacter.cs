@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Character.Abilities;
-using Core;
 using Core.Inventory;
 using Core.GameplayTags;
 using Core.Location;
@@ -12,69 +10,40 @@ using Interaction;
 using Interaction.Tools;
 using Interaction.Tools.Stamina;
 using Items;
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Character
 {
-    /// <summary>
-    /// Base class for all characters. 
-    /// Owns state, components, and game-specific data. Drives nothing itself — abilities do that.
-    /// </summary>
-    [RequireComponent(typeof(CharacterOccupation))]
+    /// <summary>Character composition and ordered startup. Gameplay state lives with its owning subsystem.</summary>
+    [RequireComponent(typeof(CharacterOccupation), typeof(Controller2D), typeof(Orientation2D))]
+    [RequireComponent(typeof(CharacterTileContext))]
     public class GameCharacter : MonoBehaviour, ILocationLifecycle
     {
-        public enum LifecycleState
-        {
-            Booting,
-            Initialized,
-            SceneUnloading,
-            SceneReady
-        }
+        [SerializeField] private UrCharacterAnimator animator;
+        [SerializeField] private InteractionSensor interactionSensor;
+        [SerializeField] private CharacterPerformPrimaryActionAbility performPrimaryActionAbility;
+        [SerializeField] private TileHighlighter tileHighlighter;
+        [SerializeField] private Transform toolInteractionAnchor;
+        [SerializeField] private Transform characterCenter;
+        [SerializeField] private ActionRegistry actionRegistry;
+        [SerializeField] private ToolActionRegistry toolActionRegistry;
+        [SerializeField] private GameObject characterGraphicsGo;
+        [SerializeField] private GameObject abilitiesGo;
+        [SerializeField] private CharacterAttributes attributes = new();
+        [field: SerializeField] public SlotInventory MainInventory { get; private set; }
+        [field: SerializeField] public Stamina Stamina { get; private set; }
 
-        // ── Serialized refs ─────────────────────────────────────────────────────────
-
-        [SerializeField] protected UrCharacterAnimator animator;
-        [SerializeField] protected InteractionSensor interactionSensor;
-        [SerializeField] protected CharacterPerformPrimaryActionAbility performPrimaryActionAbility;
-        [SerializeField] protected TileHighlighter tileHighlighter;
-        [SerializeField] protected Transform toolInteractionAnchor;
-        [SerializeField] protected Transform characterCenter;
-        [SerializeField] protected bool pollTileDataEveryFrame;
-        [SerializeField] protected ActionRegistry actionRegistry;
-        [SerializeField] protected ToolActionRegistry toolActionRegistry;
-        [SerializeField] protected GameObject characterGraphicsGo;
-        [SerializeField] protected GameObject abilitiesGo;
-
-        [field: SerializeField] public Controller2D Controller { get; private set; }
-        [field: SerializeField] public Orientation2D Orientation { get; private set; }
-
-        [PixelCrushers.DialogueSystem.ActorPopup(true)] [SerializeField] protected string actor;
-        [field: SerializeField] protected Stamina Stamina { get; private set; }
-
-        [Header("Attributes")]
-        [SerializeField] private CharacterAttribute maxHealth = new CharacterAttribute(100f);
-        [SerializeField] private CharacterAttribute maxStamina = new CharacterAttribute(100f);
-        [SerializeField] private CharacterAttribute physicalDefense = new CharacterAttribute(0f);
-        [SerializeField] private CharacterAttribute walkSpeed = new CharacterAttribute(4f);
-        [SerializeField] private CharacterAttribute runSpeed = new CharacterAttribute(7f);
-
-        // ── State ────────────────────────────────────────────────────────────────────
-
-        public MovementState MovementState { get; private set; } = MovementState.Invalid;
-        public ConditionState ConditionState { get; private set; } = ConditionState.Normal;
-
-        public event Action<MovementState> OnMovementStateChanged;
-        public event Action<ConditionState> OnConditionStateChanged;
-
-        /// <summary>The required component owning slot use and its character presentation.</summary>
+        public Controller2D Controller { get; private set; }
+        public Orientation2D Orientation { get; private set; }
+        public CharacterTileContext Tiles { get; private set; }
         public CharacterOccupation Occupation => GetComponent<CharacterOccupation>();
-
-        public bool IsFrozen => Occupation.IsOccupied || ConditionState == ConditionState.Frozen || UI.Shared.UrGUIManager.IsCharacterPaused(this);
-        public bool IsRuntimeInitialized { get; private set; }
-        public LifecycleState CurrentLifecycleState { get; private set; } = LifecycleState.Booting;
-
-        // ── Game data accessors ──────────────────────────────────────────────────────
+        public CharacterAttributes Attributes => attributes;
+        public Wallet Wallet { get; private set; }
+        public CharacterSkills Skills { get; private set; } = new();
+        public TagSet Tags { get; } = new();
+        public CharacterLoadout Loadout => MainInventory.Loadout;
+        public EquippableItem CurrentlyHeldItem => Loadout.ActiveHandItem;
+        public ToolData CurrentTool => CurrentlyHeldItem as ToolData;
 
         public UrCharacterAnimator Animator => animator;
         public Transform Graphics => characterGraphicsGo.transform;
@@ -83,181 +52,109 @@ namespace Character
         public Transform ToolInteractionAnchor => toolInteractionAnchor;
         public Transform CharacterCenter => characterCenter;
         public CharacterPerformPrimaryActionAbility PerformPrimaryAction => performPrimaryActionAbility;
-
-        public ToolData CurrentTool => CurrentlyHeldItem as ToolData;
-        public EquippableItem CurrentlyHeldItem { get; protected set; }
         public ActionRegistry ActionRegistry => actionRegistry;
         public ToolActionRegistry ToolActionRegistry => toolActionRegistry;
+        public AbstractInteractable CurrentInteractable => interactionSensor.Current;
 
-        public SlotInventory MainInventory { get; private set; }
-        public Wallet Wallet { get; private set; }
-
-        public CharacterSkills Skills { get; private set; } = new CharacterSkills();
-
-        /// <summary>Runtime tags derived from skill levels and other active grants.</summary>
-        public TagSet Tags { get; } = new();
-
-        public int MaxHealth => Mathf.RoundToInt(maxHealth.Value);
-        public int MaxStamina => Mathf.RoundToInt(maxStamina.Value);
-        public int PhysicalDefense => Mathf.RoundToInt(physicalDefense.Value);
-        public float WalkSpeed => walkSpeed.Value;
-        public float RunSpeed => runSpeed.Value;
-
-        public void SetAttributeModifier(CharacterAttributeType attribute, string sourceId, float flat = 0f, float percent = 0f)
-        {
-            switch (attribute)
-            {
-                case CharacterAttributeType.MaxHealth: SetMaxHealthModifier(sourceId, flat, percent); break;
-                case CharacterAttributeType.MaxStamina: SetMaxStaminaModifier(sourceId, flat, percent); break;
-                case CharacterAttributeType.WalkSpeed: SetWalkSpeedModifier(sourceId, flat, percent); break;
-                case CharacterAttributeType.RunSpeed: SetRunSpeedModifier(sourceId, flat, percent); break;
-                case CharacterAttributeType.PhysicalDefense: SetPhysicalDefenseModifier(sourceId, flat, percent); break;
-                default: throw new ArgumentOutOfRangeException(nameof(attribute));
-            }
-        }
-
-        public bool RemoveAttributeModifier(CharacterAttributeType attribute, string sourceId)
-        {
-            return attribute switch
-            {
-                CharacterAttributeType.MaxHealth => RemoveMaxHealthModifier(sourceId),
-                CharacterAttributeType.MaxStamina => RemoveMaxStaminaModifier(sourceId),
-                CharacterAttributeType.WalkSpeed => RemoveWalkSpeedModifier(sourceId),
-                CharacterAttributeType.RunSpeed => RemoveRunSpeedModifier(sourceId),
-                CharacterAttributeType.PhysicalDefense => RemovePhysicalDefenseModifier(sourceId),
-                _ => throw new ArgumentOutOfRangeException(nameof(attribute))
-            };
-        }
-
-        public void SetMaxHealthModifier(string sourceId, float flat = 0f, float percent = 0f) =>
-            maxHealth.SetModifier(sourceId, flat, percent);
-
-        public bool RemoveMaxHealthModifier(string sourceId) => maxHealth.RemoveModifier(sourceId);
-
-        public void SetPhysicalDefenseModifier(string sourceId, float flat = 0f, float percent = 0f) =>
-            physicalDefense.SetModifier(sourceId, flat, percent);
-
-        public bool RemovePhysicalDefenseModifier(string sourceId) => physicalDefense.RemoveModifier(sourceId);
-
-        public void SetMaxStaminaModifier(string sourceId, float flat = 0f, float percent = 0f)
-        {
-            var previous = MaxStamina;
-            maxStamina.SetModifier(sourceId, flat, percent);
-            if (MaxStamina != previous) Stamina?.RefreshMaximum();
-        }
-
-        public bool RemoveMaxStaminaModifier(string sourceId)
-        {
-            var previous = MaxStamina;
-            var removed = maxStamina.RemoveModifier(sourceId);
-            if (MaxStamina != previous) Stamina?.RefreshMaximum();
-            return removed;
-        }
-
-        public void SetWalkSpeedModifier(string sourceId, float flat = 0f, float percent = 0f) =>
-            walkSpeed.SetModifier(sourceId, flat, percent);
-
-        public bool RemoveWalkSpeedModifier(string sourceId) => walkSpeed.RemoveModifier(sourceId);
-
-        public void SetRunSpeedModifier(string sourceId, float flat = 0f, float percent = 0f) =>
-            runSpeed.SetModifier(sourceId, flat, percent);
-
-        public bool RemoveRunSpeedModifier(string sourceId) => runSpeed.RemoveModifier(sourceId);
-
-        [CanBeNull] public TileData CurrentTileData { get; private set; }
-
-        public Vector2Int CurrentTileCoordinates =>
-            MapManager.Instance.GetCurrentTileCoordinates(this);
-
-        public AbstractInteractable CurrentInteractable =>
-            interactionSensor != null ? interactionSensor.Current : null;
-
-        [CanBeNull]
-        public TileData TileDataInFront =>
-            MapManager.Instance.GetTileDataInDirectionOfCharacter(this, Controller.CurrentDirection);
-
-        [CanBeNull]
-        public TileData TileDataInBack =>
-            MapManager.Instance.GetTileDataInDirectionOfCharacter(this, -Controller.CurrentDirection);
-
-        // ── Lifecycle ────────────────────────────────────────────────────────────────
+        public MovementState MovementState { get; private set; } = MovementState.Invalid;
+        public ConditionState ConditionState { get; private set; } = ConditionState.Normal;
+        public event Action<MovementState> OnMovementStateChanged;
+        public event Action<ConditionState> OnConditionStateChanged;
+        public bool IsControlBlocked => IsConditionOrControlBlocked || Occupation.IsOccupied;
+        public bool IsConditionOrControlBlocked => ConditionState != ConditionState.Normal || _controlBlocks.Count > 0 || UI.Shared.UrGUIManager.IsCharacterPaused(this);
+        public bool IsRuntimeInitialized { get; private set; }
+        private bool _locationEntered;
+        private readonly HashSet<object> _controlBlocks = new();
+        private CharacterAbility[] _abilities;
+        private CharacterEquipmentEffects _equipmentEffects;
 
         protected virtual void Awake()
         {
-            Wallet = new Wallet(this);
-            Skills.BindCharacter(this);
+            ValidateConfiguration();
             Controller = GetComponent<Controller2D>();
             Orientation = GetComponent<Orientation2D>();
-
-            Abilities = abilitiesGo.GetComponents<CharacterAbility>().ToList();
+            Tiles = GetComponent<CharacterTileContext>();
+            Tiles.Bind(this);
+            _abilities = abilitiesGo.GetComponentsInChildren<CharacterAbility>(true);
+            Wallet = new Wallet(this);
+            Stamina.Bind(this, Attributes);
+            Skills.BindCharacter(this);
             characterGraphicsGo.SetActive(false);
-
-            LevelManager.Instance?.RegisterLifecycle(this);
         }
 
-        // ── Helpers ────────────────────────────────────────────────────────────────
-        private bool _sceneReady;
+        // Registration may immediately enter a location. All child Awake methods must have completed first.
+        protected virtual void Start() => LevelManager.Instance.RegisterLifecycle(this);
 
-        protected virtual void Start()
+        public virtual void ValidateConfiguration()
         {
-            // Initialization now happens in OnLocationEnter, called by LevelManager
+            if (!animator || !interactionSensor || !tileHighlighter || !toolInteractionAnchor || !characterCenter ||
+                !actionRegistry || !toolActionRegistry || !characterGraphicsGo || !abilitiesGo || !MainInventory || !Stamina)
+                throw new InvalidOperationException($"Character '{name}' requires all authored subsystem references.");
+            if (!GetComponent<Controller2D>() || !GetComponent<Orientation2D>() || !GetComponent<CharacterOccupation>() || !GetComponent<CharacterTileContext>())
+                throw new InvalidOperationException($"Character '{name}' requires controller, orientation, occupation and tile components.");
+            if (!MainInventory.Configuration)
+                throw new InvalidOperationException($"Character '{name}' requires an inventory configuration.");
+            if (attributes == null) throw new InvalidOperationException($"Character '{name}' requires attributes.");
+            attributes.ValidateConfiguration();
+            actionRegistry.ValidateConfiguration();
+            toolActionRegistry.ValidateConfiguration();
         }
 
-        private void OnDestroy()
+        protected virtual void OnDestroy()
         {
+            if (Stamina) Stamina.Unbind();
+            // Initialization can fail before equipment is bound; teardown must still release completed bindings.
+            if (_equipmentEffects != null) _equipmentEffects.Dispose();
             Skills.UnbindCharacter(this);
-            LevelManager.Instance?.UnregisterLifecycle(this);
+            if (LevelManager.Instance) LevelManager.Instance.UnregisterLifecycle(this);
         }
 
         public void EnsureRuntimeInitialized()
         {
-            InitializeRuntimeSystems();
-        }
-
-        private void InitializeRuntimeSystems()
-        {
-            if (IsRuntimeInitialized)
-                return;
-
-            MainInventory = SlotInventory.FindInventory("MainInventory", "Player1")
-                ?? throw new InvalidOperationException("Character requires a registered MainInventory.");
-            if (this is MainCharacter && !MainInventory.Configuration)
-                throw new InvalidOperationException("MainCharacter requires an inventory configuration.");
-
+            if (IsRuntimeInitialized) return;
+            MainInventory.EnsureInitialized();
             toolActionRegistry.Initialize(this);
             actionRegistry.Initialize(this);
-            PlayerStateManager.Instance.InitializeCharacter(this);
-
+            _equipmentEffects = new CharacterEquipmentEffects(MainInventory, Attributes);
+            InitializeCharacterState();
             IsRuntimeInitialized = true;
-            CurrentLifecycleState = LifecycleState.Initialized;
         }
 
+        // The main character overrides this to bind the live save root. Other characters keep local state.
+        protected virtual void InitializeCharacterState() => Stamina.Initialize(Stamina.StartStamina);
 
-        protected virtual void Update()
+        private void Update()
         {
-            if (!_sceneReady) return;
-
-            foreach (var ability in Abilities)
-            {
-                ability.Tick();
-            }
-
-            if (pollTileDataEveryFrame && MovementState != MovementState.Idle)
-                CheckCurrentTileData();
+            if (!_locationEntered) return;
+            Tiles.Refresh();
+            foreach (var ability in _abilities)
+                if (ability.isActiveAndEnabled) ability.Tick();
         }
 
-        protected void LateUpdate()
+        private void LateUpdate()
         {
-            if (!_sceneReady) return;
-
-
-            foreach (var ability in Abilities)
-            {
-                ability.TickLate();
-            }
+            if (!_locationEntered) return;
+            foreach (var ability in _abilities)
+                if (ability.isActiveAndEnabled) ability.TickLate();
         }
 
-        // ── State API ────────────────────────────────────────────────────────────────
+        public T GetAbility<T>() where T : CharacterAbility
+        {
+            foreach (var ability in _abilities)
+                if (ability is T typed) return typed;
+            throw new InvalidOperationException($"Character '{name}' has no {typeof(T).Name} in its configured abilities hierarchy.");
+        }
+
+        /// <summary>Each operation releases only its own block; blocks never rewrite character conditions.</summary>
+        public void SetControlBlocked(object owner, bool blocked)
+        {
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            if (blocked)
+            {
+                if (_controlBlocks.Add(owner)) Controller.Stop();
+            }
+            else _controlBlocks.Remove(owner);
+        }
 
         public void SetMovementState(MovementState state)
         {
@@ -270,83 +167,27 @@ namespace Character
         {
             if (ConditionState == state) return;
             ConditionState = state;
-            if (state == ConditionState.Frozen) Controller.Stop();
+            if (state != ConditionState.Normal) Controller.Stop();
             OnConditionStateChanged?.Invoke(state);
-        }
-
-        public void Freeze() => SetConditionState(ConditionState.Frozen);
-        public void UnFreeze() => SetConditionState(ConditionState.Normal);
-
-        // ── Abilities ───────────────────────────────────────────────────────────────────
-
-        protected List<CharacterAbility> Abilities = new();
-
-        /// <summary>Finds the first ability of type T on this character. Cached by abilities themselves on Awake.</summary>
-        public T GetAbility<T>() where T : CharacterAbility
-        {
-            foreach (var a in Abilities)
-                if (a is T typed)
-                    return typed;
-            return GetComponentInChildren<T>();
-        }
-
-        // ── Item helpers ─────────────────────────────────────────────────────────────
-
-        protected void SetHeldItem(EquippableItem item) => CurrentlyHeldItem = item;
-
-        public void Unequip(EquippableItem item)
-        {
-            if (CurrentlyHeldItem == item)
-                CurrentlyHeldItem = null;
-        }
-
-        public List<TileData> TilesAround(int size)
-        {
-            var relativeTiles = new Vector2Int[(size * 2 + 1) * (size * 2 + 1) - 1];
-            int index = 0;
-            for (int x = -size; x <= size; x++)
-            for (int y = -size; y <= size; y++)
-            {
-                if (x == 0 && y == 0) continue;
-                relativeTiles[index++] = new Vector2Int(x, y);
-            }
-
-            return MapManager.Instance.GetTileDataAround(this, relativeTiles);
-        }
-
-        // ── Energy API ────────────────────────────────────────────────────────────────
-
-        public void ConsumeStamina(int amount) => Stamina?.ConsumeStamina(amount);
-        public int CurrentStamina => Stamina ? Stamina.CurrentStamina : 0;
-        public bool CanRestoreStamina => Stamina;
-        public void RestoreStamina(int amount) => Stamina?.RestoreStamina(amount);
-        public void InitializeStamina(int value) => Stamina?.Initialize(value);
-
-        // ── Tile tracking ─────────────────────────────────────────────────────────────
-
-        void CheckCurrentTileData()
-        {
-            var tileData = MapManager.Instance.GetTileDataBelowCharacter(this);
-            if (tileData == CurrentTileData) return;
-            CurrentTileData = tileData;
-            CharacterChangedTileEvent.Trigger(tileData, this);
         }
 
         public void OnLocationEnter(LocationData location)
         {
             EnsureRuntimeInitialized();
-            animator.OnLocationEnter(location);
+            Tiles.EnterLocation(MapManager.Instance);
             characterGraphicsGo.SetActive(true);
-            _sceneReady = true;
-            CurrentLifecycleState = LifecycleState.SceneReady;
+            animator.OnLocationEnter(location);
+            foreach (var ability in _abilities) ability.OnLocationEnter(location);
+            _locationEntered = true;
             SetMovementState(MovementState.Idle);
         }
 
         public void OnLocationLeave(LocationData location)
         {
-            _sceneReady = false;
-            CurrentLifecycleState = LifecycleState.SceneUnloading;
+            _locationEntered = false;
+            foreach (var ability in _abilities) ability.OnLocationLeave(location);
             animator.OnLocationLeave(location);
+            Tiles.LeaveLocation();
             characterGraphicsGo.SetActive(false);
         }
 

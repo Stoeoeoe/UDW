@@ -10,7 +10,7 @@ namespace Character.Abilities
         public override void Tick()
         {
             var occupation = Character.Occupation;
-            if (!occupation.IsOccupied || Character.ConditionState != ConditionState.Normal) return;
+            if (!occupation.IsOccupied || Character.IsConditionOrControlBlocked) return;
             if (!PlayerInteractionContext.Instance.CurrentSnapshot.CanInteractWithWorld) return;
             var input = InputManager.Instance;
             if (input.InteractPressed || input.PerformPrimaryActionDown)

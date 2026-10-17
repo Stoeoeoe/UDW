@@ -73,6 +73,21 @@ namespace Core.Common.Editor
         /// <summary>Owns a temporary asset until managers have been shut down.</summary>
         public T Own<T>(T asset) where T : Object { _assets.Add(asset); return asset; }
 
+        /// <summary>Builds a locally bound character from the authored prefab, without entering a location or binding a player save.</summary>
+        public Character.MainCharacter CreateCharacter(string name = "Test character")
+        {
+            var holder = new GameObject(name);
+            holder.SetActive(false);
+            holder.transform.SetParent(Root.transform);
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
+            var character = Object.Instantiate(prefab, holder.transform).GetComponent<Character.MainCharacter>();
+            Invoke(character.GetComponent<Character.Controller2D>(), "Awake");
+            character.MainInventory.EnsureInitialized();
+            Invoke(character, "Awake");
+            Invoke(character.Occupation, "Awake");
+            return character;
+        }
+
         /// <summary>Runs a lifecycle callback explicitly when EditMode does not invoke it.</summary>
         public static void Invoke(object target, string method)
         {

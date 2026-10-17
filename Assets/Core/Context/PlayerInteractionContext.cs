@@ -40,7 +40,7 @@ namespace Core.Context
                     character.CurrentInteractable,
                     PointerManager.Instance != null ? PointerManager.Instance.CurrentTileDataUnderPointer : null,
                     PointerManager.Instance != null ? PointerManager.Instance.CurrentInteractableUnderPointer : null,
-                    character.CurrentTileData,
+                    character.Tiles.Current,
                     character.CurrentTool,
                     character.CurrentlyHeldItem,
                     character.ConditionState,

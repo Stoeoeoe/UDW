@@ -44,8 +44,12 @@ namespace Core.Inventory
         }
         private void Awake()
         {
-            if (!IsInitialized) Initialize(new InventoryState(), ItemCatalog.Find);
+            EnsureInitialized();
             _registry[(_inventoryName, _playerID)] = this;
+        }
+        public void EnsureInitialized()
+        {
+            if (!IsInitialized) Initialize(new InventoryState(), ItemCatalog.Find);
         }
         private void OnDestroy() => _registry.Remove((_inventoryName, _playerID));
         public static SlotInventory FindInventory(string inventoryName, string playerID)

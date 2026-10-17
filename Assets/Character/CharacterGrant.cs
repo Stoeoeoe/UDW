@@ -22,7 +22,7 @@ namespace Character
             character.Tags.SetSourceTags(source, _tags ?? Array.Empty<string>());
             if (_attributes == null) return;
             for (var i = 0; i < _attributes.Length; i++)
-                _attributes[i].Apply(character, source + ":" + i);
+                _attributes[i].Apply(character.Attributes, source + ":" + i);
         }
 
         public void Remove(GameCharacter character, string source)
@@ -30,7 +30,7 @@ namespace Character
             character.Tags.RemoveSource(source);
             if (_attributes == null) return;
             for (var i = 0; i < _attributes.Length; i++)
-                _attributes[i].Remove(character, source + ":" + i);
+                _attributes[i].Remove(character.Attributes, source + ":" + i);
         }
     }
 
@@ -46,10 +46,10 @@ namespace Character
         public float Flat => flat;
         public float Percent => percent;
 
-        internal void Apply(GameCharacter character, string source) =>
-            character.SetAttributeModifier(attribute, source, flat, percent);
+        internal void Apply(CharacterAttributes attributes, string source) =>
+            attributes.SetModifier(attribute, source, flat, percent);
 
-        internal void Remove(GameCharacter character, string source) =>
-            character.RemoveAttributeModifier(attribute, source);
+        internal void Remove(CharacterAttributes attributes, string source) =>
+            attributes.RemoveModifier(attribute, source);
     }
 }

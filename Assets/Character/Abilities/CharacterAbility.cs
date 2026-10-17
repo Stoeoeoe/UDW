@@ -14,26 +14,22 @@ namespace Character.Abilities
         protected Controller2D  Controller => Character.Controller;
         protected Orientation2D Orientation => Character.Orientation;
 
-        protected bool IsReady = false;
-
         protected virtual void Awake()
         {
             Character = GetComponentInParent<GameCharacter>();
+            if (!Character) throw new System.InvalidOperationException("Character abilities require a parent character.");
         }
 
-        private void OnEnable() => LevelManager.Instance?.RegisterLifecycle(this);
-        private void OnDisable() => LevelManager.Instance?.UnregisterLifecycle(this);
-
-        protected virtual bool AbilityAuthorized => Character == null || !Character.IsFrozen;
+        protected virtual bool AbilityAuthorized => !Character.IsControlBlocked;
 
         // ── Convenience accessors ──────────────────────────────────────────────────
 
-        protected TileData CurrentTileData  => Character?.CurrentTileData;
-        protected TileData TileDataInFront  => Character?.TileDataInFront;
-        protected TileData TileDataInBack   => Character?.TileDataInBack;
+        protected TileData CurrentTileData  => Character.Tiles.Current;
+        protected TileData TileDataInFront  => Character.Tiles.InFront;
+        protected TileData TileDataInBack   => Character.Tiles.InBack;
 
         protected Vector2Int CurrentTileCoordinates =>
-            Character != null ? Character.CurrentTileCoordinates : Vector2Int.zero;
+            Character.Tiles.Coordinates;
 
         protected Vector2Int GetTileCoordinatesInDirection(Vector2 relativeDirection)
         {
@@ -59,12 +55,10 @@ namespace Character.Abilities
 
         public virtual void OnLocationEnter(LocationData location)
         {
-            IsReady = true;
         }
 
         public virtual void OnLocationLeave(LocationData location)
         {
-            IsReady = false;
         }
     }
 }

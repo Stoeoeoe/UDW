@@ -36,14 +36,8 @@ namespace Core
         /// Called during GameCharacter runtime initialization on every spawn.
         /// Initializes the player loadout once and restores player stamina on each spawn.
         /// </summary>
-        public void InitializeCharacter(GameCharacter character)
+        public void InitializeCharacter(MainCharacter character)
         {
-            if (character is not MainCharacter)
-            {
-                character.InitializeStamina(_startingStamina);
-                return;
-            }
-
             var player = GameState.Player;
             if (!player.StaminaInitialized)
             {
@@ -64,8 +58,7 @@ namespace Core
             if (!inventory.ApplyStartingLoadout(loadout))
                 throw new InvalidOperationException("The configured starting loadout does not fit the player's inventory.");
 
-            ((MainCharacter)character).RefreshInventoryState();
-            character.InitializeStamina(savedStamina);
+            character.Stamina.Initialize(savedStamina);
         }
     }
 }

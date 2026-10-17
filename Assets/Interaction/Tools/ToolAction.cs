@@ -38,9 +38,9 @@ namespace Interaction.Tools
         
 
         protected GameCharacter Character => Owner;
-        protected TileData CurrentTileData => Character?.CurrentTileData;
-        protected TileData TileDataInFront => Character?.TileDataInFront;
-        protected TileData TileDataInBack => Character?.TileDataInBack;
+        protected TileData CurrentTileData => Character.Tiles.Current;
+        protected TileData TileDataInFront => Character.Tiles.InFront;
+        protected TileData TileDataInBack => Character.Tiles.InBack;
 
         // Cached affected tiles for the current action execution
         private List<TileData> _cachedAffectedTiles;

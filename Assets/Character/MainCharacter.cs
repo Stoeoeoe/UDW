@@ -1,123 +1,75 @@
-using Core.Equipment;
+using Core;
 using Core.Events;
-using Core.Inventory;
 using Core.TimeAndWeather;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Character
 {
-    public class MainCharacter : GameCharacter, IEventListener<ItemSelectedEvent>, IEventListener<InventoryChangedEvent>,
-        IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
+    /// <summary>Player identity, save binding and day-transition participation.</summary>
+    public class MainCharacter : GameCharacter, IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
     {
         private static MainCharacter _currentMainCharacter;
-
         public static MainCharacter CurrentMainCharacter
         {
             get
             {
-                if (!_currentMainCharacter)
-                    _currentMainCharacter = FindFirstObjectByType<MainCharacter>();
+                if (!_currentMainCharacter) _currentMainCharacter = FindFirstObjectByType<MainCharacter>();
                 return _currentMainCharacter;
             }
         }
 
-        public int CurrentSelectedSlotIndex { get; protected set; }
-        private readonly Dictionary<string, WornEquipmentItem> _appliedEquipment = new();
-        private bool _dayTransitionActive;
-        private ConditionState _conditionBeforeDayTransition;
+        public int CurrentSelectedSlotIndex => Loadout.ActiveHandInventoryIndex;
+        private readonly object _dayTransitionBlock = new();
 
         protected override void Awake()
         {
-            base.Awake();
             _currentMainCharacter = this;
+            base.Awake();
         }
 
         protected override void Start()
         {
-            base.Start();
             CharacterManager.Instance.RegisterMainCharacter(this);
+            base.Start();
+        }
+        protected override void InitializeCharacterState() => PlayerStateManager.Instance.InitializeCharacter(this);
+
+        public override void ValidateConfiguration()
+        {
+            base.ValidateConfiguration();
+            if (!PerformPrimaryAction)
+                throw new InvalidOperationException($"Main character '{name}' requires its primary action ability.");
         }
 
-        protected virtual void OnEnable()
+        private void OnEnable()
         {
-            this.Subscribe<ItemSelectedEvent>();
-            this.Subscribe<InventoryChangedEvent>();
             this.Subscribe<DayTransitionStarted>();
             this.Subscribe<DayTransitionFinished>();
         }
 
-        protected virtual void OnDisable()
+        private void OnDisable()
         {
-            this.Unsubscribe<ItemSelectedEvent>();
-            this.Unsubscribe<InventoryChangedEvent>();
             this.Unsubscribe<DayTransitionStarted>();
             this.Unsubscribe<DayTransitionFinished>();
-            FinishDayTransition();
+            SetControlBlocked(_dayTransitionBlock, false);
         }
 
-        /// <summary>Stops this character while their day transition is presented.</summary>
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            if (_currentMainCharacter == this) _currentMainCharacter = null;
+        }
+
         public void OnEvent(DayTransitionStarted change)
         {
             if (change.Character != this) return;
-            _conditionBeforeDayTransition = ConditionState;
-            _dayTransitionActive = true;
-            Freeze();
+            SetControlBlocked(_dayTransitionBlock, true);
             SetMovementState(MovementState.Idle);
         }
 
-        /// <summary>Restores the previous condition unless gameplay changed it during the transition.</summary>
         public void OnEvent(DayTransitionFinished change)
         {
-            if (change.Character == this) FinishDayTransition();
-        }
-
-        private void FinishDayTransition()
-        {
-            if (!_dayTransitionActive) return;
-            _dayTransitionActive = false;
-            if (ConditionState == ConditionState.Frozen) SetConditionState(_conditionBeforeDayTransition);
-        }
-
-        public void OnEvent(ItemSelectedEvent e)
-        {
-            if (e.Inventory && e.Inventory != MainInventory) return;
-            SetHeldItem(e.HeldItem);
-            CurrentSelectedSlotIndex = e.InventorySlotIndex;
-        }
-
-        public void OnEvent(InventoryChangedEvent e)
-        {
-            if (e.InventoryRef == MainInventory) RefreshInventoryState();
-        }
-
-        public void RefreshInventoryState()
-        {
-            SetHeldItem(MainInventory.Loadout.ActiveHandItem);
-            CurrentSelectedSlotIndex = MainInventory.Loadout.ActiveHandInventoryIndex;
-            var config = MainInventory.Configuration;
-            foreach (var id in _appliedEquipment.Keys.ToArray())
-            {
-                var previous = _appliedEquipment[id];
-                if (Array.Exists(config.EquipmentSlots, slot => slot.Id == id) &&
-                    MainInventory.Loadout.GetEquipment(id).Item == previous) continue;
-                for (var i = 0; i < previous.Modifiers.Length; i++)
-                    RemoveAttributeModifier(previous.Modifiers[i].Attribute, $"equipment:{id}:{i}");
-                _appliedEquipment.Remove(id);
-            }
-            foreach (var slot in config.EquipmentSlots)
-            {
-                if (_appliedEquipment.ContainsKey(slot.Id) ||
-                    MainInventory.Loadout.GetEquipment(slot.Id).Item is not WornEquipmentItem item) continue;
-                for (var i = 0; i < item.Modifiers.Length; i++)
-                {
-                    var modifier = item.Modifiers[i];
-                    var source = $"equipment:{slot.Id}:{i}";
-                    SetAttributeModifier(modifier.Attribute, source, modifier.Flat, modifier.Percent);
-                }
-                _appliedEquipment[slot.Id] = item;
-            }
+            if (change.Character == this) SetControlBlocked(_dayTransitionBlock, false);
         }
     }
 }

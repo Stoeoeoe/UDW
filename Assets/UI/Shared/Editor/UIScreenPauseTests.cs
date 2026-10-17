@@ -67,10 +67,7 @@ namespace UI.Shared.Editor
             _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
             _first = _root.AddComponent<PauseTestScreen>();
             _second = _root.AddComponent<PauseTestScreen>();
-            var characterRoot = new GameObject("Uninitialized test character");
-            characterRoot.transform.SetParent(_root.transform);
-            characterRoot.SetActive(false);
-            _character = characterRoot.AddComponent<GameCharacter>();
+            _character = _fixture.CreateCharacter();
         }
 
         [TearDown]
@@ -83,13 +80,7 @@ namespace UI.Shared.Editor
             Time.fixedDeltaTime = _fixedDeltaTime;
         }
 
-        private MainCharacter CreateMainCharacter(string name)
-        {
-            var root = new GameObject(name);
-            root.SetActive(false);
-            root.transform.SetParent(_root.transform);
-            return root.AddComponent<MainCharacter>();
-        }
+        private MainCharacter CreateMainCharacter(string name) => _fixture.CreateCharacter(name);
 
         [Test]
         public void MainCharacterDeathClosesAllScreensWithoutChangingTheDeadCondition()
@@ -162,7 +153,7 @@ namespace UI.Shared.Editor
             _second.Open(_character, ScreenPauseMode.None);
             _first.Rebind(replacement);
             Assert.That(_manager.IsTopScreen(_second), Is.True);
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
             Assert.That(original.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.None));
             Assert.That(replacement.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.Flex));
@@ -171,7 +162,7 @@ namespace UI.Shared.Editor
             _first.Close();
             Assert.That(replacement.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.None));
             Assert.That(_first.CloseCount, Is.EqualTo(1));
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
         }
 
         [TestCase(ScreenPauseMode.None, false, false)]
@@ -183,12 +174,12 @@ namespace UI.Shared.Editor
             _first.PauseWhileOpen = mode;
             Assert.That(_first.Open(_character), Is.True);
             Assert.That(_first.Visible, Is.True);
-            Assert.That(_character.IsFrozen, Is.EqualTo(characterPaused));
+            Assert.That(_character.IsControlBlocked, Is.EqualTo(characterPaused));
             Assert.That(UrGUIManager.IsGameClockPaused, Is.EqualTo(clockPaused));
             Assert.That(Time.timeScale, Is.EqualTo(_timeScale), "Screen pauses must preserve gameplay time-scale requests.");
             _first.Close();
             Assert.That(_first.Visible, Is.False);
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
         }
 
@@ -199,10 +190,10 @@ namespace UI.Shared.Editor
             _first.Open(_character);
             _second.Open(_character);
             (closeFirst ? _first : _second).Close();
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
             (closeFirst ? _second : _first).Close();
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
         }
 
@@ -214,7 +205,7 @@ namespace UI.Shared.Editor
             _first.Close();
             Assert.That(UrGUIManager.HasOpenScreens, Is.True);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
         }
 
         [Test]
@@ -224,10 +215,10 @@ namespace UI.Shared.Editor
             _first.Open(_character);
             _first.Open(_character, ScreenPauseMode.Character);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
             _first.Close();
             _first.Close();
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
         }
 
         [Test]
@@ -236,37 +227,34 @@ namespace UI.Shared.Editor
             SetCondition(ConditionState.Frozen);
             _first.Open(_character);
             _first.Close();
-            Assert.That(_character.IsFrozen, Is.True);
-            _character.UnFreeze();
+            Assert.That(_character.IsControlBlocked, Is.True);
+            _character.SetConditionState(ConditionState.Normal);
             _first.Open(_character);
             SetCondition(ConditionState.Frozen);
             _first.Close();
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
         }
 
         [Test]
         public void GameplayUnfreezeCannotReleaseAnOpenScreensPause()
         {
             _first.Open(_character);
-            _character.UnFreeze();
-            Assert.That(_character.IsFrozen, Is.True);
+            _character.SetConditionState(ConditionState.Normal);
+            Assert.That(_character.IsControlBlocked, Is.True);
             _first.Close();
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
         }
 
         [Test]
         public void UpdatingTheTargetReleasesOnlyTheOldCharacter()
         {
-            var otherRoot = new GameObject("Other test character");
-            otherRoot.transform.SetParent(_root.transform);
-            otherRoot.SetActive(false);
-            var other = otherRoot.AddComponent<GameCharacter>();
+            var other = _fixture.CreateCharacter("Other character");
             _first.Open(_character);
             _first.Open(other);
-            Assert.That(_character.IsFrozen, Is.False);
-            Assert.That(other.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.False);
+            Assert.That(other.IsControlBlocked, Is.True);
             _first.Close();
-            Assert.That(other.IsFrozen, Is.False);
+            Assert.That(other.IsControlBlocked, Is.False);
         }
 
         [Test]
@@ -275,7 +263,7 @@ namespace UI.Shared.Editor
             _first.Open(_character);
             typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_first, null);
             Assert.That(_first.Visible, Is.False);
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
         }
 
@@ -288,7 +276,7 @@ namespace UI.Shared.Editor
             if (leavingLocation) _manager.OnLocationLeave(null);
             else Invoke(_manager, "OnDisable");
             Assert.That(_first.Visible || _second.Visible, Is.False);
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(UrGUIManager.HasOpenScreens, Is.False);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
         }
@@ -299,7 +287,7 @@ namespace UI.Shared.Editor
             Assert.Throws<InvalidOperationException>(() => _manager.Open(_first,
                 () => throw new InvalidOperationException("Failed presentation"), () => { },
                 ScreenPauseMode.CharacterAndClock, _character));
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
         }
 
@@ -358,12 +346,12 @@ namespace UI.Shared.Editor
             var prepare = (IEnumerator)routine.Current;
             Assert.That(prepare.MoveNext(), Is.True);
             Assert.That(executor.State, Is.EqualTo(ActionExecutionState.Preparing));
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
             snapshot = snapshot with { WorldInteractionBlocked = true };
             executor.ContinueFromPrepare();
             Assert.That(routine.MoveNext(), Is.False);
             Assert.That(action.Executed, Is.False);
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(executor.IsIdle, Is.True);
         }
 

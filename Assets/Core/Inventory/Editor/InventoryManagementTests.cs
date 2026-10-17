@@ -179,13 +179,13 @@ namespace Core.Inventory.Editor
             _bag.AddItem(hat, 1); _bag.Interaction.TryPickUp(0, 1);
             Assert.That(_bag.Actions.TryEquipHeld(slot), Is.True);
             Assert.That(_bag.HeldStack.IsOccupied, Is.False);
-            var character = _root.AddComponent<MainCharacter>();
-            typeof(GameCharacter).GetProperty("MainInventory").SetValue(character, _bag);
-            var initial = character.WalkSpeed;
-            character.RefreshInventoryState(); character.RefreshInventoryState();
-            Assert.That(character.WalkSpeed, Is.EqualTo(initial + 1));
-            _bag.Actions.TryUnequip(slot); character.RefreshInventoryState();
-            Assert.That(character.WalkSpeed, Is.EqualTo(initial));
+            var attributes = new CharacterAttributes();
+            var initial = attributes.WalkSpeed;
+            using var effects = new CharacterEquipmentEffects(_bag, attributes);
+            effects.Refresh(); effects.Refresh();
+            Assert.That(attributes.WalkSpeed, Is.EqualTo(initial + 1));
+            _bag.Actions.TryUnequip(slot);
+            Assert.That(attributes.WalkSpeed, Is.EqualTo(initial));
         }
         [Test] public void SortingIncludesEveryBagRow()
         {

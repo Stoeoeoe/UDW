@@ -21,7 +21,7 @@ namespace Core.Tile
             if (!showCurrentTileInfos) return;
             if (!MainCharacter.CurrentMainCharacter) return;
 
-            var currentTile = MainCharacter.CurrentMainCharacter.CurrentTileData;
+            var currentTile = MainCharacter.CurrentMainCharacter.Tiles.Current;
 
             // Prepare rect anchored to top-right
             var rect = new Rect(Screen.width - labelWidth - rightPadding, topPadding, labelWidth, labelHeight);

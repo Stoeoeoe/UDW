@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using Animancer;
 using Character.Animations;
-using Core.Context;
 using Core.Location;
 using Interaction;
 using Interaction.Tools;
 using UnityEngine;
-using InteractionMode = Core.Context.InteractionMode;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -39,6 +37,7 @@ namespace Character
         // Collected clips from aseprite subresources keyed by name
         private readonly Dictionary<string, AnimationClip> _asepriteClips = new();
         private bool _isBound;
+        private ActionExecutor _actions;
         private bool _interactionAnimationActive;
         private CharacterAnimationSet _interactionSet;
         private AnimancerState _interactionState;
@@ -85,83 +84,63 @@ namespace Character
             _playingVariation = true;
         }
 
-        private void TryBind()
+        private void Bind()
         {
-            if (_isBound || PlayerInteractionContext.Instance == null || character == null)
-                return;
-
-            PlayerInteractionContext.Instance.OnContextChanged += UpdateAnimator;
+            if (_isBound) return;
+            if (!animancer || !character)
+                throw new InvalidOperationException("Character animation requires Animancer and its owning character.");
             character.OnMovementStateChanged += OnMovementStateChanged;
             character.Orientation.OnFacingDirectionChanged += OnFacingDirectionChanged;
+            // Only characters with the optional primary-action ability have tool presentation.
+            if (character.PerformPrimaryAction)
+            {
+                _actions = character.PerformPrimaryAction.ActionExecutor
+                    ?? throw new InvalidOperationException("Primary actions must initialize before animation binding.");
+                _actions.StateChanged += RefreshAnimation;
+            }
             _isBound = true;
         }
 
         private void Unbind()
         {
-            if (!_isBound)
-                return;
-
-            if (PlayerInteractionContext.Instance != null)
-                PlayerInteractionContext.Instance.OnContextChanged -= UpdateAnimator;
-
-            if (character != null)
+            if (!_isBound) return;
+            if (character)
             {
                 character.OnMovementStateChanged -= OnMovementStateChanged;
                 character.Orientation.OnFacingDirectionChanged -= OnFacingDirectionChanged;
             }
-
+            if (_actions != null) _actions.StateChanged -= RefreshAnimation;
+            _actions = null;
             _isBound = false;
         }
 
-        private void OnFacingDirectionChanged(Vector2 newDirection)
+        private void OnFacingDirectionChanged(Vector2 direction) => RefreshAnimation();
+        private void OnMovementStateChanged(MovementState state) => RefreshAnimation();
+
+        private void RefreshAnimation()
         {
             if (_interactionAnimationActive) return;
-            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
-            if (snapshot == null) return;
-
-            var mainCharacter = MainCharacter.CurrentMainCharacter;
-            if (!mainCharacter) return;
-
-            var actionState = mainCharacter.PerformPrimaryAction.ActionExecutor.State;
-            if (snapshot.Mode == InteractionMode.Tool)
+            var facing = character.Orientation.FacingDirection;
+            if (_actions != null && _actions.CurrentAction is UseToolAction)
             {
-                switch (actionState)
+                if (_actions.State == ActionExecutionState.Preparing)
                 {
-                    case ActionExecutionState.Preparing:
-                        PlayToolPrepareAnimation(newDirection, character.CurrentTool);
-                        return;
-                    case ActionExecutionState.Executing:
-                        PlayToolUseAnimation(newDirection, character.CurrentTool);
-                        return;
+                    PlayToolPrepareAnimation(facing, character.CurrentTool);
+                    return;
+                }
+                if (_actions.State == ActionExecutionState.Executing)
+                {
+                    PlayToolUseAnimation(facing, character.CurrentTool);
+                    return;
                 }
             }
-
             switch (character.MovementState)
             {
                 case MovementState.Walking:
-                case MovementState.Running: PlayWalkAnimation(newDirection); break;
-                case MovementState.Idle: PlayIdleAnimation(newDirection); break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private void OnMovementStateChanged(MovementState newState)
-        {
-            if (_interactionAnimationActive) return;
-            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
-            if (snapshot == null) return;
-            // Snapshot.MovementState may be stale (LateUpdate hasn't run yet), so use the live value.
-            var facingDirection = character.Orientation.FacingDirection;
-            switch (newState)
-            {
-                case MovementState.Walking:
-                case MovementState.Running:
-                    PlayWalkAnimation(facingDirection);
-                    break;
-                case MovementState.Idle:
-                    PlayIdleAnimation(facingDirection);
-                    break;
+                case MovementState.Running: PlayWalkAnimation(facing); break;
+                case MovementState.Invalid: // Entry binds presentation before publishing the initial idle state.
+                case MovementState.Idle: PlayIdleAnimation(facing); break;
+                default: throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -206,47 +185,6 @@ namespace Character
             var fullName = prefix + suffix;
             _asepriteClips.TryGetValue(fullName, out var clip);
             return clip;
-        }
-
-        private void UpdateAnimator(PlayerInteractionContextSnapshot playerInteractionContextSnapshot)
-        {
-            if (_interactionAnimationActive) return;
-            var facingDirection = character.Orientation.FacingDirection;
-            var snapshot = PlayerInteractionContext.Instance.CurrentSnapshot;
-            var mainCharacter = MainCharacter.CurrentMainCharacter;
-            if (mainCharacter == null)
-            {
-                PlayIdleAnimation(facingDirection);
-                return;
-            }
-
-            var actionState = mainCharacter.PerformPrimaryAction.ActionExecutor.State;
-
-            if (snapshot.Mode == InteractionMode.Tool)
-            {
-                if (actionState == ActionExecutionState.Preparing)
-                {
-                    PlayToolPrepareAnimation(facingDirection, character.CurrentTool);
-                    return;
-                }
-
-                if (actionState == ActionExecutionState.Executing)
-                {
-                    PlayToolUseAnimation(facingDirection, character.CurrentTool);
-                    return;
-                }
-            }
-
-            switch (snapshot.MovementState)
-            {
-                case MovementState.Idle:
-                    PlayIdleAnimation(facingDirection);
-                    break;
-                case MovementState.Walking:
-                case MovementState.Running:
-                    PlayWalkAnimation(facingDirection);
-                    break;
-            }
         }
 
         /// <summary>Plays one animation or a base/variation set while suppressing ordinary movement/tool updates.</summary>
@@ -332,7 +270,7 @@ namespace Character
 
         public void OnLocationEnter(LocationData location)
         {
-            TryBind();
+            Bind();
             PlayIdleAnimation(character.Orientation.FacingDirection);
         }
 

@@ -190,38 +190,33 @@ namespace Core.Tile
 
         public bool IsTileWithinRadiusOfCharacter(GameCharacter character, TileData targetTile, int radius)
         {
-            return IsTileWithinRadius(character.CurrentTileData, targetTile, radius);
+            return IsTileWithinRadius(character.Tiles.Current, targetTile, radius);
         }
 
         #endregion
 
         #region Coordinate Conversions
 
-        public Vector2Int GetCurrentTileCoordinates(GameCharacter character)
+        public Vector2Int WorldToTileCoordinates(Vector2 worldPosition)
         {
-            if (_terrainTilemap == null)
-                return Vector2Int.zero;
-
-            var worldPosition = character.ToolInteractionAnchor.position;
-            var cellPosition = _terrainTilemap.WorldToCell(worldPosition);
-            return new Vector2Int(cellPosition.x, cellPosition.y);
+            if (!_terrainTilemap) throw new InvalidOperationException("Tile queries require an initialized location map.");
+            var cell = _terrainTilemap.WorldToCell(worldPosition);
+            return new Vector2Int(cell.x, cell.y);
         }
+
+        public Vector2Int GetCurrentTileCoordinates(GameCharacter character) =>
+            WorldToTileCoordinates(character.ToolInteractionAnchor.position);
 
         public Vector2Int GetCurrentMainCharacterTileCoordinates()
         {
             return GetCurrentTileCoordinates(MainCharacter.CurrentMainCharacter);
         }
 
-        public Vector2Int GetInteractionOriginTile(GameCharacter character)
-        {
-            if (_terrainTilemap == null)
-                return Vector2Int.zero;
+        public Vector2Int GetInteractionOriginTile(GameCharacter character) =>
+            GetInteractionOriginTile(character.ToolInteractionAnchor.position, character.Orientation.FacingDirection);
 
-            var forward = character.Orientation.FacingDirection;
-            var probeWorldPosition = (Vector2)character.ToolInteractionAnchor.position + forward * InteractionDistance;
-            var cell = _terrainTilemap.WorldToCell(probeWorldPosition);
-            return new Vector2Int(cell.x, cell.y);
-        }
+        public Vector2Int GetInteractionOriginTile(Vector2 anchor, Vector2 facing) =>
+            WorldToTileCoordinates(anchor + facing * InteractionDistance);
 
         public Vector2Int GetTileCoordinatesInDirection(GameCharacter character, Vector2 direction)
         {
@@ -257,6 +252,7 @@ namespace Core.Tile
                 ? anchor.FacingDirection
                 : (facingDirection != Vector2.zero ? facingDirection : Vector2.down);
             character.Orientation.ForceDirection(resolvedFacing);
+            character.Tiles.OnPlaced();
             return true;
         }
 
@@ -345,7 +341,7 @@ namespace Core.Tile
             if (config?.AffectedTileOffsets == null)
                 return new List<TileData>();
 
-            var originCoordinates = character.CurrentTileCoordinates;
+            var originCoordinates = character.Tiles.Coordinates;
             var facing = character.Orientation.FacingDirection;
 
             return config.AffectedTileOffsets

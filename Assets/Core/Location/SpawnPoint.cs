@@ -17,6 +17,7 @@ namespace Core.Location
         {
             character.transform.position = transform.position;
             character.Orientation.ForceDirection(facingDirection != Vector2.zero ? facingDirection : Vector2.down);
+            character.Tiles.OnPlaced();
         }
 
         private void OnDrawGizmos()

@@ -27,7 +27,7 @@ namespace Character.Abilities
 
             var input   = InputManager.Instance.Move;
             bool run    = InputManager.Instance.RunHeld;
-            float speed = run ? Character.RunSpeed : Character.WalkSpeed;
+            float speed = run ? Character.Attributes.RunSpeed : Character.Attributes.WalkSpeed;
 
             Controller.SetMovementInput(input, speed);
             Orientation.UpdateFromVelocity(Controller.CurrentVelocity);
@@ -47,7 +47,7 @@ namespace Character.Abilities
             {
                 if (_footstepTimer >= _nextFootstepTime)
                 {
-                    var surfaceSound = Character.CurrentTileData?.TerrainData?.SurfaceSound;
+                    var surfaceSound = Character.Tiles.Current?.TerrainData?.SurfaceSound;
                     var sound   = state == MovementState.Walking
                         ? surfaceSound?.walkSound
                         : surfaceSound?.runSound;

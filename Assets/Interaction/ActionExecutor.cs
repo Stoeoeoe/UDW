@@ -14,7 +14,18 @@ namespace Interaction
     public class ActionExecutor
     {
         public AbstractAction CurrentAction { get; private set; }
-        public ActionExecutionState State { get; private set; } = ActionExecutionState.Idle;
+        private ActionExecutionState _state = ActionExecutionState.Idle;
+        public event Action StateChanged;
+        public ActionExecutionState State
+        {
+            get => _state;
+            private set
+            {
+                if (_state == value) return;
+                _state = value;
+                StateChanged?.Invoke();
+            }
+        }
         public bool IsIdle => State == ActionExecutionState.Idle;
 
         private readonly GameCharacter _owner;
@@ -26,7 +37,7 @@ namespace Interaction
         /// <summary>New constructor — used by GameCharacter-based abilities.</summary>
         public ActionExecutor(GameCharacter owner, Func<PlayerInteractionContextSnapshot> snapshotProvider)
         {
-            _owner = owner;
+            _owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             _snapshotProvider = snapshotProvider;
         }
 
@@ -126,13 +137,14 @@ namespace Interaction
         {
             _frozeCharacter = false;
             if (!action.FreezeCharacterDuringAction) return;
-            if (_owner != null)       { _owner.Freeze();       _frozeCharacter = true; }
+            _owner.SetControlBlocked(this, true);
+            _frozeCharacter = true;
         }
 
         private void Unfreeze()
         {
             if (!_frozeCharacter) return;
-            if (_owner != null)       _owner.UnFreeze();
+            if (_owner) _owner.SetControlBlocked(this, false); // Owner may have been destroyed during a scene transition.
             _frozeCharacter = false;
         }
 

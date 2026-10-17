@@ -46,28 +46,28 @@ namespace Core.Divinity.Editor
             var state = new DivineFavourState();
             var manager = CreateManager(state);
             var character = CreateCharacter();
-            character.SetPhysicalDefenseModifier("equipment:shield", 3);
+            character.Attributes.SetModifier(CharacterAttributeType.PhysicalDefense, "equipment:shield", 3);
             manager.BindCharacter(character);
             var observedDefense = -1;
             var listener = new FavourObserver(change =>
             {
-                if (ReferenceEquals(change.State, state)) observedDefense = character.PhysicalDefense;
+                if (ReferenceEquals(change.State, state)) observedDefense = character.Attributes.PhysicalDefense;
             });
             EventBus<DivineFavourChangedEvent>.Subscribe(listener);
             try
             {
                 manager.AddFavour(deity.Id, 9);
-                Assert.That(character.PhysicalDefense, Is.EqualTo(3));
+                Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(3));
                 manager.AddFavour(deity.Id, 1);
                 Assert.That(observedDefense, Is.EqualTo(5));
                 Assert.That(character.Tags.Has("State.Blessed"), Is.True);
                 manager.AddFavour(deity.Id, 10);
-                Assert.That(character.PhysicalDefense, Is.EqualTo(5));
-                Assert.That(character.MaxHealth, Is.EqualTo(110));
+                Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(5));
+                Assert.That(character.Attributes.MaxHealth, Is.EqualTo(110));
                 manager.AddFavour(deity.Id, -11);
                 Assert.That(observedDefense, Is.EqualTo(3));
                 Assert.That(character.Tags.Has("State.Blessed"), Is.False);
-                Assert.That(character.MaxHealth, Is.EqualTo(100));
+                Assert.That(character.Attributes.MaxHealth, Is.EqualTo(100));
             }
             finally { EventBus<DivineFavourChangedEvent>.Unsubscribe(listener); }
         }
@@ -84,15 +84,15 @@ namespace Core.Divinity.Editor
             manager.Restore(new Dictionary<string, int> { [deity.Id] = 10 });
             manager.BindCharacter(first);
             Assert.That(manager.GetFavour(deity.Id), Is.EqualTo(10));
-            Assert.That(first.WalkSpeed, Is.EqualTo(5));
+            Assert.That(first.Attributes.WalkSpeed, Is.EqualTo(5));
             manager.BindCharacter(first);
-            Assert.That(first.WalkSpeed, Is.EqualTo(5));
+            Assert.That(first.Attributes.WalkSpeed, Is.EqualTo(5));
             manager.BindCharacter(second);
-            Assert.That(first.WalkSpeed, Is.EqualTo(4));
-            Assert.That(second.WalkSpeed, Is.EqualTo(5));
+            Assert.That(first.Attributes.WalkSpeed, Is.EqualTo(4));
+            Assert.That(second.Attributes.WalkSpeed, Is.EqualTo(5));
             NewDayEvent.Trigger(2);
             Assert.That(manager.GetFavour(deity.Id), Is.EqualTo(8));
-            Assert.That(second.WalkSpeed, Is.EqualTo(4));
+            Assert.That(second.Attributes.WalkSpeed, Is.EqualTo(4));
         }
 
         [Test]
@@ -108,11 +108,11 @@ namespace Core.Divinity.Editor
             manager.BindCharacter(character);
             manager.AddFavour(first.Id, 10);
             manager.AddFavour(second.Id, 10);
-            Assert.That(character.PhysicalDefense, Is.EqualTo(4));
+            Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(4));
             manager.AdvanceDays(1);
             Assert.That(manager.GetFavour(first.Id), Is.Zero);
             Assert.That(manager.GetFavour(second.Id), Is.EqualTo(10));
-            Assert.That(character.PhysicalDefense, Is.EqualTo(2));
+            Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(2));
             manager.AddFavour(first.Id, -5);
             manager.AdvanceDays(1);
             Assert.That(manager.GetFavour(first.Id), Is.Zero);
@@ -313,3 +313,4 @@ namespace Core.Divinity.Editor
         }
     }
 }
+

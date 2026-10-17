@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Collections.Generic;
 using Character;
 using Sirenix.OdinInspector;
@@ -21,28 +23,24 @@ namespace Interaction.Tools
         /// </summary>
         public void Initialize(Character.GameCharacter owner)
         {
+            ValidateConfiguration();
             foreach (var prefab in toolActionPrefabs)
             {
-                if (prefab.ToolData == null)
-                {
-                    Debug.LogWarning($"Tool action prefab '{prefab.name}' has no ToolData assigned. Skipping.");
-                    continue;
-                }
-                
                 var toolAction = Instantiate(prefab, transform, false);
                 var id = toolAction.ToolData.ItemId;
                 
-                if (_toolActions.ContainsKey(id))
-                {
-                    Debug.LogWarning($"Duplicate tool action with id '{id}' found. Skipping duplicate.");
-                    Destroy(toolAction.gameObject);
-                    continue;
-                }
-
                 toolAction.Initialize(owner);
                 toolAction.gameObject.SetActive(false);
                 _toolActions.Add(id, toolAction);
             }
+        }
+
+        public void ValidateConfiguration()
+        {
+            if (toolActionPrefabs == null || toolActionPrefabs.Any(action => !action || !action.ToolData || string.IsNullOrWhiteSpace(action.ToolData.ItemId)))
+                throw new InvalidOperationException("ToolActionRegistry requires tool prefabs with definitions and stable item IDs.");
+            if (toolActionPrefabs.GroupBy(action => action.ToolData.ItemId).Any(group => group.Count() > 1))
+                throw new InvalidOperationException("ToolActionRegistry contains duplicate tool IDs.");
         }
 
         /// <summary>

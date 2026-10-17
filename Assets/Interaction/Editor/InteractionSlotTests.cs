@@ -272,7 +272,7 @@ namespace Interaction.Editor
             Assert.That(_character.Occupation.TryEnter(_slot), Is.True);
             Assert.That(_slot.Occupant, Is.SameAs(_character.Occupation));
             Assert.That(_character.Occupation.CurrentSlot, Is.SameAs(_slot));
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
             Assert.That(_character.Occupation.Phase, Is.EqualTo(CharacterOccupation.OccupationPhase.Entering));
             Assert.That(_other.Occupation.TryEnter(_slot), Is.False);
             Assert.That(_character.Occupation.TryEnter(_slot), Is.False);
@@ -294,8 +294,8 @@ namespace Interaction.Editor
             Hop(_character).Complete(true);
             Assert.That(_character.Occupation.Phase, Is.EqualTo(CharacterOccupation.OccupationPhase.Occupied));
             Assert.That(_character.transform.position, Is.EqualTo(_slot.transform.position));
-            _character.UnFreeze(); // Finishing a normal primary action cannot release occupation.
-            Assert.That(_character.IsFrozen, Is.True);
+            _character.SetConditionState(ConditionState.Normal); // Finishing a normal primary action cannot release occupation.
+            Assert.That(_character.IsControlBlocked, Is.True);
 
             Assert.That(_character.Occupation.TryExit(), Is.True);
             Assert.That(_character.Occupation.TryExit(), Is.False);
@@ -306,7 +306,7 @@ namespace Interaction.Editor
 
             Assert.That(_character.Occupation.Phase, Is.EqualTo(CharacterOccupation.OccupationPhase.Empty));
             Assert.That(_character.Occupation.CurrentSlot, Is.Null);
-            Assert.That(_character.IsFrozen, Is.False);
+            Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(body.simulated, Is.True);
             Assert.That(_character.transform.position, Is.EqualTo(new Vector3(2, -1, 0)));
             Assert.That(body.position, Is.EqualTo(new Vector2(2, -1)));

@@ -134,7 +134,7 @@ namespace Interaction
         /// </summary>
         public virtual Vector2 GetActionExecutionLocation(PlayerInteractionContextSnapshot snapshot)
         {
-            return snapshot.Character.TileDataInFront?.WorldPosition ?? snapshot.Character.transform.position;
+            return snapshot.Character.Tiles.InFront?.WorldPosition ?? snapshot.Character.transform.position;
         }
     }
 }

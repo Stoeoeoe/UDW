@@ -125,23 +125,23 @@ namespace Core.GameplayTags.Editor
             {
                 Assert.That(skills.TryLevelUp(skillId), Is.True);
                 Assert.That(observer.SawUpgradeWithTag, Is.True);
-                Assert.That(character.PhysicalDefense, Is.EqualTo(2));
+                Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(2));
 
                 tags.SetSourceTags("boon:mercury", new[] { "State.Inspired" });
                 typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
                     ?.Invoke(skills, new object[] { character });
                 Assert.That(tags.Has("State.Trained"), Is.False);
                 Assert.That(tags.Has("State.Inspired"), Is.True);
-                Assert.That(character.PhysicalDefense, Is.Zero);
+                Assert.That(character.Attributes.PhysicalDefense, Is.Zero);
                 typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
                     ?.Invoke(skills, new object[] { character });
                 Assert.That(tags.Has("State.Trained"), Is.True);
-                Assert.That(character.PhysicalDefense, Is.EqualTo(2));
+                Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(2));
 
                 typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
                     ?.Invoke(skills, new object[] { Array.Empty<KeyValuePair<string, int>>() });
                 Assert.That(observer.SawResetWithoutTag, Is.True);
-                Assert.That(character.PhysicalDefense, Is.Zero);
+                Assert.That(character.Attributes.PhysicalDefense, Is.Zero);
             }
             finally
             {
@@ -170,8 +170,8 @@ namespace Core.GameplayTags.Editor
             public void OnEvent(SkillLevelChangedEvent change)
             {
                 if (!ReferenceEquals(change.Skills, _skills)) return;
-                if (change.NewLevel == 1) SawUpgradeWithTag = _character.Tags.Has("State.Trained") && _character.PhysicalDefense == 2;
-                if (change.NewLevel == 0) SawResetWithoutTag = !_character.Tags.Has("State.Trained") && _character.PhysicalDefense == 0;
+                if (change.NewLevel == 1) SawUpgradeWithTag = _character.Tags.Has("State.Trained") && _character.Attributes.PhysicalDefense == 2;
+                if (change.NewLevel == 0) SawResetWithoutTag = !_character.Tags.Has("State.Trained") && _character.Attributes.PhysicalDefense == 0;
             }
         }
     }

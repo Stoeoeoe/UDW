@@ -16,7 +16,7 @@ namespace Core.Items
 
         public int StaminaRestored => _staminaRestored;
 
-        public override bool CanConsume(GameCharacter character) => character && character.CanRestoreStamina && character.CurrentStamina < character.MaxStamina;
-        public override void Apply(GameCharacter character) => character.RestoreStamina(StaminaRestored);
+        public override bool CanConsume(GameCharacter character) => character.Stamina.CurrentStamina < character.Stamina.MaxStamina;
+        public override void Apply(GameCharacter character) => character.Stamina.RestoreStamina(StaminaRestored);
     }
 }

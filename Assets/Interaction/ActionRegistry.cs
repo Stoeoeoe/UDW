@@ -20,7 +20,7 @@ namespace Interaction
 
         public void Initialize(GameCharacter owner)
         {
-            ValidateNoDuplicates();
+            ValidateConfiguration();
             
             _actions = new Dictionary<InteractionMode, PrimaryAction>();
             
@@ -32,8 +32,10 @@ namespace Interaction
             }
         }
 
-        private void ValidateNoDuplicates()
+        public void ValidateConfiguration()
         {
+            if (actionPrefabs == null || actionPrefabs.Any(action => !action))
+                throw new InvalidOperationException("ActionRegistry requires a list without missing action prefabs.");
             var duplicates = actionPrefabs
                 .GroupBy(a => a.InteractionMode)
                 .Where(g => g.Count() > 1)

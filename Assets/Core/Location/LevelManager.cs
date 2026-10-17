@@ -209,7 +209,9 @@ namespace Core.Location
         {
             SceneReady = false;
             var character = MainCharacter.CurrentMainCharacter;
-            character.Freeze();
+            character.SetControlBlocked(this, true);
+            try
+            {
             yield return UrGUIManager.Instance.CoverScene(character.transform);
 
             // Notify all lifecycle components before unloading the old scene
@@ -228,6 +230,11 @@ namespace Core.Location
 
             SetCurrentLocation(locationData);
             yield return EnterLocationRoutine(locationData, entryKey, facingDirection);
+            }
+            finally
+            {
+                if (character) character.SetControlBlocked(this, false);
+            }
         }
 
         void SetCurrentLocation(LocationData locationData)

@@ -47,12 +47,7 @@ namespace Core.TimeAndWeather.Editor
             });
             var gui = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
 
-            var characterRoot = Child("Character");
-            characterRoot.SetActive(false);
-            var controller = characterRoot.AddComponent<Controller2D>();
-            GameTestFixture.Invoke(controller, "Awake");
-            _character = characterRoot.AddComponent<MainCharacter>();
-            Set(_character, "<Controller>k__BackingField", controller, typeof(GameCharacter));
+            _character = _fixture.CreateCharacter();
             GameTestFixture.Invoke(_character, "OnEnable");
             CharacterManager.Instance.RegisterMainCharacter(_character);
 
@@ -136,7 +131,7 @@ namespace Core.TimeAndWeather.Editor
         {
             Assert.That(NextYield(), Is.Not.Null);
             Assert.That(_input.Actions.enabled, Is.False);
-            Assert.That(_character.IsFrozen, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.True);
             Assert.That(GameState.Time.daysSinceStart, Is.EqualTo(5));
             _clock.EndDay(); // A second bedtime request must not start another transition.
 
