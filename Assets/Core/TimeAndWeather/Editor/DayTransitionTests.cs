@@ -7,6 +7,7 @@ using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
 using Core.Location;
+using Interaction;
 using DG.Tweening;
 using NUnit.Framework;
 using UI.Shared;
@@ -39,6 +40,21 @@ namespace Core.TimeAndWeather.Editor
             _fixture.AddSingleton<CharacterManager>();
             var level = _fixture.RegisterSingleton<LevelManager>();
             Set(level, "<SceneReady>k__BackingField", true);
+            var homeLocation = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+            homeLocation.id = "test:home";
+            Set(level, "<CurrentLocationData>k__BackingField", homeLocation);
+            _fixture.AddSingleton<PlayerStateManager>();
+            var bedObject = Child("Home bed");
+            bedObject.AddComponent<BoxCollider2D>();
+            var bed = bedObject.AddComponent<Bed>();
+            var bedSlot = bed.GetComponent<InteractionSlot>();
+            var wakePoint = Child("Wake point").transform;
+            wakePoint.position = new Vector3(3, 2, 0);
+            Set(bedSlot, "exitPoint", wakePoint);
+            Set(bedSlot, "occupiedAnimation", AssetDatabase.LoadAssetAtPath<Character.Animations.CharacterAnimationDefinition>("Assets/Interaction/PrototypeSittingAnimation.asset"));
+            GameTestFixture.Invoke(bedSlot, "Awake");
+            GameTestFixture.Invoke(bed, "Awake");
+            GameState.Player.Home = new PlayerHomeState(homeLocation.id, bed.PersistentId);
             _input = _fixture.AddSingleton<Input.InputManager>(input =>
             {
                 input.GetComponent<PlayerInput>().actions = _fixture.Own(Object.Instantiate(
@@ -93,6 +109,34 @@ namespace Core.TimeAndWeather.Editor
         }
 
         [Test]
+        public void StartingHomeIsAssignedOnceWithoutOverwritingASavedChoice()
+        {
+            var manager = PlayerStateManager.Instance;
+            Set(manager, "_startingHomeLocation", LevelManager.Instance.CurrentLocationData);
+            Set(manager, "_startingBedId", "starting-bed");
+            GameState.Player.Home = null;
+            manager.InitializeHome();
+            Assert.That(GameState.Player.Home.BedId, Is.EqualTo("starting-bed"));
+            GameState.Player.Home = new PlayerHomeState("test:another-home", "selected-bed");
+            manager.InitializeHome();
+            Assert.That(GameState.Player.Home.LocationId, Is.EqualTo("test:another-home"));
+            Assert.That(GameState.Player.Home.BedId, Is.EqualTo("selected-bed"));
+        }
+
+        [Test]
+        public void MissingHomeBedFailsBehindBlackWithoutAdvancingTheDay()
+        {
+            GameState.Player.Home.BedId = "missing-bed";
+            NextYield();
+            DOTween.Complete(_canvas, true);
+            Assert.Throws<InvalidOperationException>(() => NextYield());
+            Assert.That(GameState.Time.daysSinceStart, Is.EqualTo(5));
+            Assert.That(_newDays, Is.Zero);
+            ((IDisposable)_routine).Dispose();
+            Assert.That(_input.Actions.enabled, Is.True);
+        }
+
+        [Test]
         public void SharedCoverAndRevealHaveNoOvernightGameplayEffects()
         {
             var gui = UrGUIManager.Instance;
@@ -139,6 +183,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(NextYield(), Is.TypeOf<WaitForSecondsRealtime>());
             Assert.That(_newDays, Is.EqualTo(1));
             Assert.That(GameState.Time.hour, Is.EqualTo(6));
+            Assert.That(_character.transform.position, Is.EqualTo(new Vector3(3, 2, 0)));
             Assert.That(_input.Actions.enabled, Is.False);
 
             Assert.That(NextYield(), Is.Not.Null);

@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Events;
+using Core.Game;
 using Core.Tile;
 using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
+using Interaction;
 using UI.Shared;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -109,7 +111,8 @@ namespace Core.Location
         }
 
         // Entry and facing data is passed into the location load.
-        IEnumerator EnterLocationRoutine(LocationData locationData, string entryKey = null, Vector2 facingDirection = default)
+        IEnumerator EnterLocationRoutine(LocationData locationData, string entryKey = null, Vector2 facingDirection = default,
+            bool reveal = true, Action<MainCharacter> placeCharacter = null)
         {
             SceneReady = false;
 
@@ -118,7 +121,7 @@ namespace Core.Location
 
             // Spawn and place character
             var character = SpawnOrFindPlayer();
-            PlaceCharacterAtSpawn(character, entryKey, facingDirection);
+            if (placeCharacter == null) PlaceCharacterAtSpawn(character, entryKey, facingDirection);
 
             // Ensure character runtime initialization
             character.EnsureRuntimeInitialized();
@@ -129,8 +132,9 @@ namespace Core.Location
                 if (_lifecycleComponents.Contains(component) && CanReceiveLocation(component, locationData))
                     component.OnLocationEnter(locationData);
 
-            // Fade in
-            yield return UrGUIManager.Instance.RevealScene(character.transform);
+            // Custom placement runs after location listeners restore persistent objects, including the home bed.
+            placeCharacter?.Invoke(character);
+            if (reveal) yield return UrGUIManager.Instance.RevealScene(character.transform);
             
             SceneReady = true;
         }
@@ -140,6 +144,28 @@ namespace Core.Location
         public void LoadLocation(LocationData location, string entryKey, Vector2 facingDirection)
         {
             StartCoroutine(LoadRoutine(location.ScenePath, location, entryKey, facingDirection));
+        }
+
+        /// <summary>Loads and initializes a location without fading; the caller owns the covered screen and final placement.</summary>
+        public IEnumerator LoadLocationCovered(LocationData location, Action<MainCharacter> placeCharacter) =>
+            LoadRoutine(location.ScenePath, location, covered: true, placeCharacter: placeCharacter);
+
+        /// <summary>Returns to the saved home behind an already-covered screen, awaiting location initialization and bed placement.</summary>
+        public IEnumerator ReturnHome(MainCharacter character)
+        {
+            var home = GameState.Player.Home;
+            if (CurrentLocationData.id == home.LocationId)
+                PlaceAtHome(character, home.BedId);
+            else
+                yield return LoadLocationCovered(GetLocationDataById(home.LocationId),
+                    player => PlaceAtHome(player, home.BedId));
+        }
+
+        private static void PlaceAtHome(MainCharacter character, string bedId)
+        {
+            // Exactly one live bed must have this authored identity. Missing or duplicate beds are broken content.
+            var bed = FindObjectsByType<Bed>(FindObjectsSortMode.None).Single(b => b.PersistentId == bedId);
+            bed.PlaceCharacter(character);
         }
 
         public bool TransitionWithinCurrentLocation(string entryKey, Vector2 facingDirection)
@@ -205,14 +231,15 @@ namespace Core.Location
             return scene.IsValid() ? scene : SceneManager.GetSceneByName(scenePath);
         }
 
-        IEnumerator LoadRoutine(string sceneName, LocationData locationData, string entryKey = null, Vector2 facingDirection = default)
+        IEnumerator LoadRoutine(string sceneName, LocationData locationData, string entryKey = null, Vector2 facingDirection = default,
+            bool covered = false, Action<MainCharacter> placeCharacter = null)
         {
             SceneReady = false;
             var character = MainCharacter.CurrentMainCharacter;
             character.SetControlBlocked(this, true);
             try
             {
-            yield return UrGUIManager.Instance.CoverScene(character.transform);
+            if (!covered) yield return UrGUIManager.Instance.CoverScene(character.transform);
 
             // Notify all lifecycle components before unloading the old scene
             _locationEntered = false;
@@ -222,6 +249,10 @@ namespace Core.Location
 
             var previousScene = SceneManager.GetActiveScene();
 
+            // Location changes retain the player; the overnight caller also keeps this character through its reveal.
+            character.transform.SetParent(null, true);
+            DontDestroyOnLoad(character.gameObject);
+
             yield return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
             SceneManager.SetActiveScene(GetLoadedScene(sceneName));
 
@@ -229,7 +260,7 @@ namespace Core.Location
             yield return null; // Allow new scene's OnEnable to fire so components can register
 
             SetCurrentLocation(locationData);
-            yield return EnterLocationRoutine(locationData, entryKey, facingDirection);
+            yield return EnterLocationRoutine(locationData, entryKey, facingDirection, !covered, placeCharacter);
             }
             finally
             {

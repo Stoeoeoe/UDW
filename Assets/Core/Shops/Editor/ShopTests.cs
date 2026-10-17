@@ -50,6 +50,7 @@ namespace Core.Shops.Editor
             _fixture = new Core.Common.Editor.GameTestFixture("Shop tests");
             _root = _fixture.Root;
             _manager = _fixture.AddSingleton<GameStateManager>();
+            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
             GameState.Time.daysSinceStart = 1;
             _item = ScriptableObject.CreateInstance<ShopTestItem>();
             Set(_item, "_itemId", "test:shop-item");

@@ -151,6 +151,7 @@ namespace Core.Game.Editor
             data.time.minute = 20;
             data.time.secondsTowardNextMinute = 2.5f;
             data.player.StaminaInitialized = true;
+            data.player.Home = new PlayerHomeState("test:home", "test-bed");
             data.player.CurrentStamina = 42;
             data.player.Inventory.StartingLoadoutApplied = true;
             data.player.Inventory.Toolbelt = new[] { "base:hammer", null, null };
@@ -213,6 +214,8 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Favour.GetFavour("mars"), Is.EqualTo(12));
                 Assert.That(loaded.player.StaminaInitialized, Is.True);
                 Assert.That(loaded.player.CurrentStamina, Is.EqualTo(42));
+                Assert.That(loaded.player.Home.LocationId, Is.EqualTo("test:home"));
+                Assert.That(loaded.player.Home.BedId, Is.EqualTo("test-bed"));
                 Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);
                 Assert.That(loaded.player.Inventory.Toolbelt[0], Is.EqualTo("base:hammer"));
                 Assert.That(loaded.player.Inventory.SelectedItemId, Is.EqualTo("base:hammer"));
@@ -289,6 +292,7 @@ namespace Core.Game.Editor
             var slot = "test-" + Guid.NewGuid().ToString("N");
             var path = GameSaveService.GetSavePath(slot);
             var data = new GameSaveData();
+            data.player.Home = new PlayerHomeState("test:home", "test-bed");
             data.time.initialized = true;
             data.time.daysSinceStart = 1;
             data.time.dayOfSeason = 1;

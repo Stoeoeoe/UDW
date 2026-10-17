@@ -26,10 +26,11 @@ namespace Core.Game
     [Serializable]
     public sealed class PlayerState
     {
-        [field: OdinSerialize] public CharacterSkills Skills { get; private set; } = new CharacterSkills();
-        [field: OdinSerialize] public DivineFavourState Favour { get; private set; } = new DivineFavourState();
-        [field: OdinSerialize] public WalletState Wallet { get; private set; } = new WalletState();
-        [field: OdinSerialize] public InventoryState Inventory { get; private set; } = new();
+        public PlayerHomeState Home;
+        public CharacterSkills Skills = new();
+        public DivineFavourState Favour = new();
+        public WalletState Wallet = new();
+        public InventoryState Inventory = new();
         public bool StaminaInitialized;
         public int CurrentStamina;
     }

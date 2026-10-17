@@ -10694,6 +10694,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8b92d76454e6af84cbbdb64e9263dc4c, type: 2}
   - {fileID: 11400000, guid: 2b2d483d2d3cdf04b912715bb138ae15, type: 2}
   _startingItems: []
+  _startingHomeLocation: {fileID: 11400000, guid: 3f3e5bd81c79f0c45bb7c97d7d1f44ce, type: 2}
+  _startingBedId: GameObject_10358e7f-122e-406c-8eea-f535e3e0102c
 --- !u!1 &3671229915821791108
 GameObject:
   m_ObjectHideFlags: 0

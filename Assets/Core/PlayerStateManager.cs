@@ -4,6 +4,7 @@ using System.Linq;
 using Core.Events;
 using Core.Game;
 using Core.Inventory;
+using Core.Location;
 using Interaction.Tools;
 using Interaction.Tools.Stamina;
 using Items;
@@ -21,6 +22,12 @@ namespace Core
         [SerializeField] int _startingStamina = 100;
         [SerializeField] ToolData[] _startingTools = Array.Empty<ToolData>();
         [SerializeField] ItemDefinition[] _startingItems = Array.Empty<ItemDefinition>();
+        [Header("Starting home")]
+        [SerializeField] private LocationData _startingHomeLocation;
+        [SerializeField] private string _startingBedId;
+
+        public LocationData StartingHomeLocation => _startingHomeLocation;
+        public string StartingBedId => _startingBedId;
 
         void OnEnable()  => this.Subscribe<StaminaChangedEvent>();
         void OnDisable() => this.Unsubscribe<StaminaChangedEvent>();
@@ -39,6 +46,7 @@ namespace Core
         public void InitializeCharacter(MainCharacter character)
         {
             var player = GameState.Player;
+            InitializeHome();
             if (!player.StaminaInitialized)
             {
                 player.CurrentStamina = _startingStamina;
@@ -60,5 +68,15 @@ namespace Core
 
             character.Stamina.Initialize(savedStamina);
         }
+
+        /// <summary>Seeds a new player's home once. Loaded and subsequently reassigned homes remain authoritative.</summary>
+        public void InitializeHome()
+        {
+            if (GameState.Player.Home != null) return;
+            if (!_startingHomeLocation)
+                throw new InvalidOperationException("PlayerStateManager requires a configured starting home location.");
+            GameState.Player.Home = new PlayerHomeState(_startingHomeLocation.id, _startingBedId);
+        }
+
     }
 }

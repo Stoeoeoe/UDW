@@ -294,6 +294,7 @@ namespace Core.TimeAndWeather
                 gui.TransitionInterrupted += CancelDayTransition;
                 EventBus<DayTransitionStarted>.Raise(new DayTransitionStarted(character));
                 yield return gui.CoverScene(character.transform);
+                yield return LevelManager.Instance.ReturnHome(character);
                 // NewDayEvent listeners run only after the screen is completely covered.
                 StartNewDay();
                 yield return gui.RevealScene(character.transform, dayBlackoutDuration, newDayJingle);

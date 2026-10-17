@@ -29,6 +29,10 @@ namespace Core.Game
 
             if (player.Inventory.StartingLoadoutApplied && player.Inventory.Slots == null)
                 throw new FormatException("The initialized inventory is missing its slots.");
+
+            if (player.Home == null)
+                throw new FormatException("The save is missing the player's home assignment.");
+            player.Home.Validate();
             if (player.Inventory.Slots != null)
                 foreach (var slot in player.Inventory.Slots.Concat(new[] { player.Inventory.HeldSlot }))
                     if (slot.Quantity < 0 || (slot.Quantity > 0 && string.IsNullOrWhiteSpace(slot.ItemId)))
