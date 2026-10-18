@@ -15,7 +15,7 @@ namespace Interaction.Tools.Stamina
 
         public int StartStamina => startingStamina;
         public int MaxStamina => _attributes.MaxStamina;
-        public int CurrentStamina => _state.Current;
+        public int CurrentStamina => _state.Current + _state.Overcharge;
 
         internal void Bind(GameCharacter character)
         {
@@ -32,7 +32,7 @@ namespace Interaction.Tools.Stamina
                 state.Current = startingStamina;
                 state.Initialized = true;
             }
-            state.Current = Math.Min(state.Current, MaxStamina);
+            ReconcileMaximum();
             _attributes.MaximumStaminaChanged -= RefreshMaximum;
             _attributes.MaximumStaminaChanged += RefreshMaximum;
             Publish();
@@ -44,7 +44,9 @@ namespace Interaction.Tools.Stamina
             if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
             var spent = Math.Min(amount, CurrentStamina);
             if (spent == 0) return 0;
-            _state.Current -= spent;
+            var surplusSpent = Math.Min(spent, _state.Overcharge);
+            _state.Overcharge -= surplusSpent;
+            _state.Current -= spent - surplusSpent;
             Publish();
             if (CurrentStamina == 0) StaminaDepletedEvent.Trigger(_character);
             return spent;
@@ -54,7 +56,7 @@ namespace Interaction.Tools.Stamina
         public int RestoreStamina(int amount)
         {
             if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
-            var restored = Math.Min(amount, MaxStamina - CurrentStamina);
+            var restored = Math.Min(amount, Math.Max(0, MaxStamina - CurrentStamina));
             if (restored == 0) return 0;
             _state.Current += restored;
             Publish();
@@ -64,10 +66,31 @@ namespace Interaction.Tools.Stamina
         /// <summary>Restores stamina to the current maximum.</summary>
         public int RestoreToFull() => RestoreStamina(MaxStamina);
 
+        /// <summary>Adds stamina beyond the normal cap when full. Surplus is spent first and ordinary recovery cannot refill it.</summary>
+        public int GrantOvercharge(int amount)
+        {
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            if (amount == 0) return 0;
+            var total = checked(CurrentStamina + amount);
+            _state.Current = Math.Min(total, MaxStamina);
+            _state.Overcharge = total - _state.Current;
+            Publish();
+            return amount;
+        }
+
         private void RefreshMaximum()
         {
-            _state.Current = Math.Min(CurrentStamina, MaxStamina);
+            ReconcileMaximum();
             Publish();
+        }
+
+        private void ReconcileMaximum()
+        {
+            // Capacity loss still caps normal stamina. Capacity gained absorbs existing surplus without granting points.
+            _state.Current = Math.Min(_state.Current, MaxStamina);
+            var absorbed = Math.Min(_state.Overcharge, MaxStamina - _state.Current);
+            _state.Current += absorbed;
+            _state.Overcharge -= absorbed;
         }
 
         private void Publish() => StaminaChangedEvent.Trigger(_character, CurrentStamina, MaxStamina);

@@ -11,7 +11,7 @@ namespace Character
         private CharacterAttributes _attributes;
         private HealthState _state;
 
-        public int CurrentHealth => _state.Current;
+        public int CurrentHealth => _state.Current + _state.Overcharge;
         public int MaxHealth => _attributes.MaxHealth;
         public bool IsDead => CurrentHealth == 0;
 
@@ -30,8 +30,7 @@ namespace Character
                 state.Current = MaxHealth;
                 state.Initialized = true;
             }
-            // A loaded character's equipment or bonuses may now give it a smaller maximum.
-            state.Current = Math.Min(state.Current, MaxHealth);
+            ReconcileMaximum();
             _attributes.MaximumHealthChanged -= RefreshMaximum;
             _attributes.MaximumHealthChanged += RefreshMaximum;
             if (IsDead) _character.SetConditionState(ConditionState.Dead);
@@ -44,7 +43,9 @@ namespace Character
             if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
             var lost = Math.Min(amount, CurrentHealth);
             if (lost == 0) return 0;
-            _state.Current -= lost;
+            var surplusLost = Math.Min(lost, _state.Overcharge);
+            _state.Overcharge -= surplusLost;
+            _state.Current -= lost - surplusLost;
             if (IsDead) _character.SetConditionState(ConditionState.Dead);
             Publish();
             return lost;
@@ -55,7 +56,7 @@ namespace Character
         {
             if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
             if (IsDead) return 0;
-            var restored = Math.Min(amount, MaxHealth - CurrentHealth);
+            var restored = Math.Min(amount, Math.Max(0, MaxHealth - CurrentHealth));
             if (restored == 0) return 0;
             _state.Current += restored;
             Publish();
@@ -65,10 +66,31 @@ namespace Character
         /// <summary>Fully heals a living character; does not revive a dead one.</summary>
         public int RestoreToFull() => Heal(MaxHealth);
 
+        /// <summary>Adds health beyond the normal cap when full. Surplus is spent first and cannot be healed back; does not revive.</summary>
+        public int GrantOvercharge(int amount)
+        {
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            if (IsDead || amount == 0) return 0;
+            var total = checked(CurrentHealth + amount);
+            _state.Current = Math.Min(total, MaxHealth);
+            _state.Overcharge = total - _state.Current;
+            Publish();
+            return amount;
+        }
+
         private void RefreshMaximum()
         {
-            _state.Current = Math.Min(CurrentHealth, MaxHealth);
+            ReconcileMaximum();
             Publish();
+        }
+
+        private void ReconcileMaximum()
+        {
+            // Capacity loss still caps normal health. Capacity gained absorbs existing surplus without granting points.
+            _state.Current = Math.Min(_state.Current, MaxHealth);
+            var absorbed = Math.Min(_state.Overcharge, MaxHealth - _state.Current);
+            _state.Current += absorbed;
+            _state.Overcharge -= absorbed;
         }
 
         private void Publish() => HealthChangedEvent.Trigger(_character, CurrentHealth, MaxHealth);

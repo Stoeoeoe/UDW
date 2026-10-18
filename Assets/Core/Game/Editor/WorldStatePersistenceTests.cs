@@ -197,6 +197,18 @@ namespace Core.Game.Editor
             Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
         }
 
+        [TestCase(-1)]
+        [TestCase(int.MaxValue)]
+        public void SaveValidationRejectsNegativeOrOverflowingOvercharge(int surplus)
+        {
+            var data = new GameSaveData();
+            data.player.Health = new HealthState { Initialized = true, Current = 100, Overcharge = surplus };
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("health"));
+            data.player.Health.Overcharge = 0;
+            data.player.Stamina = new StaminaState { Initialized = true, Current = 100, Overcharge = surplus };
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("stamina"));
+        }
+
         [Test]
         public void SaveAndLoadRoundTripWorldPlayerAndStory()
         {
@@ -211,8 +223,8 @@ namespace Core.Game.Editor
             data.time.minute = 20;
             data.time.secondsTowardNextMinute = 2.5f;
             data.player.Home = new PlayerHomeState("test:home", "test-bed");
-            data.player.Stamina = new StaminaState { Initialized = true, Current = 42 };
-            data.player.Health = new HealthState { Initialized = true, Current = 37 };
+            data.player.Stamina = new StaminaState { Initialized = true, Current = 100, Overcharge = 20 };
+            data.player.Health = new HealthState { Initialized = true, Current = 100, Overcharge = 30 };
             data.player.Boosts.Active["sleep:well-rested"] = new ActiveAttributeBoost { ExpiresAtMinute = data.time.TotalMinutes + 1440, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Flat = 5, Percent = 0.25f } } };
             data.player.Inventory.StartingLoadoutApplied = true;
             data.player.Inventory.Toolbelt = new[] { "base:hammer", null, null };
@@ -274,9 +286,11 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Skills.GetLevel("hammer-mastery"), Is.EqualTo(3));
                 Assert.That(loaded.player.Favour.GetFavour("mars"), Is.EqualTo(12));
                 Assert.That(loaded.player.Stamina.Initialized, Is.True);
-                Assert.That(loaded.player.Stamina.Current, Is.EqualTo(42));
+                Assert.That(loaded.player.Stamina.Current, Is.EqualTo(100));
+                Assert.That(loaded.player.Stamina.Overcharge, Is.EqualTo(20));
                 Assert.That(loaded.player.Health.Initialized, Is.True);
-                Assert.That(loaded.player.Health.Current, Is.EqualTo(37));
+                Assert.That(loaded.player.Health.Current, Is.EqualTo(100));
+                Assert.That(loaded.player.Health.Overcharge, Is.EqualTo(30));
                 Assert.That(loaded.player.Boosts.Active["sleep:well-rested"].ExpiresAtMinute, Is.EqualTo(data.time.TotalMinutes + 1440));
                 var bonus = loaded.player.Boosts.Active["sleep:well-rested"].Bonuses[0];
                 Assert.That(bonus.Attribute, Is.EqualTo(CharacterAttributeType.MaxStamina));

@@ -149,6 +149,85 @@ namespace Character.Editor
             Assert.That(_changes, Is.Empty);
         }
 
+        [Test]
+        public void OverchargeIsSpentFirstAndOrdinaryRecoveryCannotRefillIt()
+        {
+            Assert.That(_stamina.GrantOvercharge(20), Is.EqualTo(20));
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(120));
+            Assert.That(_stamina.MaxStamina, Is.EqualTo(100));
+            Assert.That(_state.Current, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.EqualTo(20));
+            Assert.That(_changes[0].Current, Is.EqualTo(120));
+            Assert.That(_changes[0].Max, Is.EqualTo(100));
+            Assert.That(_stamina.RestoreStamina(50), Is.Zero);
+            Assert.That(_stamina.RestoreToFull(), Is.Zero);
+            Assert.That(_changes.Count, Is.EqualTo(1));
+            _stamina.ConsumeStamina(10);
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(110));
+            Assert.That(_state.Overcharge, Is.EqualTo(10));
+            Assert.That(_stamina.RestoreToFull(), Is.Zero);
+            _stamina.ConsumeStamina(20);
+            Assert.That(_state.Overcharge, Is.Zero);
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(90));
+            Assert.That(_stamina.RestoreToFull(), Is.EqualTo(10));
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void GrantFillsMissingNormalPointsBeforeCreatingSurplus()
+        {
+            _stamina.ConsumeStamina(30);
+            _stamina.GrantOvercharge(20);
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(90));
+            Assert.That(_state.Overcharge, Is.Zero);
+            _stamina.GrantOvercharge(20);
+            Assert.That(_state.Current, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void RebindingPreservesSurplusAndSpendingUpdatesTheLiveState()
+        {
+            var saved = new StaminaState { Initialized = true, Current = 100, Overcharge = 20 };
+            _stamina.Initialize(saved);
+            _stamina.Initialize(saved);
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(120));
+            _stamina.ConsumeStamina(25);
+            Assert.That(saved.Current, Is.EqualTo(95));
+            Assert.That(saved.Overcharge, Is.Zero);
+            _stamina.Initialize(saved);
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(95));
+        }
+
+        [Test]
+        public void MaximumChangesCapNormalPointsAndAbsorbExistingSurplusWithoutRefilling()
+        {
+            _stamina.GrantOvercharge(20);
+            _character.Attributes.SetModifier(CharacterAttributeType.MaxStamina, "test:capacity", -20);
+            Assert.That(_state.Current, Is.EqualTo(80));
+            Assert.That(_state.Overcharge, Is.EqualTo(20));
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(100));
+            _character.Attributes.RemoveModifier(CharacterAttributeType.MaxStamina, "test:capacity");
+            Assert.That(_state.Current, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.Zero);
+            _stamina.GrantOvercharge(20);
+            _character.Attributes.SetModifier(CharacterAttributeType.MaxStamina, "test:capacity", 25);
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(120));
+            Assert.That(_state.Overcharge, Is.Zero);
+            Assert.That(_stamina.MaxStamina, Is.EqualTo(125));
+        }
+
+        [Test]
+        public void ZeroAndInvalidOverchargeAmountsDoNotMutateTheResource()
+        {
+            Assert.That(_stamina.GrantOvercharge(0), Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _stamina.GrantOvercharge(-1));
+            Assert.Throws<OverflowException>(() => _stamina.GrantOvercharge(int.MaxValue));
+            Assert.That(_stamina.CurrentStamina, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.Zero);
+            Assert.That(_changes, Is.Empty);
+        }
+
         public void OnEvent(StaminaChangedEvent change)
         {
             Assert.That(change.Current, Is.EqualTo(change.Character.Stamina.CurrentStamina));

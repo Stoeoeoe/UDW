@@ -78,6 +78,7 @@ namespace Character.Editor
             Assert.That(_character.ConditionState, Is.EqualTo(ConditionState.Dead));
             Assert.That(_health.TakeDamage(1), Is.Zero);
             Assert.That(_health.Heal(100), Is.Zero);
+            Assert.That(_health.GrantOvercharge(20), Is.Zero);
             Assert.That(_health.RestoreToFull(), Is.Zero);
             Assert.That(_health.IsDead, Is.True);
             Assert.That(deaths, Is.EqualTo(1));
@@ -156,6 +157,85 @@ namespace Character.Editor
             Assert.Throws<ArgumentOutOfRangeException>(() => _health.TakeDamage(-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _health.Heal(-1));
             Assert.That(_health.CurrentHealth, Is.EqualTo(100));
+            Assert.That(_changes, Is.Empty);
+        }
+
+        [Test]
+        public void OverchargeIsSpentFirstAndOrdinaryRecoveryCannotRefillIt()
+        {
+            Assert.That(_health.GrantOvercharge(20), Is.EqualTo(20));
+            Assert.That(_health.CurrentHealth, Is.EqualTo(120));
+            Assert.That(_health.MaxHealth, Is.EqualTo(100));
+            Assert.That(_state.Current, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.EqualTo(20));
+            Assert.That(_changes[0].Current, Is.EqualTo(120));
+            Assert.That(_changes[0].Max, Is.EqualTo(100));
+            Assert.That(_health.Heal(50), Is.Zero);
+            Assert.That(_health.RestoreToFull(), Is.Zero);
+            Assert.That(_changes.Count, Is.EqualTo(1));
+            _health.TakeDamage(10);
+            Assert.That(_health.CurrentHealth, Is.EqualTo(110));
+            Assert.That(_state.Overcharge, Is.EqualTo(10));
+            Assert.That(_health.RestoreToFull(), Is.Zero);
+            _health.TakeDamage(20);
+            Assert.That(_state.Overcharge, Is.Zero);
+            Assert.That(_health.CurrentHealth, Is.EqualTo(90));
+            Assert.That(_health.RestoreToFull(), Is.EqualTo(10));
+            Assert.That(_health.CurrentHealth, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void GrantFillsMissingNormalPointsBeforeCreatingSurplus()
+        {
+            _health.TakeDamage(30);
+            _health.GrantOvercharge(20);
+            Assert.That(_health.CurrentHealth, Is.EqualTo(90));
+            Assert.That(_state.Overcharge, Is.Zero);
+            _health.GrantOvercharge(20);
+            Assert.That(_state.Current, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void RebindingPreservesSurplusAndSpendingUpdatesTheLiveState()
+        {
+            var saved = new HealthState { Initialized = true, Current = 100, Overcharge = 20 };
+            _health.Initialize(saved);
+            _health.Initialize(saved);
+            Assert.That(_health.CurrentHealth, Is.EqualTo(120));
+            _health.TakeDamage(25);
+            Assert.That(saved.Current, Is.EqualTo(95));
+            Assert.That(saved.Overcharge, Is.Zero);
+            _health.Initialize(saved);
+            Assert.That(_health.CurrentHealth, Is.EqualTo(95));
+        }
+
+        [Test]
+        public void MaximumChangesCapNormalPointsAndAbsorbExistingSurplusWithoutRefilling()
+        {
+            _health.GrantOvercharge(20);
+            _character.Attributes.SetModifier(CharacterAttributeType.MaxHealth, "test:capacity", -20);
+            Assert.That(_state.Current, Is.EqualTo(80));
+            Assert.That(_state.Overcharge, Is.EqualTo(20));
+            Assert.That(_health.CurrentHealth, Is.EqualTo(100));
+            _character.Attributes.RemoveModifier(CharacterAttributeType.MaxHealth, "test:capacity");
+            Assert.That(_state.Current, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.Zero);
+            _health.GrantOvercharge(20);
+            _character.Attributes.SetModifier(CharacterAttributeType.MaxHealth, "test:capacity", 25);
+            Assert.That(_health.CurrentHealth, Is.EqualTo(120));
+            Assert.That(_state.Overcharge, Is.Zero);
+            Assert.That(_health.MaxHealth, Is.EqualTo(125));
+        }
+
+        [Test]
+        public void ZeroAndInvalidOverchargeAmountsDoNotMutateTheResource()
+        {
+            Assert.That(_health.GrantOvercharge(0), Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _health.GrantOvercharge(-1));
+            Assert.Throws<OverflowException>(() => _health.GrantOvercharge(int.MaxValue));
+            Assert.That(_health.CurrentHealth, Is.EqualTo(100));
+            Assert.That(_state.Overcharge, Is.Zero);
             Assert.That(_changes, Is.Empty);
         }
 

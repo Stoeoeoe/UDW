@@ -27,11 +27,13 @@ namespace Core.Game
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
 
-            if (player.Health.Current < 0)
-                throw new FormatException("The save contains negative player health.");
+            if (player.Health.Current < 0 || player.Health.Overcharge < 0 ||
+                (long)player.Health.Current + player.Health.Overcharge > int.MaxValue)
+                throw new FormatException("The save contains invalid player health.");
 
-            if (player.Stamina.Current < 0)
-                throw new FormatException("The save contains negative player stamina.");
+            if (player.Stamina.Current < 0 || player.Stamina.Overcharge < 0 ||
+                (long)player.Stamina.Current + player.Stamina.Overcharge > int.MaxValue)
+                throw new FormatException("The save contains invalid player stamina.");
 
             foreach (var boost in player.Boosts.Active)
             {
