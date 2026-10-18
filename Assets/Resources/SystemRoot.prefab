@@ -2518,6 +2518,7 @@ GameObject:
   - component: {fileID: 7446204801965182001}
   - component: {fileID: 7410992665882482011}
   - component: {fileID: 7410992665882482012}
+  - component: {fileID: 8864502943986586909}
   m_Layer: 0
   m_Name: SystemRoot
   m_TagString: Untagged
@@ -2648,6 +2649,18 @@ MonoBehaviour:
     Title: Settings
     Layout: {fileID: 0}
     Placeholder: Settings are not available yet.
+--- !u!114 &8864502943986586909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893779559843713635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0fa94c8998ded94bae5482edf4f7811, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Clock.ClockHudPresenter
 --- !u!1 &1124810803398170432
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="ClockHud.uss" />
+    <ui:VisualElement name="clockHud" class="clock-hud" picking-mode="Ignore">
+        <ui:Label name="clockTime" class="clock-hud-time" text="06:00" picking-mode="Ignore" />
+        <ui:Label name="clockDate" class="clock-hud-date" text="Spring · Day 5" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

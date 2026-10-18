@@ -198,7 +198,7 @@ namespace Core.TimeAndWeather
             WeatherManager.Instance.RefreshConditions();
             NewDayEvent.Trigger(time.daysSinceStart);
             GameTimeChangedEvent.Trigger(time.TotalMinutes);
-            Debug.Log("Starting day " + time.daysSinceStart + " of season " + time.season);
+            Debug.Log($"Starting {time.season} day {time.dayOfSeason} at {time.hour:00}:{time.minute:00} (game day {time.daysSinceStart}).");
         }
 
         public void StartSeason(Season season)
