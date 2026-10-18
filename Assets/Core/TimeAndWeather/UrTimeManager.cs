@@ -120,7 +120,7 @@ namespace Core.TimeAndWeather
 
             if (time.hour >= endOfDay)
             {
-                EndDay();
+                EndDay(DayEndReason.PassedOut);
                 return; // The transition publishes the next morning's clock after fading to black.
             }
             if (time.TotalMinutes != previousMinute)
@@ -128,17 +128,17 @@ namespace Core.TimeAndWeather
         }
 
         /// <summary>Fades through the next morning, stopping the clock and player controls during the transition.</summary>
-        public void EndDay()
+        public void EndDay(DayEndReason reason = DayEndReason.Sleep)
         {
             if (_dayTransitionRoutine != null || !LevelManager.Instance.SceneReady) return;
             var character = CharacterManager.Instance.MainCharacter;
             if (!character)
                 throw new System.InvalidOperationException("Ending the day requires a registered main character.");
-            _dayTransitionRoutine = TransitionToNextDay(character);
+            _dayTransitionRoutine = TransitionToNextDay(character, reason, GameState.Time.hour);
             StartCoroutine(_dayTransitionRoutine);
         }
 
-        private IEnumerator TransitionToNextDay(Character.MainCharacter character)
+        private IEnumerator TransitionToNextDay(Character.MainCharacter character, DayEndReason reason, int bedtimeHour)
         {
             var gui = UrGUIManager.Instance;
             try
@@ -149,6 +149,8 @@ namespace Core.TimeAndWeather
                 yield return LevelManager.Instance.ReturnHome(character);
                 // NewDayEvent listeners run only after the screen is completely covered.
                 StartNewDay();
+                // Recovery follows clock-driven expirations and only occurs once the overnight advance succeeds.
+                EventBus<OvernightRestCompleted>.Raise(new OvernightRestCompleted(character, reason, bedtimeHour));
                 yield return gui.RevealScene(character.transform, dayBlackoutDuration, newDayJingle);
             }
             finally

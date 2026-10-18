@@ -228,6 +228,20 @@ namespace Character.Editor
             Assert.That(_changes, Is.Empty);
         }
 
+        [Test]
+        public void OvernightRecoveryReplacesSurplusWithOneNotificationAndNoDepletion()
+        {
+            _stamina.GrantOvercharge(50);
+            _changes.Clear();
+            _character.OnEvent(new Core.TimeAndWeather.OvernightRestCompleted(
+                _character, Core.TimeAndWeather.DayEndReason.PassedOut, 23));
+            Assert.That(_state.Current, Is.EqualTo(60));
+            Assert.That(_state.Overcharge, Is.Zero);
+            Assert.That(_changes.Count, Is.EqualTo(1));
+            Assert.That(_changes[0].Current, Is.EqualTo(60));
+            Assert.That(_depleted, Is.Empty);
+        }
+
         public void OnEvent(StaminaChangedEvent change)
         {
             Assert.That(change.Current, Is.EqualTo(change.Character.Stamina.CurrentStamina));

@@ -95,12 +95,8 @@ namespace Core.TimeAndWeather.Editor
             GameState.Time.hour = 23;
             _newDays = 0;
             EventBus<NewDayEvent>.Subscribe(this);
-            _routine = (IEnumerator)typeof(UrTimeManager).GetMethod("TransitionToNextDay", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_clock, new object[] { _character });
-            // EndDay normally stores this before starting Unity's coroutine scheduler.
-            Set(_clock, "_dayTransitionRoutine", _routine);
             _steps = new Stack<IEnumerator>();
-            _steps.Push(_routine);
+            PrepareNight(23, 0, DayEndReason.Sleep);
         }
 
         [TearDown]
@@ -203,6 +199,8 @@ namespace Core.TimeAndWeather.Editor
         [Test]
         public void CancellationBeforeBlackoutReleasesControlsWithoutAdvancingTheDay()
         {
+            _character.Health.TakeDamage(30);
+            _character.Stamina.ConsumeStamina(40);
             NextYield();
             GameTestFixture.Invoke(_clock, "OnDisable");
             Assert.That(_input.Actions.enabled, Is.True);
@@ -210,7 +208,70 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(GameState.Time.daysSinceStart, Is.EqualTo(5));
             Assert.That(_canvas.alpha, Is.Zero);
             Assert.That(_canvas.blocksRaycasts, Is.False);
+            Assert.That(_character.Health.CurrentHealth, Is.EqualTo(70));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(60));
             AssertClockResumes();
+        }
+
+        [TestCase(20, 59, DayEndReason.Sleep, 120)]
+        [TestCase(21, 0, DayEndReason.Sleep, 110)]
+        [TestCase(22, 59, DayEndReason.Sleep, 110)]
+        [TestCase(23, 0, DayEndReason.Sleep, 100)]
+        [TestCase(20, 0, DayEndReason.PassedOut, 60)]
+        [TestCase(23, 0, DayEndReason.PassedOut, 60)]
+        public void OvernightRecoveryUsesTheOriginalBedtimeAndReasonBehindBlack(int hour, int minute, DayEndReason reason, int expectedStamina)
+        {
+            PrepareNight(hour, minute, reason);
+            _character.Health.TakeDamage(70);
+            _character.Stamina.ConsumeStamina(80);
+            NextYield();
+            Assert.That(_character.Health.CurrentHealth, Is.EqualTo(30));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(20));
+            DOTween.Complete(_canvas, true);
+            Assert.That(NextYield(), Is.TypeOf<WaitForSecondsRealtime>());
+            Assert.That(_canvas.alpha, Is.EqualTo(1));
+            Assert.That(_character.Health.CurrentHealth, Is.EqualTo(100));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(expectedStamina));
+            Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(100));
+            NextYield();
+            DOTween.Complete(_canvas, true);
+            Assert.That(NextYield(), Is.Null);
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(expectedStamina), "Reveal must not apply recovery twice.");
+        }
+
+        [TestCase(DayEndReason.Sleep, 120)]
+        [TestCase(DayEndReason.PassedOut, 60)]
+        public void OvernightRecoveryReplacesThePreviousSurplus(DayEndReason reason, int expectedStamina)
+        {
+            PrepareNight(20, 0, reason);
+            _character.Stamina.GrantOvercharge(50);
+            NextYield();
+            DOTween.Complete(_canvas, true);
+            NextYield();
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(expectedStamina));
+        }
+
+        [Test]
+        public void CalendarAdvancementAloneDoesNotGrantSleepRecovery()
+        {
+            _character.Health.TakeDamage(30);
+            _character.Stamina.ConsumeStamina(40);
+            EventBus<NewDayEvent>.Unsubscribe(this); // This test intentionally advances without the presentation sequence.
+            _clock.StartNewDay();
+            Assert.That(_character.Health.CurrentHealth, Is.EqualTo(70));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(60));
+        }
+
+        private void PrepareNight(int hour, int minute, DayEndReason reason)
+        {
+            GameState.Time.hour = hour;
+            GameState.Time.minute = minute;
+            _routine = (IEnumerator)typeof(UrTimeManager).GetMethod("TransitionToNextDay", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(_clock, new object[] { _character, reason, hour });
+            // EndDay normally captures bedtime and stores this before starting Unity's scheduler.
+            Set(_clock, "_dayTransitionRoutine", _routine);
+            _steps.Clear();
+            _steps.Push(_routine);
         }
 
         [Test]

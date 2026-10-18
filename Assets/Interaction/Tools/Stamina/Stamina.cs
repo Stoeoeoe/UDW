@@ -78,6 +78,17 @@ namespace Interaction.Tools.Stamina
             return amount;
         }
 
+        /// <summary>Replaces stamina with the night's recovery, discarding the previous surplus without a depletion event.</summary>
+        internal void RecoverFromRest(int percentOfMaximum)
+        {
+            if (percentOfMaximum < 0) throw new ArgumentOutOfRangeException(nameof(percentOfMaximum));
+            var total = Mathf.RoundToInt(MaxStamina * (percentOfMaximum / 100f));
+            if (total == CurrentStamina) return;
+            _state.Current = Math.Min(total, MaxStamina);
+            _state.Overcharge = total - _state.Current;
+            Publish();
+        }
+
         private void RefreshMaximum()
         {
             ReconcileMaximum();

@@ -6,7 +6,8 @@ using System;
 namespace Character
 {
     /// <summary>Player identity, save binding and day-transition participation.</summary>
-    public class MainCharacter : GameCharacter, IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
+    public class MainCharacter : GameCharacter, IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>,
+        IEventListener<OvernightRestCompleted>
     {
         private static MainCharacter _currentMainCharacter;
         public static MainCharacter CurrentMainCharacter
@@ -45,12 +46,14 @@ namespace Character
         {
             this.Subscribe<DayTransitionStarted>();
             this.Subscribe<DayTransitionFinished>();
+            this.Subscribe<OvernightRestCompleted>();
         }
 
         private void OnDisable()
         {
             this.Unsubscribe<DayTransitionStarted>();
             this.Unsubscribe<DayTransitionFinished>();
+            this.Unsubscribe<OvernightRestCompleted>();
             SetControlBlocked(_dayTransitionBlock, false);
         }
 
@@ -70,6 +73,20 @@ namespace Character
         public void OnEvent(DayTransitionFinished change)
         {
             if (change.Character == this) SetControlBlocked(_dayTransitionBlock, false);
+        }
+
+        /// <summary>Restores health and replaces last night's stamina surplus with this night's recovery.</summary>
+        public void OnEvent(OvernightRestCompleted change)
+        {
+            if (change.Character != this) return;
+            var staminaPercent = change.Reason switch
+            {
+                DayEndReason.PassedOut => 60,
+                DayEndReason.Sleep => change.BedtimeHour < 21 ? 120 : change.BedtimeHour < 23 ? 110 : 100,
+                _ => throw new ArgumentOutOfRangeException(nameof(change.Reason))
+            };
+            Health.RestoreToFull();
+            Stamina.RecoverFromRest(staminaPercent);
         }
     }
 }
