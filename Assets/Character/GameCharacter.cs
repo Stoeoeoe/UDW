@@ -17,6 +17,7 @@ namespace Character
     /// <summary>Character composition and ordered startup. Gameplay state lives with its owning subsystem.</summary>
     [RequireComponent(typeof(CharacterOccupation), typeof(Controller2D), typeof(Orientation2D))]
     [RequireComponent(typeof(CharacterTileContext), typeof(CharacterHealth))]
+    [RequireComponent(typeof(CharacterBoosts))]
     public class GameCharacter : MonoBehaviour, ILocationLifecycle
     {
         [SerializeField] private UrCharacterAnimator animator;
@@ -39,6 +40,7 @@ namespace Character
         public CharacterOccupation Occupation => GetComponent<CharacterOccupation>();
         public CharacterAttributes Attributes => attributes;
         public CharacterHealth Health { get; private set; }
+        public CharacterBoosts Boosts { get; private set; }
         public Wallet Wallet { get; private set; }
         public CharacterSkills Skills { get; private set; } = new();
         public TagSet Tags { get; } = new();
@@ -80,6 +82,8 @@ namespace Character
             Wallet = new Wallet(this);
             Health = GetComponent<CharacterHealth>();
             Health.Bind(this);
+            Boosts = GetComponent<CharacterBoosts>();
+            Boosts.Bind(this);
             Stamina.Bind(this);
             Skills.BindCharacter(this);
             characterGraphicsGo.SetActive(false);
@@ -98,6 +102,8 @@ namespace Character
             if (!MainInventory.Configuration)
                 throw new InvalidOperationException($"Character '{name}' requires an inventory configuration.");
             if (attributes == null) throw new InvalidOperationException($"Character '{name}' requires attributes.");
+            var boosts = GetComponent<CharacterBoosts>();
+            if (!boosts) throw new InvalidOperationException($"Character '{name}' requires its boosts component.");
             if (Stamina.StartStamina < 0)
                 throw new InvalidOperationException($"Character '{name}' requires nonnegative starting stamina.");
             attributes.ValidateConfiguration();
@@ -110,6 +116,7 @@ namespace Character
             // Teardown removes bonuses; it must not clamp the live saved resources against a temporary lower maximum.
             if (Health) Health.Unbind();
             if (Stamina) Stamina.Unbind();
+            if (Boosts) Boosts.Unbind();
             // Initialization can fail before equipment is bound; teardown must still release completed bindings.
             if (_equipmentEffects != null) _equipmentEffects.Dispose();
             Skills.UnbindCharacter(this);
@@ -130,6 +137,7 @@ namespace Character
         // The main character overrides this to bind the live save root. Other characters keep local state.
         protected virtual void InitializeCharacterState()
         {
+            Boosts.Initialize(new CharacterBoostState());
             Health.Initialize(new HealthState());
             Stamina.Initialize(new StaminaState());
         }

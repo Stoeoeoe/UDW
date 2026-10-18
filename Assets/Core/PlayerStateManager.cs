@@ -33,6 +33,9 @@ namespace Core
         {
             var player = GameState.Player;
             InitializeHome();
+            // Attribute sources are rebound before resource state, without clipping saved points at an intermediate maximum.
+            character.Health.Unbind();
+            character.Stamina.Unbind();
             character.InitializeSkills(player.Skills);
             character.Wallet.Bind(player.Wallet);
             GameStateManager.Instance.DivineFavour.BindCharacter(character);
@@ -43,6 +46,7 @@ namespace Core
             if (!inventory.ApplyStartingLoadout(loadout))
                 throw new InvalidOperationException("The configured starting loadout does not fit the player's inventory.");
 
+            character.Boosts.Initialize(player.Boosts);
             character.Health.Initialize(player.Health);
             character.Stamina.Initialize(player.Stamina);
         }

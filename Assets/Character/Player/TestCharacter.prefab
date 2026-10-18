@@ -627,6 +627,7 @@ GameObject:
   - component: {fileID: 8924394137492448784}
   - component: {fileID: 4097203093351208776}
   - component: {fileID: 7396489869614572399}
+  - component: {fileID: 8752219345580689540}
   m_Layer: 10
   m_Name: TestCharacter
   m_TagString: Player
@@ -887,6 +888,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 705e553ba38730446a72df47554415d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.CharacterHealth
+--- !u!114 &8752219345580689540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7329059664347269403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ed99297b6b044e43a80da62d6681d72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Character.CharacterBoosts
 --- !u!1 &9151607056303179122
 GameObject:
   m_ObjectHideFlags: 0

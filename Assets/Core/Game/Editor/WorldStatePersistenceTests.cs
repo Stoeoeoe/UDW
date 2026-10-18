@@ -158,6 +158,46 @@ namespace Core.Game.Editor
         }
 
         [Test]
+        public void SaveValidationRejectsMissingOrMalformedBoostState()
+        {
+            var data = new GameSaveData();
+            data.player.Boosts = null;
+            Assert.Throws<FormatException>(data.Validate);
+            data.player.Boosts = new CharacterBoostState();
+            data.player.Boosts.Active["sleep:well-rested"] = new ActiveAttributeBoost { ExpiresAtMinute = -1, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f } } };
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
+            data.player.Boosts.Active.Clear();
+            data.player.Boosts.Active[""] = new ActiveAttributeBoost { ExpiresAtMinute = 60, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f } } };
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
+        }
+
+        [TestCase("missing")]
+        [TestCase("empty")]
+        [TestCase("attribute")]
+        [TestCase("negative-flat")]
+        [TestCase("negative-percent")]
+        [TestCase("nan")]
+        [TestCase("infinity")]
+        public void SaveValidationRejectsMalformedBoostSnapshots(string fault)
+        {
+            var data = new GameSaveData();
+            var bonus = new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f };
+            switch (fault)
+            {
+                case "attribute": bonus.Attribute = (CharacterAttributeType)999; break;
+                case "negative-flat": bonus.Flat = -1; break;
+                case "negative-percent": bonus.Percent = -0.1f; break;
+                case "nan": bonus.Flat = float.NaN; break;
+                case "infinity": bonus.Percent = float.PositiveInfinity; break;
+            }
+            var boost = new ActiveAttributeBoost { ExpiresAtMinute = 60, Bonuses = new[] { bonus } };
+            if (fault == "missing") boost.Bonuses = null;
+            if (fault == "empty") boost.Bonuses = Array.Empty<AppliedAttributeBonus>();
+            data.player.Boosts.Active["item:test:tonic"] = boost;
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
+        }
+
+        [Test]
         public void SaveAndLoadRoundTripWorldPlayerAndStory()
         {
             var slot = "test-" + Guid.NewGuid().ToString("N");
@@ -173,6 +213,7 @@ namespace Core.Game.Editor
             data.player.Home = new PlayerHomeState("test:home", "test-bed");
             data.player.Stamina = new StaminaState { Initialized = true, Current = 42 };
             data.player.Health = new HealthState { Initialized = true, Current = 37 };
+            data.player.Boosts.Active["sleep:well-rested"] = new ActiveAttributeBoost { ExpiresAtMinute = data.time.TotalMinutes + 1440, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Flat = 5, Percent = 0.25f } } };
             data.player.Inventory.StartingLoadoutApplied = true;
             data.player.Inventory.Toolbelt = new[] { "base:hammer", null, null };
             data.player.Inventory.SelectedItemId = "base:hammer";
@@ -236,6 +277,11 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Stamina.Current, Is.EqualTo(42));
                 Assert.That(loaded.player.Health.Initialized, Is.True);
                 Assert.That(loaded.player.Health.Current, Is.EqualTo(37));
+                Assert.That(loaded.player.Boosts.Active["sleep:well-rested"].ExpiresAtMinute, Is.EqualTo(data.time.TotalMinutes + 1440));
+                var bonus = loaded.player.Boosts.Active["sleep:well-rested"].Bonuses[0];
+                Assert.That(bonus.Attribute, Is.EqualTo(CharacterAttributeType.MaxStamina));
+                Assert.That(bonus.Flat, Is.EqualTo(5));
+                Assert.That(bonus.Percent, Is.EqualTo(0.25f));
                 Assert.That(loaded.player.Home.LocationId, Is.EqualTo("test:home"));
                 Assert.That(loaded.player.Home.BedId, Is.EqualTo("test-bed"));
                 Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);

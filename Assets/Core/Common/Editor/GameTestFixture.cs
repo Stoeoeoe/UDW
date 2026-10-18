@@ -22,6 +22,7 @@ namespace Core.Common.Editor
 
         private readonly List<Service> _services = new();
         private readonly List<Object> _assets = new();
+        private readonly List<Character.GameCharacter> _characters = new();
         public GameObject Root { get; }
 
         public GameTestFixture(string name = "Game test services")
@@ -87,6 +88,7 @@ namespace Core.Common.Editor
             character.Health.Initialize(new Character.HealthState());
             character.Stamina.Initialize(new Character.StaminaState());
             Invoke(character.Occupation, "Awake");
+            _characters.Add(character);
             return character;
         }
 
@@ -123,6 +125,13 @@ namespace Core.Common.Editor
 
         public void Dispose()
         {
+            // These actors were awakened explicitly while inactive; release their subscriptions before services disappear.
+            foreach (var character in _characters)
+                if (character)
+                {
+                    InvokeOptional(character, "OnDisable");
+                    Invoke(character, "OnDestroy");
+                }
             // Dependents stop while the services they use are still available.
             for (var i = _services.Count - 1; i >= 0; i--)
             {

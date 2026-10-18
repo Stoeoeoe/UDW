@@ -33,6 +33,7 @@ namespace Core.Game
         public InventoryState Inventory = new();
         public HealthState Health = new();
         public StaminaState Stamina = new();
+        public CharacterBoostState Boosts = new();
     }
 
     [Serializable]

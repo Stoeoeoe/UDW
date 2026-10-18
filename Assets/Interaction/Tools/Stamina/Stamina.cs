@@ -76,7 +76,6 @@ namespace Interaction.Tools.Stamina
         {
             // An inactive prefab instance may be destroyed before binding.
             if (_attributes != null) _attributes.MaximumStaminaChanged -= RefreshMaximum;
-            _attributes = null;
         }
 
         private void OnDestroy() => Unbind();

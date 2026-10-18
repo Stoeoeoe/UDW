@@ -23,7 +23,7 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory == null || player.Health == null || player.Stamina == null ||
+            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
 
@@ -32,6 +32,18 @@ namespace Core.Game
 
             if (player.Stamina.Current < 0)
                 throw new FormatException("The save contains negative player stamina.");
+
+            foreach (var boost in player.Boosts.Active)
+            {
+                if (string.IsNullOrWhiteSpace(boost.Key) || boost.Value == null || boost.Value.ExpiresAtMinute < 0 ||
+                    boost.Value.Bonuses == null || boost.Value.Bonuses.Length == 0)
+                    throw new FormatException("The save contains an invalid temporary boost.");
+                foreach (var bonus in boost.Value.Bonuses)
+                    if (!Enum.IsDefined(typeof(Character.CharacterAttributeType), bonus.Attribute) ||
+                        float.IsNaN(bonus.Flat) || float.IsInfinity(bonus.Flat) || bonus.Flat < 0 ||
+                        float.IsNaN(bonus.Percent) || float.IsInfinity(bonus.Percent) || bonus.Percent < 0)
+                        throw new FormatException("The save contains invalid temporary boost values.");
+            }
 
             if (player.Inventory.StartingLoadoutApplied && player.Inventory.Slots == null)
                 throw new FormatException("The initialized inventory is missing its slots.");

@@ -77,7 +77,6 @@ namespace Character
         {
             // An inactive prefab instance may be destroyed before the character has bound it.
             if (_attributes != null) _attributes.MaximumHealthChanged -= RefreshMaximum;
-            _attributes = null;
         }
 
         private void OnDestroy() => Unbind();
