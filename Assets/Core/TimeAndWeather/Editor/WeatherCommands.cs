@@ -18,7 +18,7 @@ namespace Core.TimeAndWeather.Editor
         [CliCommand("list_weather", "List authored weather IDs and the active Play mode weather", MainThreadRequired = true)]
         public static object ListWeather()
         {
-            var manager = EditorApplication.isPlaying ? UnityEngine.Object.FindFirstObjectByType<UrTimeManager>() : null;
+            var manager = EditorApplication.isPlaying ? UnityEngine.Object.FindFirstObjectByType<WeatherManager>() : null;
             return new
             {
                 playing = EditorApplication.isPlaying,
@@ -35,8 +35,8 @@ namespace Core.TimeAndWeather.Editor
         {
             if (!EditorApplication.isPlaying)
                 throw new InvalidOperationException("Start the game in Play mode before using set_weather.");
-            var manager = UnityEngine.Object.FindFirstObjectByType<UrTimeManager>();
-            if (!manager) throw new InvalidOperationException("No active UrTimeManager was found in the running game.");
+            var manager = UnityEngine.Object.FindFirstObjectByType<WeatherManager>();
+            if (!manager) throw new InvalidOperationException("No active WeatherManager was found in the running game.");
             if (string.IsNullOrWhiteSpace(weather)) throw new ArgumentException("Provide a weather ID from list_weather.");
 
             var key = weather.Trim();

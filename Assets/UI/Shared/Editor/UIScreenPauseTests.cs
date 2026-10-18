@@ -362,11 +362,6 @@ namespace UI.Shared.Editor
             using var services = new Core.Common.Editor.GameTestFixture("Isolated game clock");
             services.AddSingleton<GameStateManager>();
             var clock = services.AddSingleton<UrTimeManager>();
-            // This isolated clock skips Start, which normally captures these physics baselines.
-            typeof(UrTimeManager).GetField("_initialFixedDeltaTime", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(clock, _fixedDeltaTime);
-            typeof(UrTimeManager).GetField("_initialMaximumDeltaTime", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(clock, _maximumDeltaTime);
             GameState.Time.hour = 6;
             GameState.Time.minute = 0;
             GameState.Time.secondsTowardNextMinute = 10;

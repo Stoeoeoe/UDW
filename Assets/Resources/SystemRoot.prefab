@@ -7956,6 +7956,8 @@ GameObject:
   m_Component:
   - component: {fileID: 356081600353874470}
   - component: {fileID: 8214932355852322051}
+  - component: {fileID: 1500776327173921673}
+  - component: {fileID: 2267217509241276070}
   m_Layer: 0
   m_Name: TimeAndWeatherManager
   m_TagString: Untagged
@@ -7999,22 +8001,41 @@ MonoBehaviour:
   secondsPerInGameMinute: 5
   dayBlackoutDuration: 0.6
   newDayJingle: {fileID: 0}
-  currentSeasonData: {fileID: 0}
-  currentWeather: {fileID: 0}
   seasons:
   - {fileID: 11400000, guid: 2a3cefee7ee73574c8d0445ad62b9a7b, type: 2}
   - {fileID: 11400000, guid: fc8d7b249a3c8d549b6384f5290f309b, type: 2}
   - {fileID: 11400000, guid: 07264c67d41f08b4195017adda640402, type: 2}
   - {fileID: 11400000, guid: 7ab970def97610b42a5d1fa584afb583, type: 2}
+--- !u!114 &1500776327173921673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2611045215585513801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69865aa6987b8f64db33688c8a90071f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.TimeScaleController
+  normalTimeScale: 1
+  updateTimescale: 1
+  updateFixedDeltaTime: 1
+  updateMaximumDeltaTime: 1
+--- !u!114 &2267217509241276070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2611045215585513801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11677300f54a538468c37a9599ae10d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.WeatherManager
   defaultVolumeProfile: {fileID: 11400000, guid: 3f9215ea0144899419cfbc0957140d3f, type: 2}
   postProcessingVolume: {fileID: 6514711041759444391}
-  noWeatherMaterial: {fileID: 2100000, guid: bf9ce920fe6e8554c86feb2cd36e5eb3, type: 2}
-  NormalTimeScale: 1
-  UpdateTimescale: 1
-  UpdateFixedDeltaTime: 1
-  UpdateMaximumDeltaTime: 1
-  CurrentTimeScale: 1
-  TargetTimeScale: 1
 --- !u!1 &2617926688909081256
 GameObject:
   m_ObjectHideFlags: 0

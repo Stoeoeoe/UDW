@@ -74,7 +74,7 @@ namespace Core.TimeAndWeather.Editor
 
             var clock = _fixture.AddSingleton<UrTimeManager>(time => time.gameObject.SetActive(true));
             _clock = clock;
-            Set(clock, "_timeScaleLastTime", Time.timeScale);
+
             Set(gui, "screenFader", fader);
             GameTestFixture.Invoke(gui, "Start");
             var weather = _fixture.Own(ScriptableObject.CreateInstance<WeatherData>());
@@ -82,10 +82,14 @@ namespace Core.TimeAndWeather.Editor
             season.daylightColorGradient = new Gradient();
             season.weatherData = new Util.WeightedList<WeatherData>();
             season.weatherData.Add(weather);
-            Set(clock, "currentSeasonData", season);
-            Set(clock, "postProcessingVolume", Child("Weather volume").AddComponent<Volume>());
-            Set(clock, "defaultVolumeProfile", _fixture.Own(ScriptableObject.CreateInstance<VolumeProfile>()));
-            Set(clock, "_weatherParentGo", Child("Weather effects"));
+            _fixture.AddSingleton<WeatherManager>(manager =>
+            {
+                Set(manager, "postProcessingVolume", Child("Weather volume").AddComponent<Volume>());
+                Set(manager, "defaultVolumeProfile", _fixture.Own(ScriptableObject.CreateInstance<VolumeProfile>()));
+                manager.gameObject.SetActive(true);
+            });
+            Set(clock, "seasons", new[] { season });
+            clock.Start();
             GameState.Time.daysSinceStart = 5;
             GameState.Time.dayOfSeason = 5;
             GameState.Time.hour = 23;
