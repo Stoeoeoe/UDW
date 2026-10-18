@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="GameHud.uss" />
+    <ui:Template name="Clock" src="../Clock/ClockHud.uxml" />
+    <ui:Template name="Stamina" src="../Stamina/StaminaHud.uxml" />
+    <ui:VisualElement name="gameHud" class="game-hud" picking-mode="Ignore">
+        <ui:Instance template="Clock" picking-mode="Ignore" />
+        <ui:Instance template="Stamina" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

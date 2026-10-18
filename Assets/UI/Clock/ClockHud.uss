@@ -1,15 +1,4 @@
-.clock-hud-host {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-}
-
 .clock-hud {
-    position: absolute;
-    top: 16px;
-    right: 16px;
     padding: 8px 12px;
     align-items: flex-end;
     background-color: rgba(32, 30, 24, 0.76);

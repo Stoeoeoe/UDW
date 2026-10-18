@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="StaminaHud.uss" />
+    <ui:VisualElement name="staminaHud" class="stamina-hud" picking-mode="Ignore">
+        <ui:VisualElement class="stamina-hud-header" picking-mode="Ignore">
+            <ui:Label text="Stamina" class="stamina-hud-caption" picking-mode="Ignore" />
+            <ui:Label name="staminaValue" text="100 / 100" class="stamina-hud-value" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:ProgressBar name="staminaMeter" class="stamina-hud-meter" low-value="0" high-value="100" value="100" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>
