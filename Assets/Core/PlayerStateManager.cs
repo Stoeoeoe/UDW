@@ -1,12 +1,10 @@
 using Character;
 using System;
 using System.Linq;
-using Core.Events;
 using Core.Game;
 using Core.Inventory;
 using Core.Location;
 using Interaction.Tools;
-using Interaction.Tools.Stamina;
 using Items;
 using UnityEngine;
 
@@ -16,10 +14,8 @@ namespace Core
     /// Initializes player state and the starting loadout across scene loads.
     /// Lives on SystemRoot. Add starting tools/items here instead of on GameCharacter.
     /// </summary>
-    public class PlayerStateManager : Singleton<PlayerStateManager>,
-        IEventListener<StaminaChangedEvent>
+    public class PlayerStateManager : Singleton<PlayerStateManager>
     {
-        [SerializeField] int _startingStamina = 100;
         [SerializeField] ToolData[] _startingTools = Array.Empty<ToolData>();
         [SerializeField] ItemDefinition[] _startingItems = Array.Empty<ItemDefinition>();
         [Header("Starting home")]
@@ -29,33 +25,14 @@ namespace Core
         public LocationData StartingHomeLocation => _startingHomeLocation;
         public string StartingBedId => _startingBedId;
 
-        void OnEnable()  => this.Subscribe<StaminaChangedEvent>();
-        void OnDisable() => this.Unsubscribe<StaminaChangedEvent>();
-
-        public void OnEvent(StaminaChangedEvent e)
-        {
-            if (e.Character is not MainCharacter) return;
-            GameState.Player.CurrentStamina = e.Current;
-            GameState.Player.StaminaInitialized = true;
-        }
-
         /// <summary>
         /// Called during GameCharacter runtime initialization on every spawn.
-        /// Initializes the player loadout once and restores player stamina on each spawn.
+        /// Initializes the player loadout once and restores player health and stamina on each spawn.
         /// </summary>
         public void InitializeCharacter(MainCharacter character)
         {
             var player = GameState.Player;
             InitializeHome();
-            if (!player.StaminaInitialized)
-            {
-                player.CurrentStamina = _startingStamina;
-                player.StaminaInitialized = true;
-            }
-
-            // Attribute/equipment rebinding can publish maximum-stamina changes. Preserve
-            // the saved amount until the final maximum is available, then restore it once.
-            var savedStamina = player.CurrentStamina;
             character.InitializeSkills(player.Skills);
             character.Wallet.Bind(player.Wallet);
             GameStateManager.Instance.DivineFavour.BindCharacter(character);
@@ -66,7 +43,8 @@ namespace Core
             if (!inventory.ApplyStartingLoadout(loadout))
                 throw new InvalidOperationException("The configured starting loadout does not fit the player's inventory.");
 
-            character.Stamina.Initialize(savedStamina);
+            character.Health.Initialize(player.Health);
+            character.Stamina.Initialize(player.Stamina);
         }
 
         /// <summary>Seeds a new player's home once. Loaded and subsequently reassigned homes remain authoritative.</summary>

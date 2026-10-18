@@ -26,6 +26,4 @@ and weather notifications without advancing the date. Notifications and daylight
 refresh finish on the next frame. The next normal weather roll, such as a new day,
 replaces the selection; seasonal probabilities and authored assets stay unchanged.
 
-The game must have an active, initialized `UrTimeManager` for `set_weather`.
-
 Implementation: [WeatherCommands.cs](../Assets/Core/TimeAndWeather/Editor/WeatherCommands.cs).

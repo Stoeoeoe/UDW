@@ -323,7 +323,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38dbd2c93416499680af09901eab80d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Tools.Stamina.Stamina
-  <StartStamina>k__BackingField: 100
+  startingStamina: 100
 --- !u!1 &5282825044868650758
 GameObject:
   m_ObjectHideFlags: 0
@@ -406,84 +406,6 @@ MonoBehaviour:
   - {fileID: 3128213862891680475, guid: 3747a002ab11b604db7b47d13876247c, type: 3}
   - {fileID: 8552039935380434340, guid: 4116490e4f0a7a049922fac4209e3b15, type: 3}
   registryActionType: 0
---- !u!1 &5417196245741090841
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4792313389428449789}
-  - component: {fileID: 5099108372705855068}
-  m_Layer: 10
-  m_Name: Health
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &4792313389428449789
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5417196245741090841}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2334998026169977668}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5099108372705855068
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5417196245741090841}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01754710d9f92ec4d9a21b81f5682667, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: MoreMountains.TopDownEngine::MoreMountains.TopDownEngine.Health
-  Model: {fileID: 0}
-  CurrentHealth: 0
-  Invulnerable: 0
-  InitialHealth: 10
-  MaximumHealth: 10
-  ResetHealthOnEnable: 1
-  OnHealFeedback: {fileID: 0}
-  ImmuneToDamage: 0
-  DamageMMFeedbacks: {fileID: 0}
-  FeedbackIsProportionalToDamage: 0
-  PreventTakeSelfDamage: 0
-  ImmuneToKnockback: 0
-  ImmuneToKnockbackIfZeroDamage: 0
-  KnockbackForceMultiplier: 1
-  DestroyOnDeath: 1
-  DelayBeforeDestruction: 0
-  PointsWhenDestroyed: 0
-  RespawnAtInitialLocation: 0
-  DisableControllerOnDeath: 1
-  DisableModelOnDeath: 1
-  DisableCollisionsOnDeath: 1
-  DisableChildCollisionsOnDeath: 0
-  ChangeLayerOnDeath: 0
-  ChangeLayersRecursivelyOnDeath: 0
-  LayerOnDeath:
-    _layerIndex: 0
-  DeathMMFeedbacks: {fileID: 0}
-  ResetColorOnRevive: 1
-  ColorMaterialPropertyName: _Color
-  UseMaterialPropertyBlocks: 0
-  MasterHealth: {fileID: 0}
-  TargetDamageResistanceProcessor: {fileID: 0}
-  TargetAnimator: {fileID: 0}
-  DisableAnimatorLogs: 1
 --- !u!1 &5925657350178306964
 GameObject:
   m_ObjectHideFlags: 0
@@ -699,12 +621,12 @@ GameObject:
   - component: {fileID: 7142370670707177995}
   - component: {fileID: 1943890019534543298}
   - component: {fileID: 789938966457487899}
-  - component: {fileID: 4654039551551919212}
   - component: {fileID: 4211830286840800522}
   - component: {fileID: 1818461748592574796}
   - component: {fileID: 5522847340107149325}
   - component: {fileID: 8924394137492448784}
   - component: {fileID: 4097203093351208776}
+  - component: {fileID: 7396489869614572399}
   m_Layer: 10
   m_Name: TestCharacter
   m_TagString: Player
@@ -730,8 +652,6 @@ Transform:
   - {fileID: 2558535847211723794}
   - {fileID: 2154222981132267359}
   - {fileID: 664460592021955459}
-  - {fileID: 4792313389428449789}
-  - {fileID: 6939415270864809170}
   - {fileID: 6490586568447708027}
   - {fileID: 4347191741671128094}
   - {fileID: 3444782001837870393}
@@ -891,19 +811,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.TileHighlight.TileHighlighter
   _tileHighlightPrefab: {fileID: 7113988650912272901, guid: a832bdcb8d18c5b4daabcde2284fd1af, type: 3}
---- !u!114 &4654039551551919212
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7329059664347269403}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38dbd2c93416499680af09901eab80d7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Interaction.Tools.Energy.Energy
-  <StartStamina>k__BackingField: 100
 --- !u!114 &4211830286840800522
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -968,84 +875,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57518ad52ddabed4fb81ef8d99bbe9fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.CharacterTileContext
---- !u!1 &7803843678168213874
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6939415270864809170}
-  - component: {fileID: 8091261134384213382}
-  m_Layer: 10
-  m_Name: Energy
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &6939415270864809170
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7803843678168213874}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2334998026169977668}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8091261134384213382
+--- !u!114 &7396489869614572399
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7803843678168213874}
+  m_GameObject: {fileID: 7329059664347269403}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01754710d9f92ec4d9a21b81f5682667, type: 3}
+  m_Script: {fileID: 11500000, guid: 705e553ba38730446a72df47554415d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: MoreMountains.TopDownEngine::MoreMountains.TopDownEngine.Health
-  Model: {fileID: 0}
-  CurrentHealth: 0
-  Invulnerable: 0
-  InitialHealth: 100
-  MaximumHealth: 100
-  ResetHealthOnEnable: 1
-  OnHealFeedback: {fileID: 0}
-  ImmuneToDamage: 0
-  DamageMMFeedbacks: {fileID: 0}
-  FeedbackIsProportionalToDamage: 0
-  PreventTakeSelfDamage: 0
-  ImmuneToKnockback: 0
-  ImmuneToKnockbackIfZeroDamage: 0
-  KnockbackForceMultiplier: 1
-  DestroyOnDeath: 0
-  DelayBeforeDestruction: 0
-  PointsWhenDestroyed: 0
-  RespawnAtInitialLocation: 0
-  DisableControllerOnDeath: 1
-  DisableModelOnDeath: 1
-  DisableCollisionsOnDeath: 1
-  DisableChildCollisionsOnDeath: 0
-  ChangeLayerOnDeath: 0
-  ChangeLayersRecursivelyOnDeath: 0
-  LayerOnDeath:
-    _layerIndex: 0
-  DeathMMFeedbacks: {fileID: 0}
-  ResetColorOnRevive: 1
-  ColorMaterialPropertyName: _Color
-  UseMaterialPropertyBlocks: 0
-  MasterHealth: {fileID: 0}
-  TargetDamageResistanceProcessor: {fileID: 0}
-  TargetAnimator: {fileID: 0}
-  DisableAnimatorLogs: 1
+  m_EditorClassIdentifier: Assembly-CSharp::Character.CharacterHealth
 --- !u!1 &9151607056303179122
 GameObject:
   m_ObjectHideFlags: 0

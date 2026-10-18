@@ -31,8 +31,8 @@ namespace Core.Game
         public DivineFavourState Favour = new();
         public WalletState Wallet = new();
         public InventoryState Inventory = new();
-        public bool StaminaInitialized;
-        public int CurrentStamina;
+        public HealthState Health = new();
+        public StaminaState Stamina = new();
     }
 
     [Serializable]

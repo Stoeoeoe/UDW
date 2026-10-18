@@ -84,6 +84,8 @@ namespace Core.Common.Editor
             Invoke(character.GetComponent<Character.Controller2D>(), "Awake");
             character.MainInventory.EnsureInitialized();
             Invoke(character, "Awake");
+            character.Health.Initialize(new Character.HealthState());
+            character.Stamina.Initialize(new Character.StaminaState());
             Invoke(character.Occupation, "Awake");
             return character;
         }

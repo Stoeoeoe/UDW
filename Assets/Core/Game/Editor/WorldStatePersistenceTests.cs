@@ -138,6 +138,26 @@ namespace Core.Game.Editor
         }
 
         [Test]
+        public void SaveValidationRejectsMissingOrNegativeHealth()
+        {
+            var data = new GameSaveData();
+            data.player.Health = null;
+            Assert.Throws<FormatException>(data.Validate);
+            data.player.Health = new HealthState { Initialized = true, Current = -1 };
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("health"));
+        }
+
+        [Test]
+        public void SaveValidationRejectsMissingOrNegativeStamina()
+        {
+            var data = new GameSaveData();
+            data.player.Stamina = null;
+            Assert.Throws<FormatException>(data.Validate);
+            data.player.Stamina = new StaminaState { Initialized = true, Current = -1 };
+            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("stamina"));
+        }
+
+        [Test]
         public void SaveAndLoadRoundTripWorldPlayerAndStory()
         {
             var slot = "test-" + Guid.NewGuid().ToString("N");
@@ -150,9 +170,9 @@ namespace Core.Game.Editor
             data.time.hour = 14;
             data.time.minute = 20;
             data.time.secondsTowardNextMinute = 2.5f;
-            data.player.StaminaInitialized = true;
             data.player.Home = new PlayerHomeState("test:home", "test-bed");
-            data.player.CurrentStamina = 42;
+            data.player.Stamina = new StaminaState { Initialized = true, Current = 42 };
+            data.player.Health = new HealthState { Initialized = true, Current = 37 };
             data.player.Inventory.StartingLoadoutApplied = true;
             data.player.Inventory.Toolbelt = new[] { "base:hammer", null, null };
             data.player.Inventory.SelectedItemId = "base:hammer";
@@ -212,8 +232,10 @@ namespace Core.Game.Editor
                 Assert.That(loaded.time.secondsTowardNextMinute, Is.EqualTo(2.5f));
                 Assert.That(loaded.player.Skills.GetLevel("hammer-mastery"), Is.EqualTo(3));
                 Assert.That(loaded.player.Favour.GetFavour("mars"), Is.EqualTo(12));
-                Assert.That(loaded.player.StaminaInitialized, Is.True);
-                Assert.That(loaded.player.CurrentStamina, Is.EqualTo(42));
+                Assert.That(loaded.player.Stamina.Initialized, Is.True);
+                Assert.That(loaded.player.Stamina.Current, Is.EqualTo(42));
+                Assert.That(loaded.player.Health.Initialized, Is.True);
+                Assert.That(loaded.player.Health.Current, Is.EqualTo(37));
                 Assert.That(loaded.player.Home.LocationId, Is.EqualTo("test:home"));
                 Assert.That(loaded.player.Home.BedId, Is.EqualTo("test-bed"));
                 Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);

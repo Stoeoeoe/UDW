@@ -1,3 +1,4 @@
+using System;
 using Character;
 using NUnit.Framework;
 
@@ -5,6 +6,20 @@ namespace Character.Editor
 {
     public sealed class CharacterAttributeTests
     {
+        [Test]
+        public void MaximumHealthIsValidatedAtModifierChangesWithoutAHealthComponent()
+        {
+            var attributes = new CharacterAttributes();
+            Assert.Throws<InvalidOperationException>(() =>
+                attributes.SetModifier(CharacterAttributeType.MaxHealth, "invalid", -100));
+
+            attributes = new CharacterAttributes();
+            attributes.SetModifier(CharacterAttributeType.MaxHealth, "bonus", 100);
+            attributes.SetModifier(CharacterAttributeType.MaxHealth, "penalty", -150);
+            Assert.Throws<InvalidOperationException>(() =>
+                attributes.RemoveModifier(CharacterAttributeType.MaxHealth, "bonus"));
+        }
+
         [Test]
         public void FlatAndPercentModifiersCombineAndCanBeReplaced()
         {

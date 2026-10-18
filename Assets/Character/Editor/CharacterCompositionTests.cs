@@ -61,8 +61,9 @@ namespace Character.Editor
         public void MaximumStaminaChangesClampTheBoundResourceAndRebindingDoesNotDuplicateSubscriptions()
         {
             var stamina = _character.Stamina;
-            stamina.Bind(_character, _character.Attributes);
-            stamina.Initialize(90);
+            var state = new StaminaState { Initialized = true, Current = 90 };
+            stamina.Initialize(state);
+            stamina.Initialize(state);
             _character.Attributes.SetModifier(CharacterAttributeType.MaxStamina, "test:penalty", -50);
             Assert.That(stamina.CurrentStamina, Is.EqualTo(50));
             _character.Attributes.RemoveModifier(CharacterAttributeType.MaxStamina, "test:penalty");
@@ -89,6 +90,7 @@ namespace Character.Editor
         [Test]
         public void StationaryEntryPlacementAndForcedFacingUseTheCurrentMap()
         {
+            _fixture.Root.SetActive(true); // Grid needs an active hierarchy to initialize its cell conversion.
             var map = _fixture.RegisterSingleton<MapManager>();
             var grid = new GameObject("Grid", typeof(Grid));
             grid.transform.SetParent(_fixture.Root.transform);

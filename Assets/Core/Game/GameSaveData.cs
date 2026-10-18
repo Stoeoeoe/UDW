@@ -23,9 +23,15 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory == null ||
+            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory == null || player.Health == null || player.Stamina == null ||
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
+
+            if (player.Health.Current < 0)
+                throw new FormatException("The save contains negative player health.");
+
+            if (player.Stamina.Current < 0)
+                throw new FormatException("The save contains negative player stamina.");
 
             if (player.Inventory.StartingLoadoutApplied && player.Inventory.Slots == null)
                 throw new FormatException("The initialized inventory is missing its slots.");

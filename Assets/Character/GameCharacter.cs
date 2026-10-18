@@ -16,7 +16,7 @@ namespace Character
 {
     /// <summary>Character composition and ordered startup. Gameplay state lives with its owning subsystem.</summary>
     [RequireComponent(typeof(CharacterOccupation), typeof(Controller2D), typeof(Orientation2D))]
-    [RequireComponent(typeof(CharacterTileContext))]
+    [RequireComponent(typeof(CharacterTileContext), typeof(CharacterHealth))]
     public class GameCharacter : MonoBehaviour, ILocationLifecycle
     {
         [SerializeField] private UrCharacterAnimator animator;
@@ -38,6 +38,7 @@ namespace Character
         public CharacterTileContext Tiles { get; private set; }
         public CharacterOccupation Occupation => GetComponent<CharacterOccupation>();
         public CharacterAttributes Attributes => attributes;
+        public CharacterHealth Health { get; private set; }
         public Wallet Wallet { get; private set; }
         public CharacterSkills Skills { get; private set; } = new();
         public TagSet Tags { get; } = new();
@@ -77,7 +78,9 @@ namespace Character
             Tiles.Bind(this);
             _abilities = abilitiesGo.GetComponentsInChildren<CharacterAbility>(true);
             Wallet = new Wallet(this);
-            Stamina.Bind(this, Attributes);
+            Health = GetComponent<CharacterHealth>();
+            Health.Bind(this);
+            Stamina.Bind(this);
             Skills.BindCharacter(this);
             characterGraphicsGo.SetActive(false);
         }
@@ -90,11 +93,13 @@ namespace Character
             if (!animator || !interactionSensor || !tileHighlighter || !toolInteractionAnchor || !characterCenter ||
                 !actionRegistry || !toolActionRegistry || !characterGraphicsGo || !abilitiesGo || !MainInventory || !Stamina)
                 throw new InvalidOperationException($"Character '{name}' requires all authored subsystem references.");
-            if (!GetComponent<Controller2D>() || !GetComponent<Orientation2D>() || !GetComponent<CharacterOccupation>() || !GetComponent<CharacterTileContext>())
-                throw new InvalidOperationException($"Character '{name}' requires controller, orientation, occupation and tile components.");
+            if (!GetComponent<Controller2D>() || !GetComponent<Orientation2D>() || !GetComponent<CharacterOccupation>() || !GetComponent<CharacterTileContext>() || !GetComponent<CharacterHealth>())
+                throw new InvalidOperationException($"Character '{name}' requires controller, orientation, occupation, tile and health components.");
             if (!MainInventory.Configuration)
                 throw new InvalidOperationException($"Character '{name}' requires an inventory configuration.");
             if (attributes == null) throw new InvalidOperationException($"Character '{name}' requires attributes.");
+            if (Stamina.StartStamina < 0)
+                throw new InvalidOperationException($"Character '{name}' requires nonnegative starting stamina.");
             attributes.ValidateConfiguration();
             actionRegistry.ValidateConfiguration();
             toolActionRegistry.ValidateConfiguration();
@@ -102,6 +107,8 @@ namespace Character
 
         protected virtual void OnDestroy()
         {
+            // Teardown removes bonuses; it must not clamp the live saved resources against a temporary lower maximum.
+            if (Health) Health.Unbind();
             if (Stamina) Stamina.Unbind();
             // Initialization can fail before equipment is bound; teardown must still release completed bindings.
             if (_equipmentEffects != null) _equipmentEffects.Dispose();
@@ -121,7 +128,11 @@ namespace Character
         }
 
         // The main character overrides this to bind the live save root. Other characters keep local state.
-        protected virtual void InitializeCharacterState() => Stamina.Initialize(Stamina.StartStamina);
+        protected virtual void InitializeCharacterState()
+        {
+            Health.Initialize(new HealthState());
+            Stamina.Initialize(new StaminaState());
+        }
 
         private void Update()
         {
