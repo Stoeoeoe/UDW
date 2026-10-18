@@ -85,6 +85,12 @@ namespace Core.Common.Editor
             Invoke(character.GetComponent<Character.Controller2D>(), "Awake");
             character.MainInventory.EnsureInitialized();
             Invoke(character, "Awake");
+            // Inactive parents are excluded by the ability's normal Awake lookup. Bind this isolated fixture explicitly.
+            var primary = character.PerformPrimaryAction;
+            typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(primary, character);
+            typeof(Character.Abilities.CharacterPerformPrimaryActionAbility).GetProperty("ActionExecutor")
+                .SetValue(primary, new Interaction.ActionExecutor(character, () => Core.Context.PlayerInteractionContext.Instance.CurrentSnapshot));
             character.Health.Initialize(new Character.HealthState());
             character.Stamina.Initialize(new Character.StaminaState());
             Invoke(character.Occupation, "Awake");
@@ -130,6 +136,7 @@ namespace Core.Common.Editor
                 if (character)
                 {
                     InvokeOptional(character, "OnDisable");
+                    Invoke(character.PerformPrimaryAction, "OnDestroy");
                     Invoke(character, "OnDestroy");
                 }
             // Dependents stop while the services they use are still available.

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Character;
+using Animancer;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
@@ -64,6 +65,9 @@ namespace Core.TimeAndWeather.Editor
             var gui = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
 
             _character = _fixture.CreateCharacter();
+            _character.transform.parent.gameObject.SetActive(true);
+            _character.Graphics.gameObject.SetActive(true); // Normal location entry reveals the artwork.
+            GameTestFixture.Invoke(_character.Animator, "Awake");
             GameTestFixture.Invoke(_character, "OnEnable");
             CharacterManager.Instance.RegisterMainCharacter(_character);
 
@@ -225,6 +229,7 @@ namespace Core.TimeAndWeather.Editor
             _character.Health.TakeDamage(70);
             _character.Stamina.ConsumeStamina(80);
             NextYield();
+            if (reason == DayEndReason.PassedOut) CompleteCollapse();
             Assert.That(_character.Health.CurrentHealth, Is.EqualTo(30));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(20));
             DOTween.Complete(_canvas, true);
@@ -246,6 +251,7 @@ namespace Core.TimeAndWeather.Editor
             PrepareNight(20, 0, reason);
             _character.Stamina.GrantOvercharge(50);
             NextYield();
+            if (reason == DayEndReason.PassedOut) CompleteCollapse();
             DOTween.Complete(_canvas, true);
             NextYield();
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(expectedStamina));
@@ -260,6 +266,89 @@ namespace Core.TimeAndWeather.Editor
             _clock.StartNewDay();
             Assert.That(_character.Health.CurrentHealth, Is.EqualTo(70));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(60));
+        }
+
+        [TestCase(100)]
+        [TestCase(150)]
+        public void ExhaustionStartsCollapseThenWakesAtHomeWithThePassOutPenalty(int amount)
+        {
+            Set(_clock, "_dayTransitionRoutine", null);
+            _character.Health.TakeDamage(30);
+            var position = _character.transform.position;
+            var graphics = _character.Graphics;
+            var rotation = graphics.localRotation;
+            _character.Stamina.ConsumeStamina(amount);
+            _routine = (IEnumerator)typeof(UrTimeManager).GetField("_dayTransitionRoutine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_clock);
+            Assert.That(_routine, Is.Not.Null, "The depletion event must start the forced-night sequence.");
+            _clock.StopCoroutine(_routine);
+            _steps.Clear();
+            _steps.Push(_routine);
+            // AnimancerState is Unity's animation wait; resume the outer iterator after completing the clip.
+            Assert.That(_routine.Current, Is.InstanceOf<AnimancerState>());
+            Assert.That(_character.IsControlBlocked, Is.True);
+            Assert.That(_character.PerformPrimaryAction.ActionExecutor.IsIdle, Is.True);
+            Assert.That(_canvas.alpha, Is.Zero, "The collapse precedes the blackout.");
+            CompleteCollapse();
+            Assert.That(Quaternion.Angle(graphics.localRotation, rotation), Is.EqualTo(90).Within(0.1));
+            Assert.That(_character.transform.position, Is.EqualTo(position), "Only the artwork falls, not the physics root.");
+            DOTween.Complete(_canvas, true);
+            NextYield();
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(60));
+            Assert.That(_character.Health.CurrentHealth, Is.EqualTo(100));
+            Assert.That(_character.transform.position, Is.EqualTo(new Vector3(3, 2, 0)));
+            Assert.That(graphics.localRotation, Is.EqualTo(rotation));
+            Assert.That(_newDays, Is.EqualTo(1));
+            NextYield();
+            DOTween.Complete(_canvas, true);
+            Assert.That(NextYield(), Is.Null);
+            Assert.That(_character.IsControlBlocked, Is.False);
+        }
+
+        [Test]
+        public void CancellingDuringCollapseRestoresArtworkWithoutRecoveryOrDayAdvance()
+        {
+            PrepareNight(20, 0, DayEndReason.PassedOut);
+            var graphics = _character.Graphics;
+            var position = graphics.localPosition;
+            var rotation = graphics.localRotation;
+            var scale = graphics.localScale;
+            NextYield();
+            var state = CollapseState();
+            state.Time = state.Length * 0.5f;
+            _character.GetComponentInChildren<NamedAnimancerComponent>().Evaluate();
+            Assert.That(graphics.localRotation, Is.Not.EqualTo(rotation));
+            _clock.CancelDayTransition();
+            Assert.That(state.IsPlaying, Is.False);
+            Assert.That(graphics.localPosition, Is.EqualTo(position));
+            Assert.That(graphics.localRotation, Is.EqualTo(rotation));
+            Assert.That(graphics.localScale, Is.EqualTo(scale));
+            Assert.That(_character.IsControlBlocked, Is.False);
+            Assert.That(_input.Actions.enabled, Is.True);
+            Assert.That(_newDays, Is.Zero);
+            Assert.That(GameState.Time.daysSinceStart, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void OtherCharactersAndDeadPlayersDoNotStartAnExhaustionTransition()
+        {
+            Set(_clock, "_dayTransitionRoutine", null);
+            var other = _fixture.CreateCharacter("Other character");
+            other.Stamina.ConsumeStamina(100);
+            Assert.That(typeof(UrTimeManager).GetField("_dayTransitionRoutine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_clock), Is.Null);
+            _character.SetConditionState(ConditionState.Dead);
+            _character.Stamina.ConsumeStamina(100);
+            Assert.That(typeof(UrTimeManager).GetField("_dayTransitionRoutine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_clock), Is.Null);
+        }
+
+        private AnimancerState CollapseState() => (AnimancerState)typeof(UrCharacterAnimator)
+            .GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_character.Animator);
+
+        private void CompleteCollapse()
+        {
+            var state = CollapseState();
+            state.Time = state.Length;
+            _character.GetComponentInChildren<NamedAnimancerComponent>().Evaluate();
+            NextYield(); // Begin covering only after the collapse has completed.
         }
 
         private void PrepareNight(int hour, int minute, DayEndReason reason)
@@ -368,7 +457,7 @@ namespace Core.TimeAndWeather.Editor
             {
                 var current = _steps.Peek();
                 if (!current.MoveNext()) { _steps.Pop(); continue; }
-                if (current.Current is IEnumerator nested && !(nested is CustomYieldInstruction))
+                if (current.Current is IEnumerator nested && !(nested is CustomYieldInstruction) && !(nested is AnimancerState))
                 {
                     _steps.Push(nested);
                     continue;

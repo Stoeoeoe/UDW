@@ -1,4 +1,5 @@
 using Core.Common;
+using System;
 using UnityEngine;
 
 namespace Character.Animations
@@ -12,5 +13,14 @@ namespace Character.Animations
 
         public AnimationClip Clip => clip;
         public override CharacterAnimation BaseAnimation => this;
+
+        /// <summary>Checks a caller's finite, non-looping playback contract before gameplay.</summary>
+        public void ValidateAsOneShot()
+        {
+            var errors = ValidateConfiguration();
+            if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
+            if (clip.isLooping || clip.length <= 0f)
+                throw new InvalidOperationException($"Animation '{name}' requires a non-looping clip with positive duration.");
+        }
     }
 }

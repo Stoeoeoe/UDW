@@ -64,7 +64,7 @@ namespace Character
 
         private void OnDisable()
         {
-            ClearInteractionAnimation();
+            EndInteractionAnimation();
             Unbind();
         }
 
@@ -188,11 +188,14 @@ namespace Character
         }
 
         /// <summary>Plays one animation or a base/variation set while suppressing ordinary movement/tool updates.</summary>
-        public void PlayInteractionAnimation(CharacterAnimationDefinition animation)
+        /// <returns>The native state. For a finite clip, yield it to wait for completion or interruption; end the interaction to release the pose.</returns>
+        public AnimancerState PlayInteractionAnimation(CharacterAnimationDefinition animation)
         {
+            EndInteractionAnimation();
             _interactionAnimationActive = true;
             _interactionSet = animation is CharacterAnimationSet set && set.Variations.Count > 0 ? set : null;
             PlayInteractionBase(animation.BaseAnimation);
+            return _interactionState;
         }
 
         private void PlayInteractionBase(CharacterAnimation animation)
@@ -212,13 +215,16 @@ namespace Character
             _playingVariation = false;
         }
 
-        /// <summary>Returns animation ownership to normal locomotion when leaving an interaction slot.</summary>
+        /// <summary>Stops the interaction animation and returns ownership to normal locomotion.</summary>
         public void EndInteractionAnimation()
         {
             if (!_interactionAnimationActive) return;
+            _interactionState.Stop();
             ClearInteractionAnimation();
             if (!isActiveAndEnabled) return; // Disabling a character releases its slot without restarting its animation graph.
             PlayIdleAnimation(character.Orientation.FacingDirection);
+            // Apply the idle/default bindings now, before another operation repositions the character.
+            animancer.Evaluate();
         }
 
         private void PlayInvalidAnimation()
@@ -276,7 +282,7 @@ namespace Character
 
         public void OnLocationLeave(LocationData location)
         {
-            ClearInteractionAnimation();
+            EndInteractionAnimation();
             Unbind();
         }
     }

@@ -171,8 +171,8 @@ namespace Interaction
         
         public void InterruptCurrentAction()
         {
-            _currentSnapshot = _snapshotProvider();
-            CurrentAction?.Interrupt(_currentSnapshot);
+            if (CurrentAction != null)
+                CurrentAction.Interrupt(_snapshotProvider());
             Cleanup();
             Reset();
         }

@@ -75,6 +75,7 @@ namespace Interaction.Editor
             var character = root.GetComponent<MainCharacter>();
             GameTestFixture.Invoke(root.GetComponent<Controller2D>(), "Awake");
             GameTestFixture.Invoke(character, "Awake");
+            character.Graphics.gameObject.SetActive(true); // These presentation tests do not enter a full location.
             GameTestFixture.Invoke(character.Animator, "Awake");
             GameTestFixture.Invoke(character.Occupation, "Awake");
             GameTestFixture.Invoke(character.Occupation, "OnEnable");
@@ -516,6 +517,68 @@ namespace Interaction.Editor
             Assert.That(InteractionAnimationState(_character).Clip, Is.SameAs(set.BaseAnimation.Clip));
             Assert.That(Read<CharacterAnimationSet>(_character.Animator, "_interactionSet"), Is.Null);
             GameTestFixture.Invoke(_character.Animator, "OnDisable");
+            Assert.That(InteractionAnimationState(_character), Is.Null);
+        }
+
+        [Test]
+        public void FallClipHoldsItsPoseUntilEndedAndRestoresArtworkWithoutMovingPhysics()
+        {
+            var graphics = _character.Graphics;
+            var position = graphics.localPosition;
+            var rotation = graphics.localRotation;
+            var scale = graphics.localScale;
+            var rootPosition = _character.transform.position;
+            var state = _character.Animator.PlayInteractionAnimation(_character.PassOutAnimation);
+            state.Time = state.Length;
+            _character.GetComponentInChildren<NamedAnimancerComponent>().Evaluate();
+            Assert.That(Quaternion.Angle(graphics.localRotation, rotation), Is.EqualTo(90).Within(0.1));
+            Assert.That(_character.transform.position, Is.EqualTo(rootPosition));
+            Assert.That(InteractionAnimationState(_character), Is.SameAs(state));
+            _character.Animator.EndInteractionAnimation();
+            Assert.That(state.IsPlaying, Is.False);
+            Assert.That(InteractionAnimationState(_character), Is.Null);
+            Assert.That(graphics.localPosition, Is.EqualTo(position));
+            Assert.That(graphics.localRotation, Is.EqualTo(rotation));
+            Assert.That(graphics.localScale, Is.EqualTo(scale));
+            _character.Animator.EndInteractionAnimation();
+        }
+
+        [Test]
+        public void ReplacingInteractionStopsThePreviousAnimation()
+        {
+            var previous = _character.Animator.PlayInteractionAnimation(_character.PassOutAnimation);
+            var replacement = CreateAnimation("replacement");
+            var state = _character.Animator.PlayInteractionAnimation(replacement);
+            Assert.That(previous.IsPlaying, Is.False);
+            Assert.That(state.Clip, Is.SameAs(replacement.Clip));
+            _character.Animator.EndInteractionAnimation();
+        }
+
+        [Test]
+        public void NativeAnimationWaitCompletesOnEndAndOnInterruption()
+        {
+            var animation = CreateAnimation("clip-only");
+            animation.ValidateAsOneShot();
+            var state = _character.Animator.PlayInteractionAnimation(animation);
+            var wait = (System.Collections.IEnumerator)state;
+            Assert.That(wait.MoveNext(), Is.True);
+            state.Time = state.Length + 0.01f;
+            Assert.That(wait.MoveNext(), Is.False);
+            Assert.That(InteractionAnimationState(_character), Is.SameAs(state));
+            _character.Animator.EndInteractionAnimation();
+            state = _character.Animator.PlayInteractionAnimation(animation);
+            wait = (System.Collections.IEnumerator)state;
+            Assert.That(wait.MoveNext(), Is.True);
+            _character.Animator.EndInteractionAnimation();
+            Assert.That(wait.MoveNext(), Is.False, "Stopping playback also releases Animancer's waiter.");
+        }
+
+        [Test]
+        public void AnimatorDisableStopsTheInteractionAnimation()
+        {
+            var state = _character.Animator.PlayInteractionAnimation(_character.PassOutAnimation);
+            GameTestFixture.Invoke(_character.Animator, "OnDisable");
+            Assert.That(state.IsPlaying, Is.False);
             Assert.That(InteractionAnimationState(_character), Is.Null);
         }
 

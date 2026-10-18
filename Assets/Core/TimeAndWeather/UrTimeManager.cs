@@ -145,7 +145,13 @@ namespace Core.TimeAndWeather
             {
                 gui.TransitionInterrupted += CancelDayTransition;
                 EventBus<DayTransitionStarted>.Raise(new DayTransitionStarted(character));
-                yield return gui.CoverScene(character.transform);
+                try
+                {
+                    if (reason == DayEndReason.PassedOut)
+                        yield return character.Animator.PlayInteractionAnimation(character.PassOutAnimation);
+                    yield return gui.CoverScene(character.transform);
+                }
+                finally { character.Animator.EndInteractionAnimation(); }
                 yield return LevelManager.Instance.ReturnHome(character);
                 // NewDayEvent listeners run only after the screen is completely covered.
                 StartNewDay();

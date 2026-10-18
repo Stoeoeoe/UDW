@@ -694,6 +694,7 @@ MonoBehaviour:
       baseValue: 7
   <MainInventory>k__BackingField: {fileID: 8841422247142192497}
   <Stamina>k__BackingField: {fileID: 7673362515365116421}
+  passOutAnimation: {fileID: 11400000, guid: 5ca016e6910b14f4db88ac348a0921dd, type: 2}
 --- !u!50 &1412798929070309304
 Rigidbody2D:
   serializedVersion: 5

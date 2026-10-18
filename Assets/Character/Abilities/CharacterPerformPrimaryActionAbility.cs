@@ -91,7 +91,8 @@ namespace Character.Abilities
             InterruptAction();
         }
 
-        private void InterruptAction()
+        /// <summary>Stops the running action and releases its preparation, feedback and control ownership.</summary>
+        public void InterruptAction()
         {
             if (_runningAction != null) StopCoroutine(_runningAction);
             _runningAction = null;
