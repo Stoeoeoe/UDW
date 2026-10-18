@@ -2,20 +2,21 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:VisualElement name="dialogue-overlay" class="dialogue-overlay">
         <ui:VisualElement name="dialogue-backdrop" class="dialogue-backdrop" />
-        <ui:VisualElement name="dialogue-anchor" class="dialogue-anchor">
-            <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
-                <ui:VisualElement class="dialogue-ribbon">
-                    <ui:Label class="dialogue-ribbon-text" text="Conversation" />
+        <ui:VisualElement class="dialogue-anchor">
+            <ui:VisualElement class="dialogue-shell">
+                <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
+                    <ui:ScrollView name="dialogue-content" class="dialogue-content" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                        <ui:Label name="dialogue-body" class="dialogue-body" />
+                        <ui:VisualElement name="dialogue-choices" class="dialogue-choices" />
+                    </ui:ScrollView>
+                    <ui:VisualElement name="dialogue-portrait" class="dialogue-portrait" picking-mode="Ignore" />
+                    <ui:Label name="dialogue-speaker" class="dialogue-speaker" picking-mode="Ignore" />
                 </ui:VisualElement>
-                <ui:VisualElement class="dialogue-header">
-                    <ui:Label name="dialogue-speaker" class="dialogue-speaker" />
-                    <ui:Label name="dialogue-emotion" class="dialogue-emotion" />
-                </ui:VisualElement>
-                <ui:Label name="dialogue-body" class="dialogue-body" />
-                <ui:VisualElement name="dialogue-choices" class="dialogue-choices" />
                 <ui:VisualElement class="dialogue-footer">
+                    <ui:Label name="dialogue-emotion" class="dialogue-emotion" />
                     <ui:Label name="dialogue-hint" class="dialogue-hint" />
-                    <ui:Button name="dialogue-continue" class="dialogue-continue" text="Continue" />
+                    <ui:Button name="dialogue-continue" class="dialogue-button" text="Continue" focusable="false" />
+                    <ui:Button name="dialogue-close" class="dialogue-button dialogue-close" text="Close" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

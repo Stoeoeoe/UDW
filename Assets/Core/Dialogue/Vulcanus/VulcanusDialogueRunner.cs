@@ -70,7 +70,7 @@ namespace Core.Dialogue.Vulcanus
             }
 
             if (_activeDialogueRoutine != null)
-                StopCoroutine(_activeDialogueRoutine);
+                CancelDialogue();
 
             _activeDialogueRoutine = StartCoroutine(RunDialogue(dialogue, instigator, pauseWhileOpen));
             return true;
@@ -343,9 +343,10 @@ namespace Core.Dialogue.Vulcanus
 
         private void FinishDialogue()
         {
-            Presenter?.OnDialogueFinished(_activeContext);
+            var context = _activeContext;
             _activeDialogueRoutine = null;
             _activeContext = null;
+            Presenter?.OnDialogueFinished(context);
         }
     }
 }

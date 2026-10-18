@@ -4,6 +4,8 @@
     top: 0;
     right: 0;
     bottom: 0;
+    -unity-font: url("../../Fonts/Jersey25-Regular.ttf");
+    -unity-font-definition: initial;
 }
 
 .dialogue-backdrop {
@@ -12,167 +14,189 @@
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(9, 12, 10, 0.28);
+    background-color: rgba(0, 0, 0, 0.388);
 }
 
 .dialogue-anchor {
     flex-grow: 1;
     justify-content: flex-end;
     align-items: center;
-    padding-left: 32px;
-    padding-right: 32px;
-    padding-top: 28px;
-    padding-bottom: 28px;
+    padding: 24px;
 }
 
+.dialogue-shell {
+    width: 560px;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+/* The original artwork includes the text frame, portrait frame and nameplate.
+   Keep its proportions and reserve the whole frame while the text is revealed. */
 .dialogue-panel {
-    width: 100%;
-    max-width: 860px;
-    padding-left: 26px;
-    padding-right: 26px;
-    padding-top: 18px;
-    padding-bottom: 18px;
-    background-color: rgba(27, 33, 29, 0.96);
-    border-left-width: 2px;
-    border-right-width: 2px;
-    border-top-width: 2px;
-    border-bottom-width: 2px;
-    border-left-color: rgba(212, 186, 136, 0.48);
-    border-right-color: rgba(212, 186, 136, 0.48);
-    border-top-color: rgba(212, 186, 136, 0.48);
-    border-bottom-color: rgba(212, 186, 136, 0.48);
-    border-top-left-radius: 18px;
-    border-top-right-radius: 18px;
-    border-bottom-left-radius: 18px;
-    border-bottom-right-radius: 18px;
+    position: relative;
+    height: 222px;
+    min-height: 222px;
+    flex-shrink: 0;
+    background-image: url("../in progress dialogue box.png");
+    -unity-background-scale-mode: stretch-to-fill;
 }
 
-.dialogue-ribbon {
-    align-self: flex-start;
-    margin-bottom: 12px;
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    background-color: rgba(113, 91, 56, 0.56);
-    border-top-left-radius: 999px;
-    border-top-right-radius: 999px;
-    border-bottom-left-radius: 999px;
-    border-bottom-right-radius: 999px;
+.dialogue-content {
+    position: absolute;
+    left: 4%;
+    top: 18%;
+    width: 55%;
+    height: 69%;
 }
 
-.dialogue-ribbon-text {
-    color: rgba(245, 228, 194, 0.95);
-    font-size: 12px;
-    letter-spacing: 0.8px;
-    -unity-font-style: bold;
+.dialogue-panel.is-neutral {
+    height: 144px;
+    min-height: 144px;
+    background-image: url("../../UIBox01.png");
+    -unity-slice-scale: 0.32;
 }
 
-.dialogue-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-}
-
-.dialogue-speaker {
-    flex-grow: 1;
-    color: rgb(247, 240, 222);
-    font-size: 26px;
-    -unity-font-style: bold;
-    letter-spacing: 0.4px;
-}
-
-.dialogue-emotion {
-    margin-left: 16px;
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    color: rgb(255, 206, 141);
-    font-size: 13px;
-    background-color: rgba(95, 69, 42, 0.54);
-    border-top-left-radius: 999px;
-    border-top-right-radius: 999px;
-    border-bottom-left-radius: 999px;
-    border-bottom-right-radius: 999px;
+.dialogue-panel.is-neutral .dialogue-content {
+    left: 24px;
+    top: 24px;
+    right: 24px;
+    bottom: 24px;
+    width: auto;
+    height: auto;
 }
 
 .dialogue-body {
-    color: rgb(234, 238, 229);
-    font-size: 21px;
+    color: rgb(84, 30, 4);
+    font-size: 22px;
     white-space: normal;
-    margin-bottom: 16px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
     -unity-text-align: upper-left;
 }
 
+.dialogue-portrait {
+    position: absolute;
+    left: 69%;
+    top: 20%;
+    width: 20%;
+    height: 50%;
+    visibility: hidden;
+    background-image: url("../../PlaceholderPortrait.png");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.dialogue-panel.has-speaker .dialogue-portrait {
+    visibility: visible;
+}
+
+.dialogue-speaker {
+    position: absolute;
+    left: 63%;
+    top: 77%;
+    width: 31%;
+    height: 12%;
+    margin: 0;
+    padding: 0;
+    color: rgb(84, 30, 4);
+    font-size: 22px;
+    -unity-text-align: middle-center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .dialogue-choices {
-    margin-bottom: 14px;
+    flex-shrink: 0;
 }
 
 .dialogue-choice {
-    min-height: 48px;
-    margin-bottom: 10px;
-    padding-left: 16px;
-    padding-right: 16px;
-    color: rgb(247, 244, 235);
-    font-size: 17px;
+    min-height: 32px;
+    margin: 6px 4px 0 0;
+    padding: 4px 8px;
+    white-space: normal;
+    font-size: 20px;
+    color: rgb(84, 30, 4);
     -unity-text-align: middle-left;
-    background-color: rgba(46, 60, 53, 0.96);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(190, 214, 188, 0.26);
-    border-right-color: rgba(190, 214, 188, 0.26);
-    border-top-color: rgba(190, 214, 188, 0.26);
-    border-bottom-color: rgba(190, 214, 188, 0.26);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
+    background-color: rgb(244, 188, 104);
+    border-width: 2px;
+    border-color: rgb(119, 65, 31);
+    border-radius: 0;
 }
 
-.dialogue-choice:hover {
-    background-color: rgba(65, 83, 74, 0.98);
+.dialogue-choice:hover, .dialogue-choice:focus {
+    background-color: rgb(255, 211, 139);
+    border-color: rgb(79, 39, 19);
 }
 
 .dialogue-choice:active {
-    background-color: rgba(84, 103, 92, 1);
+    background-color: rgb(216, 145, 76);
+}
+
+.dialogue-content .unity-scroller--vertical {
+    width: 10px;
+}
+
+.dialogue-content .unity-base-slider__tracker {
+    background-color: rgb(151, 94, 48);
+    border-radius: 0;
+}
+
+.dialogue-content .unity-base-slider__dragger {
+    background-color: rgb(238, 177, 94);
+    border-width: 1px;
+    border-color: rgb(84, 30, 4);
+    border-radius: 0;
 }
 
 .dialogue-footer {
+    height: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
     flex-direction: row;
-    justify-content: space-between;
     align-items: center;
+    margin-top: 4px;
+}
+
+.dialogue-emotion {
+    margin: 0 10px 0 0;
+    color: rgb(244, 188, 104);
+    font-size: 18px;
 }
 
 .dialogue-hint {
     flex-grow: 1;
-    margin-right: 16px;
-    color: rgba(214, 220, 208, 0.72);
-    font-size: 13px;
+    flex-shrink: 1;
+    margin: 0 8px 0 0;
+    color: rgb(246, 221, 175);
+    font-size: 18px;
+    white-space: normal;
 }
 
-.dialogue-continue {
-    min-width: 138px;
-    min-height: 40px;
-    padding-left: 18px;
-    padding-right: 18px;
-    color: rgb(36, 28, 20);
-    font-size: 16px;
-    -unity-font-style: bold;
-    background-color: rgb(241, 201, 129);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
+.dialogue-button {
+    min-width: 96px;
+    height: 36px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 2px 12px;
+    font-size: 20px;
+    color: rgb(84, 30, 4);
+    background-color: rgb(244, 188, 104);
+    border-width: 2px;
+    border-color: rgb(119, 65, 31);
+    border-radius: 0;
 }
 
-.dialogue-continue:hover {
-    background-color: rgb(251, 217, 156);
+.dialogue-button:hover, .dialogue-button:focus {
+    background-color: rgb(255, 211, 139);
+    border-color: rgb(79, 39, 19);
 }
 
-.dialogue-continue:active {
-    background-color: rgb(228, 184, 108);
+.dialogue-button:active {
+    background-color: rgb(216, 145, 76);
+}
+
+.dialogue-close {
+    min-width: 72px;
+    margin-left: 8px;
 }

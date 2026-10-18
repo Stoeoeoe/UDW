@@ -7,6 +7,7 @@ using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
+    /// <summary>Presents dialogue lines, typewriter text and choices as a managed UI Toolkit screen.</summary>
     [RequireComponent(typeof(UIDocument))]
     public class VulcanusDialogueUIDocumentPresenter : ManagedUIScreen, IDialoguePresenter, IDialogueAdvanceHandler
     {
@@ -18,7 +19,8 @@ namespace Core.Dialogue.Vulcanus
         [Header("Behavior")]
         [SerializeField] private string continueButtonText = "Continue";
         [SerializeField] private string choicePromptText = "Choose a response";
-        [SerializeField] private string missingLayoutMessage = "Dialogue UI layout is missing.";
+        [SerializeField, Min(0)] private float charactersPerSecond = 48f;
+        [SerializeField] private Interaction.Dialog.TypewriterSound defaultTypewriterSound;
 
         private VisualElement _overlay;
         private VisualElement _panel;
@@ -27,9 +29,12 @@ namespace Core.Dialogue.Vulcanus
         private Label _bodyLabel;
         private Label _hintLabel;
         private VisualElement _choiceContainer;
+        private ScrollView _content;
         private Button _continueButton;
         private bool _isBuilt;
         private VisualElement _boundRoot;
+        private bool _isTyping;
+        private bool _revealRequested;
         private bool _waitingForAdvance;
         private bool _waitingForChoice;
         private VulcanusDialogueChoiceOption _selectedOption;
@@ -51,13 +56,36 @@ namespace Core.Dialogue.Vulcanus
             EnsureBuilt();
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, node.Emotion);
-            SetBody(localizedText);
-            SetHint("Click, press Enter, or press Space");
+            SetBody(string.Empty);
+            SetHint("Click, Enter or Space to continue; Esc to close");
             ClearChoices();
             SetContinueVisible(true);
 
             _waitingForAdvance = true;
             FocusOverlay();
+            _isTyping = true;
+            _revealRequested = false;
+            var sound = Interaction.Dialog.TypewriterSoundResolver.ResolveTypewriterSound(node.Speaker, defaultTypewriterSound);
+            var revealed = 0;
+            var elapsed = 0f;
+            while (revealed < localizedText.Length && !_revealRequested && charactersPerSecond > 0f)
+            {
+                elapsed += Time.unscaledDeltaTime * charactersPerSecond;
+                while (elapsed >= 1f && revealed < localizedText.Length)
+                {
+                    elapsed -= 1f;
+                    var character = localizedText[revealed++];
+                    if (sound && sound.audioClips.Length > 0 && !char.IsWhiteSpace(character))
+                        MoreMountains.Tools.MMSoundManager.Current.PlaySound(
+                            sound.audioClips[UnityEngine.Random.Range(0, sound.audioClips.Length)],
+                            MoreMountains.Tools.MMSoundManager.MMSoundManagerTracks.Sfx, Vector3.zero,
+                            pitch: UnityEngine.Random.Range(sound.pitchMin, sound.pitchMax));
+                }
+                SetBody(localizedText.Substring(0, revealed));
+                yield return null;
+            }
+            SetBody(localizedText);
+            _isTyping = false;
             yield return new WaitUntil(() => !_waitingForAdvance);
         }
 
@@ -74,7 +102,7 @@ namespace Core.Dialogue.Vulcanus
             _waitingForChoice = true;
             _selectedOption = null;
             RebuildChoices(options, context);
-            FocusOverlay();
+            _choiceContainer[0].Focus();
             yield return new WaitUntil(() => !_waitingForChoice);
 
             onSelected?.Invoke(_selectedOption);
@@ -82,6 +110,8 @@ namespace Core.Dialogue.Vulcanus
 
         public void OnDialogueFinished(VulcanusDialogueExecutionContext context)
         {
+            _isTyping = false;
+            _revealRequested = false;
             _waitingForAdvance = false;
             _waitingForChoice = false;
             _selectedOption = null;
@@ -95,6 +125,7 @@ namespace Core.Dialogue.Vulcanus
 
         public bool TryAdvanceDialogue()
         {
+            if (!ReceivesInput) return false;
             if (!_isBuilt)
                 EnsureBuilt();
 
@@ -127,57 +158,48 @@ namespace Core.Dialogue.Vulcanus
 
         private void EnsureBuilt()
         {
-            document = document != null ? document : GetComponent<UIDocument>();
-            if (document == null)
-            {
-                Debug.LogError("[VulcanusDialogueUIDocumentPresenter] No UIDocument was found.");
-                return;
-            }
-
+            if (!document) document = GetComponent<UIDocument>();
+            if (!document.isActiveAndEnabled) return; // UIDocument rebuilds its visual tree when enabled.
             var root = document.rootVisualElement;
-            if (root == null || !document.isActiveAndEnabled) return;
             if (_isBuilt && ReferenceEquals(root, _boundRoot)) return;
+            if (!layoutAsset || !styleSheet)
+                throw new InvalidOperationException("Dialogue requires its UXML layout and stylesheet.");
             _boundRoot = root;
+            root.pickingMode = PickingMode.Ignore; // Only the visible overlay should intercept world clicks.
             root.Clear();
-            if (styleSheet != null)
-                root.styleSheets.Add(styleSheet);
-
-            var resolvedLayout = layoutAsset != null ? layoutAsset : document.visualTreeAsset;
-            if (resolvedLayout != null)
-            {
-                resolvedLayout.CloneTree(root);
-            }
-            else
-            {
-                BuildFallbackLayout(root, missingLayoutMessage);
-            }
-
+            root.styleSheets.Add(styleSheet);
+            layoutAsset.CloneTree(root);
             BindElements(root);
             if (!ValidateBindings())
-            {
-                root.Clear();
-                BuildFallbackLayout(root, "Dialogue UI was incomplete, using fallback layout.");
-                BindElements(root);
-            }
-
-            if (_overlay == null)
-                _overlay = root;
+                throw new InvalidOperationException("Dialogue UXML is missing required named elements.");
 
             _overlay.focusable = true;
             _overlay.tabIndex = 0;
-            _overlay.RegisterCallback<PointerDownEvent>(OnPointerDown);
+            _overlay.RegisterCallback<ClickEvent>(OnPointerDown);
             _overlay.RegisterCallback<KeyDownEvent>(OnKeyDown);
+            _overlay.RegisterCallback<NavigationCancelEvent>(evt =>
+            {
+                if (!ReceivesInput) return;
+                VulcanusDialogueRunner.Instance.CancelDialogue();
+                evt.StopPropagation();
+            });
 
-            if (_continueButton != null)
-                _continueButton.clicked += ContinueRequested;
+            _overlay.RegisterCallback<NavigationSubmitEvent>(evt =>
+            {
+                if (!_waitingForAdvance || IsButtonTarget(evt.target as VisualElement)) return;
+                ContinueRequested();
+                evt.StopPropagation();
+            });
+            _continueButton.clicked += ContinueRequested;
+            root.Q<Button>("dialogue-close").clicked += () => VulcanusDialogueRunner.Instance.CancelDialogue();
 
             RebindRoot(_overlay);
             _isBuilt = true;
         }
 
-        private void OnPointerDown(PointerDownEvent evt)
+        private void OnPointerDown(ClickEvent evt)
         {
-            if (_waitingForAdvance && !IsChoiceTarget(evt.target as VisualElement))
+            if (_waitingForAdvance && !IsButtonTarget(evt.target as VisualElement))
             {
                 ContinueRequested();
                 evt.StopPropagation();
@@ -186,7 +208,14 @@ namespace Core.Dialogue.Vulcanus
 
         private void OnKeyDown(KeyDownEvent evt)
         {
-            if (_waitingForAdvance && (evt.keyCode == KeyCode.Space || evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter))
+            if (!ReceivesInput) return;
+            if (evt.keyCode == KeyCode.Escape)
+            {
+                VulcanusDialogueRunner.Instance.CancelDialogue();
+                evt.StopPropagation();
+                return;
+            }
+            if (_waitingForAdvance && evt.keyCode == KeyCode.Space)
             {
                 ContinueRequested();
                 evt.StopPropagation();
@@ -223,18 +252,21 @@ namespace Core.Dialogue.Vulcanus
 
         private void ContinueRequested()
         {
-            if (!_waitingForAdvance) return;
+            if (!_waitingForAdvance || !ReceivesInput) return;
             PlayUISound(UISoundCue.Click);
-            _waitingForAdvance = false;
+            if (_isTyping) _revealRequested = true;
+            else _waitingForAdvance = false;
         }
 
         private void SelectOption(VulcanusDialogueChoiceOption option)
         {
-            if (!_waitingForChoice) return;
+            if (!_waitingForChoice || !ReceivesInput) return;
             PlayUISound(UISoundCue.Click);
             _selectedOption = option;
             _waitingForChoice = false;
         }
+
+        protected override void OnScreenClosed() => VulcanusDialogueRunner.Instance.CancelDialogue();
 
         private void RebuildChoices(IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context)
         {
@@ -266,6 +298,7 @@ namespace Core.Dialogue.Vulcanus
         {
             _visibleOptions.Clear();
             _choiceContainer?.Clear();
+            _content.scrollOffset = Vector2.zero;
         }
 
         private void SetSpeaker(string speaker, string emotion)
@@ -285,6 +318,7 @@ namespace Core.Dialogue.Vulcanus
             if (_panel != null)
             {
                 _panel.EnableInClassList("has-speaker", !string.IsNullOrWhiteSpace(speaker));
+                _panel.EnableInClassList("is-neutral", string.IsNullOrWhiteSpace(speaker));
                 _panel.EnableInClassList("has-emotion", !string.IsNullOrWhiteSpace(emotion));
             }
         }
@@ -317,6 +351,7 @@ namespace Core.Dialogue.Vulcanus
 
         private void BindElements(VisualElement root)
         {
+            _content = root.Q<ScrollView>("dialogue-content");
             _overlay = root.Q<VisualElement>("dialogue-overlay");
             _panel = root.Q<VisualElement>("dialogue-panel");
             _speakerLabel = root.Q<Label>("dialogue-speaker");
@@ -329,22 +364,23 @@ namespace Core.Dialogue.Vulcanus
 
         private bool ValidateBindings()
         {
-            return _overlay != null &&
+            return _content != null && _overlay != null &&
                    _panel != null &&
                    _bodyLabel != null &&
                    _hintLabel != null &&
                    _choiceContainer != null &&
                    _continueButton != null &&
                    _speakerLabel != null &&
-                   _emotionLabel != null;
+                   _emotionLabel != null &&
+                   _boundRoot.Q<Button>("dialogue-close") != null;
         }
 
-        private static bool IsChoiceTarget(VisualElement target)
+        private static bool IsButtonTarget(VisualElement target)
         {
             var current = target;
             while (current != null)
             {
-                if (current.ClassListContains("dialogue-choice"))
+                if (current is Button || current is Scroller)
                     return true;
 
                 current = current.parent;
@@ -353,56 +389,5 @@ namespace Core.Dialogue.Vulcanus
             return false;
         }
 
-        private void BuildFallbackLayout(VisualElement root, string bodyText)
-        {
-            var overlay = new VisualElement { name = "dialogue-overlay" };
-            overlay.AddToClassList("dialogue-overlay");
-
-            var backdrop = new VisualElement { name = "dialogue-backdrop" };
-            backdrop.AddToClassList("dialogue-backdrop");
-            overlay.Add(backdrop);
-
-            var anchor = new VisualElement { name = "dialogue-anchor" };
-            anchor.AddToClassList("dialogue-anchor");
-            overlay.Add(anchor);
-
-            var panel = new VisualElement { name = "dialogue-panel" };
-            panel.AddToClassList("dialogue-panel");
-            anchor.Add(panel);
-
-            var header = new VisualElement();
-            header.AddToClassList("dialogue-header");
-            panel.Add(header);
-
-            var speaker = new Label { name = "dialogue-speaker" };
-            speaker.AddToClassList("dialogue-speaker");
-            header.Add(speaker);
-
-            var emotion = new Label { name = "dialogue-emotion" };
-            emotion.AddToClassList("dialogue-emotion");
-            header.Add(emotion);
-
-            var body = new Label(bodyText) { name = "dialogue-body" };
-            body.AddToClassList("dialogue-body");
-            panel.Add(body);
-
-            var choices = new VisualElement { name = "dialogue-choices" };
-            choices.AddToClassList("dialogue-choices");
-            panel.Add(choices);
-
-            var footer = new VisualElement();
-            footer.AddToClassList("dialogue-footer");
-            panel.Add(footer);
-
-            var hint = new Label { name = "dialogue-hint" };
-            hint.AddToClassList("dialogue-hint");
-            footer.Add(hint);
-
-            var continueButton = new Button { name = "dialogue-continue", text = continueButtonText };
-            continueButton.AddToClassList("dialogue-continue");
-            footer.Add(continueButton);
-
-            root.Add(overlay);
-        }
     }
 }

@@ -249,6 +249,7 @@ namespace Core.Dialogue.Vulcanus
     [Serializable]
     public sealed class VulcanusDialogueLineNode : VulcanusDialogueNode
     {
+        [Tooltip("Leave empty for neutral text such as signs, boards or narration, without a portrait or nameplate.")]
         [SerializeField] private string speaker;
         [SerializeField] private string emotion;
         [SerializeField] private string text;

@@ -973,11 +973,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 788006260}
   m_CullTransparentMesh: 1
---- !u!4 &791444441 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 3245482728486734529, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
-  m_PrefabInstance: {fileID: 1950090812}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &875306222
 GameObject:
   m_ObjectHideFlags: 0
@@ -1200,12 +1195,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1079771062}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 791444441}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1079771064
 MonoBehaviour:
@@ -1227,7 +1222,8 @@ MonoBehaviour:
   styleSheet: {fileID: 7433441132597879392, guid: e2bb6efa14f45ae45b96836df65e7585, type: 3}
   continueButtonText: Continue
   choicePromptText: Choose a response
-  missingLayoutMessage: Dialogue UI layout is missing.
+  charactersPerSecond: 48
+  defaultTypewriterSound: {fileID: 11400000, guid: 75bc8f6fa67ce7c4d8d3db2483af3a98, type: 2}
 --- !u!114 &1079771065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1241,7 +1237,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
   m_PanelSettings: {fileID: 11400000, guid: 2af599cf247cb8b47b48d33b6f225ad3, type: 2}
-  m_ParentUI: {fileID: 1950090813}
+  m_ParentUI: {fileID: 0}
   sourceAsset: {fileID: 9197481963319205126, guid: 63af131c2305b2949b9a347cc475d06a, type: 3}
   m_SortingOrder: 0
   m_Position: 0
@@ -1278,7 +1274,7 @@ MonoBehaviour:
   database: {fileID: 11400000, guid: 8d4612bd8c165594887406d67e3a2510, type: 2}
   maxStepsPerRun: 256
   contextResolver: {fileID: 1079771066}
-  presenter: {fileID: 1079771068}
+  presenter: {fileID: 1079771064}
 --- !u!114 &1079771068
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1286,7 +1282,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1079771062}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ba5a4619c879aba49ad7c356e8d3c72a, type: 3}
   m_Name: 
@@ -2171,7 +2167,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1473801718
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3316,25 +3312,11 @@ PrefabInstance:
     - {fileID: 2010639790022599838, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
     - {fileID: 8286577582146441384, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 3245482728486734529, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1079771063}
     - targetCorrespondingSourceObject: {fileID: 2086590074493682223, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1473801718}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
---- !u!114 &1950090813 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7410992665882482011, guid: ab9a5be2e3578d64c9fa4ad546a2563a, type: 3}
-  m_PrefabInstance: {fileID: 1950090812}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
 --- !u!1001 &2007819675
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3598,3 +3580,4 @@ SceneRoots:
   - {fileID: 564367042}
   - {fileID: 2142778674}
   - {fileID: 2007819675}
+  - {fileID: 1079771063}
