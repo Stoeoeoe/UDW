@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Core.Inventory
 {
@@ -14,6 +15,7 @@ namespace Core.Inventory
         public int HeldSourceIndex = -1;
         public string[] Toolbelt;
         public string SelectedItemId;
+        [SerializeField]
         public Dictionary<string, InventorySlotState> Equipment = new();
     }
 

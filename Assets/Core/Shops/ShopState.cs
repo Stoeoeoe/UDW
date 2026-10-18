@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core.Game;
+using UnityEngine;
 
 namespace Core.Shops
 {
@@ -16,6 +17,7 @@ namespace Core.Shops
     [Serializable]
     public sealed class ShopState : WorldObjectState
     {
+        [SerializeField]
         public Dictionary<string, ShopStock> offerings = new(StringComparer.Ordinal);
     }
 }
