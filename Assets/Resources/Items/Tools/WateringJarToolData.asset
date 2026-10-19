@@ -14,17 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
   _itemId: WateringJarToolData
   _itemName: Watering Jar
-  _icon: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715,
-    type: 3}
+  _category: 
+  _icon: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715, type: 3}
   _description: Water your planted crops.
   _maxStackSize: 99
+  _preventDropping: 1
+  _buyBasePrice: 0
+  _sellBasePrice: 0
   _worldRepresentationPrefab: {fileID: 0}
   _pickupSound: {fileID: 0}
-  _preventDropping: 1
-  _maxCharge: 0
-  _chargePerUsage: 0
+  _maxCharge: 20
+  _chargePerUsage: 1
+  _chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
   _staminaCost: 5
-  _consumeStaminaOnFailure: 1
+  _consumeStaminaOnFailure: 0
   _isInInventory: 1
   _showTileHighlighterOnPrepare: 1
   _actionDuration: 0.2

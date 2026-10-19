@@ -20,6 +20,9 @@ namespace Interaction.Tools
         [SerializeField, Validation.Min(0)]
         private int _chargePerUsage = 0;
 
+        [SerializeField, Tooltip("Slot bar colour for tools with charge storage.")]
+        private Color _chargeColor = new(0.18f, 0.55f, 0.9f);
+
         [SerializeField, Validation.Min(0)]
         private int _staminaCost = 5;
 
@@ -67,6 +70,7 @@ namespace Interaction.Tools
 
         public int maxCharge => _maxCharge;
         public int chargePerUsage => _chargePerUsage;
+        public Color ChargeColor => _chargeColor;
         public int staminaCost => _staminaCost;
         public bool consumeStaminaOnFailure => _consumeStaminaOnFailure;
         public bool isInInventory => _isInInventory;

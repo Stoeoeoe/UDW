@@ -67,7 +67,7 @@ namespace Interaction.Tools
             }
 
             PlayFeedback(toolAction.ExecuteFeedback, toolAction, snapshot);
-            Owner.Stamina.ConsumeStamina(CurrentTool.staminaCost);
+            Owner.Stamina.ConsumeStamina(toolAction.StaminaCost);
             
             yield return toolAction.OnExecute(snapshot);
         }

@@ -33,6 +33,7 @@ namespace Interaction.Tools
         
         // Override base virtual properties - tools get values from ToolData
         public override float CooldownTime => ToolData != null ? ToolData.cooldownDuration : 0f;
+        public virtual int StaminaCost => ToolData.staminaCost;
         public override bool HasPreparationPhase => HasToolPreparationPhase;
         public override bool FreezeCharacterDuringAction => true; // Tools currently always freeze character
         

@@ -78,7 +78,7 @@ namespace Interaction
             if (!action.CanExecuteAfterPreparation(_currentSnapshot))
             {
                 yield return RunPhase(action.PostPrepareFailureFeedback, action.OnPostPrepareFailure);
-                Cleanup();
+                Cancel();
                 yield break;
             }
 

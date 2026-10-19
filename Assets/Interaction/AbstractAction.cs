@@ -23,7 +23,7 @@ namespace Interaction
         
         [field: SerializeField]
         [field: FoldoutGroup("Feedbacks")]
-        public MMFeedbacks ExecuteFeedback { get; private set; }
+        public virtual MMFeedbacks ExecuteFeedback { get; private set; }
         
         [field: SerializeField]
         [field: FoldoutGroup("Feedbacks")]
