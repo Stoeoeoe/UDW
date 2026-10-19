@@ -50,8 +50,7 @@ namespace Character
 
         private TileData InDirection(Vector2 direction)
         {
-            var origin = _map.GetInteractionOriginTile(_character.ToolInteractionAnchor.position, _character.Orientation.FacingDirection);
-            return _map.GetTileDataAtCoordinates(origin + Vector2Int.RoundToInt(direction));
+            return _map.GetTileDataInDirectionOfCharacter(_character, direction);
         }
     }
 }

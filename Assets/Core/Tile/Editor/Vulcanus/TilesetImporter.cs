@@ -80,6 +80,10 @@ namespace Core.Tile.Editor.Vulcanus
                         var pi = meta.Properties[p];
                         if (pi == null) continue;
 
+                        if (string.Equals(pi.Key, "isFreshwater", StringComparison.OrdinalIgnoreCase) &&
+                            pi.Value?.Type != Newtonsoft.Json.Linq.JTokenType.Boolean)
+                            throw new FormatException($"Tile {i}: isFreshwater must be a boolean.");
+
                         var applied = VulcanusImportHelpers.TryApplyPropertyToObject(tile, pi.Key, pi.Value);
                         if (applied) continue;
 

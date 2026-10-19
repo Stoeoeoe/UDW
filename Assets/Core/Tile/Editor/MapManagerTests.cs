@@ -68,7 +68,6 @@ namespace Core.Tile.Editor
             _plowedTile = Asset<RuleTile>();
             _irrigatedTile = Asset<RuleTile>();
             Set(_map, "_terrainTilemap", _terrain);
-            Set(_map, "_farmlandTilemap", _farmland);
             Set(_map, "_plowedTilemap", _plowed);
             Set(_map, "_irrigatedTilemap", _irrigated);
             Set(_map, "plowedFarmlandTile", _plowedTile);
@@ -129,16 +128,49 @@ namespace Core.Tile.Editor
             Assert.That(tile.FarmlandData.IsIrrigated, Is.False);
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void OnlyFarmableTilesOnTheFarmlandLayerOverrideTerrain(bool farmable)
+        [TestCase("Farmland", true)]
+        [TestCase("Farmland", false)]
+        [TestCase("Visual", true)]
+        [TestCase("Visual", false)]
+        public void FarmabilityIsCachedFromAnyLayerWithoutReplacingTheTerrainTile(string layerName, bool farmable)
         {
-            _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
-            _farmland.SetTile(Vector3Int.zero, Tile(TerrainType.Sand, farmable));
+            var grass = Tile(TerrainType.Grass);
+            _terrain.SetTile(Vector3Int.zero, grass);
+            var layer = layerName == "Farmland" ? _farmland : Tilemap(layerName);
+            layer.SetTile(Vector3Int.zero, Tile(TerrainType.Sand, farmable));
+            Tilemap("Decoration").SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
             BuildCache();
             var tile = _map.GetTileDataAtCoordinates(Vector2Int.zero);
             Assert.That(tile.IsFarmable, Is.EqualTo(farmable));
+            Assert.That(tile.TilemapTile, Is.SameAs(grass));
             Assert.That(tile.TerrainData.TerrainType, Is.EqualTo(farmable ? TerrainType.Dirt : TerrainType.Grass));
+            Assert.That(tile.FarmlandData != null, Is.EqualTo(farmable));
+
+            layer.ClearAllTiles();
+            BuildCache();
+            Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).IsFarmable, Is.False);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PropertyBearingCellsWithoutUnderlyingTerrainAreCached(bool farmable)
+        {
+            var tile = farmable ? Tile(TerrainType.Dirt, true) : WaterTile("true");
+            Tilemap("Visual").SetTile(Vector3Int.zero, tile);
+            BuildCache();
+            var data = _map.GetTileDataAtCoordinates(Vector2Int.zero);
+            Assert.That(data.IsFarmable, Is.EqualTo(farmable));
+            Assert.That(data.IsFreshwater, Is.EqualTo(!farmable));
+        }
+
+        [Test]
+        public void MissingRequiredTerrainDataFailsWhileBuildingTheCache()
+        {
+            _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
+            Set(_map, "_terrainDataByType", new Dictionary<TerrainType, TerrainData>());
+            var error = Assert.Throws<TargetInvocationException>(BuildCache);
+            Assert.That(error.InnerException, Is.TypeOf<System.InvalidOperationException>());
+            Assert.That(error.InnerException.Message, Does.Contain("Grass"));
         }
 
         [Test]
@@ -152,6 +184,43 @@ namespace Core.Tile.Editor
             _terrain.SetTile(Vector3Int.zero, null);
             BuildCache();
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero), Is.Null);
+        }
+
+        [TestCase("true", true)]
+        [TestCase("false", false)]
+        [TestCase(null, false)]
+        public void FreshwaterOnAVisualLayerIsCachedWithoutReplacingGrass(string value, bool expected)
+        {
+            var grass = Tile(TerrainType.Grass);
+            _terrain.SetTile(Vector3Int.zero, grass);
+            var waterLayer = Tilemap("Water");
+            waterLayer.SetTile(Vector3Int.zero, WaterTile(value));
+            // An unmarked layer above water must not erase the freshwater flag.
+            Tilemap("Decoration").SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
+            BuildCache();
+
+            var tile = _map.GetTileDataAtCoordinates(Vector2Int.zero);
+            Assert.That(tile.IsFreshwater, Is.EqualTo(expected));
+            Assert.That(tile.TilemapTile, Is.SameAs(grass));
+            Assert.That(tile.TerrainData.TerrainType, Is.EqualTo(TerrainType.Grass));
+
+            waterLayer.ClearAllTiles();
+            BuildCache();
+            Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).IsFreshwater, Is.False);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void FreshwaterOnTerrainSurvivesFarmlandPrecedence(bool farmland)
+        {
+            _terrain.SetTile(Vector3Int.zero, WaterTile("true"));
+            if (farmland)
+                _farmland.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
+            BuildCache();
+
+            var tile = _map.GetTileDataAtCoordinates(Vector2Int.zero);
+            Assert.That(tile.IsFreshwater, Is.True);
+            Assert.That(tile.IsFarmable, Is.EqualTo(farmland));
         }
 
         [Test]
@@ -378,6 +447,14 @@ namespace Core.Tile.Editor
             var tile = Asset<VulcanusTile>();
             tile.Configure(0, "test:tile", null, type, null, VulcanusCollisionKind.None);
             Set(tile, "isFarmable", farmable);
+            return tile;
+        }
+
+        private VulcanusTile WaterTile(string value)
+        {
+            var tile = Tile(TerrainType.Water);
+            Set(tile, "properties", value == null ? System.Array.Empty<VulcanusTile.VulcanusTileProperty>() :
+                new[] { new VulcanusTile.VulcanusTileProperty { key = "isFreshwater", jsonValue = value } });
             return tile;
         }
 

@@ -14,6 +14,9 @@ namespace Core.Tile
         // TODO: Right now, IsFarmable and TerrainType = FarmLand are essentially the same information. We should consider consolidating them, but for now we'll keep them separate to avoid unintended consequences.
         public bool IsFarmable { get; }
 
+        /// <summary>True when any authored map tile layer marks this cell as freshwater.</summary>
+        public bool IsFreshwater { get; }
+
         public GameObject PlacedObject { get; set; }
 
         public TileData(
@@ -22,7 +25,8 @@ namespace Core.Tile
             int y,
             TerrainData terrainData,
             Vector3 worldPosition,
-            bool isFarmable = false)
+            bool isFarmable = false,
+            bool isFreshwater = false)
         {
             TilemapTile = tilemapTile;
             Coordinates = new Vector2Int(x, y);
@@ -30,6 +34,7 @@ namespace Core.Tile
             WorldPosition = worldPosition;
             PlacedObject = null;
             IsFarmable = isFarmable;
+            IsFreshwater = isFreshwater;
         }
 
         public bool TryEnableFarmland()

@@ -55,6 +55,7 @@ namespace Core.Tile.Vulcanus
         public string[] Tags => tags;
         public VulcanusCollisionKind CollisionKind => collisionKind;
         public bool IsFarmable => isFarmable;
+        public bool IsFreshwater => TryGetProperty("isFreshwater", out var value) && value == "true";
         public float PivotY => pivotY;
         public CollisionShape[] CollisionShapes => collisionShapes;
         public VulcanusTileProperty[] Properties => properties;
