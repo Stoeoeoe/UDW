@@ -7,7 +7,8 @@ namespace Interaction.Tools
     {
         protected override void CollectConfigurationErrors(ToolData asset, List<ConfigurationError> errors)
         {
-            // All configuration rules are declared on the definition and its nested data.
+            if (asset.maxCharge > 0 && (asset.chargePerUsage <= 0 || asset.chargePerUsage > asset.maxCharge))
+                Report(errors, asset, "_chargePerUsage", "Charge per usage must be positive and fit within the tool's capacity.");
         }
     }
 }

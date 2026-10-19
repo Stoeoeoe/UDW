@@ -15,6 +15,7 @@ namespace Core.Inventory
         public int HeldSourceIndex = -1;
         public string[] Toolbelt;
         public string SelectedItemId;
+        public Dictionary<string, ToolChargeState> ToolCharges = new();
         [SerializeField]
         public Dictionary<string, InventorySlotState> Equipment = new();
     }

@@ -23,9 +23,14 @@ namespace Core.Game
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
-            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
+            if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory?.ToolCharges == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
                 story?.GetFlags() == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
+
+            foreach (var charge in player.Inventory.ToolCharges)
+                if (string.IsNullOrWhiteSpace(charge.Key) || charge.Value == null || charge.Value.Capacity <= 0 ||
+                    charge.Value.Current < 0 || charge.Value.Current > charge.Value.Capacity)
+                    throw new FormatException("The save contains invalid tool charge state.");
 
             if (player.Health.Current < 0 || player.Health.Overcharge < 0 ||
                 (long)player.Health.Current + player.Health.Overcharge > int.MaxValue)

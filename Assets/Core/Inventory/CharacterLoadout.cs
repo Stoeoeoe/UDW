@@ -19,11 +19,33 @@ namespace Core.Inventory
 
         internal void Bind(InventoryState state, int toolbeltSize)
         {
+            Unbind();
             _state = state;
             _state.Toolbelt ??= new string[toolbeltSize];
+            foreach (var charge in _state.ToolCharges.Values) charge.Bind(NotifyChargeChanged);
         }
 
+        internal void Unbind()
+        {
+            if (_state != null)
+                foreach (var charge in _state.ToolCharges.Values) charge.Bind(null);
+        }
+
+        private void NotifyChargeChanged() => InventoryChangedEvent.Trigger(_inventory);
+
         public int ToolbeltSize => _state.Toolbelt.Length;
+
+        /// <summary>First acquisition/use starts a charged tool full. Rebinding keeps its saved level and upgrades.</summary>
+        public ToolChargeState GetToolCharge(ToolData tool)
+        {
+            if (!_state.ToolCharges.TryGetValue(tool.ItemId, out var charge))
+            {
+                charge = new ToolChargeState(tool.maxCharge);
+                _state.ToolCharges.Add(tool.ItemId, charge);
+                charge.Bind(NotifyChargeChanged);
+            }
+            return charge;
+        }
         public int ActiveToolbeltSlot => string.IsNullOrEmpty(_state.SelectedItemId) ? -1 :
             Array.IndexOf(_state.Toolbelt, _state.SelectedItemId);
         public int ActiveHandInventoryIndex => FindItemIndex(_state.SelectedItemId);

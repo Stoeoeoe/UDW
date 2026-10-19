@@ -51,7 +51,11 @@ namespace Core.Inventory
         {
             if (!IsInitialized) Initialize(new InventoryState(), ItemCatalog.Find);
         }
-        private void OnDestroy() => _registry.Remove((_inventoryName, _playerID));
+        private void OnDestroy()
+        {
+            Loadout?.Unbind();
+            _registry.Remove((_inventoryName, _playerID));
+        }
         public static SlotInventory FindInventory(string inventoryName, string playerID)
         {
             _registry.TryGetValue((inventoryName, playerID), out var inventory);

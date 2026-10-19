@@ -3,7 +3,7 @@ using Core.Events;
 namespace Core.Inventory
 {
     /// <summary>
-    /// Raised whenever the content of an inventory changes (add, remove, move).
+    /// Raised after inventory contents, loadout or carried tool charges change.
     /// </summary>
     public struct InventoryChangedEvent
     {
