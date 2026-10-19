@@ -5,7 +5,7 @@ namespace Character
 {
     /// <summary>
     /// Tracks the character's facing direction, decoupled from raw velocity.
-    /// Abilities call UpdateFromVelocity each frame; spawn code calls ForceDirection.
+    /// Movement input determines facing even when a collision prevents motion; spawn code calls ForceDirection.
     /// </summary>
     public class Orientation2D : MonoBehaviour
     {
@@ -14,12 +14,12 @@ namespace Character
         public event Action<Vector2> OnFacingDirectionChanged;
 
         /// <summary>
-        /// Called by MovementAbility. Updates facing direction only when the character is moving.
+        /// Nonzero movement intent updates facing; releasing input preserves the last direction.
         /// </summary>
-        public void UpdateFromVelocity(Vector2 velocity)
+        public void UpdateFromInput(Vector2 input)
         {
-            if (velocity.sqrMagnitude < 0.01f) return;
-            SetDirection(velocity.normalized);
+            if (input.sqrMagnitude < 0.01f) return;
+            SetDirection(input.normalized);
         }
 
         /// <summary>

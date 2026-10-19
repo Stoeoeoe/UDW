@@ -30,7 +30,7 @@ namespace Character.Abilities
             float speed = run ? Character.Attributes.RunSpeed : Character.Attributes.WalkSpeed;
 
             Controller.SetMovementInput(input, speed);
-            Orientation.UpdateFromVelocity(Controller.CurrentVelocity);
+            Orientation.UpdateFromInput(input);
 
             bool moving = input.sqrMagnitude > 0.01f;
             var state = !moving ? MovementState.Idle
