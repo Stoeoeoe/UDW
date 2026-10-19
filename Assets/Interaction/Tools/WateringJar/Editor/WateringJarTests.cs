@@ -51,7 +51,7 @@ namespace Interaction.Tools.WateringJar.Editor
             _tiles = new Dictionary<Vector2Int, TileData>();
             Set(_map, "_tileDataCache", _tiles);
             _character = _fixture.CreateCharacter();
-            _character.ToolInteractionAnchor.position = new Vector3(0.25f, 0.25f, 0);
+            GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(0.25f, 0.25f, 0));
             _character.Orientation.ForceDirection(Vector2.up);
             _character.Tiles.EnterLocation(_map);
             _front = new Vector2Int(0, 1);
@@ -87,7 +87,7 @@ namespace Interaction.Tools.WateringJar.Editor
         [TestCase(-1, 0, 0.01f, 0.25f)]
         public void BareGroundPourSpendsResourcesAndHonoursCooldownThenPlowedGroundIsWatered(int dx, int dy, float x, float y)
         {
-            _character.ToolInteractionAnchor.position = new Vector3(x, y, 0);
+            GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(x, y, 0));
             _character.Orientation.ForceDirection(new Vector2(dx, dy));
             var (executor, wrapper) = ToolLifecycle();
             var tool = _jug.ToolData;
@@ -180,7 +180,7 @@ namespace Interaction.Tools.WateringJar.Editor
         [TestCase(-1, 0, 0.01f, 0.25f)]
         public void AdjacentWaterRefillsThroughTheFullLifecycleAtEitherEdgeOfTheStandingCell(int dx, int dy, float x, float y)
         {
-            _character.ToolInteractionAnchor.position = new Vector3(x, y, 0);
+            GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(x, y, 0));
             _character.Orientation.ForceDirection(new Vector2(dx, dy));
             var target = Tile("fresh_water", coordinates: new Vector2Int(dx, dy));
             var (executor, wrapper) = ToolLifecycle();

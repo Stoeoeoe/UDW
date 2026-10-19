@@ -99,6 +99,13 @@ namespace Core.Common.Editor
             return character;
         }
 
+        /// <summary>Places the authored character's physical footprint at a world point, preserving its child offsets.</summary>
+        public static void PlaceCharacterAtGroundPoint(Character.GameCharacter character, Vector3 point)
+        {
+            var body = character.GetComponent<BoxCollider2D>();
+            character.transform.position += point - body.transform.TransformPoint(body.offset);
+        }
+
         /// <summary>Runs a lifecycle callback explicitly when EditMode does not invoke it.</summary>
         public static void Invoke(object target, string method)
         {

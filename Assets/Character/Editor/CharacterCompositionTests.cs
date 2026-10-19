@@ -36,6 +36,15 @@ namespace Character.Editor
         }
 
         [Test]
+        public void AuthoredToolOriginMatchesTheGroundFootprint()
+        {
+            var body = _character.GetComponent<BoxCollider2D>();
+            var groundPoint = body.transform.TransformPoint(body.offset);
+            Assert.That(Vector3.Distance(_character.ToolInteractionAnchor.position, groundPoint), Is.LessThan(0.001f),
+                "Tool targeting must start at the character's ground footprint, rather than above the character.");
+        }
+
+        [Test]
         public void MissingInventoryFailsAtConfigurationBoundary()
         {
             typeof(GameCharacter).GetProperty(nameof(GameCharacter.MainInventory)).SetValue(_character, null);
@@ -104,11 +113,11 @@ namespace Character.Editor
                     tiles.Add(new Vector2Int(x, y), new TileData(null, x, y, terrain, tilemap.GetCellCenterWorld(new Vector3Int(x, y, 0))));
             Set(map, "_terrainTilemap", tilemap);
             Set(map, "_tileDataCache", tiles);
-            _character.ToolInteractionAnchor.position = new Vector3(0.25f, 0.25f, 0);
+            GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(0.25f, 0.25f, 0));
             _character.SetMovementState(MovementState.Idle);
             _character.Tiles.EnterLocation(map);
             Assert.That(_character.Tiles.Current, Is.SameAs(tiles[Vector2Int.zero]));
-            _character.ToolInteractionAnchor.position += Vector3.right;
+            _character.transform.position += Vector3.right;
             _character.Tiles.OnPlaced();
             Assert.That(_character.Tiles.Current, Is.SameAs(tiles[Vector2Int.right]));
             _character.Orientation.ForceDirection(Vector2.up);

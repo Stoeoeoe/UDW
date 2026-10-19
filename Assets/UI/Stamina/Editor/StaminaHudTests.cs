@@ -180,7 +180,7 @@ namespace UI.Stamina.Editor
                     tilemap.GetCellCenterWorld(new Vector3Int(0, y, 0))));
             Set(map, "_terrainTilemap", tilemap);
             Set(map, "_tileDataCache", cache);
-            _character.ToolInteractionAnchor.position = new Vector3(0.25f, 0.25f, 0f);
+            GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(0.25f, 0.25f, 0f));
             _character.Tiles.EnterLocation(map);
         }
 

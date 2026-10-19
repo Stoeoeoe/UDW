@@ -84,10 +84,10 @@ namespace Core.Tile.Editor
             _assets.Clear();
         }
 
-        [TestCase(0, 1, 0.5f, 0.5f)]
-        [TestCase(1, 0, 0.95f, 0.95f)]
-        [TestCase(0, -1, 0.5f, 0.5f)]
-        [TestCase(-1, 0, 0.01f, 0.01f)]
+        [TestCase(0, 1, 0.5f, 0.95f)]
+        [TestCase(1, 0, 0.95f, 0.5f)]
+        [TestCase(0, -1, 0.5f, 0.01f)]
+        [TestCase(-1, 0, 0.01f, 0.5f)]
         public void AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
         {
             _fixture.AddSingleton<PlantManager>();
@@ -105,7 +105,7 @@ namespace Core.Tile.Editor
             var character = _fixture.CreateCharacter();
             var direction = new Vector2Int(dx, dy);
             var anchor = _terrain.CellToWorld(new Vector3Int(-dx, -dy, 0)) + new Vector3(x, y, 0);
-            character.transform.position += anchor - character.ToolInteractionAnchor.position;
+            Core.Common.Editor.GameTestFixture.PlaceCharacterAtGroundPoint(character, anchor);
             character.Orientation.ForceDirection(direction);
             character.Tiles.EnterLocation(_map);
             var tool = UnityEditor.AssetDatabase.LoadAssetAtPath<Interaction.Tools.ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset");
@@ -119,11 +119,10 @@ namespace Core.Tile.Editor
             character.transform.parent.gameObject.SetActive(true);
             Physics2D.SyncTransforms();
 
-            // North reproduces sensor overlap; south reproduces body overlap. East/west also verify ordinary use.
-            if (dy != 0)
-                Assert.That(Physics2D.OverlapBoxAll(soil.WorldPosition, Vector2.one, 0)
-                    .Any(collider => collider.transform.IsChildOf(character.transform)), Is.True,
-                    "The regression requires the authored character body or sensor to overlap the target.");
+            // Near a cell edge, the character's body overlaps part of the adjacent target cell.
+            Assert.That(Physics2D.OverlapBoxAll(soil.WorldPosition, Vector2.one, 0)
+                .Any(collider => collider.transform.IsChildOf(character.transform)), Is.True,
+                "The regression requires the authored character body to overlap the target.");
             Assert.That(_map.IsTileOccupied(soil, character), Is.False);
             var snapshot = Core.Context.PlayerInteractionContextSnapshot.Empty() with
             {
