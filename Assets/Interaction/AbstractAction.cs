@@ -85,6 +85,9 @@ namespace Interaction
         {
             yield break;
         }
+
+        /// <summary>Releases action-owned resources after success, rejection or interruption. The executor calls this once per attempt.</summary>
+        public virtual void OnEnd(PlayerInteractionContextSnapshot snapshot) { }
         
         /// <summary>
         /// Override to specify what happens when the action fails the CanExecute() check.

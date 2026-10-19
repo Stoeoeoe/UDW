@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Interaction
 {
     /// <summary>
-    /// Executes actions through their full lifecycle: Prepare -> Execute -> Cooldown -> Finish.
+    /// Executes actions through preparation, execution, finish and cooldown, then releases their resources.
     /// Handles feedbacks and character freezing during action execution.
     /// </summary>
     public class ActionExecutor
@@ -26,7 +26,7 @@ namespace Interaction
                 StateChanged?.Invoke();
             }
         }
-        public bool IsIdle => State == ActionExecutionState.Idle;
+        public bool IsIdle => CurrentAction == null;
 
         private readonly GameCharacter _owner;
         private readonly Func<PlayerInteractionContextSnapshot> _snapshotProvider;
@@ -34,7 +34,7 @@ namespace Interaction
 
         private PlayerInteractionContextSnapshot _currentSnapshot;
 
-        /// <summary>New constructor — used by GameCharacter-based abilities.</summary>
+        /// <summary>Runs actions for one character using the current world-interaction context.</summary>
         public ActionExecutor(GameCharacter owner, Func<PlayerInteractionContextSnapshot> snapshotProvider)
         {
             _owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
@@ -42,7 +42,7 @@ namespace Interaction
         }
 
         /// <summary>
-        /// Runs the full action lifecycle: Prepare -> (wait for trigger) -> Execute -> Cooldown -> Finish
+        /// Runs an attempt, waiting for preparation release and retaining ownership until cleanup completes.
         /// </summary>
         public IEnumerator Run(AbstractAction action, bool skipPrepare = false)
         {
@@ -52,48 +52,43 @@ namespace Interaction
 
             if (!_currentSnapshot.CanInteractWithWorld) yield break;
 
-            if (!action.CanExecute(_currentSnapshot))
-            {
-                yield return RunPhase(action.FailureFeedback, action.OnFailure);
-                yield break;
-            }
-
             CurrentAction = action;
-            FreezeIfNeeded(action);
-
-            if (!skipPrepare && action.HasPreparationPhase)
+            try
             {
-                yield return RunPreparePhase(action);
+                if (!action.CanExecute(_currentSnapshot))
+                {
+                    yield return RunPhase(action.FailureFeedback, action.OnFailure);
+                    yield break;
+                }
+
+                FreezeIfNeeded(action);
+                if (!skipPrepare && action.HasPreparationPhase)
+                    yield return RunPreparePhase(action);
+
+                // Release captures the final context after preparation/aiming.
+                RefreshSnapshot();
+                if (!_currentSnapshot.CanInteractWithWorld) yield break;
+                if (!action.CanExecuteAfterPreparation(_currentSnapshot))
+                {
+                    yield return RunPhase(action.PostPrepareFailureFeedback, action.OnPostPrepareFailure);
+                    yield break;
+                }
+
+                yield return RunExecutePhase(action);
+                yield return RunFinishPhase(action);
+
+                Unfreeze();
+                if (action.CooldownTime > 0)
+                {
+                    State = ActionExecutionState.Cooldown;
+                    yield return new WaitForSeconds(action.CooldownTime);
+                }
             }
-
-            // Context may have changed during preparation (player moved aim, etc.)
-            RefreshSnapshot();
-
-            if (!_currentSnapshot.CanInteractWithWorld)
+            finally
             {
-                Cancel();
-                yield break;
+                // Explicit interruption may already have ended this attempt before its iterator is disposed.
+                if (CurrentAction == action) EndAttempt();
             }
-
-            if (!action.CanExecuteAfterPreparation(_currentSnapshot))
-            {
-                yield return RunPhase(action.PostPrepareFailureFeedback, action.OnPostPrepareFailure);
-                Cancel();
-                yield break;
-            }
-
-            yield return RunExecutePhase(action);
-            yield return RunFinishPhase(action);
-
-            Unfreeze();
-
-            if (action.CooldownTime > 0)
-            {
-                State = ActionExecutionState.Cooldown;
-                yield return new WaitForSeconds(action.CooldownTime);
-            }
-
-            Reset();
         }
 
         private IEnumerator RunPreparePhase(AbstractAction action)
@@ -128,7 +123,7 @@ namespace Interaction
 
         private void PlayFeedback(MMFeedbacks feedback)
         {
-            feedback?.PlayFeedbacks(CurrentAction.GetActionExecutionLocation(_currentSnapshot));
+            if (feedback) feedback.PlayFeedbacks(CurrentAction.GetActionExecutionLocation(_currentSnapshot));
         }
 
         private void RefreshSnapshot() => _currentSnapshot = _snapshotProvider();
@@ -154,27 +149,31 @@ namespace Interaction
                 State = ActionExecutionState.Executing;
         }
 
-        public void Cancel()
+        private void EndAttempt()
         {
-            Cleanup();
-            Reset();
+            if (!CurrentAction) return;
+            try { CurrentAction.OnEnd(_currentSnapshot); }
+            finally
+            {
+                Unfreeze();
+                Reset();
+            }
         }
-
-        private void Cleanup() => Unfreeze();
 
         private void Reset()
         {
             CurrentAction = null;
-            State = ActionExecutionState.Idle;
             _currentSnapshot = null;
+            State = ActionExecutionState.Idle;
         }
         
         public void InterruptCurrentAction()
         {
-            if (CurrentAction != null)
-                CurrentAction.Interrupt(_snapshotProvider());
-            Cleanup();
-            Reset();
+            try
+            {
+                if (CurrentAction) CurrentAction.Interrupt(_currentSnapshot);
+            }
+            finally { EndAttempt(); }
         }
 
 

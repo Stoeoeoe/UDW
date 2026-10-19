@@ -5,158 +5,89 @@ using UnityEngine;
 
 namespace Interaction.Tools
 {
-    /// <summary>
-    /// Delegates tool usage to the appropriate ToolAction based on the equipped tool.
-    /// This action serves as a dispatcher that routes to specific tool actions.
-    /// Handles tile caching, highlighting, and feedback coordination.
-    /// </summary>
+    /// <summary>Delegates one tool attempt and its presentation; ActionExecutor owns completion and cleanup timing.</summary>
     public class UseToolAction : PrimaryAction
     {
-        private ToolAction _activeToolAction;
-
-        private ToolAction ActiveToolAction => Owner.ToolActionRegistry.GetToolAction(CurrentTool);
-        public ToolData CurrentTool => Owner?.CurrentTool;
+        private ToolAction _toolAction;
+        public ToolData CurrentTool => Owner.CurrentTool;
 
         public override bool HasPreparationPhase => true;
-        public override float CooldownTime => CurrentTool.cooldownDuration;
-        public override float ActionDuration => CurrentTool.actionDuration;
+        public override float CooldownTime => _toolAction.ToolData.cooldownDuration;
+        public override float ActionDuration => _toolAction.ToolData.actionDuration;
 
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot)
         {
-            var toolAction = ActiveToolAction;
-            return toolAction && toolAction.CanExecute(snapshot);
+            _toolAction = Owner.ToolActionRegistry.GetToolAction(CurrentTool);
+            return _toolAction.CanExecute(snapshot);
         }
 
         public override bool CanExecuteAfterPreparation(PlayerInteractionContextSnapshot snapshot)
         {
-            var toolAction = ActiveToolAction;
-            return toolAction && toolAction.CanExecuteAfterPreparation(snapshot);
+            // Release commits the final aim. Feedback, resource costs and execution share these targets.
+            _toolAction.CaptureTargets(snapshot);
+            return _toolAction.CanExecuteAfterPreparation(snapshot);
         }
 
         public override IEnumerator OnPrepare(PlayerInteractionContextSnapshot snapshot)
         {
-            _activeToolAction = ActiveToolAction;
-            if (!_activeToolAction)
-                yield break;
-
-            _activeToolAction.gameObject.SetActive(true);
-            
-            // Cache affected tiles once for the entire action lifecycle
-            _activeToolAction.CacheAffectedTiles(snapshot);
-
-            // Show tile highlighter using cached tiles
-            if (CurrentTool.showTileHighlighterOnPrepare)
+            _toolAction.gameObject.SetActive(true);
+            _toolAction.CaptureTargets(snapshot);
+            if (_toolAction.ToolData.showTileHighlighterOnPrepare && snapshot.Character.TileHighlighter)
             {
-                snapshot.Character.TileHighlighter?.SetTiles(_activeToolAction.AffectedTiles);
-                snapshot.Character.TileHighlighter?.Show();
+                snapshot.Character.TileHighlighter.SetTiles(_toolAction.AffectedTiles);
+                snapshot.Character.TileHighlighter.Show();
             }
-
-            yield return _activeToolAction.OnPrepare(snapshot);
-            PlayFeedback(_activeToolAction.PrepareFeedback, _activeToolAction, snapshot);
+            yield return _toolAction.OnPrepare(snapshot);
+            PlayFeedback(_toolAction.PrepareFeedback, snapshot);
         }
 
         public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
         {
-            var toolAction = _activeToolAction ?? ActiveToolAction;
-            if (!toolAction)
-                yield break;
-
-            if (CurrentTool.showTileHighlighterOnPrepare)
-            {
-                toolAction.HideTileHighlighter(snapshot);
-            }
-
-            PlayFeedback(toolAction.ExecuteFeedback, toolAction, snapshot);
-            Owner.Stamina.ConsumeStamina(toolAction.StaminaCost);
-            
-            yield return toolAction.OnExecute(snapshot);
+            _toolAction.HideTileHighlighter(snapshot);
+            PlayFeedback(_toolAction.ExecuteFeedback, snapshot);
+            Owner.Stamina.ConsumeStamina(_toolAction.StaminaCost);
+            yield return _toolAction.OnExecute(snapshot);
         }
 
-        public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
-        {
-            var toolAction = _activeToolAction ?? ActiveToolAction;
-            if (!toolAction) return;
-            
-            if (CurrentTool.showTileHighlighterOnPrepare)
-            {
-                toolAction.HideTileHighlighter(snapshot);
-            }
-            CleanupToolAction(toolAction);
-            _activeToolAction = null;
-        }
+        public override void Interrupt(PlayerInteractionContextSnapshot snapshot) => _toolAction.Interrupt(snapshot);
 
         public override IEnumerator OnFinish(PlayerInteractionContextSnapshot snapshot)
         {
-            var toolAction = _activeToolAction ?? ActiveToolAction;
-            if (toolAction)
-            {
-                yield return toolAction.OnFinish(snapshot);
-                PlayFeedback(toolAction.FinishFeedback, toolAction, snapshot);
-                CleanupToolAction(toolAction);
-            }
-            _activeToolAction = null;
+            yield return _toolAction.OnFinish(snapshot);
+            PlayFeedback(_toolAction.FinishFeedback, snapshot);
+        }
+
+        public override void OnEnd(PlayerInteractionContextSnapshot snapshot)
+        {
+            _toolAction.HideTileHighlighter(snapshot);
+            _toolAction.OnEnd(snapshot);
+            _toolAction.ClearCapturedTargets();
+            _toolAction.gameObject.SetActive(false);
         }
 
         public override IEnumerator OnFailure(PlayerInteractionContextSnapshot snapshot)
         {
-            var toolAction = ActiveToolAction;
-            if (toolAction)
+            if (_toolAction.ToolData.consumeStaminaOnFailure)
+                Owner.Stamina.ConsumeStamina(_toolAction.StaminaCost);
+            yield return _toolAction.OnFailure(snapshot);
+        }
+
+        public override IEnumerator OnPostPrepareFailure(PlayerInteractionContextSnapshot snapshot) =>
+            _toolAction.OnPostPrepareFailure(snapshot);
+
+        public override Vector2 GetActionExecutionLocation(PlayerInteractionContextSnapshot snapshot) =>
+            _toolAction.GetActionExecutionLocation(snapshot);
+
+        private void PlayFeedback(MMFeedbacks feedback, PlayerInteractionContextSnapshot snapshot)
+        {
+            if (!feedback) return;
+            if (_toolAction.ExecuteFeedbackPerAffectedTile)
             {
-                if (toolAction.ToolData.consumeStaminaOnFailure)
-                {
-                    Owner.Stamina.ConsumeStamina(CurrentTool.staminaCost);
-                }
-                yield return toolAction.OnFailure(snapshot);
-            }
-        }
-
-        public override IEnumerator OnPostPrepareFailure(PlayerInteractionContextSnapshot snapshot)
-        {
-            var toolAction = _activeToolAction ?? ActiveToolAction;
-            if (toolAction)
-            {
-                yield return toolAction.OnPostPrepareFailure(snapshot);
-                CleanupToolAction(toolAction);
-            }
-            _activeToolAction = null;
-        }
-
-        public override Vector2 GetActionExecutionLocation(PlayerInteractionContextSnapshot snapshot)
-        {
-            var toolAction = _activeToolAction ?? ActiveToolAction;
-            return toolAction
-                ? toolAction.GetActionExecutionLocation(snapshot)
-                : base.GetActionExecutionLocation(snapshot);
-        }
-
-        /// <summary>
-        /// Cleans up the tool action after use - clears cache and deactivates.
-        /// </summary>
-        private void CleanupToolAction(ToolAction toolAction)
-        {
-            toolAction.ClearCachedTiles();
-            toolAction.gameObject.SetActive(false);
-        }
-
-        /// <summary>
-        /// Plays feedback either per affected tile or once at the tool's execution location.
-        /// Uses cached tiles to avoid redundant calculations.
-        /// </summary>
-        private void PlayFeedback(MMFeedbacks feedback, ToolAction toolAction, PlayerInteractionContextSnapshot snapshot)
-        {
-            if (!feedback || !toolAction) return;
-
-            if (toolAction.ExecuteFeedbackPerAffectedTile)
-            {
-                foreach (var tile in toolAction.AffectedTiles)
-                {
+                foreach (var tile in _toolAction.AffectedTiles)
                     feedback.PlayFeedbacks(tile.WorldPosition);
-                }
             }
             else
-            {
-                feedback.PlayFeedbacks(toolAction.GetActionExecutionLocation(snapshot));
-            }
+                feedback.PlayFeedbacks(_toolAction.GetActionExecutionLocation(snapshot));
         }
     }
 }

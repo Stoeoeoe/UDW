@@ -40,33 +40,36 @@ namespace Interaction.Tools
 
         protected GameCharacter Character => Owner;
         protected TileData CurrentTileData => Character.Tiles.Current;
-        protected TileData TileDataInFront => Character.Tiles.InFront;
+        protected TileData TileDataInFront => _capturedAffectedTiles != null ? _capturedFrontTile : Character.Tiles.InFront;
         protected TileData TileDataInBack => Character.Tiles.InBack;
 
-        // Cached affected tiles for the current action execution
-        private List<TileData> _cachedAffectedTiles;
+        // Targets held steady for the current action attempt
+        private List<TileData> _capturedAffectedTiles;
+        private TileData _capturedFrontTile;
         
         /// <summary>
-        /// Gets the cached affected tiles. Call CacheAffectedTiles first to populate.
-        /// Falls back to computing if not cached.
+        /// Gets the captured affected tiles, or a live preview outside an attempt.
+        /// CaptureTargets fixes the targets used during execution.
         /// </summary>
-        public List<TileData> AffectedTiles => _cachedAffectedTiles ?? ComputeAffectedTiles();
+        public List<TileData> AffectedTiles => _capturedAffectedTiles ?? ComputeAffectedTiles();
 
         /// <summary>
-        /// Computes and caches the affected tiles for this action execution.
-        /// Called at the start of the action lifecycle.
+        /// Captures the front tile and affected tiles for this action attempt.
+        /// Used for the preparation preview, then refreshed on release and held stable through execution.
         /// </summary>
-        public void CacheAffectedTiles(PlayerInteractionContextSnapshot snapshot)
+        public void CaptureTargets(PlayerInteractionContextSnapshot snapshot)
         {
-            _cachedAffectedTiles = ComputeAffectedTiles(snapshot);
+            _capturedFrontTile = Character.Tiles.InFront;
+            _capturedAffectedTiles = ComputeAffectedTiles(snapshot);
         }
 
         /// <summary>
-        /// Clears the cached affected tiles. Called at the end of the action lifecycle.
+        /// Releases the captured targets at the end of the action attempt.
         /// </summary>
-        public void ClearCachedTiles()
+        public void ClearCapturedTargets()
         {
-            _cachedAffectedTiles = null;
+            _capturedAffectedTiles = null;
+            _capturedFrontTile = null;
         }
 
         /// <summary>
@@ -75,9 +78,6 @@ namespace Interaction.Tools
         /// </summary>
         private List<TileData> ComputeAffectedTiles(PlayerInteractionContextSnapshot snapshot = null)
         {
-            if (!ToolData)
-                return new List<TileData>();
-
             return MapManager.Instance
                 .GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration)
                 .Where(CanBeUsedOnTile)
@@ -85,11 +85,11 @@ namespace Interaction.Tools
         }
 
         /// <summary>
-        /// Gets the tiles affected by this tool. Uses cache if available.
+        /// Gets captured targets during an attempt, or computes a live preview.
         /// </summary>
         public virtual List<TileData> GetAffectedTiles(PlayerInteractionContextSnapshot snapshot)
         {
-            return _cachedAffectedTiles ?? ComputeAffectedTiles(snapshot);
+            return _capturedAffectedTiles ?? ComputeAffectedTiles(snapshot);
         }
 
         /// <summary>
@@ -101,30 +101,12 @@ namespace Interaction.Tools
         }
 
         /// <summary>
-        /// Default prepare behavior: shows affected tiles highlight.
-        /// </summary>
-        public override IEnumerator OnPrepare(PlayerInteractionContextSnapshot snapshot)
-        {
-            yield break;
-        }
-
-        /// <summary>
-        /// Override to specify what happens when the tool action finishes.
-        /// </summary>
-        public override IEnumerator OnFinish(PlayerInteractionContextSnapshot snapshot)
-        {
-            // Default: hide the tile highlighter in case it wasn't hidden
-            snapshot.Character.TileHighlighter?.Hide();
-            yield break;
-        }
-        
-        /// <summary>
         /// Hides the tile highlighter. Call this at the start of your OnExecute override
         /// if you want to hide the preview when execution begins.
         /// </summary>
         public void HideTileHighlighter(PlayerInteractionContextSnapshot snapshot)
         {
-            snapshot.Character.TileHighlighter?.Hide();
+            if (snapshot.Character.TileHighlighter) snapshot.Character.TileHighlighter.Hide();
         }
 
         /// <summary>
@@ -143,7 +125,7 @@ namespace Interaction.Tools
 
         /// <summary>
         /// Helper method to execute an action on each affected tile with optional delay.
-        /// Uses cached tiles if available.
+        /// Uses the captured targets during an attempt.
         /// </summary>
         protected IEnumerator ForEachAffectedTile(
             PlayerInteractionContextSnapshot snapshot, 
@@ -163,7 +145,7 @@ namespace Interaction.Tools
         
         /// <summary>
         /// Helper method to execute an async action on each affected tile with optional delay.
-        /// Uses cached tiles if available.
+        /// Uses the captured targets during an attempt.
         /// </summary>
         protected IEnumerator ForEachAffectedTileAsync(
             PlayerInteractionContextSnapshot snapshot, 

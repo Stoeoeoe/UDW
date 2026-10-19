@@ -53,6 +53,7 @@ namespace UI.Stamina.Editor
             CharacterManager.Instance.RegisterMainCharacter(_character);
 
             _fixture.Root.SetActive(true);
+            BuildToolMap();
             var hud = new GameObject("Stamina HUD");
             hud.SetActive(false);
             hud.transform.SetParent(_fixture.Root.transform);
@@ -77,7 +78,6 @@ namespace UI.Stamina.Editor
         [TestCase(false)]
         public void SuccessfulToolExecutionSpendsItsAuthoredCostAndUpdatesTheBar(bool skipPreparation)
         {
-            if (!skipPreparation) BuildToolMap();
             RunTool(skipPreparation);
             Assert.That(_toolAction.Executions, Is.EqualTo(1));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - _tool.staminaCost));
@@ -188,7 +188,7 @@ namespace UI.Stamina.Editor
             .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 
-    /// <summary>A deterministic tool effect so the test exercises the production dispatcher without a terrain dependency.</summary>
+    /// <summary>A deterministic tool effect so the test exercises resource spending without changing terrain.</summary>
     public sealed class StaminaTestToolAction : ToolAction
     {
         public bool Allowed = true;

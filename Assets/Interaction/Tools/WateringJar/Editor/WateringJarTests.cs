@@ -241,12 +241,57 @@ namespace Interaction.Tools.WateringJar.Editor
         }
 
         [Test]
+        public void CapturedRefillUsesTheSameTargetForFeedbackCostAndExecution()
+        {
+            var water = Tile("fresh_water");
+            var (_, wrapper) = ToolLifecycle();
+            _jug.Water.Current = 2;
+            var snapshot = PlayerInteractionContextSnapshot.Empty() with { SceneReady = true, Character = _character };
+            Assert.That(wrapper.CanExecute(snapshot), Is.True);
+            Assert.That(wrapper.CanExecuteAfterPreparation(snapshot), Is.True);
+            var feedback = _jug.ExecuteFeedback;
+
+            // Presentation callbacks must not change the operation chosen on release.
+            _character.Orientation.ForceDirection(Vector2.down);
+            Assert.That(_jug.IsRefilling, Is.True);
+            Assert.That(_jug.StaminaCost, Is.Zero);
+            Assert.That(_jug.ExecuteFeedback, Is.SameAs(feedback));
+            Assert.That(_jug.GetActionExecutionLocation(snapshot), Is.EqualTo(water.WorldPosition));
+            var routine = _jug.OnExecute(snapshot);
+            Assert.That(routine.MoveNext(), Is.True);
+            Assert.That(routine.MoveNext(), Is.False);
+            Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
+
+            wrapper.OnEnd(snapshot);
+            Assert.That(_jug.IsRefilling, Is.False, "Ending the attempt releases its captured target.");
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void PreparationReleaseCapturesTheFinalAimForBothRefillAndWatering(bool finishFacingWater)
+        {
+            Tile("fresh_water");
+            var soil = Tile("dirt", true, new Vector2Int(0, -1));
+            _character.Orientation.ForceDirection(finishFacingWater ? Vector2.down : Vector2.up);
+            var (executor, wrapper) = ToolLifecycle();
+            _jug.Water.Current = 4;
+
+            Run(executor, wrapper, () => _character.Orientation.ForceDirection(finishFacingWater ? Vector2.up : Vector2.down));
+
+            Assert.That(_jug.Water.Current, Is.EqualTo(finishFacingWater ? _jug.Water.Capacity : 4 - _jug.ToolData.chargePerUsage));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(finishFacingWater ? 100 : 100 - _jug.ToolData.staminaCost));
+            Assert.That(soil.FarmlandData.IsIrrigated, Is.EqualTo(!finishFacingWater));
+            Assert.That(executor.IsIdle, Is.True);
+            Assert.That(_character.IsControlBlocked, Is.False);
+        }
+
+        [Test]
         public void WateringSpendsPerTileAndStopsWhenEmpty()
         {
             var first = Tile("dirt", true);
             var second = Tile("dirt", true, _front + Vector2Int.right);
             _jug.Water.Current = _jug.ToolData.chargePerUsage;
-            Set(typeof(ToolAction), _jug, "_cachedAffectedTiles", new List<TileData> { first, second });
+            Set(typeof(ToolAction), _jug, "_capturedAffectedTiles", new List<TileData> { first, second });
             var routine = _jug.OnExecute(null);
             while (routine.MoveNext()) { }
             Assert.That(first.FarmlandData.IsIrrigated, Is.True);
