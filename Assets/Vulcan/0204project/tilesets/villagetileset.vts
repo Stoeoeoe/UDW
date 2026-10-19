@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/tileset.schema.json",
+  "$schema": "../../schemas/tileset.schema.json",
   "version": 1,
   "id": "base:villagetileset",
   "name": "VillageTileset Test",
@@ -340,10 +340,28 @@
       "id": "tile_2_3"
     },
     "99": {
-      "id": "tile_3_3"
+      "id": "tile_3_3",
+      "collision": {
+        "type": "full"
+      },
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ]
     },
     "100": {
-      "id": "tile_4_3"
+      "id": "tile_4_3",
+      "collision": {
+        "type": "full"
+      },
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ]
     },
     "101": {
       "id": "tile_5_3"

@@ -1,5 +1,5 @@
 {
-  "$schema": "./schemas/project.schema.json",
+  "$schema": "../schemas/project.schema.json",
   "version": "1.0",
   "id": "vulcan",
   "name": "0204 Project Tests",
@@ -128,6 +128,14 @@
       "type": "boolean",
       "defaultValue": false,
       "required": false
+    },
+    {
+      "key": "isFreshwater",
+      "label": "Is Freshwater",
+      "type": "boolean",
+      "required": false,
+      "description": "For watering jug",
+      "defaultValue": false
     }
   ],
   "locationMetadataDefinitions": [
@@ -166,5 +174,6 @@
         }
       ]
     }
-  ]
+  ],
+  "idPrefix": "base"
 }
