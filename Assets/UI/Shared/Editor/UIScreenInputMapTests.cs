@@ -40,6 +40,38 @@ namespace UI.Shared.Editor
         }
 
         [Test]
+        public void ScriptReloadDoesNotSerializeRuntimeActionMapReferences()
+        {
+            using var serialized = new UnityEditor.SerializedObject(_input);
+            // Debug serialization includes private fields, as Unity's script reload does.
+            typeof(UnityEditor.SerializedObject).GetProperty("inspectorMode",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(serialized, UnityEditor.InspectorMode.Debug);
+
+            foreach (var field in new[] { "_playerControls", "_ui", "_global", "_screenMap" })
+                Assert.That(serialized.FindProperty(field), Is.Null,
+                    $"{field} must be resolved from PlayerInput, never restored as an inline action map.");
+        }
+
+        [Test]
+        public void EnablingRebindsActionMapsAfterScriptReloadClearsRuntimeReferences()
+        {
+            Core.Common.Editor.GameTestFixture.Invoke(_input, "OnDisable");
+            foreach (var field in new[] { "_playerControls", "_ui", "_global", "_screenMap" })
+                typeof(Input.InputManager).GetField(field,
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .SetValue(_input, null);
+
+            Core.Common.Editor.GameTestFixture.Invoke(_input, "OnEnable");
+
+            Assert.That(_input.PlayerControls, Is.SameAs(_input.Actions.FindActionMap("PlayerControls", true)));
+            Assert.That(_input.GetComponent<PlayerInput>().currentActionMap, Is.SameAs(_input.PlayerControls));
+            Assert.That(_input.PlayerControls.enabled, Is.True);
+            Assert.That(_input.Actions.FindActionMap("Global").enabled, Is.True);
+            Assert.That(_input.Actions.FindActionMap("UI").enabled, Is.True);
+        }
+
+        [Test]
         public void KeyboardMovementResolvesWithTheAuthoredControlSchemeAfterClosingAMenu()
         {
             var keyboard = InputSystem.AddDevice<Keyboard>();

@@ -20,7 +20,9 @@ namespace Input
     {
         private PlayerInput _player;
         private InputActionAsset _actions;
-        private InputActionMap _playerControls, _ui, _global, _screenMap;
+        // Script reload serializes private action maps inline, even turning a null screen map
+        // into an empty map. These references belong to PlayerInput's live asset only.
+        [NonSerialized] private InputActionMap _playerControls, _ui, _global, _screenMap;
         private readonly HashSet<InputBlockContext> _blocks = new();
 
         private enum InputBlockContext { Location, DayTransition }
@@ -52,7 +54,7 @@ namespace Input
         public bool PerformSecondaryActionReleased =>
             _playerControls["PerformSecondaryAction"].WasReleasedThisFrame();
 
-        protected override void OnAwake()
+        private void BindActions()
         {
             _player = GetComponent<PlayerInput>();
             _actions = _player.actions ?? throw new InvalidOperationException("InputManager requires PlayerInput actions.");
@@ -61,7 +63,6 @@ namespace Input
             _global = _actions.FindActionMap("Global", true);
             _global.FindAction("OpenInventory", true);
             _global.FindAction("Pause", true);
-            ApplyMaps();
         }
 
         public void ValidateScreenMap(string name)
@@ -73,6 +74,7 @@ namespace Input
 
         private void OnEnable()
         {
+            BindActions();
             this.Subscribe<DayTransitionStarted>();
             this.Subscribe<DayTransitionFinished>();
             ApplyMaps();
