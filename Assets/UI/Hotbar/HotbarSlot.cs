@@ -1,4 +1,5 @@
 using Core.Inventory;
+using Interaction.Tools;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,10 @@ namespace UI.Hotbar
         [Tooltip("TextMeshPro component for displaying the key binding")]
         public TMP_Text KeyBindingText;
 
+        [Header("Charge")]
+        public RectTransform ChargeTrack;
+        public Image ChargeFill;
+
         
         [Header("Button")]
         [Tooltip("Button component for mouse/touch input")]
@@ -54,6 +59,8 @@ namespace UI.Hotbar
         {
             _parentHotbar = parentHotbar;
             _slotIndex = slotIndex;
+            if (!ChargeTrack || !ChargeFill)
+                throw new System.InvalidOperationException("Hotbar slots require a charge track and fill image.");
             
             // Set up button click listener
             if (SlotButton != null)
@@ -90,6 +97,16 @@ namespace UI.Hotbar
             
             // Update quantity
             UpdateQuantityDisplay(stack);
+
+            var charged = hasItem && stack.Item is ToolData { maxCharge: > 0 };
+            ChargeTrack.gameObject.SetActive(charged);
+            if (charged)
+            {
+                var tool = (ToolData)stack.Item;
+                var charge = _parentHotbar.TargetInventory.Loadout.GetToolCharge(tool);
+                ChargeFill.color = tool.ChargeColor;
+                ChargeFill.rectTransform.anchorMax = new Vector2((float)charge.Current / charge.Capacity, 1f);
+            }
             
             // Update background
             if (BackgroundImage != null)

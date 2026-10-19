@@ -184,13 +184,28 @@ namespace UI.InventoryScreen
                 var inHand = stack.Item && TargetInventory.Loadout.ActiveHandInventoryIndex == i;
                 cell.EnableInClassList("inventory-slot-active", inHand);
                 cell.EnableInClassList("inventory-slot-empty", !stack.IsOccupied);
+                var charged = stack.Item is Interaction.Tools.ToolData { maxCharge: > 0 };
+                cell.EnableInClassList("inventory-slot-charged", charged);
                 cell.tooltip = stack.IsOccupied ? stack.Item.ItemName : "Empty slot";
                 if (stack.IsOccupied)
                 {
                     var icon = new VisualElement { pickingMode = PickingMode.Ignore }; icon.AddToClassList("inventory-icon");
                     if (stack.Item.Icon) icon.style.backgroundImage = new StyleBackground(stack.Item.Icon);
                     cell.Add(icon);
-                    if (stack.Quantity > 1) AddLabel(cell, stack.Quantity.ToString(), "inventory-quantity");
+                    if (stack.Item.MaxStackSize > 1) AddLabel(cell, stack.Quantity.ToString(), "inventory-quantity");
+                    if (charged)
+                    {
+                        var tool = (Interaction.Tools.ToolData)stack.Item;
+                        var charge = TargetInventory.Loadout.GetToolCharge(tool);
+                        cell.tooltip = $"{tool.ItemName}\n{charge.Current} / {charge.Capacity}";
+                        var track = new VisualElement { name = "chargeTrack", pickingMode = PickingMode.Ignore, tooltip = $"{charge.Current} / {charge.Capacity}" };
+                        track.AddToClassList("inventory-charge-track");
+                        var fill = new VisualElement { name = "chargeFill", pickingMode = PickingMode.Ignore };
+                        fill.AddToClassList("inventory-charge-fill");
+                        fill.style.width = Length.Percent(100f * charge.Current / charge.Capacity);
+                        fill.style.backgroundColor = tool.ChargeColor;
+                        track.Add(fill); cell.Add(track);
+                    }
                 }
                 if (inHand)
                     AddLabel(cell, TargetInventory.Loadout.ActiveHandItem ? "In hand" : "Empty hand", "inventory-hand-marker");

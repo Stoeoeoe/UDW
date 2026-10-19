@@ -122,6 +122,83 @@ namespace UI.Shared.Editor
         }
 
         [Test]
+        public void InventorySlotShowsQuantityAndColouredChargeAndRefreshesAfterConsumption()
+        {
+            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
+            Set(typeof(ToolData), _tool, "_maxCharge", 20);
+            Set(typeof(ToolData), _tool, "_chargeColor", Color.red);
+            _inventory.SetSlot(0, new ItemStack(_tool, 7));
+            var presenter = CreateInventoryScreen(); presenter.OpenInventory();
+            var root = _document.rootVisualElement;
+            var cell = root.Q("slot0");
+            Assert.That(cell.Q<Label>(className: "inventory-quantity").text, Is.EqualTo("7"));
+            Assert.That(cell.Q("chargeFill").style.width.value.value, Is.EqualTo(100f));
+            Assert.That(cell.Q("chargeFill").style.backgroundColor.value, Is.EqualTo(Color.red));
+            var charge = _inventory.Loadout.GetToolCharge(_tool);
+            charge.TryConsume(5);
+            UIScreenPauseTests.Invoke(presenter, "LateUpdate");
+            Assert.That(cell.Q("chargeFill").style.width.value.value, Is.EqualTo(75f));
+            Assert.That(cell.Q("chargeTrack").tooltip, Is.EqualTo("15 / 20"));
+            charge.IncreaseCapacity(20);
+            UIScreenPauseTests.Invoke(presenter, "LateUpdate");
+            Assert.That(cell.Q("chargeFill").style.width.value.value, Is.EqualTo(37.5f));
+            charge.Refill();
+            UIScreenPauseTests.Invoke(presenter, "LateUpdate");
+            Assert.That(cell.Q("chargeFill").style.width.value.value, Is.EqualTo(100f));
+            charge.TryConsume(40);
+            UIScreenPauseTests.Invoke(presenter, "LateUpdate");
+            Assert.That(cell.Q("chargeFill").style.width.value.value, Is.Zero);
+            Assert.That(cell.Q<Label>(className: "inventory-quantity").text, Is.EqualTo("7"));
+            _inventory.SetSlot(0, ItemStack.Empty);
+            UIScreenPauseTests.Invoke(presenter, "LateUpdate");
+            Assert.That(cell.Q("chargeTrack"), Is.Null);
+            Assert.That(cell.Q<Label>(className: "inventory-quantity"), Is.Null);
+        }
+
+        [Test]
+        public void HotbarUsesCarriedQuantityAndRefreshesChargeWithoutPolling()
+        {
+            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
+            Set(typeof(ToolData), _tool, "_maxCharge", 20);
+            Set(typeof(ToolData), _tool, "_chargeColor", Color.red);
+            _inventory.SetSlot(0, new ItemStack(_tool, 3));
+            _inventory.SetSlot(1, new ItemStack(_tool, 4));
+            _inventory.Loadout.AssignToolbeltSlot(0, 0);
+            var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
+            var bar = owner.AddComponent<UI.Hotbar.ToolHotbar>();
+            bar.TargetInventoryName = _inventory.InventoryName;
+            bar.PlayerId = _inventory.PlayerID;
+            Set(typeof(UI.Hotbar.ToolHotbar), bar, "_targetInventory", _inventory);
+            bar.SlotContainer = owner.transform;
+            bar.SlotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Hotbar/ToolHotbarSlot.prefab");
+            UIScreenPauseTests.Invoke(bar, "Start");
+            UIScreenPauseTests.Invoke(bar, "OnEnable");
+            try
+            {
+                var slot = owner.transform.GetChild(0).GetComponent<UI.Hotbar.HotbarSlot>();
+                Assert.That(slot.QuantityText.text, Is.EqualTo("7"));
+                Assert.That(slot.ChargeTrack.gameObject.activeSelf, Is.True);
+                Assert.That(slot.ChargeFill.rectTransform.anchorMax.x, Is.EqualTo(1f));
+                Assert.That(slot.ChargeFill.color, Is.EqualTo(Color.red));
+                var charge = _inventory.Loadout.GetToolCharge(_tool);
+                charge.TryConsume(5);
+                Assert.That(slot.ChargeFill.rectTransform.anchorMax.x, Is.EqualTo(0.75f));
+                charge.IncreaseCapacity(20);
+                Assert.That(slot.ChargeFill.rectTransform.anchorMax.x, Is.EqualTo(0.375f));
+                charge.Refill();
+                Assert.That(slot.ChargeFill.rectTransform.anchorMax.x, Is.EqualTo(1f));
+                charge.TryConsume(40);
+                Assert.That(slot.ChargeFill.rectTransform.anchorMax.x, Is.Zero);
+                _inventory.SetSlot(0, ItemStack.Empty);
+                Assert.That(slot.QuantityText.text, Is.EqualTo("4"));
+                _inventory.SetSlot(1, ItemStack.Empty);
+                Assert.That(slot.ChargeTrack.gameObject.activeSelf, Is.False);
+                Assert.That(slot.QuantityText.enabled, Is.False);
+            }
+            finally { UIScreenPauseTests.Invoke(bar, "OnDisable"); }
+        }
+
+        [Test]
         public void SwitchingTabsReturnsCarriedItemsAndReopeningStartsOnBag()
         {
             var presenter = CreateInventoryScreen(); presenter.OpenInventory();

@@ -153,7 +153,14 @@ namespace UI.Hotbar
             for (int i = 0; i < _hotbarSlots.Count; i++)
             {
                 var tool = TargetInventory.Loadout.GetToolbeltTool(i);
-                _hotbarSlots[i].UpdateDisplay(tool ? new ItemStack(tool, 1) : ItemStack.Empty);
+                var quantity = 0;
+                if (tool)
+                    for (var slot = 0; slot < TargetInventory.Capacity; slot++)
+                    {
+                        var stack = TargetInventory.GetSlot(slot);
+                        if (stack.ItemId == tool.ItemId) quantity += stack.Quantity;
+                    }
+                _hotbarSlots[i].UpdateDisplay(tool ? new ItemStack(tool, quantity) : ItemStack.Empty);
             }
             SetSelectedSlot(TargetInventory.Loadout.ActiveToolbeltSlot);
         }
