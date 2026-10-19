@@ -37,6 +37,7 @@ namespace Core.Tile
         private GameObject _plantParentGameObject;
         private Dictionary<TerrainType, TerrainData> _terrainDataByType;
         private Dictionary<Vector2Int, TileData> _tileDataCache;
+        private readonly List<Collider2D> _occupancyColliders = new();
 
         public Bounds CurrentBounds
         {
@@ -164,12 +165,18 @@ namespace Core.Tile
                 .ToList();
         }
 
-        public bool IsTileOccupied(TileData tileData)
+        /// <summary>Checks solid obstacles and crops, excluding sensors and the character performing the action.</summary>
+        public bool IsTileOccupied(TileData tileData, GameCharacter actingCharacter = null)
         {
             if (tileData == null) return true;
 
-            var collider = Physics2D.OverlapBox(tileData.WorldPosition, new Vector2(1, 1), 0);
-            if (collider != null) return true;
+            // A character's sensor can reach neighbouring cells without occupying them.
+            var filter = new ContactFilter2D { useTriggers = false };
+            filter.SetLayerMask(Physics2D.DefaultRaycastLayers);
+            Physics2D.OverlapBox(tileData.WorldPosition, Vector2.one, 0f, filter, _occupancyColliders);
+            foreach (var collider in _occupancyColliders)
+                if (!actingCharacter || !collider.transform.IsChildOf(actingCharacter.transform))
+                    return true;
 
             if (PlantManager.Instance.HasPlantAtCurrentMap(tileData.Coordinates))
                 return true;

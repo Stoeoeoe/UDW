@@ -1,4 +1,5 @@
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -81,6 +82,90 @@ namespace Core.Tile.Editor
             Object.DestroyImmediate(_gridRoot);
             foreach (var asset in _assets) Object.DestroyImmediate(asset);
             _assets.Clear();
+        }
+
+        [TestCase(0, 1, 0.5f, 0.5f)]
+        [TestCase(1, 0, 0.95f, 0.95f)]
+        [TestCase(0, -1, 0.5f, 0.5f)]
+        [TestCase(-1, 0, 0.01f, 0.01f)]
+        public void AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
+        {
+            _fixture.AddSingleton<PlantManager>();
+            var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/map-1.vmap")
+                .GetComponent<VulcanusImportedMap>();
+            var sourceCell = new Vector3Int(6, 21, 0);
+            _terrain.SetTile(Vector3Int.zero, source.TerrainTilemap.GetTile(sourceCell));
+            _farmland.SetTile(Vector3Int.zero, source.FarmlandTilemap.GetTile(sourceCell));
+            // Isolate physical queries from the user's open scene, while using the real map's tile definitions.
+            _gridRoot.transform.position = new Vector3(1000, -1000, 0);
+            BuildCache();
+            var soil = _map.GetTileDataAtCoordinates(Vector2Int.zero);
+            Assert.That(soil.IsFarmable, Is.True);
+
+            var character = _fixture.CreateCharacter();
+            var direction = new Vector2Int(dx, dy);
+            var anchor = _terrain.CellToWorld(new Vector3Int(-dx, -dy, 0)) + new Vector3(x, y, 0);
+            character.transform.position += anchor - character.ToolInteractionAnchor.position;
+            character.Orientation.ForceDirection(direction);
+            character.Tiles.EnterLocation(_map);
+            var tool = UnityEditor.AssetDatabase.LoadAssetAtPath<Interaction.Tools.ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset");
+            character.MainInventory.AddItem(tool, 1);
+            character.Loadout.SelectItem(0);
+            character.ToolActionRegistry.Initialize(character);
+            var wrapper = Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform).GetComponent<Interaction.Tools.UseToolAction>();
+            wrapper.Initialize(character);
+            _root.SetActive(true);
+            character.transform.parent.gameObject.SetActive(true);
+            Physics2D.SyncTransforms();
+
+            // North reproduces sensor overlap; south reproduces body overlap. East/west also verify ordinary use.
+            if (dy != 0)
+                Assert.That(Physics2D.OverlapBoxAll(soil.WorldPosition, Vector2.one, 0)
+                    .Any(collider => collider.transform.IsChildOf(character.transform)), Is.True,
+                    "The regression requires the authored character body or sensor to overlap the target.");
+            Assert.That(_map.IsTileOccupied(soil, character), Is.False);
+            var snapshot = Core.Context.PlayerInteractionContextSnapshot.Empty() with
+            {
+                SceneReady = true, Character = character, CurrentTool = tool, CurrentlyHeldItem = tool,
+                Mode = Core.Context.InteractionMode.Tool
+            };
+            var executor = new Interaction.ActionExecutor(character, () => snapshot);
+            var steps = new Stack<IEnumerator>();
+            steps.Push(executor.Run(wrapper));
+            while (steps.Count > 0)
+            {
+                var step = steps.Peek();
+                if (!step.MoveNext()) { steps.Pop(); continue; }
+                if (step.Current is WaitUntil && executor.State == Interaction.ActionExecutionState.Preparing)
+                    executor.ContinueFromPrepare();
+                if (step.Current is IEnumerator nested) steps.Push(nested);
+            }
+
+            Assert.That(soil.FarmlandData.IsPlowed, Is.True);
+            Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
+            Assert.That(GameState.World.TryGet<FarmlandState>(_location.id, "farmland:0,0", out var saved), Is.True);
+            Assert.That(saved.plowed, Is.True);
+            Assert.That(character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.staminaCost));
+            Assert.That(executor.IsIdle, Is.True);
+            Assert.That(character.IsControlBlocked, Is.False);
+        }
+
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        public void OccupancyIgnoresTriggersButKeepsSolidObstacles(bool trigger, bool occupied)
+        {
+            _fixture.AddSingleton<PlantManager>();
+            _gridRoot.transform.position = new Vector3(1000, -1000, 0);
+            _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
+            BuildCache();
+            var tile = _map.GetTileDataAtCoordinates(Vector2Int.zero);
+            var obstacle = new GameObject("Occupancy probe", typeof(BoxCollider2D));
+            obstacle.transform.SetParent(_gridRoot.transform);
+            obstacle.transform.position = tile.WorldPosition;
+            obstacle.GetComponent<BoxCollider2D>().isTrigger = trigger;
+            Physics2D.SyncTransforms();
+            Assert.That(_map.IsTileOccupied(tile), Is.EqualTo(occupied));
         }
 
         [TestCase(TerrainType.Dirt)]
