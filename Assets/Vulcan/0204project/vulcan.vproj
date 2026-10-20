@@ -25,6 +25,11 @@
       "id": "dark_grass",
       "displayName": "Dark Grass",
       "color": "#194805"
+    },
+    {
+      "id": "lakewater",
+      "displayName": "Lake Water",
+      "color": "#3182ce"
     }
   ],
   "gameVariables": [
@@ -136,6 +141,20 @@
       "required": false,
       "description": "For watering jug",
       "defaultValue": false
+    },
+    {
+      "key": "waterType",
+      "label": "Water Type",
+      "type": "enum",
+      "required": false,
+      "defaultValue": "None",
+      "constraints": {
+        "options": [
+          "None",
+          "Ocean_1",
+          "Lake_1"
+        ]
+      }
     }
   ],
   "locationMetadataDefinitions": [

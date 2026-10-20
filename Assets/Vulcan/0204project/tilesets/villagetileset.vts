@@ -348,7 +348,17 @@
         {
           "key": "isFreshwater",
           "value": true
+        },
+        {
+          "key": "waterType",
+          "value": "Lake_1"
         }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "lakewater",
+        "lakewater"
       ]
     },
     "100": {
@@ -360,7 +370,17 @@
         {
           "key": "isFreshwater",
           "value": true
+        },
+        {
+          "key": "waterType",
+          "value": "Lake_1"
         }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "lakewater",
+        "lakewater"
       ]
     },
     "101": {
@@ -1599,22 +1619,10 @@
       "id": "tile_8_11"
     },
     "361": {
-      "id": "tile_9_11",
-      "terrainCorners": [
-        "grass",
-        "grass",
-        "grass",
-        "grass"
-      ]
+      "id": "tile_9_11"
     },
     "362": {
-      "id": "tile_10_11",
-      "terrainCorners": [
-        "grass",
-        null,
-        "grass",
-        null
-      ]
+      "id": "tile_10_11"
     },
     "363": {
       "id": "tile_11_11"
@@ -1725,22 +1733,10 @@
       "id": "tile_8_12"
     },
     "393": {
-      "id": "tile_9_12",
-      "terrainCorners": [
-        "grass",
-        "grass",
-        "grass",
-        "grass"
-      ]
+      "id": "tile_9_12"
     },
     "394": {
-      "id": "tile_10_12",
-      "terrainCorners": [
-        "grass",
-        null,
-        "grass",
-        null
-      ]
+      "id": "tile_10_12"
     },
     "395": {
       "id": "tile_11_12"
