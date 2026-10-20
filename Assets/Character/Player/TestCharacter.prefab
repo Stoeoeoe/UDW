@@ -796,11 +796,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Character.UrCharacterAnimator
   animancer: {fileID: 8160659729119610378}
   character: {fileID: 1754888933028988936}
-  asepriteFile: {fileID: -2253911629886400664, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
+  animationLibrary: {fileID: 11400000, guid: cf4542130557d7d4ca2059be98e024d3, type: 2}
+  runPrefix: Run
   walkPrefix: Walk
   idlePrefix: Idle
-  preparePrefix: PrepTool
-  usePrefix: UseTool
+  toolPrepareAction: Idle
+  toolUseAction: Mine
 --- !u!114 &789938966457487899
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1000,7 +1001,7 @@ SpriteRenderer:
   m_SortingLayer: 5
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -6145153117917986877, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
+  m_Sprite: {fileID: -2564260319049456275, guid: 2ce17a910b107bc4eafaf54517426a39, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1026,26 +1027,9 @@ MonoBehaviour:
   _Animator: {fileID: 4390219943731076891}
   _Transitions: {fileID: 0}
   _ActionOnDisable: 0
-  _PlayAutomatically: 1
+  _PlayAutomatically: 0
   _Names: []
-  _Animations:
-  - {fileID: 3346143868754109990, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -2355971724533255871, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -6505532226874924360, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 6265599726495398126, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -8873193061684874310, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 8011725755852944038, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 1094025910225952618, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -610218999681834185, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 6252899775254673161, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -3466137559090630743, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 28909758462378905, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -3496457805999578187, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -3178249447056455081, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 2079152480662627284, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 9001146409403103182, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: 8280672964860469539, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
-  - {fileID: -8228980631134644920, guid: 8f32b111b27a2594b9244d77b4d0742c, type: 3}
+  _Animations: []
 --- !u!95 &4390219943731076891
 Animator:
   serializedVersion: 7

@@ -30,7 +30,7 @@ MonoBehaviour:
   _consumeStaminaOnFailure: 0
   _isInInventory: 1
   _showTileHighlighterOnPrepare: 1
-  _actionDuration: 0.2
+  _actionDuration: 0.5
   _cooldownDuration: 0.2
   _toolEffectConfiguration:
     AffectedTileOffsets:
@@ -40,7 +40,7 @@ MonoBehaviour:
   _prepareUseRightAnimationClip: {fileID: 0}
   _prepareUseDownAnimationClip: {fileID: 0}
   _prepareUseLeftAnimationClip: {fileID: 0}
-  _useUpAnimationClip: {fileID: 0}
-  _useRightAnimationClip: {fileID: 0}
-  _useDownAnimationClip: {fileID: 0}
-  _useLeftAnimationClip: {fileID: 0}
+  _useUpAnimationClip: {fileID: 7400000, guid: 538b1a80fa6361d41ba0affb36297fc3, type: 2}
+  _useRightAnimationClip: {fileID: 7400000, guid: 84068ea6b445e404aa10906413198def, type: 2}
+  _useDownAnimationClip: {fileID: 7400000, guid: fa324b615f7293b4ab1695b6af5b3ff6, type: 2}
+  _useLeftAnimationClip: {fileID: 7400000, guid: 74fc0907349401c48938ea137a91862e, type: 2}

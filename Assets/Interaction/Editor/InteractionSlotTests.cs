@@ -487,10 +487,12 @@ namespace Interaction.Editor
             GameTestFixture.Invoke(_character.Animator, "Update");
             var first = InteractionAnimationState(_character);
             Assert.That(first.Clip, Is.SameAs(variation.Clip));
-            Assert.That(InteractionAnimationState(_other).Clip, Is.SameAs(baseAnimation.Clip));
+            Assert.That(InteractionAnimationState(_other).Clip, Is.SameAs(baseAnimation.ResolveClip(
+                _other.Animator.AnimationLibrary, _other.Orientation.FacingDirection)));
             first.Time = first.Length;
             GameTestFixture.Invoke(_character.Animator, "Update");
-            Assert.That(InteractionAnimationState(_character).Clip, Is.SameAs(baseAnimation.Clip));
+            Assert.That(InteractionAnimationState(_character).Clip, Is.SameAs(baseAnimation.ResolveClip(
+                _character.Animator.AnimationLibrary, _character.Orientation.FacingDirection)));
             Assert.That(Read<float>(_character.Animator, "_variationDelay"), Is.InRange(5f, 10f));
         }
 
@@ -514,24 +516,38 @@ namespace Interaction.Editor
             _character.Animator.PlayInteractionAnimation(set);
             _character.Animator.PlayInteractionAnimation(set.BaseAnimation);
             GameTestFixture.Invoke(_character.Animator, "Update");
-            Assert.That(InteractionAnimationState(_character).Clip, Is.SameAs(set.BaseAnimation.Clip));
+            Assert.That(InteractionAnimationState(_character).Clip, Is.SameAs(set.BaseAnimation.ResolveClip(
+                _character.Animator.AnimationLibrary, _character.Orientation.FacingDirection)));
             Assert.That(Read<CharacterAnimationSet>(_character.Animator, "_interactionSet"), Is.Null);
             GameTestFixture.Invoke(_character.Animator, "OnDisable");
             Assert.That(InteractionAnimationState(_character), Is.Null);
         }
 
-        [Test]
-        public void FallClipHoldsItsPoseUntilEndedAndRestoresArtworkWithoutMovingPhysics()
+        [TestCase(0, -1)]
+        [TestCase(0, 1)]
+        [TestCase(-1, 0)]
+        [TestCase(1, 0)]
+        public void DeathClipHoldsItsPoseUntilEndedAndRestoresArtworkWithoutMovingPhysics(int x, int y)
         {
+            var facing = new Vector2(x, y);
+            _character.Orientation.ForceDirection(facing);
             var graphics = _character.Graphics;
             var position = graphics.localPosition;
             var rotation = graphics.localRotation;
             var scale = graphics.localScale;
             var rootPosition = _character.transform.position;
             var state = _character.Animator.PlayInteractionAnimation(_character.PassOutAnimation);
+            var expected = _character.Animator.AnimationLibrary.GetDirectional("Death", facing);
+            Assert.That(state.Clip, Is.SameAs(expected));
+            var keys = AnimationUtility.GetObjectReferenceCurve(expected,
+                EditorCurveBinding.PPtrCurve("", typeof(SpriteRenderer), "m_Sprite"));
+            var finalPose = keys[^1].value;
             state.Time = state.Length;
             _character.GetComponentInChildren<NamedAnimancerComponent>().Evaluate();
-            Assert.That(Quaternion.Angle(graphics.localRotation, rotation), Is.EqualTo(90).Within(0.1));
+            Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.SameAs(finalPose));
+            Assert.That(graphics.localPosition, Is.EqualTo(position));
+            Assert.That(graphics.localRotation, Is.EqualTo(rotation));
+            Assert.That(graphics.localScale, Is.EqualTo(scale));
             Assert.That(_character.transform.position, Is.EqualTo(rootPosition));
             Assert.That(InteractionAnimationState(_character), Is.SameAs(state));
             _character.Animator.EndInteractionAnimation();
@@ -540,6 +556,7 @@ namespace Interaction.Editor
             Assert.That(graphics.localPosition, Is.EqualTo(position));
             Assert.That(graphics.localRotation, Is.EqualTo(rotation));
             Assert.That(graphics.localScale, Is.EqualTo(scale));
+            Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.Not.SameAs(finalPose));
             _character.Animator.EndInteractionAnimation();
         }
 
@@ -588,6 +605,116 @@ namespace Interaction.Editor
             AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.z"),
                 AnimationCurve.Constant(0, 1, 1));
             return clip;
+        }
+
+        [Test]
+        public void MemaoLocomotionDistinguishesWalkingAndRunning()
+        {
+            var animator = _character.Animator;
+            var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
+            GameTestFixture.Invoke(playback, "Awake");
+            GameTestFixture.Invoke(playback, "OnEnable");
+            _character.Orientation.ForceDirection(Vector2.right);
+            _character.SetMovementState(MovementState.Walking);
+            GameTestFixture.Invoke(animator, "RefreshAnimation");
+            Assert.That(playback.Layers[0].CurrentState.Clip,
+                Is.SameAs(animator.AnimationLibrary.GetDirectional("Walk", Vector2.right)));
+            _character.SetMovementState(MovementState.Running);
+            GameTestFixture.Invoke(animator, "RefreshAnimation");
+            Assert.That(playback.Layers[0].CurrentState.Clip,
+                Is.SameAs(animator.AnimationLibrary.GetDirectional("Run", Vector2.right)));
+        }
+
+        [Test]
+        public void AuthoredSittingSlotPlaysTheDirectionalMemaoPose()
+        {
+            _character.Orientation.ForceDirection(Vector2.down);
+            var state = _character.Animator.PlayInteractionAnimation(_slot.OccupiedAnimation);
+            Assert.That(state.Clip, Is.SameAs(_character.Animator.AnimationLibrary.GetDirectional("Sit", Vector2.down)));
+        }
+
+        [TestCase("Assets/Resources/Items/Tools/HoeToolData.asset", "Mine", 0, 1)]
+        [TestCase("Assets/Resources/Items/Tools/HoeToolData.asset", "Mine", 1, 0)]
+        [TestCase("Assets/Resources/Items/Tools/HoeToolData.asset", "Mine", 0, -1)]
+        [TestCase("Assets/Resources/Items/Tools/HoeToolData.asset", "Mine", -1, 0)]
+        [TestCase("Assets/Resources/Items/Tools/WateringJarToolData.asset", "Water", 0, 1)]
+        [TestCase("Assets/Resources/Items/Tools/WateringJarToolData.asset", "Water", 1, 0)]
+        [TestCase("Assets/Resources/Items/Tools/WateringJarToolData.asset", "Water", 0, -1)]
+        [TestCase("Assets/Resources/Items/Tools/WateringJarToolData.asset", "Water", -1, 0)]
+        public void AuthoredFarmingToolsPlayTheirMappedClipAndAllowEveryFrame(string path, string action, int x, int y)
+        {
+            var tool = AssetDatabase.LoadAssetAtPath<Interaction.Tools.ToolData>(path);
+            var expected = _character.Animator.AnimationLibrary.GetDirectional(action, new Vector2(x, y));
+            typeof(UrCharacterAnimator).GetMethod("PlayToolUseAnimation", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(_character.Animator, new object[] { new Vector2(x, y), tool });
+            var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
+            Assert.That(playback.Layers[0].CurrentState.Clip, Is.SameAs(expected));
+            Assert.That(tool.actionDuration, Is.EqualTo(expected.length).Within(0.0001f));
+        }
+
+        [Test]
+        public void DifferentIdleClipsCanCoexistWithoutNameKeyCollisions()
+        {
+            var animator = _character.Animator;
+            var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
+            var oldClip = CreateClip();
+            oldClip.name = "Idle_D";
+            var previousState = playback.States.GetOrCreate("Idle_D", oldClip);
+            var memaoClip = animator.AnimationLibrary.GetDirectional("Idle", Vector2.down);
+            Assert.That(memaoClip.name, Is.EqualTo(oldClip.name));
+            _character.Orientation.ForceDirection(Vector2.down);
+            _character.SetMovementState(MovementState.Idle);
+            GameTestFixture.Invoke(animator, "RefreshAnimation");
+            Assert.That(playback.Layers[0].CurrentState.Clip, Is.SameAs(memaoClip));
+
+            var fixedAnimation = CreateAnimation("same-name-override");
+            Set(fixedAnimation, "clip", oldClip);
+            var overrideState = animator.PlayInteractionAnimation(fixedAnimation);
+            Assert.That(overrideState.Clip, Is.SameAs(oldClip));
+            animator.EndInteractionAnimation();
+            Assert.That(playback.Layers[0].CurrentState.Clip, Is.SameAs(memaoClip));
+            Assert.That(previousState.Clip, Is.SameAs(oldClip));
+        }
+
+        [Test]
+        public void NamedAnimancerAutomaticPlaybackFailsBeforeGameplay()
+        {
+            var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
+            playback.PlayAutomatically = true;
+            Assert.Throws<InvalidOperationException>(_character.Animator.ValidateConfiguration);
+        }
+
+        [Test]
+        public void NamedAnimancerPreloadedClipsFailBeforeGameplay()
+        {
+            var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
+            Set(playback, "_Animations", new[] { CreateClip() });
+            Assert.Throws<InvalidOperationException>(_character.Animator.ValidateConfiguration);
+        }
+
+        [Test]
+        public void MemaoInteractionTakesOwnershipFromNamedActionsAndRetainsItsFacing()
+        {
+            var animator = _character.Animator;
+            _character.Orientation.ForceDirection(Vector2.left);
+            Assert.That(animator.PlayNamedAction("Wave"), Is.True);
+            var pose = CreateAnimation("memao-sit");
+            Set(pose, "clip", null);
+            Set(pose, "memaoAction", "Sit");
+            var variation = CreateAnimation("memao-read");
+            Set(variation, "clip", null);
+            Set(variation, "memaoAction", "Read");
+            var set = CreateAnimationSet(pose, variation);
+            animator.PlayInteractionAnimation(set);
+            Assert.That(Read<bool>(animator, "_namedAnimationActive"), Is.False);
+            Assert.That(InteractionAnimationState(_character).Clip,
+                Is.SameAs(animator.AnimationLibrary.GetDirectional("Sit", Vector2.left)));
+            Assert.That(animator.PlayNamedAction("Wave"), Is.False);
+            _character.Orientation.ForceDirection(Vector2.right);
+            Set(animator, "_variationDelay", 0f);
+            GameTestFixture.Invoke(animator, "Update");
+            Assert.That(InteractionAnimationState(_character).Clip,
+                Is.SameAs(animator.AnimationLibrary.GetDirectional("Read", Vector2.left)));
         }
 
         private CharacterAnimation CreateAnimation(string id)

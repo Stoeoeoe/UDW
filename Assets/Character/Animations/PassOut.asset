@@ -13,4 +13,5 @@ MonoBehaviour:
   m_Name: PassOut
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.CharacterAnimation
   animationId: base:pass-out
-  clip: {fileID: 7400000, guid: cc493379bcbf0c64d9692bd00b2f978b, type: 2}
+  clip: {fileID: 0}
+  memaoAction: Death

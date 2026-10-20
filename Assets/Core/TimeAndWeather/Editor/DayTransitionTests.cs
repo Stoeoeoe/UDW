@@ -289,7 +289,12 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_character.PerformPrimaryAction.ActionExecutor.IsIdle, Is.True);
             Assert.That(_canvas.alpha, Is.Zero, "The collapse precedes the blackout.");
             CompleteCollapse();
-            Assert.That(Quaternion.Angle(graphics.localRotation, rotation), Is.EqualTo(90).Within(0.1));
+            var death = _character.Animator.AnimationLibrary.GetDirectional("Death", _character.Orientation.FacingDirection);
+            Assert.That(CollapseState().Clip, Is.SameAs(death));
+            var poses = AnimationUtility.GetObjectReferenceCurve(death,
+                EditorCurveBinding.PPtrCurve("", typeof(SpriteRenderer), "m_Sprite"));
+            Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.SameAs(poses[^1].value));
+            Assert.That(graphics.localRotation, Is.EqualTo(rotation));
             Assert.That(_character.transform.position, Is.EqualTo(position), "Only the artwork falls, not the physics root.");
             DOTween.Complete(_canvas, true);
             NextYield();
@@ -297,6 +302,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_character.Health.CurrentHealth, Is.EqualTo(100));
             Assert.That(_character.transform.position, Is.EqualTo(new Vector3(3, 2, 0)));
             Assert.That(graphics.localRotation, Is.EqualTo(rotation));
+            Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.Not.SameAs(poses[^1].value));
             Assert.That(_newDays, Is.EqualTo(1));
             NextYield();
             DOTween.Complete(_canvas, true);
@@ -312,16 +318,20 @@ namespace Core.TimeAndWeather.Editor
             var position = graphics.localPosition;
             var rotation = graphics.localRotation;
             var scale = graphics.localScale;
+            var originalSprite = graphics.GetComponent<SpriteRenderer>().sprite;
             NextYield();
             var state = CollapseState();
             state.Time = state.Length * 0.5f;
             _character.GetComponentInChildren<NamedAnimancerComponent>().Evaluate();
-            Assert.That(graphics.localRotation, Is.Not.EqualTo(rotation));
+            Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.Not.SameAs(originalSprite));
+            Assert.That(graphics.localRotation, Is.EqualTo(rotation));
+            var fallenSprite = graphics.GetComponent<SpriteRenderer>().sprite;
             _clock.CancelDayTransition();
             Assert.That(state.IsPlaying, Is.False);
             Assert.That(graphics.localPosition, Is.EqualTo(position));
             Assert.That(graphics.localRotation, Is.EqualTo(rotation));
             Assert.That(graphics.localScale, Is.EqualTo(scale));
+            Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.Not.SameAs(fallenSprite));
             Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(_input.Actions.enabled, Is.True);
             Assert.That(_newDays, Is.Zero);

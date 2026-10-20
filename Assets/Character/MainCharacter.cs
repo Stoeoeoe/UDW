@@ -48,7 +48,10 @@ namespace Character
                 throw new InvalidOperationException($"Main character '{name}' requires its primary action ability.");
             if (!passOutAnimation)
                 throw new InvalidOperationException("The player requires its pass-out animation.");
-            passOutAnimation.ValidateAsOneShot();
+            passOutAnimation.ValidateAsOneShot(Animator.AnimationLibrary);
+            // Passing out can happen in any facing, unlike a direction-specific occupied pose.
+            if (!string.IsNullOrEmpty(passOutAnimation.MemaoAction))
+                Animator.AnimationLibrary.ValidateAction(passOutAnimation.MemaoAction, oneShot: true);
         }
 
         private void OnEnable()

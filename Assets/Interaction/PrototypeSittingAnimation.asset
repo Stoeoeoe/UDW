@@ -13,4 +13,5 @@ MonoBehaviour:
   m_Name: PrototypeSittingAnimation
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.CharacterAnimation
   animationId: base:prototype-sitting
-  clip: {fileID: 7400000, guid: 45d9bbbb35d3c2f488f43c338bf3efee, type: 2}
+  clip: {fileID: 0}
+  memaoAction: Sit

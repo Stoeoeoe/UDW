@@ -8,6 +8,15 @@ namespace Character.Animations
     {
         protected override void CollectConfigurationErrors(CharacterAnimationDefinition asset, List<ConfigurationError> errors)
         {
+            if (asset is CharacterAnimation animation)
+            {
+                bool usesMemao = !string.IsNullOrEmpty(animation.MemaoAction);
+                if (usesMemao == (bool)animation.Clip)
+                    Report(errors, asset, "clip", "Assign exactly one source: a fixed clip or a Memao action.");
+                if (usesMemao && (string.IsNullOrWhiteSpace(animation.MemaoAction) || animation.MemaoAction.Trim() != animation.MemaoAction))
+                    Report(errors, asset, "memaoAction", "Use an importer action name without surrounding whitespace.");
+                return;
+            }
             if (asset is not CharacterAnimationSet set) return;
             var delay = set.VariationDelay;
             if (!ConfigurationRules.IsFinite(delay.x) || !ConfigurationRules.IsFinite(delay.y) ||

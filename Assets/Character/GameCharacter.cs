@@ -109,6 +109,7 @@ namespace Character
             attributes.ValidateConfiguration();
             actionRegistry.ValidateConfiguration();
             toolActionRegistry.ValidateConfiguration();
+            animator.ValidateConfiguration();
         }
 
         protected virtual void OnDestroy()

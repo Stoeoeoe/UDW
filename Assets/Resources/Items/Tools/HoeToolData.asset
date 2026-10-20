@@ -14,20 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
   _itemId: HoeToolData
   _itemName: Hoe
-  _icon: {fileID: 21300000, guid: c0c3b91584690fd4692faf1638a03621,
-    type: 3}
+  _category: 
+  _icon: {fileID: 21300000, guid: c0c3b91584690fd4692faf1638a03621, type: 3}
   _description: Prepare soil for planting.
   _maxStackSize: 99
+  _preventDropping: 1
+  _buyBasePrice: 0
+  _sellBasePrice: 0
   _worldRepresentationPrefab: {fileID: 0}
   _pickupSound: {fileID: 0}
-  _preventDropping: 1
   _maxCharge: 0
   _chargePerUsage: 0
+  _chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
   _staminaCost: 5
   _consumeStaminaOnFailure: 1
   _isInInventory: 1
   _showTileHighlighterOnPrepare: 1
-  _actionDuration: 0.2
+  _actionDuration: 0.5
   _cooldownDuration: 0.2
   _toolEffectConfiguration:
     AffectedTileOffsets:
@@ -37,7 +40,7 @@ MonoBehaviour:
   _prepareUseRightAnimationClip: {fileID: 0}
   _prepareUseDownAnimationClip: {fileID: 0}
   _prepareUseLeftAnimationClip: {fileID: 0}
-  _useUpAnimationClip: {fileID: 0}
-  _useRightAnimationClip: {fileID: 0}
-  _useDownAnimationClip: {fileID: 0}
-  _useLeftAnimationClip: {fileID: 0}
+  _useUpAnimationClip: {fileID: 7400000, guid: b207c7018328be5489cc3eec0b7ea82b, type: 2}
+  _useRightAnimationClip: {fileID: 7400000, guid: 3f4194b7f4caf31468bf2fdb71a4cadf, type: 2}
+  _useDownAnimationClip: {fileID: 7400000, guid: 3a4b93d43c200244b839ec2f5f5c22c0, type: 2}
+  _useLeftAnimationClip: {fileID: 7400000, guid: 6e7aacd0993a54c48acd1d1837887d15, type: 2}
