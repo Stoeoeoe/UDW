@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Tile.Vulcanus;
+using Core.Tile.Water;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEditor.U2D.Aseprite;
@@ -64,6 +65,7 @@ namespace Core.Tile.Editor.Vulcanus
                 var collisionKind = ParseCollisionKind(meta?.Collision);
                 var tileId = !string.IsNullOrEmpty(meta?.Id) ? meta.Id : $"{tilesetId}_{i}";
                 var tilePivotY = meta?.PivotY ?? 1f;
+                var waterType = "None";
 
                 // Use "grid" collision if "Full" mode was selected
                 if (collisionKind == VulcanusCollisionKind.Full)
@@ -79,6 +81,15 @@ namespace Core.Tile.Editor.Vulcanus
                     {
                         var pi = meta.Properties[p];
                         if (pi == null) continue;
+
+                        if (string.Equals(pi.Key, "waterType", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (pi.Value?.Type != Newtonsoft.Json.Linq.JTokenType.String ||
+                                string.IsNullOrWhiteSpace(pi.Value.ToObject<string>()))
+                                throw new FormatException($"Tile {i}: waterType must be a non-empty enum string (use 'None' for no water).");
+                            waterType = pi.Value.ToObject<string>();
+                            continue;
+                        }
 
                         if (string.Equals(pi.Key, "isFreshwater", StringComparison.OrdinalIgnoreCase) &&
                             pi.Value?.Type != Newtonsoft.Json.Linq.JTokenType.Boolean)
@@ -134,7 +145,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                 tile.Configure(i, tileId, terrainId,
                     VulcanusImportHelpers.MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind,
-                    metaProps, tilePivotY, shapes);
+                    metaProps, tilePivotY, shapes, waterType);
 
                 // Use Sprite collider type so TilemapCollider2D picks up the overridden physics shape.
                 if (collisionKind == VulcanusCollisionKind.Complex && sprite != null)
@@ -286,11 +297,13 @@ namespace Core.Tile.Editor.Vulcanus
             string humanName)
         {
             var go = new GameObject(humanName);
+            go.SetActive(false);
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.sortingLayerName = "Objects";
             sr.spriteSortPoint = SpriteSortPoint.Pivot;
+            go.AddComponent<WaterReflectionSource>().Configure(go.transform, new[] { sr });
 
             var sg = go.AddComponent<SortingGroup>();
             sg.sortingLayerName = "Objects";
@@ -381,7 +394,10 @@ namespace Core.Tile.Editor.Vulcanus
             }
 
             if (allPolygons.Count == 0)
+            {
+                go.SetActive(true);
                 return go;
+            }
 
             // Complex shapes are authored precisely — preserve every path as-is.
             // Only attempt merging for the all-full-tile case (rectangular grids) where
@@ -397,6 +413,7 @@ namespace Core.Tile.Editor.Vulcanus
             for (int i = 0; i < finalPaths.Count; i++)
                 poly.SetPath(i, finalPaths[i]);
 
+            go.SetActive(true);
             return go;
         }
 

@@ -9,6 +9,7 @@ using Core.Spawning;
 using Core.Spawning.Editor;
 using Core.Tile.Editor.Vulcanus;
 using Core.Tile.Vulcanus;
+using Core.Tile.Water;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEditor;
@@ -16,6 +17,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 using LocationType = Core.Common.LocationType;
 
@@ -152,6 +154,132 @@ namespace Core.Tile.Editor
             Assert.That(terrain, Is.EqualTo(TerrainType.Dirt));
             Assert.That(File.Exists(Absolute(_scenePath)), Is.True);
             Assert.That(EditorBuildSettings.scenes.Any(scene => scene.path == location.ScenePath), Is.True);
+        }
+
+        [Test]
+        public void WaterRegionsKeepCollisionAndGameplayTilesAndUseSeparateRenderers()
+        {
+            var tilesetJson = JObject.Parse(File.ReadAllText(Absolute(_tilesetPath)));
+            tilesetJson["tiles"]["0"]["properties"] = JArray.Parse(
+                "[{'key':'waterType','value':'Lake_1'},{'key':'isFreshwater','value':true}]");
+            WriteAndImport(_tilesetPath, tilesetJson.ToString());
+            _mapJson["layers"][0]["data"] = JArray.Parse("[[0,0,-1,0],[-1,0,-1,-1],[-1,-1,0,-1]]");
+            _mapJson["layers"][0]["opacity"] = 0.6f;
+            _mapJson["layers"][0]["zOrder"] = 5;
+            var map = ImportMap();
+            var bodies = map.GetComponentsInChildren<WaterBody>(true);
+            Assert.That(bodies.Length, Is.EqualTo(3), "Diagonal contact must not join independent water bodies.");
+            Assert.That(bodies.Select(body => body.name), Is.Unique);
+            var source = map.TerrainTilemap;
+            Assert.That(source.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>(), Is.Not.Null);
+            var waterCells = new[] { new Vector3Int(0, 3, 0), new Vector3Int(1, 3, 0), new Vector3Int(3, 3, 0),
+                new Vector3Int(1, 2, 0), new Vector3Int(2, 1, 0) };
+            foreach (var cell in waterCells)
+            {
+                var tile = source.GetTile<VulcanusTile>(cell);
+                Assert.That(tile.WaterType, Is.EqualTo("Lake_1"));
+                Assert.That(tile.IsFreshwater, Is.True);
+                Assert.That(source.GetColliderType(cell), Is.EqualTo(UnityEngine.Tilemaps.Tile.ColliderType.Grid));
+                Assert.That(source.GetColor(cell).a, Is.Zero);
+                var surface = bodies.Select(body => body.GetComponent<UnityEngine.Tilemaps.Tilemap>()).Single(layer => layer.HasTile(cell));
+                Assert.That(surface.GetSprite(cell), Is.SameAs(tile.sprite));
+                Assert.That(surface.GetTile(cell), Is.Not.InstanceOf<VulcanusTile>());
+                Assert.That(surface.GetColliderType(cell), Is.EqualTo(UnityEngine.Tilemaps.Tile.ColliderType.None));
+                Assert.That(surface.GetColor(cell).a, Is.EqualTo(1));
+            }
+            foreach (var body in bodies)
+            {
+                body.Validate();
+                Assert.That(body.Profile.name, Is.EqualTo("Lake_1"));
+                Assert.That(body.PixelsPerUnit, Is.EqualTo(16));
+                Assert.That(body.GetComponent<UnityEngine.Tilemaps.Tilemap>().color.a, Is.EqualTo(0.6f));
+                Assert.That(body.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder, Is.EqualTo(5));
+                Assert.That(body.GetComponent<Collider2D>(), Is.Null);
+            }
+            var names = bodies.Select(body => body.name).ToArray();
+            Assert.That(ImportMap().GetComponentsInChildren<WaterBody>(true).Select(body => body.name), Is.EqualTo(names));
+        }
+
+        [Test]
+        public void ShorelineFollowsSpriteAlphaHolesAndIgnoresArtificialMapEdges()
+        {
+            var tilesetJson = JObject.Parse(File.ReadAllText(Absolute(_tilesetPath)));
+            tilesetJson["tiles"]["0"]["properties"] = JArray.Parse("[{'key':'waterType','value':'Lake_1'}]");
+            WriteAndImport(_tilesetPath, tilesetJson.ToString());
+            _mapJson["width"] = _mapJson["height"] = 1;
+            _mapJson["layers"] = JArray.Parse("[{'name':'Water','kind':'terrain','data':[[0]]}]");
+            _mapJson.Remove("entities");
+            _mapJson.Remove("spatialPrimitives");
+            _mapJson.Remove("locationLinks");
+            var openWater = ImportMap().GetComponentInChildren<WaterBody>(true);
+            Assert.That(SampleShoreline(openWater.Shoreline, new Vector2Int(0, -8)), Is.EqualTo(32));
+
+            var texture = new Texture2D(16, 16);
+            texture.SetPixels(Enumerable.Repeat(Color.green, 256).ToArray());
+            for (var y = 7; y <= 8; y++)
+                for (var x = 7; x <= 8; x++) texture.SetPixel(x, y, Color.clear);
+            texture.Apply();
+            File.WriteAllBytes(Absolute(_root + "/sheet.png"), texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(_root + "/sheet.png", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(_tilesetPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            var island = ImportMap().GetComponentInChildren<WaterBody>(true);
+            Assert.That(SampleShoreline(island.Shoreline, new Vector2Int(6, -1)), Is.EqualTo(0.5f).Within(0.001));
+            Assert.That(SampleShoreline(island.Shoreline, new Vector2Int(0, -8)), Is.EqualTo(Mathf.Sqrt(84.5f)).Within(0.001));
+        }
+
+        private static float SampleShoreline(WaterShorelineData data, Vector2Int pixel)
+        {
+            var relative = pixel - data.OriginPixels;
+            var pageX = relative.x / WaterShorelineData.ChunkSize;
+            var pageY = relative.y / WaterShorelineData.ChunkSize;
+            var pages = AsyncGPUReadback.Request(data.Pages, 0);
+            pages.WaitForCompletion();
+            Assert.That(pages.hasError, Is.False);
+            var slice = Mathf.RoundToInt(pages.GetData<float>()[pageY * data.Pages.width + pageX]) - 1;
+            Assert.That(slice, Is.GreaterThanOrEqualTo(0));
+            var distances = AsyncGPUReadback.Request(data.Distances, 0);
+            distances.WaitForCompletion();
+            Assert.That(distances.hasError, Is.False);
+            return distances.GetData<float>(slice)[relative.y % WaterShorelineData.ChunkSize * WaterShorelineData.ChunkSize + relative.x % WaterShorelineData.ChunkSize];
+        }
+
+        [Test]
+        public void WaterProfileRejectsInvalidSettingsAtTheBoundary()
+        {
+            var profile = ScriptableObject.CreateInstance<WaterProfile>();
+            try
+            {
+                Assert.That(Assert.Throws<InvalidOperationException>(() => profile.Validate()).Message, Does.Contain("material"));
+                profile.material = AssetDatabase.LoadAssetAtPath<WaterProfile>("Assets/Content/Water/Lake_1.asset").material;
+                profile.Validate();
+                profile.waveScale = 0;
+                Assert.Throws<InvalidOperationException>(() => profile.Validate());
+                profile.waveScale = 1;
+                profile.causticIntensity = float.NaN;
+                Assert.Throws<InvalidOperationException>(() => profile.Validate());
+                profile.causticIntensity = 0;
+                profile.baseColor = Color.clear;
+                Assert.Throws<InvalidOperationException>(() => profile.Validate());
+            }
+            finally { Object.DestroyImmediate(profile); }
+        }
+
+        [Test]
+        public void ImportRejectsWaterTypesWithoutAnAuthoredProfile()
+        {
+            var tilesetJson = JObject.Parse(File.ReadAllText(Absolute(_tilesetPath)));
+            tilesetJson["tiles"]["0"]["properties"] = JArray.Parse("[{'key':'waterType','value':'__MissingWaterProfile'}]");
+            WriteAndImport(_tilesetPath, tilesetJson.ToString());
+            var messages = new List<string>();
+            Application.LogCallback capture = (message, stack, type) => messages.Add(message);
+            var previous = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            Application.logMessageReceived += capture;
+            try { WriteAndImport(_mapPath, _mapJson.ToString()); }
+            finally { Application.logMessageReceived -= capture; LogAssert.ignoreFailingMessages = previous; }
+            Assert.That(messages.Any(message => message.Contains("__MissingWaterProfile.asset")), Is.True);
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(_mapPath), Is.Null);
         }
 
         [Test]

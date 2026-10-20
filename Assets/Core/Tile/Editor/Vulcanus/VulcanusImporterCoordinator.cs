@@ -6,9 +6,11 @@ using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(6, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
+    [ScriptedImporter(9, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
+        [SerializeField, Range(1, 128), Tooltip("Maximum baked shoreline distance in logical pixels. Appearance widths can change within this range without recalculating distances.")]
+        private int shorelineDistancePixels = 32;
         // Declare source-derived artifact dependencies before Unity chooses import order.
         // A fresh project must import its project and tileset assets before its maps.
         internal static string[] GatherDependenciesFromSourceFile(string assetPath)
@@ -74,7 +76,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                 if (ctx.assetPath.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase))
                 {
-                    MapImporter.ImportMap(ctx);
+                    MapImporter.ImportMap(ctx, shorelineDistancePixels);
                     return;
                 }
 

@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a41e7ee4131a8e4d89124f1930931f6, type: 3}
+  m_Name: Lake_1
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Water.WaterProfile
+  material: {fileID: 2100000, guid: 8a8d7f18ef894b2ab376bcc659cbd40c, type: 2}
+  deepColor: {r: 0.14901961, g: 0.26666668, b: 0.32156864, a: 1}
+  baseColor: {r: 0.17254902, g: 0.3019608, b: 0.34901962, a: 1}
+  waveColor: {r: 0.21176471, g: 0.3529412, b: 0.4, a: 1}
+  highlightColor: {r: 0.28235295, g: 0.42352942, b: 0.45490196, a: 1}
+  waveSpeed: 0.16
+  waveScale: 1.5
+  causticIntensity: 0.1
+  causticScale: 2
+  flowDirection: {x: 1, y: 0.12}
+  shorelineEnabled: 1
+  foamEnabled: 1
+  foamWidth: 1.25
+  foamIntensity: 0.22
+  foamSpeed: 0.3
+  shoreWavesEnabled: 1
+  shoreWaveFrequency: 0.071428575
+  shoreWaveWidth: 0.8
+  shoreWaveSpeed: 1.2
+  shallowWaterEnabled: 0
+  shallowWaterWidth: 3
+  flowEnabled: 0
+  flowSpeed: 0.3
+  flowStrength: 1
+  flowMap: {fileID: 0}
+  flowMapWorldOrigin: {x: 0, y: 0}
+  flowMapWorldSize: {x: 16, y: 16}
+  surfaceHighlightsEnabled: 1
+  surfaceHighlightIntensity: 0.18
+  surfaceHighlightDensity: 0.12
+  surfaceHighlightScale: 1
+  surfaceHighlightSpeed: 0.12
+  surfaceHighlightStretch: {x: 4, y: 1}
+  objectReflectionsEnabled: 1
+  objectReflectionOpacity: 0.35
+  objectReflectionRipplePixels: 1
+  objectReflectionRippleSpeed: 0.5

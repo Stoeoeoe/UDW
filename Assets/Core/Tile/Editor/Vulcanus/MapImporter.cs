@@ -19,7 +19,7 @@ namespace Core.Tile.Editor.Vulcanus
     {
         private const float DefaultOverlayAlpha = 0.5f;
 
-        public static void ImportMap(AssetImportContext ctx)
+        public static void ImportMap(AssetImportContext ctx, int shorelineDistancePixels = 32)
         {
             var dto = VulcanusImportHelpers.LoadDto<MapDto>(ctx.assetPath);
             VulcanusImportHelpers.AddDependency(ctx, SpawnableCatalogEditor.CatalogPath);
@@ -73,6 +73,7 @@ namespace Core.Tile.Editor.Vulcanus
                 Tilemap farmlandTilemap = null;
                 var terrainCells = new List<VulcanusImportedMap.TerrainCell>();
                 var persistentEntities = new List<AuthoredSpawnPlacement>();
+                var waterSources = new List<Tilemap>();
 
                 foreach (var layer in dto.Layers)
                 {
@@ -101,6 +102,7 @@ namespace Core.Tile.Editor.Vulcanus
                         layer.SortingLayer,
                         hasTileCollision);
                     PopulateTileLayer(tilemap, layer.Data, height, tilesetsByIndex);
+                    waterSources.Add(tilemap);
 
                     var isTerrain = layer.Kind.Equals("terrain", StringComparison.OrdinalIgnoreCase);
                     if (terrainTilemap == null && isTerrain) terrainTilemap = tilemap;
@@ -113,6 +115,7 @@ namespace Core.Tile.Editor.Vulcanus
                         ctx, persistentEntities);
                 }
 
+                WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels);
                 SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
 
                 var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(

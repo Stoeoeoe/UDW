@@ -36,6 +36,7 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private string[] tags = Array.Empty<string>();
         [SerializeField] private VulcanusCollisionKind collisionKind;
         [SerializeField] private bool isFarmable;
+        [SerializeField] private string waterType = "None";
         [SerializeField] private float pivotY = 1f;
         [SerializeField] private CollisionShape[] collisionShapes = Array.Empty<CollisionShape>();
 
@@ -55,6 +56,7 @@ namespace Core.Tile.Vulcanus
         public string[] Tags => tags;
         public VulcanusCollisionKind CollisionKind => collisionKind;
         public bool IsFarmable => isFarmable;
+        public string WaterType => waterType;
         public bool IsFreshwater => TryGetProperty("isFreshwater", out var value) && value == "true";
         public float PivotY => pivotY;
         public CollisionShape[] CollisionShapes => collisionShapes;
@@ -69,12 +71,14 @@ namespace Core.Tile.Vulcanus
             VulcanusCollisionKind collision,
             VulcanusTileProperty[] metaProperties = null,
             float tilePivotY = 1f,
-            CollisionShape[] tileCollisionShapes = null)
+            CollisionShape[] tileCollisionShapes = null,
+            string tileWaterType = "None")
         {
             tileIndex = index;
             tileId = id;
             terrainId = terrain;
             terrainType = mappedTerrain;
+            waterType = tileWaterType;
             tags = tagValues ?? Array.Empty<string>();
             collisionKind = collision;
             properties = metaProperties ?? Array.Empty<VulcanusTileProperty>();
