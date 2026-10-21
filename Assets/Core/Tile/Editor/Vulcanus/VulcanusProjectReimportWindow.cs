@@ -328,7 +328,7 @@ namespace Core.Tile.Editor.Vulcanus
 
             if (_summary.Sources.Count == 0)
             {
-                AddBodyLabel(content, "No .vproj, .vmap, .vts, or .vitm files were found in this folder.");
+                AddBodyLabel(content, "No supported Vulcanus source files were found in this folder.");
                 return section;
             }
 
@@ -840,6 +840,8 @@ namespace Core.Tile.Editor.Vulcanus
         {
                         var extension = Path.GetExtension(filePath);
                         return filePath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)
+                                     || filePath.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase)
+                                     || filePath.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase)
                                      || extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)
                                      || extension.Equals(".vmap", StringComparison.OrdinalIgnoreCase)
                                      || extension.Equals(".vts", StringComparison.OrdinalIgnoreCase)
@@ -853,6 +855,7 @@ namespace Core.Tile.Editor.Vulcanus
                 case SourceKind.Project:
                     return "0";
                 case SourceKind.EntityDefinition:
+                case SourceKind.Character:
                     return "1";
                 case SourceKind.Map:
                     return "2";
@@ -1050,6 +1053,8 @@ namespace Core.Tile.Editor.Vulcanus
             public static SourceKind GetKind(string filePath)
             {
                 if (filePath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)) return SourceKind.EntityDefinition;
+                if (filePath.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase) ||
+                    filePath.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase)) return SourceKind.Character;
 
                 var extension = Path.GetExtension(filePath);
                 if (extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)) return SourceKind.Project;
@@ -1075,6 +1080,7 @@ namespace Core.Tile.Editor.Vulcanus
             Unknown,
             Project,
             EntityDefinition,
+            Character,
             Map,
             Tileset,
             Item

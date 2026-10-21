@@ -21,6 +21,7 @@ namespace Core.Catalogs.Editor
                 AssetDatabase.CreateFolder(Path.GetDirectoryName(folder)?.Replace('\\', '/'), Path.GetFileName(folder));
             var created = new List<DefinitionCatalog>();
             Create<ItemCatalog>(folder, ItemCatalog.ResourceName, created);
+            Create<CharacterCatalog>(folder, CharacterCatalog.ResourceName, created);
             Create<SkillCatalog>(folder, SkillCatalog.ResourceName, created);
             Create<DeityCatalog>(folder, DeityCatalog.ResourceName, created);
             Create<PlantCatalog>(folder, PlantCatalog.ResourceName, created);

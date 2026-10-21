@@ -1,0 +1,6 @@
+{
+  "$schema": "../schemas/actor.schema.json",
+  "id": "base:gagaa",
+  "name": "Gagaa",
+  "icon": "GiAbstract041"
+}

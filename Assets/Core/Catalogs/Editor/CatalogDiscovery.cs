@@ -65,6 +65,8 @@ namespace Core.Catalogs.Editor
             if (imported.Concat(deleted).Concat(moved).Concat(movedFrom).Any(path =>
                 (path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase)) &&
                 !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) Schedule();
         }

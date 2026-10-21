@@ -20,6 +20,9 @@ namespace Character
     [RequireComponent(typeof(CharacterBoosts))]
     public class GameCharacter : MonoBehaviour, ILocationLifecycle
     {
+        [SerializeField] private CharacterDefinition definition;
+        public CharacterDefinition Definition => definition;
+        public string CharacterId => definition.CharacterId;
         [SerializeField] private UrCharacterAnimator animator;
         [SerializeField] private InteractionSensor interactionSensor;
         [SerializeField] private CharacterPerformPrimaryActionAbility performPrimaryActionAbility;
@@ -94,6 +97,9 @@ namespace Character
 
         public virtual void ValidateConfiguration()
         {
+            if (!definition)
+                throw new InvalidOperationException($"Character '{name}' requires its stable character definition.");
+            definition.RequireValidConfiguration();
             if (!animator || !interactionSensor || !tileHighlighter || !toolInteractionAnchor || !characterCenter ||
                 !actionRegistry || !toolActionRegistry || !characterGraphicsGo || !abilitiesGo || !MainInventory || !Stamina)
                 throw new InvalidOperationException($"Character '{name}' requires all authored subsystem references.");
@@ -127,6 +133,8 @@ namespace Character
         public void EnsureRuntimeInitialized()
         {
             if (IsRuntimeInitialized) return;
+            if (CharacterCatalog.Require(CharacterId) != definition)
+                throw new InvalidOperationException($"Character '{name}' must use its registered character definition.");
             MainInventory.EnsureInitialized();
             toolActionRegistry.Initialize(this);
             actionRegistry.Initialize(this);
