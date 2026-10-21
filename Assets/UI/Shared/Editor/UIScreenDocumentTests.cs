@@ -528,10 +528,50 @@ namespace UI.Shared.Editor
         }
 
         [Test]
+        public void ContainerScreenTransfersBothWaysAndReleasesItsModalPauseOnClose()
+        {
+            var character = _fixture.CreateCharacter("Chest owner");
+            character.MainInventory.AddItem(_tool, 1);
+            var holder = new GameObject("Inactive chest staging");
+            holder.SetActive(false);
+            holder.transform.SetParent(_root.transform);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab");
+            var chest = Object.Instantiate(prefab, holder.transform).GetComponent<PersistentContainer>();
+            typeof(Core.Spawning.SpawnedObject).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(chest, new object[] { null, "test-chest", chest.CreateState() });
+            holder.SetActive(true);
+            CreateDocument("Assets/UI/Containers/ContainerScreen.uxml");
+            var screen = _screenRoot.AddComponent<UI.Containers.ContainerScreen>();
+            Set(typeof(UI.Containers.ContainerScreen), screen, "document", _document);
+            UIScreenPauseTests.Invoke(screen, "Awake");
+            screen.Open(chest, character);
+            Assert.That(UrGUIManager.IsCharacterPaused(character), Is.True);
+            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
+            Submit(_document.rootVisualElement.Q("bagGrid").Q<Button>());
+            Assert.That(character.MainInventory.GetSlot(0).IsEmpty, Is.True);
+            Assert.That(chest.Storage.Inventory.GetSlot(0).Item, Is.SameAs(_tool));
+            UIScreenPauseTests.Invoke(screen, "LateUpdate");
+            Submit(_document.rootVisualElement.Q("containerGrid").Q<Button>());
+            Assert.That(chest.Storage.Inventory.GetSlot(0).IsEmpty, Is.True);
+            Assert.That(character.MainInventory.GetSlot(0).Item, Is.SameAs(_tool));
+            Submit(_document.rootVisualElement.Q<Button>("closeContainer"));
+            Assert.That(UrGUIManager.IsCharacterPaused(character), Is.False);
+            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(_manager.IsOpen(screen), Is.False);
+        }
+
+        [Test]
         public void DialogueUsesTheScreenPolicyOrAnOpeningOverrideAfterReactivation()
         {
+            var runnerRoot = new GameObject("Dialogue runner");
+            runnerRoot.transform.SetParent(_root.transform);
+            var runner = runnerRoot.AddComponent<VulcanusDialogueRunner>();
+            UIScreenPauseTests.Invoke(runner, "Awake");
             CreateDocument(AssetDatabase.GUIDToAssetPath("63af131c2305b2949b9a347cc475d06a"));
             var presenter = _screenRoot.AddComponent<VulcanusDialogueUIDocumentPresenter>();
+            Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "layoutAsset", _document.visualTreeAsset);
+            Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "styleSheet",
+                AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uss"));
             UIScreenPauseTests.Invoke(presenter, "Awake");
             presenter.PauseWhileOpen = ScreenPauseMode.None;
             var context = new VulcanusDialogueExecutionContext();

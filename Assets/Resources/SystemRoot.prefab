@@ -485,6 +485,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 5125004169509253656}
   QuantityText: {fileID: 2530202478272422637}
   KeyBindingText: {fileID: 8164620554148799115}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 196459472678730231}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -906,6 +908,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 595726082504893159}
   QuantityText: {fileID: 545159928518245735}
   KeyBindingText: {fileID: 5305481817614095799}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 2192867436258566019}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2208,6 +2212,7 @@ Transform:
   - {fileID: 2862082369136968849}
   - {fileID: 2229483864884697566}
   - {fileID: 3677478025291362046}
+  - {fileID: 3997705227323603445}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &-5602565127603773880
@@ -3800,6 +3805,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 1801248541307439491}
   QuantityText: {fileID: 8885439837727714239}
   KeyBindingText: {fileID: 7920585069145268468}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 602068406634215420}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -4343,6 +4350,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 3271697303946105476}
   QuantityText: {fileID: 8339599606165833314}
   KeyBindingText: {fileID: 5177154297744088865}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 7038645986870539890}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -4698,6 +4707,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 7961781611378703281}
   QuantityText: {fileID: 5844776023609425284}
   KeyBindingText: {fileID: 8895795465362262318}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 8914441321366492703}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -6653,6 +6664,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 8664278615886268643}
   QuantityText: {fileID: 9080175975173131329}
   KeyBindingText: {fileID: 8093484425014775598}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 5019614581764544264}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7476,6 +7489,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 8237566185202574868}
   QuantityText: {fileID: 7727634661466632482}
   KeyBindingText: {fileID: 8469238398324944521}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 4172615187305341259}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -8613,6 +8628,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 3879416129431937720}
   QuantityText: {fileID: 101376701396007693}
   KeyBindingText: {fileID: 5440587312591198640}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 4444871371649927374}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -9020,6 +9037,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 5791709250152447546}
   QuantityText: {fileID: 6379245130104339256}
   KeyBindingText: {fileID: 8870951048093324653}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 6915064201012042433}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -9630,6 +9649,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 7034381139494881422}
   QuantityText: {fileID: 4415875383734164305}
   KeyBindingText: {fileID: 8115424154977759620}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 2730070350541498195}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -10890,6 +10911,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 6307033848172198904}
   QuantityText: {fileID: 4313046259075263745}
   KeyBindingText: {fileID: 8574211408171121848}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 7450170909691386503}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12225,6 +12248,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 2732241157185117745}
   QuantityText: {fileID: 2132029364401289436}
   KeyBindingText: {fileID: 742631795430673060}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 5005963577654316400}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -12945,6 +12970,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 8008735334064182973}
   QuantityText: {fileID: 5573845336268437658}
   KeyBindingText: {fileID: 806335146411392366}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 305193437184495488}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -14792,6 +14819,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 1495150053119625628}
   QuantityText: {fileID: 428771600403338690}
   KeyBindingText: {fileID: 6098170839169680762}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 7890052852115644255}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -14974,6 +15003,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 6094723998773388751}
   QuantityText: {fileID: 7891338000390542551}
   KeyBindingText: {fileID: 2707200214515863600}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 2092605760844213490}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -19263,6 +19294,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 4060425628681067491}
   QuantityText: {fileID: 8365905327707465137}
   KeyBindingText: {fileID: 8849508696741557494}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 1923459131137649827}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -20208,6 +20241,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 2037149508639454061}
   QuantityText: {fileID: 4134498082376606445}
   KeyBindingText: {fileID: 3647331947776511970}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 6620017867377905859}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -20390,6 +20425,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 5967496554153999685}
   QuantityText: {fileID: 4648958591376941025}
   KeyBindingText: {fileID: 7153034987922192035}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 1647738659820511181}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -20821,6 +20858,78 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 88}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &7015936330713821584
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3997705227323603445}
+  - component: {fileID: 4210585489515912989}
+  - component: {fileID: 5586458323586402731}
+  m_Layer: 0
+  m_Name: Container Screen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3997705227323603445
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7015936330713821584}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3245482728486734529}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4210585489515912989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7015936330713821584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 2af599cf247cb8b47b48d33b6f225ad3, type: 2}
+  m_ParentUI: {fileID: 7410992665882482011}
+  sourceAsset: {fileID: 9197481963319205126, guid: f7ce6c62cdb8c5245a3eef90d136eb12, type: 3}
+  m_SortingOrder: 5
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!114 &5586458323586402731
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7015936330713821584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eec3a476cdd23e458769fa19da94a11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Containers.ContainerScreen
+  pauseWhileOpen: 3
+  soundOverrides: {fileID: 0}
+  inputActionMap: UI
+  document: {fileID: 4210585489515912989}
 --- !u!1 &7023939551663406804
 GameObject:
   m_ObjectHideFlags: 0
@@ -23525,6 +23634,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 2668801632952384650}
   QuantityText: {fileID: 6813169433542938420}
   KeyBindingText: {fileID: 4336431378244788082}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 2215626961673196561}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}
@@ -26866,6 +26977,8 @@ MonoBehaviour:
   SelectedIndicator: {fileID: 512494186843999928}
   QuantityText: {fileID: 126799269851563545}
   KeyBindingText: {fileID: 6706138233052779260}
+  ChargeTrack: {fileID: 0}
+  ChargeFill: {fileID: 0}
   SlotButton: {fileID: 2189369394597133674}
   EmptySlotColor: {r: 1, g: 1, b: 1, a: 1}
   FilledSlotColor: {r: 1, g: 1, b: 1, a: 1}

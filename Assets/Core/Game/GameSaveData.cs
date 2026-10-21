@@ -85,8 +85,12 @@ namespace Core.Game
                 if (string.IsNullOrWhiteSpace(location.Key) || location.Value == null)
                     throw new FormatException("The save contains an invalid world location.");
                 foreach (var obj in location.Value)
+                {
                     if (string.IsNullOrWhiteSpace(obj.Key) || obj.Value == null)
                         throw new FormatException("The save contains an invalid world object.");
+                    if (obj.Value is Inventory.ContainerState container)
+                        Core.Inventory.ContainerStorage.ValidateState(container, Character.CharacterCatalog.Require, Inventory.ItemCatalog.Find);
+                }
             }
         }
     }

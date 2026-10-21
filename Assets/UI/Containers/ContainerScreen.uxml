@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="ContainerScreen.uss" />
+    <ui:VisualElement name="containerOverlay" class="container-overlay" focusable="true">
+        <ui:VisualElement class="container-panel">
+            <ui:VisualElement class="container-header">
+                <ui:Label name="containerTitle" class="container-title" />
+                <ui:Button name="closeContainer" text="Close" />
+            </ui:VisualElement>
+            <ui:Label name="containerOwner" />
+            <ui:VisualElement class="container-columns">
+                <ui:VisualElement class="container-column">
+                    <ui:Label text="Your bag — select a stack to store" />
+                    <ui:ScrollView><ui:VisualElement name="bagGrid" class="container-grid" /></ui:ScrollView>
+                </ui:VisualElement>
+                <ui:VisualElement class="container-column">
+                    <ui:Label text="Chest — select a stack to take" />
+                    <ui:ScrollView><ui:VisualElement name="containerGrid" class="container-grid" /></ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="Click or Enter: move a stack. Right-click: move one item. Escape: close." class="container-hint" />
+            <ui:Label name="containerMessage" class="container-message" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

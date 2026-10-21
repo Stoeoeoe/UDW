@@ -60,6 +60,28 @@ namespace Core.Spawning.Editor
         }
 
         [Test]
+        public void AuthoredChestPrefabKeepsItsOwnerAndContentsAcrossLocationReentry()
+        {
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab")
+                .GetComponent<Core.Inventory.PersistentContainer>();
+            Assert.That(prefab, Is.Not.Null);
+            _spawner.Register(prefab);
+            var first = (Core.Inventory.PersistentContainer)_spawner.Spawn(prefab, new Vector3(4, 7, 0));
+            var id = first.PersistentId;
+            var item = UnityEditor.AssetDatabase.LoadAssetAtPath<Core.Inventory.ItemDefinition>("Assets/Resources/Items/Tools/HoeToolData.asset");
+            Assert.That(first.Storage.Inventory.AddItem(item, 1), Is.True);
+            Assert.That(GameState.World.TryGet(_location.id, id, out Core.Inventory.ContainerState saved), Is.True);
+            Assert.That(saved.OwnerCharacterId, Is.EqualTo("base:player"));
+            _spawner.OnLocationLeave(_location);
+            _spawner.OnLocationEnter(_location);
+            var restored = _systems.GetComponentsInChildren<Core.Inventory.PersistentContainer>(true).Single();
+            Assert.That(restored.PersistentId, Is.EqualTo(id));
+            Assert.That(restored.Storage.State, Is.SameAs(saved));
+            Assert.That(restored.Storage.Inventory.GetSlot(0).Item, Is.SameAs(item));
+            Assert.That(restored.Storage.Inventory.GetSlot(0).Quantity, Is.EqualTo(1));
+        }
+
+        [Test]
         public void SpawnRegistersStateAndLocationReentryKeepsIdentityAndChanges()
         {
             var first = _spawner.Spawn(_prefabComponent, new Vector3(4, 7, 0));
