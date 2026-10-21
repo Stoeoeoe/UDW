@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using Character;
 using Core.Context;
 using Core.Tile;
@@ -10,12 +11,19 @@ namespace Plants
     /// <summary>Plants the player's selected seed on an available plowed tile within sowing range.</summary>
     public class PlantSeedAction : PrimaryAction
     {
+        public const string AnimationAction = "Seed";
         [SerializeField] public int sowRange = 2;
+        private bool _playingSeedAnimation;
+
+        public override float ActionDuration => Owner.Animator.AnimationLibrary
+            .GetDirectional(AnimationAction, Owner.Orientation.FacingDirection).length;
 
         public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
         {
             if (!CanExecute(snapshot)) yield break;
-            var seedItem = snapshot.CurrentlyHeldItem as SeedItem;
+            if (!Owner.Animator.PlayNamedAction(AnimationAction))
+                throw new InvalidOperationException("Planting requires an available Seed animation.");
+            _playingSeedAnimation = true;
             var character = snapshot.Character as MainCharacter;
             PlantManager.Instance.TrySowCarriedSeed(Core.Location.LevelManager.Instance.CurrentLocationData.id,
                 snapshot.CurrentTileDataUnderPointer, character!.MainInventory, character.CurrentSelectedSlotIndex);
@@ -25,6 +33,13 @@ namespace Plants
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot)
         {
             
+        }
+
+        public override void OnEnd(PlayerInteractionContextSnapshot snapshot)
+        {
+            if (!_playingSeedAnimation) return;
+            _playingSeedAnimation = false;
+            Owner.Animator.EndNamedAnimation();
         }
 
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot)

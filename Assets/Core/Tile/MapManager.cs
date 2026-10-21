@@ -96,7 +96,7 @@ namespace Core.Tile
                 transform = { parent = transform }
             };
             var sortingGroup = _plantParentGameObject.AddComponent<SortingGroup>();
-            sortingGroup.sortingLayerName = "Plants";
+            sortingGroup.sortingLayerName = "Foreground";
             sortingGroup.sortingOrder = 1;
         }
 
@@ -441,6 +441,7 @@ namespace Core.Tile
             _plowedTilemap = EnsureTilemap(_plowedTilemap, "FarmLand_Plowed", 10, 0.5f);
             _irrigatedTilemap = EnsureTilemap(_irrigatedTilemap, "FarmLand_Irrigated", 11, 0.5f);
             OverlayTilemap = EnsureTilemap(OverlayTilemap, "Overlay", 999, 0.5f);
+            OverlayTilemap.GetComponent<TilemapRenderer>().sortingLayerName = "Above";
 
             if (_terrainTilemap == null)
             {

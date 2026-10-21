@@ -50,6 +50,8 @@ namespace Character
                 animationLibrary.ValidateAction(toolPrepareAction);
                 animationLibrary.ValidateAction(toolUseAction, oneShot: true);
             }
+            if (character.GetComponentInChildren<Plants.PlantSeedAction>(true))
+                animationLibrary.ValidateAction(Plants.PlantSeedAction.AnimationAction, oneShot: true);
         }
         private void OnDisable()
         {
