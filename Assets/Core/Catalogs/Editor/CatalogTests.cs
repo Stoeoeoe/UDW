@@ -16,13 +16,6 @@ using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
 {
-    public sealed class CatalogTestDefinitionCatalog : DefinitionCatalog<ItemDefinition>
-    {
-        public string Folder;
-        public override string Path => Folder;
-        protected override string GetDefinitionId(ItemDefinition definition) => definition.ItemId;
-    }
-
     public sealed class CatalogTests
     {
         private CatalogTestDefinitionCatalog _catalog;
@@ -161,6 +154,7 @@ namespace Core.Catalogs.Editor
         [Test]
         public void EnabledChoicesAreSerializedWithTheCatalogAsset()
         {
+            AssetDatabase.CreateAsset(_second, _folder + "/Second.asset");
             _catalog.Synchronize(new Object[] { _first, _second });
             _catalog.SetEnabled(_first, false);
             var copy = ScriptableObject.CreateInstance<CatalogTestDefinitionCatalog>();

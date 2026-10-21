@@ -10,8 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Core.Inventory.Editor
 {
-    public sealed class InventoryTestItem : ItemDefinition { }
-
     public sealed class InventoryDragTestDisplay : UrInventoryDisplay
     {
         public SlotInventory Inventory;
