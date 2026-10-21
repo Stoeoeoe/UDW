@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
+using Core.Tile.Vulcanus;
+using Core.Spawning;
 using Interaction;
 using UI.Containers;
 using UnityEditor;
@@ -18,6 +20,13 @@ namespace Core.Inventory.Editor
 
         public static void Check(GameObject root)
         {
+            foreach (var map in root.GetComponentsInChildren<VulcanusImportedMap>(true))
+                foreach (var placement in map.PersistentEntities)
+                {
+                    var template = placement.template;
+                    if (!template || !template.gameObject.activeSelf || !template.transform.parent || template.transform.parent.gameObject.activeSelf)
+                        throw new InvalidOperationException($"Map '{map.name}' persistent entity '{placement.id}' requires an active template root under an inactive parent. Templates must only be activated by WorldObjectSpawner after binding.");
+                }
             foreach (var container in root.GetComponentsInChildren<PersistentContainer>(true))
             {
                 container.ValidateConfiguration();
@@ -37,6 +46,10 @@ namespace Core.Inventory.Editor
             var systems = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
             if (!systems || systems.GetComponentsInChildren<ContainerScreen>(true).Length != 1)
                 throw new InvalidOperationException("SystemRoot requires exactly one configured container screen.");
+            var spawners = systems.GetComponentsInChildren<WorldObjectSpawner>(true);
+            if (spawners.Length != 1 || !spawners[0].enabled || !spawners[0].gameObject.activeSelf
+                || !new SerializedObject(spawners[0]).FindProperty("catalog").objectReferenceValue)
+                throw new InvalidOperationException("SystemRoot requires exactly one enabled WorldObjectSpawner with its catalog assigned.");
             Check(systems);
         }
 

@@ -316,6 +316,23 @@ namespace Core.Tile.Editor
         }
 
         [Test]
+        public void SceneValidationRejectsActivatingPersistentTemplatesEvenUnderAnInactiveMap()
+        {
+            var staging = new GameObject("Inactive map staging");
+            staging.SetActive(false);
+            _views.Add(staging);
+            var map = Object.Instantiate(ImportMap(), staging.transform);
+            Assert.DoesNotThrow(() => Core.Inventory.Editor.ContainerConfigurationValidation.Check(staging));
+            var template = map.PersistentEntities.Single().template;
+            template.transform.parent.gameObject.SetActive(true);
+            Assert.That(template.gameObject.activeInHierarchy, Is.False);
+            var error = Assert.Throws<InvalidOperationException>(() =>
+                Core.Inventory.Editor.ContainerConfigurationValidation.Check(staging));
+            StringAssert.Contains("crate-1", error.Message);
+            StringAssert.Contains("inactive parent", error.Message);
+        }
+
+        [Test]
         public void LocationLinksResolveCatalogTargetsAndAnchors()
         {
             var map = ImportMap();

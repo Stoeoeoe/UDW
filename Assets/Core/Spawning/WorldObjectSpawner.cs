@@ -19,9 +19,11 @@ namespace Core.Spawning
         private Transform _stagingRoot;
         private Transform _locationRoot;
         private string _locationId;
+        private LevelManager _levelManager;
 
         protected override void OnAwake()
         {
+            if (!catalog) throw new InvalidOperationException("WorldObjectSpawner requires a SpawnableCatalog.");
             var staging = new GameObject("Spawn staging");
             staging.SetActive(false);
             staging.transform.SetParent(transform, false);
@@ -29,11 +31,22 @@ namespace Core.Spawning
             foreach (var prefab in catalog.Prefabs) Register(prefab);
         }
 
-        private void OnEnable() => LevelManager.Instance?.RegisterLifecycle(this);
+        private void Start()
+        {
+            // Auto-created SystemRoot children can enable before LevelManager.Awake.
+            _levelManager = LevelManager.Instance
+                ?? throw new InvalidOperationException("WorldObjectSpawner requires LevelManager before startup.");
+            _levelManager.RegisterLifecycle(this);
+        }
+
+        private void OnEnable()
+        {
+            if (_levelManager) _levelManager.RegisterLifecycle(this);
+        }
 
         private void OnDisable()
         {
-            LevelManager.Instance?.UnregisterLifecycle(this);
+            if (_levelManager) _levelManager.UnregisterLifecycle(this);
             ClearViews();
         }
 
