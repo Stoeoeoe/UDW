@@ -7,19 +7,28 @@
     justify-content: center;
 }
 .container-panel {
-    width: 88%; max-width: 880px; max-height: 90%;
+    width: 88%; max-width: 880px; height: 86%; max-height: 640px;
     padding: 20px;
     background-color: rgb(238, 226, 193);
     border-width: 3px; border-color: rgb(177, 139, 73);
     color: rgb(49, 43, 32);
 }
-.container-header { flex-direction: row; justify-content: space-between; align-items: center; }
+.container-header { flex-direction: row; justify-content: space-between; align-items: center; flex-shrink: 0; }
 .container-title { font-size: 24px; -unity-font-style: bold; }
-.container-columns { flex-direction: row; flex-grow: 1; flex-shrink: 1; margin-top: 14px; }
-.container-column { flex-grow: 1; flex-basis: 0; flex-shrink: 1; margin: 4px; }
+.container-owner { flex-shrink: 0; margin-top: 4px; }
+.container-close { min-width: 70px; min-height: 28px; background-color: rgb(249, 242, 218); color: rgb(49, 43, 32); border-color: rgb(177, 139, 73); }
+.container-columns { flex-direction: row; flex-grow: 1; min-height: 0; flex-shrink: 1; margin-top: 14px; }
+.container-column { flex-grow: 1; flex-basis: 0; min-width: 0; min-height: 0; flex-shrink: 1; margin: 4px; }
+.container-column-title { flex-shrink: 0; white-space: normal; margin-bottom: 8px; -unity-font-style: bold; }
+.container-scroll { flex-grow: 1; min-height: 0; }
+.container-scroll .unity-scroller--vertical { width: 8px; min-width: 8px; margin-left: 6px; background-color: rgb(226, 212, 175); }
+.container-scroll .unity-scroller__low-button, .container-scroll .unity-scroller__high-button { display: none; }
+.container-scroll .unity-scroller__slider { min-width: 8px; }
+.container-scroll .unity-base-slider__input { min-width: 8px; }
+.container-scroll .unity-base-slider__dragger { min-width: 8px; background-color: rgb(177, 139, 73); border-width: 0; }
 .container-grid { flex-direction: row; flex-wrap: wrap; }
 .container-slot {
-    width: 18%; height: 62px; margin: 1%;
+    width: 18%; height: 62px; flex-shrink: 0; margin: 1%;
     background-color: rgb(249, 242, 218);
     border-width: 1px; border-color: rgb(177, 139, 73);
     color: rgb(49, 43, 32);
@@ -27,5 +36,5 @@
 .container-slot:hover, .container-slot:focus { border-width: 2px; border-color: rgb(75, 105, 67); }
 .container-icon { flex-grow: 1; -unity-background-scale-mode: scale-to-fit; }
 .container-quantity { position: absolute; right: 3px; bottom: 1px; -unity-font-style: bold; }
-.container-hint { font-size: 12px; white-space: normal; margin-top: 8px; }
-.container-message { min-height: 24px; white-space: normal; margin-top: 8px; color: rgb(116, 48, 31); }
+.container-hint { flex-shrink: 0; font-size: 12px; white-space: normal; margin-top: 8px; }
+.container-message { flex-shrink: 0; min-height: 24px; white-space: normal; margin-top: 8px; color: rgb(116, 48, 31); }

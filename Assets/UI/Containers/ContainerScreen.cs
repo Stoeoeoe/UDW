@@ -53,6 +53,7 @@ namespace UI.Containers
             var root = document.rootVisualElement;
             if (ReferenceEquals(_root, root)) return;
             _root = root;
+            root.StretchToParentSize();
             root.pickingMode = PickingMode.Ignore;
             T Require<T>(string name) where T : VisualElement => root.Q<T>(name)
                 ?? throw new InvalidOperationException($"Container layout is missing '{name}'.");

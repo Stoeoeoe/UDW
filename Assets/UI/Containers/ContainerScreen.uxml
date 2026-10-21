@@ -4,17 +4,17 @@
         <ui:VisualElement class="container-panel">
             <ui:VisualElement class="container-header">
                 <ui:Label name="containerTitle" class="container-title" />
-                <ui:Button name="closeContainer" text="Close" />
+                <ui:Button name="closeContainer" text="Close" class="container-close" />
             </ui:VisualElement>
-            <ui:Label name="containerOwner" />
+            <ui:Label name="containerOwner" class="container-owner" />
             <ui:VisualElement class="container-columns">
                 <ui:VisualElement class="container-column">
-                    <ui:Label text="Your bag — select a stack to store" />
-                    <ui:ScrollView><ui:VisualElement name="bagGrid" class="container-grid" /></ui:ScrollView>
+                    <ui:Label text="Your bag — select a stack to store" class="container-column-title" />
+                    <ui:ScrollView class="container-scroll" horizontal-scroller-visibility="Hidden"><ui:VisualElement name="bagGrid" class="container-grid" /></ui:ScrollView>
                 </ui:VisualElement>
                 <ui:VisualElement class="container-column">
-                    <ui:Label text="Chest — select a stack to take" />
-                    <ui:ScrollView><ui:VisualElement name="containerGrid" class="container-grid" /></ui:ScrollView>
+                    <ui:Label text="Chest — select a stack to take" class="container-column-title" />
+                    <ui:ScrollView class="container-scroll" horizontal-scroller-visibility="Hidden"><ui:VisualElement name="containerGrid" class="container-grid" /></ui:ScrollView>
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:Label text="Click or Enter: move a stack. Right-click: move one item. Escape: close." class="container-hint" />
