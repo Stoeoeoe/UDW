@@ -11,6 +11,7 @@ namespace Core.Inventory
         [SerializeField] private CharacterDefinition owner;
         [SerializeField, Min(1)] private int capacity = 20;
         [SerializeField] private string displayName = "Chest";
+        [SerializeField] private ItemStack[] startingContents = Array.Empty<ItemStack>();
         public string DisplayName => displayName;
         public CharacterDefinition Owner => owner;
         public ContainerStorage Storage { get; private set; }
@@ -21,13 +22,22 @@ namespace Core.Inventory
             if (!owner || capacity <= 0 || string.IsNullOrWhiteSpace(displayName))
                 throw new InvalidOperationException($"Container '{name}' requires an owner, positive capacity and display name.");
             owner.RequireValidConfiguration();
+            if (startingContents == null || startingContents.Length > capacity)
+                throw new InvalidOperationException($"Container '{name}' starting contents must fit its capacity.");
+            foreach (var stack in startingContents)
+                if (!stack.Item || ItemCatalog.Find(stack.Item.ItemId) != stack.Item
+                    || stack.Quantity <= 0 || stack.Quantity > stack.Item.MaxStackSize)
+                    throw new InvalidOperationException($"Container '{name}' starting contents require registered items and valid stack quantities.");
         }
 
         public override SpawnedObjectState CreateState()
         {
             ValidateConfiguration();
-            return new ContainerState { OwnerCharacterId = owner.CharacterId,
+            var state = new ContainerState { OwnerCharacterId = owner.CharacterId,
                 Inventory = new InventoryState { Slots = new InventorySlotState[capacity] } };
+            for (int i = 0; i < startingContents.Length; i++)
+                state.Inventory.Slots[i] = new InventorySlotState(startingContents[i].Item.ItemId, startingContents[i].Quantity);
+            return state;
         }
 
         protected override void OnStateBound()
