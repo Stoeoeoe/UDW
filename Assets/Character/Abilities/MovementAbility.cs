@@ -19,6 +19,9 @@ namespace Character.Abilities
 
         public override void Tick()
         {
+            // An action such as cutscene walking supplies movement and facing while it owns the controller.
+            if (Controller.IsMovementOwned) return;
+
             if (!AbilityAuthorized)
             {
                 Controller.Stop();
