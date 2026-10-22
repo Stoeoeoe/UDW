@@ -20,7 +20,7 @@ namespace Core.Scripting.Editor
         {
             try
             {
-                var manifest = new VulcanusLuaEngine().DescribeBindings();
+                var manifest = VulcanusLuaEngine.DescribeBindings();
                 var projectRoot = Path.GetDirectoryName(Application.dataPath);
                 if (projectRoot != null)
                 {

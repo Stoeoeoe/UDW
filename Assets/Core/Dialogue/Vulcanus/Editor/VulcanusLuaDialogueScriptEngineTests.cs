@@ -87,7 +87,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void ExportedManifestMatchesTheValidatedLuaApi()
         {
-            var expected = new VulcanusLuaEngine(new StoryState(), new PlayerState(), new WorldState()).DescribeBindings();
+            var expected = VulcanusLuaEngine.DescribeBindings();
             var path = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? string.Empty, "Generated/Scripting/bindings.json");
 
             Assert.That(File.Exists(path), Is.True);

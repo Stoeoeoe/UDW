@@ -2,6 +2,43 @@
   "schemaVersion": 2,
   "modules": [
     {
+      "path": "Actors",
+      "methods": [
+        {
+          "name": "MoveTo",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "destination",
+              "type": "string",
+              "semanticType": "anchorRef",
+              "picker": "mapAnchor"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.moveTo",
+            "displayName": "Move to anchor",
+            "category": "Movement",
+            "description": "Walk an existing actor to a map anchor.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "execution": "awaitable",
+            "failure": "terminatesSession"
+          }
+        }
+      ]
+    },
+    {
       "path": "GameState.Player.Skills",
       "methods": [
         {

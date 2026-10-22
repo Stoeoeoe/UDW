@@ -37,7 +37,10 @@ namespace Core.Scripting
                 new CharacterTagLuaApi(playerTags ?? (() => MainCharacter.CurrentMainCharacter?.Tags)));
         }
 
-        public LuaBindingManifest DescribeBindings() => _bindings.Describe();
+        /// <summary>Lists the supported Lua APIs, including actions that need a map when they run.</summary>
+        public static LuaBindingManifest DescribeBindings() => LuaBindingRegistry.DescribeTypes(
+            typeof(StoryLuaApi), typeof(SkillsLuaApi), typeof(WorldLuaApi), typeof(CharacterTagLuaApi),
+            typeof(MapActorLuaApi));
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
             string context = "cutscene", float timeoutSeconds = 120f) =>

@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Core.Scripting.Editor
@@ -101,6 +103,64 @@ namespace Core.Scripting.Editor
         {
             Assert.That(() => VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new TestApi()),
                 "Test.Finish()", "fixture", "unknown"), Throws.ArgumentException);
+        }
+
+        [Test]
+        public void TypeDescriptionsMatchRuntimeDescriptionsWithoutCreatingApiObjects()
+        {
+            var fromTypes = LuaBindingRegistry.DescribeTypes(typeof(TestApi));
+            var fromObject = new LuaBindingRegistry(new TestApi()).Describe();
+            Assert.That(UnityEngine.JsonUtility.ToJson(fromTypes), Is.EqualTo(UnityEngine.JsonUtility.ToJson(fromObject)));
+            Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(ConstructorRequiresGameApi)), Throws.Nothing);
+        }
+
+        [Test]
+        public void TypeExportUsesTheSameSignatureAndIdentityValidationAsRuntimeBinding()
+        {
+            Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(InvalidExportApi)), Throws.InvalidOperationException);
+            Assert.That(() => new LuaBindingRegistry(new InvalidExportApi()), Throws.InvalidOperationException);
+            Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(TestApi), typeof(TestApi)), Throws.ArgumentException);
+            Assert.That(() => LuaBindingRegistry.DescribeTypes(new Type[] { null }), Throws.ArgumentException);
+        }
+
+        [Test]
+        public void GlobalManifestIncludesMapActionsWithoutLoadingAMap()
+        {
+            var manifest = VulcanusLuaEngine.DescribeBindings();
+            var move = manifest.modules.Single(module => module.path == "Actors").methods.Single();
+            Assert.That(move.name, Is.EqualTo("MoveTo"));
+            Assert.That(move.action.id, Is.EqualTo("actors.moveTo"));
+            Assert.That(move.action.execution, Is.EqualTo("awaitable"));
+            Assert.That(move.action.contexts, Is.EqualTo(new[] { "cutscene", "npcRoutine" }));
+            Assert.That(move.parameters[0].semanticType, Is.EqualTo("actorRef"));
+            Assert.That(move.parameters[0].picker, Is.EqualTo("mapActor"));
+            Assert.That(move.parameters[1].semanticType, Is.EqualTo("anchorRef"));
+            Assert.That(move.parameters[1].picker, Is.EqualTo("mapAnchor"));
+        }
+
+        [Test]
+        public void IdenticalExportsLeaveTheManifestFileUntouched()
+        {
+            var path = Path.Combine(Path.GetDirectoryName(UnityEngine.Application.dataPath), "Generated/Scripting/bindings.json");
+            LuaBindingManifestExporter.Export();
+            var content = File.ReadAllText(path);
+            var writtenAt = File.GetLastWriteTimeUtc(path);
+            LuaBindingManifestExporter.Export();
+            Assert.That(File.ReadAllText(path), Is.EqualTo(content));
+            Assert.That(File.GetLastWriteTimeUtc(path), Is.EqualTo(writtenAt));
+        }
+
+        [LuaModule("RequiresGame")]
+        private sealed class ConstructorRequiresGameApi
+        {
+            public ConstructorRequiresGameApi() => throw new InvalidOperationException("A running game is required.");
+            [LuaCall] public void Read() { }
+        }
+
+        [LuaModule("InvalidExport")]
+        private sealed class InvalidExportApi
+        {
+            [LuaCall] public void Move(UnityEngine.Vector2 destination) { }
         }
 
         private static LuaExecutionSession Start(TestApi api, string lua) =>

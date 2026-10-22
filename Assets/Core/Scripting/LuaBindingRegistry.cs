@@ -44,15 +44,42 @@ namespace Core.Scripting
         private readonly List<Module> _modules = new();
         private readonly Dictionary<Type, FieldInfo[]> _dtoFields = new();
 
-        public LuaBindingRegistry(params object[] apiModules)
+        public LuaBindingRegistry(params object[] apiModules) : this(RuntimeModules(apiModules)) { }
+
+        /// <summary>Describes API types without creating them, so editor export needs no running game.</summary>
+        public static LuaBindingManifest DescribeTypes(params Type[] apiTypes)
+        {
+            if (apiTypes == null) throw new ArgumentNullException(nameof(apiTypes));
+            var modules = new (Type Type, object Api)[apiTypes.Length];
+            for (var i = 0; i < apiTypes.Length; i++)
+            {
+                if (apiTypes[i] == null) throw new ArgumentException("Lua API types cannot be null.", nameof(apiTypes));
+                // Export reads attributes and signatures only. It never calls these methods.
+                modules[i] = (apiTypes[i], null);
+            }
+            return new LuaBindingRegistry(modules).Describe();
+        }
+
+        private static (Type Type, object Api)[] RuntimeModules(object[] apiModules)
         {
             if (apiModules == null) throw new ArgumentNullException(nameof(apiModules));
+            var modules = new (Type Type, object Api)[apiModules.Length];
+            for (var i = 0; i < apiModules.Length; i++)
+            {
+                var api = apiModules[i];
+                if (api == null) throw new ArgumentException("Lua API modules cannot be null.", nameof(apiModules));
+                modules[i] = (api.GetType(), api);
+            }
+            return modules;
+        }
+
+        // Runtime registration and editor export share all signature and metadata checks.
+        private LuaBindingRegistry((Type Type, object Api)[] apiModules)
+        {
             var paths = new HashSet<string>(StringComparer.Ordinal);
             var actionIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var api in apiModules)
+            foreach (var (type, api) in apiModules)
             {
-                if (api == null) throw new ArgumentException("Lua API modules cannot be null.", nameof(apiModules));
-                var type = api.GetType();
                 var attribute = type.GetCustomAttribute<LuaModuleAttribute>();
                 if (attribute == null)
                     throw new ArgumentException($"{type.Name} needs [LuaModule].", nameof(apiModules));
