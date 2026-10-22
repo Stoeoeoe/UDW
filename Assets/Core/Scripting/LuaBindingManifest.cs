@@ -6,7 +6,7 @@ namespace Core.Scripting
     [Serializable]
     public sealed class LuaBindingManifest
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public LuaModuleDescription[] modules;
         public LuaTableDescription[] tables;
     }
@@ -26,6 +26,7 @@ namespace Core.Scripting
         public string returnType;
         public bool returnNullable;
         public bool writesState;
+        public LuaActionDescription action;
     }
 
     [Serializable]
@@ -33,6 +34,8 @@ namespace Core.Scripting
     {
         public string name;
         public string type;
+        public string semanticType;
+        public string picker;
     }
 
     [Serializable]
@@ -40,5 +43,17 @@ namespace Core.Scripting
     {
         public string name;
         public LuaParameterDescription[] fields;
+    }
+
+    [Serializable]
+    public sealed class LuaActionDescription
+    {
+        public string id;
+        public string displayName;
+        public string category;
+        public string description;
+        public string[] contexts;
+        public string execution;
+        public string failure = "terminatesSession";
     }
 }

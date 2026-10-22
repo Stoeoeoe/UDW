@@ -39,6 +39,10 @@ namespace Core.Scripting
 
         public LuaBindingManifest DescribeBindings() => _bindings.Describe();
 
+        public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
+            string context = "cutscene", float timeoutSeconds = 120f) =>
+            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context, timeoutSeconds);
+
         /// <summary>Compiles each distinct expression once, but reads live state on every evaluation.</summary>
         public bool EvaluateCondition(string expression)
         {

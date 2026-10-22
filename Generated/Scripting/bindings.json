@@ -1,137 +1,188 @@
 {
-    "schemaVersion": 1,
-    "modules": [
+  "schemaVersion": 2,
+  "modules": [
+    {
+      "path": "GameState.Player.Skills",
+      "methods": [
         {
-            "path": "GameState.Player.Skills",
-            "methods": [
-                {
-                    "name": "GetLevel",
-                    "parameters": [
-                        { "name": "skillId", "type": "string" }
-                    ],
-                    "returnType": "integer",
-                    "returnNullable": false,
-                    "writesState": false
-                },
-                {
-                    "name": "HasUnlocked",
-                    "parameters": [
-                        { "name": "skillId", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": false
-                },
-                {
-                    "name": "TryLevelUp",
-                    "parameters": [
-                        { "name": "skillId", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": true
-                }
-            ]
+          "name": "GetLevel",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": false
         },
         {
-            "path": "GameState.Story",
-            "methods": [
-                {
-                    "name": "ClearFlag",
-                    "parameters": [
-                        { "name": "flag", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": true
-                },
-                {
-                    "name": "HasFlag",
-                    "parameters": [
-                        { "name": "flag", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": false
-                },
-                {
-                    "name": "SetFlag",
-                    "parameters": [
-                        { "name": "flag", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": true
-                }
-            ]
+          "name": "HasUnlocked",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
         },
         {
-            "path": "GameState.World",
-            "methods": [
-                {
-                    "name": "GetFarmland",
-                    "parameters": [
-                        { "name": "locationId", "type": "string" },
-                        { "name": "objectId", "type": "string" }
-                    ],
-                    "returnType": "FarmlandLuaView",
-                    "returnNullable": true,
-                    "writesState": false
-                },
-                {
-                    "name": "SetFarmland",
-                    "parameters": [
-                        { "name": "locationId", "type": "string" },
-                        { "name": "objectId", "type": "string" },
-                        { "name": "plowed", "type": "boolean" },
-                        { "name": "irrigated", "type": "boolean" }
-                    ],
-                    "returnType": "nil",
-                    "returnNullable": false,
-                    "writesState": true
-                }
-            ]
-        },
-        {
-            "path": "Player.Tags",
-            "methods": [
-                {
-                    "name": "Has",
-                    "parameters": [
-                        { "name": "tag", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": false
-                },
-                {
-                    "name": "HasExact",
-                    "parameters": [
-                        { "name": "tag", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": false
-                },
-                {
-                    "name": "Matches",
-                    "parameters": [
-                        { "name": "expression", "type": "string" }
-                    ],
-                    "returnType": "boolean",
-                    "returnNullable": false,
-                    "writesState": false
-                }
-            ]
+          "name": "TryLevelUp",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
         }
-    ],
-    "tables": [
+      ]
+    },
+    {
+      "path": "GameState.Story",
+      "methods": [
         {
-            "name": "FarmlandLuaView",
-            "fields": [
-                { "name": "irrigated", "type": "boolean" },
-                { "name": "plowed", "type": "boolean" }
-            ]
+          "name": "ClearFlag",
+          "parameters": [
+            {
+              "name": "flag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "HasFlag",
+          "parameters": [
+            {
+              "name": "flag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "SetFlag",
+          "parameters": [
+            {
+              "name": "flag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
         }
-    ]
+      ]
+    },
+    {
+      "path": "GameState.World",
+      "methods": [
+        {
+          "name": "GetFarmland",
+          "parameters": [
+            {
+              "name": "locationId",
+              "type": "string"
+            },
+            {
+              "name": "objectId",
+              "type": "string"
+            }
+          ],
+          "returnType": "FarmlandLuaView",
+          "returnNullable": true,
+          "writesState": false
+        },
+        {
+          "name": "SetFarmland",
+          "parameters": [
+            {
+              "name": "locationId",
+              "type": "string"
+            },
+            {
+              "name": "objectId",
+              "type": "string"
+            },
+            {
+              "name": "plowed",
+              "type": "boolean"
+            },
+            {
+              "name": "irrigated",
+              "type": "boolean"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "Player.Tags",
+      "methods": [
+        {
+          "name": "Has",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "HasExact",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Matches",
+          "parameters": [
+            {
+              "name": "expression",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "name": "FarmlandLuaView",
+      "fields": [
+        {
+          "name": "irrigated",
+          "type": "boolean"
+        },
+        {
+          "name": "plowed",
+          "type": "boolean"
+        }
+      ]
+    }
+  ]
 }

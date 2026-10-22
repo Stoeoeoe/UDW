@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
@@ -37,22 +38,14 @@ namespace Core.Scripting.Editor
 
         private static bool WriteIfChanged(string path, LuaBindingManifest manifest)
         {
-            if (File.Exists(path))
-            {
-                try
-                {
-                    var previous = JsonUtility.FromJson<LuaBindingManifest>(File.ReadAllText(path));
-                    if (previous != null && JsonUtility.ToJson(previous) == JsonUtility.ToJson(manifest))
-                        return false;
-                }
-                catch (ArgumentException)
-                {
-                    // An invalid old manifest is replaced by the current valid contract.
-                }
-            }
+            var content = Serialize(manifest) + "\n";
+            if (File.Exists(path) && File.ReadAllText(path) == content) return false;
             Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
-            File.WriteAllText(path, JsonUtility.ToJson(manifest, true) + "\n", new UTF8Encoding(false));
+            File.WriteAllText(path, content, new UTF8Encoding(false));
             return true;
         }
+
+        private static string Serialize(LuaBindingManifest manifest) => JsonConvert.SerializeObject(manifest,
+            Formatting.Indented, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
     }
 }
