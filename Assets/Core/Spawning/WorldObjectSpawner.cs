@@ -21,6 +21,9 @@ namespace Core.Spawning
         private string _locationId;
         private LevelManager _levelManager;
 
+        /// <summary>Objects currently spawned in this location, including those restored from a save.</summary>
+        public IReadOnlyCollection<SpawnedObject> SpawnedObjects => _instances.Values;
+
         protected override void OnAwake()
         {
             if (!catalog) throw new InvalidOperationException("WorldObjectSpawner requires a SpawnableCatalog.");
