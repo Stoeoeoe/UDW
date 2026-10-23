@@ -142,6 +142,11 @@ namespace Core.Scripting.Editor
             Assert.That(face.action.execution, Is.EqualTo("immediate"));
             Assert.That(face.returnType, Is.EqualTo("nil"));
             Assert.That(face.parameters.Select(parameter => parameter.semanticType), Is.EqualTo(new[] { "actorRef", "actorRef" }));
+            var play = manifest.modules.Single(module => module.path == "Dialogue").methods.Single();
+            Assert.That(play.action.id, Is.EqualTo("dialogue.play"));
+            Assert.That(play.action.execution, Is.EqualTo("awaitable"));
+            Assert.That(play.action.contexts, Is.EqualTo(new[] { "cutscene" }));
+            Assert.That(play.parameters.Single().semanticType, Is.EqualTo("dialogueRef"));
         }
 
         [Test]

@@ -71,6 +71,36 @@
       ]
     },
     {
+      "path": "Dialogue",
+      "methods": [
+        {
+          "name": "Play",
+          "parameters": [
+            {
+              "name": "dialogue",
+              "type": "string",
+              "semanticType": "dialogueRef",
+              "picker": "dialogue"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "dialogue.play",
+            "displayName": "Play dialogue",
+            "category": "Dialogue",
+            "description": "Wait for a conversation to finish through its flow.",
+            "contexts": [
+              "cutscene"
+            ],
+            "execution": "awaitable",
+            "failure": "terminatesSession"
+          }
+        }
+      ]
+    },
+    {
       "path": "GameState.Player.Skills",
       "methods": [
         {

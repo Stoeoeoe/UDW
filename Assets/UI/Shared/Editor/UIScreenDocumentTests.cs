@@ -68,6 +68,12 @@ namespace UI.Shared.Editor
                     .Invoke(screen, null);
             }
             _manager?.CloseAll();
+            var dialogueRunner = _root.GetComponentInChildren<VulcanusDialogueRunner>(true);
+            if (dialogueRunner)
+            {
+                UIScreenPauseTests.Invoke(dialogueRunner, "OnDisable");
+                UIScreenPauseTests.Invoke(dialogueRunner, "OnDestroy");
+            }
             _fixture?.Dispose();
             Object.DestroyImmediate(_tool);
         }
@@ -566,12 +572,16 @@ namespace UI.Shared.Editor
             var runnerRoot = new GameObject("Dialogue runner");
             runnerRoot.transform.SetParent(_root.transform);
             var runner = runnerRoot.AddComponent<VulcanusDialogueRunner>();
-            UIScreenPauseTests.Invoke(runner, "Awake");
             CreateDocument(AssetDatabase.GUIDToAssetPath("63af131c2305b2949b9a347cc475d06a"));
             var presenter = _screenRoot.AddComponent<VulcanusDialogueUIDocumentPresenter>();
             Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "layoutAsset", _document.visualTreeAsset);
             Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "styleSheet",
                 AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uss"));
+            var database = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueDatabase>());
+            database.Configure(null, System.Array.Empty<VulcanusDialogueAsset>());
+            Set(typeof(VulcanusDialogueRunner), runner, "database", database);
+            Set(typeof(VulcanusDialogueRunner), runner, "presenter", presenter);
+            UIScreenPauseTests.Invoke(runner, "Awake");
             UIScreenPauseTests.Invoke(presenter, "Awake");
             presenter.PauseWhileOpen = ScreenPauseMode.None;
             var context = new VulcanusDialogueExecutionContext();

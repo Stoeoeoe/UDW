@@ -20,11 +20,12 @@ namespace Core.Dialogue.Vulcanus
 
         private Coroutine _activeDialogueRoutine;
         private VulcanusDialogueExecutionContext _activeContext;
+        private Action _onCompleted;
         private readonly VulcanusLuaDialogueScriptEngine _scriptEngine = new(new VulcanusLuaEngine());
 
-        private IDialogueContextResolver ContextResolver => ResolveInterface<IDialogueContextResolver>(contextResolver);
-        private IDialoguePresenter Presenter => ResolveInterface<IDialoguePresenter>(presenter);
-        private IDialogueAdvanceHandler AdvanceHandler => ResolveInterface<IDialogueAdvanceHandler>(presenter);
+        private IDialogueContextResolver _contextResolver;
+        private IDialoguePresenter _presenter;
+        private IDialogueAdvanceHandler _advanceHandler;
 
         public VulcanusDialogueExecutionContext ActiveContext => _activeContext;
         public string CurrentDialogueId => _activeContext?.CurrentDialogue?.DialogueId;
@@ -32,18 +33,18 @@ namespace Core.Dialogue.Vulcanus
         public string CurrentSpeakerId =>
             _activeContext?.CurrentNode is VulcanusDialogueLineNode lineNode ? lineNode.Speaker : null;
 
-        public bool IsDialogueActive => _activeDialogueRoutine != null;
+        public bool IsDialogueActive => _activeContext != null;
 
         private void Awake()
         {
-            if (Instance == null || Instance == this)
-            {
-                Instance = this;
-                return;
-            }
-
-            Debug.LogWarning(
-                "[VulcanusDialogueRunner] Multiple dialogue runners are active. Using the most recently awakened instance.");
+            if (database == null) throw new InvalidOperationException("Dialogue runner requires its database.");
+            if (maxStepsPerRun < 1) throw new InvalidOperationException("Dialogue maxStepsPerRun must be positive.");
+            _presenter = ResolveInterface<IDialoguePresenter>(presenter)
+                ?? throw new InvalidOperationException("Dialogue runner requires its presenter.");
+            _contextResolver = ResolveInterface<IDialogueContextResolver>(contextResolver);
+            _advanceHandler = _presenter as IDialogueAdvanceHandler;
+            if (Instance != null && Instance != this)
+                throw new InvalidOperationException("Only one dialogue runner may be active.");
             Instance = this;
         }
 
@@ -55,34 +56,40 @@ namespace Core.Dialogue.Vulcanus
 
         private void OnDisable() => StopDialogue();
 
-        public bool StartDialogue(string dialogueId, GameCharacter instigator = null, ScreenPauseMode? pauseWhileOpen = null)
+        /// <summary>Calls onCompleted after the dialogue reaches the end of its flow.</summary>
+        public bool StartDialogue(string dialogueId, GameCharacter instigator = null, ScreenPauseMode? pauseWhileOpen = null,
+            Action onCompleted = null)
         {
-            if (database == null)
-            {
-                Debug.LogError("[VulcanusDialogueRunner] No dialogue database assigned.");
-                return false;
-            }
-
-            if (!database.TryGetDialogue(dialogueId, out var dialogue))
-            {
-                Debug.LogError($"[VulcanusDialogueRunner] Dialogue '{dialogueId}' was not found.");
-                return false;
-            }
-
-            if (_activeDialogueRoutine != null)
+            var (dialogue, startNode) = ResolveDialogue(dialogueId);
+            if (IsDialogueActive)
                 throw new InvalidOperationException("Finish the current dialogue before starting another.");
 
-            _activeDialogueRoutine = StartCoroutine(RunDialogue(dialogue, instigator, pauseWhileOpen));
+            _onCompleted = onCompleted;
+            var routine = StartCoroutine(RunDialogue(dialogue, startNode, instigator, pauseWhileOpen));
+            // A dialogue with only an End node can finish before StartCoroutine returns.
+            _activeDialogueRoutine = IsDialogueActive ? routine : null;
             return true;
+        }
+
+        /// <summary>Checks a script's dialogue reference before playback opens the UI.</summary>
+        public void ValidateDialogue(string dialogueId) => ResolveDialogue(dialogueId);
+
+        private (VulcanusDialogueAsset Dialogue, VulcanusDialogueNode StartNode) ResolveDialogue(string dialogueId)
+        {
+            if (!database.TryGetDialogue(dialogueId, out var dialogue))
+                throw new InvalidOperationException($"Dialogue '{dialogueId}' was not found in the assigned database.");
+            if (!dialogue.TryGetNode(dialogue.StartNodeId, out var startNode))
+                throw new InvalidOperationException($"Dialogue '{dialogueId}' has no valid start node.");
+            return (dialogue, startNode);
         }
 
         // Called only when the runner or its managed screen is torn down.
         internal void StopDialogue()
         {
-            if (_activeDialogueRoutine != null)
+            if (IsDialogueActive)
             {
-                StopCoroutine(_activeDialogueRoutine);
-                FinishDialogue();
+                if (_activeDialogueRoutine != null) StopCoroutine(_activeDialogueRoutine);
+                CloseDialogue();
             }
         }
 
@@ -91,19 +98,16 @@ namespace Core.Dialogue.Vulcanus
             if (!IsDialogueActive)
                 return false;
 
-            return AdvanceHandler != null && AdvanceHandler.TryAdvanceDialogue();
+            return _advanceHandler != null && _advanceHandler.TryAdvanceDialogue();
         }
 
-        private IEnumerator RunDialogue(VulcanusDialogueAsset startingDialogue, GameCharacter instigator, ScreenPauseMode? pauseWhileOpen)
+        private IEnumerator RunDialogue(VulcanusDialogueAsset startingDialogue, VulcanusDialogueNode currentNode,
+            GameCharacter instigator, ScreenPauseMode? pauseWhileOpen)
         {
             _activeContext = new VulcanusDialogueExecutionContext
             {
                 Database = database,
-                Project = startingDialogue != null && startingDialogue.Project != null
-                    ? startingDialogue.Project
-                    : database != null
-                        ? database.Project
-                        : null,
+                Project = startingDialogue.Project != null ? startingDialogue.Project : database.Project,
                 CurrentDialogue = startingDialogue,
                 Self = ResolveSelf(startingDialogue),
                 StepsExecuted = 0,
@@ -111,136 +115,77 @@ namespace Core.Dialogue.Vulcanus
                 PauseWhileOpen = pauseWhileOpen
             };
 
-            Presenter?.OnDialogueStarted(_activeContext);
-
-            if (!TryResolveStartNode(startingDialogue, out var currentNode))
+            var completed = false;
+            try
             {
-                Debug.LogError(
-                    $"[VulcanusDialogueRunner] Dialogue '{startingDialogue?.DialogueId}' has no valid start node.");
-                FinishDialogue();
-                yield break;
-            }
-
-            while (currentNode != null)
-            {
-                _activeContext.CurrentNode = currentNode;
-                _activeContext.StepsExecuted++;
-
-                if (_activeContext.StepsExecuted > Mathf.Max(1, maxStepsPerRun))
+                _presenter.OnDialogueStarted(_activeContext);
+                while (currentNode != null)
                 {
-                    Debug.LogError(
-                        $"[VulcanusDialogueRunner] Dialogue '{_activeContext.CurrentDialogue?.DialogueId}' exceeded the loop guard ({maxStepsPerRun} steps).");
-                    break;
-                }
-
-                if (!currentNode.IsExecutable)
-                {
-                    if (_activeContext.CurrentDialogue.TryGetExecutableNodeAfter(currentNode.Id,
-                            out var nextExecutable))
+                    _activeContext.CurrentNode = currentNode;
+                    _activeContext.StepsExecuted++;
+                    if (_activeContext.StepsExecuted > maxStepsPerRun)
                     {
-                        currentNode = nextExecutable;
+                        Debug.LogError($"Dialogue '{_activeContext.CurrentDialogue.DialogueId}' exceeded {maxStepsPerRun} steps.");
+                        yield break;
+                    }
+
+                    if (!currentNode.IsExecutable)
+                    {
+                        _activeContext.CurrentDialogue.TryGetExecutableNodeAfter(currentNode.Id, out currentNode);
                         continue;
                     }
 
-                    break;
-                }
+                    switch (currentNode)
+                    {
+                        case VulcanusDialogueLineNode line:
+                            var text = _activeContext.CurrentDialogue.ResolveLocalizedText(line.MsgKey, line.Text);
+                            yield return _presenter.PresentLine(line, text, _activeContext);
+                            if (!TryResolveLocalNode(_activeContext.CurrentDialogue, line.Next, out currentNode)) yield break;
+                            break;
 
-                switch (currentNode)
-                {
-                    case VulcanusDialogueLineNode lineNode:
-                        yield return RunLine(lineNode);
-                        currentNode = ResolveLocalNode(_activeContext.CurrentDialogue, lineNode.Next);
-                        break;
+                        case VulcanusDialogueChoiceNode choice:
+                            if (!TryBuildVisibleOptions(choice, out var options)) yield break;
+                            if (options.Count == 0)
+                            {
+                                Debug.LogError($"Choice '{choice.Id}' has zero visible options.");
+                                yield break;
+                            }
+                            VulcanusDialogueChoiceOption selected = null;
+                            yield return _presenter.PresentChoice(choice, options, _activeContext, option => selected = option);
+                            if (selected == null)
+                            {
+                                Debug.LogError($"No option was selected for choice '{choice.Id}'.");
+                                yield break;
+                            }
+                            if (!TryResolveLocalNode(_activeContext.CurrentDialogue, selected.TargetNodeId, out currentNode)) yield break;
+                            break;
 
-                    case VulcanusDialogueChoiceNode choiceNode:
-                        yield return RunChoice(choiceNode, nextNode => currentNode = nextNode);
-                        break;
+                        case VulcanusDialogueActionNode action:
+                            if (!RunAction(action)) yield break;
+                            if (!TryResolveLocalNode(_activeContext.CurrentDialogue, action.Next, out currentNode)) yield break;
+                            break;
 
-                    case VulcanusDialogueActionNode actionNode:
-                        if (!RunAction(actionNode))
-                        {
+                        case VulcanusDialogueJumpNode jump:
+                            if (!RunJump(jump, out currentNode)) yield break;
+                            break;
+
+                        case VulcanusDialogueEndNode:
                             currentNode = null;
                             break;
-                        }
 
-                        currentNode = ResolveLocalNode(_activeContext.CurrentDialogue, actionNode.Next);
-                        break;
-
-                    case VulcanusDialogueJumpNode jumpNode:
-                        if (!RunJump(jumpNode, out currentNode))
-                            currentNode = null;
-                        break;
-
-                    case VulcanusDialogueEndNode:
-                        currentNode = null;
-                        break;
-
-                    default:
-                        Debug.LogError(
-                            $"[VulcanusDialogueRunner] Unsupported node type '{currentNode.GetType().Name}'.");
-                        currentNode = null;
-                        break;
+                        default:
+                            Debug.LogError($"Unsupported dialogue node type '{currentNode.GetType().Name}'.");
+                            yield break;
+                    }
                 }
+                completed = true;
             }
-
-            FinishDialogue();
-        }
-
-        private bool TryResolveStartNode(VulcanusDialogueAsset dialogue, out VulcanusDialogueNode startNode)
-        {
-            startNode = null;
-            if (dialogue == null)
-                return false;
-
-            if (dialogue.TryGetNode(dialogue.StartNodeId, out startNode) && startNode != null)
-                return true;
-
-            return dialogue.TryGetExecutableNodeAfter(string.Empty, out startNode);
-        }
-
-        private IEnumerator RunLine(VulcanusDialogueLineNode lineNode)
-        {
-            var localizedText = _activeContext.CurrentDialogue.ResolveLocalizedText(lineNode.MsgKey, lineNode.Text);
-            if (Presenter != null)
+            finally
             {
-                yield return Presenter.PresentLine(lineNode, localizedText, _activeContext);
-                yield break;
+                // Only reaching the end of the flow calls the completion callback.
+                if (completed) FinishDialogue();
+                else CloseDialogue();
             }
-
-            yield return null;
-        }
-
-        private IEnumerator RunChoice(VulcanusDialogueChoiceNode choiceNode, Action<VulcanusDialogueNode> setNextNode)
-        {
-            var visibleOptions = BuildVisibleOptions(choiceNode);
-            if (visibleOptions.Count == 0)
-            {
-                Debug.LogError(
-                    $"[VulcanusDialogueRunner] Choice node '{choiceNode.Id}' in dialogue '{_activeContext.CurrentDialogue?.DialogueId}' has zero visible options.");
-                setNextNode(null);
-                yield break;
-            }
-
-            VulcanusDialogueChoiceOption selectedOption = null;
-            if (Presenter != null)
-            {
-                yield return Presenter.PresentChoice(choiceNode, visibleOptions, _activeContext,
-                    option => selectedOption = option);
-            }
-            else
-            {
-                selectedOption = visibleOptions[0];
-                yield return null;
-            }
-
-            if (selectedOption == null)
-            {
-                Debug.LogError($"[VulcanusDialogueRunner] No option was selected for choice node '{choiceNode.Id}'.");
-                setNextNode(null);
-                yield break;
-            }
-
-            setNextNode(ResolveLocalNode(_activeContext.CurrentDialogue, selectedOption.TargetNodeId));
         }
 
         private bool RunAction(VulcanusDialogueActionNode actionNode)
@@ -255,99 +200,90 @@ namespace Core.Dialogue.Vulcanus
             return false;
         }
 
-        private bool RunJump(VulcanusDialogueJumpNode jumpNode, out VulcanusDialogueNode nextNode)
+        private bool RunJump(VulcanusDialogueJumpNode jump, out VulcanusDialogueNode nextNode)
         {
             nextNode = null;
-
-            if (string.IsNullOrWhiteSpace(jumpNode.TargetNodeId))
+            if (string.IsNullOrWhiteSpace(jump.TargetNodeId))
             {
-                Debug.LogError($"[VulcanusDialogueRunner] Jump node '{jumpNode.Id}' has an empty target node id.");
+                Debug.LogError($"Jump '{jump.Id}' has an empty target node ID.");
                 return false;
             }
+            if (string.IsNullOrWhiteSpace(jump.TargetDialogueId))
+                return TryResolveLocalNode(_activeContext.CurrentDialogue, jump.TargetNodeId, out nextNode);
 
-            if (string.IsNullOrWhiteSpace(jumpNode.TargetDialogueId))
+            if (!database.TryGetDialogue(jump.TargetDialogueId, out var targetDialogue))
             {
-                nextNode = ResolveLocalNode(_activeContext.CurrentDialogue, jumpNode.TargetNodeId);
-                if (nextNode != null)
-                    return true;
-
-                Debug.LogError(
-                    $"[VulcanusDialogueRunner] Jump node '{jumpNode.Id}' references missing local node '{jumpNode.TargetNodeId}'.");
+                Debug.LogError($"Jump '{jump.Id}' references unknown dialogue '{jump.TargetDialogueId}'.");
                 return false;
             }
-
-            if (database == null || !database.TryGetDialogue(jumpNode.TargetDialogueId, out var targetDialogue))
-            {
-                Debug.LogError(
-                    $"[VulcanusDialogueRunner] Jump node '{jumpNode.Id}' references unknown dialogue '{jumpNode.TargetDialogueId}'.");
-                return false;
-            }
-
+            if (!TryResolveLocalNode(targetDialogue, jump.TargetNodeId, out nextNode)) return false;
             _activeContext.CurrentDialogue = targetDialogue;
             _activeContext.Project = targetDialogue.Project != null ? targetDialogue.Project : _activeContext.Project;
             _activeContext.Self = ResolveSelf(targetDialogue);
-            nextNode = ResolveLocalNode(targetDialogue, jumpNode.TargetNodeId);
-            if (nextNode != null)
-                return true;
-
-            Debug.LogError(
-                $"[VulcanusDialogueRunner] Jump node '{jumpNode.Id}' references missing node '{jumpNode.TargetNodeId}' in dialogue '{targetDialogue.DialogueId}'.");
-            return false;
+            return true;
         }
 
-        private List<VulcanusDialogueChoiceOption> BuildVisibleOptions(VulcanusDialogueChoiceNode choiceNode)
+        private bool TryBuildVisibleOptions(VulcanusDialogueChoiceNode choice, out List<VulcanusDialogueChoiceOption> visibleOptions)
         {
-            var visibleOptions = new List<VulcanusDialogueChoiceOption>();
-            var options = choiceNode.Options ?? Array.Empty<VulcanusDialogueChoiceOption>();
-
-            for (var i = 0; i < options.Length; i++)
+            visibleOptions = new List<VulcanusDialogueChoiceOption>();
+            foreach (var option in choice.Options)
             {
-                var option = options[i];
                 if (option == null || string.IsNullOrWhiteSpace(option.TargetNodeId))
-                    continue;
-
+                {
+                    Debug.LogError($"Choice '{choice.Id}' has an invalid option.");
+                    return false;
+                }
                 if (string.IsNullOrWhiteSpace(option.Condition))
                 {
                     visibleOptions.Add(option);
                     continue;
                 }
-
-                if (_scriptEngine.EvaluateCondition(option.Condition, _activeContext, out var isVisible) && isVisible)
-                    visibleOptions.Add(option);
+                if (!_scriptEngine.EvaluateCondition(option.Condition, _activeContext, out var isVisible)) return false;
+                if (isVisible) visibleOptions.Add(option);
             }
-
-            return visibleOptions;
+            return true;
         }
 
         private object ResolveSelf(VulcanusDialogueAsset dialogue)
         {
-            var project = dialogue != null && dialogue.Project != null ? dialogue.Project :
-                database != null ? database.Project : null;
-            return ContextResolver != null ? ContextResolver.ResolveSelf(project, dialogue) : null;
+            var project = dialogue.Project != null ? dialogue.Project : database.Project;
+            // A resolver is optional for dialogues that have no self context.
+            return _contextResolver?.ResolveSelf(project, dialogue);
         }
 
         private T ResolveInterface<T>(UnityEngine.Object configuredObject) where T : class
         {
-            if (configuredObject is T typedObject)
-                return typedObject;
-
+            if (configuredObject != null)
+                return configuredObject as T
+                    ?? throw new InvalidOperationException($"Dialogue reference must implement {typeof(T).Name}.");
             return GetComponents<MonoBehaviour>().OfType<T>().FirstOrDefault();
         }
 
-        private static VulcanusDialogueNode ResolveLocalNode(VulcanusDialogueAsset dialogue, string nodeId)
+        private static bool TryResolveLocalNode(VulcanusDialogueAsset dialogue, string nodeId, out VulcanusDialogueNode node)
         {
-            if (dialogue == null || string.IsNullOrWhiteSpace(nodeId))
-                return null;
-
-            return dialogue.TryGetNode(nodeId, out var node) ? node : null;
+            node = null;
+            // An empty Next means the flow ends here.
+            if (string.IsNullOrWhiteSpace(nodeId)) return true;
+            if (dialogue.TryGetNode(nodeId, out node)) return true;
+            Debug.LogError($"Dialogue '{dialogue.DialogueId}' references missing node '{nodeId}'.");
+            return false;
         }
 
         private void FinishDialogue()
         {
+            var completed = _onCompleted;
+            CloseDialogue();
+            completed?.Invoke();
+        }
+
+        private void CloseDialogue()
+        {
+            if (!IsDialogueActive) return;
             var context = _activeContext;
             _activeDialogueRoutine = null;
             _activeContext = null;
-            Presenter?.OnDialogueFinished(context);
+            _onCompleted = null;
+            _presenter.OnDialogueFinished(context);
         }
     }
 }

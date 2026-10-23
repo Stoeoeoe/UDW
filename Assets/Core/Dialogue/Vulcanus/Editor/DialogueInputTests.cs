@@ -19,6 +19,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         private UrGUIManager _gui;
         private MainCharacter _character;
         private VulcanusDialogueRunner _runner;
+        private VulcanusDialogueDatabase _database;
         private VulcanusDialogueUIDocumentPresenter _presenter;
         private UIDocument _document;
         private VisualElement Overlay => _document.rootVisualElement.Q("dialogue-overlay");
@@ -50,6 +51,9 @@ namespace Core.Dialogue.Vulcanus.Editor
             root.SetActive(true);
             GameTestFixture.Invoke(_presenter, "OnEnable");
             _runner = root.AddComponent<VulcanusDialogueRunner>();
+            _database = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueDatabase>());
+            _database.Configure(null, Array.Empty<VulcanusDialogueAsset>());
+            Set(_runner, "database", _database);
             Set(_runner, "presenter", _presenter);
             GameTestFixture.Invoke(_runner, "Awake");
         }
@@ -74,9 +78,7 @@ namespace Core.Dialogue.Vulcanus.Editor
                 : new VulcanusDialogueLineNode("entry", "", "", "A line of dialogue.", "", "end");
             dialogue.Configure(null, 1, "test:dialogue", "Test", "", false, "", "entry", Array.Empty<string>(), "", "",
                 new[] { entry, new VulcanusDialogueEndNode("end") }, Array.Empty<VulcanusDialogueAsset.ImportedMessage>(), Array.Empty<string>());
-            var database = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueDatabase>());
-            database.Configure(null, new[] { dialogue });
-            Set(_runner, "database", database);
+            _database.Configure(null, new[] { dialogue });
             Assert.That(_runner.StartDialogue(dialogue.DialogueId, _character), Is.True);
             Assert.That(_input.PlayerControls.enabled, Is.False);
             Assert.That(_input.ActiveMapName, Is.EqualTo("UI"));
@@ -94,6 +96,23 @@ namespace Core.Dialogue.Vulcanus.Editor
             using var evt = KeyDownEvent.GetPooled('\0', key, EventModifiers.None);
             evt.target = Overlay;
             Overlay.SendEvent(evt);
+        }
+
+        [TestCase("database", "requires its database")]
+        [TestCase("presenter", "requires its presenter")]
+        [TestCase("maxStepsPerRun", "must be positive")]
+        public void InvalidSetupFailsInAwake(string invalidField, string message)
+        {
+            var owner = new GameObject("Invalid dialogue setup");
+            owner.SetActive(false);
+            owner.transform.SetParent(_fixture.Root.transform);
+            var runner = owner.AddComponent<VulcanusDialogueRunner>();
+            Set(runner, "database", _database);
+            Set(runner, "presenter", _presenter);
+            Set(runner, invalidField, invalidField == "maxStepsPerRun" ? 0 : null);
+            Assert.That(() => GameTestFixture.Invoke(runner, "Awake"),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains(message));
+            Assert.That(VulcanusDialogueRunner.Instance, Is.SameAs(_runner));
         }
 
         [Test]
