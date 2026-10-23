@@ -161,6 +161,76 @@ namespace Core.Scripting.Editor
             Assert.That(File.GetLastWriteTimeUtc(path), Is.EqualTo(writtenAt));
         }
 
+        [Test]
+        public void SequenceFindsANewActionAndItsValidatorWithoutAnActionSwitch()
+        {
+            var api = new ValidationApi();
+            var step = new CutsceneStep("new-step", "test.newAction", new[]
+            {
+                new CutsceneArgument("destination", "square"), new CutsceneArgument("actor", "player")
+            });
+            var registry = LuaBindingRegistry.BindSequence(new[] { step }, "cutscene",
+                (typeof(ValidationApi), () => api),
+                (typeof(ConstructorRequiresGameApi), () => new ConstructorRequiresGameApi()));
+            Assert.That(api.Checked, Is.EqualTo("player:square"));
+            Assert.That(api.Executed, Is.False);
+            Assert.That(registry.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Validation" }));
+            using var run = VulcanusLuaEngine.StartSession(registry, "Validation.NewAction('player', 'square')", "fixture");
+            run.Tick(0.01f);
+            Assert.That(api.Executed, Is.True, run.Error);
+        }
+
+        [Test]
+        public void SequenceReportsTheStepWhenItsValidatorRejectsAReference()
+        {
+            var step = new CutsceneStep("bad-step", "test.newAction", new[]
+            {
+                new CutsceneArgument("actor", "missing"), new CutsceneArgument("destination", "square")
+            });
+            Assert.That(() => LuaBindingRegistry.BindSequence(new[] { step }, "cutscene",
+                (typeof(ValidationApi), () => new ValidationApi())),
+                Throws.InvalidOperationException.With.Message.Contains("step 'bad-step'").And.Message.Contains("Unknown actor"));
+        }
+
+        [TestCase(typeof(MissingValidatorApi), "needs a Validator")]
+        [TestCase(typeof(WrongValidatorApi), "same parameter types")]
+        public void InvalidValidatorsFailDuringMetadataExport(Type type, string reason)
+        {
+            Assert.That(() => LuaBindingRegistry.DescribeTypes(type),
+                Throws.InvalidOperationException.With.Message.Contains(reason));
+        }
+
+        [LuaModule("Validation")]
+        private sealed class ValidationApi
+        {
+            public string Checked;
+            public bool Executed;
+            [LuaCall, LuaAction("test.newAction", "New", "Test", "New action", "cutscene", Validator = nameof(Check))]
+            public void NewAction([LuaReference("actorRef", "mapActor")] string actor, string destination) => Executed = true;
+            [UnityEngine.Scripting.Preserve]
+            private void Check(string actor, string destination)
+            {
+                if (actor != "player") throw new InvalidOperationException("Unknown actor");
+                Checked = actor + ":" + destination;
+            }
+        }
+
+        [LuaModule("MissingValidator")]
+        private sealed class MissingValidatorApi
+        {
+            [LuaCall, LuaAction("test.missing", "Missing", "Test", "Missing validator", "cutscene")]
+            public void Run([LuaReference("actorRef", "mapActor")] string actor) { }
+        }
+
+        [LuaModule("WrongValidator")]
+        private sealed class WrongValidatorApi
+        {
+            [LuaCall, LuaAction("test.wrong", "Wrong", "Test", "Wrong signature", "cutscene", Validator = nameof(Check))]
+            public void Run(string actor) { }
+            [UnityEngine.Scripting.Preserve]
+            private void Check(int actor) { }
+        }
+
         [LuaModule("RequiresGame")]
         private sealed class ConstructorRequiresGameApi
         {

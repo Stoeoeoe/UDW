@@ -51,7 +51,6 @@ namespace Core.Scripting
         private DynValue Await(ILuaAction action)
         {
             if (action == null) throw new InvalidOperationException("An awaitable binding returned no action.");
-            if (_pending != null) throw new InvalidOperationException("Only one linear action may be awaited.");
             // Remember the action and pause Lua until it finishes.
             _pending = action;
             return DynValue.NewYieldReq(Array.Empty<DynValue>());

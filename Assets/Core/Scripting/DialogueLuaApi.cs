@@ -21,10 +21,11 @@ namespace Core.Scripting
             _player = player;
         }
 
+        [UnityEngine.Scripting.Preserve]
         public void ValidatePlay(string dialogue) => _runner.ValidateDialogue(dialogue);
 
         [LuaCall(true)]
-        [LuaAction("dialogue.play", "Play dialogue", "Dialogue", "Wait for a conversation to finish through its flow.", "cutscene")]
+        [LuaAction("dialogue.play", "Play dialogue", "Dialogue", "Wait for a conversation to finish through its flow.", "cutscene", Validator = nameof(ValidatePlay))]
         public ILuaAction Play([LuaReference("dialogueRef", "dialogue")] string dialogue) =>
             new PlayDialogueAction(_runner, _player, dialogue);
 

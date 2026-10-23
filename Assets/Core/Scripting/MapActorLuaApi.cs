@@ -75,6 +75,7 @@ namespace Core.Scripting
         }
 
         /// <summary>Checks both IDs before a cutscene starts. Does not move anything.</summary>
+        [UnityEngine.Scripting.Preserve]
         public void ValidateMoveTo(string actor, string destination)
         {
             RequireCurrentMap();
@@ -84,7 +85,7 @@ namespace Core.Scripting
 
         /// <summary>Finds the character and anchor, then starts walking to the anchor's world position.</summary>
         [LuaCall(true)]
-        [LuaAction("actors.moveTo", "Move to anchor", "Movement", "Walk an existing actor to a map anchor.", "cutscene", "npcRoutine")]
+        [LuaAction("actors.moveTo", "Move to anchor", "Movement", "Walk an existing actor to a map anchor.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo))]
         public ILuaAction MoveTo([LuaReference("actorRef", "mapActor")] string actor,
             [LuaReference("anchorRef", "mapAnchor")] string destination)
         {
@@ -93,11 +94,12 @@ namespace Core.Scripting
         }
 
         /// <summary>Checks both actor IDs before a cutscene starts. Does not turn either actor.</summary>
+        [UnityEngine.Scripting.Preserve]
         public void ValidateFace(string actor, string target) => ResolveFacingActors(actor, target);
 
         /// <summary>Turns one character toward another. Completes immediately.</summary>
         [LuaCall(true)]
-        [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine")]
+        [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine", Validator = nameof(ValidateFace))]
         public void Face([LuaReference("actorRef", "mapActor")] string actor,
             [LuaReference("actorRef", "mapActor")] string target)
         {
@@ -124,7 +126,7 @@ namespace Core.Scripting
 
         private GameCharacter ResolveActor(string id)
         {
-            if (string.IsNullOrWhiteSpace(id) || !_actors.TryGetValue(id, out var actor))
+            if (!_actors.TryGetValue(id, out var actor))
                 throw new InvalidOperationException($"Map '{_map.MapId}' has no bound actor instance '{id}'.");
             if (!actor || !actor.isActiveAndEnabled)
                 throw new InvalidOperationException($"Bound actor '{id}' has left the live world.");
@@ -133,7 +135,7 @@ namespace Core.Scripting
 
         private VulcanusMapAnchor ResolveAnchor(string id)
         {
-            if (string.IsNullOrWhiteSpace(id) || !_anchors.TryGetValue(id, out var anchor))
+            if (!_anchors.TryGetValue(id, out var anchor))
                 throw new InvalidOperationException($"Map '{_map.MapId}' has no anchor '{id}'.");
             if (!anchor) throw new InvalidOperationException($"Bound anchor '{id}' was destroyed.");
             return anchor;

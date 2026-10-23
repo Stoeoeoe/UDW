@@ -26,6 +26,9 @@ namespace Core.Scripting
         public string Description { get; }
         /// <summary>Allowed session contexts: cutscene and/or npcRoutine. No routine scheduler is implied.</summary>
         public string[] Contexts { get; }
+        /// <summary>Optional check to run before playback. Takes the same arguments and returns void.</summary>
+        /// <remarks>Required for actions with LuaReference arguments. Use nameof and mark the method [Preserve].</remarks>
+        public string Validator { get; set; }
         public LuaActionAttribute(string id, string displayName, string category, string description, params string[] contexts)
         { Id = id; DisplayName = displayName; Category = category; Description = description; Contexts = contexts; }
     }

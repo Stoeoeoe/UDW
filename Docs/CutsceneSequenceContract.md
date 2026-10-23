@@ -74,3 +74,21 @@ Schema and action-manifest changes invalidate imported cutscene scripts.
 Catalog discovery preserves enabled selections and uses exact cutscene IDs.
 Before Play Mode or a build, the current sources are validated again so a
 failed edit cannot run through an older retained Unity import artifact.
+
+`CutsceneBindings.BindCurrentMap(definition, dialogueRunner, movementTimeoutSeconds)`
+checks the definition's map against the ready loaded map, then validates every
+step through the existing actor/anchor/dialogue APIs. It returns the Lua binding
+registry after all references resolve. It does not execute actions, open
+dialogue or claim player controls. Errors include the cutscene ID and authored
+step ID. Only API modules used by the sequence are bound.
+
+Each action links its pre-playback check with
+`[LuaAction(..., Validator = nameof(ValidateMoveTo))]`. The check takes the same
+parameters as the action, returns `void`, and is marked `[Preserve]` for Unity
+builds. It checks references without starting gameplay. Actions with
+`[LuaReference]` arguments must provide a check; the registry verifies this and
+the method signature during registration and manifest export.
+
+The binder discovers actions and their checks through these attributes. Adding
+an action to an existing API module needs no binder change. A new API module
+still needs its construction function wired into `CutsceneBindings`.

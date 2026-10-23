@@ -2,9 +2,13 @@ using System;
 using System.Collections;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Linq;
 using Character;
 using Core.Dialogue.Vulcanus;
 using Core.Location;
+using Core.Tile;
+using Core.Tile.Vulcanus;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UI.Shared;
 using UnityEditor;
@@ -112,6 +116,71 @@ namespace Core.Scripting.Editor
             Assert.That(broken.Status, Is.EqualTo(LuaExecutionStatus.Failed));
             Assert.That(broken.Error, Does.Contain("before reaching the end"));
             AssertClosed();
+        }
+
+        [UnityTest]
+        public IEnumerator CutsceneBindingChecksLaterReferencesBeforeStartingEarlierActions()
+        {
+            var player = MainCharacter.CurrentMainCharacter;
+            var map = MapManager.Instance.CurrentMap;
+            var anchor = map.GetComponentsInChildren<VulcanusMapAnchor>(true).First();
+            var position = player.GetComponent<Rigidbody2D>().position;
+            var facing = player.Orientation.FacingDirection;
+            var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
+            try
+            {
+                var walk = Step("walk", "actors.moveTo", ("actor", "player"), ("destination", anchor.AnchorId));
+                ConfigureDefinition(definition, map.MapId, walk, Step("talk", "dialogue.play", ("dialogue", "missing-dialogue")));
+                var error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner, 5f));
+                Assert.That(error.Message, Does.Contain("fixture:binding").And.Contain("step 'talk'").And.Contain("missing-dialogue"));
+
+                foreach (var invalid in new[]
+                {
+                    Step("missing-actor", "actors.moveTo", ("actor", "missing"), ("destination", anchor.AnchorId)),
+                    Step("missing-anchor", "actors.moveTo", ("actor", "player"), ("destination", "missing")),
+                    Step("missing-target", "actors.face", ("actor", "player"), ("target", "missing"))
+                })
+                {
+                    ConfigureDefinition(definition, map.MapId, invalid);
+                    error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner, 5f));
+                    Assert.That(error.Message, Does.Contain($"step '{invalid.Id}'"));
+                }
+
+                var talk = Step("talk", "dialogue.play", ("dialogue", "fixture:talk"));
+                ConfigureDefinition(definition, "another-map", walk, talk);
+                Assert.That(() => CutsceneBindings.BindCurrentMap(definition, _runner, 5f),
+                    Throws.InvalidOperationException.With.Message.Contains("another-map"));
+
+                ConfigureDefinition(definition, map.MapId, walk, talk);
+                var bindings = CutsceneBindings.BindCurrentMap(definition, _runner, 5f);
+                Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EquivalentTo(new[] { "Actors", "Dialogue" }));
+                ConfigureDefinition(definition, map.MapId, talk);
+                bindings = CutsceneBindings.BindCurrentMap(definition, _runner, 5f);
+                Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Dialogue" }));
+                ConfigureDefinition(definition, map.MapId, walk);
+                bindings = CutsceneBindings.BindCurrentMap(definition, null, 5f);
+                Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Actors" }));
+                Assert.That(player.Controller.IsMovementOwned, Is.False);
+                Assert.That(player.GetComponent<Rigidbody2D>().position, Is.EqualTo(position));
+                Assert.That(player.Orientation.FacingDirection, Is.EqualTo(facing));
+                AssertClosed();
+                yield return null;
+            }
+            finally { Object.Destroy(definition); }
+        }
+
+        private static CutsceneStep Step(string id, string action, params (string Name, string Value)[] arguments) =>
+            new(id, action, arguments.Select(argument => new CutsceneArgument(argument.Name, argument.Value)).ToArray());
+
+        private static void ConfigureDefinition(CutsceneDefinition definition, string map, params CutsceneStep[] steps)
+        {
+            var sequence = new JArray(steps.Select(step => new JObject
+            {
+                ["id"] = step.Id, ["action"] = step.ActionId,
+                ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value)))
+            }));
+            var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding");
+            definition.Configure("fixture:binding", map, compiled.Lua, steps);
         }
 
         private void AssertClosed()
