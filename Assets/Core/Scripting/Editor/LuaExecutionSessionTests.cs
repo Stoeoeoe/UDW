@@ -169,7 +169,7 @@ namespace Core.Scripting.Editor
             {
                 new CutsceneArgument("destination", "square"), new CutsceneArgument("actor", "player")
             });
-            var registry = LuaBindingRegistry.BindSequence(new[] { step }, "cutscene",
+            var registry = CutsceneBindings.BindSequence(new[] { step }, "cutscene",
                 (typeof(ValidationApi), () => api),
                 (typeof(ConstructorRequiresGameApi), () => new ConstructorRequiresGameApi()));
             Assert.That(api.Checked, Is.EqualTo("player:square"));
@@ -187,7 +187,7 @@ namespace Core.Scripting.Editor
             {
                 new CutsceneArgument("actor", "missing"), new CutsceneArgument("destination", "square")
             });
-            Assert.That(() => LuaBindingRegistry.BindSequence(new[] { step }, "cutscene",
+            Assert.That(() => CutsceneBindings.BindSequence(new[] { step }, "cutscene",
                 (typeof(ValidationApi), () => new ValidationApi())),
                 Throws.InvalidOperationException.With.Message.Contains("step 'bad-step'").And.Message.Contains("Unknown actor"));
         }

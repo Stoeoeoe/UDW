@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Character;
 using Core.Dialogue.Vulcanus;
 using Core.Location;
@@ -6,7 +8,7 @@ using Core.Tile;
 
 namespace Core.Scripting
 {
-    /// <summary>Checks a cutscene's references against the loaded map before any action starts.</summary>
+    /// <summary>Prepares the Lua modules and validates every sequence step before any action starts.</summary>
     public static class CutsceneBindings
     {
         public static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
@@ -24,7 +26,7 @@ namespace Core.Scripting
 
             try
             {
-                return LuaBindingRegistry.BindSequence(definition.Steps, "cutscene",
+                return BindSequence(definition.Steps, "cutscene",
                     (typeof(MapActorLuaApi), () => MapActorLuaApi.BindCurrentMap(movementTimeoutSeconds)),
                     (typeof(DialogueLuaApi), () => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)));
             }
@@ -32,6 +34,55 @@ namespace Core.Scripting
             {
                 throw new InvalidOperationException($"Cutscene '{definition.CutsceneId}': {error.Message}", error);
             }
+        }
+
+        /// <summary>Creates the modules a sequence uses and checks all steps without executing them.</summary>
+        public static LuaBindingRegistry BindSequence(IEnumerable<CutsceneStep> steps, string context,
+            params (Type Type, Func<object> Create)[] factories)
+        {
+            // Inspect signatures first. Creating a module can require live scene services,
+            // so only create it below if this sequence actually uses one of its actions.
+            var descriptions = LuaBindingRegistry.InspectTypes(factories.Select(factory => factory.Type).ToArray());
+            var actions = descriptions.GetActions()
+                .ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
+            var instances = new Dictionary<Type, object>();
+            foreach (var step in steps)
+            {
+                try
+                {
+                    if (!actions.TryGetValue(step.ActionId, out var method) ||
+                        !method.Action.Contexts.Contains(context))
+                        throw new InvalidOperationException($"Unsupported {context} action '{step.ActionId}'.");
+                    var arguments = ReadStepArguments(step, method);
+                    var type = method.Info.DeclaringType;
+                    if (!instances.TryGetValue(type, out var api))
+                    {
+                        api = factories.Single(factory => factory.Type == type).Create();
+                        instances.Add(type, api);
+                    }
+                    // Only the check runs here. The action itself is called later by Lua.
+                    if (method.Validator != null)
+                        LuaBindingRegistry.InvokeReflected(method.Validator, api, arguments);
+                }
+                catch (Exception error)
+                {
+                    throw new InvalidOperationException($"step '{step.Id}' ({step.ActionId}): {error.Message}", error);
+                }
+            }
+            return new LuaBindingRegistry(instances.Values.ToArray());
+        }
+
+        private static object[] ReadStepArguments(CutsceneStep step, LuaBindingRegistry.Method method)
+        {
+            var arguments = step.Arguments.ToDictionary(argument => argument.Name, argument => argument.Value, StringComparer.Ordinal);
+            if (arguments.Count != method.Parameters.Length || method.Parameters.Any(parameter => !arguments.ContainsKey(parameter.Name)))
+                throw new InvalidOperationException($"Expected named arguments: {string.Join(", ", method.Parameters.Select(parameter => parameter.Name))}.");
+            // The sequence format supports string references. Handwritten Lua has the wider primitive API.
+            if (method.Parameters.Any(parameter => parameter.ParameterType != typeof(string)) ||
+                arguments.Values.Any(string.IsNullOrWhiteSpace))
+                throw new InvalidOperationException("Sequence arguments must be non-empty strings.");
+            // Authored arguments are named; reflection expects the C# parameter order.
+            return method.Parameters.Select(parameter => (object)arguments[parameter.Name]).ToArray();
         }
     }
 }

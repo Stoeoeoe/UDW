@@ -22,62 +22,16 @@ namespace Core.Scripting
             (apiModules ?? throw new ArgumentNullException(nameof(apiModules))).Select(api =>
                 (api?.GetType() ?? throw new ArgumentException("Lua API modules cannot be null.", nameof(apiModules)), api)).ToArray()) { }
 
-        /// <summary>Creates the modules a sequence uses and checks all steps without executing them.</summary>
-        public static LuaBindingRegistry BindSequence(IEnumerable<CutsceneStep> steps, string context,
-            params (Type Type, Func<object> Create)[] factories)
-        {
-            // Inspect signatures first. Creating a module can require live scene services,
-            // so only create it below if this sequence actually uses one of its actions.
-            var descriptions = new LuaBindingRegistry(factories.Select(factory => (factory.Type, (object)null)).ToArray());
-            var actions = descriptions._modules.SelectMany(module => module.Methods)
-                .Where(method => method.Action != null)
-                .ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
-            var instances = new Dictionary<Type, object>();
-            foreach (var step in steps)
-            {
-                try
-                {
-                    if (!actions.TryGetValue(step.ActionId, out var method) ||
-                        !method.Action.Contexts.Contains(context))
-                        throw new InvalidOperationException($"Unsupported {context} action '{step.ActionId}'.");
-                    var arguments = ReadStepArguments(step, method);
-                    var type = method.Info.DeclaringType;
-                    if (!instances.TryGetValue(type, out var api))
-                    {
-                        api = factories.Single(factory => factory.Type == type).Create();
-                        instances.Add(type, api);
-                    }
-                    // Only the check runs here. The action itself is called later by Lua.
-                    if (method.Validator != null)
-                        InvokeReflected(method.Validator, api, arguments);
-                }
-                catch (Exception error)
-                {
-                    throw new InvalidOperationException($"step '{step.Id}' ({step.ActionId}): {error.Message}", error);
-                }
-            }
-            return new LuaBindingRegistry(instances.Values.ToArray());
-        }
-
-        private static object[] ReadStepArguments(CutsceneStep step, Method method)
-        {
-            var arguments = step.Arguments.ToDictionary(argument => argument.Name, argument => argument.Value, StringComparer.Ordinal);
-            if (arguments.Count != method.Parameters.Length || method.Parameters.Any(parameter => !arguments.ContainsKey(parameter.Name)))
-                throw new InvalidOperationException($"Expected named arguments: {string.Join(", ", method.Parameters.Select(parameter => parameter.Name))}.");
-            // The sequence format supports string references. Handwritten Lua has the wider primitive API.
-            if (method.Parameters.Any(parameter => parameter.ParameterType != typeof(string)) ||
-                arguments.Values.Any(string.IsNullOrWhiteSpace))
-                throw new InvalidOperationException("Sequence arguments must be non-empty strings.");
-            // Authored arguments are named; reflection expects the C# parameter order.
-            return method.Parameters.Select(parameter => (object)arguments[parameter.Name]).ToArray();
-        }
-
         /// <summary>Describes API types without creating them, so editor export needs no running game.</summary>
-        public static LuaBindingManifest DescribeTypes(params Type[] apiTypes)
+        public static LuaBindingManifest DescribeTypes(params Type[] apiTypes) => InspectTypes(apiTypes).Describe();
+
+        // Type-only inspection deliberately has no API instances: export and sequence
+        // preparation need validated signatures before scene services are constructed.
+        internal static LuaBindingRegistry InspectTypes(params Type[] apiTypes)
         {
             if (apiTypes == null) throw new ArgumentNullException(nameof(apiTypes));
             return new LuaBindingRegistry(apiTypes.Select(type =>
-                (type ?? throw new ArgumentException("Lua API types cannot be null.", nameof(apiTypes)), (object)null)).ToArray()).Describe();
+                (type ?? throw new ArgumentException("Lua API types cannot be null.", nameof(apiTypes)), (object)null)).ToArray());
         }
 
         // Runtime registration and editor export share all signature and metadata checks.
@@ -206,6 +160,9 @@ namespace Core.Scripting
             };
         }
 
+        internal IEnumerable<Method> GetActions() =>
+            _modules.SelectMany(module => module.Methods).Where(method => method.Action != null);
+
         internal void Bind(Script script, bool allowWrites)
         {
             foreach (var module in _modules)
@@ -245,7 +202,7 @@ namespace Core.Scripting
                 ? awaitAction((ILuaAction)result) : ToLua(script, result, method.Info.ReturnType);
         }
 
-        private static object InvokeReflected(MethodInfo method, object api, object[] values)
+        internal static object InvokeReflected(MethodInfo method, object api, object[] values)
         {
             try
             {
@@ -365,7 +322,7 @@ namespace Core.Scripting
 
         private sealed record Module(string[] Path, List<Method> Methods);
 
-        private sealed record Method(object Api, MethodInfo Info, ParameterInfo[] Parameters,
+        internal sealed record Method(object Api, MethodInfo Info, ParameterInfo[] Parameters,
             bool WritesState, LuaActionAttribute Action, MethodInfo Validator);
     }
 }

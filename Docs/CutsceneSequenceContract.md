@@ -92,3 +92,7 @@ the method signature during registration and manifest export.
 The binder discovers actions and their checks through these attributes. Adding
 an action to an existing API module needs no binder change. A new API module
 still needs its construction function wired into `CutsceneBindings`.
+
+`CutsceneBindings.BindSequence` owns step argument checks, lazy module creation,
+and pre-playback reference validation. `LuaBindingRegistry` supplies the validated
+API methods and attaches calls to Lua; it does not interpret cutscene steps.
