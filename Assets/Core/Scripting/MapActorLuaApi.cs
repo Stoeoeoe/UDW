@@ -124,7 +124,7 @@ namespace Core.Scripting
                 throw new InvalidOperationException("Actor bindings no longer belong to the ready current map.");
         }
 
-        private GameCharacter ResolveActor(string id)
+        internal GameCharacter ResolveActor(string id)
         {
             if (!_actors.TryGetValue(id, out var actor))
                 throw new InvalidOperationException($"Map '{_map.MapId}' has no bound actor instance '{id}'.");
@@ -133,7 +133,7 @@ namespace Core.Scripting
             return actor;
         }
 
-        private VulcanusMapAnchor ResolveAnchor(string id)
+        internal VulcanusMapAnchor ResolveAnchor(string id)
         {
             if (!_anchors.TryGetValue(id, out var anchor))
                 throw new InvalidOperationException($"Map '{_map.MapId}' has no anchor '{id}'.");

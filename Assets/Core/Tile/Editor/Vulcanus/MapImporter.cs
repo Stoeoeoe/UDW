@@ -62,6 +62,7 @@ namespace Core.Tile.Editor.Vulcanus
             try
             {
                 var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
+                mapComponent.Configure(mapId, mapName, width, height, tileSize);
 
                 var gridGo = new GameObject("Grid");
                 gridGo.transform.SetParent(mapRoot.transform, false);
@@ -145,7 +146,6 @@ namespace Core.Tile.Editor.Vulcanus
                 if (terrainTilemap == null)
                     terrainTilemap = CreateTilemapLayer(gridGo.transform, "Terrain", 0, 1f);
 
-                mapComponent.Configure(mapId, mapName, width, height, tileSize);
                 mapComponent.SetTilemaps(terrainTilemap, farmlandTilemap, plowedTilemap, irrigatedTilemap, overlayTilemap);
                 mapComponent.SetTerrainCells(terrainCells.ToArray());
                 mapComponent.SetPersistentEntities(persistentEntities.ToArray());

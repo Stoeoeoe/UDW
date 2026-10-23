@@ -253,7 +253,7 @@
         },
         "rotation": {
           "type": "number",
-          "description": "Degrees, 0â€“360.",
+          "description": "Degrees, 0–360.",
           "minimum": 0,
           "maximum": 360
         },
@@ -327,12 +327,14 @@
       "type": "object",
       "required": ["id", "type", "shape", "position"],
       "additionalProperties": false,
+      "allOf": [{ "if": { "properties": { "type": { "const": "cutscene" } } }, "then": { "required": ["cutsceneId"] } }],
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string" },
+        "cutsceneId": { "type": "string", "pattern": "^[^\\s:]+:[^\\s]+$" },
         "type": {
           "type": "string",
-          "enum": ["locationLinkTrigger"]
+          "enum": ["locationLinkTrigger", "cutscene"]
         },
         "shape": {
           "type": "string",

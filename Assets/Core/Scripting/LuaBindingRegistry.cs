@@ -178,7 +178,7 @@ namespace Core.Scripting
             }
         }
 
-        internal void BindActions(Script script, string context, Func<ILuaAction, DynValue> awaitAction)
+        internal void BindActions(Script script, string context, Func<ILuaAction, DynValue> awaitAction, Action actionStarting)
         {
             if (context is not ("cutscene" or "npcRoutine")) throw new ArgumentException("Unsupported Lua execution context.", nameof(context));
             foreach (var module in _modules)
@@ -186,7 +186,11 @@ namespace Core.Scripting
             {
                 if (method.Action == null || !method.Action.Contexts.Contains(context)) continue;
                 var table = EnsurePath(script, module.Path);
-                table.Set(method.Info.Name, DynValue.NewCallback((_, args) => Invoke(script, method, args, awaitAction)));
+                table.Set(method.Info.Name, DynValue.NewCallback((_, args) =>
+                {
+                    actionStarting();
+                    return Invoke(script, method, args, awaitAction);
+                }));
             }
         }
 

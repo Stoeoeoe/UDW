@@ -2173,6 +2173,7 @@ GameObject:
   - component: {fileID: 7410992665882482012}
   - component: {fileID: 8864502943986586909}
   - component: {fileID: 2617813395228831673}
+  - component: {fileID: 979660742405634151}
   m_Layer: 0
   m_Name: SystemRoot
   m_TagString: Untagged
@@ -2214,6 +2215,7 @@ Transform:
   - {fileID: 3677478025291362046}
   - {fileID: 3997705227323603445}
   - {fileID: 2937310220239482421}
+  - {fileID: 3666859091866977424}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &-5602565127603773880
@@ -2329,6 +2331,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 264a37955a969d44ab5902a9392c1f13, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Stamina.StaminaHudPresenter
+--- !u!114 &979660742405634151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893779559843713635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c2168fb36c9b804180d45036c82fbc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.CutsceneRunner
+  catalog: {fileID: 11400000, guid: fecf48307a9fbb945bfef9c05e36bacd, type: 2}
+  movementTimeoutSeconds: 30
+  runTimeoutSeconds: 120
 --- !u!1 &1124810803398170432
 GameObject:
   m_ObjectHideFlags: 0
@@ -7241,6 +7258,101 @@ MonoBehaviour:
   placeItemCursor: {fileID: 2800000, guid: 1578bd72bf85da94e82cdb6f9fcf5eca, type: 3}
   dialogueCursor: {fileID: 2800000, guid: bb93388d2253d0f4f817624eec4e3fe0, type: 3}
   cursorHotspot: {x: 0, y: 0}
+--- !u!1 &2516256580491792791
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3666859091866977424}
+  - component: {fileID: 8278069806850872323}
+  - component: {fileID: 9157795043132513636}
+  - component: {fileID: 2973932276558431489}
+  m_Layer: 0
+  m_Name: Vulcanus dialogue
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3666859091866977424
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2516256580491792791}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3245482728486734529}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8278069806850872323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2516256580491792791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 2af599cf247cb8b47b48d33b6f225ad3, type: 2}
+  m_ParentUI: {fileID: 7410992665882482011}
+  sourceAsset: {fileID: 9197481963319205126, guid: 63af131c2305b2949b9a347cc475d06a, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!114 &9157795043132513636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2516256580491792791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2768686e2007b84fbf549c44fafe5e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueUIDocumentPresenter
+  pauseWhileOpen: 3
+  soundOverrides: {fileID: 0}
+  inputActionMap: UI
+  document: {fileID: 8278069806850872323}
+  layoutAsset: {fileID: 9197481963319205126, guid: 63af131c2305b2949b9a347cc475d06a, type: 3}
+  styleSheet: {fileID: 7433441132597879392, guid: e2bb6efa14f45ae45b96836df65e7585, type: 3}
+  continueButtonText: Continue
+  choicePromptText: Choose a response
+  charactersPerSecond: 48
+  defaultTypewriterSound: {fileID: 0}
+--- !u!114 &2973932276558431489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2516256580491792791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c06dd73ba8c18cb44aebc89b51f354f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueRunner
+  database: {fileID: 11400000, guid: 8d4612bd8c165594887406d67e3a2510, type: 2}
+  maxStepsPerRun: 256
+  contextResolver: {fileID: 0}
+  presenter: {fileID: 9157795043132513636}
 --- !u!1 &2564801937499825263
 GameObject:
   m_ObjectHideFlags: 0
@@ -11026,7 +11138,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cc69b2e4acd44244a9eb18d1879323d7, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.WorldObjectSpawner
   catalog: {fileID: 11400000, guid: 0b428aab452fe9e4f92deb81faa81167, type: 2}
 --- !u!1 &3976900426702374613

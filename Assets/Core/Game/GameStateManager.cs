@@ -34,6 +34,8 @@ namespace Core.Game
 
         public void Save(string slot)
         {
+            if (Scripting.CutsceneRunner.Instance && Scripting.CutsceneRunner.Instance.IsRunning)
+                throw new InvalidOperationException("Cannot save while a cutscene is staging actors. Save after its terminal cleanup.");
             Spawning.WorldObjectSpawner.Instance?.SavePositions();
             _data.schemaVersion = GameSaveData.CurrentVersion;
             _data.worldBaselineVersion = WorldBaselineVersion;

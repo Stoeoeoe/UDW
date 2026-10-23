@@ -33,7 +33,7 @@ namespace Core.Context
             // e.g. during scene transitions, the character reference may be null. In that case, reset to an empty snapshot
             // instead of null so listeners can handle the cleared state safely.
             var snapshot = !character
-                ? PlayerInteractionContextSnapshot.Empty() with { WorldInteractionBlocked = UrGUIManager.HasOpenScreens }
+                ? PlayerInteractionContextSnapshot.Empty() with { WorldInteractionBlocked = UrGUIManager.IsWorldInteractionBlocked }
                 : PlayerInteractionContextSnapshot.Create(
                     LevelManager.Instance != null && LevelManager.Instance.SceneReady,
                     character,
@@ -47,7 +47,7 @@ namespace Core.Context
                     character.MovementState,
                     ResolveCurrentConversation(),
                     (UrTimeManager.Instance)?.CurrentTime,
-                    UrGUIManager.HasOpenScreens
+                    UrGUIManager.IsWorldInteractionBlocked
                 );
 
             if (CurrentSnapshot == snapshot)

@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: CharacterCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Character.CharacterCatalog
   entries:
+  - definition: {fileID: 8476815486123167853, guid: c21ff465ad3e7fb4fae9576897b67fc9, type: 3}
+    enabled: 1
   - definition: {fileID: 8476815486123167853, guid: d11ffda88280b3d49900d40005f62884, type: 3}
     enabled: 1
   - definition: {fileID: 8476815486123167853, guid: fa8bc519b3424904a8f14c3fbef5cb68, type: 3}

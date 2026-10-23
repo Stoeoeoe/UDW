@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b79530aae483b304abd834cdcb93bd5c, type: 3}
   m_Name: VulcanusDialogueDatabase
   m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueDatabase
-  project: {fileID: -1814933055721424766, guid: 970770d7999d5f945b71ec98f97650ba,
-    type: 3}
+  project: {fileID: -1814933055721424766, guid: 970770d7999d5f945b71ec98f97650ba, type: 3}
   dialogues:
   - {fileID: 2757037704936936944, guid: f9ec580aa05a8544789d27cee1cbafac, type: 3}
+  - {fileID: 2757037704936936944, guid: 485e7015c14884c4cb8e78aaa1959f19, type: 3}

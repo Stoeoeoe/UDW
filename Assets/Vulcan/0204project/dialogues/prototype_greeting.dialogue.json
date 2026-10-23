@@ -1,0 +1,38 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "prototype_greeting",
+  "name": "Cutscene prototype greeting",
+  "oneShot": false,
+  "startNodeId": "greeting",
+  "tags": [
+    "prototype"
+  ],
+  "createdAt": "2026-10-23T12:00:00Z",
+  "updatedAt": "2026-10-23T12:00:00Z",
+  "nodes": [
+    {
+      "id": "greeting",
+      "type": "line",
+      "text": "Prototype: I reached the meeting anchor.",
+      "msgKey": "prototype.greeting",
+      "next": "goodbye"
+    },
+    {
+      "id": "goodbye",
+      "type": "choice",
+      "options": [
+        {
+          "id": "done",
+          "text": "Goodbye.",
+          "msgKey": "prototype.goodbye",
+          "targetNodeId": "end"
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "type": "end"
+    }
+  ]
+}

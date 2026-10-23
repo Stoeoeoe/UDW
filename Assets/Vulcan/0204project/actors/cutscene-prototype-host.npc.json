@@ -1,0 +1,6 @@
+{
+  "$schema": "../schemas/npc.schema.json",
+  "id": "base:cutscene-prototype-host",
+  "name": "Cutscene prototype host",
+  "icon": "GiPerson"
+}

@@ -58,6 +58,8 @@ namespace Core.Tile.Editor.Vulcanus
         [TestCase("mapId", "' '")]
         [TestCase("sequence", "[]")]
         [TestCase("unknown", "true")]
+        [TestCase("completion", "null")]
+        [TestCase("allowSkip", "'yes'")]
         public void SchemaRejectsUnsupportedOrMalformedRequiredData(string field, string value)
         {
             var source = Source("test:intro");
@@ -71,6 +73,32 @@ namespace Core.Tile.Editor.Vulcanus
             var source = Source("test:intro");
             ((JObject)source["sequence"][0]["arguments"]).Remove("dialogue");
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("(speak)"));
+        }
+
+        [Test]
+        public void CompletionPlanPreservesAuthoredFlagsEndpointsAndSkipPermission()
+        {
+            var source = Source("test:outcomes");
+            source["allowSkip"] = true;
+            source["completion"] = JObject.Parse("{ 'flag':'intro_done', 'setFlags':['met_host'], 'actorOutcomes':[{'actor':'host-01','anchor':'meeting'}] }");
+            var definition = Parse(source);
+            try
+            {
+                Assert.That(definition.AllowSkip, Is.True);
+                Assert.That(definition.Completion.Flag, Is.EqualTo("intro_done"));
+                Assert.That(definition.Completion.SetFlags, Is.EqualTo(new[] { "met_host" }));
+                Assert.That(definition.Completion.ActorOutcomes[0].Actor, Is.EqualTo("host-01"));
+                Assert.That(definition.Completion.ActorOutcomes[0].Anchor, Is.EqualTo("meeting"));
+            }
+            finally { Object.DestroyImmediate(definition); }
+        }
+
+        [Test]
+        public void DuplicateTerminalActorsFailBeforePlayback()
+        {
+            var source = Source("test:outcomes");
+            source["completion"]["actorOutcomes"] = JArray.Parse("[{'actor':'host','anchor':'a'},{'actor':'host','anchor':'b'}]");
+            Assert.That(() => Parse(source), Throws.Exception.With.Message.Contains("unique actors"));
         }
 
         [UnityTest]
@@ -128,6 +156,8 @@ namespace Core.Tile.Editor.Vulcanus
             ["formatVersion"] = 1,
             ["id"] = id,
             ["mapId"] = "map-1",
+            ["allowSkip"] = false,
+            ["completion"] = new JObject { ["flag"] = "", ["setFlags"] = new JArray(), ["actorOutcomes"] = new JArray() },
             ["sequence"] = new JArray(new JObject
             {
                 ["id"] = "speak", ["action"] = "dialogue.play",

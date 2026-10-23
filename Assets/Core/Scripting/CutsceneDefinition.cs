@@ -14,21 +14,28 @@ namespace Core.Scripting
         [SerializeField, ReadOnly] private string mapId;
         [SerializeField, ReadOnly, TextArea] private string lua;
         [SerializeField, ReadOnly] private CutsceneStep[] steps = Array.Empty<CutsceneStep>();
+        [SerializeField, ReadOnly] private bool allowSkip;
+        [SerializeField, ReadOnly] private CutsceneCompletion completion;
         [NonSerialized] private IReadOnlyList<CutsceneStep> _steps;
 
         public string CutsceneId => cutsceneId;
         public string MapId => mapId;
         public string Lua => lua;
+        public bool AllowSkip => allowSkip;
+        public CutsceneCompletion Completion => completion;
         public IReadOnlyList<CutsceneStep> Steps => _steps ??= Array.AsReadOnly(steps);
 
 #if UNITY_EDITOR
-        public void Configure(string id, string map, string script, IEnumerable<CutsceneStep> importedSteps)
+        public void Configure(string id, string map, string script, IEnumerable<CutsceneStep> importedSteps,
+            bool skipAllowed, CutsceneCompletion completionPlan)
         {
             cutsceneId = id;
             mapId = map;
             lua = script;
             steps = importedSteps.ToArray();
             _steps = null;
+            allowSkip = skipAllowed;
+            completion = completionPlan;
             RequireValidConfiguration();
         }
 #endif
@@ -36,6 +43,8 @@ namespace Core.Scripting
         public override IReadOnlyList<ConfigurationError> ValidateConfiguration()
         {
             var errors = new List<ConfigurationError>();
+            if (completion == null) errors.Add(new ConfigurationError(this, "completion", "Requires an explicit terminal completion plan."));
+            else completion.Validate(this, errors);
             if (!DefinitionIdRules.IsNamespaced(cutsceneId))
                 errors.Add(new ConfigurationError(this, "cutsceneId", "Requires a permanent namespace:name ID."));
             if (string.IsNullOrWhiteSpace(mapId))

@@ -35,6 +35,7 @@ namespace UI.Shared
         // Counts let multiple open screens own a pause independently.
         private readonly Dictionary<GameCharacter, int> _characterPauses = new();
         private int _clockPauses;
+        [NonSerialized] private bool _cutsceneActive;
         // The last screen in the list is the only one that receives input.
         private readonly List<ManagedUIScreen> _screenOrder = new();
 
@@ -56,7 +57,15 @@ namespace UI.Shared
         public static bool HasOpenScreens => Instance != null && Instance._openScreens.Count > 0;
 
         /// <summary>Whether an open screen currently pauses the game clock.</summary>
-        public static bool IsGameClockPaused => Instance != null && Instance._clockPauses > 0;
+        public static bool IsGameClockPaused => Instance != null && (Instance._clockPauses > 0 || Instance._cutsceneActive);
+        public static bool IsWorldInteractionBlocked => HasOpenScreens || (Instance != null && Instance._cutsceneActive);
+
+        internal void SetCutsceneActive(bool active)
+        {
+            _cutsceneActive = active;
+            _input.SetCutsceneActive(active);
+            PlayerInteractionContext.Instance.Refresh();
+        }
 
         /// <summary>Whether an open screen currently pauses <paramref name="character"/>.</summary>
         /// <param name="character">Character to check.</param>
@@ -109,8 +118,8 @@ namespace UI.Shared
             if (_transitionTween != null)
             {
                 ResetTransition();
-                TransitionInterrupted?.Invoke();
             }
+            TransitionInterrupted?.Invoke();
             this.Unsubscribe<MainCharacterChangedEvent>();
             this.Unsubscribe<DayTransitionStarted>();
             BindMainCharacter(null);

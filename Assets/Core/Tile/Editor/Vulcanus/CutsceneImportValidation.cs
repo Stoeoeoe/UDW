@@ -3,6 +3,8 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using Core.Scripting;
+using Core.Catalogs;
 
 namespace Core.Tile.Editor.Vulcanus
 {
@@ -32,6 +34,18 @@ namespace Core.Tile.Editor.Vulcanus
         {
             foreach (var path in AssetDatabase.GetAllAssetPaths())
             {
+                if (path.StartsWith("Assets/", StringComparison.Ordinal) && path.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase))
+                {
+                    var map = VulcanusImportHelpers.LoadDto<MapDto>(path);
+                    var triggers = map.SpatialPrimitives?.Triggers;
+                    if (triggers != null) foreach (var trigger in triggers)
+                    {
+                        if (trigger.Type != "cutscene") continue;
+                        var definition = CatalogResources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName).Get(trigger.CutsceneId);
+                        if (!definition || !StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, map.Id))
+                            throw new InvalidOperationException($"{path}: trigger '{trigger.Id}' requires its enabled cutscene '{trigger.CutsceneId}' on this map.");
+                    }
+                }
                 if (!path.StartsWith("Assets/", StringComparison.Ordinal) ||
                     !path.EndsWith(".runtime.cutscene.json", StringComparison.OrdinalIgnoreCase)) continue;
                 CutsceneImporter.ValidateSource(path);

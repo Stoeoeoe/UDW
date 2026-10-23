@@ -24,6 +24,7 @@ namespace Input
         // into an empty map. These references belong to PlayerInput's live asset only.
         [NonSerialized] private InputActionMap _playerControls, _ui, _global, _screenMap;
         private readonly HashSet<InputBlockContext> _blocks = new();
+        [NonSerialized] private bool _cutsceneActive;
 
         private enum InputBlockContext { Location, DayTransition }
         public InputActionAsset Actions => _actions;
@@ -38,6 +39,7 @@ namespace Input
         public bool InteractPressed => _playerControls["Interact"].WasPerformedThisFrame();
         public bool PausePressed => _global["Pause"].WasPerformedThisFrame();
         public bool OpenInventoryPressed => _global["OpenInventory"].WasPerformedThisFrame();
+        public bool SkipCutscenePressed => _ui["Cancel"].WasPerformedThisFrame();
         public bool NextSlotPressed => _playerControls["NextSlot"].WasPerformedThisFrame();
         public bool PreviousSlotPressed => _playerControls["PreviousSlot"].WasPerformedThisFrame();
         public float ChangeSlotAxis => _playerControls["ChangeSlotAxis"].ReadValue<float>();
@@ -63,6 +65,7 @@ namespace Input
             _global = _actions.FindActionMap("Global", true);
             _global.FindAction("OpenInventory", true);
             _global.FindAction("Pause", true);
+            _ui.FindAction("Cancel", true);
         }
 
         public void ValidateScreenMap(string name)
@@ -111,12 +114,19 @@ namespace Input
             ApplyMaps();
         }
 
+        // Cutscenes suppress gameplay and global shortcuts, but retain dialogue and skip input.
+        internal void SetCutsceneActive(bool active)
+        {
+            _cutsceneActive = active;
+            ApplyMaps();
+        }
+
         private void ApplyMaps()
         {
             _actions.Disable();
-            _player.currentActionMap = _blocks.Count == 0 ? _screenMap ?? _playerControls : null;
+            _player.currentActionMap = _blocks.Count == 0 ? _screenMap ?? (_cutsceneActive ? _ui : _playerControls) : null;
             if (_blocks.Count > 0) return;
-            _global.Enable();
+            if (!_cutsceneActive) _global.Enable();
             // Standard UI navigation also serves the HUD and screens with extra actions.
             _ui.Enable();
         }

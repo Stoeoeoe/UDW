@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2adc9a543bc2d54db0ed0a01c9ed910, type: 3}
   m_Name: CutsceneCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.CutsceneCatalog
-  entries: []
+  entries:
+  - definition: {fileID: -8605681064480913607, guid: e457c4ab7a3d6394396136fa61c74c73, type: 3}
+    enabled: 1

@@ -22,7 +22,7 @@ namespace Core.Scripting
         }
 
         [UnityEngine.Scripting.Preserve]
-        public void ValidatePlay(string dialogue) => _runner.ValidateDialogue(dialogue);
+        public void ValidatePlay(string dialogue) => _runner.ValidateCutsceneDialogue(dialogue);
 
         [LuaCall(true)]
         [LuaAction("dialogue.play", "Play dialogue", "Dialogue", "Wait for a conversation to finish through its flow.", "cutscene", Validator = nameof(ValidatePlay))]

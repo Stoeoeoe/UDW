@@ -31,6 +31,7 @@ namespace Core.Scripting
         public LuaExecutionStatus Status { get; private set; } = LuaExecutionStatus.Running;
         public string Error { get; private set; }
         public string Source { get; }
+        public int ActionsStarted { get; private set; }
 
         internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context,
             float timeout)
@@ -43,7 +44,7 @@ namespace Core.Scripting
             _timeout = timeout;
             var script = new Script(CoreModules.Preset_HardSandbox);
             // Give this script only the actions allowed in its context, e.g. "cutscene".
-            bindings.BindActions(script, context, Await);
+            bindings.BindActions(script, context, Await, () => ActionsStarted++);
             _routine = script.CreateCoroutine(script.LoadString(chunk, null, source)).Coroutine;
             _routine.AutoYieldCounter = InstructionsPerFrame;
         }

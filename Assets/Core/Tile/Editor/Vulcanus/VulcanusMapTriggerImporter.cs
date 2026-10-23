@@ -126,6 +126,18 @@ namespace Core.Tile.Editor.Vulcanus
 
             ApplyTriggerGeometry(go, trigger, tileSize);
 
+            if (trigger.Type == "cutscene")
+            {
+                if (link != null || string.IsNullOrWhiteSpace(trigger.CutsceneId))
+                    throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' requires cutsceneId and cannot also be a location link.");
+                if (!CutsceneImporter.FindSources().TryGetValue(trigger.CutsceneId, out var sourcePath))
+                    throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' has no source for '{trigger.CutsceneId}'.");
+                var definition = UnityEditor.AssetDatabase.LoadAssetAtPath<Core.Scripting.CutsceneDefinition>(sourcePath);
+                if (!definition || !StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, go.GetComponentInParent<VulcanusImportedMap>().MapId))
+                    throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' references a failed import or differently mapped cutscene '{trigger.CutsceneId}'.");
+                go.AddComponent<Core.Scripting.CutsceneTrigger>().Configure(trigger.CutsceneId);
+            }
+
             if (link == null)
                 return;
 

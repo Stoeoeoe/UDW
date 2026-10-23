@@ -12,6 +12,8 @@ wrapper is:
   "formatVersion": 1,
   "id": "base:intro",
   "mapId": "map-1",
+  "allowSkip": false,
+  "completion": { "flag": "intro_done", "setFlags": [], "actorOutcomes": [] },
   "sequence": [
     { "id": "talk", "action": "dialogue.play", "arguments": { "dialogue": "base:greeting" } }
   ]
@@ -22,8 +24,8 @@ The schema reference is relative to the source file and must resolve inside
 Assets. This example path assumes a `cutscenes` folder beside the project's
 `schemas` folder. Format version 1 accepts only the fields above. IDs are
 permanent `namespace:name` values; map IDs retain their existing source form.
-Playback lifecycle, terminal completion outcomes and trigger bindings are not
-implemented yet; importing a definition does not start it.
+Importing a definition does not start it. The Systems prefab provides one
+`CutsceneRunner` and the shared Vulcanus dialogue runner/presenter.
 
 ```json
 [
@@ -96,3 +98,74 @@ still needs its construction function wired into `CutsceneBindings`.
 `CutsceneBindings.BindSequence` owns step argument checks, lazy module creation,
 and pre-playback reference validation. `LuaBindingRegistry` supplies the validated
 API methods and attaches calls to Lua; it does not interpret cutscene steps.
+
+## Running a cutscene
+
+`CutsceneRunner.TryStart(id, out run)` resolves an enabled catalog entry. Unknown
+IDs are setup errors. Busy, not-ready, already-completed, occupied-player and
+open-menu starts return false; they do not replace or queue a run. The returned
+`CutsceneRun` has a unique runtime identity, definition, status and error. Its
+`Cancel`/`Dispose` only affect that run; `Skip` returns false when skipping is
+disabled or the run is already terminal. The runner inspector shows the active
+run and authored step ID. Failures include cutscene and step identity in the
+console and run result.
+
+While staging, normal gameplay, world interactions and global menu shortcuts
+are blocked. UI input stays enabled for dialogue and skip. The in-game calendar
+pauses without changing Unity time scale or freezing Rigidbody2D movement.
+Escape/controller UI Cancel skips the entire run only when `allowSkip` is true;
+it never dismisses a standalone dialogue. Pause menus are unavailable during v1
+staging. Camera, animation and audio commands remain outside the initial action
+set.
+
+All actor/anchor/dialogue references resolve before claims are acquired. Referenced
+dialogues, including dialogue jumps, must have no import diagnostics or Lua
+action nodes: persistent effects belong to terminal completion, not dialogue
+actions during staging. Read-only choice conditions and normal dialogue flow
+remain supported.
+
+## Completion and persistence
+
+`allowSkip` and `completion` are required authored fields. An empty
+`completion.flag` explicitly makes a scene repeatable; a non-empty flag makes it
+once-only through the existing saved story flags. `setFlags` is an ordered list
+of unique non-empty story flags. `actorOutcomes` is an ordered list of
+`{ "actor": "placed-instance-id", "anchor": "anchor-id" }` endpoints, with
+each actor listed at most once. Empty lists are valid.
+
+The runner captures the initial positions and facing of referenced actors before
+execution. Normal completion and skip both stop transient actions and apply the
+same prepared endpoints. Unlisted actors return to their pre-run placement. An
+anchor's nonzero facing overrides the actor's direction; zero retains its pre-run
+direction. Spawned actor endpoints update the existing live spawn state. All
+outcome flags and the once-only flag are set before terminal notifications.
+Cancellation, location leave, death, disabled presentation and runtime failure
+stop pending movement/dialogue, restore surviving actors and set no completion
+flags. Cleanup releases only the run's own control and calendar claims.
+
+`GameStateManager.Save` rejects direct saves while staging. Save after `Finished`,
+when placements, flags and ownership are settled. There is no autosave caller in
+the current project and no new deferral queue. No transient Lua state or second
+cutscene save root is serialized; no save migration/version change is required.
+
+## Map triggers and the playable fixture
+
+A Vulcanus map `spatialPrimitives.triggers` entry with `type: "cutscene"` and a
+required `cutsceneId` imports a `CutsceneTrigger` using its existing rectangle or
+polygon geometry. It cannot also be a location link. Source dependencies import
+the referenced cutscene before its map; disabled/missing/wrong-map targets fail
+validation before play/build. Runtime activation uses `LevelManager.LocationReady`
+after reveal and checks for an already-overlapping player. Only physical player
+colliders count; NPCs and interaction sensors do not. Multiple player colliders
+produce one attempt per visit. Busy attempts do not retry until a new visit.
+
+The authored prototype is
+`Assets/Vulcan/0204project/cutscenes/prototype.runtime.cutscene.json`:
+`base:cutscene-prototype` on `base:map-1`, with the persistent NPC
+`cutscene-prototype-host-01`, anchor `prototype-meeting`, and
+`prototype_greeting` dialogue. Its map trigger occupies source pixels
+`[160,160]` to `[176,192]`, west of the arrival area. Watching through Goodbye or
+skipping places the host at the meeting anchor and sets
+`prototype:cutscene-complete`. This is an explicitly named prototype, not story
+canon. A second cutscene using supported assets needs a new source, not manager
+registration or new C#.

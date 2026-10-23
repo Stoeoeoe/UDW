@@ -74,6 +74,27 @@ namespace Core.Dialogue.Vulcanus
         /// <summary>Checks a script's dialogue reference before playback opens the UI.</summary>
         public void ValidateDialogue(string dialogueId) => ResolveDialogue(dialogueId);
 
+        /// <summary>Cutscene dialogue must leave persistent outcomes to the enclosing terminal plan.</summary>
+        public void ValidateCutsceneDialogue(string dialogueId)
+        {
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Visit(string id)
+            {
+                if (!visited.Add(id)) return; // Dialogue jumps may form a cycle; validate each asset once.
+                var (dialogue, _) = ResolveDialogue(id);
+                if (dialogue.ImportDiagnostics.Length > 0)
+                    throw new InvalidOperationException($"Cutscene dialogue '{id}' has import errors: {string.Join("; ", dialogue.ImportDiagnostics)}");
+                foreach (var node in dialogue.Nodes)
+                {
+                    if (node is VulcanusDialogueActionNode)
+                        throw new InvalidOperationException($"Cutscene dialogue '{id}', node '{node.Id}' contains a Lua action. Persistent changes belong in the cutscene completion plan.");
+                    if (node is VulcanusDialogueJumpNode jump && !string.IsNullOrWhiteSpace(jump.TargetDialogueId))
+                        Visit(jump.TargetDialogueId);
+                }
+            }
+            Visit(dialogueId);
+        }
+
         private (VulcanusDialogueAsset Dialogue, VulcanusDialogueNode StartNode) ResolveDialogue(string dialogueId)
         {
             if (!database.TryGetDialogue(dialogueId, out var dialogue))

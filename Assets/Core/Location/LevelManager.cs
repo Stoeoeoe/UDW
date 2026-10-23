@@ -41,6 +41,8 @@ namespace Core.Location
         public LocationData CurrentLocationData { get; private set; }
         public Light2D CurrentGlobalLight { get; private set; }
         public bool SceneReady { get; private set; }
+        public event Action<LocationData> LocationReady;
+        public event Action LocationLeaving;
 
         // - Location lookup ---------------------------------------------------------
 
@@ -137,6 +139,7 @@ namespace Core.Location
             if (reveal) yield return UrGUIManager.Instance.RevealScene(character.transform);
             
             SceneReady = true;
+            LocationReady?.Invoke(locationData);
         }
 
         // - API ---------------------------------------------------------------------
@@ -235,6 +238,8 @@ namespace Core.Location
             bool covered = false, Action<MainCharacter> placeCharacter = null)
         {
             SceneReady = false;
+            // Cancel staging before any listener captures departing world-object positions.
+            LocationLeaving?.Invoke();
             var character = MainCharacter.CurrentMainCharacter;
             character.SetControlBlocked(this, true);
             try

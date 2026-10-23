@@ -4589,7 +4589,17 @@
       ]
     }
   ],
-  "entities": [],
+  "entities": [
+    {
+      "id": "cutscene-prototype-host-01",
+      "typeId": "base:cutscene-prototype-host",
+      "position": [
+        192,
+        176
+      ],
+      "properties": {}
+    }
+  ],
   "spatialPrimitives": {
     "anchors": [
       {
@@ -4604,6 +4614,21 @@
           1
         ],
         "tags": []
+      },
+      {
+        "id": "prototype-meeting",
+        "name": "Prototype meeting",
+        "position": [
+          208,
+          176
+        ],
+        "facing": [
+          1,
+          0
+        ],
+        "tags": [
+          "prototype"
+        ]
       }
     ],
     "triggers": [
@@ -4621,6 +4646,24 @@
         ],
         "tags": [],
         "label": "Exit"
+      },
+      {
+        "id": "prototype-cutscene-trigger",
+        "label": "Prototype cutscene",
+        "type": "cutscene",
+        "cutsceneId": "base:cutscene-prototype",
+        "shape": "rectangle",
+        "position": [
+          160,
+          160
+        ],
+        "size": [
+          16,
+          32
+        ],
+        "tags": [
+          "prototype"
+        ]
       }
     ],
     "collisions": [

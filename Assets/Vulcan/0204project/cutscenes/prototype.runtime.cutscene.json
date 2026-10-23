@@ -1,0 +1,44 @@
+{
+  "$schema": "../schemas/cutscene.schema.json",
+  "formatVersion": 1,
+  "id": "base:cutscene-prototype",
+  "mapId": "base:map-1",
+  "allowSkip": true,
+  "completion": {
+    "flag": "prototype:cutscene-complete",
+    "setFlags": [
+      "prototype:met-host"
+    ],
+    "actorOutcomes": [
+      {
+        "actor": "cutscene-prototype-host-01",
+        "anchor": "prototype-meeting"
+      }
+    ]
+  },
+  "sequence": [
+    {
+      "id": "approach",
+      "action": "actors.moveTo",
+      "arguments": {
+        "actor": "cutscene-prototype-host-01",
+        "destination": "prototype-meeting"
+      }
+    },
+    {
+      "id": "greet",
+      "action": "actors.face",
+      "arguments": {
+        "actor": "cutscene-prototype-host-01",
+        "target": "player"
+      }
+    },
+    {
+      "id": "talk",
+      "action": "dialogue.play",
+      "arguments": {
+        "dialogue": "prototype_greeting"
+      }
+    }
+  ]
+}

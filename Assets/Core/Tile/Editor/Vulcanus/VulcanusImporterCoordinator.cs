@@ -26,8 +26,16 @@ namespace Core.Tile.Editor.Vulcanus
                 if (isMap)
                 {
                     var paths = VulcanusImportHelpers.BuildTilesetIndex(assetPath, projectPath);
-                    foreach (var id in VulcanusImportHelpers.LoadDto<MapDto>(assetPath).TilesetRefs)
+                    var map = VulcanusImportHelpers.LoadDto<MapDto>(assetPath);
+                    foreach (var id in map.TilesetRefs)
                         if (!string.IsNullOrWhiteSpace(id) && paths.TryGetValue(id, out var path)) dependencies.Add(path);
+                    var triggers = map.SpatialPrimitives?.Triggers;
+                    if (triggers != null && triggers.Exists(trigger => trigger.Type == "cutscene"))
+                    {
+                        var sources = CutsceneImporter.FindSources();
+                        foreach (var trigger in triggers)
+                            if (trigger.Type == "cutscene" && sources.TryGetValue(trigger.CutsceneId, out var source)) dependencies.Add(source);
+                    }
                 }
                 else
                 {
