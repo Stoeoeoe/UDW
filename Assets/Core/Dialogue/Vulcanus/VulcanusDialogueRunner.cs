@@ -53,7 +53,7 @@ namespace Core.Dialogue.Vulcanus
                 Instance = null;
         }
 
-        private void OnDisable() => CancelDialogue();
+        private void OnDisable() => StopDialogue();
 
         public bool StartDialogue(string dialogueId, GameCharacter instigator = null, ScreenPauseMode? pauseWhileOpen = null)
         {
@@ -70,13 +70,14 @@ namespace Core.Dialogue.Vulcanus
             }
 
             if (_activeDialogueRoutine != null)
-                CancelDialogue();
+                throw new InvalidOperationException("Finish the current dialogue before starting another.");
 
             _activeDialogueRoutine = StartCoroutine(RunDialogue(dialogue, instigator, pauseWhileOpen));
             return true;
         }
 
-        public void CancelDialogue()
+        // Called only when the runner or its managed screen is torn down.
+        internal void StopDialogue()
         {
             if (_activeDialogueRoutine != null)
             {

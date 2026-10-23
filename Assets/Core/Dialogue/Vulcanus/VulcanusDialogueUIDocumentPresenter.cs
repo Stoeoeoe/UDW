@@ -57,7 +57,7 @@ namespace Core.Dialogue.Vulcanus
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, node.Emotion);
             SetBody(string.Empty);
-            SetHint("Click, Enter or Space to continue; Esc to close");
+            SetHint("Click, Enter or Space to continue");
             ClearChoices();
             SetContinueVisible(true);
 
@@ -177,13 +177,6 @@ namespace Core.Dialogue.Vulcanus
             _overlay.tabIndex = 0;
             _overlay.RegisterCallback<ClickEvent>(OnPointerDown);
             _overlay.RegisterCallback<KeyDownEvent>(OnKeyDown);
-            _overlay.RegisterCallback<NavigationCancelEvent>(evt =>
-            {
-                if (!ReceivesInput) return;
-                VulcanusDialogueRunner.Instance.CancelDialogue();
-                evt.StopPropagation();
-            });
-
             _overlay.RegisterCallback<NavigationSubmitEvent>(evt =>
             {
                 if (!_waitingForAdvance || IsButtonTarget(evt.target as VisualElement)) return;
@@ -191,7 +184,6 @@ namespace Core.Dialogue.Vulcanus
                 evt.StopPropagation();
             });
             _continueButton.clicked += ContinueRequested;
-            root.Q<Button>("dialogue-close").clicked += () => VulcanusDialogueRunner.Instance.CancelDialogue();
 
             RebindRoot(_overlay);
             _isBuilt = true;
@@ -209,12 +201,6 @@ namespace Core.Dialogue.Vulcanus
         private void OnKeyDown(KeyDownEvent evt)
         {
             if (!ReceivesInput) return;
-            if (evt.keyCode == KeyCode.Escape)
-            {
-                VulcanusDialogueRunner.Instance.CancelDialogue();
-                evt.StopPropagation();
-                return;
-            }
             if (_waitingForAdvance && evt.keyCode == KeyCode.Space)
             {
                 ContinueRequested();
@@ -266,7 +252,7 @@ namespace Core.Dialogue.Vulcanus
             _waitingForChoice = false;
         }
 
-        protected override void OnScreenClosed() => VulcanusDialogueRunner.Instance.CancelDialogue();
+        protected override void OnScreenClosed() => VulcanusDialogueRunner.Instance.StopDialogue();
 
         private void RebuildChoices(IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context)
         {
@@ -371,8 +357,7 @@ namespace Core.Dialogue.Vulcanus
                    _choiceContainer != null &&
                    _continueButton != null &&
                    _speakerLabel != null &&
-                   _emotionLabel != null &&
-                   _boundRoot.Q<Button>("dialogue-close") != null;
+                   _emotionLabel != null;
         }
 
         private static bool IsButtonTarget(VisualElement target)

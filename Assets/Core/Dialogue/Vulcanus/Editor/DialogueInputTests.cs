@@ -124,24 +124,22 @@ namespace Core.Dialogue.Vulcanus.Editor
         }
 
         [Test]
-        public void CloseButtonCancelsTheDialogue()
+        public void DialogueHasNoCloseButton()
         {
             Start();
-            using var evt = NavigationSubmitEvent.GetPooled();
-            var button = _document.rootVisualElement.Q<Button>("dialogue-close");
-            evt.target = button;
-            button.SendEvent(evt);
-            AssertClosed();
+            Assert.That(_document.rootVisualElement.Q<Button>("dialogue-close"), Is.Null);
+            Assert.That(_document.rootVisualElement.Q<Label>("dialogue-hint").text, Does.Not.Contain("Esc"));
         }
 
-        [Test]
-        public void NavigationCancelCancelsTheDialogue()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NavigationCancelLeavesLinesAndChoicesOpen(bool choice)
         {
-            Start();
+            Start(choice);
             using var evt = NavigationCancelEvent.GetPooled();
             evt.target = Overlay;
             Overlay.SendEvent(evt);
-            AssertClosed();
+            AssertDialogueWaiting(choice);
         }
 
         [Test]
@@ -174,15 +172,15 @@ namespace Core.Dialogue.Vulcanus.Editor
 
         [TestCase(false)]
         [TestCase(true)]
-        public void EscapeCancelsLinesAndChoicesAndReleasesTheirPauses(bool choice)
+        public void EscapeLeavesLinesAndChoicesOpen(bool choice)
         {
             Start(choice);
             SetKey(KeyCode.Escape);
-            AssertClosed();
+            AssertDialogueWaiting(choice);
         }
 
         [Test]
-        public void ClosingTheManagedScreenAlsoCancelsTheRunner()
+        public void ScreenTeardownStopsTheRunnerAndReleasesPauses()
         {
             Start();
             _gui.CloseAll();
@@ -199,6 +197,8 @@ namespace Core.Dialogue.Vulcanus.Editor
             Assert.That(_runner.IsDialogueActive, Is.True);
             screen.Close();
             SetKey(KeyCode.Escape);
+            AssertDialogueWaiting(false);
+            GameTestFixture.Invoke(_runner, "FinishDialogue");
             AssertClosed();
         }
 
@@ -209,8 +209,18 @@ namespace Core.Dialogue.Vulcanus.Editor
             GameTestFixture.Invoke(_runner, "FinishDialogue");
             AssertClosed();
             Start();
-            SetKey(KeyCode.Escape);
+            GameTestFixture.Invoke(_runner, "FinishDialogue");
             AssertClosed();
+        }
+
+        private void AssertDialogueWaiting(bool choice)
+        {
+            Assert.That(_runner.IsDialogueActive, Is.True);
+            Assert.That(Read<bool>(_presenter, choice ? "_waitingForChoice" : "_waitingForAdvance"), Is.True);
+            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
+            Assert.That(UrGUIManager.IsCharacterPaused(_character), Is.True);
+            Assert.That(_input.PlayerControls.enabled, Is.False);
+            Assert.That(Overlay.style.display.value, Is.EqualTo(DisplayStyle.Flex));
         }
 
         private void AssertClosed()

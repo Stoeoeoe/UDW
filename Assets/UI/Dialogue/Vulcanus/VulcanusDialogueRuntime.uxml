@@ -16,7 +16,6 @@
                     <ui:Label name="dialogue-emotion" class="dialogue-emotion" />
                     <ui:Label name="dialogue-hint" class="dialogue-hint" />
                     <ui:Button name="dialogue-continue" class="dialogue-button" text="Continue" focusable="false" />
-                    <ui:Button name="dialogue-close" class="dialogue-button dialogue-close" text="Close" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
