@@ -37,8 +37,7 @@ namespace Core.Spawning
         private void Start()
         {
             // Auto-created SystemRoot children can enable before LevelManager.Awake.
-            _levelManager = LevelManager.Instance
-                ?? throw new InvalidOperationException("WorldObjectSpawner requires LevelManager before startup.");
+            _levelManager = LevelManager.Instance;
             _levelManager.RegisterLifecycle(this);
         }
 

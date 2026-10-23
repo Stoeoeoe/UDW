@@ -24,8 +24,8 @@ namespace Core.Scripting
             LuaExecutionSession session, CutscenePlacement[] placements)
         { _owner = owner; Definition = definition; Session = session; Placements = placements; }
 
-        public void Cancel() { if (_owner) _owner.Cancel(this); }
-        public bool Skip() => _owner && _owner.Skip(this);
+        public void Cancel() => _owner.Cancel(this);
+        public bool Skip() => _owner.Skip(this);
         public void Dispose() => Cancel();
     }
 

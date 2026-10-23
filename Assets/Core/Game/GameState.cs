@@ -11,9 +11,7 @@ namespace Core.Game
     /// <summary>Convenient access to the state of the current game session.</summary>
     public static class GameState
     {
-        private static GameStateManager Manager => GameStateManager.Instance
-            ? GameStateManager.Instance
-            : throw new InvalidOperationException("GameState is unavailable until SystemRoot has initialized.");
+        private static GameStateManager Manager => GameStateManager.Instance;
 
         public static WorldState World => Manager.World;
         public static PlayerState Player => Manager.Player;

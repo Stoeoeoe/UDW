@@ -5,8 +5,6 @@ namespace Core.Tile
 {
     public class TileDebugger : MonoBehaviour
     {
-        private MapManager _mapManager;
-
         [SerializeField] private bool showCurrentTileInfos = true;
 
         [SerializeField] private int fontSize = 14;

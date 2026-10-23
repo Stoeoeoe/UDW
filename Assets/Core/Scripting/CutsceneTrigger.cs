@@ -14,7 +14,6 @@ namespace Core.Scripting
         [SerializeField] private string cutsceneId;
         private Collider2D _area;
         private LevelManager _level;
-        private CutsceneRunner _runner;
         private readonly HashSet<Collider2D> _playerColliders = new();
         private bool _attempted;
         public string CutsceneId => cutsceneId;
@@ -28,20 +27,19 @@ namespace Core.Scripting
             if (string.IsNullOrWhiteSpace(cutsceneId)) throw new InvalidOperationException("A cutscene trigger requires its permanent cutscene ID.");
             _area = GetComponent<Collider2D>();
             if (!_area.isTrigger) throw new InvalidOperationException("A cutscene trigger requires a trigger collider.");
-            _level = LevelManager.Instance ?? throw new InvalidOperationException("CutsceneTrigger requires LevelManager.");
-            _runner = CutsceneRunner.Instance ?? throw new InvalidOperationException("CutsceneTrigger requires the Systems cutscene runner.");
-            _runner.Resolve(cutsceneId); // Broken bindings fail before a player enters the area.
+            CutsceneRunner.Instance.Resolve(cutsceneId); // Broken bindings fail before a player enters the area.
         }
 
         private void OnEnable()
         {
+            _level = LevelManager.Instance;
             _level.LocationReady += OnReady;
             if (_level.SceneReady) CheckInitialOverlap();
         }
 
         private void OnDisable()
         {
-            if (_level) _level.LocationReady -= OnReady;
+            _level.LocationReady -= OnReady;
             _playerColliders.Clear();
             _attempted = false;
         }
@@ -79,7 +77,7 @@ namespace Core.Scripting
         {
             if (_attempted || !_level.SceneReady || _playerColliders.Count == 0) return;
             _attempted = true; // Busy requests are rejected once, never queued until the other scene finishes.
-            _runner.TryStart(cutsceneId, out _);
+            CutsceneRunner.Instance.TryStart(cutsceneId, out _);
         }
     }
 }

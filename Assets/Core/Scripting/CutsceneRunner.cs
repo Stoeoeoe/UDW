@@ -37,13 +37,12 @@ namespace Core.Scripting
             if (!float.IsFinite(movementTimeoutSeconds) || movementTimeoutSeconds <= 0 ||
                 !float.IsFinite(runTimeoutSeconds) || runTimeoutSeconds <= 0)
                 throw new InvalidOperationException("Cutscene timeouts must be finite and positive.");
-            _level = LevelManager.Instance ?? throw new InvalidOperationException("CutsceneRunner requires LevelManager.");
-            _gui = UrGUIManager.Instance ?? throw new InvalidOperationException("CutsceneRunner requires UrGUIManager.");
-            if (!GameStateManager.Instance) throw new InvalidOperationException("CutsceneRunner requires GameStateManager.");
         }
 
         private void OnEnable()
         {
+            _level = LevelManager.Instance;
+            _gui = UrGUIManager.Instance;
             _level.LocationLeaving += Cancel;
             _gui.TransitionInterrupted += Cancel;
             this.Subscribe<DayTransitionStarted>();
@@ -52,9 +51,8 @@ namespace Core.Scripting
         private void OnDisable()
         {
             Cancel();
-            // Unity can disable services in either order during shutdown.
-            if (_level) _level.LocationLeaving -= Cancel;
-            if (_gui) _gui.TransitionInterrupted -= Cancel;
+            _level.LocationLeaving -= Cancel;
+            _gui.TransitionInterrupted -= Cancel;
             this.Unsubscribe<DayTransitionStarted>();
         }
 

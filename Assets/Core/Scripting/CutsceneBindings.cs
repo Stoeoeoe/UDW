@@ -20,9 +20,9 @@ namespace Core.Scripting
         {
             if (!definition) throw new ArgumentNullException(nameof(definition));
             definition.RequireValidConfiguration();
-            if (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            if (!LevelManager.Instance.SceneReady)
                 throw new InvalidOperationException("Bind a cutscene after the location is SceneReady.");
-            if (!MapManager.Instance || !MapManager.Instance.CurrentMap)
+            if (!MapManager.Instance.CurrentMap)
                 throw new InvalidOperationException("Cutscene binding requires the initialized map.");
             var map = MapManager.Instance.CurrentMap;
             if (!StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, map.MapId))

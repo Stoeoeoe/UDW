@@ -21,12 +21,10 @@ namespace Core.Scripting
         /// <summary>Finds the actors and anchors in the loaded map and remembers their IDs.</summary>
         public static MapActorLuaApi BindCurrentMap(float movementTimeoutSeconds)
         {
-            if (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            if (!LevelManager.Instance.SceneReady)
                 throw new InvalidOperationException("Bind actor actions after the location is SceneReady.");
-            if (!MapManager.Instance || !MapManager.Instance.CurrentMap)
+            if (!MapManager.Instance.CurrentMap)
                 throw new InvalidOperationException("Actor actions require the initialized Vulcanus map.");
-            if (!WorldObjectSpawner.Instance)
-                throw new InvalidOperationException("Actor actions require the world's live object spawner.");
             return new MapActorLuaApi(MapManager.Instance.CurrentMap, MainCharacter.CurrentMainCharacter,
                 WorldObjectSpawner.Instance.SpawnedObjects, movementTimeoutSeconds);
         }
@@ -120,7 +118,7 @@ namespace Core.Scripting
         private void RequireCurrentMap()
         {
             // These lookups are for one map. Don't use them while changing maps.
-            if (!LevelManager.Instance || !LevelManager.Instance.SceneReady || !MapManager.Instance || MapManager.Instance.CurrentMap != _map)
+            if (!LevelManager.Instance.SceneReady || MapManager.Instance.CurrentMap != _map)
                 throw new InvalidOperationException("Actor bindings no longer belong to the ready current map.");
         }
 

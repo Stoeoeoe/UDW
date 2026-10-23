@@ -19,7 +19,6 @@ namespace UI.Shared
     public sealed class UrGUIManager : Singleton<UrGUIManager>, ILocationLifecycle, IEventListener<MainCharacterChangedEvent>,
         IEventListener<DayTransitionStarted>
     {
-        private Input.InputManager _input;
         private MainCharacter _mainCharacter;
         // Saved with each open screen so its callbacks and original sorting order can be restored.
         private sealed class OpenScreenState
@@ -63,7 +62,7 @@ namespace UI.Shared
         internal void SetCutsceneActive(bool active)
         {
             _cutsceneActive = active;
-            _input.SetCutsceneActive(active);
+            Input.InputManager.Instance.SetCutsceneActive(active);
             PlayerInteractionContext.Instance.Refresh();
         }
 
@@ -71,12 +70,6 @@ namespace UI.Shared
         /// <param name="character">Character to check.</param>
         public static bool IsCharacterPaused(GameCharacter character) =>
             character && Instance != null && Instance._characterPauses.ContainsKey(character);
-
-        protected override void OnAwake()
-        {
-            _input = Input.InputManager.Instance
-                ?? throw new InvalidOperationException("UrGUIManager requires InputManager to initialize first.");
-        }
 
         private void OnEnable()
         {
@@ -178,7 +171,7 @@ namespace UI.Shared
             if (!screen) throw new ArgumentNullException(nameof(screen));
             if (show == null) throw new ArgumentNullException(nameof(show));
             if (hide == null) throw new ArgumentNullException(nameof(hide));
-            _input.ValidateScreenMap(screen.InputActionMap);
+            Input.InputManager.Instance.ValidateScreenMap(screen.InputActionMap);
 
             // Reopening updates ownership without duplicating the screen in the stack.
             var wasOpen = _openScreens.TryGetValue(screen, out var previous);
@@ -264,7 +257,7 @@ namespace UI.Shared
         private void UpdateInput()
         {
             var top = _screenOrder.Count == 0 ? null : _screenOrder[^1];
-            _input.SetScreenMap(top ? top.InputActionMap : null);
+            Input.InputManager.Instance.SetScreenMap(top ? top.InputActionMap : null);
             foreach (var screen in _screenOrder) screen.SetInputActive(screen == top);
         }
 
@@ -304,7 +297,7 @@ namespace UI.Shared
             _screenOrder.Clear();
             _characterPauses.Clear();
             _clockPauses = 0;
-            _input.SetScreenMap(null);
+            Input.InputManager.Instance.SetScreenMap(null);
             PlayerInteractionContext.Instance?.Refresh();
             foreach (var state in screens)
             {

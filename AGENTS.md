@@ -44,6 +44,17 @@ actual use case. Possibility alone is not a requirement.**
 - Before implementation, identify the concrete problem, the existing caller or
   supported workflow that needs the change, and why the simplest existing approach
   is insufficient. State that reason briefly before nontrivial structural changes.
+- Every design decision needs a concrete explanation of what happens in this game
+  and why that behavior needs the change. Name the actual gameplay scenario and
+  caller or authored content. "Clean code", "robustness", "best practice" and
+  generic Unity shutdown concerns are not sufficient reasons on their own.
+- Do not implement hypothetical scenarios unless the user explicitly requests
+  them. A prototype or test invented by the agent is not evidence of a gameplay
+  requirement. Leave unsupported behavior out rather than adding guards for it.
+- Required global managers are established by game startup. Consumers rely on
+  that contract instead of repeating manager-presence checks. Keep a manager
+  reference when it serves an actual operation, such as unsubscribing from the
+  same instance that owns an event; do not add shutdown guards without a demonstrated need.
 - Prefer established project conventions. A refactor should remove duplication or
   make a demonstrated operation easier to understand; do not invent extra behavior
   while carrying it out.

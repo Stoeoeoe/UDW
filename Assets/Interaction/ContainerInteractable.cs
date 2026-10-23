@@ -10,13 +10,11 @@ namespace Interaction
     public sealed class ContainerInteractable : AbstractInteractable
     {
         private PersistentContainer _container;
-        private ContainerScreen _screen;
         protected override void Awake()
         {
             base.Awake();
             _container = GetComponent<PersistentContainer>();
             ValidateConfiguration();
-            _screen = ContainerScreen.Instance;
         }
 
         public void ValidateConfiguration()
@@ -29,7 +27,7 @@ namespace Interaction
 
         protected override bool Interact(GameCharacter instigator)
         {
-            _screen.Open(_container, instigator);
+            ContainerScreen.Instance.Open(_container, instigator);
             return true;
         }
     }

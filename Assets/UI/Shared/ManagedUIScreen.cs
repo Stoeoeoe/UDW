@@ -66,8 +66,7 @@ namespace UI.Shared
             if (show == null) throw new ArgumentNullException(nameof(show));
             if (hide == null) throw new ArgumentNullException(nameof(hide));
 
-            var manager = UrGUIManager.Instance
-                ?? throw new InvalidOperationException("A managed screen requires UrGUIManager.");
+            var manager = UrGUIManager.Instance;
             _manager = manager;
             _hide = hide;
             try { _manager.Open(this, show, HandleClosed, pauseMode ?? pauseWhileOpen, character); }
