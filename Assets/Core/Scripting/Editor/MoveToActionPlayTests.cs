@@ -101,6 +101,10 @@ namespace Core.Scripting.Editor
             Assert.That(() => api.ValidateMoveTo("missing-actor", authoredAnchor.AnchorId), Throws.InvalidOperationException);
             Assert.That(() => api.ValidateMoveTo("player", "missing-anchor"), Throws.InvalidOperationException);
             Assert.That(() => api.ValidateMoveTo(actor.gameObject.name, authoredAnchor.AnchorId), Throws.InvalidOperationException);
+            Assert.That(() => api.ValidateFace("missing-actor", "player"), Throws.InvalidOperationException);
+            Assert.That(() => api.ValidateFace("player", "missing-actor"), Throws.InvalidOperationException);
+            Assert.That(() => api.ValidateFace("player", "player"), Throws.InvalidOperationException);
+            Assert.That(() => api.Face("player", "player"), Throws.InvalidOperationException);
             Assert.That(actor.Controller.IsMovementOwned, Is.False, "Reference validation must not start movement.");
             foreach (var placement in map.PersistentEntities)
                 Assert.That(WorldObjectSpawner.Instance.SpawnedObjects, Has.No.Member(placement.template));
@@ -116,7 +120,7 @@ namespace Core.Scripting.Editor
             anchor.Configure("test:meeting", "Meeting", Vector2.down, System.Array.Empty<string>());
             api = MapActorLuaApi.BindCurrentMap(5f);
             var registry = new LuaBindingRegistry(api);
-            var method = registry.Describe().modules.Single().methods.Single();
+            var method = registry.Describe().modules.Single().methods.Single(value => value.name == "MoveTo");
             Assert.That(method.action.id, Is.EqualTo("actors.moveTo"));
             Assert.That(method.action.execution, Is.EqualTo("awaitable"));
             Assert.That(method.parameters[0].semanticType, Is.EqualTo("actorRef"));

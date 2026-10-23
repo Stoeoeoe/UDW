@@ -5,6 +5,38 @@
       "path": "Actors",
       "methods": [
         {
+          "name": "Face",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "target",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.face",
+            "displayName": "Face actor",
+            "category": "Movement",
+            "description": "Turn an existing actor toward another actor.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "execution": "immediate",
+            "failure": "terminatesSession"
+          }
+        },
+        {
           "name": "MoveTo",
           "parameters": [
             {

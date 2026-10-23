@@ -184,6 +184,30 @@ namespace Character.Editor
             return controller;
         }
 
+        [TestCase(1f, 0f)]
+        [TestCase(-1f, 0f)]
+        [TestCase(0f, 1f)]
+        [TestCase(0f, -1f)]
+        [TestCase(0.01f, 0.01f)]
+        public void FacingAWorldPositionTurnsWithoutMoving(float x, float y)
+        {
+            var position = new Vector3(10, -4, 0);
+            _character.transform.position = position;
+            var direction = new Vector2(x, y);
+            _character.Orientation.FaceTowards((Vector2)position + direction);
+            Assert.That(Vector2.Distance(_character.Orientation.FacingDirection, direction.normalized), Is.LessThan(0.0001f));
+            Assert.That(_character.transform.position, Is.EqualTo(position));
+        }
+
+        [Test]
+        public void FacingRejectsInvalidOrCoincidentPositionsWithoutInventingADirection()
+        {
+            _character.Orientation.ForceDirection(Vector2.left);
+            Assert.That(() => _character.Orientation.FaceTowards(new Vector2(float.NaN, 0)), Throws.ArgumentException);
+            Assert.That(() => _character.Orientation.FaceTowards(_character.transform.position), Throws.InvalidOperationException);
+            Assert.That(_character.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
+        }
+
         private void Press(Key key)
         {
             InputSystem.QueueStateEvent(_keyboard, new KeyboardState(key));

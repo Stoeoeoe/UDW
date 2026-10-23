@@ -127,7 +127,8 @@ namespace Core.Scripting.Editor
         public void GlobalManifestIncludesMapActionsWithoutLoadingAMap()
         {
             var manifest = VulcanusLuaEngine.DescribeBindings();
-            var move = manifest.modules.Single(module => module.path == "Actors").methods.Single();
+            var methods = manifest.modules.Single(module => module.path == "Actors").methods;
+            var move = methods.Single(method => method.name == "MoveTo");
             Assert.That(move.name, Is.EqualTo("MoveTo"));
             Assert.That(move.action.id, Is.EqualTo("actors.moveTo"));
             Assert.That(move.action.execution, Is.EqualTo("awaitable"));
@@ -136,6 +137,11 @@ namespace Core.Scripting.Editor
             Assert.That(move.parameters[0].picker, Is.EqualTo("mapActor"));
             Assert.That(move.parameters[1].semanticType, Is.EqualTo("anchorRef"));
             Assert.That(move.parameters[1].picker, Is.EqualTo("mapAnchor"));
+            var face = methods.Single(method => method.name == "Face");
+            Assert.That(face.action.id, Is.EqualTo("actors.face"));
+            Assert.That(face.action.execution, Is.EqualTo("immediate"));
+            Assert.That(face.returnType, Is.EqualTo("nil"));
+            Assert.That(face.parameters.Select(parameter => parameter.semanticType), Is.EqualTo(new[] { "actorRef", "actorRef" }));
         }
 
         [Test]

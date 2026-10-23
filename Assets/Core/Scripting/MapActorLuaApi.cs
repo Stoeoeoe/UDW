@@ -8,7 +8,7 @@ using Core.Tile.Vulcanus;
 
 namespace Core.Scripting
 {
-    /// <summary>Lets Lua move characters to anchors in the current map.</summary>
+    /// <summary>Lets Lua move and turn characters in the current map.</summary>
     /// <remarks>Create this for each run after the map finishes loading. Use "player" for the player and spawned-object IDs for NPCs.</remarks>
     [LuaModule("Actors")]
     public sealed class MapActorLuaApi
@@ -90,6 +90,29 @@ namespace Core.Scripting
         {
             RequireCurrentMap();
             return new MoveToAction(ResolveActor(actor), ResolveAnchor(destination).transform.position, _movementTimeout);
+        }
+
+        /// <summary>Checks both actor IDs before a cutscene starts. Does not turn either actor.</summary>
+        public void ValidateFace(string actor, string target) => ResolveFacingActors(actor, target);
+
+        /// <summary>Turns one character toward another. Completes immediately.</summary>
+        [LuaCall(true)]
+        [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine")]
+        public void Face([LuaReference("actorRef", "mapActor")] string actor,
+            [LuaReference("actorRef", "mapActor")] string target)
+        {
+            var (character, targetCharacter) = ResolveFacingActors(actor, target);
+            character.Orientation.FaceTowards(targetCharacter.transform.position);
+        }
+
+        private (GameCharacter Actor, GameCharacter Target) ResolveFacingActors(string actor, string target)
+        {
+            RequireCurrentMap();
+            var character = ResolveActor(actor);
+            var targetCharacter = ResolveActor(target);
+            if (character == targetCharacter)
+                throw new InvalidOperationException("An actor cannot face itself.");
+            return (character, targetCharacter);
         }
 
         private void RequireCurrentMap()

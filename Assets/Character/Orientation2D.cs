@@ -31,6 +31,17 @@ namespace Character
             SetDirection(direction.normalized);
         }
 
+        /// <summary>Turns toward a world position without moving the character.</summary>
+        public void FaceTowards(Vector2 worldPosition)
+        {
+            if (!float.IsFinite(worldPosition.x) || !float.IsFinite(worldPosition.y))
+                throw new ArgumentException("Facing requires a finite target position.", nameof(worldPosition));
+            var direction = (worldPosition - (Vector2)transform.position).normalized;
+            if (direction == Vector2.zero)
+                throw new InvalidOperationException("The target is too close to determine a facing direction.");
+            ForceDirection(direction);
+        }
+
         void SetDirection(Vector2 dir)
         {
             if (dir == FacingDirection) return;
