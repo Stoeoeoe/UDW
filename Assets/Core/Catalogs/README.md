@@ -13,7 +13,7 @@ type under `Path`. No runtime folder scanning occurs. Items, skills, deities,
 plants, typewriter sounds and spawnables use this pipeline. Items and plants search `Assets` because their
 definitions live in multiple folders; skills/deities keep their existing
 Resources authoring folders, and spawnables search `Assets/Content/Spawnables`.
-`DefaultCatalogAssets.CreateMissingCatalogs()` creates the five default Resources
+`DefaultCatalogAssets.CreateMissingCatalogs()` creates the default Resources
 catalog assets when absent and returns only those it created. Existing assets
 and enabled selections are not overwritten. **Tools > Catalogs > Create Missing
 Catalogs** reports the result and schedules discovery separately. The same API
@@ -53,6 +53,12 @@ and pre-build refresh discover it automatically. Imported source formats must
 produce Unity definition assets; arbitrary JSON is not itself a definition asset.
 Adding a *new catalog type* still requires its class and, if desired, one default
 asset registration in `DefaultCatalogAssets` (not one registration per content item).
+
+Cutscenes use the same pipeline: `.runtime.cutscene.json` sources under Assets
+import into `CutsceneDefinition` assets, and `CutsceneCatalog` discovers them.
+The source schema and Lua action manifest are import dependencies. Invalid
+current cutscene sources block Play Mode and builds even if Unity retained an
+older artifact. Map/actor/dialogue references are bound before playback.
 
 ## Specialized catalogs
 

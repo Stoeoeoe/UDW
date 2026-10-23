@@ -11,6 +11,7 @@ namespace Core.Scripting.Editor
     internal static class LuaBindingManifestExporter
     {
         private const string RelativePath = "Generated/Scripting/bindings.json";
+        internal const string DependencyName = "UrdewValley.LuaBindings";
 
         [DidReloadScripts]
         private static void AfterScriptsReload() => Export();
@@ -21,6 +22,7 @@ namespace Core.Scripting.Editor
             try
             {
                 var manifest = VulcanusLuaEngine.DescribeBindings();
+                AssetDatabase.RegisterCustomDependency(DependencyName, Hash128.Compute(Serialize(manifest)));
                 var projectRoot = Path.GetDirectoryName(Application.dataPath);
                 if (projectRoot != null)
                 {

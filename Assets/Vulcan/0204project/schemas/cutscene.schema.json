@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Linear cutscene source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "formatVersion", "id", "mapId", "sequence"],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "formatVersion": { "type": "integer", "enum": [1] },
+    "id": { "type": "string", "pattern": "^[^\\s:]+:[^\\s]+$" },
+    "mapId": { "type": "string", "pattern": "\\S" },
+    "sequence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "action", "arguments"],
+        "properties": {
+          "id": { "type": "string", "pattern": "\\S" },
+          "action": { "type": "string", "pattern": "\\S" },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "pattern": "\\S" }
+          }
+        }
+      }
+    }
+  }
+}

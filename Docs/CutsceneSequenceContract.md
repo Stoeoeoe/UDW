@@ -2,8 +2,28 @@
 
 The initial sequence contract is an ordered list of action steps. Unity compiles
 the list to Lua; the Lua session executes it. There is no second command runner.
-This describes the sequence body only. The full source file, import route and
-terminal completion outcomes are not implemented yet.
+Sources ending in `.runtime.cutscene.json` import into `CutsceneDefinition`
+assets and are discovered by the shared `CutsceneCatalog`. The prototype file
+wrapper is:
+
+```json
+{
+  "$schema": "../schemas/cutscene.schema.json",
+  "formatVersion": 1,
+  "id": "base:intro",
+  "mapId": "map-1",
+  "sequence": [
+    { "id": "talk", "action": "dialogue.play", "arguments": { "dialogue": "base:greeting" } }
+  ]
+}
+```
+
+The schema reference is relative to the source file and must resolve inside
+Assets. This example path assumes a `cutscenes` folder beside the project's
+`schemas` folder. Format version 1 accepts only the fields above. IDs are
+permanent `namespace:name` values; map IDs retain their existing source form.
+Playback lifecycle, terminal completion outcomes and trigger bindings are not
+implemented yet; importing a definition does not start it.
 
 ```json
 [
@@ -41,7 +61,16 @@ Lua escaping.
 Each step produces exactly one Lua line. `CompiledSequence.StepIds[line - 1]`
 maps that one-based Lua line to its authored step ID. Compiler errors identify
 the source, sequence index and step ID when available.
+Imported definitions retain `Steps` with the authored IDs, action IDs and named
+arguments alongside the generated Lua. Runtime diagnostics can use
+`definition.Steps[line - 1].Id`; reference validation can inspect the arguments
+without parsing executable Lua.
 
 This compiler validates shape and action signatures. Reference existence is
 checked separately against the map and dialogue bindings before playback.
 The IDs above illustrate the format; they are not a playable fixture.
+
+Schema and action-manifest changes invalidate imported cutscene scripts.
+Catalog discovery preserves enabled selections and uses exact cutscene IDs.
+Before Play Mode or a build, the current sources are validated again so a
+failed edit cannot run through an older retained Unity import artifact.

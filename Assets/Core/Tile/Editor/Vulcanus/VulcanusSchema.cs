@@ -10,18 +10,22 @@ namespace Core.Tile.Editor.Vulcanus
 {
     internal static class VulcanusSchema
     {
-        public static T Read<T>(AssetImportContext ctx)
+        public static T Read<T>(AssetImportContext ctx) => Read<T>(ctx.assetPath, ctx.DependsOnSourceAsset);
+
+        public static T Read<T>(string sourcePath) => Read<T>(sourcePath, null);
+
+        private static T Read<T>(string sourcePath, Action<string> schemaDependency)
         {
-            var json = File.ReadAllText(ctx.assetPath);
+            var json = File.ReadAllText(sourcePath);
             var reference = JObject.Parse(json)["$schema"];
             if (reference?.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)reference))
-                throw new FormatException($"{ctx.assetPath}: '$schema' must point to a local schema file.");
+                throw new FormatException($"{sourcePath}: '$schema' must point to a local schema file.");
 
-            var absolutePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(ctx.assetPath), (string)reference));
+            var absolutePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath), (string)reference));
             if (!VulcanusImportHelpers.TryAbsoluteToAssetPath(absolutePath, out var schemaPath))
-                throw new FormatException($"{ctx.assetPath}: schema must be inside Assets: '{reference}'.");
-            ctx.DependsOnSourceAsset(schemaPath);
-            return Deserialize<T>(json, schemaPath, ctx.assetPath);
+                throw new FormatException($"{sourcePath}: schema must be inside Assets: '{reference}'.");
+            schemaDependency?.Invoke(schemaPath);
+            return Deserialize<T>(json, schemaPath, sourcePath);
         }
 
         internal static T Deserialize<T>(string json, string schemaPath, string sourcePath)

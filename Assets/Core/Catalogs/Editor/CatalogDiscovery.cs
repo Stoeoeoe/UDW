@@ -67,6 +67,7 @@ namespace Core.Catalogs.Editor
                  path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".runtime.cutscene.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase)) &&
                 !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) Schedule();
         }

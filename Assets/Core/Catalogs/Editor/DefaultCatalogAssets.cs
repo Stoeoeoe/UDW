@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Core.Divinity;
 using Core.Inventory;
+using Core.Scripting;
 using Interaction.Dialog;
 using Plants;
 using UnityEditor;
@@ -22,6 +23,7 @@ namespace Core.Catalogs.Editor
             var created = new List<DefinitionCatalog>();
             Create<ItemCatalog>(folder, ItemCatalog.ResourceName, created);
             Create<CharacterCatalog>(folder, CharacterCatalog.ResourceName, created);
+            Create<CutsceneCatalog>(folder, CutsceneCatalog.ResourceName, created);
             Create<SkillCatalog>(folder, SkillCatalog.ResourceName, created);
             Create<DeityCatalog>(folder, DeityCatalog.ResourceName, created);
             Create<PlantCatalog>(folder, PlantCatalog.ResourceName, created);
