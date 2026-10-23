@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Character;
+using Core.Catalogs;
 using Core.Dialogue.Vulcanus;
 using Core.Events;
 using Core.Game;
@@ -16,9 +17,9 @@ namespace Core.Scripting
     [DefaultExecutionOrder(300)]
     public sealed class CutsceneRunner : Singleton<CutsceneRunner>, IEventListener<DayTransitionStarted>
     {
-        [SerializeField] private CutsceneCatalog catalog;
-        [SerializeField] private float movementTimeoutSeconds = 30f;
-        [SerializeField] private float runTimeoutSeconds = 120f;
+        private CutsceneCatalog _catalog;
+        [SerializeField][Min(0)] private float movementTimeoutSeconds = 30f;
+        [SerializeField][Min(0)] private float runTimeoutSeconds = 120f;
         private LevelManager _level;
         private UrGUIManager _gui;
         private MainCharacter _player;
@@ -33,10 +34,7 @@ namespace Core.Scripting
 
         protected override void OnAwake()
         {
-            if (!catalog) throw new InvalidOperationException("CutsceneRunner requires its cutscene catalog.");
-            if (!float.IsFinite(movementTimeoutSeconds) || movementTimeoutSeconds <= 0 ||
-                !float.IsFinite(runTimeoutSeconds) || runTimeoutSeconds <= 0)
-                throw new InvalidOperationException("Cutscene timeouts must be finite and positive.");
+            _catalog = CatalogResources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName);
         }
 
         private void OnEnable()
@@ -56,7 +54,7 @@ namespace Core.Scripting
             this.Unsubscribe<DayTransitionStarted>();
         }
 
-        public CutsceneDefinition Resolve(string id) => catalog.Get(id)
+        public CutsceneDefinition Resolve(string id) => _catalog.Get(id)
             ?? throw new InvalidOperationException($"Unknown or disabled cutscene '{id}'.");
 
         public bool TryStart(string id, out CutsceneRun run) => TryStart(Resolve(id), out run);
@@ -67,18 +65,18 @@ namespace Core.Scripting
             run = null;
             if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || UrGUIManager.HasOpenScreens) return false;
             definition.RequireValidConfiguration();
-            if (definition.Completion.Flag.Length > 0 && GameState.Story.HasFlag(definition.Completion.Flag)) return false;
+            if (GameState.Story.CompletedCutscenes.ContainsKey(definition.CutsceneId)) return false;
             var player = MainCharacter.CurrentMainCharacter;
             if (!player || !player.IsRuntimeInitialized) throw new InvalidOperationException("Cutscenes require the initialized player.");
             if (player.IsControlBlocked || player.Controller.IsMovementOwned) return false;
 
             // Resolve everything before acquiring control. A bad reference cannot leave half a scene staged.
             var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance,
-                movementTimeoutSeconds, out var actors);
+                movementTimeoutSeconds, out var actors, out var cutscene);
             var placements = CutscenePlacement.Prepare(definition, bindings, actors);
             if (placements.Any(placement => placement.Actor.IsControlBlocked || placement.Actor.Controller.IsMovementOwned)) return false;
             var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId, timeoutSeconds: runTimeoutSeconds);
-            run = new CutsceneRun(this, definition, session, placements);
+            run = new CutsceneRun(this, definition, session, placements, cutscene);
             ActiveRun = run;
             _player = player;
             _player.OnConditionStateChanged += OnPlayerConditionChanged;
@@ -138,10 +136,7 @@ namespace Core.Scripting
                 if (completed) foreach (var placement in run.Placements) placement.RequireLive();
                 foreach (var placement in run.Placements) placement.Apply(completed);
                 if (completed)
-                {
-                    foreach (var flag in run.Definition.Completion.SetFlags) GameState.Story.SetFlag(flag);
-                    if (run.Definition.Completion.Flag.Length > 0) GameState.Story.SetFlag(run.Definition.Completion.Flag);
-                }
+                    GameState.Story.CompletedCutscenes[run.Definition.CutsceneId] = run.Outcome;
             }
             catch (Exception failure)
             {
@@ -164,7 +159,7 @@ namespace Core.Scripting
                 run.Error = error;
                 ActiveRun = null;
             }
-            // Flags, placements and ownership are settled before listeners can start another scene or save.
+            // Outcome, placements and ownership are settled before listeners can start another scene or save.
             if (status == CutsceneRunStatus.Failed) Debug.LogError(error, this);
             Finished?.Invoke(run);
         }

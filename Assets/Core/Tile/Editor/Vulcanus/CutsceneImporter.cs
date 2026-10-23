@@ -51,8 +51,7 @@ namespace Core.Tile.Editor.Vulcanus
                 var outcomes = completion["actorOutcomes"].Select(outcome =>
                     new CutsceneActorOutcome((string)outcome["actor"], (string)outcome["anchor"])).ToArray();
                 definition.Configure((string)source["id"], (string)source["mapId"], compiled.Lua, steps,
-                    (bool)source["allowSkip"], new CutsceneCompletion((string)completion["flag"],
-                        completion["setFlags"].Values<string>().ToArray(), outcomes));
+                    (bool)source["allowSkip"], new CutsceneCompletion(outcomes, (string)completion["outcome"] ?? "completed"));
                 return definition;
             }
             catch { Object.DestroyImmediate(definition); throw; }

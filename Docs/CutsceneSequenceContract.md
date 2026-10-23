@@ -13,7 +13,7 @@ wrapper is:
   "id": "base:intro",
   "mapId": "map-1",
   "allowSkip": false,
-  "completion": { "flag": "intro_done", "setFlags": [], "actorOutcomes": [] },
+  "completion": { "outcome": "completed", "actorOutcomes": [] },
   "sequence": [
     { "id": "talk", "action": "dialogue.play", "arguments": { "dialogue": "base:greeting" } }
   ]
@@ -50,8 +50,10 @@ Importing a definition does not start it. The Systems prefab provides one
 Step IDs are permanent, non-empty and unique within the sequence, compared
 exactly. Reordering or renaming a step's display label must retain its ID.
 Action IDs and argument names come from `Generated/Scripting/bindings.json`.
-Only actions allowing the `cutscene` context are accepted. The initial three
-actions take non-empty string references. Missing/unknown arguments, unknown
+Only actions allowing the `cutscene` context are accepted. Movement and dialogue
+actions take non-empty string references. `cutscene.setOutcome` takes a non-empty
+`outcome` string and compiles to `Cutscene.SetOutcome("admitted")`.
+Missing/unknown arguments, unknown
 step fields and unsupported actions are errors. Branches and raw Lua steps are
 not supported.
 
@@ -101,6 +103,9 @@ API methods and attaches calls to Lua; it does not interpret cutscene steps.
 
 ## Running a cutscene
 
+The runner loads the shared `Resources/CutsceneCatalog` through `CatalogResources`
+at initialization; no Inspector catalog assignment is needed.
+
 `CutsceneRunner.TryStart(id, out run)` resolves an enabled catalog entry. Unknown
 IDs are setup errors. Busy, not-ready, already-completed, occupied-player and
 open-menu starts return false; they do not replace or queue a run. The returned
@@ -126,10 +131,19 @@ remain supported.
 
 ## Completion and persistence
 
-`allowSkip` and `completion` are required authored fields. An empty
-`completion.flag` explicitly makes a scene repeatable; a non-empty flag makes it
-once-only through the existing saved story flags. `setFlags` is an ordered list
-of unique non-empty story flags. `actorOutcomes` is an ordered list of
+`allowSkip` and `completion` are required authored fields. `completion.outcome`
+defaults to `"completed"` when omitted; an explicitly empty value is invalid.
+`Cutscene.SetOutcome(outcome)` changes the active run's pending outcome without
+writing saved state. Successful completion or skip records the latest outcome in
+`GameState.Story.CompletedCutscenes[cutsceneId]`. The presence of that ID prevents
+replay, regardless of the outcome string. Cancellation and failure record nothing.
+Story flags remain separate and are not set by cutscene completion.
+
+For skippable scenes, the default outcome must be correct even when skipped before
+the first action. Scenes requiring a player-selected outcome use `allowSkip: false`;
+skip does not execute remaining actions or invent answers.
+
+`actorOutcomes` is an ordered list of
 `{ "actor": "placed-instance-id", "anchor": "anchor-id" }` endpoints, with
 each actor listed at most once. Empty lists are valid.
 
@@ -137,14 +151,14 @@ The runner captures the initial positions and facing of referenced actors before
 execution. Normal completion and skip both stop transient actions and apply the
 same prepared endpoints. Unlisted actors return to their pre-run placement. An
 anchor's nonzero facing overrides the actor's direction; zero retains its pre-run
-direction. Spawned actor endpoints update the existing live spawn state. All
-outcome flags and the once-only flag are set before terminal notifications.
+direction. Spawned actor endpoints update the existing live spawn state. The
+outcome is saved before terminal notifications.
 Cancellation, location leave, death, disabled presentation and runtime failure
-stop pending movement/dialogue, restore surviving actors and set no completion
-flags. Cleanup releases only the run's own control and calendar claims.
+stop pending movement/dialogue and restore surviving actors.
+Cleanup releases only the run's own control and calendar claims.
 
 `GameStateManager.Save` rejects direct saves while staging. Save after `Finished`,
-when placements, flags and ownership are settled. There is no autosave caller in
+when placements, outcome and ownership are settled. There is no autosave caller in
 the current project and no new deferral queue. No transient Lua state or second
 cutscene save root is serialized; no save migration/version change is required.
 
@@ -165,7 +179,7 @@ The authored prototype is
 `cutscene-prototype-host-01`, anchor `prototype-meeting`, and
 `prototype_greeting` dialogue. Its map trigger occupies source pixels
 `[160,160]` to `[176,192]`, west of the arrival area. Watching through Goodbye or
-skipping places the host at the meeting anchor and sets
-`prototype:cutscene-complete`. This is an explicitly named prototype, not story
+skipping places the host at the meeting anchor and records `"completed"` under
+`base:cutscene-prototype`. This is an explicitly named prototype, not story
 canon. A second cutscene using supported assets needs a new source, not manager
 registration or new C#.

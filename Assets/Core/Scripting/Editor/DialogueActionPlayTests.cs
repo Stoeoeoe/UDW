@@ -108,8 +108,8 @@ namespace Core.Scripting.Editor
                 var deadline = Time.realtimeSinceStartup + 5;
                 while (service.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(run.Status, Is.EqualTo(CutsceneRunStatus.Completed), run.Error);
-                Assert.That(GameState.Story.HasFlag("fixture_intro_done"), Is.True);
-                Assert.That(service.TryStart(definition, out _), Is.False, "Once-only completion uses its saved flag.");
+                Assert.That(GameState.Story.CompletedCutscenes["fixture:terminal"], Is.EqualTo("fixture_intro_done"));
+                Assert.That(service.TryStart(definition, out _), Is.False, "Completion is tracked by the cutscene ID.");
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
                 Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.True);
                 AssertClosed();
@@ -118,7 +118,7 @@ namespace Core.Scripting.Editor
                 {
                     GameState.Save(slot);
                     Assert.That(GameSaveService.TryLoad(slot, out var saved), Is.True);
-                    Assert.That(saved.story.HasFlag("fixture_intro_done"), Is.True);
+                    Assert.That(saved.story.CompletedCutscenes["fixture:terminal"], Is.EqualTo("fixture_intro_done"));
                 }
                 finally { System.IO.File.Delete(GameSaveService.GetSavePath(slot)); }
             }
@@ -139,7 +139,7 @@ namespace Core.Scripting.Editor
                 Assert.That(_runner.IsDialogueActive, Is.True);
                 old.Cancel(); old.Dispose();
                 Assert.That(old.Status, Is.EqualTo(CutsceneRunStatus.Cancelled));
-                Assert.That(GameState.Story.HasFlag("fixture_cancelled"), Is.False);
+                Assert.That(GameState.Story.CompletedCutscenes.ContainsKey("fixture:cancel"), Is.False);
                 AssertClosed();
                 Assert.That(service.TryStart(skipped, out var run), Is.True);
                 old.Cancel();
@@ -150,7 +150,7 @@ namespace Core.Scripting.Editor
                 {
                     finished++;
                     Assert.That(service.IsRunning, Is.False);
-                    Assert.That(GameState.Story.HasFlag("fixture_skipped"), Is.True);
+                    Assert.That(GameState.Story.CompletedCutscenes["fixture:skip"], Is.EqualTo("fixture_skipped"));
                     Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
                     terminal.Cancel();
                 };
@@ -168,16 +168,44 @@ namespace Core.Scripting.Editor
             finally { service.Cancel(); Object.Destroy(cancelled); Object.Destroy(skipped); }
         }
 
-        private static CutsceneDefinition CreateCutscene(string id, bool skip, string flag, string dialogue)
+        private static CutsceneDefinition CreateCutscene(string id, bool skip, string outcome, string dialogue,
+            params CutsceneStep[] beforeDialogue)
         {
-            var step = Step("talk", "dialogue.play", ("dialogue", dialogue));
-            var sequence = new JArray(new JObject { ["id"] = step.Id, ["action"] = step.ActionId,
-                ["arguments"] = new JObject { ["dialogue"] = dialogue } });
+            var steps = beforeDialogue.Append(Step("talk", "dialogue.play", ("dialogue", dialogue))).ToArray();
+            var sequence = new JArray(steps.Select(step => new JObject { ["id"] = step.Id, ["action"] = step.ActionId,
+                ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value))) }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, id);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled.Lua, new[] { step }, skip,
-                new CutsceneCompletion(flag, Array.Empty<string>(), Array.Empty<CutsceneActorOutcome>()));
+            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled.Lua, steps, skip,
+                new CutsceneCompletion(Array.Empty<CutsceneActorOutcome>(), outcome));
             return definition;
+        }
+
+        [UnityTest]
+        public IEnumerator OutcomeActionIsSavedOnCompletionOrSkipButNotCancellation()
+        {
+            var service = CutsceneRunner.Instance;
+            var choice = Step("answer", "cutscene.setOutcome", ("outcome", "admitted"));
+            var watched = CreateCutscene("fixture:watched-outcome", false, "completed", "fixture:end", choice);
+            var interrupted = CreateCutscene("fixture:pending-outcome", true, "completed", "fixture:talk", choice);
+            try
+            {
+                Assert.That(service.TryStart(watched, out var finished), Is.True);
+                for (var frame = 0; frame < 20 && service.IsRunning; frame++) yield return null;
+                Assert.That(finished.Status, Is.EqualTo(CutsceneRunStatus.Completed), finished.Error);
+                Assert.That(GameState.Story.CompletedCutscenes[watched.CutsceneId], Is.EqualTo("admitted"));
+                Assert.That(service.TryStart(interrupted, out var cancelled), Is.True);
+                yield return null;
+                Assert.That(cancelled.Outcome, Is.EqualTo("admitted"));
+                Assert.That(GameState.Story.CompletedCutscenes.ContainsKey(interrupted.CutsceneId), Is.False);
+                cancelled.Cancel();
+                Assert.That(GameState.Story.CompletedCutscenes.ContainsKey(interrupted.CutsceneId), Is.False);
+                Assert.That(service.TryStart(interrupted, out var skipped), Is.True);
+                yield return null;
+                Assert.That(skipped.Skip(), Is.True);
+                Assert.That(GameState.Story.CompletedCutscenes[interrupted.CutsceneId], Is.EqualTo("admitted"));
+            }
+            finally { service.Cancel(); Object.Destroy(watched); Object.Destroy(interrupted); }
         }
 
         [UnityTest]
@@ -195,7 +223,7 @@ namespace Core.Scripting.Editor
             Assert.That(_runner.CurrentDialogueId, Is.EqualTo("prototype_greeting"), run.Error);
             Assert.That(Vector2.Distance(actor.GetComponent<Rigidbody2D>().position, anchor.transform.position), Is.LessThanOrEqualTo(0.04f));
             Assert.That(actor.Orientation.FacingDirection.x, Is.GreaterThan(0));
-            Assert.That(GameState.Story.HasFlag("prototype:cutscene-complete"), Is.False);
+            Assert.That(GameState.Story.CompletedCutscenes.ContainsKey("base:cutscene-prototype"), Is.False);
             Assert.That(_runner.TryAdvanceActiveDialogue(), Is.True);
             for (var frame = 0; frame < 20 && _runner.ActiveContext.CurrentNode is not VulcanusDialogueChoiceNode; frame++) yield return null;
             using (var key = KeyDownEvent.GetPooled('\0', KeyCode.Alpha1, EventModifiers.None))
@@ -207,8 +235,7 @@ namespace Core.Scripting.Editor
             Assert.That(run.Status, Is.EqualTo(CutsceneRunStatus.Completed), run.Error);
             Assert.That(spawn.transform.position, Is.EqualTo(anchor.transform.position));
             Assert.That(spawn.State.position, Is.EqualTo(spawn.transform.position));
-            Assert.That(GameState.Story.HasFlag("prototype:met-host"), Is.True);
-            Assert.That(GameState.Story.HasFlag("prototype:cutscene-complete"), Is.True);
+            Assert.That(GameState.Story.CompletedCutscenes["base:cutscene-prototype"], Is.EqualTo("completed"));
             Assert.That(actor.Controller.IsMovementOwned, Is.False);
             Assert.That(actor.IsControlBlocked, Is.False);
             AssertClosed();
@@ -219,7 +246,7 @@ namespace Core.Scripting.Editor
                 Assert.That(GameSaveService.TryLoad(slot, out var saved), Is.True);
                 Assert.That(saved.world.TryGet<SpawnedObjectState>(LevelManager.Instance.CurrentLocationData.id, spawn.PersistentId, out var placement), Is.True);
                 Assert.That(placement.position, Is.EqualTo(anchor.transform.position));
-                Assert.That(saved.story.HasFlag("prototype:cutscene-complete"), Is.True);
+                Assert.That(saved.story.CompletedCutscenes["base:cutscene-prototype"], Is.EqualTo("completed"));
             }
             finally { System.IO.File.Delete(GameSaveService.GetSavePath(slot)); }
         }
@@ -238,7 +265,7 @@ namespace Core.Scripting.Editor
             Assert.That(cancelled.Status, Is.EqualTo(CutsceneRunStatus.Cancelled));
             Assert.That(spawn.transform.position, Is.EqualTo(original));
             Assert.That(spawn.State.position, Is.EqualTo(original));
-            Assert.That(GameState.Story.HasFlag("prototype:cutscene-complete"), Is.False);
+            Assert.That(GameState.Story.CompletedCutscenes.ContainsKey("base:cutscene-prototype"), Is.False);
             Assert.That(actor.Controller.IsMovementOwned, Is.False);
             Assert.That(actor.Controller.CurrentVelocity, Is.EqualTo(Vector2.zero));
             Assert.That(service.TryStart("base:cutscene-prototype", out var skipped), Is.True);
@@ -247,7 +274,7 @@ namespace Core.Scripting.Editor
             Assert.That(skipped.Status, Is.EqualTo(CutsceneRunStatus.Skipped), skipped.Error);
             Assert.That(spawn.transform.position, Is.Not.EqualTo(original));
             Assert.That(spawn.State.position, Is.EqualTo(spawn.transform.position));
-            Assert.That(GameState.Story.HasFlag("prototype:cutscene-complete"), Is.True);
+            Assert.That(GameState.Story.CompletedCutscenes["base:cutscene-prototype"], Is.EqualTo("completed"));
             Assert.That(actor.IsControlBlocked, Is.False);
             AssertClosed();
         }
@@ -256,11 +283,11 @@ namespace Core.Scripting.Editor
         public IEnumerator InitialOverlapDeduplicatesPlayerCollidersAndBusyTriggersNeverQueue()
         {
             var service = CutsceneRunner.Instance;
-            var definition = CreateCutscene("fixture:trigger", false, "", "fixture:talk");
+            var definition = CreateCutscene("fixture:trigger", false, "completed", "fixture:talk");
             var catalog = ScriptableObject.CreateInstance<CutsceneCatalog>();
             catalog.Synchronize(new[] { definition });
-            var originalCatalog = typeof(CutsceneRunner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(service);
-            Set(service, "catalog", catalog);
+            var originalCatalog = typeof(CutsceneRunner).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(service);
+            Set(service, "_catalog", catalog);
             var owner = new GameObject("Initial-overlap trigger fixture");
             owner.SetActive(false);
             owner.transform.position = MainCharacter.CurrentMainCharacter.transform.position;
@@ -297,13 +324,13 @@ namespace Core.Scripting.Editor
             {
                 service.Cancel();
                 Object.Destroy(owner); Object.Destroy(duplicate);
-                Set(service, "catalog", originalCatalog);
+                Set(service, "_catalog", originalCatalog);
                 Object.Destroy(catalog); Object.Destroy(definition);
             }
         }
 
         [UnityTest]
-        public IEnumerator DisablingTheCutsceneOwnerClosesItsDialogueAndWritesNoCompletionFlag()
+        public IEnumerator DisablingTheCutsceneOwnerClosesItsDialogueAndWritesNoCompletionOutcome()
         {
             var service = CutsceneRunner.Instance;
             var definition = CreateCutscene("fixture:disable", true, "fixture_disabled", "fixture:talk");
@@ -314,7 +341,7 @@ namespace Core.Scripting.Editor
                 Assert.That(_runner.IsDialogueActive, Is.True);
                 service.enabled = false;
                 Assert.That(run.Status, Is.EqualTo(CutsceneRunStatus.Cancelled));
-                Assert.That(GameState.Story.HasFlag("fixture_disabled"), Is.False);
+                Assert.That(GameState.Story.CompletedCutscenes.ContainsKey("fixture:disable"), Is.False);
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
                 AssertClosed();
             }
@@ -325,7 +352,7 @@ namespace Core.Scripting.Editor
         public IEnumerator UnsafeDialogueIsRejectedBeforeAnyCutsceneClaimsAreAcquired()
         {
             var service = CutsceneRunner.Instance;
-            var definition = CreateCutscene("fixture:unsafe", false, "", "fixture:error");
+            var definition = CreateCutscene("fixture:unsafe", false, "completed", "fixture:error");
             try
             {
                 Assert.That(() => service.TryStart(definition, out _),
@@ -363,7 +390,7 @@ namespace Core.Scripting.Editor
                 Assert.That(actor.GetComponent<GameCharacter>().IsControlBlocked, Is.False);
                 Assert.That(actor.GetComponent<GameCharacter>().Controller.IsMovementOwned, Is.False);
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
-                Assert.That(GameState.Story.HasFlag("prototype:cutscene-complete"), Is.False);
+                Assert.That(GameState.Story.CompletedCutscenes.ContainsKey("base:cutscene-prototype"), Is.False);
                 AssertClosed();
             }
             finally { service.Cancel(); Object.Destroy(obstacle); }
@@ -385,7 +412,7 @@ namespace Core.Scripting.Editor
             var deadline = Time.realtimeSinceStartup + 15;
             while (!level.SceneReady && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(level.SceneReady, Is.True);
-            Assert.That(GameState.Story.HasFlag("prototype:cutscene-complete"), Is.False);
+            Assert.That(GameState.Story.CompletedCutscenes.ContainsKey("base:cutscene-prototype"), Is.False);
             Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
             AssertClosed();
             var restored = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
@@ -478,7 +505,7 @@ namespace Core.Scripting.Editor
             }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding");
             definition.Configure("fixture:binding", map, compiled.Lua, steps, false,
-                new CutsceneCompletion("", Array.Empty<string>(), Array.Empty<CutsceneActorOutcome>()));
+                new CutsceneCompletion(Array.Empty<CutsceneActorOutcome>()));
         }
 
         private void AssertClosed()

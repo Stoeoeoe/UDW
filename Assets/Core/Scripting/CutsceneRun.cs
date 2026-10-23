@@ -13,16 +13,18 @@ namespace Core.Scripting
     public sealed class CutsceneRun : IDisposable
     {
         private readonly CutsceneRunner _owner;
+        private readonly CutsceneLuaApi _cutscene;
         public Guid Id { get; } = Guid.NewGuid();
         public CutsceneDefinition Definition { get; }
         public CutsceneRunStatus Status { get; internal set; } = CutsceneRunStatus.Running;
         public string Error { get; internal set; }
+        public string Outcome => _cutscene.Outcome;
         internal LuaExecutionSession Session { get; }
         internal CutscenePlacement[] Placements { get; }
 
         internal CutsceneRun(CutsceneRunner owner, CutsceneDefinition definition,
-            LuaExecutionSession session, CutscenePlacement[] placements)
-        { _owner = owner; Definition = definition; Session = session; Placements = placements; }
+            LuaExecutionSession session, CutscenePlacement[] placements, CutsceneLuaApi cutscene)
+        { _owner = owner; Definition = definition; Session = session; Placements = placements; _cutscene = cutscene; }
 
         public void Cancel() => _owner.Cancel(this);
         public bool Skip() => _owner.Skip(this);

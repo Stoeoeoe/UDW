@@ -5,16 +5,13 @@
   "mapId": "base:map-1",
   "allowSkip": true,
   "completion": {
-    "flag": "prototype:cutscene-complete",
-    "setFlags": [
-      "prototype:met-host"
-    ],
     "actorOutcomes": [
       {
         "actor": "cutscene-prototype-host-01",
         "anchor": "prototype-meeting"
       }
-    ]
+    ],
+    "outcome": "completed"
   },
   "sequence": [
     {

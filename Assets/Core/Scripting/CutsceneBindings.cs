@@ -13,10 +13,11 @@ namespace Core.Scripting
     {
         public static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
             VulcanusDialogueRunner dialogueRunner, float movementTimeoutSeconds) =>
-            BindCurrentMap(definition, dialogueRunner, movementTimeoutSeconds, out _);
+            BindCurrentMap(definition, dialogueRunner, movementTimeoutSeconds, out _, out _);
 
         internal static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
-            VulcanusDialogueRunner dialogueRunner, float movementTimeoutSeconds, out MapActorLuaApi actors)
+            VulcanusDialogueRunner dialogueRunner, float movementTimeoutSeconds, out MapActorLuaApi actors,
+            out CutsceneLuaApi cutscene)
         {
             if (!definition) throw new ArgumentNullException(nameof(definition));
             definition.RequireValidConfiguration();
@@ -31,13 +32,16 @@ namespace Core.Scripting
             try
             {
                 MapActorLuaApi actorApi = null;
+                var cutsceneApi = new CutsceneLuaApi(definition.Completion.Outcome);
                 var bindings = BindSequence(definition.Steps, "cutscene",
                     (typeof(MapActorLuaApi), () => actorApi = MapActorLuaApi.BindCurrentMap(movementTimeoutSeconds)),
-                    (typeof(DialogueLuaApi), () => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)));
+                    (typeof(DialogueLuaApi), () => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
+                    (typeof(CutsceneLuaApi), () => cutsceneApi));
                 // An endpoint can reference an actor even when no sequence action moves it.
                 if (definition.Completion.ActorOutcomes.Count > 0)
                     actorApi ??= MapActorLuaApi.BindCurrentMap(movementTimeoutSeconds);
                 actors = actorApi;
+                cutscene = cutsceneApi;
                 return bindings;
             }
             catch (Exception error)

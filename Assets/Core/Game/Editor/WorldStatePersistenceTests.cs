@@ -243,6 +243,7 @@ namespace Core.Game.Editor
             typeof(DivineFavourState).GetMethod("SetFavour", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?.Invoke(data.player.Favour, new object[] { "mars", 12 });
             data.story.SetFlag("met-blacksmith");
+            data.story.CompletedCutscenes["test:confession"] = "admitted";
             data.world.Set("base:grocer", new ShopState
             {
                 offerings = new Dictionary<string, ShopStock>
@@ -312,6 +313,7 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Inventory.Slots[2].Quantity, Is.EqualTo(7));
                 Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(1234));
                 Assert.That(loaded.story.HasFlag("met-blacksmith"), Is.True);
+                Assert.That(loaded.story.CompletedCutscenes["test:confession"], Is.EqualTo("admitted"));
                 Assert.That(loaded.world.TryGet("base:grocer", out ShopState shop), Is.True);
                 Assert.That(shop.offerings["lentils"].quantity, Is.EqualTo(7));
                 Assert.That(shop.offerings["lentils"].available, Is.True);

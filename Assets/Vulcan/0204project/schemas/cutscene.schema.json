@@ -68,23 +68,9 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "flag",
-        "setFlags",
         "actorOutcomes"
       ],
       "properties": {
-        "flag": {
-          "type": "string",
-          "pattern": "^$|\\S"
-        },
-        "setFlags": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "pattern": "\\S"
-          }
-        },
         "actorOutcomes": {
           "type": "array",
           "items": {
@@ -105,6 +91,11 @@
               }
             }
           }
+        },
+        "outcome": {
+          "type": "string",
+          "pattern": "\\S",
+          "default": "completed"
         }
       }
     }

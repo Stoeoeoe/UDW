@@ -49,6 +49,7 @@ namespace Core.Tile.Editor.Vulcanus
                 Assert.That(definition.Steps[0].Arguments[0].Name, Is.EqualTo("dialogue"));
                 Assert.That(definition.Steps[0].Arguments[0].Value, Is.EqualTo("base:greeting"));
                 Assert.That(definition.ValidateConfiguration(), Is.Empty);
+                Assert.That(definition.Completion.Outcome, Is.EqualTo("completed"));
             }
             finally { Object.DestroyImmediate(definition); }
         }
@@ -76,17 +77,16 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
-        public void CompletionPlanPreservesAuthoredFlagsEndpointsAndSkipPermission()
+        public void CompletionPlanPreservesAuthoredOutcomeEndpointsAndSkipPermission()
         {
             var source = Source("test:outcomes");
             source["allowSkip"] = true;
-            source["completion"] = JObject.Parse("{ 'flag':'intro_done', 'setFlags':['met_host'], 'actorOutcomes':[{'actor':'host-01','anchor':'meeting'}] }");
+            source["completion"] = JObject.Parse("{ 'outcome':'admitted', 'actorOutcomes':[{'actor':'host-01','anchor':'meeting'}] }");
             var definition = Parse(source);
             try
             {
                 Assert.That(definition.AllowSkip, Is.True);
-                Assert.That(definition.Completion.Flag, Is.EqualTo("intro_done"));
-                Assert.That(definition.Completion.SetFlags, Is.EqualTo(new[] { "met_host" }));
+                Assert.That(definition.Completion.Outcome, Is.EqualTo("admitted"));
                 Assert.That(definition.Completion.ActorOutcomes[0].Actor, Is.EqualTo("host-01"));
                 Assert.That(definition.Completion.ActorOutcomes[0].Anchor, Is.EqualTo("meeting"));
             }
@@ -99,6 +99,16 @@ namespace Core.Tile.Editor.Vulcanus
             var source = Source("test:outcomes");
             source["completion"]["actorOutcomes"] = JArray.Parse("[{'actor':'host','anchor':'a'},{'actor':'host','anchor':'b'}]");
             Assert.That(() => Parse(source), Throws.Exception.With.Message.Contains("unique actors"));
+        }
+
+        [TestCase("null")]
+        [TestCase("''")]
+        [TestCase("' '")]
+        public void ExplicitInvalidOutcomeFailsImport(string value)
+        {
+            var source = Source("test:outcomes");
+            source["completion"]["outcome"] = JToken.Parse(value);
+            Assert.That(() => Parse(source), Throws.Exception.With.Message.Contains("outcome"));
         }
 
         [UnityTest]
@@ -157,7 +167,7 @@ namespace Core.Tile.Editor.Vulcanus
             ["id"] = id,
             ["mapId"] = "map-1",
             ["allowSkip"] = false,
-            ["completion"] = new JObject { ["flag"] = "", ["setFlags"] = new JArray(), ["actorOutcomes"] = new JArray() },
+            ["completion"] = new JObject { ["actorOutcomes"] = new JArray() },
             ["sequence"] = new JArray(new JObject
             {
                 ["id"] = "speak", ["action"] = "dialogue.play",

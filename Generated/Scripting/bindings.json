@@ -71,6 +71,34 @@
       ]
     },
     {
+      "path": "Cutscene",
+      "methods": [
+        {
+          "name": "SetOutcome",
+          "parameters": [
+            {
+              "name": "outcome",
+              "type": "string"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "cutscene.setOutcome",
+            "displayName": "Set outcome",
+            "category": "Cutscene",
+            "description": "Choose the outcome saved when this cutscene finishes.",
+            "contexts": [
+              "cutscene"
+            ],
+            "execution": "immediate",
+            "failure": "terminatesSession"
+          }
+        }
+      ]
+    },
+    {
       "path": "Dialogue",
       "methods": [
         {
