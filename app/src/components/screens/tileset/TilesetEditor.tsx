@@ -37,11 +37,13 @@ export const TilesetEditor: React.FC = () => {
   const { isOpen: isMetaOpen, onClose: onMetaClose } = useDisclosure();
 
   const rightPanel = activeTileset ? (
-    tilesetMode === 'terrain' ? (
-      <TilesetTerrainPanel tileset={activeTileset} />
-    ) : (
-      <TilesetInspector tileset={activeTileset} selectedIndex={selectedTileIndex} />
-    )
+    <Box h="full" overflowY="auto">
+      {tilesetMode === 'terrain' ? (
+        <TilesetTerrainPanel tileset={activeTileset} />
+      ) : (
+        <TilesetInspector tileset={activeTileset} selectedIndex={selectedTileIndex} />
+      )}
+    </Box>
   ) : null;
 
   useEffect(() => {

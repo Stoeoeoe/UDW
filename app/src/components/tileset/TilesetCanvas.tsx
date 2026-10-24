@@ -85,6 +85,13 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   });
 
   const effectiveZoom = forcedZoom ?? internalZoom;
+  const staticCanvasSize =
+    mode === 'static' && sprite
+      ? {
+          width: Math.round(sprite.width * effectiveZoom),
+          height: Math.round(sprite.height * effectiveZoom),
+        }
+      : null;
 
   // Constrain logic
   const getConstrainedPos = useCallback(
@@ -963,15 +970,21 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   };
 
   return (
-    <Box w="full" h="full" position="relative" overflow="hidden" bg="editorCanvasBg">
+    <Box
+      w={staticCanvasSize ? `${staticCanvasSize.width}px` : 'full'}
+      h={staticCanvasSize ? `${staticCanvasSize.height}px` : 'full'}
+      position="relative"
+      overflow="hidden"
+      bg="editorCanvasBg"
+    >
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
         style={{
           display: 'block',
-          width: '100%',
-          height: '100%',
+          width: staticCanvasSize ? `${staticCanvasSize.width}px` : '100%',
+          height: staticCanvasSize ? `${staticCanvasSize.height}px` : '100%',
           touchAction: 'none',
           cursor: isPanning ? 'grabbing' : 'crosshair',
         }}
