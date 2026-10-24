@@ -14,9 +14,12 @@ namespace Core.Scripting.Editor
                 Step("approach", "actors.moveTo", new JObject { ["destination"] = "meeting", ["actor"] = "npc-placement" }),
                 Step("greet", "actors.face", new JObject { ["target"] = "player", ["actor"] = "npc-placement" }),
                 Step("talk", "dialogue.play", new JObject { ["dialogue"] = "base:greeting" }));
-            var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:intro");
+            var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:intro", out var steps);
             Assert.That(compiled, Is.EqualTo("Actors.MoveTo(\"npc-placement\", \"meeting\");\nActors.Face(\"npc-placement\", \"player\");\nDialogue.Play(\"base:greeting\");\n"));
             Assert.That(CutsceneSequenceCompiler.Compile(sequence, "fixture:intro"), Is.EqualTo(compiled));
+            Assert.That(steps.Select(step => step.Id), Is.EqualTo(new[] { "approach", "greet", "talk" }));
+            Assert.That(steps[0].Arguments.Select(argument => argument.Name), Is.EqualTo(new[] { "actor", "destination" }));
+            Assert.That(steps[0].Arguments.Select(argument => argument.Value), Is.EqualTo(new[] { "npc-placement", "meeting" }));
         }
 
         [Test]

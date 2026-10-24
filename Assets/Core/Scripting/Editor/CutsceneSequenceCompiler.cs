@@ -10,11 +10,14 @@ namespace Core.Scripting.Editor
     /// <summary>Emits one Lua call per authored step; the definition retains the steps for diagnostics.</summary>
     internal static class CutsceneSequenceCompiler
     {
-        public static string Compile(JArray sequence, string source)
+        public static string Compile(JArray sequence, string source) => Compile(sequence, source, out _);
+
+        public static string Compile(JArray sequence, string source, out CutsceneStep[] steps)
         {
             if (sequence == null) throw new ArgumentNullException(nameof(sequence));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
             if (sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
+            steps = new CutsceneStep[sequence.Count];
 
             var actions = VulcanusLuaEngine.DescribeBindings().modules
                 .SelectMany(module => module.methods.Where(method => method.action != null && method.action.contexts.Contains("cutscene"))
@@ -40,14 +43,18 @@ namespace Core.Scripting.Editor
                 RejectUnknownFields(arguments, parameters.Select(parameter => parameter.name), location);
 
                 var literals = new string[parameters.Length];
+                var importedArguments = new CutsceneArgument[parameters.Length];
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
                     // Current sequence actions use string references.
                     if (parameter.type != "string")
                         throw Invalid(location, $"The sequence compiler does not support parameter type '{parameter.type}'.");
-                    literals[parameterIndex] = LuaString(RequiredString(arguments[parameter.name], location, parameter.name));
+                    var value = RequiredString(arguments[parameter.name], location, parameter.name);
+                    importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, value);
+                    literals[parameterIndex] = LuaString(value);
                 }
+                steps[index] = new CutsceneStep(id, actionId, importedArguments);
                 lua.Append(action.Module).Append('.').Append(action.Method.name).Append('(')
                     .Append(string.Join(", ", literals)).Append(");\n");
             }

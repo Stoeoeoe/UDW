@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -26,9 +25,6 @@ namespace Core.Scripting
             this.arguments = (CutsceneArgument[])arguments.Clone();
         }
 
-        internal bool HasValidArguments() => arguments != null &&
-            arguments.All(argument => !string.IsNullOrWhiteSpace(argument.Name) && !string.IsNullOrWhiteSpace(argument.Value)) &&
-            arguments.Select(argument => argument.Name).Distinct(StringComparer.Ordinal).Count() == arguments.Length;
     }
 
     [Serializable]

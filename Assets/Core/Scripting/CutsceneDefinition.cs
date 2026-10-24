@@ -53,22 +53,7 @@ namespace Core.Scripting
                 errors.Add(new ConfigurationError(this, "lua", "Requires the compiled sequence."));
             if (steps == null || steps.Length == 0)
                 errors.Add(new ConfigurationError(this, "steps", "Requires its authored steps."));
-            else
-            {
-                var ids = new HashSet<string>(StringComparer.Ordinal);
-                foreach (var step in steps)
-                {
-                    if (step == null || string.IsNullOrWhiteSpace(step.Id) || !ids.Add(step.Id) || string.IsNullOrWhiteSpace(step.ActionId))
-                    {
-                        errors.Add(new ConfigurationError(this, "steps", "Requires unique authored step IDs and action IDs."));
-                        continue;
-                    }
-                    if (!step.HasValidArguments())
-                        errors.Add(new ConfigurationError(this, step.Id, "Requires non-empty named arguments without duplicate names."));
-                }
-                if (lua == null || lua.Count(character => character == '\n') != steps.Length)
-                    errors.Add(new ConfigurationError(this, "steps", "Requires one authored step per compiled Lua line."));
-            }
+            // Step structure and action signatures are checked by the source compiler before import.
             return errors;
         }
     }

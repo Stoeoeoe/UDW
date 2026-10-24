@@ -61,7 +61,6 @@ namespace Core.Scripting
             if (!definition) throw new ArgumentNullException(nameof(definition));
             run = null;
             if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || UrGUIManager.HasOpenScreens) return false;
-            definition.RequireValidConfiguration();
             if (GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId)) return false;
             var player = MainCharacter.CurrentMainCharacter;
             if (!player || !player.IsRuntimeInitialized) throw new InvalidOperationException("Cutscenes require the initialized player.");

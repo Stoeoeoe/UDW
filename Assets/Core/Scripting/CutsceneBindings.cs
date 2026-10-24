@@ -19,7 +19,6 @@ namespace Core.Scripting
             VulcanusDialogueRunner dialogueRunner, out MapActorLuaApi actors)
         {
             if (!definition) throw new ArgumentNullException(nameof(definition));
-            definition.RequireValidConfiguration();
             if (!LevelManager.Instance.SceneReady)
                 throw new InvalidOperationException("Bind a cutscene after the location is SceneReady.");
             if (!MapManager.Instance.CurrentMap)
@@ -54,16 +53,17 @@ namespace Core.Scripting
             // so only create it below if this sequence actually uses one of its actions.
             var descriptions = LuaBindingRegistry.InspectTypes(factories.Select(factory => factory.Type).ToArray());
             var actions = descriptions.GetActions()
+                .Where(method => method.Action.Contexts.Contains(context))
                 .ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
             var instances = new Dictionary<Type, object>();
             foreach (var step in steps)
             {
                 try
                 {
-                    if (!actions.TryGetValue(step.ActionId, out var method) ||
-                        !method.Action.Contexts.Contains(context))
-                        throw new InvalidOperationException($"Unsupported {context} action '{step.ActionId}'.");
-                    var arguments = ReadStepArguments(step, method);
+                    var method = actions[step.ActionId];
+                    // Imported arguments already match this signature. Only arrange them for reflection.
+                    var arguments = method.Parameters.Select(parameter => (object)step.Arguments
+                        .Single(argument => argument.Name == parameter.Name).Value).ToArray();
                     var type = method.Info.DeclaringType;
                     if (!instances.TryGetValue(type, out var api))
                     {
@@ -82,17 +82,5 @@ namespace Core.Scripting
             return new LuaBindingRegistry(instances.Values.ToArray());
         }
 
-        private static object[] ReadStepArguments(CutsceneStep step, LuaBindingRegistry.Method method)
-        {
-            var arguments = step.Arguments.ToDictionary(argument => argument.Name, argument => argument.Value, StringComparer.Ordinal);
-            if (arguments.Count != method.Parameters.Length || method.Parameters.Any(parameter => !arguments.ContainsKey(parameter.Name)))
-                throw new InvalidOperationException($"Expected named arguments: {string.Join(", ", method.Parameters.Select(parameter => parameter.Name))}.");
-            // The sequence format supports string references. Handwritten Lua has the wider primitive API.
-            if (method.Parameters.Any(parameter => parameter.ParameterType != typeof(string)) ||
-                arguments.Values.Any(string.IsNullOrWhiteSpace))
-                throw new InvalidOperationException("Sequence arguments must be non-empty strings.");
-            // Authored arguments are named; reflection expects the C# parameter order.
-            return method.Parameters.Select(parameter => (object)arguments[parameter.Name]).ToArray();
-        }
     }
 }

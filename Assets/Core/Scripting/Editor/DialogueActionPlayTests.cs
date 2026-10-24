@@ -178,9 +178,9 @@ namespace Core.Scripting.Editor
             var steps = beforeDialogue.Append(Step("talk", "dialogue.play", ("dialogue", dialogue))).ToArray();
             var sequence = new JArray(steps.Select(step => new JObject { ["id"] = step.Id, ["action"] = step.ActionId,
                 ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value))) }));
-            var compiled = CutsceneSequenceCompiler.Compile(sequence, id);
+            var compiled = CutsceneSequenceCompiler.Compile(sequence, id, out var importedSteps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, steps, skip,
+            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, importedSteps, skip,
                 new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>(), $"GameState.Story.SetFlag('{completionFlag}')"));
             return definition;
         }
@@ -499,8 +499,8 @@ namespace Core.Scripting.Editor
                 ["id"] = step.Id, ["action"] = step.ActionId,
                 ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value)))
             }));
-            var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding");
-            definition.Configure("fixture:binding", map, compiled, steps, false,
+            var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding", out var importedSteps);
+            definition.Configure("fixture:binding", map, compiled, importedSteps, false,
                 new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>()));
         }
 

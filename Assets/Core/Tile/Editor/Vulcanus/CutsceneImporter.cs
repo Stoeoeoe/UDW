@@ -39,15 +39,11 @@ namespace Core.Tile.Editor.Vulcanus
 
         private static CutsceneDefinition CreateDefinition(JObject source, string path)
         {
-            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path);
+            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path, out var steps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             try
             {
                 definition.name = (string)source["id"];
-                var steps = ((JArray)source["sequence"]).Cast<JObject>().Select(step => new CutsceneStep(
-                    (string)step["id"], (string)step["action"], ((JObject)step["arguments"]).Properties()
-                        .OrderBy(argument => argument.Name, StringComparer.Ordinal)
-                        .Select(argument => new CutsceneArgument(argument.Name, (string)argument.Value)).ToArray()));
                 var completion = source["onComplete"];
                 var placements = completion["actorPlacements"].Select(placement =>
                     new CutsceneActorPlacement((string)placement["actor"], (string)placement["anchor"])).ToArray();

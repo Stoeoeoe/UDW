@@ -69,6 +69,11 @@ arguments alongside the generated Lua. Runtime diagnostics can use
 `definition.Steps[line - 1].Id`; reference validation can inspect the arguments
 without parsing executable Lua.
 
+The compiler creates these steps in the same pass that validates the JSON and
+emits Lua. The importer retains that exact output instead of parsing the JSON
+again. Argument shape, types and signatures belong to compilation; definition
+validation checks the required asset fields without repeating step validation.
+
 This compiler validates shape and action signatures. Reference existence is
 checked separately against the map and dialogue bindings before playback.
 The IDs above illustrate the format; they are not a playable fixture.
@@ -96,8 +101,11 @@ The binder discovers actions and their checks through these attributes. Adding
 an action to an existing API module needs no binder change. A new API module
 still needs its construction function wired into `CutsceneBindings`.
 
-`CutsceneBindings.BindSequence` owns step argument checks, lazy module creation,
-and pre-playback reference validation. `LuaBindingRegistry` supplies the validated
+`CutsceneBindings.BindSequence` orders the already-validated named arguments for
+reflection, creates the modules used by the sequence, and checks live references.
+The runner and binder do not repeat authored-definition validation during gameplay;
+import and the existing before-play/build validation establish that contract.
+`LuaBindingRegistry` supplies the validated
 API methods and attaches calls to Lua; it does not interpret cutscene steps.
 
 ## Running a cutscene
