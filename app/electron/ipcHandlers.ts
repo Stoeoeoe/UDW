@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import chokidar from 'chokidar';
@@ -89,6 +89,17 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     if (watchers.length > 0) activeWatchers.set(projectPath, watchers);
   }
   // IPC Handlers for Native File System
+  ipcMain.handle('app:reveal-in-explorer', async (_event, { projectPath, relativePath }) => {
+    const projectRoot = path.resolve(projectPath);
+    const filePath = path.resolve(projectRoot, relativePath);
+    const relative = path.relative(projectRoot, filePath);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      throw new Error('The file must be inside the project directory.');
+    }
+    await fs.access(filePath);
+    shell.showItemInFolder(filePath);
+  });
+
   ipcMain.handle('app:open-project', async () => {
     if (!win) return null;
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {

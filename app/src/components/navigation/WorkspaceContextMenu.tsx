@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box, Divider, Portal, Text, VStack } from '@chakra-ui/react';
+import { Box, Divider, Portal, Text, VStack, useToast } from '@chakra-ui/react';
 import { CreateItemDialog } from '../common/CreateItemDialog';
 import {
   canCreateResourceKind,
@@ -45,6 +45,7 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
   onCreateResource,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!state) return;
@@ -95,7 +96,20 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
             item.kind === 'divider' ? (
               <Divider key={item.key} borderColor="whiteAlpha.100" />
             ) : (
-              <MenuItem key={item.key} onClick={() => void item.onClick()} color={item.color}>
+              <MenuItem
+                key={item.key}
+                onClick={() => {
+                  void Promise.resolve().then(item.onClick).catch((error: unknown) => {
+                    toast({
+                      title: `${item.label} failed`,
+                      description: error instanceof Error ? error.message : String(error),
+                      status: 'error',
+                      isClosable: true,
+                    });
+                  });
+                }}
+                color={item.color}
+              >
                 {item.label}
               </MenuItem>
             ),
@@ -291,9 +305,9 @@ function buildMenuItems(
       kind: 'item',
       key: 'reveal',
       label: 'Reveal in File Explorer',
-      onClick: () => {
-        handleReveal(node);
+      onClick: async () => {
         onClose();
+        await handleReveal(node);
       },
     });
   }
@@ -347,7 +361,7 @@ async function handleDelete(node: WorkspaceTreeNode): Promise<void> {
   await deleteEditorResourceDocument(node.document);
 }
 
-function handleReveal(node: WorkspaceTreeNode): void {
+async function handleReveal(node: WorkspaceTreeNode): Promise<void> {
   if (!node.document) return;
 
   const projectPath = useEditorStore.getState().projectPath;
@@ -356,7 +370,7 @@ function handleReveal(node: WorkspaceTreeNode): void {
   const relativePath = getEditorResourceFileExplorerPath(node.document);
 
   if (relativePath) {
-    void window.ipcRenderer.invoke('app:reveal-in-explorer', { projectPath, relativePath });
+    await window.ipcRenderer.invoke('app:reveal-in-explorer', { projectPath, relativePath });
   }
 }
 
