@@ -20,6 +20,10 @@ export const EditorModal: React.FC<EditorModalProps> = ({
   size = 'xl',
   initialFocusRef,
 }) => {
+  // Closing must release the portal and focus lock together. Keeping them alive
+  // for an exit animation can leave an invisible modal over the next dialog.
+  if (!isOpen) return null;
+
   return (
     <Modal
       isOpen={isOpen}

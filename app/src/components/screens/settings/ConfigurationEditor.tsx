@@ -1051,35 +1051,43 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         mainContent={mainContent}
       />
 
-      <TerrainDialog
-        key={editingTerrainId ?? 'new-terrain'}
-        isOpen={terrainDialog.isOpen}
-        onClose={terrainDialog.onClose}
-        editingId={editingTerrainId}
-      />
+      {terrainDialog.isOpen && (
+        <TerrainDialog
+          key={editingTerrainId ?? 'new-terrain'}
+          isOpen={terrainDialog.isOpen}
+          onClose={terrainDialog.onClose}
+          editingId={editingTerrainId}
+        />
+      )}
 
-      <LayerDefinitionDialog
-        key={editingLayerId ?? 'new-layer'}
-        isOpen={layerDialog.isOpen}
-        onClose={layerDialog.onClose}
-        editingId={editingLayerId}
-        nextZIndex={nextLayerZIndex}
-      />
+      {layerDialog.isOpen && (
+        <LayerDefinitionDialog
+          key={editingLayerId ?? 'new-layer'}
+          isOpen={layerDialog.isOpen}
+          onClose={layerDialog.onClose}
+          editingId={editingLayerId}
+          nextZIndex={nextLayerZIndex}
+        />
+      )}
 
-      <MetadataDefinitionDialog
-        key={editingMetadataKey ?? `new-${metadataKind}`}
-        isOpen={metadataDialog.isOpen}
-        onClose={metadataDialog.onClose}
-        editingKey={editingMetadataKey}
-        kind={metadataKind}
-      />
+      {metadataDialog.isOpen && (
+        <MetadataDefinitionDialog
+          key={editingMetadataKey ?? `new-${metadataKind}`}
+          isOpen={metadataDialog.isOpen}
+          onClose={metadataDialog.onClose}
+          editingKey={editingMetadataKey}
+          kind={metadataKind}
+        />
+      )}
 
-      <ItemClassDialogModal
-        key={editingItemClassId ?? 'new-item-class'}
-        isOpen={itemClassDialog.isOpen}
-        onClose={itemClassDialog.onClose}
-        editingId={editingItemClassId}
-      />
+      {itemClassDialog.isOpen && (
+        <ItemClassDialogModal
+          key={editingItemClassId ?? 'new-item-class'}
+          isOpen={itemClassDialog.isOpen}
+          onClose={itemClassDialog.onClose}
+          editingId={editingItemClassId}
+        />
+      )}
     </>
   );
 };
