@@ -1,3 +1,4 @@
+import type { AnyResourceDefinition } from '../lib/resourceRegistry';
 import { z } from 'zod';
 
 export const editorResourceTypeIds = [
@@ -68,6 +69,7 @@ export interface EditorResourceDescriptor extends EditorResource {
 
 export interface EditorResourceTypeDefinition {
   id: EditorResourceTypeId;
+  documentDefinition?: AnyResourceDefinition;
   label: string;
   collectionLabel: string;
   editorIcon: string;

@@ -1,3 +1,10 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  resourceSchemaPath,
+  normalizeResourceDocument,
+} from '../../lib/resourceRegistry';
+import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { Actor } from '../../types/schema';
@@ -31,11 +38,13 @@ export const createActorSlice: ImmerStateCreator<ActorSlice> = (set, get) => ({
     }),
 
   addActor: async (actor) => {
+    actor = normalizeResourceDocument(actor, 'actor', get().project?.idPrefix);
+    assertUniqueResourceIds([...get().actors, actor]);
     set((state) => {
       state.actors.push(castDraft(actor));
     });
-    await fileSystem.saveJson('actors', `${actor.id}.actor.json`, {
-      $schema: '../../schemas/actor.schema.json',
+    await fileSystem.saveJson(resourceRegistry.actor.folder, resourceFileKey('actor', actor.id), {
+      $schema: resourceSchemaPath('actor'),
       ...actor,
     });
   },
@@ -45,14 +54,18 @@ export const createActorSlice: ImmerStateCreator<ActorSlice> = (set, get) => ({
     set((state) => {
       const actorIndex = state.actors.findIndex((entry) => entry.id === id);
       if (actorIndex < 0) return;
-      const merged = { ...state.actors[actorIndex], ...updates } as Actor;
+      const merged = normalizeResourceDocument(
+        { ...state.actors[actorIndex], ...updates, id: state.actors[actorIndex].id } as Actor,
+        'actor',
+        get().project?.idPrefix,
+      );
       updatedActor = merged;
       state.actors[actorIndex] = castDraft(merged);
     });
     const actor = updatedActor ?? get().actors.find((entry) => entry.id === id);
     if (actor) {
-      await fileSystem.saveJson('actors', `${actor.id}.actor.json`, {
-        $schema: '../../schemas/actor.schema.json',
+      await fileSystem.saveJson(resourceRegistry.actor.folder, resourceFileKey('actor', actor.id), {
+        $schema: resourceSchemaPath('actor'),
         ...actor,
       });
     }
@@ -63,6 +76,6 @@ export const createActorSlice: ImmerStateCreator<ActorSlice> = (set, get) => ({
       state.actors = state.actors.filter((a) => a.id !== id);
       if (state.selectedActorId === id) state.selectedActorId = null;
     });
-    await fileSystem.deleteJson('actors', `${id}.actor.json`);
+    await fileSystem.deleteJson(resourceRegistry.actor.folder, resourceFileKey('actor', id));
   },
 });

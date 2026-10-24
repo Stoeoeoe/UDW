@@ -61,7 +61,7 @@ describe('tileset save scheduling', () => {
     const ts: Tileset = {
       version: 1,
       name: 'TS1',
-      id: 'ts1',
+      id: 'base:ts1',
       spriteSheet: 's.png',
       columns: 4,
       tileCount: 1,
@@ -72,7 +72,7 @@ describe('tileset save scheduling', () => {
     await useEditorStore.getState().addTileset(ts);
 
     // Update a tile definition which should schedule another save
-    useEditorStore.getState().updateTileDefinition('ts1', 0, {
+    useEditorStore.getState().updateTileDefinition('base:ts1', 0, {
       collision: { type: 'full' },
     } as Partial<TileDefinition>);
 
@@ -86,7 +86,7 @@ describe('tileset save scheduling', () => {
     const calls = vi.mocked(fs.fileSystem.saveJson).mock.calls;
     const last = calls[calls.length - 1];
     expect(last[0]).toBe('tilesets');
-    expect(last[1]).toBe('ts1.vts');
+    expect(last[1]).toBe('base:ts1.vts');
     // payload snapshot should contain the tiles array with updated collision
     expect(last[2]).toBeTruthy();
     expect(last[2].tiles[0].collision.type).toBe('full');
@@ -98,7 +98,7 @@ describe('tileset save scheduling', () => {
     const ts: Tileset = {
       version: 1,
       name: 'TS1',
-      id: 'ts1',
+      id: 'base:ts1',
       spriteSheet: 's.png',
       columns: 4,
       tileCount: 1,
@@ -108,7 +108,7 @@ describe('tileset save scheduling', () => {
 
     await useEditorStore.getState().addTileset(ts);
 
-    useEditorStore.getState().updateTileDefinition('ts1', 0, {
+    useEditorStore.getState().updateTileDefinition('base:ts1', 0, {
       pivotY: 2.6,
     } as Partial<TileDefinition>);
 
@@ -126,7 +126,7 @@ describe('tileset save scheduling', () => {
     const ts: Tileset = {
       version: 1,
       name: 'TS1',
-      id: 'ts1',
+      id: 'base:ts1',
       spriteSheet: 's.png',
       columns: 4,
       tileCount: 64,
@@ -137,7 +137,7 @@ describe('tileset save scheduling', () => {
 
     await useEditorStore.getState().addTileset(ts);
 
-    await useEditorStore.getState().updateTileset('ts1', {
+    await useEditorStore.getState().updateTileset('base:ts1', {
       objects: [
         {
           id: 'obj_tree',

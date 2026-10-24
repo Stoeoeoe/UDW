@@ -1,3 +1,4 @@
+import { resourceFileKey, resourceRegistry, resourceSchemaPath } from './resourceRegistry';
 /**
  * Save Manager - central save-unit tracking with manual save support and optional autosave.
  */
@@ -267,10 +268,14 @@ export async function saveMapImmediate(map: GameMap): Promise<void> {
   useSaveStore.getState().markSaving(saveUnitId);
 
   try {
-    await fileSystem.saveJson('maps', `${map.id}.vmap`, {
-      $schema: '../../schemas/map.schema.json',
-      ...serializeMap(map),
-    });
+    await fileSystem.saveJson(
+      resourceRegistry.location.folder,
+      resourceFileKey('location', map.id),
+      {
+        $schema: resourceSchemaPath('location'),
+        ...serializeMap(map),
+      },
+    );
     useSaveStore.getState().markSaved(saveUnitId);
     scheduleSavedReset(saveUnitId);
   } catch (error) {
@@ -308,10 +313,14 @@ export async function saveProjectImmediate(
 
   try {
     const { entityTypes: _legacyEntityTypes, ...projectToSave } = project;
-    await fileSystem.saveJson('', `${project.id}.vproj`, {
-      $schema: '../schemas/project.schema.json',
-      ...projectToSave,
-    });
+    await fileSystem.saveJson(
+      resourceRegistry.project.folder,
+      resourceFileKey('project', project.id),
+      {
+        $schema: resourceSchemaPath('project'),
+        ...projectToSave,
+      },
+    );
     useSaveStore.getState().markSaved(saveUnitId);
     scheduleSavedReset(saveUnitId);
   } catch (error) {
@@ -348,7 +357,11 @@ export async function saveTilesetImmediate(tileset: Tileset): Promise<void> {
 
   try {
     const snapshot = serializeTileset(JSON.parse(JSON.stringify(tileset)) as Tileset);
-    await fileSystem.saveJson('tilesets', `${tileset.id}.vts`, snapshot);
+    await fileSystem.saveJson(
+      resourceRegistry.tileset.folder,
+      resourceFileKey('tileset', tileset.id),
+      snapshot,
+    );
     useSaveStore.getState().markSaved(saveUnitId);
     scheduleSavedReset(saveUnitId);
   } catch (error) {
@@ -373,10 +386,14 @@ export function saveDialogueDebounced(dialogue: DialogueDocument): void {
 
 export async function saveDialogueImmediate(dialogue: DialogueDocument): Promise<void> {
   try {
-    await fileSystem.saveJson('dialogues', `${dialogue.id}.dialogue.json`, {
-      $schema: '../../schemas/dialogue.schema.json',
-      ...dialogue,
-    });
+    await fileSystem.saveJson(
+      resourceRegistry.dialogue.folder,
+      resourceFileKey('dialogue', dialogue.id),
+      {
+        $schema: resourceSchemaPath('dialogue'),
+        ...dialogue,
+      },
+    );
   } catch (error) {
     console.error('Failed to save dialogue document:', error);
   }

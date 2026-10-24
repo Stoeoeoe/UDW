@@ -1,3 +1,4 @@
+import { resourceFileKey, resourceRegistry } from './resourceRegistry';
 import {
   cancelPendingSaveUnit,
   clearSaveUnit,
@@ -202,7 +203,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   ) {
     const editor = useEditorStore.getState();
     if (!editor.project) return;
-    const rawProject = await fileSystem.readJson('', `${editor.project.id}.vproj`);
+    const rawProject = await fileSystem.readJson(
+      resourceRegistry.project.folder,
+      resourceFileKey('project', editor.project.id),
+    );
     if (!rawProject) return;
     applyDiscardedProject(rawProject as Project);
     clearSaveUnit(document.saveUnitId);
@@ -211,8 +215,8 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
 
   if (document.kind === 'entity') {
     const rawEntityType = await fileSystem.readJson(
-      'entities',
-      `${document.entityTypeId}.entity.json`,
+      resourceRegistry.entity.folder,
+      resourceFileKey('entity', document.entityTypeId),
     );
     if (!rawEntityType) return;
 
@@ -227,7 +231,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   }
 
   if (document.kind === 'location') {
-    const rawMap = await fileSystem.readJson('maps', `${document.mapId}.vmap`);
+    const rawMap = await fileSystem.readJson(
+      resourceRegistry.location.folder,
+      resourceFileKey('location', document.mapId),
+    );
     if (!rawMap) return;
 
     const editor = useEditorStore.getState();
@@ -252,7 +259,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   }
 
   if (document.kind === 'tileset') {
-    const rawTileset = await fileSystem.readJson('tilesets', `${document.tilesetId}.vts`);
+    const rawTileset = await fileSystem.readJson(
+      resourceRegistry.tileset.folder,
+      resourceFileKey('tileset', document.tilesetId),
+    );
     if (!rawTileset) return;
 
     const nextTileset = normalizeTileset(rawTileset as Tileset);

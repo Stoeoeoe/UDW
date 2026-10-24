@@ -1,3 +1,4 @@
+import { resourceFileKey, resourceRegistry } from './resourceRegistry';
 import { fileSystem } from '../lib/fileSystem';
 import { useEditorStore } from '../store/useEditorStore';
 import { WorkspaceDocument } from '../types/workspace';
@@ -12,6 +13,7 @@ import {
 export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTypeDefinition> = {
   location: {
     id: 'location',
+    documentDefinition: resourceRegistry.location,
     label: 'Location',
     collectionLabel: 'Locations',
     editorIcon: 'locations',
@@ -28,7 +30,8 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canEditMetadata: true,
     canDelete: true,
     canRevealInFileExplorer: true,
-    fileExplorerPath: (resourceId) => `maps/${resourceId}.vmap`,
+    fileExplorerPath: (resourceId) =>
+      `${resourceRegistry.location.folder}/${fileSystem.resolveFilename(resourceRegistry.location.folder, resourceFileKey('location', resourceId))}`,
     deleteResource: async (resourceId) => {
       await useEditorStore.getState().deleteMap(resourceId);
     },
@@ -37,6 +40,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
   },
   tileset: {
     id: 'tileset',
+    documentDefinition: resourceRegistry.tileset,
     label: 'Tileset',
     collectionLabel: 'Tilesets',
     editorIcon: 'tilesets',
@@ -53,7 +57,8 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canEditMetadata: true,
     canDelete: true,
     canRevealInFileExplorer: true,
-    fileExplorerPath: (resourceId) => `tilesets/${resourceId}.vts`,
+    fileExplorerPath: (resourceId) =>
+      `${resourceRegistry.tileset.folder}/${fileSystem.resolveFilename(resourceRegistry.tileset.folder, resourceFileKey('tileset', resourceId))}`,
     renameResource: async (resourceId, name) => {
       await useEditorStore.getState().updateTileset(resourceId, { name });
     },
@@ -65,6 +70,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
   },
   actor: {
     id: 'actor',
+    documentDefinition: resourceRegistry.actor,
     label: 'Actor',
     collectionLabel: 'Actors',
     editorIcon: 'actors',
@@ -102,7 +108,8 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canEditMetadata: true,
     canDelete: true,
     canRevealInFileExplorer: true,
-    fileExplorerPath: (resourceId) => `actors/${resourceId}.actor.json`,
+    fileExplorerPath: (resourceId) =>
+      `${resourceRegistry.actor.folder}/${fileSystem.resolveFilename(resourceRegistry.actor.folder, resourceFileKey('actor', resourceId))}`,
     renameResource: async (resourceId, name) => {
       await useEditorStore.getState().updateActor(resourceId, { name });
     },
@@ -114,6 +121,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
   },
   entity: {
     id: 'entity',
+    documentDefinition: resourceRegistry.entity,
     label: 'Entity',
     collectionLabel: 'Entities',
     editorIcon: 'entities',
@@ -187,6 +195,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
   },
   item: {
     id: 'item',
+    documentDefinition: resourceRegistry.item,
     label: 'Item',
     collectionLabel: 'Items',
     editorIcon: 'items',
@@ -259,7 +268,8 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canEditMetadata: true,
     canDelete: true,
     canRevealInFileExplorer: true,
-    fileExplorerPath: (resourceId) => `items/${resourceId}.vitm`,
+    fileExplorerPath: (resourceId) =>
+      `${resourceRegistry.item.folder}/${fileSystem.resolveFilename(resourceRegistry.item.folder, resourceFileKey('item', resourceId))}`,
     renameResource: async (resourceId, name) => {
       await useEditorStore.getState().updateItem(resourceId, { name });
     },
@@ -271,6 +281,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
   },
   dialogue: {
     id: 'dialogue',
+    documentDefinition: resourceRegistry.dialogue,
     label: 'Dialogue',
     collectionLabel: 'Dialogues',
     editorIcon: 'dialogues',
@@ -287,7 +298,8 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canEditMetadata: true,
     canDelete: true,
     canRevealInFileExplorer: true,
-    fileExplorerPath: (resourceId) => `dialogues/${resourceId}.dialogue.json`,
+    fileExplorerPath: (resourceId) =>
+      `${resourceRegistry.dialogue.folder}/${fileSystem.resolveFilename(resourceRegistry.dialogue.folder, resourceFileKey('dialogue', resourceId))}`,
     deleteResource: async (resourceId) => {
       useEditorStore.setState((draft) => {
         draft.dialogues.delete(resourceId);
@@ -298,9 +310,18 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
       });
 
       await Promise.allSettled([
-        fileSystem.deleteJson('dialogues', `${resourceId}.dialogue.json`),
-        fileSystem.deleteJson('dialogues', `${resourceId}.runtime.dialogue.json`),
-        fileSystem.deleteJson('dialogues', `${resourceId}.i18n.json`),
+        fileSystem.deleteJson(
+          resourceRegistry.dialogue.folder,
+          resourceFileKey('dialogue', resourceId),
+        ),
+        fileSystem.deleteJson(
+          resourceRegistry.dialogue.folder,
+          resourceFileKey('dialogue-runtime', resourceId),
+        ),
+        fileSystem.deleteJson(
+          resourceRegistry.dialogue.folder,
+          resourceFileKey('dialogue-i18n', resourceId),
+        ),
       ]);
     },
     getFolderPath: (resourceId) =>

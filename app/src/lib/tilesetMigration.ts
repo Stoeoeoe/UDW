@@ -1,3 +1,4 @@
+import { resourceSchemaPath } from './resourceRegistry';
 /**
  * Tileset serialization helpers - strip redundant default values on save,
  * restore them on load. Old files (with all fields present) load fine because
@@ -108,7 +109,7 @@ export function serializeTileset(tileset: Tileset): Tileset & { $schema: string 
     }
   }
 
-  return { $schema: '../../schemas/tileset.schema.json', ...normalizedTileset, tiles };
+  return { $schema: resourceSchemaPath('tileset'), ...normalizedTileset, tiles };
 }
 
 /** Restore defaults for tile definitions loaded from disk. */

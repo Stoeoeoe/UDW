@@ -1,3 +1,10 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  resourceSchemaPath,
+  normalizeResourceDocument,
+} from '../../lib/resourceRegistry';
+import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { EntityType, PropertyDefinition } from '../../types/schema';
@@ -31,16 +38,22 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
   locationMetadataDefinitions: [],
 
   addEntityType: async (entityType) => {
+    entityType = normalizeResourceDocument(entityType, 'entity', get().project?.idPrefix);
+    assertUniqueResourceIds([...get().entityTypes, entityType]);
     set((state) => {
       state.entityTypes.push(castDraft(entityType));
     });
     const saveUnitId = `entity:${entityType.id}`;
     useSaveStore.getState().markSaving(saveUnitId);
     try {
-      await fileSystem.saveJson('entities', `${entityType.id}.entity.json`, {
-        $schema: '../../schemas/entity-type.schema.json',
-        ...entityType,
-      });
+      await fileSystem.saveJson(
+        resourceRegistry.entity.folder,
+        resourceFileKey('entity', entityType.id),
+        {
+          $schema: resourceSchemaPath('entity'),
+          ...entityType,
+        },
+      );
       useSaveStore.getState().markSaved(saveUnitId);
     } catch (error) {
       useSaveStore
@@ -55,7 +68,14 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
     set((state) => {
       const et = state.entityTypes.find((e) => e.id === id);
       if (!et) return;
-      Object.assign(et, updates);
+      Object.assign(
+        et,
+        normalizeResourceDocument(
+          { ...et, ...updates, id: et.id },
+          'entity',
+          get().project?.idPrefix,
+        ),
+      );
       updatedEntityType = { ...et } as EntityType;
     });
     const entityType = updatedEntityType ?? get().entityTypes.find((entry) => entry.id === id);
@@ -63,10 +83,14 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
       const saveUnitId = `entity:${entityType.id}`;
       useSaveStore.getState().markSaving(saveUnitId);
       try {
-        await fileSystem.saveJson('entities', `${entityType.id}.entity.json`, {
-          $schema: '../../schemas/entity-type.schema.json',
-          ...entityType,
-        });
+        await fileSystem.saveJson(
+          resourceRegistry.entity.folder,
+          resourceFileKey('entity', entityType.id),
+          {
+            $schema: resourceSchemaPath('entity'),
+            ...entityType,
+          },
+        );
         useSaveStore.getState().markSaved(saveUnitId);
       } catch (error) {
         useSaveStore
@@ -85,7 +109,7 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
     const saveUnitId = `entity:${id}`;
     useSaveStore.getState().markSaving(saveUnitId);
     try {
-      await fileSystem.deleteJson('entities', `${id}.entity.json`);
+      await fileSystem.deleteJson(resourceRegistry.entity.folder, resourceFileKey('entity', id));
       useSaveStore.getState().clearUnit(saveUnitId);
     } catch (error) {
       useSaveStore

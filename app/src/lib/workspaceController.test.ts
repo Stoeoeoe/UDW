@@ -14,6 +14,7 @@ vi.mock('../lib/recentProjects', () => ({
 
 vi.mock('../lib/fileSystem', () => ({
   fileSystem: {
+    resolveFilename: (_subDir: string, filename: string) => filename,
     saveJson: vi.fn(),
     loadAllTilesets: vi.fn(async () => []),
     loadAllMaps: vi.fn(async () => []),

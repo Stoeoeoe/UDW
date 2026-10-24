@@ -1,3 +1,8 @@
+import {
+  getResourceDefinition,
+  resourceRegistry,
+  resourceFilename,
+} from '../src/lib/resourceRegistry';
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -54,7 +59,9 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
 
     // Watch tileset JSON changes
     try {
-      const tilesGlob = path.join(projectPath, 'tilesets').replace(/\\/g, '/') + '/**/*.vts';
+      const tilesGlob =
+        path.join(projectPath, resourceRegistry.tileset.folder).replace(/\\/g, '/') +
+        `/**/*${resourceRegistry.tileset.extension}`;
       const wTiles = chokidar.watch(tilesGlob, {
         ignoreInitial: true,
         awaitWriteFinish: { stabilityThreshold: 200 },
@@ -104,14 +111,16 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     if (!win) return null;
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
       title: 'Select .vproj',
-      filters: [{ name: 'Project File', extensions: ['vproj'] }],
+      filters: [
+        { name: 'Project File', extensions: [resourceRegistry.project.extension.slice(1)] },
+      ],
       properties: ['openFile'],
     });
 
     if (canceled || filePaths.length === 0) return null;
 
     const filePath = filePaths[0];
-    if (!filePath.endsWith('.vproj')) {
+    if (!filePath.endsWith(resourceRegistry.project.extension)) {
       throw new Error('Please select the .vproj file.');
     }
 
@@ -121,20 +130,22 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     // Start filesystem watchers for assets/tilesets in this project
     startWatchingProject(projectPath);
 
-    return { project, projectPath };
+    return { project, projectPath, projectFilename: path.basename(filePath) };
   });
 
   ipcMain.handle('app:load-project-by-path', async (_event, projectPath) => {
     try {
       // Prefer any file ending with '.vproj' inside the folder.
       const files = await fs.readdir(projectPath);
-      const projFile = files.find((f) => f.endsWith('.vproj')) || 'project.vproj';
+      const projFile =
+        files.find((f) => f.endsWith(resourceRegistry.project.extension)) ||
+        resourceFilename('project', 'project');
       const filePath = path.join(projectPath, projFile);
       const content = await fs.readFile(filePath, 'utf-8');
       const project = JSON.parse(content);
       // Start filesystem watchers for assets/tilesets in this project
       startWatchingProject(projectPath);
-      return { project, projectPath };
+      return { project, projectPath, projectFilename: path.basename(filePath) };
     } catch (e) {
       throw new Error(`Failed to load project at ${projectPath}: ${(e as Error).message}`);
     }
@@ -152,15 +163,18 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     const projectPath = filePaths[0];
 
     // 1. Create subdirectories
-    await fs.mkdir(path.join(projectPath, 'maps'), { recursive: true });
-    await fs.mkdir(path.join(projectPath, 'tilesets'), { recursive: true });
-    await fs.mkdir(path.join(projectPath, 'actors'), { recursive: true });
-    await fs.mkdir(path.join(projectPath, 'dialogues'), { recursive: true });
+    for (const folder of new Set(
+      Object.values(resourceRegistry)
+        .map((definition) => definition.folder)
+        .filter(Boolean),
+    )) {
+      await fs.mkdir(path.join(projectPath, folder), { recursive: true });
+    }
     await fs.mkdir(path.join(projectPath, 'assets'), { recursive: true });
 
     // 2. Write <id>.vproj
     await fs.writeFile(
-      path.join(projectPath, `${projectConfig.id}.vproj`),
+      path.join(projectPath, resourceFilename('project', projectConfig.id)),
       JSON.stringify(projectConfig, null, 2),
     );
 
@@ -170,16 +184,17 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     return { projectPath };
   });
 
-  ipcMain.handle('app:fs-read-dir', async (_event, { projectPath, subDir }) => {
-    const fileExtensions = ['vproj', 'vmap', 'vts', 'vitm', 'json']; // Add other relevant extensions as needed
+  ipcMain.handle('app:fs-read-dir', async (_event, { projectPath, subDir, includeFilenames }) => {
     const dirPath = path.join(projectPath, subDir);
     try {
       const files = await fs.readdir(dirPath);
       const results = [];
       for (const file of files) {
-        if (fileExtensions.some((ext) => file.endsWith(`.${ext}`))) {
+        if (getResourceDefinition(subDir, file)) {
           const content = await fs.readFile(path.join(dirPath, file), 'utf-8');
-          results.push(JSON.parse(content));
+          results.push(
+            includeFilenames ? { filename: file, data: JSON.parse(content) } : JSON.parse(content),
+          );
         }
       }
       return results;

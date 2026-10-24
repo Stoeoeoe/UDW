@@ -1,3 +1,9 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  normalizeResourceDocument,
+} from '../../lib/resourceRegistry';
+import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { Tileset, TileDefinition } from '../../types/schema';
@@ -143,6 +149,8 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
   },
 
   addTileset: async (tileset) => {
+    tileset = normalizeResourceDocument(tileset, 'tileset', get().project?.idPrefix);
+    assertUniqueResourceIds([...get().tilesets.values(), tileset]);
     await saveTilesetImmediate(tileset);
 
     set((state) => {
@@ -164,7 +172,14 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
     set((state) => {
       const ts = state.tilesets.get(id);
       if (ts) {
-        Object.assign(ts, updates);
+        Object.assign(
+          ts,
+          normalizeResourceDocument(
+            { ...ts, ...updates, id: ts.id },
+            'tileset',
+            get().project?.idPrefix,
+          ),
+        );
         updatedTileset = JSON.parse(JSON.stringify(ts));
       }
     });
@@ -191,7 +206,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       }
     });
 
-    await fileSystem.deleteJson('tilesets', `${id}.vts`);
+    await fileSystem.deleteJson(resourceRegistry.tileset.folder, resourceFileKey('tileset', id));
   },
 
   updateTileDefinition: (tilesetId, index, definition) => {

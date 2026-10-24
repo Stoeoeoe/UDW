@@ -12,6 +12,7 @@ vi.mock('./saveManager', () => ({
 
 vi.mock('./fileSystem', () => ({
   fileSystem: {
+    resolveFilename: (_subDir: string, filename: string) => filename,
     readJson: vi.fn(),
   },
 }));

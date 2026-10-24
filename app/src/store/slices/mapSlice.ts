@@ -1,3 +1,10 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  resourceSchemaPath,
+  normalizeResourceDocument,
+} from '../../lib/resourceRegistry';
+import { qualifyResourceId, assertUniqueResourceIds } from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { Anchor, Map as GameMap, LocationLink } from '../../types/schema';
@@ -25,8 +32,8 @@ type ImmerStateCreator<T> = StateCreator<
 >;
 
 async function persistMap(map: GameMap) {
-  await fileSystem.saveJson('maps', `${map.id}.vmap`, {
-    $schema: '../../schemas/map.schema.json',
+  await fileSystem.saveJson(resourceRegistry.location.folder, resourceFileKey('location', map.id), {
+    $schema: resourceSchemaPath('location'),
     ...serializeMap(map),
   });
 }
@@ -82,10 +89,13 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
             state.currentMapPath = null;
             return;
           }
-          const withDefs = addMissingDefinitionLayers(map, state.layerDefinitions);
+          const withDefs = addMissingDefinitionLayers(
+            normalizeResourceDocument(map, 'location', state.project?.idPrefix),
+            state.layerDefinitions,
+          );
           const enrichedMap = ensureNavigationLayer(withDefs);
           state.currentMap = castDraft(enrichedMap);
-          state.currentMapPath = `maps/${enrichedMap.id}.vmap`;
+          state.currentMapPath = `${resourceRegistry.location.folder}/${fileSystem.resolveFilename(resourceRegistry.location.folder, resourceFileKey('location', enrichedMap.id))}`;
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
           state.selectedTriggerId = null;
@@ -126,7 +136,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
 
           const enrichedMap = ensureNavigationLayer(map);
           state.currentMap = castDraft(enrichedMap);
-          state.currentMapPath = `maps/${enrichedMap.id}.vmap`;
+          state.currentMapPath = `${resourceRegistry.location.folder}/${fileSystem.resolveFilename(resourceRegistry.location.folder, resourceFileKey('location', enrichedMap.id))}`;
           state.activeVariationId = null;
           state.selectedEntityId = null;
           state.selectedEntityIds = new Set();
@@ -158,7 +168,11 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
     ),
 
   createNewMap: async (name, width, height, tilesetId, folderPath = '') => {
-    const id = name.toLowerCase().replace(/\s+/g, '-');
+    const id = qualifyResourceId(
+      name.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+      get().project?.idPrefix,
+    );
+    assertUniqueResourceIds([...get().maps, { id }]);
     const layerDefs = get().layerDefinitions;
     const definedLayers = createLayersFromDefinitions(layerDefs, width, height);
     const baseLayers =
@@ -176,10 +190,12 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
       entities: [],
       folderPath: folderPath.trim() || undefined,
     };
-    const newMap = ensureNavigationLayer(rawMap);
+    const newMap = ensureNavigationLayer(
+      normalizeResourceDocument(rawMap, 'location', get().project?.idPrefix),
+    );
 
-    await fileSystem.saveJson('maps', `${id}.vmap`, {
-      $schema: '../../schemas/map.schema.json',
+    await fileSystem.saveJson(resourceRegistry.location.folder, resourceFileKey('location', id), {
+      $schema: resourceSchemaPath('location'),
       ...serializeMap(newMap),
     });
 
@@ -188,7 +204,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
         set((state) => {
           state.maps.push(castDraft(newMap));
           state.currentMap = castDraft(newMap);
-          state.currentMapPath = `maps/${newMap.id}.vmap`;
+          state.currentMapPath = `${resourceRegistry.location.folder}/${fileSystem.resolveFilename(resourceRegistry.location.folder, resourceFileKey('location', newMap.id))}`;
           state.activeVariationId = null;
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
@@ -201,13 +217,22 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
 
   addMap: (map) =>
     set((state) => {
-      state.currentMap = castDraft(map);
+      state.currentMap = castDraft(
+        normalizeResourceDocument(map, 'location', state.project?.idPrefix),
+      );
     }),
 
   updateCurrentMap: (updates) =>
     set((state) => {
       if (!state.currentMap) return;
-      Object.assign(state.currentMap, updates);
+      Object.assign(
+        state.currentMap,
+        normalizeResourceDocument(
+          { ...state.currentMap, ...updates, id: state.currentMap.id },
+          'location',
+          state.project?.idPrefix,
+        ),
+      );
 
       if (updates.baseTilesetId && !state.currentMap.tilesetRefs.includes(updates.baseTilesetId)) {
         state.currentMap.tilesetRefs.unshift(updates.baseTilesetId);
@@ -232,7 +257,10 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
         return (original.locationLinks?.length ?? 0) !== (m.locationLinks?.length ?? 0);
       });
 
-    await fileSystem.deleteJson('maps', `${mapId}.vmap`);
+    await fileSystem.deleteJson(
+      resourceRegistry.location.folder,
+      resourceFileKey('location', mapId),
+    );
     for (const updated of affectedMaps) {
       await persistMap(updated);
     }
@@ -253,7 +281,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
           if (state.currentMap?.id === mapId) {
             if (state.maps.length > 0) {
               state.currentMap = castDraft(state.maps[0]);
-              state.currentMapPath = `maps/${state.maps[0].id}.vmap`;
+              state.currentMapPath = `${resourceRegistry.location.folder}/${fileSystem.resolveFilename(resourceRegistry.location.folder, resourceFileKey('location', state.maps[0].id))}`;
               state.activeVariationId = null;
               state.selectedLayerId = getPreferredSelectedLayerId(state.maps[0]);
               syncToolStateForSelectedLayer(state, { forceDefault: true });

@@ -1,3 +1,10 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  resourceSchemaPath,
+  normalizeResourceDocument,
+} from '../../lib/resourceRegistry';
+import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { Item } from '../../types/schema';
@@ -31,11 +38,13 @@ export const createItemSlice: ImmerStateCreator<ItemSlice> = (set, get) => ({
     }),
 
   addItem: async (item) => {
+    item = normalizeResourceDocument(item, 'item', get().project?.idPrefix);
+    assertUniqueResourceIds([...get().items, item]);
     set((state) => {
       state.items.push(castDraft(item));
     });
-    await fileSystem.saveJson('items', `${item.id}.vitm`, {
-      $schema: '../../schemas/item.schema.json',
+    await fileSystem.saveJson(resourceRegistry.item.folder, resourceFileKey('item', item.id), {
+      $schema: resourceSchemaPath('item'),
       ...item,
     });
   },
@@ -45,14 +54,18 @@ export const createItemSlice: ImmerStateCreator<ItemSlice> = (set, get) => ({
     set((state) => {
       const idx = state.items.findIndex((entry) => entry.id === id);
       if (idx < 0) return;
-      const merged = { ...state.items[idx], ...updates } as Item;
+      const merged = normalizeResourceDocument(
+        { ...state.items[idx], ...updates, id: state.items[idx].id } as Item,
+        'item',
+        get().project?.idPrefix,
+      );
       updatedItem = merged;
       state.items[idx] = castDraft(merged);
     });
     const item = updatedItem ?? get().items.find((entry) => entry.id === id);
     if (item) {
-      await fileSystem.saveJson('items', `${item.id}.vitm`, {
-        $schema: '../../schemas/item.schema.json',
+      await fileSystem.saveJson(resourceRegistry.item.folder, resourceFileKey('item', item.id), {
+        $schema: resourceSchemaPath('item'),
         ...item,
       });
     }
@@ -63,6 +76,6 @@ export const createItemSlice: ImmerStateCreator<ItemSlice> = (set, get) => ({
       state.items = state.items.filter((i) => i.id !== id);
       if (state.selectedItemId === id) state.selectedItemId = null;
     });
-    await fileSystem.deleteJson('items', `${id}.vitm`);
+    await fileSystem.deleteJson(resourceRegistry.item.folder, resourceFileKey('item', id));
   },
 });

@@ -15,6 +15,7 @@ vi.mock('../lib/recentProjects', () => ({
 
 vi.mock('../lib/fileSystem', () => ({
   fileSystem: {
+    resolveFilename: (_subDir: string, filename: string) => filename,
     saveJson: vi.fn(),
     loadAllTilesets: vi.fn(async () => []),
     loadAllMaps: vi.fn(async () => []),
@@ -40,6 +41,7 @@ describe('useEditorStore', () => {
 
   it('should load a project', async () => {
     const mockProject = {
+      idPrefix: 'base',
       version: '1.0',
       name: 'Test Project',
       tileSize: 16,
@@ -53,7 +55,7 @@ describe('useEditorStore', () => {
     await loadProject(mockPath, mockProject);
 
     const state = useEditorStore.getState();
-    expect(state.project).toEqual(mockProject);
+    expect(state.project).toEqual({ ...mockProject, idPrefix: 'base' });
     expect(state.projectPath).toBe(mockPath);
     expect(state.resourcesLoaded).toBe(false);
     expect(state.resourceLoadingLabel).toBe('Preparing workspace');
@@ -80,6 +82,7 @@ describe('useEditorStore', () => {
   it('should update project', async () => {
     const { updateProject, loadProject } = useEditorStore.getState();
     const initialProject = {
+      idPrefix: 'base',
       version: '1.0',
       name: 'Initial',
       tileSize: 16,
@@ -99,8 +102,8 @@ describe('useEditorStore', () => {
   it('should handle tileset selection', () => {
     const { setActiveTileset, setSelectedTile } = useEditorStore.getState();
 
-    setActiveTileset('village');
-    expect(useEditorStore.getState().activeTilesetId).toBe('village');
+    setActiveTileset('base:village');
+    expect(useEditorStore.getState().activeTilesetId).toBe('base:village');
 
     setSelectedTile(5);
     expect(useEditorStore.getState().selectedTileIndex).toBe(5);
@@ -112,14 +115,14 @@ describe('useEditorStore', () => {
     setSelectedTile(5);
     setSelectedTiles([]);
     setSampledPattern({
-      tilesetId: 'village',
+      tilesetId: 'base:village',
       pattern: [[null]],
       width: 1,
       height: 1,
     });
 
     expect(useEditorStore.getState().sampledPattern).toEqual({
-      tilesetId: 'village',
+      tilesetId: 'base:village',
       pattern: [[null]],
       width: 1,
       height: 1,
@@ -159,8 +162,8 @@ describe('useEditorStore', () => {
       name: 'Test Map',
       width: 10,
       height: 10,
-      baseTilesetId: 'village',
-      tilesetRefs: ['village'],
+      baseTilesetId: 'base:village',
+      tilesetRefs: ['base:village'],
       layers: [
         {
           id: 'ground',
@@ -185,7 +188,7 @@ describe('useEditorStore', () => {
 
     it('should paint a tile in the base layer', () => {
       const { paintTile } = useEditorStore.getState();
-      paintTile('ground', 0, 0, 'village', 5);
+      paintTile('ground', 0, 0, 'base:village', 5);
 
       const state = useEditorStore.getState();
       expect(state.currentMap?.layers[0].data[0][0]).toBe(5); // Encoded: 0 << 16 | 5
@@ -218,7 +221,7 @@ describe('useEditorStore', () => {
       });
       setActiveVariation('winter');
 
-      paintTile('ground', 5, 5, 'village', 10);
+      paintTile('ground', 5, 5, 'base:village', 10);
 
       const state = useEditorStore.getState();
       // Base layer should still be null
@@ -226,7 +229,7 @@ describe('useEditorStore', () => {
 
       // Variation override should have the tile
       const winterVar = state.currentMap?.variations?.find((v) => v.id === 'winter');
-      expect(winterVar?.layerOverrides?.['ground'].data[5][5]).toBe('village:10');
+      expect(winterVar?.layerOverrides?.['ground'].data[5][5]).toBe('base:village:10');
     });
 
     it('should erase a tile in a variation override', () => {
@@ -241,10 +244,10 @@ describe('useEditorStore', () => {
       });
       setActiveVariation('winter');
 
-      paintTile('ground', 1, 1, 'village', 20);
+      paintTile('ground', 1, 1, 'base:village', 20);
       expect(
         useEditorStore.getState().currentMap?.variations?.[0].layerOverrides?.['ground'].data[1][1],
-      ).toBe('village:20');
+      ).toBe('base:village:20');
 
       eraseTile('ground', 1, 1);
       expect(
@@ -255,10 +258,10 @@ describe('useEditorStore', () => {
     it('should treat an all-null sampled pattern as erase during stamp flood fill', () => {
       const { paintTile, bucketFillAdvanced } = useEditorStore.getState();
 
-      paintTile('ground', 0, 0, 'village', 1);
-      paintTile('ground', 1, 0, 'village', 1);
-      paintTile('ground', 0, 1, 'village', 1);
-      paintTile('ground', 1, 1, 'village', 1);
+      paintTile('ground', 0, 0, 'base:village', 1);
+      paintTile('ground', 1, 0, 'base:village', 1);
+      paintTile('ground', 0, 1, 'base:village', 1);
+      paintTile('ground', 1, 1, 'base:village', 1);
 
       bucketFillAdvanced('ground', 0, 0, {
         mode: 'stamp',
@@ -283,8 +286,8 @@ describe('useEditorStore', () => {
         name: 'Terrain First',
         width: 10,
         height: 10,
-        baseTilesetId: 'village',
-        tilesetRefs: ['village'],
+        baseTilesetId: 'base:village',
+        tilesetRefs: ['base:village'],
         layers: [
           {
             id: 'terrain-layer',
@@ -345,9 +348,9 @@ describe('useEditorStore', () => {
       useEditorStore.getState().setCurrentMap(objectMap);
       useEditorStore.getState().setActiveVariation(null);
       useEditorStore.setState((state) => {
-        state.tilesets.set('village', {
+        state.tilesets.set('base:village', {
           version: 1,
-          id: 'village',
+          id: 'base:village',
           name: 'Village',
           spriteSheet: 'village.png',
           columns: 4,
@@ -366,14 +369,14 @@ describe('useEditorStore', () => {
         });
       });
 
-      useEditorStore.getState().placeObjectInstance('objects', 48, 80, 'village', 'tree');
+      useEditorStore.getState().placeObjectInstance('objects', 48, 80, 'base:village', 'tree');
 
       const layer = useEditorStore
         .getState()
         .currentMap?.layers.find((entry) => entry.id === 'objects');
       expect(layer?.objectInstances).toHaveLength(1);
       expect(layer?.objectInstances?.[0]).toMatchObject({
-        tilesetId: 'village',
+        tilesetId: 'base:village',
         objectDefinitionId: 'tree',
         x: 48,
         y: 80,
@@ -398,7 +401,7 @@ describe('useEditorStore', () => {
             objectInstances: [
               {
                 id: 'inst_tree',
-                tilesetId: 'village',
+                tilesetId: 'base:village',
                 objectDefinitionId: 'tree',
                 x: 48,
                 y: 80,
@@ -431,8 +434,8 @@ describe('useEditorStore', () => {
       name: 'Test Map',
       width: 10,
       height: 10,
-      baseTilesetId: 'village',
-      tilesetRefs: ['village'],
+      baseTilesetId: 'base:village',
+      tilesetRefs: ['base:village'],
       layers: [
         {
           id: 'visual-layer',
@@ -597,6 +600,7 @@ describe('useEditorStore', () => {
 
   describe('addLayerDefinition injects into currentMap', () => {
     const mockProject = {
+      idPrefix: 'base',
       version: '1.0',
       name: 'Test Project',
       tileSize: 16,
@@ -612,8 +616,8 @@ describe('useEditorStore', () => {
       name: 'Test Map',
       width: 10,
       height: 10,
-      baseTilesetId: 'village',
-      tilesetRefs: ['village'],
+      baseTilesetId: 'base:village',
+      tilesetRefs: ['base:village'],
       layers: [],
       entities: [],
     };

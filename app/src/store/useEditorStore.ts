@@ -1,3 +1,10 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  resourceSchemaPath,
+  normalizeProject,
+  normalizeResourceDocument,
+} from '../lib/resourceRegistry';
 import { create } from 'zustand';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { immer } from 'zustand/middleware/immer';
@@ -299,6 +306,7 @@ export const useEditorStore = create<EditorStore>()(
 
           // ── Project actions ────────────────────────────────────────────────
           loadProject: async (path, project) => {
+            project = normalizeProject(project);
             withHistorySuppressed(
               () =>
                 set((state) => {
@@ -379,10 +387,18 @@ export const useEditorStore = create<EditorStore>()(
           loadSprite: (path, blob) => loadSprite(path, blob, set),
 
           updateProject: async (project) => {
-            await fileSystem.saveJson('', `${project.id}.vproj`, {
-              $schema: '../schemas/project.schema.json',
-              ...project,
-            });
+            project = normalizeProject(project);
+            if (get().project && project.idPrefix !== (get().project!.idPrefix ?? 'base')) {
+              throw new Error('The ID prefix cannot be changed after project creation.');
+            }
+            await fileSystem.saveJson(
+              resourceRegistry.project.folder,
+              resourceFileKey('project', project.id),
+              {
+                $schema: resourceSchemaPath('project'),
+                ...project,
+              },
+            );
             set((state) => {
               state.project = project;
             });
@@ -471,7 +487,13 @@ if ('ipcRenderer' in window) {
           console.warn('Tileset changed but could not parse JSON:', relativePath);
           return;
         }
-        const migratedTileset = migrateTilesetOnLoad(tileset);
+        const migratedTileset = migrateTilesetOnLoad(
+          normalizeResourceDocument(
+            tileset,
+            'tileset',
+            useEditorStore.getState().project?.idPrefix,
+          ),
+        );
         useEditorStore.setState((state) => {
           const newMap = new Map(state.tilesets);
           try {

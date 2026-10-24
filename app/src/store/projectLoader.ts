@@ -1,3 +1,4 @@
+import { resourceFileKey, resourceRegistry } from '../lib/resourceRegistry';
 /**
  * Loads all project resources (tilesets, maps, actors, dialogues, etc.) into
  * the store. Extracted from useEditorStore to keep that file focused on wiring.
@@ -207,7 +208,7 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
         () =>
           set((state) => {
             state.currentMap = castDraft(enrichedMaps[0]);
-            state.currentMapPath = `maps/${enrichedMaps[0].id}.vmap`;
+            state.currentMapPath = `${resourceRegistry.location.folder}/${fileSystem.resolveFilename(resourceRegistry.location.folder, resourceFileKey('location', enrichedMaps[0].id))}`;
             state.selectedLayerId = getPreferredSelectedLayerId(enrichedMaps[0]);
             syncToolStateForSelectedLayer(state, { forceDefault: true });
           }),
