@@ -1,3 +1,4 @@
+import { qualifyResourceId, LOCAL_ID_PATTERN } from '../../lib/resourceIds';
 import React from 'react';
 import { useForm } from '@tanstack/react-form';
 import { FormControl, FormErrorMessage, FormHelperText, Input, VStack } from '@chakra-ui/react';
@@ -13,6 +14,7 @@ interface CreateItemDialogProps {
   onSubmit: (data: { id: string; name: string }) => void;
   onClose: () => void;
   additionalFields?: React.ReactNode;
+  idPrefix?: string;
   deriveId?: (name: string) => string;
   /** When provided the dialog wraps itself in an EditorModal */
   isOpen?: boolean;
@@ -37,9 +39,12 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
   onClose,
   additionalFields,
   deriveId = defaultDeriveId,
+  idPrefix,
   isOpen,
   size = 'xl',
 }) => {
+  const finalIdFor = (id: string) =>
+    idPrefix === undefined ? id.trim().toLowerCase() : qualifyResourceId(id, idPrefix);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm({
@@ -54,7 +59,10 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
       const derivedId = deriveId(name);
       const finalId = customId || derivedId;
 
-      onSubmit({ id: finalId, name });
+      if (!finalId || !LOCAL_ID_PATTERN.test(finalId.toLowerCase())) return;
+      const id = finalIdFor(finalId);
+      if (existingIds.includes(id)) return;
+      await onSubmit({ id, name });
     },
   });
 
@@ -102,7 +110,7 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
                     <FormErrorMessage>{field.state.meta.errors.join(', ')}</FormErrorMessage>
                   ) : null}
                   <FormHelperText>
-                    Will generate ID <strong>{derivedId}</strong>
+                    Will generate ID <strong>{derivedId ? finalIdFor(derivedId) : ''}</strong>
                   </FormHelperText>
                 </FormControl>
               );
@@ -117,7 +125,11 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
                 const name = fieldApi.form.getFieldValue('name');
                 const derivedId = deriveId(name);
 
-                const idToCheck = value.trim() || derivedId;
+                const localId = value.trim() || derivedId;
+                if (localId && !LOCAL_ID_PATTERN.test(localId))
+                  return 'Use lowercase letters, numbers, underscores, dots or hyphens.';
+                if (!localId) return 'An ID is required.';
+                const idToCheck = finalIdFor(localId);
                 if (existingIds.includes(idToCheck)) {
                   return 'This ID is already in use.';
                 }
@@ -133,7 +145,7 @@ export const CreateItemDialog: React.FC<CreateItemDialogProps> = ({
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(e) => field.handleChange(e.target.value.toLowerCase())}
                   placeholder="Override derived ID..."
                   fontFamily="mono"
                   bg="gray.800"

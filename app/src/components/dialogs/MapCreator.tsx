@@ -66,7 +66,7 @@ export const MapCreator: React.FC<MapCreatorProps> = ({
     setIsSubmitting(true);
     try {
       await createNewMap(name, width, height, tilesetId, folderPath);
-      onCreatedMapId?.(name.toLowerCase().replace(/\s+/g, '-'));
+      onCreatedMapId?.(useEditorStore.getState().currentMap!.id);
       toast({
         title: 'Map created',
         status: 'success',

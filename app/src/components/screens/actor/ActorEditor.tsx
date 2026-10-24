@@ -39,9 +39,11 @@ export const ActorEditor: React.FC = () => {
     <EmptyScreen
       icon={<GiPerson />}
       title={actors.length ? 'No Actor Selected' : 'No Actors'}
-      description={actors.length
-        ? 'Select an actor from the list to edit details.'
-        : 'Define characters or named roles available to dialogue and gameplay systems.'}
+      description={
+        actors.length
+          ? 'Select an actor from the list to edit details.'
+          : 'Define characters or named roles available to dialogue and gameplay systems.'
+      }
       buttonLabel={actors.length ? undefined : 'Create First Actor'}
       onCreate={actors.length ? undefined : onOpen}
     />
@@ -66,6 +68,7 @@ export const ActorEditor: React.FC = () => {
       />
 
       <CreateItemDialog
+        idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
         isOpen={isOpen}
         title="New Actor"
         itemType="Actor"

@@ -63,9 +63,11 @@ export const ItemEditor: React.FC = () => {
     <EmptyScreen
       icon={<GiChest />}
       title={items.length ? 'No Item Selected' : 'No Items'}
-      description={items.length
-        ? 'Select an item from the list to edit its details.'
-        : 'Define items that can be picked up, used, or traded in the game world.'}
+      description={
+        items.length
+          ? 'Select an item from the list to edit its details.'
+          : 'Define items that can be picked up, used, or traded in the game world.'
+      }
       buttonLabel={items.length ? undefined : 'Create First Item'}
       onCreate={items.length ? undefined : onOpen}
     />
@@ -90,6 +92,7 @@ export const ItemEditor: React.FC = () => {
       />
 
       <CreateItemDialog
+        idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
         isOpen={isOpen}
         title="New Item"
         itemType="Item"

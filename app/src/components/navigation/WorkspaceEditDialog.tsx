@@ -1,3 +1,4 @@
+import { resourceFileKey, resourceRegistry } from '../../lib/resourceRegistry';
 import React from 'react';
 import { useToast } from '@chakra-ui/react';
 import { WorkspaceDocument } from '../../types/workspace';
@@ -151,9 +152,17 @@ const DialogueMetadataDialog: React.FC<{
         });
         void saveDialogueImmediate(updated);
         void fileSystem
-          .saveJson('dialogues', `${updated.id}.runtime.dialogue.json`, toRuntimeDialogue(updated))
+          .saveJson(
+            'dialogues',
+            resourceFileKey('dialogue-runtime', updated.id),
+            toRuntimeDialogue(updated),
+          )
           .then(() =>
-            fileSystem.saveJson('dialogues', `${updated.id}.i18n.json`, buildI18nExport(updated)),
+            fileSystem.saveJson(
+              resourceRegistry.dialogue.folder,
+              resourceFileKey('dialogue-i18n', updated.id),
+              buildI18nExport(updated),
+            ),
           )
           .then(() => {
             onOpenDocument(

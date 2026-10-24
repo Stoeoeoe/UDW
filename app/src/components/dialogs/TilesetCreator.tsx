@@ -1,3 +1,4 @@
+import { qualifyResourceId } from '../../lib/resourceIds';
 import React, { useState } from 'react';
 import {
   VStack,
@@ -106,7 +107,10 @@ export const TilesetCreator: React.FC<Props> = ({ onCreate, onCancel }) => {
 
       const newTileset = {
         version: 1,
-        id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        id: qualifyResourceId(
+          name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+          useEditorStore.getState().project?.idPrefix,
+        ),
         name,
         spriteSheet: internalPath,
         columns,

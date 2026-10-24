@@ -1,3 +1,4 @@
+import { qualifyResourceId } from '../../lib/resourceIds';
 import React, { useState } from 'react';
 import {
   VStack,
@@ -112,7 +113,10 @@ export const TilesetImporter: React.FC<TilesetImporterProps> = ({ onImport, onCa
 
       const newTileset: Tileset = {
         version: 1,
-        id: tilesetName.toLowerCase().replace(/\s+/g, '-'),
+        id: qualifyResourceId(
+          tilesetName.toLowerCase().replace(/\s+/g, '-'),
+          useEditorStore.getState().project?.idPrefix,
+        ),
         name: tilesetName,
         spriteSheet: internalPath,
         columns: columns,

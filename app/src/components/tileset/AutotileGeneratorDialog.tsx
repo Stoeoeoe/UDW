@@ -1,3 +1,4 @@
+import { qualifyResourceId, resourceIdToFileStem } from '../../lib/resourceIds';
 import React, { useMemo, useState } from 'react';
 import {
   Button,
@@ -235,7 +236,10 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
         idPrefix: outputId,
       });
 
-      const baseId = sanitizeId(outputId || `${tileset.id}-${terrainAId}-${terrainBId}-${preset}`);
+      const baseId = qualifyResourceId(
+        sanitizeId(outputId || `${tileset.id}-${terrainAId}-${terrainBId}-${preset}`),
+        useEditorStore.getState().project?.idPrefix,
+      );
       let finalId = baseId;
       let suffix = 2;
       while (tilesets.has(finalId)) {
@@ -243,7 +247,7 @@ export const AutotileGeneratorDialog: React.FC<AutotileGeneratorDialogProps> = (
         suffix++;
       }
 
-      const filename = `${finalId}-${Date.now()}.png`;
+      const filename = `${resourceIdToFileStem(finalId, useEditorStore.getState().project?.idPrefix)}-${Date.now()}.png`;
       const spriteSheet = await fileSystem.saveAsset(filename, generated.pngBlob);
 
       await addTileset({

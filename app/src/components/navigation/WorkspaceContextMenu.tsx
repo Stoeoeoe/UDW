@@ -184,6 +184,7 @@ export const CreateNewResourceDialog: React.FC<{
 
   return (
     <CreateItemDialog
+      idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
       isOpen
       title={`New ${kindLabel(kind)}`}
       itemType={kindLabel(kind)}

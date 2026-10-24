@@ -42,7 +42,7 @@ export function slugify(value: string): string {
 export function nextDialogueId(dialogues: Iterable<Pick<DialogueDocument, 'id'>>): string {
   let max = 0;
   for (const entry of dialogues) {
-    const match = /^dlg_(\d+)$/.exec(entry.id);
+    const match = /^dlg_(\d+)$/.exec(entry.id.split(':').pop()!);
     if (!match) continue;
     max = Math.max(max, Number(match[1]));
   }

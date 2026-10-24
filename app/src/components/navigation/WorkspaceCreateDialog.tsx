@@ -1,3 +1,5 @@
+import { resourceFileKey, resourceRegistry } from '../../lib/resourceRegistry';
+import { qualifyResourceId } from '../../lib/resourceIds';
 import React from 'react';
 import { useToast } from '@chakra-ui/react';
 import { WorkspaceDocument, WorkspaceTreeNode } from '../../types/workspace';
@@ -39,9 +41,12 @@ export const WorkspaceCreateDialog: React.FC<{
     async (values: MetadataDraft, folderPath: string) => {
       const state = useEditorStore.getState();
       const derived = slugify(values.name);
-      const candidateId = derived ? `dlg_${derived}` : nextDialogueId(state.dialogues.values());
+      const candidateId = qualifyResourceId(
+        derived ? `dlg_${derived}` : nextDialogueId(state.dialogues.values()),
+        state.project?.idPrefix,
+      );
       const dialogueId = state.dialogues.has(candidateId)
-        ? nextDialogueId(state.dialogues.values())
+        ? qualifyResourceId(nextDialogueId(state.dialogues.values()), state.project?.idPrefix)
         : candidateId;
       const dialogue = createEmptyDialogue(
         dialogueId,
@@ -59,11 +64,15 @@ export const WorkspaceCreateDialog: React.FC<{
 
       await saveDialogueImmediate(dialogue);
       await fileSystem.saveJson(
-        'dialogues',
-        `${dialogue.id}.runtime.dialogue.json`,
+        resourceRegistry.dialogue.folder,
+        resourceFileKey('dialogue-runtime', dialogue.id),
         toRuntimeDialogue(dialogue),
       );
-      await fileSystem.saveJson('dialogues', `${dialogue.id}.i18n.json`, buildI18nExport(dialogue));
+      await fileSystem.saveJson(
+        resourceRegistry.dialogue.folder,
+        resourceFileKey('dialogue-i18n', dialogue.id),
+        buildI18nExport(dialogue),
+      );
       onOpenDocument(
         createEditorResourceDocument({ type: 'dialogue', id: dialogue.id, name: dialogue.name }),
         { pin: true },

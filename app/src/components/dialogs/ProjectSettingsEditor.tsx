@@ -1,3 +1,4 @@
+import { DEFAULT_ID_PREFIX, ID_PREFIX_PATTERN } from '../../lib/resourceIds';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,6 +8,7 @@ import {
   FormControl,
   Input,
   FormErrorMessage,
+  FormHelperText,
   SimpleGrid,
   Textarea,
   VStack,
@@ -24,6 +26,7 @@ interface ProjectSettingsEditorProps {
 
 const DEFAULT_PROJECT: Project = {
   id: 'my-project',
+  idPrefix: DEFAULT_ID_PREFIX,
   version: '1.0',
   name: 'New Project',
   tileSize: 16,
@@ -37,6 +40,9 @@ const DEFAULT_PROJECT: Project = {
 
 // Validation Schema
 const schema = z.object({
+  idPrefix: z
+    .string()
+    .regex(ID_PREFIX_PATTERN, 'Use lowercase letters, numbers, underscores or hyphens.'),
   id: z
     .string()
     .min(2, 'ID must be at least 2 characters')
@@ -72,6 +78,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
     resolver: zodResolver(schema),
     defaultValues: {
       id: initialProject?.id || `project-${Date.now()}`,
+      idPrefix: initialProject?.idPrefix ?? DEFAULT_ID_PREFIX,
       name: initialProject?.name || DEFAULT_PROJECT.name,
       tileSize: initialProject?.tileSize || DEFAULT_PROJECT.tileSize,
       defaultMapWidth: initialProject?.defaultMapWidth || DEFAULT_PROJECT.defaultMapWidth,
@@ -86,6 +93,7 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
 
   const onSubmit = (data: FormData) => {
     const project: Project = {
+      ...initialProject,
       version: initialProject?.version || '1.0',
       ...data,
     };
@@ -118,9 +126,21 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
                 _hover={{ borderColor: 'blue.500' }}
                 _focus={{ borderColor: 'blue.500', ring: 1, ringColor: 'blue.500' }}
                 placeholder="e.g. my-awesome-game"
-                {...register('id')}
+                {...register('id', { setValueAs: (value: string) => value.toLowerCase() })}
               />
               <FormErrorMessage>{errors.id?.message}</FormErrorMessage>
+            </FormControl>
+            <FormControl isInvalid={!!errors.idPrefix}>
+              <FormLabel>ID Prefix</FormLabel>
+              <Input
+                {...register('idPrefix', { setValueAs: (value: string) => value.toLowerCase() })}
+                isReadOnly={!!initialProject}
+                placeholder="base"
+              />
+              <FormErrorMessage>{errors.idPrefix?.message}</FormErrorMessage>
+              <FormHelperText>
+                Resources use IDs such as base:myactor. The prefix is fixed after project creation.
+              </FormHelperText>
             </FormControl>
             <SimpleGrid columns={2} spacing={4}>
               <FormControl isInvalid={!!errors.tileSize}>

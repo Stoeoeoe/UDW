@@ -1,3 +1,4 @@
+import { qualifyResourceId } from '../../../lib/resourceIds';
 import React, { useState } from 'react';
 import { Box, Button, FormControl, HStack, Image, Input, useToast } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -102,7 +103,10 @@ export const CreateTilesetDialog: React.FC<CreateTilesetDialogProps> = ({
 
       const newTileset = {
         version: 1,
-        id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        id: qualifyResourceId(
+          name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+          useEditorStore.getState().project?.idPrefix,
+        ),
         name,
         spriteSheet: internalPath,
         columns,

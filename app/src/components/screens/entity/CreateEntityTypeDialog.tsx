@@ -157,6 +157,7 @@ export const CreateEntityTypeDialog: React.FC<CreateEntityTypeDialogProps> = ({
 
   return (
     <CreateItemDialog
+      idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
       isOpen={isOpen}
       title="New Entity Type"
       itemType="Entity Type"

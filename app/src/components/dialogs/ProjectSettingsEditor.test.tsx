@@ -10,6 +10,7 @@ const renderWithChakra = (ui: React.ReactElement) => {
 
 describe('ProjectSettingsEditor', () => {
   const mockProject = {
+    idPrefix: 'base',
     version: '1.0',
     name: 'Old Project',
     tileSize: 16,
@@ -43,6 +44,7 @@ describe('ProjectSettingsEditor', () => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'New Amazing Project',
+          idPrefix: 'base',
         }),
       );
     });
@@ -69,5 +71,33 @@ describe('ProjectSettingsEditor', () => {
     expect(screen.getByRole('button', { name: 'Create Project' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('creates a project with a lowercase custom namespace', async () => {
+    const onSave = vi.fn();
+    renderWithChakra(<ProjectSettingsEditor onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('ID Prefix'), { target: { value: 'MyMod' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Project' }));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ idPrefix: 'mymod' })),
+    );
+  });
+
+  it('preserves project definitions and fixes the prefix for existing projects', async () => {
+    const onSave = vi.fn();
+    const project = {
+      ...mockProject,
+      id: 'game',
+      idPrefix: 'mod',
+      terrainTypes: [{ id: 'grass', displayName: 'Grass', color: '#00ff00' }],
+    };
+    renderWithChakra(<ProjectSettingsEditor initialProject={project} onSave={onSave} />);
+    expect(screen.getByLabelText('ID Prefix')).toHaveAttribute('readonly');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Project' }));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ idPrefix: 'mod', terrainTypes: project.terrainTypes }),
+      ),
+    );
   });
 });

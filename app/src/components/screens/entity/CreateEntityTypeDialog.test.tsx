@@ -25,7 +25,7 @@ describe('CreateEntityTypeDialog', () => {
     fireEvent.change(input, { target: { value: 'Treasure Chest' } });
 
     // id should be rendered
-    await waitFor(() => expect(screen.getByText('treasure_chest')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('base:treasure_chest')).toBeTruthy());
 
     const createBtn = screen.getByRole('button', {
       name: /Create Entity Type/i,
@@ -36,7 +36,7 @@ describe('CreateEntityTypeDialog', () => {
     expect(onClose).toHaveBeenCalled();
 
     const arg = addEntityType.mock.calls[0][0];
-    expect(arg.id).toBe('treasure_chest');
+    expect(arg.id).toBe('base:treasure_chest');
     expect(arg.displayName).toBe('Treasure Chest');
   });
 });
