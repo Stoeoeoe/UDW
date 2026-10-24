@@ -1,3 +1,4 @@
+import { splitTileRef } from '../../../lib/tileRef';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { Box, HStack, Text, VStack } from '@chakra-ui/react';
@@ -297,7 +298,7 @@ function createCollisionBodies(
           continue;
         }
 
-        const [tilesetId, tileIndexText] = tileRef.split(':');
+        const [tilesetId, tileIndexText] = splitTileRef(tileRef);
         const tileIndex = Number.parseInt(tileIndexText, 10);
         const originalTileset = tilesets.get(tilesetId);
         if (!originalTileset || Number.isNaN(tileIndex)) {

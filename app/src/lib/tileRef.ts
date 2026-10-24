@@ -20,13 +20,19 @@ type MigratableMap = Omit<GameMap, 'layers' | 'tilesetRefs'> & {
   tilesetRefs?: string[];
 };
 
+/** Split at the final colon: the tileset ID may itself contain a namespace. */
+export function splitTileRef(tileRef: string): [string, string] {
+  const separator = tileRef.lastIndexOf(':');
+  return [tileRef.slice(0, separator), tileRef.slice(separator + 1)];
+}
+
 /**
  * Encode a tile reference string to a number
  */
 export function encodeTileRef(tileRef: string | null, tilesetRefs: string[]): number | null {
   if (tileRef === null) return null;
 
-  const [tilesetId, tileIndexStr] = tileRef.split(':');
+  const [tilesetId, tileIndexStr] = splitTileRef(tileRef);
   const tileIndex = parseInt(tileIndexStr, 10);
   const tilesetIndex = tilesetRefs.indexOf(tilesetId);
 
@@ -84,7 +90,7 @@ export function buildTilesetRefsFromData(layers: { data?: (string | null)[][] }[
     for (const row of layer.data) {
       for (const cell of row) {
         if (cell !== null) {
-          const [tilesetId] = cell.split(':');
+          const [tilesetId] = splitTileRef(cell);
           tilesetSet.add(tilesetId);
         }
       }
@@ -115,8 +121,15 @@ export function migrateMapToEncodedData(map: MigratableMap): GameMap {
 
   // Convert layer data
   for (const layer of map.layers) {
-    if (layer.data && typeof layer.data[0]?.[0] === 'string') {
-      layer.data = convertLayerDataToEncoded(layer.data as (string | null)[][], map.tilesetRefs);
+    if (
+      Array.isArray(layer.data) &&
+      layer.data.some((row) => row.some((cell) => typeof cell === 'string'))
+    ) {
+      layer.data = layer.data.map((row) =>
+        row.map((cell) =>
+          typeof cell === 'string' ? encodeTileRef(cell, map.tilesetRefs!) : cell,
+        ),
+      );
     }
   }
 

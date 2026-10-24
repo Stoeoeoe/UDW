@@ -1,3 +1,4 @@
+import { splitTileRef } from '../../../lib/tileRef';
 import { useEffect, useRef, useCallback } from 'react';
 import { Container, Graphics, Sprite, BitmapText, Texture, Rectangle } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
@@ -106,7 +107,7 @@ export function computeCollisionOverlay(
           const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
           if (!tileRef) continue;
 
-          const [tsId, indexStr] = tileRef.split(':');
+          const [tsId, indexStr] = splitTileRef(tileRef);
           const index = parseInt(indexStr, 10);
           const tileset = tilesets.get(tsId);
           if (!tileset) continue;
@@ -387,7 +388,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
             if (!tileRef) continue;
 
-            const [tsId, indexStr] = tileRef.split(':');
+            const [tsId, indexStr] = splitTileRef(tileRef);
             const index = parseInt(indexStr, 10);
             const tileset = tilesets.get(tsId);
             if (!tileset) continue;
@@ -614,7 +615,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
             const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
             if (!tileRef) continue;
 
-            const [tsId, indexStr] = tileRef.split(':');
+            const [tsId, indexStr] = splitTileRef(tileRef);
             const index = parseInt(indexStr);
             const tileset = tilesets.get(tsId);
 

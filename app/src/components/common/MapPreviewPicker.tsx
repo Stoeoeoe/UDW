@@ -81,7 +81,7 @@ function renderToCanvas(
         const ref = resolveTileAt(map, layer.id, x, y, null, tilesets);
         if (!ref) continue;
 
-        const colonIdx = ref.indexOf(':');
+        const colonIdx = ref.lastIndexOf(':');
         if (colonIdx === -1) continue;
         const tilesetId = ref.slice(0, colonIdx);
         const tileIndex = parseInt(ref.slice(colonIdx + 1), 10);

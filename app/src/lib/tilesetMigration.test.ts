@@ -6,7 +6,7 @@ describe('tilesetMigration', () => {
   it('preserves reusable object definitions on save/load', () => {
     const tileset: Tileset = {
       version: 1,
-      id: 'village',
+      id: 'base:village',
       name: 'Village',
       spriteSheet: 'village.png',
       columns: 8,

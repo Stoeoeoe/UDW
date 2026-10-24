@@ -6,12 +6,12 @@ describe('mapMigration', () => {
   it('preserves objectGroups while serializing and deserializing a map', () => {
     const map: Map = {
       version: 1,
-      id: 'forest',
+      id: 'base:forest',
       name: 'Forest',
       width: 8,
       height: 8,
-      baseTilesetId: 'village',
-      tilesetRefs: ['village'],
+      baseTilesetId: 'base:village',
+      tilesetRefs: ['base:village'],
       layers: [
         {
           id: 'objects',
@@ -25,9 +25,9 @@ describe('mapMigration', () => {
             {
               id: 'obj_tree',
               tiles: [
-                { x: 3, y: 7, tilesetId: 'village', tileIndex: 42 },
-                { x: 3, y: 6, tilesetId: 'village', tileIndex: 26 },
-                { x: 3, y: 5, tilesetId: 'village', tileIndex: 10 },
+                { x: 3, y: 7, tilesetId: 'base:village', tileIndex: 42 },
+                { x: 3, y: 6, tilesetId: 'base:village', tileIndex: 26 },
+                { x: 3, y: 5, tilesetId: 'base:village', tileIndex: 10 },
               ],
             },
           ],
@@ -46,12 +46,12 @@ describe('mapMigration', () => {
   it('preserves objectInstances while serializing and deserializing a map', () => {
     const map: Map = {
       version: 1,
-      id: 'forest',
+      id: 'base:forest',
       name: 'Forest',
       width: 8,
       height: 8,
-      baseTilesetId: 'village',
-      tilesetRefs: ['village'],
+      baseTilesetId: 'base:village',
+      tilesetRefs: ['base:village'],
       layers: [
         {
           id: 'objects',
@@ -64,7 +64,7 @@ describe('mapMigration', () => {
           objectInstances: [
             {
               id: 'inst_tree',
-              tilesetId: 'village',
+              tilesetId: 'base:village',
               objectDefinitionId: 'oak_tree',
               x: 3,
               y: 5,

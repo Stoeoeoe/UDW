@@ -1,3 +1,4 @@
+import { splitTileRef } from '../../../lib/tileRef';
 import * as THREE from 'three';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveTileAt } from '../../../lib/mapUtils';
@@ -50,7 +51,7 @@ export function bakeLayerCanvas(
       const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
       if (!tileRef) continue;
 
-      const [tilesetId, indexStr] = tileRef.split(':');
+      const [tilesetId, indexStr] = splitTileRef(tileRef);
       const index = Number.parseInt(indexStr, 10);
       const tileset = tilesets.get(tilesetId);
       if (!tileset) continue;
