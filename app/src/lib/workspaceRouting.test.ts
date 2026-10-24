@@ -48,19 +48,6 @@ function createSnapshot(
 }
 
 describe('workspaceRouting', () => {
-  it('treats a legacy location overview route as a map route', () => {
-    const document = documentFromHash(
-      '#/?doc=location-overview&id=map-1',
-      createSnapshot({ maps: [createMap()] }),
-    );
-
-    expect(document).toMatchObject({
-      kind: 'location',
-      mapId: 'map-1',
-      variationId: null,
-    });
-  });
-
   it('does not force a base variation when a location has variations but no explicit variant', () => {
     const document = documentFromHash(
       '#/?doc=location&id=map-1',
@@ -80,19 +67,10 @@ describe('workspaceRouting', () => {
     });
   });
 
-  it('resolves first-class singleton editor routes and preserves legacy screen compatibility', () => {
+  it('resolves first-class singleton editor routes', () => {
     const entitiesDocument = documentFromHash('#/?doc=entities', createSnapshot());
-    const legacyEntitiesDocument = documentFromHash(
-      '#/?doc=legacy&mode=entities',
-      createSnapshot(),
-    );
 
     expect(entitiesDocument).toMatchObject({
-      kind: 'entities',
-      label: 'Entities',
-      saveUnitId: 'configuration',
-    });
-    expect(legacyEntitiesDocument).toMatchObject({
       kind: 'entities',
       label: 'Entities',
       saveUnitId: 'configuration',

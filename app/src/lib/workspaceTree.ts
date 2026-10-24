@@ -236,25 +236,6 @@ function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
   }
 }
 
-// ─── Compat: old two-arg signature for App.tsx ────────────────────────────────
-// App.tsx calls buildWorkspaceTree(maps, tilesets) today. We expose a shim so
-// we can migrate App.tsx in the next step without breaking the build here.
-
-export function buildWorkspaceTreeCompat(
-  maps: GameMap[],
-  tilesets: Map<string, Tileset>,
-): WorkspaceTreeNode[] {
-  return buildWorkspaceTree({
-    maps,
-    tilesets,
-    actors: [],
-    entityTypes: [],
-    items: [],
-    dialogues: [],
-    gameVariables: [],
-  });
-}
-
 // ─── Helpers used by App.tsx ──────────────────────────────────────────────────
 
 export function collectDefaultExpandedNodeIds(nodes: WorkspaceTreeNode[]): string[] {

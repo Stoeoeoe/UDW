@@ -1,6 +1,5 @@
 import { Layer } from '../types/schema';
 import { createTileRef, parseTileRef } from './tileUtils';
-import { decodeTileRef } from './tileRef';
 
 export interface ObjectGroupTile {
   x: number;
@@ -174,33 +173,6 @@ export function applyObjectGroupEdits(layer: Layer, edits: ObjectGroupEdit[]): v
   }
 
   layer.objectGroups = rebuildObjectGroups(Array.from(currentCells.values()));
-  delete layer.data;
-}
-
-export function migrateLegacyObjectLayerToObjectGroups(layer: Layer, tilesetRefs: string[]): void {
-  if (layer.objectGroups?.length) return;
-  if (!layer.data?.length) return;
-
-  const cells: ObjectGroupCell[] = [];
-  for (let y = 0; y < layer.data.length; y += 1) {
-    const row = layer.data[y];
-    if (!row) continue;
-    for (let x = 0; x < row.length; x += 1) {
-      const encoded = row[x];
-      if (encoded === null || encoded === undefined) continue;
-      const tileRef = typeof encoded === 'string' ? encoded : decodeTileRef(encoded, tilesetRefs);
-      const parsed = tileRef ? parseTileRef(tileRef) : null;
-      if (!parsed) continue;
-      cells.push({
-        x,
-        y,
-        tilesetId: parsed.tilesetId,
-        tileIndex: parsed.tileIndex,
-      });
-    }
-  }
-
-  layer.objectGroups = rebuildObjectGroups(cells);
   delete layer.data;
 }
 
