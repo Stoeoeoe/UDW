@@ -226,9 +226,9 @@ namespace Core.Scripting.Editor
             public bool Arrived;
             public MovementApi(GameCharacter actor, Vector2 target)
             { _actor = actor; _target = target; }
-            [LuaCall(true), LuaAction("test.move", "Move", "Test", "Walk the fixture actor", "cutscene")]
+            [LuaAction("test.move", "Move", "Test", "Walk the fixture actor", "cutscene")]
             public ILuaAction Move() => new MoveToAction(_actor, _target);
-            [LuaCall, LuaAction("test.arrived", "Arrived", "Test", "Observe Lua continuation", "cutscene")]
+            [LuaAction("test.arrived", "Arrived", "Test", "Observe Lua continuation", "cutscene")]
             public void MarkArrived() => Arrived = true;
         }
     }

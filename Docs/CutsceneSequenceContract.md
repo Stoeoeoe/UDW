@@ -97,6 +97,11 @@ builds. It checks references without starting gameplay. Actions with
 `[LuaReference]` arguments must provide a check; the registry verifies this and
 the method signature during registration and manifest export.
 
+`[LuaAction]` alone exposes and preserves a session action; it does not also need
+`[LuaCall]`. `[LuaCall]` is for synchronous APIs. Both attributes preserve their
+methods for stripped player builds, and session actions remain excluded from
+synchronous execution and condition evaluation.
+
 The binder discovers actions and their checks through these attributes. Adding
 an action to an existing API module needs no binder change. A new API module
 still needs its construction function wired into `CutsceneBindings`.

@@ -13,8 +13,8 @@ namespace Core.Scripting
 
     /// <summary>Exposes a public instance method to synchronous Lua execution.</summary>
     /// <remarks>
-    /// Read-only calls are also available to conditions. Adding LuaAction instead routes
-    /// the method through a session, where it can suspend Lua while a host action runs.
+    /// Read-only calls are also available to conditions. Use LuaAction instead for
+    /// session methods, which can suspend Lua while a host action runs.
     /// PreserveAttribute keeps these reflection-only methods in stripped player builds.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Method)]

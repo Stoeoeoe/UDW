@@ -64,11 +64,7 @@ namespace Core.Scripting
             {
                 var call = method.GetCustomAttribute<LuaCallAttribute>();
                 var action = method.GetCustomAttribute<LuaActionAttribute>();
-                if (call == null)
-                {
-                    if (action != null) throw Invalid(method, "needs [LuaCall] for [LuaAction]");
-                    continue;
-                }
+                if (call == null && action == null) continue;
                 if (!method.IsPublic || method.IsStatic || method.IsGenericMethod || method.IsSpecialName)
                     throw Invalid(method, "must be a public instance method");
                 if (!names.Add(method.Name))
@@ -84,7 +80,7 @@ namespace Core.Scripting
                     throw Invalid(method, "must opt in to [LuaAction] to return an awaitable");
                 if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ILuaAction) && !IsPrimitive(method.ReturnType))
                     ValidateDto(method.ReturnType);
-                methods.Add(new Method(api, method, parameters, call.WritesState, action, FindValidator(method, action, parameters)));
+                methods.Add(new Method(api, method, parameters, action != null || call.WritesState, action, FindValidator(method, action, parameters)));
             }
             return methods;
         }
@@ -238,8 +234,9 @@ namespace Core.Scripting
             var validator = candidates[0];
             if (validator.IsStatic || validator.IsGenericMethod || validator.ReturnType != typeof(void) ||
                 !validator.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(parameters.Select(parameter => parameter.ParameterType)) ||
-                validator.GetCustomAttribute<PreserveAttribute>() == null || validator.GetCustomAttribute<LuaCallAttribute>() != null)
-                throw Invalid(method, $"validator '{action.Validator}' must be an instance void method with the same parameter types, marked [Preserve] and without [LuaCall]");
+                validator.GetCustomAttribute<PreserveAttribute>() == null ||
+                validator.GetCustomAttribute<LuaCallAttribute>() != null || validator.GetCustomAttribute<LuaActionAttribute>() != null)
+                throw Invalid(method, $"validator '{action.Validator}' must be an instance void method with the same parameter types, marked [Preserve] and not exposed to Lua");
             return validator;
         }
 

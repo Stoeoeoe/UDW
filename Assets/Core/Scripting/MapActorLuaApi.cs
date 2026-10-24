@@ -78,7 +78,6 @@ namespace Core.Scripting
         }
 
         /// <summary>Finds the character and anchor, then starts walking to the anchor's world position.</summary>
-        [LuaCall(true)]
         [LuaAction("actors.moveTo", "Move to anchor", "Movement", "Walk an existing actor to a map anchor.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo))]
         public ILuaAction MoveTo([LuaReference("actorRef", "mapActor")] string actor,
             [LuaReference("anchorRef", "mapAnchor")] string destination)
@@ -92,7 +91,6 @@ namespace Core.Scripting
         public void ValidateFace(string actor, string target) => ResolveFacingActors(actor, target);
 
         /// <summary>Turns one character toward another. Completes immediately.</summary>
-        [LuaCall(true)]
         [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine", Validator = nameof(ValidateFace))]
         public void Face([LuaReference("actorRef", "mapActor")] string actor,
             [LuaReference("actorRef", "mapActor")] string target)

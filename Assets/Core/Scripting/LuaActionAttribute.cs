@@ -1,11 +1,12 @@
 using System;
+using UnityEngine.Scripting;
 
 namespace Core.Scripting
 {
-    /// <summary>Opts a LuaCall method into session execution and visual-action metadata in the binding manifest.</summary>
+    /// <summary>Exposes a public instance method to session execution and visual-action metadata in the binding manifest.</summary>
     /// <remarks>
-    /// Requires <see cref="LuaCallAttribute"/> on the same method. The registry validates
-    /// the stable action ID, display metadata and allowed contexts before binding.
+    /// Preserves the method in stripped player builds. The registry validates the
+    /// stable action ID, display metadata and allowed contexts before binding.
     /// Sessions expose only actions allowed in their context; ordinary LuaCall methods
     /// are not automatically available. Actions are excluded from synchronous execution
     /// and condition evaluation, including actions that complete immediately.
@@ -17,7 +18,7 @@ namespace Core.Scripting
     /// not this attribute or the registry. This metadata does not implement an editor UI.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class LuaActionAttribute : Attribute
+    public sealed class LuaActionAttribute : PreserveAttribute
     {
         /// <summary>Permanent authoring identity, unique across the registry; independent of the C# method name.</summary>
         public string Id { get; }
