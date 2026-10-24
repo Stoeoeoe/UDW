@@ -496,16 +496,16 @@ describe('useEditorStore', () => {
       expect(useEditorStore.getState().activeTool).toBe('stamp');
     });
 
-    it('should keep stamp when switching between tile layers', () => {
+    it('should switch to collision selection when leaving a visual layer', () => {
       useEditorStore.getState().setActiveTool('stamp');
       useEditorStore.getState().selectLayer('collision-layer');
-      expect(useEditorStore.getState().activeTool).toBe('stamp');
+      expect(useEditorStore.getState().activeTool).toBe('collisionSelect');
     });
 
-    it('should switch to stamp when selecting a collision layer while on entityDelete', () => {
+    it('should switch to collision selection when leaving an entity layer', () => {
       useEditorStore.getState().setActiveTool('entityDelete');
       useEditorStore.getState().selectLayer('collision-layer');
-      expect(useEditorStore.getState().activeTool).toBe('stamp');
+      expect(useEditorStore.getState().activeTool).toBe('collisionSelect');
     });
 
     it('should switch away from fill when selecting an object-sorted layer', () => {
@@ -531,6 +531,22 @@ describe('useEditorStore', () => {
       useEditorStore.getState().selectLayer('object-layer');
 
       expect(useEditorStore.getState().activeTool).toBe('objectPlace');
+    });
+
+    it('updates the tool and clears stale selection when the selected layer changes type', () => {
+      useEditorStore.getState().selectLayer('entity-layer');
+      useEditorStore.getState().selectEntity('entity-1');
+      useEditorStore.getState().setActiveTool('entityPlace');
+
+      useEditorStore.getState().updateLayer('entity-layer', { kind: 'visual' });
+
+      const state = useEditorStore.getState();
+      expect(state.currentMap?.layers.find((layer) => layer.id === 'entity-layer')?.kind).toBe(
+        'visual',
+      );
+      expect(state.selectedLayerId).toBe('entity-layer');
+      expect(state.activeTool).toBe('stamp');
+      expect(state.selectedEntityId).toBeNull();
     });
   });
 

@@ -46,7 +46,11 @@ export const createLayerSlice: ImmerStateCreator<LayerSlice> = (set) => ({
     set((state) => {
       const layer = state.currentMap?.layers.find((l) => l.id === layerId);
       if (layer) {
+        const kindChanged = updates.kind !== undefined && updates.kind !== layer.kind;
         Object.assign(layer, updates);
+        if (kindChanged && state.selectedLayerId === layerId) {
+          syncToolStateForSelectedLayer(state, { forceDefault: true });
+        }
         if (updates.zOrder !== undefined && state.currentMap) {
           state.currentMap.layers.sort((a, b) => a.zOrder - b.zOrder);
         }
