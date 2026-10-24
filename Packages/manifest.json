@@ -1,22 +1,23 @@
 {
   "dependencies": {
     "com.eflatun.scenereference": "5.0.0",
-    "org.moonsharp.moonsharp": "https://github.com/moonsharp-devs/moonsharp.git?path=/interpreter#0fb8ba9106c44b140b8f56cb44cb1b50b358897c",
     "com.unity.2d.pixel-perfect": "6.0.0",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.2d.tilemap": "1.0.0",
     "com.unity.2d.tilemap.extras": "9.0.1",
-    "com.unity.ai.navigation": "2.0.14",
+    "com.unity.ai.navigation": "2.0.16",
     "com.unity.cinemachine": "6.6.0",
     "com.unity.feature.2d": "2.0.2",
-    "com.unity.ide.rider": "3.0.39",
-    "com.unity.inputsystem": "1.20.0",
+    "com.unity.ide.rider": "3.1.0",
+    "com.unity.inputsystem": "1.20.1",
     "com.unity.mathematics": "1.4.0",
-    "com.unity.multiplayer.center": "2.0.1",
+    "com.unity.multiplayer.center": "2.1.0",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
+    "com.unity.pipeline": "0.8.0-exp.1",
     "com.unity.postprocessing": "3.5.4",
     "com.unity.render-pipelines.universal": "17.6.0",
     "com.unity.ugui": "2.6.0",
+    "org.moonsharp.moonsharp": "https://github.com/moonsharp-devs/moonsharp.git?path=/interpreter#0fb8ba9106c44b140b8f56cb44cb1b50b358897c",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
@@ -52,8 +53,7 @@
     "com.unity.modules.vehicles": "1.0.0",
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0",
-    "com.unity.pipeline": "0.8.0-exp.1"
+    "com.unity.modules.xr": "1.0.0"
   },
   "scopedRegistries": [
     {

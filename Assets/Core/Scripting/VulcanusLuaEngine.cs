@@ -40,7 +40,7 @@ namespace Core.Scripting
         /// <summary>Lists the supported Lua APIs, including actions that need a map when they run.</summary>
         public static LuaBindingManifest DescribeBindings() => LuaBindingRegistry.DescribeTypes(
             typeof(StoryLuaApi), typeof(SkillsLuaApi), typeof(WorldLuaApi), typeof(CharacterTagLuaApi),
-            typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi));
+            typeof(MapActorLuaApi), typeof(DialogueLuaApi));
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
             string context = "cutscene") =>

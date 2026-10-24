@@ -52,7 +52,7 @@ namespace Core.Game
     [Serializable]
     public sealed class StoryState
     {
-        public Dictionary<string, string> CompletedCutscenes = new(StringComparer.Ordinal);
+        public HashSet<string> CompletedCutscenes = new(StringComparer.Ordinal);
         [OdinSerialize] private HashSet<string> _flags = new HashSet<string>(StringComparer.Ordinal);
 
         public bool HasFlag(string flag) => _flags.Contains(flag);

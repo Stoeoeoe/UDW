@@ -5,6 +5,7 @@ using System.Linq;
 using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using MoonSharp.Interpreter;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -47,11 +48,17 @@ namespace Core.Tile.Editor.Vulcanus
                     (string)step["id"], (string)step["action"], ((JObject)step["arguments"]).Properties()
                         .OrderBy(argument => argument.Name, StringComparer.Ordinal)
                         .Select(argument => new CutsceneArgument(argument.Name, (string)argument.Value)).ToArray()));
-                var completion = source["completion"];
-                var outcomes = completion["actorOutcomes"].Select(outcome =>
-                    new CutsceneActorOutcome((string)outcome["actor"], (string)outcome["anchor"])).ToArray();
+                var completion = source["onComplete"];
+                var placements = completion["actorPlacements"].Select(placement =>
+                    new CutsceneActorPlacement((string)placement["actor"], (string)placement["anchor"])).ToArray();
+                var actions = (string)completion["actions"];
+                try { new Script(CoreModules.Preset_HardSandbox).LoadString(actions, null, path + ":onComplete"); }
+                catch (SyntaxErrorException error)
+                {
+                    throw new FormatException($"{path}, onComplete.actions: {error.DecoratedMessage}", error);
+                }
                 definition.Configure((string)source["id"], (string)source["mapId"], compiled, steps,
-                    (bool)source["allowSkip"], new CutsceneCompletion(outcomes, (string)completion["outcome"] ?? "completed"));
+                    (bool)source["allowSkip"], new CutsceneCompletion(placements, actions));
                 return definition;
             }
             catch { Object.DestroyImmediate(definition); throw; }

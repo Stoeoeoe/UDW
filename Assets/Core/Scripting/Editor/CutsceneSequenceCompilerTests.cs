@@ -29,7 +29,7 @@ namespace Core.Scripting.Editor
             var capture = new CaptureDialogue();
             using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(capture), compiled, "fixture:encoding");
             run.Tick(0);
-            Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Succeeded), run.Error);
+            Assert.That(run.IsRunning, Is.False);
             Assert.That(capture.Reference, Is.EqualTo(reference));
         }
 

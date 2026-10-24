@@ -9,6 +9,12 @@
             "command": "printf '%s\\n' 'Required setup must be valid before gameplay. Enforce invariants at boundaries; never hide missing services or invalid definitions with gameplay fallbacks. Consumers trust required global managers established at startup; do not repeat manager-presence checks or add unsupported shutdown guards. Every design decision needs a concrete explanation of what happens in this game, tied to an actual gameplay scenario and caller or authored content. Clean code, robustness and generic best practices alone are not gameplay reasons. No hypothetical scenarios unless the user explicitly requests them; agent-invented prototypes and tests do not establish requirements. Remove code without a demonstrated need.'",
             "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"Write-Output 'Required setup must be valid before gameplay. Enforce invariants at boundaries; never hide missing services or invalid definitions with gameplay fallbacks. Consumers trust required global managers established at startup; do not repeat manager-presence checks or add unsupported shutdown guards. Every design decision needs a concrete explanation of what happens in this game, tied to an actual gameplay scenario and caller or authored content. Clean code, robustness and generic best practices alone are not gameplay reasons. No hypothetical scenarios unless the user explicitly requests them; agent-invented prototypes and tests do not establish requirements. Remove code without a demonstrated need.'\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "printf '%s\\n' 'Use apply_patch for source and text edits so changes appear in the native clickable changed-file list and diff view. Do not rewrite files with shell scripts when a patch can make the edit, or replace the native diff view with manual file lists or line-count tables unless requested. Keep Unity asset APIs and established generators where required.'",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -Command \"Write-Output 'Use apply_patch for source and text edits so changes appear in the native clickable changed-file list and diff view. Do not rewrite files with shell scripts when a patch can make the edit, or replace the native diff view with manual file lists or line-count tables unless requested. Keep Unity asset APIs and established generators where required.'\"",
+            "timeout": 5
           }
         ]
       }

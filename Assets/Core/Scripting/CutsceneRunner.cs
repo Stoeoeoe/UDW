@@ -18,6 +18,7 @@ namespace Core.Scripting
     public sealed class CutsceneRunner : Singleton<CutsceneRunner>, IEventListener<DayTransitionStarted>
     {
         private CutsceneCatalog _catalog;
+        private readonly VulcanusLuaEngine _completionActions = new();
         private LevelManager _level;
         private UrGUIManager _gui;
         private MainCharacter _player;
@@ -61,18 +62,18 @@ namespace Core.Scripting
             run = null;
             if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || UrGUIManager.HasOpenScreens) return false;
             definition.RequireValidConfiguration();
-            if (GameState.Story.CompletedCutscenes.ContainsKey(definition.CutsceneId)) return false;
+            if (GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId)) return false;
             var player = MainCharacter.CurrentMainCharacter;
             if (!player || !player.IsRuntimeInitialized) throw new InvalidOperationException("Cutscenes require the initialized player.");
             if (player.IsControlBlocked || player.Controller.IsMovementOwned) return false;
 
             // Resolve everything before acquiring control. A bad reference cannot leave half a scene staged.
             var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance,
-                out var actors, out var cutscene);
+                out var actors);
             var placements = CutscenePlacement.Prepare(definition, bindings, actors);
             if (placements.Any(placement => placement.Actor.IsControlBlocked || placement.Actor.Controller.IsMovementOwned)) return false;
             var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId);
-            run = new CutsceneRun(this, definition, session, placements, cutscene);
+            run = new CutsceneRun(this, definition, session, placements);
             ActiveRun = run;
             _player = player;
             _player.OnConditionStateChanged += OnPlayerConditionChanged;
@@ -92,11 +93,13 @@ namespace Core.Scripting
             {
                 foreach (var placement in run.Placements) placement.RequireLive();
                 run.Session.Tick(Time.deltaTime);
-                if (run.Session.Status == LuaExecutionStatus.Succeeded) Finish(run, CutsceneRunStatus.Completed);
-                else if (run.Session.Status != LuaExecutionStatus.Running)
-                    Finish(run, CutsceneRunStatus.Failed, DescribeError(run, run.Session.Error));
             }
-            catch (Exception error) { Finish(run, CutsceneRunStatus.Failed, DescribeError(run, error.Message)); }
+            catch (Exception error)
+            {
+                Cancel(run);
+                throw new InvalidOperationException(DescribeError(run, error.Message), error);
+            }
+            if (!run.Session.IsRunning) Finish(run, completed: true);
         }
 
         private static string DescribeError(CutsceneRun run, string message) => run.CurrentStepId is string step
@@ -104,36 +107,38 @@ namespace Core.Scripting
             : $"{run.Definition.CutsceneId}: {message}";
 
         public void Cancel() { if (ActiveRun != null) Cancel(ActiveRun); }
-        internal void Cancel(CutsceneRun run) => Finish(run, CutsceneRunStatus.Cancelled);
+        internal void Cancel(CutsceneRun run) => Finish(run, completed: false);
         public void OnEvent(DayTransitionStarted change) => Cancel();
         private void OnPlayerConditionChanged(ConditionState condition) { if (condition != ConditionState.Normal) Cancel(); }
 
         internal bool Skip(CutsceneRun run)
         {
-            if (!ReferenceEquals(ActiveRun, run) || run.Status != CutsceneRunStatus.Running || !run.Definition.AllowSkip) return false;
-            Finish(run, CutsceneRunStatus.Skipped);
+            if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || !run.Definition.AllowSkip) return false;
+            run.Skipped = true;
+            Finish(run, completed: true);
             return true;
         }
 
-        private void Finish(CutsceneRun run, CutsceneRunStatus status, string error = null)
+        private void Finish(CutsceneRun run, bool completed)
         {
-            if (!ReferenceEquals(ActiveRun, run) || run.Status != CutsceneRunStatus.Running) return;
+            if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning) return;
             // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
-            run.Status = status;
+            run.IsRunning = false;
             try
             {
                 run.Session.Dispose();
-                var completed = status is CutsceneRunStatus.Completed or CutsceneRunStatus.Skipped;
                 if (completed) foreach (var placement in run.Placements) placement.RequireLive();
                 foreach (var placement in run.Placements) placement.Apply(completed);
                 if (completed)
-                    GameState.Story.CompletedCutscenes[run.Definition.CutsceneId] = run.Outcome;
+                {
+                    _completionActions.Execute(run.Definition.OnComplete.Actions);
+                    GameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
+                }
             }
-            catch (Exception failure)
+            catch
             {
-                status = CutsceneRunStatus.Failed;
-                error = failure.Message;
                 foreach (var placement in run.Placements) placement.Apply(false);
+                throw;
             }
             finally
             {
@@ -146,12 +151,9 @@ namespace Core.Scripting
                 }
                 _player = null;
                 _gui.SetCutsceneActive(false);
-                run.Status = status;
-                run.Error = error;
                 ActiveRun = null;
             }
-            // Outcome, placements and ownership are settled before listeners can start another scene or save.
-            if (status == CutsceneRunStatus.Failed) Debug.LogError(error, this);
+            // Completion actions, placements and ownership are settled before listeners can start another scene or save.
             Finished?.Invoke(run);
         }
     }

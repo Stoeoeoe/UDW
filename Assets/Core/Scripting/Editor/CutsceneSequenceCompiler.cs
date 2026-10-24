@@ -43,7 +43,7 @@ namespace Core.Scripting.Editor
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
-                    // Current actions use string references or an outcome string.
+                    // Current sequence actions use string references.
                     if (parameter.type != "string")
                         throw Invalid(location, $"The sequence compiler does not support parameter type '{parameter.type}'.");
                     literals[parameterIndex] = LuaString(RequiredString(arguments[parameter.name], location, parameter.name));

@@ -40,8 +40,7 @@ namespace Core.Scripting
                 runner.StartDialogue(dialogue, player, onCompleted: () => _completed = true);
             }
 
-            public LuaExecutionStatus Status => _completed ? LuaExecutionStatus.Succeeded : LuaExecutionStatus.Running;
-            public string Error => null;
+            public bool IsCompleted => _completed;
 
             public void Tick(float deltaTime)
             {

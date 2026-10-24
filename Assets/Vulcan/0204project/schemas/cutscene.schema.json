@@ -10,7 +10,7 @@
     "mapId",
     "sequence",
     "allowSkip",
-    "completion"
+    "onComplete"
   ],
   "properties": {
     "$schema": {
@@ -64,14 +64,15 @@
     "allowSkip": {
       "type": "boolean"
     },
-    "completion": {
+    "onComplete": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "actorOutcomes"
+        "actorPlacements",
+        "actions"
       ],
       "properties": {
-        "actorOutcomes": {
+        "actorPlacements": {
           "type": "array",
           "items": {
             "type": "object",
@@ -92,10 +93,8 @@
             }
           }
         },
-        "outcome": {
-          "type": "string",
-          "pattern": "\\S",
-          "default": "completed"
+        "actions": {
+          "type": "string"
         }
       }
     }

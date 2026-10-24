@@ -54,6 +54,5 @@ namespace Core.Scripting
         public string description;
         public string[] contexts;
         public string execution;
-        public string failure = "terminatesSession";
     }
 }

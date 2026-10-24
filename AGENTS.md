@@ -68,6 +68,24 @@ actual use case. Possibility alone is not a requirement.**
   reason. Remove complexity that has no supported use case. Required setup invariants
   still belong at validation, registration or initialization boundaries.
 
+## Edit presentation
+
+- Use `apply_patch` for source and text edits so the user gets the native clickable
+  changed-file list and diff view. Do not use shell scripts to rewrite files when
+  a patch can make the edit.
+- Do not substitute manually written file lists or line-count tables for that
+  native diff view unless the user asks for them. Use Unity Editor APIs for Unity
+  assets that require them, and retain established generators for generated files.
+
+## Edit presentation
+
+- Use `apply_patch` for source and text edits so the user gets the native clickable
+  changed-file list and diff view. Do not use shell scripts to rewrite files when
+  a patch can make the edit.
+- Do not substitute manually written file lists or line-count tables for that
+  native diff view unless the user asks for them. Use Unity Editor APIs for Unity
+  assets that require them, and retain established generators for generated files.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

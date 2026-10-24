@@ -7,25 +7,21 @@ using UnityEngine;
 
 namespace Core.Scripting
 {
-    public enum CutsceneRunStatus { Running, Completed, Skipped, Cancelled, Failed }
-
-    /// <summary>The lifetime/result of one attempt. Disposing an old handle cannot cancel a newer run.</summary>
+    /// <summary>The handle for one playback. Disposing an old handle cannot cancel a newer run.</summary>
     public sealed class CutsceneRun : IDisposable
     {
         private readonly CutsceneRunner _owner;
-        private readonly CutsceneLuaApi _cutscene;
         public CutsceneDefinition Definition { get; }
-        public CutsceneRunStatus Status { get; internal set; } = CutsceneRunStatus.Running;
-        public string Error { get; internal set; }
-        public string Outcome => _cutscene.Outcome;
+        public bool IsRunning { get; internal set; } = true;
+        public bool Skipped { get; internal set; }
         // Imported Lua enters one action per authored step, including actions that yield.
         internal string CurrentStepId => Session.ActionsStarted == 0 ? null : Definition.Steps[Session.ActionsStarted - 1].Id;
         internal LuaExecutionSession Session { get; }
         internal CutscenePlacement[] Placements { get; }
 
         internal CutsceneRun(CutsceneRunner owner, CutsceneDefinition definition,
-            LuaExecutionSession session, CutscenePlacement[] placements, CutsceneLuaApi cutscene)
-        { _owner = owner; Definition = definition; Session = session; Placements = placements; _cutscene = cutscene; }
+            LuaExecutionSession session, CutscenePlacement[] placements)
+        { _owner = owner; Definition = definition; Session = session; Placements = placements; }
 
         public void Cancel() => _owner.Cancel(this);
         public bool Skip() => _owner.Skip(this);
@@ -63,12 +59,12 @@ namespace Core.Scripting
             var ids = definition.Steps.SelectMany(step => actions[step.ActionId].Parameters
                     .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "actorRef")
                     .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name).Value))
-                .Concat(definition.Completion.ActorOutcomes.Select(outcome => outcome.Actor)).Distinct(StringComparer.Ordinal);
+                .Concat(definition.OnComplete.ActorPlacements.Select(placement => placement.Actor)).Distinct(StringComparer.Ordinal);
             return ids.Select(id =>
             {
                 var actor = actors.ResolveActor(id);
-                var outcome = definition.Completion.ActorOutcomes.SingleOrDefault(value => value.Actor == id);
-                var anchor = outcome == null ? null : actors.ResolveAnchor(outcome.Anchor);
+                var placement = definition.OnComplete.ActorPlacements.SingleOrDefault(value => value.Actor == id);
+                var anchor = placement == null ? null : actors.ResolveAnchor(placement.Anchor);
                 return new CutscenePlacement(actor, anchor ? anchor.transform.position : actor.transform.position,
                     anchor ? anchor.FacingDirection : actor.Orientation.FacingDirection);
             }).ToArray();

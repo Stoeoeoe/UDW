@@ -16,24 +16,11 @@ namespace Core.Scripting.Editor
             Assert.That(api.Finished, Is.False);
             run.Tick(0.02f);
             Assert.That(api.Finished, Is.False);
-            api.Action.Status = LuaExecutionStatus.Succeeded;
+            api.Action.IsCompleted = true;
             run.Tick(0.02f);
-            Assert.That(api.Finished, Is.True, run.Error);
-            Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Succeeded), run.Error);
+            Assert.That(api.Finished, Is.True);
+            Assert.That(run.IsRunning, Is.False);
             Assert.That(api.Action.Disposals, Is.EqualTo(1));
-        }
-
-        [TestCase(LuaExecutionStatus.Cancelled)]
-        [TestCase(LuaExecutionStatus.Failed)]
-        public void NonSuccessNeverRunsNextAction(LuaExecutionStatus status)
-        {
-            var api = new TestApi();
-            using var run = Start(api, "Test.Wait(); Test.Finish()");
-            run.Tick(0.02f);
-            api.Action.Status = status;
-            run.Tick(0.02f);
-            Assert.That(run.Status, Is.EqualTo(status));
-            Assert.That(api.Finished, Is.False);
         }
 
         [Test]
@@ -43,20 +30,19 @@ namespace Core.Scripting.Editor
             var run = Start(api, "Test.Wait(); Test.Finish()");
             run.Tick(0.02f);
             run.Cancel(); run.Dispose();
-            api.Action.Status = LuaExecutionStatus.Succeeded;
+            api.Action.IsCompleted = true;
             run.Tick(0.02f);
             Assert.That(api.Finished, Is.False);
             Assert.That(api.Action.Disposals, Is.EqualTo(1));
-            Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Cancelled));
+            Assert.That(run.IsRunning, Is.False);
         }
 
         [Test]
         public void EndlessLuaFailsItsInstructionBudget()
         {
             using var loop = Start(new TestApi(), "while true do end");
-            for (var i = 0; i < 130; i++) loop.Tick(0.01f);
-            Assert.That(loop.Status, Is.EqualTo(LuaExecutionStatus.Failed));
-            Assert.That(loop.Error, Does.Contain("instruction budget"));
+            Assert.That(() => { for (var i = 0; i < 130; i++) loop.Tick(0.01f); },
+                Throws.InvalidOperationException.With.Message.Contains("instruction budget"));
         }
 
         [Test]
@@ -65,7 +51,7 @@ namespace Core.Scripting.Editor
             var api = new TestApi();
             using var run = Start(api, "assert(os == nil and io == nil and dofile == nil and Test.OrdinaryWrite == nil); Test.Finish()");
             run.Tick(0.01f);
-            Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Succeeded), run.Error);
+            Assert.That(run.IsRunning, Is.False);
             Assert.That(api.Finished, Is.True);
         }
 
@@ -73,9 +59,8 @@ namespace Core.Scripting.Editor
         public void ErrorsCarrySourceAndContextRestrictionsAreEnforced()
         {
             using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new TestApi()), "Test.Finish()", "fixture:step-1", "npcRoutine");
-            run.Tick(0.01f);
-            Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Failed));
-            Assert.That(run.Error, Does.Contain("fixture:step-1"));
+            Assert.That(() => run.Tick(0.01f),
+                Throws.InvalidOperationException.With.Message.Contains("fixture:step-1"));
         }
 
         [Test]
@@ -172,7 +157,7 @@ namespace Core.Scripting.Editor
             Assert.That(registry.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Validation" }));
             using var run = VulcanusLuaEngine.StartSession(registry, "Validation.NewAction('player', 'square')", "fixture");
             run.Tick(0.01f);
-            Assert.That(api.Executed, Is.True, run.Error);
+            Assert.That(api.Executed, Is.True);
         }
 
         [Test]
@@ -256,8 +241,7 @@ namespace Core.Scripting.Editor
 
         private sealed class PendingAction : ILuaAction
         {
-            public LuaExecutionStatus Status { get; set; } = LuaExecutionStatus.Running;
-            public string Error => "Test action ended";
+            public bool IsCompleted { get; set; }
             public int Disposals;
             public void Tick(float deltaTime) { }
             public void Dispose() => Disposals++;

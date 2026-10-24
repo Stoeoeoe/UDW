@@ -12,16 +12,13 @@ namespace Core.Scripting
         public MoveToAction(GameCharacter actor, Vector2 destination) =>
             _move = CharacterNavigation.MoveTo(actor, destination);
 
-        public LuaExecutionStatus Status => _move.Status switch
+        public bool IsCompleted => _move.Status == NavigationMoveStatus.Arrived;
+        public void Tick(float deltaTime)
         {
-            NavigationMoveStatus.Moving => LuaExecutionStatus.Running,
-            NavigationMoveStatus.Arrived => LuaExecutionStatus.Succeeded,
-            NavigationMoveStatus.Unreachable => LuaExecutionStatus.Failed,
-            NavigationMoveStatus.Cancelled => LuaExecutionStatus.Cancelled,
-            _ => throw new InvalidOperationException($"Unknown navigation result '{_move.Status}'.")
-        };
-        public string Error => _move.Error;
-        public void Tick(float deltaTime) => _move.Tick(deltaTime);
+            _move.Tick(deltaTime);
+            if (_move.Status is NavigationMoveStatus.Unreachable or NavigationMoveStatus.Cancelled)
+                throw new InvalidOperationException(_move.Error ?? "Movement stopped before arrival.");
+        }
         public void Dispose() => _move.Dispose();
     }
 }

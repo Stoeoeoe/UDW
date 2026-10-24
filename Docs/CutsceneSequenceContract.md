@@ -13,7 +13,7 @@ wrapper is:
   "id": "base:intro",
   "mapId": "map-1",
   "allowSkip": false,
-  "completion": { "outcome": "completed", "actorOutcomes": [] },
+  "onComplete": { "actions": "GameState.Story.SetFlag('introduced')", "actorPlacements": [] },
   "sequence": [
     { "id": "talk", "action": "dialogue.play", "arguments": { "dialogue": "base:greeting" } }
   ]
@@ -51,8 +51,7 @@ Step IDs are permanent, non-empty and unique within the sequence, compared
 exactly. Reordering or renaming a step's display label must retain its ID.
 Action IDs and argument names come from `Generated/Scripting/bindings.json`.
 Only actions allowing the `cutscene` context are accepted. Movement and dialogue
-actions take non-empty string references. `cutscene.setOutcome` takes a non-empty
-`outcome` string and compiles to `Cutscene.SetOutcome("admitted")`.
+actions take non-empty string references.
 Missing/unknown arguments, unknown
 step fields and unsupported actions are errors. Branches and raw Lua steps are
 not supported.
@@ -62,7 +61,7 @@ manifest's parameter order. Strings are encoded as Lua literals, including
 quotes, backslashes and control characters. JSON string escaping is not used as
 Lua escaping.
 
-Each step produces exactly one Lua line. `CompiledSequence.StepIds[line - 1]`
+Each step produces exactly one Lua line. `definition.Steps[line - 1].Id`
 maps that one-based Lua line to its authored step ID. Compiler errors identify
 the source, sequence index and step ID when available.
 Imported definitions retain `Steps` with the authored IDs, action IDs and named
@@ -109,11 +108,11 @@ at initialization; no Inspector catalog assignment is needed.
 `CutsceneRunner.TryStart(id, out run)` resolves an enabled catalog entry. Unknown
 IDs are setup errors. Busy, not-ready, already-completed, occupied-player and
 open-menu starts return false; they do not replace or queue a run. The returned
-`CutsceneRun` is the handle for one attempt, with its definition, status and error. Its
+`CutsceneRun` is the handle for one attempt, with its definition, `IsRunning` and `Skipped` flags. Its
 `Cancel`/`Dispose` only affect that run; `Skip` returns false when skipping is
 disabled or the run is already terminal. The runner inspector shows the active
-run and authored step ID. Failures include cutscene and step identity in the
-console and run result.
+run and authored step ID. Errors propagate as exceptions with cutscene and
+step identity after releasing control and restoring staging.
 
 While staging, normal gameplay, world interactions and global menu shortcuts
 are blocked. UI input stays enabled for dialogue and skip. The in-game calendar
@@ -124,26 +123,28 @@ staging. Camera, animation and audio commands remain outside the initial action
 set.
 
 All actor/anchor/dialogue references resolve before claims are acquired. Referenced
-dialogues, including dialogue jumps, must have no import diagnostics or Lua
-action nodes: persistent effects belong to terminal completion, not dialogue
-actions during staging. Read-only choice conditions and normal dialogue flow
-remain supported.
+dialogues, including dialogue jumps, must have no import diagnostics. Dialogue
+choices use ordinary action nodes to set story flags or perform other supported
+Lua actions immediately. These changes survive a later cutscene interruption.
+Dialogue actions do not need access to a cutscene-specific Lua environment.
 
 ## Completion and persistence
 
-`allowSkip` and `completion` are required authored fields. `completion.outcome`
-defaults to `"completed"` when omitted; an explicitly empty value is invalid.
-`Cutscene.SetOutcome(outcome)` changes the active run's pending outcome without
-writing saved state. Successful completion or skip records the latest outcome in
-`GameState.Story.CompletedCutscenes[cutsceneId]`. The presence of that ID prevents
-replay, regardless of the outcome string. Cancellation and failure record nothing.
-Story flags remain separate and are not set by cutscene completion.
+`allowSkip` and `onComplete` are required authored fields. `onComplete` contains
+`actions`, a synchronous Lua block using the same state APIs as dialogue actions,
+and `actorPlacements`. Empty actions and placement lists are valid. Lua syntax is
+checked during import. There is no cutscene outcome string or `SetOutcome` action.
 
-For skippable scenes, the default outcome must be correct even when skipped before
-the first action. Scenes requiring a player-selected outcome use `allowSkip: false`;
-skip does not execute remaining actions or invent answers.
+Normal playback and skipping both apply the prepared placements and run
+`onComplete.actions` once, then add the cutscene ID to the saved
+`GameState.Story.CompletedCutscenes` set. That ID prevents replay. Cancellation
+and exceptions do not execute `onComplete` or mark the cutscene completed.
+Completion actions are ordinary immediate mutations, not a rollback transaction.
+If they throw, the exception propagates and the cutscene is not marked completed.
+Scenes requiring a player decision use `allowSkip: false`; skipping does not
+execute the remaining dialogue choices or invent answers.
 
-`actorOutcomes` is an ordered list of
+`onComplete.actorPlacements` is an ordered list of
 `{ "actor": "placed-instance-id", "anchor": "anchor-id" }` endpoints, with
 each actor listed at most once. Empty lists are valid.
 
@@ -152,13 +153,13 @@ execution. Normal completion and skip both stop transient actions and apply the
 same prepared endpoints. Unlisted actors return to their pre-run placement. An
 anchor's nonzero facing overrides the actor's direction; zero retains its pre-run
 direction. Spawned actor endpoints update the existing live spawn state. The
-outcome is saved before terminal notifications.
-Cancellation, location leave, death, disabled presentation and runtime failure
+completion marker is saved before terminal notifications.
+Cancellation, location leave, death, disabled presentation and exceptions
 stop pending movement/dialogue and restore surviving actors.
 Cleanup releases only the run's own control and calendar claims.
 
 `GameStateManager.Save` rejects direct saves while staging. Save after `Finished`,
-when placements, outcome and ownership are settled. There is no autosave caller in
+when placements, completion actions and ownership are settled. There is no autosave caller in
 the current project and no new deferral queue. No transient Lua state or second
 cutscene save root is serialized; no save migration/version change is required.
 
@@ -179,7 +180,7 @@ The authored prototype is
 `cutscene-prototype-host-01`, anchor `prototype-meeting`, and
 `prototype_greeting` dialogue. Its map trigger occupies source pixels
 `[160,160]` to `[176,192]`, west of the arrival area. Watching through Goodbye or
-skipping places the host at the meeting anchor and records `"completed"` under
-`base:cutscene-prototype`. This is an explicitly named prototype, not story
+skipping places the host at the meeting anchor and adds
+`base:cutscene-prototype` to the completed set. This is an explicitly named prototype, not story
 canon. A second cutscene using supported assets needs a new source, not manager
 registration or new C#.

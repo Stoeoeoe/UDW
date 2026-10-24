@@ -3,13 +3,10 @@ using MoonSharp.Interpreter;
 
 namespace Core.Scripting
 {
-    public enum LuaExecutionStatus { Running, Succeeded, Cancelled, Failed }
-
     /// <summary>A gameplay action that takes time, such as walking. Dispose stops it and cleans up its resources.</summary>
     public interface ILuaAction : IDisposable
     {
-        LuaExecutionStatus Status { get; }
-        string Error { get; }
+        bool IsCompleted { get; }
         void Tick(float deltaTime);
     }
 
@@ -26,8 +23,7 @@ namespace Core.Scripting
         private readonly Coroutine _routine;
         private ILuaAction _pending;
         private int _slices;
-        public LuaExecutionStatus Status { get; private set; } = LuaExecutionStatus.Running;
-        public string Error { get; private set; }
+        public bool IsRunning { get; private set; } = true;
         public string Source { get; }
         public int ActionsStarted { get; private set; }
 
@@ -56,46 +52,42 @@ namespace Core.Scripting
         {
             if (float.IsNaN(deltaTime) || float.IsInfinity(deltaTime) || deltaTime < 0)
                 throw new ArgumentOutOfRangeException(nameof(deltaTime));
-            if (Status != LuaExecutionStatus.Running) return;
+            if (!IsRunning) return;
             try
             {
                 // Keep Lua paused while the current action is still running.
                 if (_pending != null)
                 {
                     _pending.Tick(deltaTime);
-                    if (_pending.Status == LuaExecutionStatus.Running) return;
-                    var status = _pending.Status;
-                    var error = _pending.Error;
+                    if (!_pending.IsCompleted) return;
                     var completed = _pending;
                     _pending = null;
                     completed.Dispose();
-                    if (status != LuaExecutionStatus.Succeeded) { Finish(status, error); return; }
                     _slices = 0;
                 }
                 // Run a little Lua this frame so a long script cannot freeze the game.
                 _routine.Resume();
-                if (_routine.State == CoroutineState.Dead) { Finish(LuaExecutionStatus.Succeeded, null); return; }
+                if (_routine.State == CoroutineState.Dead) { Dispose(); return; }
                 // Lua may pause for an action or because it used up this frame's CPU budget.
                 if (_pending == null && _routine.State != CoroutineState.ForceSuspended)
                     throw new InvalidOperationException("Unexpected Lua suspension.");
                 // Stop scripts that keep using their full CPU budget, such as an endless loop.
                 if (_pending == null && ++_slices >= MaxInstructionSlices)
-                    Finish(LuaExecutionStatus.Failed, "Lua script exceeded its instruction budget.");
+                    throw new InvalidOperationException("Lua script exceeded its instruction budget.");
             }
             catch (Exception exception)
             {
-                Finish(LuaExecutionStatus.Failed, exception is InterpreterException lua ? lua.DecoratedMessage : exception.Message);
+                Dispose();
+                var message = exception is InterpreterException lua ? lua.DecoratedMessage : exception.Message;
+                throw new InvalidOperationException($"{Source}: {message}", exception);
             }
         }
 
-        public void Cancel() { if (Status == LuaExecutionStatus.Running) Finish(LuaExecutionStatus.Cancelled, null); }
-        public void Dispose() => Cancel();
+        public void Cancel() => Dispose();
 
-        private void Finish(LuaExecutionStatus status, string error)
+        public void Dispose()
         {
-            // Mark the run as finished before cleanup, so later ticks do nothing.
-            Status = status;
-            Error = error == null ? null : $"{Source}: {error}";
+            IsRunning = false;
             var pending = _pending;
             _pending = null;
             pending?.Dispose(); // There may be no action to clean up.

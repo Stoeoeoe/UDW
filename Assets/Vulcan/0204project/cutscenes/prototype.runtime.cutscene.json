@@ -4,14 +4,14 @@
   "id": "base:cutscene-prototype",
   "mapId": "base:map-1",
   "allowSkip": true,
-  "completion": {
-    "actorOutcomes": [
+  "onComplete": {
+    "actorPlacements": [
       {
         "actor": "cutscene-prototype-host-01",
         "anchor": "prototype-meeting"
       }
     ],
-    "outcome": "completed"
+    "actions": ""
   },
   "sequence": [
     {

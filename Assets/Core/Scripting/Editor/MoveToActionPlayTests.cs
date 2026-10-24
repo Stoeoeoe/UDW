@@ -44,15 +44,15 @@ namespace Core.Scripting.Editor
             using (var run = Start(api))
             {
                 run.Tick(0);
-                Assert.That(actor.Controller.IsMovementOwned, Is.True, run.Error);
+                Assert.That(actor.Controller.IsMovementOwned, Is.True);
                 Assert.That(api.Arrived, Is.False);
                 var frames = 0;
-                while (run.Status == LuaExecutionStatus.Running && frames++ < 600)
+                while (run.IsRunning && frames++ < 600)
                 {
                     yield return null;
                     run.Tick(Time.unscaledDeltaTime);
                 }
-                Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Succeeded), run.Error);
+                Assert.That(run.IsRunning, Is.False);
                 Assert.That(frames, Is.GreaterThan(1), "Movement must span actual Unity frames.");
                 Assert.That(Vector2.Distance(body.position, start), Is.GreaterThan(0.2f));
                 Assert.That(Vector2.Distance(body.position, target), Is.LessThanOrEqualTo(0.04f));
@@ -70,11 +70,11 @@ namespace Core.Scripting.Editor
                     yield return null;
                     run.Tick(Time.unscaledDeltaTime);
                 }
-                Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Running), run.Error);
+                Assert.That(run.IsRunning, Is.True);
                 run.Cancel();
                 run.Cancel();
                 run.Tick(0);
-                Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Cancelled));
+                Assert.That(run.IsRunning, Is.False);
                 Assert.That(api.Arrived, Is.False);
                 AssertReleased(actor);
             }
@@ -120,14 +120,14 @@ namespace Core.Scripting.Editor
                 "Actors.MoveTo('player', 'test:meeting')", "AnchorBindingPlayTest"))
             {
                 run.Tick(0);
-                Assert.That(actor.Controller.IsMovementOwned, Is.True, run.Error);
+                Assert.That(actor.Controller.IsMovementOwned, Is.True);
                 var frames = 0;
-                while (run.Status == LuaExecutionStatus.Running && frames++ < 600)
+                while (run.IsRunning && frames++ < 600)
                 {
                     yield return null;
                     run.Tick(Time.unscaledDeltaTime);
                 }
-                Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Succeeded), run.Error);
+                Assert.That(run.IsRunning, Is.False);
                 Assert.That(Vector2.Distance(actor.GetComponent<Rigidbody2D>().position, target), Is.LessThanOrEqualTo(0.04f));
                 AssertReleased(actor);
             }
@@ -188,7 +188,7 @@ namespace Core.Scripting.Editor
                 AssertReleased(actor);
 
                 using var lua = new MoveToAction(actor, target);
-                Assert.That(lua.Status, Is.EqualTo(LuaExecutionStatus.Failed));
+                Assert.That(() => lua.Tick(0), Throws.InvalidOperationException.With.Message.Contains("straight-line route"));
                 AssertReleased(actor);
             }
             finally { Object.DestroyImmediate(wall); }

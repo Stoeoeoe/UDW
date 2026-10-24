@@ -6,39 +6,39 @@ using UnityEngine;
 
 namespace Core.Scripting
 {
-    /// <summary>Default outcome and final actor placements shared by watching and skipping.</summary>
+    /// <summary>Immediate actions and final actor placements shared by watching and skipping.</summary>
     [Serializable]
     public sealed class CutsceneCompletion
     {
-        [SerializeField] private string outcome = "completed";
-        [SerializeField] private CutsceneActorOutcome[] actorOutcomes;
-        public string Outcome => outcome;
-        public IReadOnlyList<CutsceneActorOutcome> ActorOutcomes => Array.AsReadOnly(actorOutcomes);
+        [SerializeField] private string actions;
+        [SerializeField] private CutsceneActorPlacement[] actorPlacements;
+        public string Actions => actions;
+        public IReadOnlyList<CutsceneActorPlacement> ActorPlacements => Array.AsReadOnly(actorPlacements);
 
-        public CutsceneCompletion(CutsceneActorOutcome[] actorOutcomes, string outcome = "completed")
+        public CutsceneCompletion(CutsceneActorPlacement[] actorPlacements, string actions = "")
         {
-            this.outcome = outcome;
-            this.actorOutcomes = (CutsceneActorOutcome[])actorOutcomes.Clone();
+            this.actions = actions;
+            this.actorPlacements = (CutsceneActorPlacement[])actorPlacements.Clone();
         }
 
         internal void Validate(CutsceneDefinition owner, List<ConfigurationError> errors)
         {
-            if (string.IsNullOrWhiteSpace(outcome))
-                errors.Add(new ConfigurationError(owner, "completion.outcome", "Requires a non-empty outcome."));
-            if (actorOutcomes == null || actorOutcomes.Any(outcome => outcome == null ||
-                    string.IsNullOrWhiteSpace(outcome.Actor) || string.IsNullOrWhiteSpace(outcome.Anchor)) ||
-                actorOutcomes.Select(outcome => outcome.Actor).Distinct(StringComparer.Ordinal).Count() != actorOutcomes.Length)
-                errors.Add(new ConfigurationError(owner, "completion.actorOutcomes", "Requires unique actors and an anchor for each endpoint; an empty list is allowed."));
+            if (actions == null)
+                errors.Add(new ConfigurationError(owner, "onComplete.actions", "Requires a Lua action block; an empty string is allowed."));
+            if (actorPlacements == null || actorPlacements.Any(placement => placement == null ||
+                    string.IsNullOrWhiteSpace(placement.Actor) || string.IsNullOrWhiteSpace(placement.Anchor)) ||
+                actorPlacements.Select(placement => placement.Actor).Distinct(StringComparer.Ordinal).Count() != actorPlacements.Length)
+                errors.Add(new ConfigurationError(owner, "onComplete.actorPlacements", "Requires unique actors and an anchor for each endpoint; an empty list is allowed."));
         }
     }
 
     [Serializable]
-    public sealed class CutsceneActorOutcome
+    public sealed class CutsceneActorPlacement
     {
         [SerializeField] private string actor;
         [SerializeField] private string anchor;
         public string Actor => actor;
         public string Anchor => anchor;
-        public CutsceneActorOutcome(string actor, string anchor) { this.actor = actor; this.anchor = anchor; }
+        public CutsceneActorPlacement(string actor, string anchor) { this.actor = actor; this.anchor = anchor; }
     }
 }

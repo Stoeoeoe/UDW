@@ -10,7 +10,7 @@ namespace Core.Scripting
     /// are not automatically available. Actions are excluded from synchronous execution
     /// and condition evaluation, including actions that complete immediately.
     /// A method returning <see cref="ILuaAction"/> suspends Lua until the host operation
-    /// succeeds; cancellation or failure terminates the session without advancing.
+    /// completes; cancellation stops playback and errors propagate as exceptions.
     /// The operation stays in C# and its Lua return type is nil. Other supported return
     /// types complete immediately and use the ordinary Lua value conversion.
     /// Gameplay behavior and claim cleanup belong to the operation and execution session,
