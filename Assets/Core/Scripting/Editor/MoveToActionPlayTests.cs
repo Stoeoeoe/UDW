@@ -31,7 +31,7 @@ namespace Core.Scripting.Editor
         }
 
         [UnityTest]
-        public IEnumerator LuaWaitsForArrivalAndReleasesMovementOnCancellationAndTimeout()
+        public IEnumerator LuaWaitsForArrivalAndReleasesMovementOnCancellation()
         {
             var actor = MainCharacter.CurrentMainCharacter;
             Assert.That(actor, Is.Not.Null);
@@ -40,7 +40,7 @@ namespace Core.Scripting.Editor
             var body = actor.GetComponent<Rigidbody2D>();
             var start = body.position;
             var target = FindClearTarget(actor);
-            var api = new MovementApi(actor, target, 5f);
+            var api = new MovementApi(actor, target);
             using (var run = Start(api))
             {
                 run.Tick(0);
@@ -61,7 +61,7 @@ namespace Core.Scripting.Editor
             }
 
             // Walk back along the same clear path, then cancel while Lua is waiting.
-            api = new MovementApi(actor, start, 5f);
+            api = new MovementApi(actor, start);
             using (var run = Start(api))
             {
                 run.Tick(0);
@@ -78,16 +78,6 @@ namespace Core.Scripting.Editor
                 Assert.That(api.Arrived, Is.False);
                 AssertReleased(actor);
             }
-
-            api = new MovementApi(actor, start, 0.01f);
-            using (var run = Start(api))
-            {
-                run.Tick(0);
-                run.Tick(0.02f);
-                Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.TimedOut), run.Error);
-                Assert.That(api.Arrived, Is.False);
-                AssertReleased(actor);
-            }
         }
 
         [UnityTest]
@@ -96,7 +86,7 @@ namespace Core.Scripting.Editor
             var actor = MainCharacter.CurrentMainCharacter;
             var map = MapManager.Instance.CurrentMap;
             var authoredAnchor = map.GetComponentsInChildren<VulcanusMapAnchor>(true).First();
-            var api = MapActorLuaApi.BindCurrentMap(5f);
+            var api = MapActorLuaApi.BindCurrentMap();
             api.ValidateMoveTo("player", authoredAnchor.AnchorId);
             Assert.That(() => api.ValidateMoveTo("missing-actor", authoredAnchor.AnchorId), Throws.InvalidOperationException);
             Assert.That(() => api.ValidateMoveTo("player", "missing-anchor"), Throws.InvalidOperationException);
@@ -118,7 +108,7 @@ namespace Core.Scripting.Editor
             anchor.transform.SetParent(holder.transform, false);
             anchor.transform.position = target;
             anchor.Configure("test:meeting", "Meeting", Vector2.down, System.Array.Empty<string>());
-            api = MapActorLuaApi.BindCurrentMap(5f);
+            api = MapActorLuaApi.BindCurrentMap();
             var registry = new LuaBindingRegistry(api);
             var method = registry.Describe().modules.Single().methods.Single(value => value.name == "MoveTo");
             Assert.That(method.action.id, Is.EqualTo("actors.moveTo"));
@@ -145,10 +135,10 @@ namespace Core.Scripting.Editor
             var duplicate = new GameObject("Duplicate anchor").AddComponent<VulcanusMapAnchor>();
             duplicate.transform.SetParent(holder.transform, false);
             duplicate.Configure("test:meeting", "Duplicate", Vector2.zero, System.Array.Empty<string>());
-            Assert.That(() => MapActorLuaApi.BindCurrentMap(5f), Throws.InvalidOperationException);
+            Assert.That(() => MapActorLuaApi.BindCurrentMap(), Throws.InvalidOperationException);
             Object.DestroyImmediate(duplicate.gameObject);
             anchor.Configure("", "Missing ID", Vector2.zero, System.Array.Empty<string>());
-            Assert.That(() => MapActorLuaApi.BindCurrentMap(5f), Throws.InvalidOperationException);
+            Assert.That(() => MapActorLuaApi.BindCurrentMap(), Throws.InvalidOperationException);
             Object.DestroyImmediate(holder);
         }
 
@@ -163,7 +153,7 @@ namespace Core.Scripting.Editor
         {
             var actor = MainCharacter.CurrentMainCharacter;
             var target = FindClearTarget(actor);
-            using (var move = CharacterNavigation.MoveTo(actor, target, 5f))
+            using (var move = CharacterNavigation.MoveTo(actor, target))
             {
                 var frames = 0;
                 while (move.Status == NavigationMoveStatus.Moving && frames++ < 600)
@@ -191,13 +181,13 @@ namespace Core.Scripting.Editor
                 wall.AddComponent<BoxCollider2D>().size = direction.x != 0 ? new Vector2(0.05f, 2f) : new Vector2(2f, 0.05f);
                 Physics2D.SyncTransforms();
 
-                using var blocked = CharacterNavigation.MoveTo(actor, target, 5f);
+                using var blocked = CharacterNavigation.MoveTo(actor, target);
                 Assert.That(blocked.Status, Is.EqualTo(NavigationMoveStatus.Unreachable));
                 Assert.That(blocked.Error, Does.Contain("straight-line route"));
                 Assert.That(body.position, Is.EqualTo(start));
                 AssertReleased(actor);
 
-                using var lua = new MoveToAction(actor, target, 5f);
+                using var lua = new MoveToAction(actor, target);
                 Assert.That(lua.Status, Is.EqualTo(LuaExecutionStatus.Failed));
                 AssertReleased(actor);
             }
@@ -233,12 +223,11 @@ namespace Core.Scripting.Editor
         {
             private readonly GameCharacter _actor;
             private readonly Vector2 _target;
-            private readonly float _timeout;
             public bool Arrived;
-            public MovementApi(GameCharacter actor, Vector2 target, float timeout)
-            { _actor = actor; _target = target; _timeout = timeout; }
+            public MovementApi(GameCharacter actor, Vector2 target)
+            { _actor = actor; _target = target; }
             [LuaCall(true), LuaAction("test.move", "Move", "Test", "Walk the fixture actor", "cutscene")]
-            public ILuaAction Move() => new MoveToAction(_actor, _target, _timeout);
+            public ILuaAction Move() => new MoveToAction(_actor, _target);
             [LuaCall, LuaAction("test.arrived", "Arrived", "Test", "Observe Lua continuation", "cutscene")]
             public void MarkArrived() => Arrived = true;
         }

@@ -9,8 +9,8 @@ namespace Core.Scripting
     {
         private readonly NavigationMove _move;
 
-        public MoveToAction(GameCharacter actor, Vector2 destination, float timeoutSeconds) =>
-            _move = CharacterNavigation.MoveTo(actor, destination, timeoutSeconds);
+        public MoveToAction(GameCharacter actor, Vector2 destination) =>
+            _move = CharacterNavigation.MoveTo(actor, destination);
 
         public LuaExecutionStatus Status => _move.Status switch
         {
@@ -18,7 +18,6 @@ namespace Core.Scripting
             NavigationMoveStatus.Arrived => LuaExecutionStatus.Succeeded,
             NavigationMoveStatus.Unreachable => LuaExecutionStatus.Failed,
             NavigationMoveStatus.Cancelled => LuaExecutionStatus.Cancelled,
-            NavigationMoveStatus.TimedOut => LuaExecutionStatus.TimedOut,
             _ => throw new InvalidOperationException($"Unknown navigation result '{_move.Status}'.")
         };
         public string Error => _move.Error;

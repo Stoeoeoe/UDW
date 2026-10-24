@@ -16,26 +16,22 @@ namespace Core.Scripting
         private readonly VulcanusImportedMap _map;
         private readonly Dictionary<string, GameCharacter> _actors = new(StringComparer.Ordinal);
         private readonly Dictionary<string, VulcanusMapAnchor> _anchors = new(StringComparer.OrdinalIgnoreCase);
-        private readonly float _movementTimeout;
 
         /// <summary>Finds the actors and anchors in the loaded map and remembers their IDs.</summary>
-        public static MapActorLuaApi BindCurrentMap(float movementTimeoutSeconds)
+        public static MapActorLuaApi BindCurrentMap()
         {
             if (!LevelManager.Instance.SceneReady)
                 throw new InvalidOperationException("Bind actor actions after the location is SceneReady.");
             if (!MapManager.Instance.CurrentMap)
                 throw new InvalidOperationException("Actor actions require the initialized Vulcanus map.");
             return new MapActorLuaApi(MapManager.Instance.CurrentMap, MainCharacter.CurrentMainCharacter,
-                WorldObjectSpawner.Instance.SpawnedObjects, movementTimeoutSeconds);
+                WorldObjectSpawner.Instance.SpawnedObjects);
         }
 
         private MapActorLuaApi(VulcanusImportedMap map, GameCharacter player,
-            IEnumerable<SpawnedObject> spawnedObjects, float movementTimeoutSeconds)
+            IEnumerable<SpawnedObject> spawnedObjects)
         {
-            if (!float.IsFinite(movementTimeoutSeconds) || movementTimeoutSeconds <= 0)
-                throw new ArgumentOutOfRangeException(nameof(movementTimeoutSeconds));
             _map = map;
-            _movementTimeout = movementTimeoutSeconds;
             // The player is created separately from the other spawned objects.
             AddActor("player", player);
 
@@ -88,7 +84,7 @@ namespace Core.Scripting
             [LuaReference("anchorRef", "mapAnchor")] string destination)
         {
             RequireCurrentMap();
-            return new MoveToAction(ResolveActor(actor), ResolveAnchor(destination).transform.position, _movementTimeout);
+            return new MoveToAction(ResolveActor(actor), ResolveAnchor(destination).transform.position);
         }
 
         /// <summary>Checks both actor IDs before a cutscene starts. Does not turn either actor.</summary>

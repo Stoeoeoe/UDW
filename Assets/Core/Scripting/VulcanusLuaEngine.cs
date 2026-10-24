@@ -43,8 +43,8 @@ namespace Core.Scripting
             typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi));
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
-            string context = "cutscene", float timeoutSeconds = 120f) =>
-            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context, timeoutSeconds);
+            string context = "cutscene") =>
+            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context);
 
         /// <summary>Compiles each distinct expression once, but reads live state on every evaluation.</summary>
         public bool EvaluateCondition(string expression)

@@ -455,7 +455,7 @@ namespace Core.Scripting.Editor
             {
                 var walk = Step("walk", "actors.moveTo", ("actor", "player"), ("destination", anchor.AnchorId));
                 ConfigureDefinition(definition, map.MapId, walk, Step("talk", "dialogue.play", ("dialogue", "missing-dialogue")));
-                var error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner, 5f));
+                var error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner));
                 Assert.That(error.Message, Does.Contain("fixture:binding").And.Contain("step 'talk'").And.Contain("missing-dialogue"));
 
                 foreach (var invalid in new[]
@@ -466,23 +466,23 @@ namespace Core.Scripting.Editor
                 })
                 {
                     ConfigureDefinition(definition, map.MapId, invalid);
-                    error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner, 5f));
+                    error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner));
                     Assert.That(error.Message, Does.Contain($"step '{invalid.Id}'"));
                 }
 
                 var talk = Step("talk", "dialogue.play", ("dialogue", "fixture:talk"));
                 ConfigureDefinition(definition, "another-map", walk, talk);
-                Assert.That(() => CutsceneBindings.BindCurrentMap(definition, _runner, 5f),
+                Assert.That(() => CutsceneBindings.BindCurrentMap(definition, _runner),
                     Throws.InvalidOperationException.With.Message.Contains("another-map"));
 
                 ConfigureDefinition(definition, map.MapId, walk, talk);
-                var bindings = CutsceneBindings.BindCurrentMap(definition, _runner, 5f);
+                var bindings = CutsceneBindings.BindCurrentMap(definition, _runner);
                 Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EquivalentTo(new[] { "Actors", "Dialogue" }));
                 ConfigureDefinition(definition, map.MapId, talk);
-                bindings = CutsceneBindings.BindCurrentMap(definition, _runner, 5f);
+                bindings = CutsceneBindings.BindCurrentMap(definition, _runner);
                 Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Dialogue" }));
                 ConfigureDefinition(definition, map.MapId, walk);
-                bindings = CutsceneBindings.BindCurrentMap(definition, null, 5f);
+                bindings = CutsceneBindings.BindCurrentMap(definition, null);
                 Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Actors" }));
                 Assert.That(player.Controller.IsMovementOwned, Is.False);
                 Assert.That(player.GetComponent<Rigidbody2D>().position, Is.EqualTo(position));

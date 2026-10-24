@@ -18,8 +18,6 @@ namespace Core.Scripting
     public sealed class CutsceneRunner : Singleton<CutsceneRunner>, IEventListener<DayTransitionStarted>
     {
         private CutsceneCatalog _catalog;
-        [SerializeField][Min(0)] private float movementTimeoutSeconds = 30f;
-        [SerializeField][Min(0)] private float runTimeoutSeconds = 120f;
         private LevelManager _level;
         private UrGUIManager _gui;
         private MainCharacter _player;
@@ -70,10 +68,10 @@ namespace Core.Scripting
 
             // Resolve everything before acquiring control. A bad reference cannot leave half a scene staged.
             var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance,
-                movementTimeoutSeconds, out var actors, out var cutscene);
+                out var actors, out var cutscene);
             var placements = CutscenePlacement.Prepare(definition, bindings, actors);
             if (placements.Any(placement => placement.Actor.IsControlBlocked || placement.Actor.Controller.IsMovementOwned)) return false;
-            var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId, timeoutSeconds: runTimeoutSeconds);
+            var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId);
             run = new CutsceneRun(this, definition, session, placements, cutscene);
             ActiveRun = run;
             _player = player;

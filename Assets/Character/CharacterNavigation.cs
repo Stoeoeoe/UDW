@@ -3,16 +3,16 @@ using UnityEngine;
 
 namespace Character
 {
-    public enum NavigationMoveStatus { Moving, Arrived, Unreachable, Cancelled, TimedOut }
+    public enum NavigationMoveStatus { Moving, Arrived, Unreachable, Cancelled }
 
     /// <summary>Shared entry point for character movement. Currently supports straight-line routes only.</summary>
     public static class CharacterNavigation
     {
-        public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination, float timeoutSeconds) =>
-            new(actor, destination, timeoutSeconds);
+        public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination) =>
+            new(actor, destination);
     }
 
-    /// <summary>Walks to a position and owns movement until arrival, cancellation or timeout.</summary>
+    /// <summary>Walks to a position and owns movement until arrival or cancellation.</summary>
     /// <remarks>The caller ticks this move each frame and disposes it when interrupted.</remarks>
     public sealed class NavigationMove : IDisposable
     {
@@ -22,22 +22,18 @@ namespace Character
         private readonly Rigidbody2D _body;
         private readonly Vector2 _destination;
         private readonly float _speed;
-        private readonly float _timeout;
-        private float _elapsed;
         private bool _disposed;
 
         public NavigationMoveStatus Status { get; private set; } = NavigationMoveStatus.Moving;
         public string Error { get; private set; }
 
-        internal NavigationMove(GameCharacter actor, Vector2 destination, float timeoutSeconds)
+        internal NavigationMove(GameCharacter actor, Vector2 destination)
         {
             if (!actor) throw new ArgumentNullException(nameof(actor));
             if (!actor.isActiveAndEnabled || !actor.IsRuntimeInitialized)
                 throw new InvalidOperationException("MoveTo requires a live initialized character.");
             if (!float.IsFinite(destination.x) || !float.IsFinite(destination.y))
                 throw new ArgumentException("MoveTo requires a finite world position.", nameof(destination));
-            if (!float.IsFinite(timeoutSeconds) || timeoutSeconds <= 0)
-                throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
             if (actor.ConditionState != ConditionState.Normal || actor.Occupation.IsOccupied)
                 throw new InvalidOperationException("MoveTo requires a character that can walk.");
 
@@ -50,7 +46,6 @@ namespace Character
             if (!float.IsFinite(_speed) || _speed <= 0)
                 throw new InvalidOperationException("MoveTo requires a positive walk speed.");
             _destination = destination;
-            _timeout = timeoutSeconds;
 
             // Check the actual character footprint before starting. This version cannot take a detour.
             if (!HasClearDirectRoute())
@@ -98,12 +93,6 @@ namespace Character
             if (_actor.ConditionState != ConditionState.Normal || _actor.Occupation.IsOccupied || !_body.simulated)
             {
                 Finish(NavigationMoveStatus.Cancelled, "The actor can no longer walk.");
-                return;
-            }
-            _elapsed += deltaTime;
-            if (_elapsed >= _timeout)
-            {
-                Finish(NavigationMoveStatus.TimedOut, "The actor did not reach the destination in time.");
                 return;
             }
 

@@ -25,7 +25,6 @@ namespace Core.Scripting.Editor
 
         [TestCase(LuaExecutionStatus.Cancelled)]
         [TestCase(LuaExecutionStatus.Failed)]
-        [TestCase(LuaExecutionStatus.TimedOut)]
         public void NonSuccessNeverRunsNextAction(LuaExecutionStatus status)
         {
             var api = new TestApi();
@@ -52,12 +51,8 @@ namespace Core.Scripting.Editor
         }
 
         [Test]
-        public void DeadlineAndInstructionBudgetAreDistinctFromAwaiting()
+        public void EndlessLuaFailsItsInstructionBudget()
         {
-            var api = new TestApi();
-            using var timeout = Start(api, "Test.Wait()");
-            timeout.Tick(0.01f); timeout.Tick(121f);
-            Assert.That(timeout.Status, Is.EqualTo(LuaExecutionStatus.TimedOut));
             using var loop = Start(new TestApi(), "while true do end");
             for (var i = 0; i < 130; i++) loop.Tick(0.01f);
             Assert.That(loop.Status, Is.EqualTo(LuaExecutionStatus.Failed));

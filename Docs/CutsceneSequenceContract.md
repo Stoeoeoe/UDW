@@ -79,7 +79,7 @@ Catalog discovery preserves enabled selections and uses exact cutscene IDs.
 Before Play Mode or a build, the current sources are validated again so a
 failed edit cannot run through an older retained Unity import artifact.
 
-`CutsceneBindings.BindCurrentMap(definition, dialogueRunner, movementTimeoutSeconds)`
+`CutsceneBindings.BindCurrentMap(definition, dialogueRunner)`
 checks the definition's map against the ready loaded map, then validates every
 step through the existing actor/anchor/dialogue APIs. It returns the Lua binding
 registry after all references resolve. It does not execute actions, open

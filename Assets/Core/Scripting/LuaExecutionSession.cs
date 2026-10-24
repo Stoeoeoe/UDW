@@ -3,7 +3,7 @@ using MoonSharp.Interpreter;
 
 namespace Core.Scripting
 {
-    public enum LuaExecutionStatus { Running, Succeeded, Cancelled, Failed, TimedOut }
+    public enum LuaExecutionStatus { Running, Succeeded, Cancelled, Failed }
 
     /// <summary>A gameplay action that takes time, such as walking. Dispose stops it and cleans up its resources.</summary>
     public interface ILuaAction : IDisposable
@@ -17,31 +17,25 @@ namespace Core.Scripting
     /// <remarks>
     /// Call Tick once per frame. When Lua starts an action such as walking, the script
     /// pauses while the action runs. It continues when the action succeeds.
-    /// Cancelling the session, an error, or a timeout stops the run and cleans up the action.
+    /// Cancelling the session or an error stops the run and cleans up the action.
     /// </remarks>
     public sealed class LuaExecutionSession : IDisposable
     {
         private const int InstructionsPerFrame = 1000;
         private const int MaxInstructionSlices = 128;
         private readonly Coroutine _routine;
-        private readonly float _timeout;
         private ILuaAction _pending;
         private int _slices;
-        private float _elapsed;
         public LuaExecutionStatus Status { get; private set; } = LuaExecutionStatus.Running;
         public string Error { get; private set; }
         public string Source { get; }
         public int ActionsStarted { get; private set; }
 
-        internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context,
-            float timeout)
+        internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context)
         {
             if (string.IsNullOrWhiteSpace(chunk)) throw new ArgumentException("Lua source is required.", nameof(chunk));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
-            if (float.IsNaN(timeout) || float.IsInfinity(timeout) || timeout <= 0)
-                throw new ArgumentOutOfRangeException(nameof(timeout));
             Source = source;
-            _timeout = timeout;
             var script = new Script(CoreModules.Preset_HardSandbox);
             // Give this script only the actions allowed in its context, e.g. "cutscene".
             bindings.BindActions(script, context, Await, () => ActionsStarted++);
@@ -65,8 +59,6 @@ namespace Core.Scripting
             if (Status != LuaExecutionStatus.Running) return;
             try
             {
-                _elapsed += deltaTime;
-                if (_elapsed >= _timeout) { Finish(LuaExecutionStatus.TimedOut, "Execution deadline exceeded."); return; }
                 // Keep Lua paused while the current action is still running.
                 if (_pending != null)
                 {

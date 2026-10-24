@@ -2343,8 +2343,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c2168fb36c9b804180d45036c82fbc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.CutsceneRunner
-  movementTimeoutSeconds: 30
-  runTimeoutSeconds: 120
 --- !u!1 &1124810803398170432
 GameObject:
   m_ObjectHideFlags: 0
