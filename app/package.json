@@ -18,6 +18,8 @@
     "lint:ui:strict": "node scripts/check-ui-hex.mjs --strict",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:coverage": "vitest run --config vitest.unit.config.ts --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config playwright.e2e.config.ts",
     "storybook": "storybook dev -p 6006",
