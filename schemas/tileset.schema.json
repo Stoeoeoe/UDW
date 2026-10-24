@@ -22,8 +22,8 @@
     },
     "id": {
       "type": "string",
-      "description": "Unique identifier for this tileset (kebab-case).",
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Lowercase qualified resource ID, e.g. base:myactor."
     },
     "name": {
       "type": "string",
@@ -53,16 +53,23 @@
     "wangSets": {
       "type": "array",
       "description": "Wang sets for autotiling (Tiled-compatible).",
-      "items": { "$ref": "#/$defs/WangSet" }
+      "items": {
+        "$ref": "#/$defs/WangSet"
+      }
     },
     "objects": {
       "type": "array",
       "description": "Reusable multi-tile object definitions such as trees or bushes.",
-      "items": { "$ref": "#/$defs/TilesetObjectDefinition" }
+      "items": {
+        "$ref": "#/$defs/TilesetObjectDefinition"
+      }
     },
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'Environment/Forest'). Empty string or absent = root."
+    },
+    "$schema": {
+      "type": "string"
     }
   },
   "$defs": {
@@ -73,18 +80,25 @@
       "properties": {
         "id": {
           "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
           "description": "Optional semantic string ID (e.g. 'player_spawn')."
         },
         "tags": {
           "type": "array",
           "description": "Semantic tags (e.g. ['walkable', 'water']).",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "collision": { "$ref": "#/$defs/CollisionDefinition" },
+        "collision": {
+          "$ref": "#/$defs/CollisionDefinition"
+        },
         "properties": {
           "type": "array",
           "description": "Custom key-value properties.",
-          "items": { "$ref": "#/$defs/PropertyInstance" }
+          "items": {
+            "$ref": "#/$defs/PropertyInstance"
+          }
         },
         "terrain": {
           "type": "string",
@@ -103,7 +117,9 @@
         "terrainCorners": {
           "type": "array",
           "description": "Per-corner terrain IDs for corner-based Wang tiles: [top-left, top-right, bottom-left, bottom-right].",
-          "items": { "type": ["string", "null"] },
+          "items": {
+            "type": ["string", "null"]
+          },
           "minItems": 4,
           "maxItems": 4
         }
@@ -120,7 +136,9 @@
         },
         "shapes": {
           "type": "array",
-          "items": { "$ref": "#/$defs/CollisionShape" }
+          "items": {
+            "$ref": "#/$defs/CollisionShape"
+          }
         }
       }
     },
@@ -129,25 +147,38 @@
       "required": ["id", "type"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
         "type": {
           "type": "string",
           "enum": ["rectangle", "polygon", "circle"]
         },
         "points": {
           "type": "array",
-          "description": "Polygon/shape vertices as normalized [x, y] pairs (0.0–1.0).",
+          "description": "Polygon/shape vertices as normalized [x, y] pairs (0.0â€“1.0).",
           "items": {
             "type": "array",
-            "items": { "type": "number" },
+            "items": {
+              "type": "number"
+            },
             "minItems": 2,
             "maxItems": 2
           }
         },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "width": { "type": "number" },
-        "height": { "type": "number" }
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        }
       }
     },
     "TilesetObjectDefinition": {
@@ -155,11 +186,18 @@
       "required": ["id", "name", "tiles"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
         "tiles": {
           "type": "array",
-          "items": { "$ref": "#/$defs/TilesetObjectTile" }
+          "items": {
+            "$ref": "#/$defs/TilesetObjectTile"
+          }
         }
       }
     },
@@ -168,9 +206,18 @@
       "required": ["x", "y", "tileIndex"],
       "additionalProperties": false,
       "properties": {
-        "x": { "type": "integer", "minimum": 0 },
-        "y": { "type": "integer", "minimum": 0 },
-        "tileIndex": { "type": "integer", "minimum": 0 }
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tileIndex": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "WangSet": {
@@ -178,22 +225,32 @@
       "required": ["id", "name", "type", "colors", "tileMappings"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
         "type": {
           "type": "string",
           "enum": ["corner", "edge", "mixed"]
         },
         "colors": {
           "type": "array",
-          "items": { "$ref": "#/$defs/WangColor" }
+          "items": {
+            "$ref": "#/$defs/WangColor"
+          }
         },
         "tileMappings": {
           "type": "object",
           "description": "Maps tile index to an 8-element array of Wang color IDs: [T, TR, R, BR, B, BL, L, TL].",
           "additionalProperties": {
             "type": "array",
-            "items": { "type": "integer", "minimum": 0 },
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
             "minItems": 8,
             "maxItems": 8
           }
@@ -210,13 +267,17 @@
           "description": "1-indexed Wang color ID (0 is none/neutral).",
           "minimum": 0
         },
-        "name": { "type": "string" },
+        "name": {
+          "type": "string"
+        },
         "color": {
           "type": "string",
           "description": "Hex color for editor visualization (e.g. '#ff0000').",
           "pattern": "^#[0-9a-fA-F]{6}$"
         },
-        "labelIcon": { "type": "string" }
+        "labelIcon": {
+          "type": "string"
+        }
       }
     },
     "PropertyInstance": {
@@ -224,19 +285,41 @@
       "required": ["key", "value"],
       "additionalProperties": false,
       "properties": {
-        "key": { "type": "string" },
-        "value": { "$ref": "#/$defs/PropertyValue" }
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/PropertyValue"
+        }
       }
     },
     "PropertyValue": {
       "description": "A scalar, array, or object property value.",
       "oneOf": [
-        { "type": "string" },
-        { "type": "number" },
-        { "type": "boolean" },
-        { "type": "null" },
-        { "type": "array", "items": { "type": "string" } },
-        { "type": "array", "items": { "type": "number" } },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
         {
           "type": "object",
           "additionalProperties": {

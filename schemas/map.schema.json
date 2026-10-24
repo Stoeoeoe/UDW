@@ -24,7 +24,8 @@
     },
     "id": {
       "type": "string",
-      "description": "Unique identifier for this map."
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Lowercase qualified resource ID, e.g. base:myactor."
     },
     "name": {
       "type": "string",
@@ -42,36 +43,55 @@
     },
     "baseTilesetId": {
       "type": "string",
+      "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
       "description": "ID of the primary tileset for this map."
     },
     "tilesetRefs": {
       "type": "array",
       "description": "Ordered list of tileset IDs referenced by encoded tile data. A tile ref encodes as (tilesetIndex << 16) | tileIndex.",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+      }
     },
     "layers": {
       "type": "array",
-      "items": { "$ref": "#/$defs/Layer" }
+      "items": {
+        "$ref": "#/$defs/Layer"
+      }
     },
     "entities": {
       "type": "array",
       "description": "Top-level entity instances (not bound to an entity layer).",
-      "items": { "$ref": "#/$defs/EntityInstance" }
+      "items": {
+        "$ref": "#/$defs/EntityInstance"
+      }
     },
     "locationLinks": {
       "type": "array",
       "description": "Map transition links (doors, exits, portals).",
-      "items": { "$ref": "#/$defs/LocationLink" }
+      "items": {
+        "$ref": "#/$defs/LocationLink"
+      }
     },
-    "spatialPrimitives": { "$ref": "#/$defs/SpatialPrimitives" },
+    "spatialPrimitives": {
+      "$ref": "#/$defs/SpatialPrimitives"
+    },
     "variations": {
       "type": "array",
-      "items": { "$ref": "#/$defs/Variation" }
+      "items": {
+        "$ref": "#/$defs/Variation"
+      }
     },
-    "metadata": { "$ref": "#/$defs/MapMetadata" },
+    "metadata": {
+      "$ref": "#/$defs/MapMetadata"
+    },
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'World/Dungeon'). Empty string or absent = root."
+    },
+    "$schema": {
+      "type": "string"
     }
   },
   "$defs": {
@@ -88,8 +108,13 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
         "kind": {
           "type": "string",
           "enum": [
@@ -102,22 +127,31 @@
             "terrain"
           ]
         },
-        "visible": { "type": "boolean" },
-        "locked": { "type": "boolean" },
+        "visible": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
         "opacity": {
           "type": "number",
           "minimum": 0,
           "maximum": 1
         },
-        "zOrder": { "type": "integer" },
+        "zOrder": {
+          "type": "integer"
+        },
         "sortingLayer": {
           "type": "string",
           "enum": ["ground", "above"],
           "description": "Sorting bucket at runtime for visual/tile layers. 'ground' uses fixed zOrder; 'above' always renders on top. Default 'ground'. Object layers (kind='object') handle their own Y-sorting."
         },
-        "icon": { "type": "string" },
+        "icon": {
+          "type": "string"
+        },
         "definitionId": {
           "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
           "description": "Reference to a LayerDefinition in project"
         },
         "data": {
@@ -127,26 +161,36 @@
               "type": "array",
               "items": {
                 "type": "array",
-                "items": { "type": ["integer", "null"] }
+                "items": {
+                  "type": ["integer", "null"]
+                }
               }
             },
-            { "$ref": "#/$defs/SparseLayerData" }
+            {
+              "$ref": "#/$defs/SparseLayerData"
+            }
           ]
         },
         "objectGroups": {
           "type": "array",
           "description": "Connected painted tiles stored as first-class groups for object-sorted layers.",
-          "items": { "$ref": "#/$defs/ObjectGroup" }
+          "items": {
+            "$ref": "#/$defs/ObjectGroup"
+          }
         },
         "objectInstances": {
           "type": "array",
           "description": "Placed reusable object instances for object-sorted layers. Instance positions are stored in pixels.",
-          "items": { "$ref": "#/$defs/MapObjectInstance" }
+          "items": {
+            "$ref": "#/$defs/MapObjectInstance"
+          }
         },
         "terrainPalette": {
           "type": "array",
           "description": "Unique terrain IDs used in this layer (sorted). Present only when terrain data uses palette encoding.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "terrainData": {
           "description": "Parallel grid of terrain IDs per cell. When 'terrainPalette' is present, values are integer indices into the palette; otherwise values are terrain ID strings (legacy format).",
@@ -155,14 +199,18 @@
               "type": "array",
               "items": {
                 "type": "array",
-                "items": { "type": ["integer", "null"] }
+                "items": {
+                  "type": ["integer", "null"]
+                }
               }
             },
             {
               "type": "array",
               "items": {
                 "type": "array",
-                "items": { "type": ["string", "null"] }
+                "items": {
+                  "type": ["string", "null"]
+                }
               }
             }
           ]
@@ -170,7 +218,9 @@
         "entities": {
           "type": "array",
           "description": "Entity instances on this layer (entity layers only).",
-          "items": { "$ref": "#/$defs/EntityInstance" }
+          "items": {
+            "$ref": "#/$defs/EntityInstance"
+          }
         }
       }
     },
@@ -179,10 +229,15 @@
       "required": ["id", "tiles"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
         "tiles": {
           "type": "array",
-          "items": { "$ref": "#/$defs/ObjectGroupTile" }
+          "items": {
+            "$ref": "#/$defs/ObjectGroupTile"
+          }
         }
       }
     },
@@ -191,10 +246,22 @@
       "required": ["x", "y", "tilesetId", "tileIndex"],
       "additionalProperties": false,
       "properties": {
-        "x": { "type": "integer", "minimum": 0 },
-        "y": { "type": "integer", "minimum": 0 },
-        "tilesetId": { "type": "string" },
-        "tileIndex": { "type": "integer", "minimum": 0 }
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tilesetId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "tileIndex": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "MapObjectInstance": {
@@ -202,11 +269,26 @@
       "required": ["id", "tilesetId", "objectDefinitionId", "x", "y"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "tilesetId": { "type": "string" },
-        "objectDefinitionId": { "type": "string" },
-        "x": { "type": "integer", "description": "Pixel X coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map." },
-        "y": { "type": "integer", "description": "Pixel Y coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map." }
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "tilesetId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "objectDefinitionId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "x": {
+          "type": "integer",
+          "description": "Pixel X coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map."
+        },
+        "y": {
+          "type": "integer",
+          "description": "Pixel Y coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map."
+        }
       }
     },
     "SparseLayerData": {
@@ -215,9 +297,18 @@
       "required": ["sparse", "width", "height", "entries"],
       "additionalProperties": false,
       "properties": {
-        "sparse": { "type": "boolean", "const": true },
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 },
+        "sparse": {
+          "type": "boolean",
+          "const": true
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
         "entries": {
           "type": "array",
           "description": "Non-null cell values. Cells not listed are implicitly null.",
@@ -226,8 +317,14 @@
             "required": ["x", "y", "v"],
             "additionalProperties": false,
             "properties": {
-              "x": { "type": "integer", "minimum": 0 },
-              "y": { "type": "integer", "minimum": 0 },
+              "x": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0
+              },
               "v": {
                 "type": "integer",
                 "description": "Encoded tile ref: (tilesetIndex << 16) | tileIndex."
@@ -242,33 +339,52 @@
       "required": ["id", "typeId", "position", "properties"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "typeId": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "typeId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
         "position": {
           "type": "array",
           "description": "Absolute pixel coordinates [x, y].",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 2,
           "maxItems": 2
         },
         "rotation": {
           "type": "number",
-          "description": "Degrees, 0–360.",
+          "description": "Degrees, 0â€“360.",
           "minimum": 0,
           "maximum": 360
         },
-        "layerId": { "type": "string" },
-        "label": { "type": "string" },
+        "layerId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "label": {
+          "type": "string"
+        },
         "properties": {
           "type": "object",
           "description": "Key-value property bag.",
-          "additionalProperties": { "$ref": "#/$defs/PropertyValue" }
+          "additionalProperties": {
+            "$ref": "#/$defs/PropertyValue"
+          }
         },
         "tags": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "timeScope": { "$ref": "#/$defs/TimeScope" }
+        "timeScope": {
+          "$ref": "#/$defs/TimeScope"
+        }
       }
     },
     "TimeScope": {
@@ -276,9 +392,22 @@
       "required": ["startTime", "endTime"],
       "additionalProperties": false,
       "properties": {
-        "startTime": { "type": "number", "minimum": 0, "maximum": 1 },
-        "endTime": { "type": "number", "minimum": 0, "maximum": 1 },
-        "seasons": { "type": "array", "items": { "type": "string" } }
+        "startTime": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "endTime": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "seasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "LocationLink": {
@@ -286,23 +415,33 @@
       "required": ["id", "triggerId", "targetMapId", "targetAnchorId"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "label": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "label": {
+          "type": "string"
+        },
         "triggerId": {
           "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
           "description": "References a MapTrigger on this map."
         },
         "targetMapId": {
           "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
           "description": "ID of the target map."
         },
         "targetAnchorId": {
           "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
           "description": "ID of an Anchor on the target map. Defines arrival position/facing."
         },
         "tags": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -310,16 +449,35 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "paths": { "type": "array", "items": { "$ref": "#/$defs/Path" } },
-        "areas": { "type": "array", "items": { "$ref": "#/$defs/Area" } },
-        "anchors": { "type": "array", "items": { "$ref": "#/$defs/Anchor" } },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Path"
+          }
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Area"
+          }
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Anchor"
+          }
+        },
         "triggers": {
           "type": "array",
-          "items": { "$ref": "#/$defs/MapTrigger" }
+          "items": {
+            "$ref": "#/$defs/MapTrigger"
+          }
         },
         "collisions": {
           "type": "array",
-          "items": { "$ref": "#/$defs/MapCollision" }
+          "items": {
+            "$ref": "#/$defs/MapCollision"
+          }
         }
       }
     },
@@ -328,8 +486,13 @@
       "required": ["id", "type", "shape", "position"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "label": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "label": {
+          "type": "string"
+        },
         "type": {
           "type": "string",
           "enum": ["locationLinkTrigger"]
@@ -341,14 +504,19 @@
         "position": {
           "type": "array",
           "description": "Absolute pixel coordinates [x, y]. Top-left for rectangle, first vertex for polygon.",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 2,
           "maxItems": 2
         },
         "size": {
           "type": "array",
           "description": "Pixel [width, height]. Only for rectangle shape.",
-          "items": { "type": "number", "minimum": 1 },
+          "items": {
+            "type": "number",
+            "minimum": 1
+          },
           "minItems": 2,
           "maxItems": 2
         },
@@ -357,14 +525,18 @@
           "description": "Absolute pixel vertices. Only for polygon shape.",
           "items": {
             "type": "array",
-            "items": { "type": "number" },
+            "items": {
+              "type": "number"
+            },
             "minItems": 2,
             "maxItems": 2
           }
         },
         "tags": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -373,8 +545,13 @@
       "required": ["id", "shape", "position"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "label": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "label": {
+          "type": "string"
+        },
         "shape": {
           "type": "string",
           "enum": ["rectangle", "polygon", "circle"]
@@ -382,14 +559,19 @@
         "position": {
           "type": "array",
           "description": "Absolute pixel coordinates [x, y]. Top-left for rectangle, center for circle, first vertex for polygon.",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 2,
           "maxItems": 2
         },
         "size": {
           "type": "array",
           "description": "Pixel [width, height]. Only for rectangle shape.",
-          "items": { "type": "number", "minimum": 1 },
+          "items": {
+            "type": "number",
+            "minimum": 1
+          },
           "minItems": 2,
           "maxItems": 2
         },
@@ -403,14 +585,18 @@
           "description": "Absolute pixel vertices. Only for polygon shape.",
           "items": {
             "type": "array",
-            "items": { "type": "number" },
+            "items": {
+              "type": "number"
+            },
             "minItems": 2,
             "maxItems": 2
           }
         },
         "tags": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -419,20 +605,37 @@
       "required": ["id", "name", "points", "closed", "tags"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
         "points": {
           "type": "array",
           "items": {
             "type": "array",
-            "items": { "type": "number" },
+            "items": {
+              "type": "number"
+            },
             "minItems": 2,
             "maxItems": 2
           }
         },
-        "closed": { "type": "boolean" },
-        "width": { "type": "number", "minimum": 0 },
-        "tags": { "type": "array", "items": { "type": "string" } }
+        "closed": {
+          "type": "boolean"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "Area": {
@@ -440,20 +643,37 @@
       "required": ["id", "name", "shape", "points", "priority", "tags"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "shape": { "type": "string", "enum": ["rectangle", "polygon"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "shape": {
+          "type": "string",
+          "enum": ["rectangle", "polygon"]
+        },
         "points": {
           "type": "array",
           "items": {
             "type": "array",
-            "items": { "type": "number" },
+            "items": {
+              "type": "number"
+            },
             "minItems": 2,
             "maxItems": 2
           }
         },
-        "priority": { "type": "integer" },
-        "tags": { "type": "array", "items": { "type": "string" } }
+        "priority": {
+          "type": "integer"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "Anchor": {
@@ -461,24 +681,40 @@
       "required": ["id", "name", "position", "tags"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
         "position": {
           "description": "Absolute pixel coordinates [x, y].",
           "type": "array",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 2,
           "maxItems": 2
         },
         "facing": {
           "type": "array",
           "description": "Normalized facing vector [x, y].",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 2,
           "maxItems": 2
         },
-        "rotation": { "type": "number" },
-        "tags": { "type": "array", "items": { "type": "string" } }
+        "rotation": {
+          "type": "number"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "Variation": {
@@ -486,22 +722,49 @@
       "required": ["id", "kind", "displayName"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "kind": { "type": "string", "enum": ["season", "generic"] },
-        "displayName": { "type": "string" },
-        "parentId": { "type": "string" },
-        "tilesetSuffix": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["season", "generic"]
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "tilesetSuffix": {
+          "type": "string"
+        },
         "layerOverrides": {
           "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/LayerOverride" }
+          "additionalProperties": {
+            "$ref": "#/$defs/LayerOverride"
+          },
+          "propertyNames": {
+            "type": "string"
+          }
         },
         "entityOverrides": {
           "type": "array",
-          "items": { "$ref": "#/$defs/EntityOverride" }
+          "items": {
+            "$ref": "#/$defs/EntityOverride"
+          }
         },
         "metadata": {
           "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/PropertyValue" }
+          "additionalProperties": {
+            "$ref": "#/$defs/PropertyValue"
+          },
+          "properties": {
+            "baseTilesetIdOverride": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -514,10 +777,15 @@
           "type": "array",
           "items": {
             "type": "array",
-            "items": { "type": ["string", "null"] }
+            "items": {
+              "type": ["string", "null"]
+            }
           }
         },
-        "mode": { "type": "string", "enum": ["replace", "merge"] }
+        "mode": {
+          "type": "string",
+          "enum": ["replace", "merge"]
+        }
       }
     },
     "EntityOverride": {
@@ -525,19 +793,37 @@
       "required": ["action"],
       "additionalProperties": false,
       "properties": {
-        "action": { "type": "string", "enum": ["add", "remove", "modify"] },
-        "entityId": { "type": "string" },
-        "entity": { "type": "object" }
+        "action": {
+          "type": "string",
+          "enum": ["add", "remove", "modify"]
+        },
+        "entityId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "entity": {
+          "$ref": "#/$defs/PartialEntityInstance"
+        }
       }
     },
     "MapMetadata": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/PropertyValue" },
+      "additionalProperties": {
+        "$ref": "#/$defs/PropertyValue"
+      },
       "properties": {
-        "description": { "type": "string" },
-        "music": { "type": "string" },
-        "ambience": { "type": "string" },
-        "world": { "$ref": "#/$defs/WorldMapMetadata" },
+        "description": {
+          "type": "string"
+        },
+        "music": {
+          "type": "string"
+        },
+        "ambience": {
+          "type": "string"
+        },
+        "world": {
+          "$ref": "#/$defs/WorldMapMetadata"
+        },
         "entryPoints": {
           "type": "array",
           "items": {
@@ -545,10 +831,15 @@
             "required": ["id", "position"],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string" },
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+              },
               "position": {
                 "type": "array",
-                "items": { "type": "number" },
+                "items": {
+                  "type": "number"
+                },
                 "minItems": 2,
                 "maxItems": 2
               }
@@ -562,11 +853,19 @@
             "required": ["id", "targetMap", "targetPosition"],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string" },
-              "targetMap": { "type": "string" },
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+              },
+              "targetMap": {
+                "type": "string",
+                "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+              },
               "targetPosition": {
                 "type": "array",
-                "items": { "type": "number" },
+                "items": {
+                  "type": "number"
+                },
                 "minItems": 2,
                 "maxItems": 2
               }
@@ -579,9 +878,15 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "included": { "type": "boolean" },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
+        "included": {
+          "type": "boolean"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
         "category": {
           "type": "string",
           "enum": ["world", "indoor", "special"]
@@ -591,12 +896,30 @@
     "PropertyValue": {
       "description": "A scalar, array, or object property value.",
       "oneOf": [
-        { "type": "string" },
-        { "type": "number" },
-        { "type": "boolean" },
-        { "type": "null" },
-        { "type": "array", "items": { "type": "string" } },
-        { "type": "array", "items": { "type": "number" } },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
         {
           "type": "object",
           "additionalProperties": {
@@ -604,6 +927,57 @@
           }
         }
       ]
+    },
+    "PartialEntityInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "typeId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y].",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": {
+          "type": "number",
+          "description": "Degrees, 0â€“360.",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "layerId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "description": "Key-value property bag.",
+          "additionalProperties": {
+            "$ref": "#/$defs/PropertyValue"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeScope": {
+          "$ref": "#/$defs/TimeScope"
+        }
+      }
     }
   }
 }

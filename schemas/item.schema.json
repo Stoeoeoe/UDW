@@ -12,8 +12,8 @@
     },
     "id": {
       "type": "string",
-      "description": "Unique identifier for this item (kebab-case).",
-      "pattern": "^[a-z0-9_-]+$"
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Lowercase qualified resource ID, e.g. base:myactor."
     },
     "name": {
       "type": "string",
@@ -39,10 +39,11 @@
     },
     "pickupSound": {
       "type": "string",
-      "description": "Relative path to the audio clip played when the item is picked up. Optional — falls back to the ItemManager default."
+      "description": "Relative path to the audio clip played when the item is picked up. Optional â€” falls back to the ItemManager default."
     },
     "classId": {
       "type": "string",
+      "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
       "description": "Optional reference to a project-level ItemClass definition (e.g. 'seed', 'weapon'). Drives extra typed properties on this item."
     },
     "classProperties": {

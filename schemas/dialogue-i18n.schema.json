@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dialogue-i18n.schema.json",
+  "title": "Dialogue localization export",
+  "type": "object",
+  "properties": {
+    "dialogueId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "dialogueName": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "msgKey": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+          },
+          "optionId": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+          },
+          "sourceType": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "$schema": {
+      "type": "string"
+    }
+  },
+  "required": ["dialogueId", "dialogueName", "generatedAt", "messages"]
+}

@@ -12,16 +12,18 @@
     },
     "id": {
       "type": "string",
-      "description": "Unique identifier for this actor (kebab-case).",
-      "pattern": "^[a-z0-9_-]+$"
+      "description": "Stable identifier for this actor, with a required namespace (for example base:gagaa).",
+      "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$"
     },
     "name": {
       "type": "string",
+      "pattern": "\\S",
       "description": "Display name shown in the editor and game."
     },
     "icon": {
       "type": "string",
-      "description": "Emoji icon used to represent this actor in the editor."
+      "pattern": "\\S",
+      "description": "Icon identifier used to represent this actor in the editor."
     },
     "emotions": {
       "type": "array",

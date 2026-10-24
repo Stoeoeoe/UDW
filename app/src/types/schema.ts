@@ -32,6 +32,8 @@ export function getSchemaResourceName(resource: SchemaEditorResource): string {
 }
 
 export interface Project {
+  /** Namespace for independently stored resources; legacy projects default to base. */
+  idPrefix?: string;
   id: string; // Unique identifier (kebab-case)
   version: string; // File format version (starts at 1.0)
   name: string; // Display name
@@ -399,9 +401,6 @@ export interface TableField {
   enumValues?: string[]; // Only when type === 'enum'
 }
 
-/** @deprecated Use TableField instead */
-export type ComplexField = TableField;
-
 /** A reusable table definition with named fields. */
 export interface ScriptTable {
   id: string;
@@ -493,9 +492,6 @@ export interface Actor extends NamedEditorResource {
   icon: string; // Emoji icon for display
   emotions?: string[]; // Named emotions available for line nodes
 }
-
-/** @deprecated Use Actor. Kept for compatibility while migrating call sites. */
-export type Npc = Actor;
 
 export interface DialogueType {
   id: string;
