@@ -74,10 +74,15 @@ namespace Plants.Editor
         [Test]
         public void UnitySerializationPreservesAnOmittedWiltedRepresentation()
         {
+            // JSON round trips need asset references; this fixture's scene objects do not survive them.
+            var source = AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset");
+            Assert.That(source, Is.Not.Null);
+            Assert.That(source.WiltedRepresentation, Is.Null);
+            Assert.That(source.ValidateConfiguration(), Is.Empty);
             var restored = ScriptableObject.CreateInstance<PlantData>();
             try
             {
-                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(_plant), restored);
+                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(source), restored);
                 Assert.That(restored.WiltedRepresentation, Is.Null);
                 Assert.That(restored.ValidateConfiguration(), Is.Empty);
             }
@@ -239,8 +244,7 @@ namespace Plants.Editor
         {
             for (var type = target.GetType(); type != null; type = type.BaseType)
             {
-                var found = type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                    ?? type.GetField($"<{field}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+                var found = type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (found != null) return found;
             }
             throw new ArgumentException(field);

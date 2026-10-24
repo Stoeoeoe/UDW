@@ -20,11 +20,8 @@ namespace Core.Inventory.Editor
             var item = ScriptableObject.CreateInstance<DropTestItem>();
             try
             {
-                // Support both the existing property and the private-field authoring style.
                 var flags = BindingFlags.Instance | BindingFlags.NonPublic;
-                var id = typeof(ItemDefinition).GetField("_itemId", flags)
-                    ?? typeof(ItemDefinition).GetField("<ItemId>k__BackingField", flags);
-                id.SetValue(item, "test:grain");
+                typeof(ItemDefinition).GetField("_itemId", flags).SetValue(item, "test:grain");
                 typeof(ItemDefinition).GetField("_preventDropping", flags).SetValue(item, true);
                 var bag = root.AddComponent<SlotInventory>();
                 bag.Bind(new InventoryState { Slots = new InventorySlotState[1] });

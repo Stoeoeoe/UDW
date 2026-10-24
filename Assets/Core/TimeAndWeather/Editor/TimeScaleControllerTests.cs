@@ -125,12 +125,13 @@ namespace Core.TimeAndWeather.Editor
         }
 
         [Test]
-        public void InvalidRequestsFailBeforeChangingTheActiveEffect()
+        public void MissingDurationCurveFailsBeforeChangingTheActiveEffect()
         {
             MMTimeScaleEvent.Trigger(MMTimeScaleMethods.For, 0.5f, 0f, false, 0f, true);
             Advance(0.1f);
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
-                MMTimeScaleEvent.Trigger(MMTimeScaleMethods.For, float.NaN, 1f, false, 0f, false));
+            Assert.Throws<ArgumentException>(() =>
+                MMTimeScaleEvent.Trigger(MMTimeScaleMethods.For, 0.25f, 1f, true, 0f, false,
+                    MMTimeScaleLerpModes.Duration, null, 1f, false, null, 0f));
             Advance(0.1f);
             Assert.That(Time.timeScale, Is.EqualTo(0.5f));
         }

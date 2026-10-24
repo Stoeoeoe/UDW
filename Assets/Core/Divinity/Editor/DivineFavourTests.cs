@@ -27,7 +27,7 @@ namespace Core.Divinity.Editor
             foreach (var instance in _objects) Object.DestroyImmediate(instance);
             _objects.Clear();
             typeof(DeityDefinitions).GetMethod("Reset", BindingFlags.Static | BindingFlags.NonPublic)
-                ?.Invoke(null, null);
+                .Invoke(null, null);
         }
 
         [Test]

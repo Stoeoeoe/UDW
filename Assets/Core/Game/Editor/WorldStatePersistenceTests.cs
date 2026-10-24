@@ -239,9 +239,9 @@ namespace Core.Game.Editor
             typeof(WalletState).GetMethod("SetBalance", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(data.player.Wallet, new object[] { 1234L });
             typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.Invoke(data.player.Skills, new object[] { new[] { new KeyValuePair<string, int>("hammer-mastery", 3) } });
+                .Invoke(data.player.Skills, new object[] { new[] { new KeyValuePair<string, int>("hammer-mastery", 3) } });
             typeof(DivineFavourState).GetMethod("SetFavour", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.Invoke(data.player.Favour, new object[] { "mars", 12 });
+                .Invoke(data.player.Favour, new object[] { "mars", 12 });
             data.story.SetFlag("met-blacksmith");
             data.story.CompletedCutscenes["test:confession"] = "admitted";
             data.world.Set("base:grocer", new ShopState
@@ -387,7 +387,7 @@ namespace Core.Game.Editor
             gameObject.SetActive(false);
             var character = gameObject.AddComponent<GameCharacter>();
             typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.Invoke(data.player.Skills, new object[] { character });
+                .Invoke(data.player.Skills, new object[] { character });
             try
             {
                 GameSaveService.Save(slot, data);
@@ -397,7 +397,7 @@ namespace Core.Game.Editor
             finally
             {
                 typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?.Invoke(data.player.Skills, new object[] { character });
+                    .Invoke(data.player.Skills, new object[] { character });
                 UnityEngine.Object.DestroyImmediate(gameObject);
                 File.Delete(path);
                 File.Delete(path + ".tmp");

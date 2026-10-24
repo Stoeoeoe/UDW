@@ -34,8 +34,14 @@ namespace Core.Spawning.Editor
             _options = EditorSettings.enterPlayModeOptions;
             _changedEnvironment = true;
             EditorSettings.enterPlayModeOptionsEnabled = true;
-            EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
+            EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload;
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            // Supply the isolated services before the bootstrap can load the full gameplay prefab.
+            _systems = new GameObject("Spawn depletion systems");
+            // Location registration is required; this test enters its location explicitly, without the UI or Start routine.
+            _systems.AddComponent<LevelManager>().enabled = false;
+            _systems.AddComponent<UI.Shared.UrGUIManager>().enabled = false;
+            _systems.AddComponent<SystemRoot>();
             yield return new EnterPlayMode(false);
         }
 
@@ -50,16 +56,17 @@ namespace Core.Spawning.Editor
             if (Application.isPlaying) yield return new ExitPlayMode();
             EditorSettings.enterPlayModeOptionsEnabled = _optionsEnabled;
             EditorSettings.enterPlayModeOptions = _options;
-            if (_scenes != null) EditorSceneManager.RestoreSceneManagerSetup(_scenes);
+            if (_scenes.Length > 0) EditorSceneManager.RestoreSceneManagerSetup(_scenes);
+            else EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             _changedEnvironment = false;
         }
 
         [UnityTest]
         public IEnumerator ExhaustedObjectsRemoveTheirRecordOnFreshSpawnAndLocationReentry()
         {
-            var systems = _systems = new GameObject("Spawn regression systems");
+            var systems = _systems;
             systems.SetActive(false);
-            systems.AddComponent<GameStateManager>();
+            Assert.That(systems.GetComponent<GameStateManager>(), Is.SameAs(GameStateManager.Instance));
             var spawner = systems.AddComponent<WorldObjectSpawner>();
             var holder = _holder = new GameObject("Inactive prefab holder");
             holder.SetActive(false);
@@ -68,14 +75,14 @@ namespace Core.Spawning.Editor
             var prefab = prefabObject.AddComponent<SpawnedObject>();
             typeof(SpawnedObject).GetField("prefabId", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(prefab, "base:exhausted");
+            prefabObject.AddComponent<BoxCollider2D>();
             var interactable = prefabObject.AddComponent<TestInteractable>();
             typeof(AbstractInteractable).GetField("UnlimitedActivations", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(interactable, false);
             typeof(AbstractInteractable).GetField("DestroyWhenUsedUp", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(interactable, true);
             _catalog = ScriptableObject.CreateInstance<SpawnableCatalog>();
-            typeof(SpawnableCatalog).GetField("prefabs", BindingFlags.NonPublic | BindingFlags.Instance)
-                .SetValue(_catalog, new[] { prefab });
+            _catalog.Synchronize(new[] { prefab });
             typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(spawner, _catalog);
             systems.SetActive(true);
