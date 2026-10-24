@@ -109,7 +109,7 @@ at initialization; no Inspector catalog assignment is needed.
 `CutsceneRunner.TryStart(id, out run)` resolves an enabled catalog entry. Unknown
 IDs are setup errors. Busy, not-ready, already-completed, occupied-player and
 open-menu starts return false; they do not replace or queue a run. The returned
-`CutsceneRun` has a unique runtime identity, definition, status and error. Its
+`CutsceneRun` is the handle for one attempt, with its definition, status and error. Its
 `Cancel`/`Dispose` only affect that run; `Skip` returns false when skipping is
 disabled or the run is already terminal. The runner inspector shows the active
 run and authored step ID. Failures include cutscene and step identity in the

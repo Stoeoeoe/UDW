@@ -9,17 +9,11 @@ namespace Core.Scripting
         public string Outcome { get; private set; }
         public CutsceneLuaApi(string outcome) => Outcome = outcome;
 
-        [UnityEngine.Scripting.Preserve]
-        public void ValidateSetOutcome(string outcome)
-        {
-            if (string.IsNullOrWhiteSpace(outcome)) throw new ArgumentException("A cutscene outcome must be non-empty.", nameof(outcome));
-        }
-
         [LuaCall(true)]
-        [LuaAction("cutscene.setOutcome", "Set outcome", "Cutscene", "Choose the outcome saved when this cutscene finishes.", "cutscene", Validator = nameof(ValidateSetOutcome))]
+        [LuaAction("cutscene.setOutcome", "Set outcome", "Cutscene", "Choose the outcome saved when this cutscene finishes.", "cutscene")]
         public void SetOutcome(string outcome)
         {
-            ValidateSetOutcome(outcome);
+            if (string.IsNullOrWhiteSpace(outcome)) throw new ArgumentException("A cutscene outcome must be non-empty.", nameof(outcome));
             Outcome = outcome;
         }
     }

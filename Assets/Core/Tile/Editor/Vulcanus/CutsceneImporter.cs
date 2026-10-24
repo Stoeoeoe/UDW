@@ -50,7 +50,7 @@ namespace Core.Tile.Editor.Vulcanus
                 var completion = source["completion"];
                 var outcomes = completion["actorOutcomes"].Select(outcome =>
                     new CutsceneActorOutcome((string)outcome["actor"], (string)outcome["anchor"])).ToArray();
-                definition.Configure((string)source["id"], (string)source["mapId"], compiled.Lua, steps,
+                definition.Configure((string)source["id"], (string)source["mapId"], compiled, steps,
                     (bool)source["allowSkip"], new CutsceneCompletion(outcomes, (string)completion["outcome"] ?? "completed"));
                 return definition;
             }

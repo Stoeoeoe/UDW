@@ -7,23 +7,10 @@ using Newtonsoft.Json.Linq;
 
 namespace Core.Scripting.Editor
 {
-    /// <summary>Turns the editor's ordered action steps into Lua calls and a line-to-step lookup.</summary>
+    /// <summary>Emits one Lua call per authored step; the definition retains the steps for diagnostics.</summary>
     internal static class CutsceneSequenceCompiler
     {
-        internal sealed class CompiledSequence
-        {
-            public string Lua { get; }
-            // Each action occupies one Lua line, in the same order as these permanent step IDs.
-            public IReadOnlyList<string> StepIds { get; }
-
-            public CompiledSequence(string lua, string[] stepIds)
-            {
-                Lua = lua;
-                StepIds = Array.AsReadOnly(stepIds);
-            }
-        }
-
-        public static CompiledSequence Compile(JArray sequence, string source)
+        public static string Compile(JArray sequence, string source)
         {
             if (sequence == null) throw new ArgumentNullException(nameof(sequence));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
@@ -33,7 +20,6 @@ namespace Core.Scripting.Editor
                 .SelectMany(module => module.methods.Where(method => method.action != null && method.action.contexts.Contains("cutscene"))
                     .Select(method => (Module: module.path, Method: method)))
                 .ToDictionary(entry => entry.Method.action.id, StringComparer.Ordinal);
-            var ids = new string[sequence.Count];
             var usedIds = new HashSet<string>(StringComparer.Ordinal);
             var lua = new StringBuilder();
 
@@ -57,16 +43,15 @@ namespace Core.Scripting.Editor
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
-                    // The initial move, face and dialogue actions take string references only.
+                    // Current actions use string references or an outcome string.
                     if (parameter.type != "string")
                         throw Invalid(location, $"The sequence compiler does not support parameter type '{parameter.type}'.");
                     literals[parameterIndex] = LuaString(RequiredString(arguments[parameter.name], location, parameter.name));
                 }
-                ids[index] = id;
                 lua.Append(action.Module).Append('.').Append(action.Method.name).Append('(')
                     .Append(string.Join(", ", literals)).Append(");\n");
             }
-            return new CompiledSequence(lua.ToString(), ids);
+            return lua.ToString();
         }
 
         private static string RequiredString(JToken value, string location, string name)

@@ -176,7 +176,7 @@ namespace Core.Scripting.Editor
                 ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value))) }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, id);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled.Lua, steps, skip,
+            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, steps, skip,
                 new CutsceneCompletion(Array.Empty<CutsceneActorOutcome>(), outcome));
             return definition;
         }
@@ -504,7 +504,7 @@ namespace Core.Scripting.Editor
                 ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value)))
             }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding");
-            definition.Configure("fixture:binding", map, compiled.Lua, steps, false,
+            definition.Configure("fixture:binding", map, compiled, steps, false,
                 new CutsceneCompletion(Array.Empty<CutsceneActorOutcome>()));
         }
 

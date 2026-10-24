@@ -8,16 +8,15 @@ namespace Core.Scripting.Editor
     public sealed class CutsceneSequenceCompilerTests
     {
         [Test]
-        public void CompilesTheInitialActionsInOrderAndMapsEachLineToItsStep()
+        public void CompilesOneLuaLinePerStepInOrder()
         {
             var sequence = new JArray(
                 Step("approach", "actors.moveTo", new JObject { ["destination"] = "meeting", ["actor"] = "npc-placement" }),
                 Step("greet", "actors.face", new JObject { ["target"] = "player", ["actor"] = "npc-placement" }),
                 Step("talk", "dialogue.play", new JObject { ["dialogue"] = "base:greeting" }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:intro");
-            Assert.That(compiled.Lua, Is.EqualTo("Actors.MoveTo(\"npc-placement\", \"meeting\");\nActors.Face(\"npc-placement\", \"player\");\nDialogue.Play(\"base:greeting\");\n"));
-            Assert.That(compiled.StepIds, Is.EqualTo(new[] { "approach", "greet", "talk" }));
-            Assert.That(CutsceneSequenceCompiler.Compile(sequence, "fixture:intro").Lua, Is.EqualTo(compiled.Lua));
+            Assert.That(compiled, Is.EqualTo("Actors.MoveTo(\"npc-placement\", \"meeting\");\nActors.Face(\"npc-placement\", \"player\");\nDialogue.Play(\"base:greeting\");\n"));
+            Assert.That(CutsceneSequenceCompiler.Compile(sequence, "fixture:intro"), Is.EqualTo(compiled));
         }
 
         [Test]
@@ -26,9 +25,9 @@ namespace Core.Scripting.Editor
             var reference = "quote\" slash\\ newline\n\r\t\0" + "123\u001f\u007f ü😀 ]]; error('injected') --";
             var compiled = CutsceneSequenceCompiler.Compile(new JArray(
                 Step("talk", "dialogue.play", new JObject { ["dialogue"] = reference })), "fixture:encoding");
-            Assert.That(compiled.Lua.Count(character => character == '\n'), Is.EqualTo(1));
+            Assert.That(compiled.Count(character => character == '\n'), Is.EqualTo(1));
             var capture = new CaptureDialogue();
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(capture), compiled.Lua, "fixture:encoding");
+            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(capture), compiled, "fixture:encoding");
             run.Tick(0);
             Assert.That(run.Status, Is.EqualTo(LuaExecutionStatus.Succeeded), run.Error);
             Assert.That(capture.Reference, Is.EqualTo(reference));

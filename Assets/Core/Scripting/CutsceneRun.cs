@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Character;
 using Core.Spawning;
 using UnityEngine;
@@ -14,11 +14,12 @@ namespace Core.Scripting
     {
         private readonly CutsceneRunner _owner;
         private readonly CutsceneLuaApi _cutscene;
-        public Guid Id { get; } = Guid.NewGuid();
         public CutsceneDefinition Definition { get; }
         public CutsceneRunStatus Status { get; internal set; } = CutsceneRunStatus.Running;
         public string Error { get; internal set; }
         public string Outcome => _cutscene.Outcome;
+        // Imported Lua enters one action per authored step, including actions that yield.
+        internal string CurrentStepId => Session.ActionsStarted == 0 ? null : Definition.Steps[Session.ActionsStarted - 1].Id;
         internal LuaExecutionSession Session { get; }
         internal CutscenePlacement[] Placements { get; }
 
@@ -58,11 +59,10 @@ namespace Core.Scripting
 
         internal static CutscenePlacement[] Prepare(CutsceneDefinition definition, LuaBindingRegistry bindings, MapActorLuaApi actors)
         {
-            var actions = bindings.Describe().modules.SelectMany(module => module.methods)
-                .Where(method => method.action != null).ToDictionary(method => method.action.id, StringComparer.Ordinal);
-            var ids = definition.Steps.SelectMany(step => actions[step.ActionId].parameters
-                    .Where(parameter => parameter.semanticType == "actorRef")
-                    .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.name).Value))
+            var actions = bindings.GetActions().ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
+            var ids = definition.Steps.SelectMany(step => actions[step.ActionId].Parameters
+                    .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "actorRef")
+                    .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name).Value))
                 .Concat(definition.Completion.ActorOutcomes.Select(outcome => outcome.Actor)).Distinct(StringComparer.Ordinal);
             return ids.Select(id =>
             {
@@ -82,10 +82,8 @@ namespace Core.Scripting
 
         internal void Apply(bool completed)
         {
-            // A failed/cancelled scene may be tearing down an already-destroyed actor.
-            // Successful completion checks every actor first and never uses this exception.
-            if (completed) RequireLive();
-            else if (!Actor || !_root || !_body) return;
+            // Completion has checked all actors before moving any; cancellation can outlive a destroyed actor.
+            if (!completed && (!Actor || !_root || !_body)) return;
             var position = completed ? _endpoint : _originalPosition;
             Actor.Controller.Stop();
             _root.position += position - Actor.transform.position;

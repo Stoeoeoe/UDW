@@ -25,9 +25,7 @@ namespace Core.Scripting
         private MainCharacter _player;
         [field: NonSerialized]
         [ShowInInspector, ReadOnly] public CutsceneRun ActiveRun { get; private set; }
-        [ShowInInspector, ReadOnly] public string CurrentStepId =>
-            ActiveRun == null || ActiveRun.Session.ActionsStarted == 0 ? null :
-                ActiveRun.Definition.Steps[ActiveRun.Session.ActionsStarted - 1].Id;
+        [ShowInInspector, ReadOnly] public string CurrentStepId => ActiveRun?.CurrentStepId;
         public bool IsRunning => ActiveRun != null;
         public event Action<CutsceneRun> Started;
         public event Action<CutsceneRun> Finished;
@@ -103,14 +101,9 @@ namespace Core.Scripting
             catch (Exception error) { Finish(run, CutsceneRunStatus.Failed, DescribeError(run, error.Message)); }
         }
 
-        private static string DescribeError(CutsceneRun run, string message)
-        {
-            // Imported scripts make one call per authored step. Counting action entry also
-            // identifies a host action that fails several frames after Lua has yielded.
-            var count = run.Session.ActionsStarted;
-            return count == 0 ? $"{run.Definition.CutsceneId}: {message}" :
-                $"{run.Definition.CutsceneId}, step '{run.Definition.Steps[count - 1].Id}': {message}";
-        }
+        private static string DescribeError(CutsceneRun run, string message) => run.CurrentStepId is string step
+            ? $"{run.Definition.CutsceneId}, step '{step}': {message}"
+            : $"{run.Definition.CutsceneId}: {message}";
 
         public void Cancel() { if (ActiveRun != null) Cancel(ActiveRun); }
         internal void Cancel(CutsceneRun run) => Finish(run, CutsceneRunStatus.Cancelled);
