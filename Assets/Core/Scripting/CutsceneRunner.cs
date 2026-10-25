@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Catalogs;
@@ -72,13 +73,19 @@ namespace Core.Scripting
             var placements = CutscenePlacement.Prepare(definition, bindings, actors);
             if (placements.Any(placement => placement.Actor.IsControlBlocked || placement.Actor.Controller.IsMovementOwned)) return false;
             var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId);
-            run = new CutsceneRun(this, definition, session, placements);
+            run = new CutsceneRun(this, definition, session, placements, bindings);
             ActiveRun = run;
             _player = player;
             _player.OnConditionStateChanged += OnPlayerConditionChanged;
             _player.SetControlBlocked(run, true);
             foreach (var placement in placements) placement.Actor.SetControlBlocked(run, true);
             _gui.SetCutsceneActive(true);
+            try { ExecuteImmediate(run, definition.OnStartLua, definition.OnStart, "setup"); }
+            catch
+            {
+                Finish(run, completed: false, notify: false);
+                throw;
+            }
             Started?.Invoke(run);
             return true;
         }
@@ -118,7 +125,23 @@ namespace Core.Scripting
             return true;
         }
 
-        private void Finish(CutsceneRun run, bool completed)
+        private static void ExecuteImmediate(CutsceneRun run, string lua, IReadOnlyList<CutsceneStep> steps, string phase)
+        {
+            if (steps.Count == 0) return; // An explicitly empty setup/completion block is valid.
+            using var session = VulcanusLuaEngine.StartSession(run.Bindings, lua, $"{run.Definition.CutsceneId}:{phase}", phase: phase);
+            try
+            {
+                // Phase registration forbids awaitables; only instruction-budget slices can suspend this script.
+                while (session.IsRunning) session.Tick(0);
+            }
+            catch (Exception error)
+            {
+                var step = session.ActionsStarted > 0 ? $", step '{steps[session.ActionsStarted - 1].Id}'" : "";
+                throw new InvalidOperationException($"{run.Definition.CutsceneId}, {phase}{step}: {error.Message}", error);
+            }
+        }
+
+        private void Finish(CutsceneRun run, bool completed, bool notify = true)
         {
             if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning) return;
             // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
@@ -130,6 +153,7 @@ namespace Core.Scripting
                 foreach (var placement in run.Placements) placement.Apply(completed);
                 if (completed)
                 {
+                    ExecuteImmediate(run, run.Definition.OnComplete.Lua, run.Definition.OnComplete.Steps, "completion");
                     _completionActions.Execute(run.Definition.OnComplete.Actions);
                     GameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
                 }
@@ -153,7 +177,7 @@ namespace Core.Scripting
                 ActiveRun = null;
             }
             // Completion actions, placements and ownership are settled before listeners can start another scene or save.
-            Finished?.Invoke(run);
+            if (notify) Finished?.Invoke(run);
         }
     }
 }

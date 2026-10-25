@@ -39,7 +39,11 @@ namespace Core.Tile.Editor.Vulcanus
 
         private static CutsceneDefinition CreateDefinition(JObject source, string path)
         {
-            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path, out var steps);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var setup = CutsceneSequenceCompiler.Compile((JArray)source["onStart"] ?? new JArray(), path, out var setupSteps, "setup", ids);
+            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path, out var steps, "sequence", ids);
+            var completionLua = CutsceneSequenceCompiler.Compile((JArray)source["onComplete"]["steps"] ?? new JArray(),
+                path, out var completionSteps, "completion", ids);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             try
             {
@@ -54,7 +58,7 @@ namespace Core.Tile.Editor.Vulcanus
                     throw new FormatException($"{path}, onComplete.actions: {error.DecoratedMessage}", error);
                 }
                 definition.Configure((string)source["id"], (string)source["mapId"], compiled, steps,
-                    (bool)source["allowSkip"], new CutsceneCompletion(placements, actions));
+                    (bool)source["allowSkip"], new CutsceneCompletion(placements, actions, completionLua, completionSteps), setup, setupSteps);
                 return definition;
             }
             catch { Object.DestroyImmediate(definition); throw; }

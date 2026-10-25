@@ -12,11 +12,14 @@ namespace Core.Scripting.Editor
     {
         public static string Compile(JArray sequence, string source) => Compile(sequence, source, out _);
 
-        public static string Compile(JArray sequence, string source, out CutsceneStep[] steps)
+        public static string Compile(JArray sequence, string source, out CutsceneStep[] steps,
+            string phase = "sequence", ISet<string> usedIds = null)
         {
             if (sequence == null) throw new ArgumentNullException(nameof(sequence));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
-            if (sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
+            var section = phase switch { "setup" => "onStart", "sequence" => "sequence", "completion" => "onComplete.steps",
+                _ => throw new ArgumentException("Unknown cutscene phase.", nameof(phase)) };
+            if (phase == "sequence" && sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
             steps = new CutsceneStep[sequence.Count];
 
             var bindings = VulcanusLuaEngine.InspectBindings();
@@ -24,12 +27,12 @@ namespace Core.Scripting.Editor
                 .SelectMany(module => module.methods.Where(method => method.action != null && method.action.contexts.Contains("cutscene"))
                     .Select(method => (Module: module.path, Method: method)))
                 .ToDictionary(entry => entry.Method.action.id, StringComparer.Ordinal);
-            var usedIds = new HashSet<string>(StringComparer.Ordinal);
+            usedIds ??= new HashSet<string>(StringComparer.Ordinal);
             var lua = new StringBuilder();
 
             for (var index = 0; index < sequence.Count; index++)
             {
-                var location = $"{source}: sequence[{index}]";
+                var location = $"{source}: {section}[{index}]";
                 if (sequence[index] is not JObject step) throw Invalid(location, "Expected a step object.");
                 var id = RequiredString(step["id"], location, "id");
                 location += $" ({id})";
@@ -38,6 +41,8 @@ namespace Core.Scripting.Editor
                 var actionId = RequiredString(step["action"], location, "action");
                 if (!actions.TryGetValue(actionId, out var action))
                     throw Invalid(location, $"Unsupported cutscene action '{actionId}'.");
+                if (!action.Method.action.phases.Contains(phase))
+                    throw Invalid(location, $"Action '{actionId}' is not allowed in phase '{phase}'.");
                 if (step["arguments"] is not JObject arguments)
                     throw Invalid(location, "Expected named arguments.");
                 var parameters = action.Method.parameters;
@@ -49,6 +54,14 @@ namespace Core.Scripting.Editor
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
+                    if (parameter.type == "position")
+                    {
+                        var position = RequiredPosition(arguments[parameter.name], location, parameter.name);
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, position);
+                        values[parameterIndex] = position;
+                        literals[parameterIndex] = $"{{ x = {position.X.ToString("R", CultureInfo.InvariantCulture)}, y = {position.Y.ToString("R", CultureInfo.InvariantCulture)} }}";
+                        continue;
+                    }
                     string value;
                     if (parameter.type == "string")
                     {
@@ -86,6 +99,17 @@ namespace Core.Scripting.Editor
             if (value?.Type != JTokenType.String || string.IsNullOrWhiteSpace(value.Value<string>()))
                 throw Invalid(location, $"'{name}' requires a non-empty string.");
             return value.Value<string>();
+        }
+
+        private static MapPixelPosition RequiredPosition(JToken token, string location, string name)
+        {
+            if (token is not JObject point) throw Invalid(location, $"'{name}' requires a position object with x/y numbers.");
+            RejectUnknownFields(point, new[] { "x", "y" }, location + "." + name);
+            foreach (var axis in new[] { "x", "y" })
+                if (point[axis] == null || point[axis].Type is not (JTokenType.Integer or JTokenType.Float))
+                    throw Invalid(location, $"'{name}.{axis}' requires a finite, nonnegative number.");
+            try { return new MapPixelPosition(point["x"].Value<double>(), point["y"].Value<double>()); }
+            catch (ArgumentOutOfRangeException error) { throw new FormatException($"{location}: '{name}': {error.Message}", error); }
         }
 
         private static void RejectUnknownFields(JObject value, IEnumerable<string> allowed, string location)

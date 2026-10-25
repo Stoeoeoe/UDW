@@ -1,5 +1,16 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "mapPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
   "title": "Linear cutscene source",
   "type": "object",
   "additionalProperties": false,
@@ -55,8 +66,16 @@
             "type": "object",
             "additionalProperties": {
               "oneOf": [
-                { "type": "string", "pattern": "\\S" },
-                { "type": "number" }
+                {
+                  "type": "string",
+                  "pattern": "\\S"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/definitions/mapPosition"
+                }
               ]
             }
           }
@@ -97,6 +116,49 @@
         },
         "actions": {
           "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/properties/sequence/items" }
+        }
+      }
+    },
+    "onStart": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "action",
+          "arguments"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "action": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "\\S"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/definitions/mapPosition"
+                }
+              ]
+            }
+          }
         }
       }
     }

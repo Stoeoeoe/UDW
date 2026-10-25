@@ -33,14 +33,14 @@ namespace Core.Scripting
         public string Source { get; }
         public int ActionsStarted { get; private set; }
 
-        internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context)
+        internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context, string phase)
         {
             if (string.IsNullOrWhiteSpace(chunk)) throw new ArgumentException("Lua source is required.", nameof(chunk));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
             Source = source;
             var script = new Script(CoreModules.Preset_HardSandbox);
             // Give this script only the actions allowed in its context, e.g. "cutscene".
-            bindings.BindActions(script, context, Await, () => ActionsStarted++);
+            bindings.BindActions(script, context, phase, Await, () => ActionsStarted++);
             _routine = script.CreateCoroutine(script.LoadString(chunk, null, source)).Coroutine;
             _routine.AutoYieldCounter = InstructionsPerFrame;
         }

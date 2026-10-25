@@ -52,6 +52,52 @@
           }
         },
         {
+          "name": "FaceDirection",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "resourceType": "direction"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.faceDirection",
+            "displayName": "Face direction",
+            "category": "Movement",
+            "description": "Turn an actor toward North, East, South or West.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "faceActorDirection",
+                  "actorParameter": "actor",
+                  "directionParameter": "direction"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "MoveTo",
           "parameters": [
             {
@@ -92,6 +138,60 @@
                   "actorParameter": "actor",
                   "anchorParameter": "destination",
                   "facing": "unknown"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Place",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "position",
+              "type": "position",
+              "picker": "mapPosition",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel"
+              ],
+              "tileAnchor": "center",
+              "actorPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.place",
+            "displayName": "Place character",
+            "category": "Placement",
+            "description": "Immediately place a character at a map position.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "setActorPosition",
+                  "actorParameter": "actor",
+                  "positionParameter": "position",
+                  "facing": "preserve"
                 }
               ]
             }
@@ -406,6 +506,24 @@
       {
         "id": "base:prototype-sitting",
         "description": "PrototypeSittingAnimation"
+      }
+    ],
+    "direction": [
+      {
+        "id": "East",
+        "description": "East"
+      },
+      {
+        "id": "North",
+        "description": "North"
+      },
+      {
+        "id": "South",
+        "description": "South"
+      },
+      {
+        "id": "West",
+        "description": "West"
       }
     ]
   }

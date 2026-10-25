@@ -44,7 +44,10 @@ namespace Core.Scripting
             try
             {
                 MapActorLuaApi actorApi = null;
-                var bindings = BindSequence(definition.Steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, actors => actorApi = actors));
+                var steps = definition.OnStart.Select(step => ("setup", step))
+                    .Concat(definition.Steps.Select(step => ("sequence", step)))
+                    .Concat(definition.OnComplete.Steps.Select(step => ("completion", step)));
+                var bindings = BindSteps(steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, actors => actorApi = actors));
                 // An endpoint can reference an actor even when no sequence action moves it.
                 if (definition.OnComplete.ActorPlacements.Count > 0)
                     actorApi ??= MapActorLuaApi.BindCurrentMap();
@@ -59,6 +62,10 @@ namespace Core.Scripting
 
         /// <summary>Creates the modules a sequence uses and checks all steps without executing them.</summary>
         public static LuaBindingRegistry BindSequence(IEnumerable<CutsceneStep> steps, string context,
+            params (Type Type, Func<object> Create)[] factories) =>
+            BindSteps(steps.Select(step => ("sequence", step)), context, factories);
+
+        private static LuaBindingRegistry BindSteps(IEnumerable<(string Phase, CutsceneStep Step)> steps, string context,
             params (Type Type, Func<object> Create)[] factories)
         {
             // Inspect signatures first. Creating a module can require live scene services,
@@ -68,17 +75,20 @@ namespace Core.Scripting
                 .Where(method => method.Action.Contexts.Contains(context))
                 .ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
             var instances = new Dictionary<Type, object>();
-            foreach (var step in steps)
+            foreach (var (phase, step) in steps)
             {
                 try
                 {
                     var method = actions[step.ActionId];
+                    if (!method.Action.Phases.Contains(phase))
+                        throw new InvalidOperationException($"Action '{step.ActionId}' is not allowed in phase '{phase}'.");
                     // Imported arguments already match this signature. Only arrange them for reflection.
                     var arguments = method.Parameters.Select(parameter =>
                     {
-                        var value = step.Arguments.Single(argument => argument.Name == parameter.Name).Value;
-                        if (parameter.ParameterType == typeof(string)) return (object)value;
-                        if (parameter.ParameterType == typeof(double)) return double.Parse(value, CultureInfo.InvariantCulture);
+                        var argument = step.Arguments.Single(argument => argument.Name == parameter.Name);
+                        if (parameter.ParameterType == typeof(string)) return (object)argument.Value;
+                        if (parameter.ParameterType == typeof(double)) return double.Parse(argument.Value, CultureInfo.InvariantCulture);
+                        if (parameter.ParameterType == typeof(MapPixelPosition)) return argument.Position;
                         throw new InvalidOperationException($"Unsupported sequence parameter type '{parameter.ParameterType}'.");
                     }).ToArray();
                     var type = method.Info.DeclaringType;
@@ -93,7 +103,7 @@ namespace Core.Scripting
                 }
                 catch (Exception error)
                 {
-                    throw new InvalidOperationException($"step '{step.Id}' ({step.ActionId}): {error.Message}", error);
+                    throw new InvalidOperationException($"{phase}, step '{step.Id}' ({step.ActionId}): {error.Message}", error);
                 }
             }
             return new LuaBindingRegistry(instances.Values.ToArray());

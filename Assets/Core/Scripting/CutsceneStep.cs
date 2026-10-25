@@ -32,9 +32,13 @@ namespace Core.Scripting
     {
         [SerializeField, ReadOnly] private string name;
         [SerializeField, ReadOnly] private string value;
+        [SerializeField, ReadOnly] private MapPixelPosition position;
+        [SerializeField, ReadOnly] private bool isPosition;
         public string Name => name;
-        /// <summary>String contents or invariant numeric text, interpreted using the action's parameter type.</summary>
-        public string Value => value;
-        public CutsceneArgument(string name, string value) { this.name = name; this.value = value; }
+        /// <summary>String contents or invariant numeric text. Position arguments use Position instead.</summary>
+        public string Value => !isPosition ? value : throw new InvalidOperationException($"Argument '{name}' is a position, not text.");
+        public MapPixelPosition Position => isPosition ? position : throw new InvalidOperationException($"Argument '{name}' is not a position.");
+        public CutsceneArgument(string name, string value) { this.name = name; this.value = value; position = default; isPosition = false; }
+        public CutsceneArgument(string name, MapPixelPosition position) { this.name = name; this.position = position; value = null; isPosition = true; }
     }
 }

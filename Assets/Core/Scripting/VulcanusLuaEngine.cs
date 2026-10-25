@@ -47,8 +47,8 @@ namespace Core.Scripting
             Modules(null, null).Select(module => module.Type).ToArray());
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
-            string context = "cutscene") =>
-            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context);
+            string context = "cutscene", string phase = "sequence") =>
+            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context, phase);
 
         /// <summary>Compiles each distinct expression once, but reads live state on every evaluation.</summary>
         public bool EvaluateCondition(string expression)

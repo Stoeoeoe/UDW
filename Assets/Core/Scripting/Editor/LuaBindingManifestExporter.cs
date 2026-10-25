@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Character;
 using Character.Animations;
 using Core.Catalogs.Editor;
 using Newtonsoft.Json;
@@ -50,6 +51,8 @@ namespace Core.Scripting.Editor
                 .Where(animation => IsOneShotCandidate(animation, libraries))
                 .OrderBy(animation => animation.Id, StringComparer.Ordinal)
                 .Select(animation => new LuaResourceDescription { id = animation.Id, description = animation.name }).ToArray());
+            manifest.resources.Add("direction", CardinalDirections.Values.Keys.OrderBy(id => id, StringComparer.Ordinal)
+                .Select(id => new LuaResourceDescription { id = id, description = id }).ToArray());
             foreach (var parameter in manifest.modules.SelectMany(module => module.methods).SelectMany(method => method.parameters))
                 if (parameter.resourceType != null && !manifest.resources.ContainsKey(parameter.resourceType))
                     throw new InvalidOperationException($"No resources exported for type '{parameter.resourceType}'.");

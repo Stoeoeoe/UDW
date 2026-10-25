@@ -115,6 +115,53 @@ namespace Core.Scripting
         }
 
         [UnityEngine.Scripting.Preserve]
+        public void ValidateFaceDirection(string actor, string direction)
+        {
+            RequireCurrentMap();
+            ResolveActor(actor);
+            CardinalDirections.Resolve(direction);
+        }
+
+        [LuaAction("actors.faceDirection", "Face direction", "Movement", "Turn an actor toward North, East, South or West.",
+            "cutscene", "npcRoutine", Validator = nameof(ValidateFaceDirection), Phases = new[] { "setup", "sequence", "completion" })]
+        [LuaPreview(LuaPreviewSpatialState.Described)]
+        [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorDirection, ActorParameter = "actor", DirectionParameter = "direction")]
+        public void FaceDirection([LuaReference("actorRef", "mapActor")] string actor,
+            [LuaResource("direction")] string direction)
+        {
+            RequireCurrentMap();
+            ResolveActor(actor).Orientation.ForceDirection(CardinalDirections.Resolve(direction));
+        }
+
+        [UnityEngine.Scripting.Preserve]
+        public void ValidatePlace(string actor, MapPixelPosition position)
+        {
+            RequireCurrentMap();
+            ResolveActor(actor);
+            position.ToWorld(_map);
+        }
+
+        [LuaAction("actors.place", "Place character", "Placement", "Immediately place a character at a map position.",
+            "cutscene", Validator = nameof(ValidatePlace), Phases = new[] { "setup", "sequence", "completion" })]
+        [LuaPreview(LuaPreviewSpatialState.Described, Version = 2)]
+        [LuaPreviewEffect(0, LuaPreviewEffectKind.SetActorPosition, ActorParameter = "actor", PositionParameter = "position", Facing = "preserve")]
+        public void Place([LuaReference("actorRef", "mapActor")] string actor, [LuaPosition] MapPixelPosition position)
+        {
+            RequireCurrentMap();
+            var character = ResolveActor(actor);
+            var point = position.ToWorld(_map);
+            var spawn = character.GetComponentInParent<SpawnedObject>();
+            var root = spawn ? spawn.transform : character.transform;
+            character.Controller.Stop();
+            // CharacterGraphics' authored sprite pivot is the feet/ground origin, not the Rigidbody's origin.
+            root.position += point - character.Graphics.position;
+            character.GetComponent<UnityEngine.Rigidbody2D>().position = character.transform.position;
+            character.SetMovementState(MovementState.Idle);
+            character.Tiles.OnPlaced();
+            if (spawn) spawn.SavePosition();
+        }
+
+        [UnityEngine.Scripting.Preserve]
         public void ValidatePlayAnimation(string actor, string animation)
         {
             RequireCurrentMap();

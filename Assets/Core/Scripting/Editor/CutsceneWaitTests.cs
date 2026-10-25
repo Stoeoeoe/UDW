@@ -118,7 +118,7 @@ namespace Core.Scripting.Editor
         private sealed class Observer
         {
             public bool Finished;
-[LuaAction("test.finish", "Finish", "Test", "Observe sequence completion.", "cutscene", Phases = new[] { "sequence" })]
+            [LuaAction("test.finish", "Finish", "Test", "Observe sequence completion.", "cutscene", Phases = new[] { "sequence" })]
             public void Finish() => Finished = true;
         }
     }

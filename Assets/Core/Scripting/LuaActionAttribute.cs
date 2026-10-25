@@ -63,8 +63,12 @@ namespace Core.Scripting
         public LuaResourceAttribute(string type) => Type = type;
     }
 
+    /// <summary>Exposes a MapPixelPosition through the reusable top-left map-pixel picker.</summary>
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public sealed class LuaPositionAttribute : Attribute { }
+
     public enum LuaPreviewSpatialState { Described, Unknown }
-    public enum LuaPreviewEffectKind { MoveActorToAnchor, FaceActorTowardActor, ShowDialogue }
+    public enum LuaPreviewEffectKind { MoveActorToAnchor, FaceActorTowardActor, ShowDialogue, FaceActorDirection, SetActorPosition }
 
     /// <summary>Declares schematic state after successful action completion, never a gameplay simulation.</summary>
     [AttributeUsage(AttributeTargets.Method)]
@@ -86,6 +90,8 @@ namespace Core.Scripting
         public string AnchorParameter { get; set; }
         public string TargetActorParameter { get; set; }
         public string DialogueParameter { get; set; }
+        public string DirectionParameter { get; set; }
+        public string PositionParameter { get; set; }
         public string Facing { get; set; }
 
         public LuaPreviewEffectAttribute(int order, LuaPreviewEffectKind kind) { Order = order; Kind = kind; }

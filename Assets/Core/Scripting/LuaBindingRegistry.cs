@@ -76,8 +76,16 @@ namespace Core.Scripting
 
                 var parameters = method.GetParameters();
                 foreach (var parameter in parameters)
-                    if (parameter.IsOptional || !IsPrimitive(parameter.ParameterType))
+                {
+                    if (parameter.IsOptional || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPixelPosition)))
                         throw Invalid(method, $"has unsupported parameter '{parameter.Name}'");
+                    var position = parameter.GetCustomAttribute<LuaPositionAttribute>();
+                    if ((parameter.ParameterType == typeof(MapPixelPosition)) != (position != null))
+                        throw Invalid(method, $"position parameter '{parameter.Name}' requires MapPixelPosition and [LuaPosition] together");
+                    if (position != null && (parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
+                        parameter.GetCustomAttribute<LuaResourceAttribute>() != null))
+                        throw Invalid(method, $"position parameter '{parameter.Name}' cannot also declare reference/resource metadata");
+                }
 
                 if (action != null) ValidateAction(method, action, parameters, actionIds);
                 if (method.ReturnType == typeof(ILuaAction) && action == null)
@@ -98,7 +106,7 @@ namespace Core.Scripting
                 if (effects.Length > 0) throw Invalid(method, "preview effects require [LuaPreview]");
                 return null; // No declaration means unavailable, not a spatial no-op.
             }
-            if (preview.Version != 1) throw Invalid(method, $"has unsupported preview version {preview.Version}");
+            if (preview.Version is not (1 or 2)) throw Invalid(method, $"has unsupported preview version {preview.Version}");
             var spatialState = preview.SpatialState switch
             {
                 LuaPreviewSpatialState.Described => "described",
@@ -117,22 +125,43 @@ namespace Core.Scripting
                     case LuaPreviewEffectKind.MoveActorToAnchor:
                         RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
                         RequireParameter(effect.AnchorParameter, "anchorRef", "mapAnchor");
-                        if (effect.TargetActorParameter != null || effect.DialogueParameter != null || effect.Facing != "unknown")
-                            throw Invalid(method, "moveActorToAnchor preview requires facing 'unknown' and forbids targetActorParameter/dialogueParameter");
+                        if (effect.TargetActorParameter != null || effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != "unknown")
+                            throw Invalid(method, "moveActorToAnchor preview requires facing 'unknown' and forbids targetActorParameter/dialogueParameter/directionParameter");
                         kind = "moveActorToAnchor";
                         break;
                     case LuaPreviewEffectKind.FaceActorTowardActor:
                         RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
                         RequireParameter(effect.TargetActorParameter, "actorRef", "mapActor");
-                        if (effect.AnchorParameter != null || effect.DialogueParameter != null || effect.Facing != null)
-                            throw Invalid(method, "faceActorTowardActor preview forbids anchorParameter/dialogueParameter/facing");
+                        if (effect.AnchorParameter != null || effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != null)
+                            throw Invalid(method, "faceActorTowardActor preview forbids anchorParameter/dialogueParameter/directionParameter/facing");
                         kind = "faceActorTowardActor";
                         break;
                     case LuaPreviewEffectKind.ShowDialogue:
                         RequireParameter(effect.DialogueParameter, "dialogueRef", "dialogue");
-                        if (effect.ActorParameter != null || effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.Facing != null)
-                            throw Invalid(method, "showDialogue preview forbids actorParameter/anchorParameter/targetActorParameter/facing");
+                        if (effect.ActorParameter != null || effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != null)
+                            throw Invalid(method, "showDialogue preview forbids actorParameter/anchorParameter/targetActorParameter/directionParameter/facing");
                         kind = "showDialogue";
+                        break;
+                    case LuaPreviewEffectKind.FaceActorDirection:
+                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
+                        var direction = parameters.SingleOrDefault(parameter => parameter.Name == effect.DirectionParameter);
+                        if (direction == null || direction.ParameterType != typeof(string) ||
+                            direction.GetCustomAttribute<LuaResourceAttribute>()?.Type != "direction")
+                            throw Invalid(method, "faceActorDirection preview requires a string directionParameter with resource type 'direction'");
+                        if (effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.DialogueParameter != null || effect.PositionParameter != null || effect.Facing != null)
+                            throw Invalid(method, "faceActorDirection preview forbids anchorParameter/targetActorParameter/dialogueParameter/facing");
+                        kind = "faceActorDirection";
+                        break;
+                    case LuaPreviewEffectKind.SetActorPosition:
+                        if (preview.Version != 2) throw Invalid(method, "setActorPosition requires preview version 2");
+                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
+                        var point = parameters.SingleOrDefault(parameter => parameter.Name == effect.PositionParameter);
+                        if (point == null || point.ParameterType != typeof(MapPixelPosition) || point.GetCustomAttribute<LuaPositionAttribute>() == null)
+                            throw Invalid(method, "setActorPosition requires a positionParameter declared with [LuaPosition]");
+                        if (effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.DialogueParameter != null ||
+                            effect.DirectionParameter != null || effect.Facing != "preserve")
+                            throw Invalid(method, "setActorPosition requires facing 'preserve' and forbids anchor/target/dialogue/direction fields");
+                        kind = "setActorPosition";
                         break;
                     default: throw Invalid(method, "has unsupported preview effect kind");
                 }
@@ -140,7 +169,7 @@ namespace Core.Scripting
                 {
                     kind = kind, actorParameter = effect.ActorParameter, anchorParameter = effect.AnchorParameter,
                     targetActorParameter = effect.TargetActorParameter, dialogueParameter = effect.DialogueParameter,
-                    facing = effect.Facing
+                    facing = effect.Facing, directionParameter = effect.DirectionParameter, positionParameter = effect.PositionParameter
                 });
             }
             return new LuaActionPreviewDescription { version = preview.Version, spatialState = spatialState, effects = descriptions.ToArray() };
@@ -233,11 +262,15 @@ namespace Core.Scripting
         private static LuaParameterDescription DescribeParameter(ParameterInfo parameter)
         {
             var reference = parameter.GetCustomAttribute<LuaReferenceAttribute>();
+            var position = parameter.GetCustomAttribute<LuaPositionAttribute>() != null;
             return new LuaParameterDescription
             {
                 name = parameter.Name, type = LuaTypeName(parameter.ParameterType),
-                semanticType = reference?.Type, picker = reference?.Picker,
-                resourceType = parameter.GetCustomAttribute<LuaResourceAttribute>()?.Type
+                semanticType = reference?.Type, picker = position ? "mapPosition" : reference?.Picker,
+                resourceType = parameter.GetCustomAttribute<LuaResourceAttribute>()?.Type,
+                coordinateSpace = position ? "mapPixels" : null, origin = position ? "topLeft" : null,
+                placementModes = position ? new[] { "tile", "pixel" } : null,
+                tileAnchor = position ? "center" : null, actorPivot = position ? "feet" : null
             };
         }
 
@@ -259,13 +292,14 @@ namespace Core.Scripting
             }
         }
 
-        internal void BindActions(Script script, string context, Func<ILuaAction, DynValue> awaitAction, Action actionStarting)
+        internal void BindActions(Script script, string context, string phase, Func<ILuaAction, DynValue> awaitAction, Action actionStarting)
         {
             if (context is not ("cutscene" or "npcRoutine")) throw new ArgumentException("Unsupported Lua execution context.", nameof(context));
+            if (phase is not ("setup" or "sequence" or "completion")) throw new ArgumentException("Unsupported Lua action phase.", nameof(phase));
             foreach (var module in _modules)
             foreach (var method in module.Methods)
             {
-                if (method.Action == null || !method.Action.Contexts.Contains(context)) continue;
+                if (method.Action == null || !method.Action.Contexts.Contains(context) || !method.Action.Phases.Contains(phase)) continue;
                 var table = EnsurePath(script, module.Path);
                 table.Set(method.Info.Name, DynValue.NewCallback((_, args) =>
                 {
@@ -316,7 +350,7 @@ namespace Core.Scripting
             if (action.Validator == null)
             {
                 if (parameters.Any(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
-                    parameter.GetCustomAttribute<LuaResourceAttribute>() != null))
+                    parameter.GetCustomAttribute<LuaResourceAttribute>() != null || parameter.GetCustomAttribute<LuaPositionAttribute>() != null))
                     throw Invalid(method, "needs a Validator to check its reference/resource arguments before playback");
                 return null; // Actions without references may have nothing to check before playback.
             }
@@ -369,15 +403,29 @@ namespace Core.Scripting
             return DynValue.NewTable(table);
         }
 
-        private static object FromLua(DynValue value, Type type, string parameter) => value.Type switch
+        private static object FromLua(DynValue value, Type type, string parameter)
         {
-            DataType.String when type == typeof(string) && !string.IsNullOrWhiteSpace(value.String) => value.String,
-            DataType.Boolean when type == typeof(bool) => value.Boolean,
-            DataType.Number when type == typeof(double) && double.IsFinite(value.Number) => value.Number,
-            DataType.Number when type == typeof(int) && value.Number == Math.Truncate(value.Number) &&
-                value.Number is >= int.MinValue and <= int.MaxValue => (int)value.Number,
-            _ => throw new ArgumentException($"{parameter} must be a valid {type.Name}.")
-        };
+            if (type == typeof(MapPixelPosition))
+            {
+                if (value.Type != DataType.Table || value.Table.MetaTable != null || value.Table.Pairs.Any(pair =>
+                    pair.Key.Type != DataType.String || pair.Key.String is not ("x" or "y")))
+                    throw new ArgumentException($"{parameter} must be a plain position table with only x/y numbers.");
+                var x = value.Table.Get("x");
+                var y = value.Table.Get("y");
+                if (x.Type != DataType.Number || y.Type != DataType.Number)
+                    throw new ArgumentException($"{parameter} requires numeric x and y coordinates.");
+                return new MapPixelPosition(x.Number, y.Number);
+            }
+            return value.Type switch
+            {
+                DataType.String when type == typeof(string) && !string.IsNullOrWhiteSpace(value.String) => value.String,
+                DataType.Boolean when type == typeof(bool) => value.Boolean,
+                DataType.Number when type == typeof(double) && double.IsFinite(value.Number) => value.Number,
+                DataType.Number when type == typeof(int) && value.Number == Math.Truncate(value.Number) &&
+                    value.Number is >= int.MinValue and <= int.MaxValue => (int)value.Number,
+                _ => throw new ArgumentException($"{parameter} must be a valid {type.Name}.")
+            };
+        }
 
         private static Table EnsurePath(Script script, string[] path)
         {
@@ -409,6 +457,7 @@ namespace Core.Scripting
             if (type == typeof(bool)) return "boolean";
             if (type == typeof(int)) return "integer";
             if (type == typeof(double)) return "number";
+            if (type == typeof(MapPixelPosition)) return "position";
             return type.Name; // [LuaTable] types were validated during registration.
         }
 

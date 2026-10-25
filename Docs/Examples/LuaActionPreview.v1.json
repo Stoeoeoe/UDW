@@ -1,5 +1,12 @@
 {
   "actions": {
+    "actors.faceDirection": {
+      "version": 1,
+      "spatialState": "described",
+      "effects": [
+        { "kind": "faceActorDirection", "actorParameter": "actor", "directionParameter": "direction" }
+      ]
+    },
     "actors.playAnimation": {
       "version": 1,
       "spatialState": "unknown",

@@ -181,8 +181,167 @@ namespace Core.Scripting.Editor
             var compiled = CutsceneSequenceCompiler.Compile(sequence, id, out var importedSteps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, importedSteps, skip,
-                new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>(), $"GameState.Story.SetFlag('{completionFlag}')"));
+                new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>(), $"GameState.Story.SetFlag('{completionFlag}')", "", Array.Empty<CutsceneStep>()),
+                "", Array.Empty<CutsceneStep>());
             return definition;
+        }
+
+        [UnityTest]
+        public IEnumerator StructuredPhasesRunBeforeStartedAndOnCompletionOrSkipButRestoreOnCancel()
+        {
+            var service = CutsceneRunner.Instance;
+            var actor = MainCharacter.CurrentMainCharacter;
+            var started = 0;
+            Action<CutsceneRun> observer = run =>
+            {
+                if (!run.Definition.CutsceneId.StartsWith("fixture:phases-", StringComparison.Ordinal)) return;
+                started++;
+                Assert.That(actor.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+                Assert.That(actor.IsControlBlocked, Is.True);
+            };
+            service.Started += observer;
+            try
+            {
+                foreach (var terminal in new[] { "cancel", "skip", "complete" })
+                {
+                    actor.Orientation.ForceDirection(Vector2.up);
+                    var id = "fixture:phases-" + terminal;
+                    var definition = CreatePhaseDefinition(id, terminal == "complete" ? 0 : 60);
+                    try
+                    {
+                        Assert.That(service.TryStart(definition, out var run), Is.True);
+                        Assert.That(actor.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+                        if (terminal == "cancel") run.Cancel();
+                        else if (terminal == "skip") Assert.That(run.Skip(), Is.True);
+                        else
+                        {
+                            for (var frame = 0; frame < 30 && run.IsRunning; frame++) yield return null;
+                            Assert.That(run.IsRunning, Is.False);
+                        }
+                        Assert.That(actor.Orientation.FacingDirection, Is.EqualTo(terminal == "cancel" ? Vector2.up : Vector2.left));
+                        Assert.That(GameState.Story.HasFlag(id), Is.EqualTo(terminal != "cancel"));
+                        Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.EqualTo(terminal != "cancel"));
+                        Assert.That(actor.IsControlBlocked, Is.False);
+                        Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+                    }
+                    finally { service.Cancel(); Object.Destroy(definition); }
+                }
+                Assert.That(started, Is.EqualTo(3));
+            }
+            finally { service.Started -= observer; }
+        }
+
+        [UnityTest]
+        public IEnumerator SetupFailureRestoresStagingAndBadCompletionReferencesFailBeforeSetup()
+        {
+            var service = CutsceneRunner.Instance;
+            var actor = MainCharacter.CurrentMainCharacter;
+            actor.Orientation.ForceDirection(Vector2.up);
+            var failed = CreatePhaseDefinition("fixture:setup-failure", 60);
+            var invalid = CreatePhaseDefinition("fixture:invalid-completion", 60, "missing-actor");
+            var notifications = 0;
+            Action<CutsceneRun> count = _ => notifications++;
+            Action<Vector2> fail = facing => { if (facing == Vector2.right) throw new InvalidOperationException("Fixture setup failure."); };
+            service.Started += count;
+            service.Finished += count;
+            actor.Orientation.OnFacingDirectionChanged += fail;
+            try
+            {
+                Assert.That(() => service.TryStart(failed, out _), Throws.InvalidOperationException
+                    .With.Message.Contains("setup").And.Message.Contains("stage").And.Message.Contains("Fixture setup failure"));
+                Assert.That(actor.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
+                Assert.That(actor.IsControlBlocked, Is.False);
+                Assert.That(service.IsRunning, Is.False);
+                Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+                Assert.That(notifications, Is.Zero);
+                Assert.That(GameState.Story.CompletedCutscenes.Contains(failed.CutsceneId), Is.False);
+                Assert.That(() => service.TryStart(invalid, out _), Throws.InvalidOperationException
+                    .With.Message.Contains("completion").And.Message.Contains("finish").And.Message.Contains("missing-actor"));
+                Assert.That(actor.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
+                Assert.That(actor.IsControlBlocked, Is.False);
+                Assert.That(notifications, Is.Zero);
+            }
+            finally
+            {
+                actor.Orientation.OnFacingDirectionChanged -= fail;
+                service.Started -= count;
+                service.Finished -= count;
+                service.Cancel();
+                Object.Destroy(failed);
+                Object.Destroy(invalid);
+            }
+            yield return null;
+        }
+
+        private static CutsceneDefinition CreatePhaseDefinition(string id, double wait, string completionActor = "player")
+        {
+            JObject Turn(string stepId, string actor, string direction) => new()
+            {
+                ["id"] = stepId, ["action"] = "actors.faceDirection",
+                ["arguments"] = new JObject { ["actor"] = actor, ["direction"] = direction }
+            };
+            var ids = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+            var setup = CutsceneSequenceCompiler.Compile(new JArray(Turn("stage", "player", "East")), id, out var setupSteps, "setup", ids);
+            var sequence = CutsceneSequenceCompiler.Compile(new JArray(new JObject
+            {
+                ["id"] = "wait", ["action"] = "cutscene.wait", ["arguments"] = new JObject { ["seconds"] = wait }
+            }), id, out var steps, "sequence", ids);
+            var completion = CutsceneSequenceCompiler.Compile(new JArray(Turn("finish", completionActor, "West")), id,
+                out var completionSteps, "completion", ids);
+            var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
+            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, sequence, steps, true,
+                new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>(), $"GameState.Story.SetFlag('{id}')", completion, completionSteps), setup, setupSteps);
+            return definition;
+        }
+
+        [UnityTest]
+        public IEnumerator PlacingSpawnedActorsSynchronizesPhysicsAndSavedRecordsAndRestoresOnCancel()
+        {
+            var service = CutsceneRunner.Instance;
+            var map = MapManager.Instance.CurrentMap;
+            var spawn = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var actor = spawn.GetComponentInChildren<GameCharacter>();
+            actor.Orientation.ForceDirection(Vector2.right);
+            foreach (var terminal in new[] { "cancel", "skip", "complete" })
+            {
+                var id = "fixture:place-" + terminal;
+                JObject Place(string step, int x) => new()
+                {
+                    ["id"] = step, ["action"] = "actors.place",
+                    ["arguments"] = new JObject { ["actor"] = spawn.PersistentId, ["position"] = new JObject { ["x"] = x, ["y"] = 104 } }
+                };
+                var ids = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                var setup = CutsceneSequenceCompiler.Compile(new JArray(Place("stage", 168)), id, out var setupSteps, "setup", ids);
+                var sequence = CutsceneSequenceCompiler.Compile(new JArray(new JObject
+                {
+                    ["id"] = "wait", ["action"] = "cutscene.wait",
+                    ["arguments"] = new JObject { ["seconds"] = terminal == "complete" ? 0 : 60 }
+                }), id, out var steps, "sequence", ids);
+                var completion = CutsceneSequenceCompiler.Compile(new JArray(Place("finish", 171)), id, out var completionSteps, "completion", ids);
+                var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
+                definition.Configure(id, map.MapId, sequence, steps, true,
+                    new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>(), "", completion, completionSteps), setup, setupSteps);
+                try
+                {
+                    var before = spawn.transform.position;
+                    Assert.That(service.TryStart(definition, out var run), Is.True);
+                    Assert.That(Vector3.Distance(actor.Graphics.position, new MapPixelPosition(168, 104).ToWorld(map)), Is.LessThan(0.0001f));
+                    Assert.That(Vector3.Distance(spawn.State.position, spawn.transform.position), Is.LessThan(0.0001f));
+                    if (terminal == "cancel") run.Cancel();
+                    else if (terminal == "skip") Assert.That(run.Skip(), Is.True);
+                    else
+                    {
+                        for (var frame = 0; frame < 30 && run.IsRunning; frame++) yield return null;
+                        Assert.That(run.IsRunning, Is.False);
+                    }
+                    if (terminal == "cancel") Assert.That(Vector3.Distance(spawn.transform.position, before), Is.LessThan(0.0001f));
+                    else Assert.That(Vector3.Distance(actor.Graphics.position, new MapPixelPosition(171, 104).ToWorld(map)), Is.LessThan(0.0001f));
+                    Assert.That(Vector2.Distance(actor.GetComponent<Rigidbody2D>().position, actor.transform.position), Is.LessThan(0.0001f));
+                    Assert.That(Vector3.Distance(spawn.State.position, spawn.transform.position), Is.LessThan(0.0001f));
+                    Assert.That(actor.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+                }
+                finally { service.Cancel(); Object.Destroy(definition); }
+            }
         }
 
         [UnityTest]
@@ -501,7 +660,7 @@ namespace Core.Scripting.Editor
             }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding", out var importedSteps);
             definition.Configure("fixture:binding", map, compiled, importedSteps, false,
-                new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>()));
+                new CutsceneCompletion(Array.Empty<CutsceneActorPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
         }
 
         private void AssertClosed()

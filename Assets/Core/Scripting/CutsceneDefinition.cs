@@ -16,7 +16,10 @@ namespace Core.Scripting
         [SerializeField, ReadOnly] private CutsceneStep[] steps = Array.Empty<CutsceneStep>();
         [SerializeField, ReadOnly] private bool allowSkip;
         [SerializeField, ReadOnly] private CutsceneCompletion onComplete;
+        [SerializeField, ReadOnly, TextArea] private string onStartLua = "";
+        [SerializeField, ReadOnly] private CutsceneStep[] onStart = Array.Empty<CutsceneStep>();
         [NonSerialized] private IReadOnlyList<CutsceneStep> _steps;
+        [NonSerialized] private IReadOnlyList<CutsceneStep> _onStart;
 
         public string CutsceneId => cutsceneId;
         public string MapId => mapId;
@@ -24,10 +27,12 @@ namespace Core.Scripting
         public bool AllowSkip => allowSkip;
         public CutsceneCompletion OnComplete => onComplete;
         public IReadOnlyList<CutsceneStep> Steps => _steps ??= Array.AsReadOnly(steps);
+        public string OnStartLua => onStartLua;
+        public IReadOnlyList<CutsceneStep> OnStart => _onStart ??= Array.AsReadOnly(onStart);
 
 #if UNITY_EDITOR
         public void Configure(string id, string map, string script, IEnumerable<CutsceneStep> importedSteps,
-            bool skipAllowed, CutsceneCompletion completionPlan)
+            bool skipAllowed, CutsceneCompletion completionPlan, string setupScript, IEnumerable<CutsceneStep> setupSteps)
         {
             cutsceneId = id;
             mapId = map;
@@ -36,6 +41,9 @@ namespace Core.Scripting
             _steps = null;
             allowSkip = skipAllowed;
             onComplete = completionPlan;
+            onStartLua = setupScript;
+            onStart = setupSteps.ToArray();
+            _onStart = null;
             RequireValidConfiguration();
         }
 #endif
@@ -53,6 +61,8 @@ namespace Core.Scripting
                 errors.Add(new ConfigurationError(this, "lua", "Requires the compiled sequence."));
             if (steps == null || steps.Length == 0)
                 errors.Add(new ConfigurationError(this, "steps", "Requires its authored steps."));
+            if (onStart == null || onStartLua == null || (onStart.Length > 0 && string.IsNullOrWhiteSpace(onStartLua)))
+                errors.Add(new ConfigurationError(this, "onStart", "Requires compiled setup steps; an empty list and script are allowed."));
             // Step structure and action signatures are checked by the source compiler before import.
             return errors;
         }

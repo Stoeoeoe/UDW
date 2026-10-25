@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Core.Catalogs;
 using Core.Catalogs.Editor;
 using Core.Scripting;
@@ -83,6 +84,102 @@ namespace Core.Tile.Editor.Vulcanus
             var source = Source("test:intro");
             source[field] = JToken.Parse(value);
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("fixture.runtime.cutscene.json"));
+        }
+
+        [Test]
+        public void ImportsSetupAndCompletionStepsWithTheirCompiledScripts()
+        {
+            var source = Source("test:phases");
+            source["onStart"] = new JArray(Turn("stage", "East"));
+            source["onComplete"]["steps"] = new JArray(Turn("finish", "West"));
+            var definition = Parse(source);
+            try
+            {
+                Assert.That(definition.OnStartLua, Is.EqualTo("Actors.FaceDirection(\"player\", \"East\");\n"));
+                Assert.That(definition.OnStart.Single().Id, Is.EqualTo("stage"));
+                Assert.That(definition.OnComplete.Lua, Is.EqualTo("Actors.FaceDirection(\"player\", \"West\");\n"));
+                Assert.That(definition.OnComplete.Steps.Single().Id, Is.EqualTo("finish"));
+                Assert.That(definition.Lua, Is.EqualTo("Dialogue.Play(\"base:greeting\");\n"));
+            }
+            finally { Object.DestroyImmediate(definition); }
+        }
+
+        [TestCase("setup", "cutscene.wait", "{'seconds':0}")]
+        [TestCase("completion", "cutscene.wait", "{'seconds':0}")]
+        [TestCase("setup", "actors.moveTo", "{'actor':'player','destination':'meeting'}")]
+        [TestCase("completion", "dialogue.play", "{'dialogue':'base:greeting'}")]
+        [TestCase("setup", "actors.playAnimation", "{'actor':'player','animation':'base:pass-out'}")]
+        public void RejectsAwaitableActionsInImmediateSections(string phase, string action, string arguments)
+        {
+            var source = Source("test:phases");
+            var steps = new JArray(new JObject { ["id"] = "bad-step", ["action"] = action, ["arguments"] = JObject.Parse(arguments) });
+            if (phase == "setup") source["onStart"] = steps;
+            else source["onComplete"]["steps"] = steps;
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("bad-step")
+                .And.Message.Contains($"not allowed in phase '{phase}'"));
+        }
+
+        [TestCase("setup")]
+        [TestCase("completion")]
+        public void StepIdsMustBeUniqueAcrossAllPhases(string phase)
+        {
+            var source = Source("test:phases");
+            if (phase == "setup") source["onStart"] = new JArray(Turn("speak", "East"));
+            else source["onComplete"]["steps"] = new JArray(Turn("speak", "East"));
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("Duplicate step ID"));
+        }
+
+        [Test]
+        public void EmptyOrOmittedImmediateSectionsAreExplicitNoOpsAndRawSetupLuaIsRejected()
+        {
+            var source = Source("test:empty-phases");
+            foreach (var explicitEmpty in new[] { false, true })
+            {
+                if (explicitEmpty)
+                {
+                    source["onStart"] = new JArray();
+                    source["onComplete"]["steps"] = new JArray();
+                }
+                var definition = Parse(source);
+                try
+                {
+                    Assert.That(definition.OnStart, Is.Empty);
+                    Assert.That(definition.OnStartLua, Is.Empty);
+                    Assert.That(definition.OnComplete.Steps, Is.Empty);
+                    Assert.That(definition.OnComplete.Lua, Is.Empty);
+                }
+                finally { Object.DestroyImmediate(definition); }
+            }
+            source["onStart"] = "Actors.FaceDirection('player', 'East')";
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+        }
+
+        private static JObject Turn(string id, string direction) => new()
+        {
+            ["id"] = id, ["action"] = "actors.faceDirection",
+            ["arguments"] = new JObject { ["actor"] = "player", ["direction"] = direction }
+        };
+
+        [Test]
+        public void PositionObjectsImportInSetupSequenceAndCompletion()
+        {
+            var source = Source("test:place-phases");
+            JObject Place(string id, int x) => new()
+            {
+                ["id"] = id, ["action"] = "actors.place",
+                ["arguments"] = new JObject { ["actor"] = "player", ["position"] = new JObject { ["x"] = x, ["y"] = 104 } }
+            };
+            source["onStart"] = new JArray(Place("stage", 168));
+            source["sequence"] = new JArray(Place("place", 171));
+            source["onComplete"]["steps"] = new JArray(Place("finish", 174));
+            var definition = Parse(source);
+            try
+            {
+                Assert.That(definition.OnStart.Single().Arguments.Single(argument => argument.Name == "position").Position.X, Is.EqualTo(168));
+                Assert.That(definition.Lua, Does.Contain("{ x = 171, y = 104 }"));
+                Assert.That(definition.OnComplete.Steps.Single().Arguments.Single(argument => argument.Name == "position").Position.X, Is.EqualTo(174));
+            }
+            finally { Object.DestroyImmediate(definition); }
         }
 
         [Test]

@@ -1,0 +1,17 @@
+{
+  "actions": {
+    "actors.place": {
+      "version": 2,
+      "spatialState": "described",
+      "effects": [
+        { "kind": "setActorPosition", "actorParameter": "actor", "positionParameter": "position", "facing": "preserve" }
+      ]
+    }
+  },
+  "example": {
+    "map": { "width": 32, "height": 24, "tileSize": 16 },
+    "step": { "id": "place-player", "action": "actors.place", "arguments": { "actor": "player", "position": { "x": 168, "y": 104 } } },
+    "initialFacing": [0, 1],
+    "result": { "mapPixels": [168, 104], "mapLocalPosition": [10.5, 17.5], "facing": [0, 1], "movementSegments": [] }
+  }
+}

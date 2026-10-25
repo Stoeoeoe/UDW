@@ -46,6 +46,11 @@ namespace Core.Scripting
         public string semanticType;
         public string picker;
         public string resourceType;
+        public string coordinateSpace;
+        public string origin;
+        public string[] placementModes;
+        public string tileAnchor;
+        public string actorPivot;
     }
 
     [Serializable]
@@ -84,6 +89,8 @@ namespace Core.Scripting
         public string anchorParameter;
         public string targetActorParameter;
         public string dialogueParameter;
+        public string directionParameter;
+        public string positionParameter;
         public string facing;
     }
 }
