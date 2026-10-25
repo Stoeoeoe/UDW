@@ -288,6 +288,14 @@ namespace Core.Scripting
             }
         }
 
+        /// <summary>Runs a pure static action validator during authoring; scene checks wait for binding.</summary>
+        public void ValidateAuthoredActionArguments(string actionId, object[] arguments)
+        {
+            var action = GetActions().Single(method => method.Action.Id == actionId);
+            if (action.Validator != null && action.Validator.IsStatic)
+                InvokeReflected(action.Validator, null, arguments);
+        }
+
         private static MethodInfo FindValidator(MethodInfo method, LuaActionAttribute action, ParameterInfo[] parameters)
         {
             if (action == null) return null;
@@ -303,11 +311,11 @@ namespace Core.Scripting
             if (candidates.Length != 1)
                 throw Invalid(method, $"needs one validation method named '{action.Validator}'");
             var validator = candidates[0];
-            if (validator.IsStatic || validator.IsGenericMethod || validator.ReturnType != typeof(void) ||
+            if (validator.IsGenericMethod || validator.ReturnType != typeof(void) ||
                 !validator.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(parameters.Select(parameter => parameter.ParameterType)) ||
                 validator.GetCustomAttribute<PreserveAttribute>() == null ||
                 validator.GetCustomAttribute<LuaCallAttribute>() != null || validator.GetCustomAttribute<LuaActionAttribute>() != null)
-                throw Invalid(method, $"validator '{action.Validator}' must be an instance void method with the same parameter types, marked [Preserve] and not exposed to Lua");
+                throw Invalid(method, $"validator '{action.Validator}' must be a void method with the same parameter types, marked [Preserve] and not exposed to Lua");
             return validator;
         }
 

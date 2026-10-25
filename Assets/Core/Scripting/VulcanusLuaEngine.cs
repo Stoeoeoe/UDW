@@ -38,9 +38,12 @@ namespace Core.Scripting
         }
 
         /// <summary>Lists the supported Lua APIs, including actions that need a map when they run.</summary>
-        public static LuaBindingManifest DescribeBindings() => LuaBindingRegistry.DescribeTypes(
+        public static LuaBindingManifest DescribeBindings() => InspectBindings().Describe();
+
+        /// <summary>Inspects shipped API signatures and authored values without constructing scene APIs.</summary>
+        public static LuaBindingRegistry InspectBindings() => LuaBindingRegistry.InspectTypes(
             typeof(StoryLuaApi), typeof(SkillsLuaApi), typeof(WorldLuaApi), typeof(CharacterTagLuaApi),
-            typeof(MapActorLuaApi), typeof(DialogueLuaApi));
+            typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi));
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
             string context = "cutscene") =>

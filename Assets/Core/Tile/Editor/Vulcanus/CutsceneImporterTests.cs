@@ -54,6 +54,23 @@ namespace Core.Tile.Editor.Vulcanus
             finally { Object.DestroyImmediate(definition); }
         }
 
+        [Test]
+        public void ImportsNumericWaitAndRejectsInvalidDurationAtImport()
+        {
+            var source = Source("test:wait");
+            source["sequence"] = new JArray(new JObject
+            {
+                ["id"] = "pause", ["action"] = "cutscene.wait",
+                ["arguments"] = new JObject { ["seconds"] = 0.5 }
+            });
+            var definition = Parse(source);
+            try { Assert.That(definition.Lua, Is.EqualTo("Cutscene.Wait(0.5);\n")); }
+            finally { Object.DestroyImmediate(definition); }
+            source["sequence"][0]["arguments"]["seconds"] = -1;
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>()
+                .With.Message.Contains("(pause)").And.Message.Contains("nonnegative"));
+        }
+
         [TestCase("formatVersion", "99")]
         [TestCase("id", "'not-namespaced'")]
         [TestCase("mapId", "' '")]

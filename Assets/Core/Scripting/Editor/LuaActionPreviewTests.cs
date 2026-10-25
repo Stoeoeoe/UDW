@@ -16,7 +16,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void CurrentActionsMatchTheVersionedHandoffFixtureWithoutLiveApis()
         {
-            var manifest = LuaBindingRegistry.DescribeTypes(typeof(MapActorLuaApi), typeof(DialogueLuaApi));
+            var manifest = LuaBindingRegistry.DescribeTypes(typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi));
             var path = Path.Combine(Path.GetDirectoryName(UnityEngine.Application.dataPath), "Docs/Examples/LuaActionPreview.v1.json");
             var expected = JObject.Parse(File.ReadAllText(path))["actions"];
             Assert.That(manifest.schemaVersion, Is.EqualTo(2));

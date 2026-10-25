@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Core.Scripting
 {
-    /// <summary>Retains an authored action's references for validation before the Lua script starts.</summary>
+    /// <summary>Retains an authored action's arguments for validation before the Lua script starts.</summary>
     [Serializable]
     public sealed class CutsceneStep
     {
@@ -33,6 +33,7 @@ namespace Core.Scripting
         [SerializeField, ReadOnly] private string name;
         [SerializeField, ReadOnly] private string value;
         public string Name => name;
+        /// <summary>String contents or invariant numeric text, interpreted using the action's parameter type.</summary>
         public string Value => value;
         public CutsceneArgument(string name, string value) { this.name = name; this.value = value; }
     }

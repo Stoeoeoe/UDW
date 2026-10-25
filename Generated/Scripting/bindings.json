@@ -92,6 +92,38 @@
       ]
     },
     {
+      "path": "Cutscene",
+      "methods": [
+        {
+          "name": "Wait",
+          "parameters": [
+            {
+              "name": "seconds",
+              "type": "number"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "cutscene.wait",
+            "displayName": "Wait",
+            "category": "Timing",
+            "description": "Wait for gameplay seconds.",
+            "contexts": [
+              "cutscene"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "Dialogue",
       "methods": [
         {

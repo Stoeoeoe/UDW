@@ -54,8 +54,10 @@
           "arguments": {
             "type": "object",
             "additionalProperties": {
-              "type": "string",
-              "pattern": "\\S"
+              "oneOf": [
+                { "type": "string", "pattern": "\\S" },
+                { "type": "number" }
+              ]
             }
           }
         }

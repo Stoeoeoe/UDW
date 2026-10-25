@@ -52,6 +52,12 @@ exactly. Reordering or renaming a step's display label must retain its ID.
 Action IDs and argument names come from `Generated/Scripting/bindings.json`.
 Only actions allowing the `cutscene` context are accepted. Movement and dialogue
 actions take non-empty string references.
+`cutscene.wait` takes a numeric `seconds` argument, for example
+`{ "id": "pause", "action": "cutscene.wait", "arguments": { "seconds": 0.5 } }`.
+It compiles to `Cutscene.Wait(0.5)` and waits for scaled gameplay seconds through
+the session's frame clock. A zero duration yields until the next session tick.
+Negative and nonfinite durations fail import and direct Lua calls. Its preview
+is `described` with no effects, preserving actor placement and facing.
 Missing/unknown arguments, unknown
 step fields and unsupported actions are errors. Branches and raw Lua steps are
 not supported.
@@ -60,6 +66,9 @@ Argument property order does not affect generated Lua: calls follow the
 manifest's parameter order. Strings are encoded as Lua literals, including
 quotes, backslashes and control characters. JSON string escaping is not used as
 Lua escaping.
+Numbers use invariant Lua numeric literals. Imported numeric arguments retain
+their invariant text representation; binding converts them to the declared
+numeric parameter type.
 
 Each step produces exactly one Lua line. `definition.Steps[line - 1].Id`
 maps that one-based Lua line to its authored step ID. Compiler errors identify
@@ -96,6 +105,9 @@ parameters as the action, returns `void`, and is marked `[Preserve]` for Unity
 builds. It checks references without starting gameplay. Actions with
 `[LuaReference]` arguments must provide a check; the registry verifies this and
 the method signature during registration and manifest export.
+Pure value checks can be static: the compiler runs them during import without
+constructing an API. Instance checks resolve scene references during binding.
+Binding checks every validator before starting the sequence.
 
 `[LuaAction]` alone exposes and preserves a session action; it does not also need
 `[LuaCall]`. `[LuaCall]` is for synchronous APIs. Both attributes preserve their

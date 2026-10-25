@@ -19,7 +19,8 @@ namespace Core.Scripting.Editor
             if (sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
             steps = new CutsceneStep[sequence.Count];
 
-            var actions = VulcanusLuaEngine.DescribeBindings().modules
+            var bindings = VulcanusLuaEngine.InspectBindings();
+            var actions = bindings.Describe().modules
                 .SelectMany(module => module.methods.Where(method => method.action != null && method.action.contexts.Contains("cutscene"))
                     .Select(method => (Module: module.path, Method: method)))
                 .ToDictionary(entry => entry.Method.action.id, StringComparer.Ordinal);
@@ -44,16 +45,35 @@ namespace Core.Scripting.Editor
 
                 var literals = new string[parameters.Length];
                 var importedArguments = new CutsceneArgument[parameters.Length];
+                var values = new object[parameters.Length];
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
-                    // Current sequence actions use string references.
-                    if (parameter.type != "string")
-                        throw Invalid(location, $"The sequence compiler does not support parameter type '{parameter.type}'.");
-                    var value = RequiredString(arguments[parameter.name], location, parameter.name);
+                    string value;
+                    if (parameter.type == "string")
+                    {
+                        value = RequiredString(arguments[parameter.name], location, parameter.name);
+                        values[parameterIndex] = value;
+                        literals[parameterIndex] = LuaString(value);
+                    }
+                    else if (parameter.type == "number")
+                    {
+                        var token = arguments[parameter.name];
+                        if (token == null || (token.Type != JTokenType.Integer && token.Type != JTokenType.Float))
+                            throw Invalid(location, $"'{parameter.name}' requires a finite number.");
+                        var number = token.Value<double>();
+                        if (double.IsNaN(number) || double.IsInfinity(number))
+                            throw Invalid(location, $"'{parameter.name}' requires a finite number.");
+                        value = number.ToString("R", CultureInfo.InvariantCulture);
+                        values[parameterIndex] = number;
+                        literals[parameterIndex] = value;
+                    }
+                    else throw Invalid(location, $"The sequence compiler does not support parameter type '{parameter.type}'.");
                     importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, value);
-                    literals[parameterIndex] = LuaString(value);
                 }
+                // Pure value checks run at import; scene reference checks run when binding the map.
+                try { bindings.ValidateAuthoredActionArguments(actionId, values); }
+                catch (Exception error) { throw new FormatException($"{location}: {error.Message}", error); }
                 steps[index] = new CutsceneStep(id, actionId, importedArguments);
                 lua.Append(action.Module).Append('.').Append(action.Method.name).Append('(')
                     .Append(string.Join(", ", literals)).Append(");\n");

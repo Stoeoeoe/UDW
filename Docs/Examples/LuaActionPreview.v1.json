@@ -1,5 +1,10 @@
 {
   "actions": {
+    "cutscene.wait": {
+      "version": 1,
+      "spatialState": "described",
+      "effects": []
+    },
     "actors.moveTo": {
       "version": 1,
       "spatialState": "described",

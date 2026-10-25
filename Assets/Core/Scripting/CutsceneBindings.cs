@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Character;
 using Core.Dialogue.Vulcanus;
@@ -32,7 +33,8 @@ namespace Core.Scripting
                 MapActorLuaApi actorApi = null;
                 var bindings = BindSequence(definition.Steps, "cutscene",
                     (typeof(MapActorLuaApi), () => actorApi = MapActorLuaApi.BindCurrentMap()),
-                    (typeof(DialogueLuaApi), () => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)));
+                    (typeof(DialogueLuaApi), () => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
+                    (typeof(CutsceneLuaApi), () => new CutsceneLuaApi()));
                 // An endpoint can reference an actor even when no sequence action moves it.
                 if (definition.OnComplete.ActorPlacements.Count > 0)
                     actorApi ??= MapActorLuaApi.BindCurrentMap();
@@ -62,8 +64,13 @@ namespace Core.Scripting
                 {
                     var method = actions[step.ActionId];
                     // Imported arguments already match this signature. Only arrange them for reflection.
-                    var arguments = method.Parameters.Select(parameter => (object)step.Arguments
-                        .Single(argument => argument.Name == parameter.Name).Value).ToArray();
+                    var arguments = method.Parameters.Select(parameter =>
+                    {
+                        var value = step.Arguments.Single(argument => argument.Name == parameter.Name).Value;
+                        if (parameter.ParameterType == typeof(string)) return (object)value;
+                        if (parameter.ParameterType == typeof(double)) return double.Parse(value, CultureInfo.InvariantCulture);
+                        throw new InvalidOperationException($"Unsupported sequence parameter type '{parameter.ParameterType}'.");
+                    }).ToArray();
                     var type = method.Info.DeclaringType;
                     if (!instances.TryGetValue(type, out var api))
                     {
