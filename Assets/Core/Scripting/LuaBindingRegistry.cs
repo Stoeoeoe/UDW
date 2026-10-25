@@ -168,6 +168,14 @@ namespace Core.Scripting
             foreach (var context in action.Contexts)
                 if (context is not ("cutscene" or "npcRoutine") || !contexts.Add(context))
                     throw Invalid(method, "has unsupported or duplicate execution contexts");
+            if (action.Phases == null || action.Phases.Length == 0)
+                throw Invalid(method, "needs explicit action phases");
+            var phases = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var phase in action.Phases)
+                if (phase is not ("setup" or "sequence" or "completion") || !phases.Add(phase))
+                    throw Invalid(method, "has unsupported or duplicate action phases");
+            if (method.ReturnType == typeof(ILuaAction) && phases.Any(phase => phase != "sequence"))
+                throw Invalid(method, "awaitable actions cannot allow setup or completion phases");
             foreach (var parameter in parameters)
             {
                 var reference = parameter.GetCustomAttribute<LuaReferenceAttribute>();
@@ -215,6 +223,7 @@ namespace Core.Scripting
                     id = action.Id, displayName = action.DisplayName,
                     category = action.Category, description = action.Description,
                     contexts = action.Contexts.OrderBy(context => context, StringComparer.Ordinal).ToArray(),
+                    phases = action.Phases.OrderBy(phase => phase, StringComparer.Ordinal).ToArray(),
                     execution = method.Info.ReturnType == typeof(ILuaAction) ? "awaitable" : "immediate",
                     preview = method.Preview
                 }

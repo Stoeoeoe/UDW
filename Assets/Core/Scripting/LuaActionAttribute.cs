@@ -27,6 +27,9 @@ namespace Core.Scripting
         public string Description { get; }
         /// <summary>Allowed session contexts: cutscene and/or npcRoutine. No routine scheduler is implied.</summary>
         public string[] Contexts { get; }
+        /// <summary>Explicit authoring phases: setup, sequence and/or completion.</summary>
+        /// <remarks>Setup/completion eligibility promises all requested mutations finish before the call returns.</remarks>
+        public string[] Phases { get; set; } = Array.Empty<string>();
         /// <summary>Optional check to run before playback. Takes the same arguments and returns void.</summary>
         /// <remarks>
         /// Required for actions with LuaReference or LuaResource arguments. Use nameof and mark the method [Preserve].

@@ -6,7 +6,7 @@ namespace Core.Scripting
     [LuaModule("Cutscene")]
     public sealed class CutsceneLuaApi
     {
-        [LuaAction("cutscene.wait", "Wait", "Timing", "Wait for gameplay seconds.", "cutscene", Validator = nameof(ValidateWait))]
+        [LuaAction("cutscene.wait", "Wait", "Timing", "Wait for gameplay seconds.", "cutscene", Validator = nameof(ValidateWait), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Described)]
         public ILuaAction Wait(double seconds)
         {

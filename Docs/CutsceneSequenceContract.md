@@ -171,6 +171,125 @@ import and the existing before-play/build validation establish that contract.
 `LuaBindingRegistry` supplies the validated
 API methods and attaches calls to Lua; it does not interpret cutscene steps.
 
+## Planned extension: Before start and action phases
+
+This section defines the agreed extension for implementation. The binding
+manifest now exports `action.phases`, and registration/export validates phase
+eligibility. The current Unity schema/importer still does **not** accept
+`onStart`; phase metadata alone does not enable setup playback. The source
+schema, Unity runtime and editor must adopt setup together before exporting
+playable sources that use it.
+
+### Authoring and interchange
+
+The editor presents a **Before start** card above the sequence. Its wire field
+is `onStart`: an optional ordered array of the same `{ id, action, arguments }`
+objects used by `sequence`. Omission or an empty array explicitly means no setup.
+Setup uses the existing action bindings and resource/reference parameter metadata;
+it has no raw Lua field. There is still one Lua execution system.
+
+For example, after the corresponding placement action is implemented:
+
+```json
+{
+  "onStart": [
+    {
+      "id": "place-host",
+      "action": "actors.placeAt",
+      "arguments": { "actor": "host-01", "destination": "meeting" }
+    }
+  ],
+  "sequence": [
+    {
+      "id": "talk",
+      "action": "dialogue.play",
+      "arguments": { "dialogue": "base:greeting" }
+    }
+  ]
+}
+```
+
+This is a proposed fragment, not a currently importable source. `actors.placeAt`
+is illustrative and is not yet an exported action. Placement is immediate;
+walking to the same anchor remains a sequence action. Retain permanent step IDs
+when moving steps between sections. IDs must be unique across `onStart` and
+`sequence`, and diagnostics must include the phase and step ID.
+
+### Binding metadata and immediate execution
+
+The action descriptor declares a non-empty, duplicate-free `phases`
+array independently of `contexts` and `execution`. Phase names are `setup`,
+`sequence` and `completion`. For an immediate action explicitly permitted in
+setup and sequence, the relevant metadata would be:
+
+```json
+{
+  "contexts": ["cutscene"],
+  "execution": "immediate",
+  "phases": ["setup", "sequence"]
+}
+```
+
+`onStart` accepts only actions whose contexts include `cutscene`, whose phases
+explicitly include `setup`, and whose execution is `immediate`. A `void` return
+or `execution: "immediate"` alone does not grant setup eligibility. The updated
+manifest must declare the allowed phases; the editor must not infer them from
+action IDs, categories, names or return types. The current Face action allows
+`setup`, `sequence` and `completion`; MoveTo, Wait, PlayAnimation and dialogue
+playback allow only `sequence`. Execution contexts remain separate: Face and
+MoveTo still allow `cutscene` and `npcRoutine`; the other actions allow `cutscene`.
+
+The C# action author must explicitly declare phase eligibility. Registration and
+manifest export reject unknown/duplicate phases and reject an `ILuaAction`
+return type whenever `setup` or `completion` is allowed. Sequence actions may be
+immediate or awaitable. `MoveTo`, `Wait`, `PlayAnimation` and dialogue playback
+cannot be used in setup. Their underlying operation may span frames, even when
+its requested duration happens to be zero.
+
+An eligible setup implementation promises that its requested state change is
+complete before the call returns. It must not start deferred mutations through
+coroutines, background tasks, tweens or queued callbacks. Return-type inspection
+cannot prove this promise; the implementation must satisfy it. The importer
+independently rejects ineligible actions in `onStart`, so hand-edited JSON cannot
+bypass the editor filter. Ordinary argument, reference and resource validation
+also applies before any setup action executes.
+
+`completion` describes eligibility for structured completion actions. It does
+not change the existing `onComplete.actions` Lua string or `actorPlacements`
+format in this extension. Completion remains distinct from the last sequence
+step: both normal completion and skip apply it; cancellation does not.
+
+### Runtime ownership, restoration and preview
+
+The runner validates and binds setup, sequence and completion references before
+mutating the scene. Actors referenced only by setup must participate in the
+same actor preparation and control ownership as sequence actors. Capture original
+actor position/facing and temporary presentation state **before** applying setup.
+Acquire the run's control claims, execute setup once in authored order, then
+start the sequence. Setup must finish before the scene's first visible sequence
+frame and before publishing the run's Started notification. Reuse the action
+bindings and Lua execution path; do not introduce a second command interpreter.
+
+Setup may establish temporary actor placement/facing and presentation overrides.
+It must not commit story outcomes or irreversible gameplay changes. If setup
+fails, abort the run, restore captured staging, release ownership and report the
+phase/step failure. Cancellation likewise restores the pre-setup staging. On
+completion/skip, apply the existing completion placement plan; a setup placement
+does not implicitly become a persistent endpoint. Skip never reruns setup or
+executes the remaining sequence.
+
+For a nighttime scene, use a temporary lighting/time-of-day presentation override
+and restore it on completion, skip, cancellation or failure. This does not advance
+the saved clock or emit calendar progression events. An actual game-time change
+needs its own explicit gameplay contract and is not implied by setup lighting.
+
+Selecting the Before start card previews the state after all setup actions.
+Sequence previews fold setup effects into their initial state, then apply the
+existing cumulative sequence reducer. Use the same declarative preview metadata;
+never execute Lua to preview setup. Unknown effects remain unknown, and setup
+placement must not appear as a walked movement segment. The placement action's
+preview effect must be specified with that action before the editor offers it.
+
 ## Declarative action previews (STO-72)
 
 `Generated/Scripting/bindings.json` remains manifest schema version 2. An action

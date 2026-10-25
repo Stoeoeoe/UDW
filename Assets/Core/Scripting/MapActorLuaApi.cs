@@ -79,7 +79,7 @@ namespace Core.Scripting
         }
 
         /// <summary>Finds the character and anchor, then starts walking to the anchor's world position.</summary>
-        [LuaAction("actors.moveTo", "Move to anchor", "Movement", "Walk an existing actor to a map anchor.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo))]
+        [LuaAction("actors.moveTo", "Move to anchor", "Movement", "Walk an existing actor to a map anchor.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Described)]
         [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "actor", AnchorParameter = "destination", Facing = "unknown")]
         public ILuaAction MoveTo([LuaReference("actorRef", "mapActor")] string actor,
@@ -94,7 +94,7 @@ namespace Core.Scripting
         public void ValidateFace(string actor, string target) => ResolveFacingActors(actor, target);
 
         /// <summary>Turns one character toward another. Completes immediately.</summary>
-        [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine", Validator = nameof(ValidateFace))]
+        [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine", Validator = nameof(ValidateFace), Phases = new[] { "setup", "sequence", "completion" })]
         [LuaPreview(LuaPreviewSpatialState.Described)]
         [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "actor", TargetActorParameter = "target")]
         public void Face([LuaReference("actorRef", "mapActor")] string actor,
@@ -122,7 +122,7 @@ namespace Core.Scripting
         }
 
         [LuaAction("actors.playAnimation", "Play animation", "Animation", "Play a finite animation on an actor and wait for completion.",
-            "cutscene", Validator = nameof(ValidatePlayAnimation))]
+            "cutscene", Validator = nameof(ValidatePlayAnimation), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Unknown)]
         public ILuaAction PlayAnimation([LuaReference("actorRef", "mapActor")] string actor,
             [LuaResource("animation")] string animation)

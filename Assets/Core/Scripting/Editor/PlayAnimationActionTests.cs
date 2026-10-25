@@ -217,9 +217,9 @@ namespace Core.Scripting.Editor
             private readonly CharacterAnimation _animation;
             public bool Finished;
             public PlaybackApi(GameCharacter actor, CharacterAnimation animation) { _actor = actor; _animation = animation; }
-            [LuaAction("test.play", "Play", "Test", "Play the fixture animation.", "cutscene")]
+[LuaAction("test.play", "Play", "Test", "Play the fixture animation.", "cutscene", Phases = new[] { "sequence" })]
             public ILuaAction Play() => new PlayAnimationAction(_actor, _animation);
-            [LuaAction("test.finish", "Finish", "Test", "Observe completion.", "cutscene")]
+[LuaAction("test.finish", "Finish", "Test", "Observe completion.", "cutscene", Phases = new[] { "sequence" })]
             public void Finish() => Finished = true;
         }
     }

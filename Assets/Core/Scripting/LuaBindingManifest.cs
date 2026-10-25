@@ -63,6 +63,7 @@ namespace Core.Scripting
         public string category;
         public string description;
         public string[] contexts;
+        public string[] phases;
         public string execution;
         public LuaActionPreviewDescription preview;
     }

@@ -200,7 +200,7 @@ namespace Core.Scripting.Editor
         {
             public string Checked;
             public bool Executed;
-            [LuaAction("test.newAction", "New", "Test", "New action", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.newAction", "New", "Test", "New action", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             public void NewAction([LuaReference("actorRef", "mapActor")] string actor, string destination) => Executed = true;
             [UnityEngine.Scripting.Preserve]
             private void Check(string actor, string destination)
@@ -213,14 +213,14 @@ namespace Core.Scripting.Editor
         [LuaModule("MissingValidator")]
         private sealed class MissingValidatorApi
         {
-            [LuaAction("test.missing", "Missing", "Test", "Missing validator", "cutscene")]
+[LuaAction("test.missing", "Missing", "Test", "Missing validator", "cutscene", Phases = new[] { "sequence" })]
             public void Run([LuaReference("actorRef", "mapActor")] string actor) { }
         }
 
         [LuaModule("WrongValidator")]
         private sealed class WrongValidatorApi
         {
-            [LuaAction("test.wrong", "Wrong", "Test", "Wrong signature", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.wrong", "Wrong", "Test", "Wrong signature", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             public void Run(string actor) { }
             [UnityEngine.Scripting.Preserve]
             private void Check(int actor) { }
@@ -247,9 +247,9 @@ namespace Core.Scripting.Editor
         {
             public readonly PendingAction Action = new();
             public bool Finished;
-            [LuaAction("test.wait", "Wait", "Test", "Test suspension", "cutscene")]
+[LuaAction("test.wait", "Wait", "Test", "Test suspension", "cutscene", Phases = new[] { "sequence" })]
             public ILuaAction Wait() => Action;
-            [LuaAction("test.finish", "Finish", "Test", "Test completion", "cutscene")]
+[LuaAction("test.finish", "Finish", "Test", "Test completion", "cutscene", Phases = new[] { "sequence" })]
             public void Finish() => Finished = true;
             [LuaCall(true)] public void OrdinaryWrite() => throw new Exception("Must not be exposed");
         }

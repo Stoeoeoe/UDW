@@ -59,7 +59,7 @@ namespace Core.Scripting.Editor
         [LuaModule("ResourceTest")]
         private sealed class ResourceApi
         {
-            [LuaAction("test.resource", "Resource", "Test", "Check declarative resource metadata.", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.resource", "Resource", "Test", "Check declarative resource metadata.", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             public void Use([LuaResource("custom")] string value) { }
             [Preserve] public void Check(string value) { }
         }

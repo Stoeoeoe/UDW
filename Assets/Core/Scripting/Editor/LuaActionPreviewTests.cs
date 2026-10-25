@@ -125,10 +125,10 @@ namespace Core.Scripting.Editor
         [LuaModule("NoOp")]
         private sealed class NoOpApi
         {
-            [LuaAction("test.known", "Known", "Test", "Known spatial no-op", "cutscene")]
+[LuaAction("test.known", "Known", "Test", "Known spatial no-op", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             public void Known() { }
-            [LuaAction("test.unmodelled", "Unmodelled", "Test", "No preview contract", "cutscene")]
+[LuaAction("test.unmodelled", "Unmodelled", "Test", "No preview contract", "cutscene", Phases = new[] { "sequence" })]
             public void Unmodelled() { }
         }
 
@@ -136,7 +136,7 @@ namespace Core.Scripting.Editor
         private sealed class CompositeApi
         {
             public int Calls;
-            [LuaAction("custom:escort", "Visit", "Test", "Composite metadata fixture", "cutscene", Validator = nameof(Check))]
+[LuaAction("custom:escort", "Visit", "Test", "Composite metadata fixture", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(20, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "conversation")]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "traveller", AnchorParameter = "meeting", Facing = "unknown")]
@@ -153,7 +153,7 @@ namespace Core.Scripting.Editor
         private sealed class SceneDependentApi
         {
             public SceneDependentApi() => throw new InvalidOperationException("No running scene.");
-            [LuaAction("test.scene", "Scene", "Test", "Needs a scene only at runtime", "cutscene")]
+[LuaAction("test.scene", "Scene", "Test", "Needs a scene only at runtime", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             public void Run() => throw new InvalidOperationException("Do not execute during export.");
         }
@@ -163,21 +163,21 @@ namespace Core.Scripting.Editor
 
         private sealed class MissingParameterApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Missing declared argument", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Missing declared argument", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "missing")]
             public void Run() { }
         }
         private sealed class MissingMappingApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Missing mapping", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Missing mapping", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue)]
             public void Run() { }
         }
         private sealed class WrongSemanticApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Wrong semantic role", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Wrong semantic role", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
             public void Run([LuaReference("dialogueRef", "dialogue")] string who) { }
@@ -185,7 +185,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class WrongPickerApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Wrong picker", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Wrong picker", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
             public void Run([LuaReference("actorRef", "dialogue")] string who) { }
@@ -193,7 +193,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class WrongTypeApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Wrong argument type", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Wrong argument type", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
             public void Run([LuaReference("actorRef", "mapActor")] int who) { }
@@ -201,33 +201,33 @@ namespace Core.Scripting.Editor
         }
         private sealed class UnmarkedParameterApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Missing semantic annotation", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Missing semantic annotation", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
             public void Run(string who) { }
         }
         private sealed class UnknownKindApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Unsupported kind", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Unsupported kind", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(0, (LuaPreviewEffectKind)99)]
             public void Run() { }
         }
         private sealed class UnknownVersionApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Unsupported version", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Unsupported version", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown, Version = 99)]
             public void Run() { }
         }
         private sealed class UnknownSpatialApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Unsupported certainty", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Unsupported certainty", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview((LuaPreviewSpatialState)99)]
             public void Run() { }
         }
         private sealed class MissingEnvelopeApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Missing preview header", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Missing preview header", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue)]
             public void Run() { }
         }
@@ -243,7 +243,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class DuplicateOrderApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Duplicate effect order", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Duplicate effect order", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "talk")]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "talk")]
@@ -252,14 +252,14 @@ namespace Core.Scripting.Editor
         }
         private sealed class NegativeOrderApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Negative effect order", "cutscene")]
+[LuaAction("test.invalid", "Invalid", "Test", "Negative effect order", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(-1, LuaPreviewEffectKind.ShowDialogue)]
             public void Run() { }
         }
         private sealed class MissingMoveFacingApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Missing facing certainty", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Missing facing certainty", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "who", AnchorParameter = "where")]
             public void Run([LuaReference("actorRef", "mapActor")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
@@ -267,7 +267,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class UnsupportedMoveFacingApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Invented facing rule", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Invented facing rule", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "who", AnchorParameter = "where", Facing = "anchor")]
             public void Run([LuaReference("actorRef", "mapActor")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
@@ -275,7 +275,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class ForbiddenMoveFieldApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Forbidden move field", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Forbidden move field", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "who", AnchorParameter = "where", Facing = "unknown", TargetActorParameter = "who")]
             public void Run([LuaReference("actorRef", "mapActor")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
@@ -283,7 +283,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class ForbiddenFaceFieldApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Forbidden facing field", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Forbidden facing field", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who", Facing = "unknown")]
             public void Run([LuaReference("actorRef", "mapActor")] string who) { }
@@ -291,7 +291,7 @@ namespace Core.Scripting.Editor
         }
         private sealed class ForbiddenDialogueFieldApi : InvalidApi
         {
-            [LuaAction("test.invalid", "Invalid", "Test", "Forbidden dialogue field", "cutscene", Validator = nameof(Check))]
+[LuaAction("test.invalid", "Invalid", "Test", "Forbidden dialogue field", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "talk", ActorParameter = "talk")]
             public void Run([LuaReference("dialogueRef", "dialogue")] string talk) { }

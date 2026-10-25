@@ -68,7 +68,7 @@ namespace Core.Scripting.Editor
         private sealed class CaptureDialogue
         {
             public string Reference;
-            [LuaAction("dialogue.play", "Capture", "Test", "Observe the encoded reference", "cutscene")]
+[LuaAction("dialogue.play", "Capture", "Test", "Observe the encoded reference", "cutscene", Phases = new[] { "sequence" })]
             public void Play(string dialogue) => Reference = dialogue;
         }
     }

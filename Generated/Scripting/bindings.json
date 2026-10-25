@@ -32,6 +32,11 @@
               "cutscene",
               "npcRoutine"
             ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
             "execution": "immediate",
             "preview": {
               "version": 1,
@@ -74,6 +79,9 @@
               "cutscene",
               "npcRoutine"
             ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -115,6 +123,9 @@
             "contexts": [
               "cutscene"
             ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -146,6 +157,9 @@
             "description": "Wait for gameplay seconds.",
             "contexts": [
               "cutscene"
+            ],
+            "phases": [
+              "sequence"
             ],
             "execution": "awaitable",
             "preview": {
@@ -180,6 +194,9 @@
             "description": "Wait for a conversation to finish through its flow.",
             "contexts": [
               "cutscene"
+            ],
+            "phases": [
+              "sequence"
             ],
             "execution": "awaitable",
             "preview": {
