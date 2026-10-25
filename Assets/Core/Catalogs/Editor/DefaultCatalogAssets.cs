@@ -1,4 +1,5 @@
 using Character;
+using Character.Animations;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,6 +24,7 @@ namespace Core.Catalogs.Editor
             var created = new List<DefinitionCatalog>();
             Create<ItemCatalog>(folder, ItemCatalog.ResourceName, created);
             Create<CharacterCatalog>(folder, CharacterCatalog.ResourceName, created);
+            Create<CharacterAnimationCatalog>(folder, CharacterAnimationCatalog.ResourceName, created);
             Create<CutsceneCatalog>(folder, CutsceneCatalog.ResourceName, created);
             Create<SkillCatalog>(folder, SkillCatalog.ResourceName, created);
             Create<DeityCatalog>(folder, DeityCatalog.ResourceName, created);

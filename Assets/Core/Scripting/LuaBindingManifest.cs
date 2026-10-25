@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Core.Scripting
 {
@@ -9,6 +10,14 @@ namespace Core.Scripting
         public int schemaVersion = 2;
         public LuaModuleDescription[] modules;
         public LuaTableDescription[] tables;
+        public Dictionary<string, LuaResourceDescription[]> resources = new(StringComparer.Ordinal);
+    }
+
+    [Serializable]
+    public sealed class LuaResourceDescription
+    {
+        public string id;
+        public string description;
     }
 
     [Serializable]
@@ -36,6 +45,7 @@ namespace Core.Scripting
         public string type;
         public string semanticType;
         public string picker;
+        public string resourceType;
     }
 
     [Serializable]

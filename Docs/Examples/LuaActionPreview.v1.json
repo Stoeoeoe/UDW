@@ -1,5 +1,10 @@
 {
   "actions": {
+    "actors.playAnimation": {
+      "version": 1,
+      "spatialState": "unknown",
+      "effects": []
+    },
     "cutscene.wait": {
       "version": 1,
       "spatialState": "described",

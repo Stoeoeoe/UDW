@@ -46,6 +46,21 @@ namespace Core.Scripting.Editor
         }
 
         [Test]
+        public void ActionFailureDisposesOnceAndNeverTicksTheActionAgain()
+        {
+            var api = new TestApi();
+            api.Action.FailOnTick = true;
+            using var run = Start(api, "Test.Wait(); Test.Finish()");
+            run.Tick(0);
+            Assert.That(() => run.Tick(0.02f), Throws.InvalidOperationException.With.Message.Contains("Action failed"));
+            run.Cancel();
+            run.Tick(0.02f);
+            Assert.That(api.Action.Ticks, Is.EqualTo(1));
+            Assert.That(api.Action.Disposals, Is.EqualTo(1));
+            Assert.That(api.Finished, Is.False);
+        }
+
+        [Test]
         public void SessionsExcludeOrdinaryWritesAndSandboxLibraries()
         {
             var api = new TestApi();
@@ -243,7 +258,13 @@ namespace Core.Scripting.Editor
         {
             public bool IsCompleted { get; set; }
             public int Disposals;
-            public void Tick(float deltaTime) { }
+            public int Ticks;
+            public bool FailOnTick;
+            public void Tick(float deltaTime)
+            {
+                Ticks++;
+                if (FailOnTick) throw new InvalidOperationException("Action failed.");
+            }
             public void Dispose() => Disposals++;
         }
     }

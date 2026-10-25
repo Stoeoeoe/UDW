@@ -58,6 +58,40 @@ It compiles to `Cutscene.Wait(0.5)` and waits for scaled gameplay seconds throug
 the session's frame clock. A zero duration yields until the next session tick.
 Negative and nonfinite durations fail import and direct Lua calls. Its preview
 is `described` with no effects, preserving actor placement and facing.
+
+`actors.playAnimation` takes `actor` and `animation` string references, for example
+`{ "id": "wave", "action": "actors.playAnimation", "arguments": { "actor": "player", "animation": "base:wave" } }`.
+It compiles to `Actors.PlayAnimation("player", "base:wave")` and waits for the
+native animation state to finish, then releases playback. CutsceneRunner owns
+actor control for the whole sequence; this action adds no second control claim.
+Cancellation releases playback. Interruption fails the sequence;
+it does not report successful animation completion. Sets and looping clips are
+not accepted. Directional animations must have finite, non-looping clips for all
+four facings in the selected actor's library; binding checks this before any step
+runs. This also covers a preceding Face action changing the actor's direction.
+The spatial preview is `unknown`: arbitrary clips can animate artwork transforms,
+and the schematic preview does not interpret Unity animation curves.
+
+Animation IDs come from the shared `CharacterAnimationCatalog`, discovered across
+Assets and selected through Tools > Catalogs. Existing `CharacterAnimation`
+assets supply either a fixed clip or a character-specific Memao action. No new
+playback library is required. Animation sets remain available to existing
+occupation code but are excluded from this one-shot action's picker.
+
+The animation parameter is marked `[LuaResource("animation")]` and exports
+`resourceType: "animation"` in `Generated/Scripting/bindings.json`. That same file
+contains `resources: { "animation": [{ "id": "base:wave", "description": "Wave" }] }`.
+The external editor can populate a generic resource selector from
+`resources[parameter.resourceType]`; Lua still receives the selected string ID.
+Scene-specific actor and anchor pickers retain their existing reference metadata.
+Choices are sorted by exact ID and include only enabled single animations with a
+finite fixed clip or complete one-shot clips in at least one authored Memao
+library. Actor compatibility is still checked at binding. The choices file is
+regenerated with the bindings after script reload and animation/catalog asset
+changes, or with Tools > Scripting > Regenerate Lua bindings.json. New resource
+types can use the same parameter attribute and add their choices in the manifest
+exporter; exporting a parameter whose resource type has no list is an error.
+No emotion resources are currently implemented.
 Missing/unknown arguments, unknown
 step fields and unsupported actions are errors. Branches and raw Lua steps are
 not supported.

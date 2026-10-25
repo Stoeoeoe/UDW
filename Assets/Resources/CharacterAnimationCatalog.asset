@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34f0cc629d75142488441594475dce6a, type: 3}
+  m_Name: CharacterAnimationCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.CharacterAnimationCatalog
+  entries:
+  - definition: {fileID: 11400000, guid: 5ca016e6910b14f4db88ac348a0921dd, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: f862f6af1a1fd0d469c344bc14ada3b3, type: 2}
+    enabled: 1

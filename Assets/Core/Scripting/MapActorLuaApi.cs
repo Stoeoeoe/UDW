@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Character;
+using Character.Animations;
 using Core.Location;
 using Core.Spawning;
 using Core.Tile;
@@ -111,6 +112,23 @@ namespace Core.Scripting
             if (character == targetCharacter)
                 throw new InvalidOperationException("An actor cannot face itself.");
             return (character, targetCharacter);
+        }
+
+        [UnityEngine.Scripting.Preserve]
+        public void ValidatePlayAnimation(string actor, string animation)
+        {
+            RequireCurrentMap();
+            ResolveActor(actor).Animator.ValidateOneShot(CharacterAnimationCatalog.RequireOneShot(animation));
+        }
+
+        [LuaAction("actors.playAnimation", "Play animation", "Animation", "Play a finite animation on an actor and wait for completion.",
+            "cutscene", Validator = nameof(ValidatePlayAnimation))]
+        [LuaPreview(LuaPreviewSpatialState.Unknown)]
+        public ILuaAction PlayAnimation([LuaReference("actorRef", "mapActor")] string actor,
+            [LuaResource("animation")] string animation)
+        {
+            RequireCurrentMap();
+            return new PlayAnimationAction(ResolveActor(actor), CharacterAnimationCatalog.RequireOneShot(animation));
         }
 
         private void RequireCurrentMap()

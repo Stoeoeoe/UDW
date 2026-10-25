@@ -33,6 +33,7 @@ namespace Character
         private bool _playingVariation;
         private float _variationDelay;
         private Vector2 _interactionFacing;
+        private OneShotPlayback _oneShot;
 
         private void Awake() => ValidateConfiguration();
 
@@ -160,6 +161,39 @@ namespace Character
             PlayInteractionBase(animation.BaseAnimation);
             return _interactionState;
         }
+
+        /// <summary>Checks all facings because earlier scripted actions can turn the actor before playback.</summary>
+        public void ValidateOneShot(CharacterAnimation animation)
+        {
+            if (!animation) throw new ArgumentNullException(nameof(animation));
+            animation.ValidateAsOneShot(animationLibrary);
+            if (!string.IsNullOrEmpty(animation.MemaoAction))
+                animationLibrary.ValidateAction(animation.MemaoAction, oneShot: true);
+        }
+
+        /// <summary>Claims finite playback until the caller releases it, including cancellation.</summary>
+        public OneShotPlayback PlayOneShot(CharacterAnimation animation)
+        {
+            ValidateOneShot(animation);
+            if (!isActiveAndEnabled) throw new InvalidOperationException("One-shot playback requires an active animator.");
+            var state = PlayInteractionAnimation(animation);
+            return _oneShot = new OneShotPlayback(this, state);
+        }
+
+        public sealed class OneShotPlayback : IDisposable
+        {
+            private readonly UrCharacterAnimator _owner;
+            private readonly AnimancerState _state;
+            internal OneShotPlayback(UrCharacterAnimator owner, AnimancerState state) { _owner = owner; _state = state; }
+            public bool IsInterrupted => !ReferenceEquals(_owner._oneShot, this) ||
+                (!_state.IsPlaying && _state.NormalizedTime < 1f);
+            public bool IsCompleted => !IsInterrupted && _state.NormalizedTime >= 1f;
+            public void Dispose()
+            {
+                // A stale handle must not stop a replacement, even if it reuses the same clip's native state.
+                if (ReferenceEquals(_owner._oneShot, this)) _owner.EndInteractionAnimation();
+            }
+        }
         private void PlayInteractionBase(CharacterAnimation animation)
         {
             _interactionState = PlayClip(animation.ResolveClip(animationLibrary, _interactionFacing));
@@ -170,6 +204,7 @@ namespace Character
         }
         private void ClearInteractionAnimation()
         {
+            _oneShot = null;
             _interactionAnimationActive = false;
             _interactionSet = null;
             _interactionState = null;

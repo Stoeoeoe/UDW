@@ -88,6 +88,40 @@
               ]
             }
           }
+        },
+        {
+          "name": "PlayAnimation",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "animation",
+              "type": "string",
+              "resourceType": "animation"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.playAnimation",
+            "displayName": "Play animation",
+            "category": "Animation",
+            "description": "Play a finite animation on an actor and wait for completion.",
+            "contexts": [
+              "cutscene"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": []
+            }
+          }
         }
       ]
     },
@@ -345,5 +379,17 @@
         }
       ]
     }
-  ]
+  ],
+  "resources": {
+    "animation": [
+      {
+        "id": "base:pass-out",
+        "description": "PassOut"
+      },
+      {
+        "id": "base:prototype-sitting",
+        "description": "PrototypeSittingAnimation"
+      }
+    ]
+  }
 }

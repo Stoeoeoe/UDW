@@ -29,7 +29,7 @@ namespace Core.Scripting
         public string[] Contexts { get; }
         /// <summary>Optional check to run before playback. Takes the same arguments and returns void.</summary>
         /// <remarks>
-        /// Required for actions with LuaReference arguments. Use nameof and mark the method [Preserve].
+        /// Required for actions with LuaReference or LuaResource arguments. Use nameof and mark the method [Preserve].
         /// Static validators check authored values at import without scene services; instance validators run at binding.
         /// </remarks>
         public string Validator { get; set; }
@@ -49,6 +49,15 @@ namespace Core.Scripting
         public string Type { get; }
         public string Picker { get; }
         public LuaReferenceAttribute(string type, string picker) { Type = type; Picker = picker; }
+    }
+
+    /// <summary>A string ID selected from the named resources list in bindings.json.</summary>
+    /// <remarks>The exporter supplies choices; the action's validator resolves the selected ID before playback.</remarks>
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public sealed class LuaResourceAttribute : Attribute
+    {
+        public string Type { get; }
+        public LuaResourceAttribute(string type) => Type = type;
     }
 
     public enum LuaPreviewSpatialState { Described, Unknown }

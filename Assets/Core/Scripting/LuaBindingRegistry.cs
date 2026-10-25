@@ -175,6 +175,10 @@ namespace Core.Scripting
                     (reference.Type, reference.Picker) is not
                         (("actorRef", "mapActor") or ("anchorRef", "mapAnchor") or ("dialogueRef", "dialogue"))))
                     throw Invalid(method, "has unsupported semantic reference metadata");
+                var resource = parameter.GetCustomAttribute<LuaResourceAttribute>();
+                if (resource != null && (parameter.ParameterType != typeof(string) ||
+                    string.IsNullOrWhiteSpace(resource.Type) || reference != null))
+                    throw Invalid(method, "resource parameters must be string IDs with a named resource type and no scene reference picker");
             }
         }
 
@@ -223,7 +227,8 @@ namespace Core.Scripting
             return new LuaParameterDescription
             {
                 name = parameter.Name, type = LuaTypeName(parameter.ParameterType),
-                semanticType = reference?.Type, picker = reference?.Picker
+                semanticType = reference?.Type, picker = reference?.Picker,
+                resourceType = parameter.GetCustomAttribute<LuaResourceAttribute>()?.Type
             };
         }
 
@@ -301,8 +306,9 @@ namespace Core.Scripting
             if (action == null) return null;
             if (action.Validator == null)
             {
-                if (parameters.Any(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>() != null))
-                    throw Invalid(method, "needs a Validator to check its LuaReference arguments before playback");
+                if (parameters.Any(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
+                    parameter.GetCustomAttribute<LuaResourceAttribute>() != null))
+                    throw Invalid(method, "needs a Validator to check its reference/resource arguments before playback");
                 return null; // Actions without references may have nothing to check before playback.
             }
             var candidates = method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic |

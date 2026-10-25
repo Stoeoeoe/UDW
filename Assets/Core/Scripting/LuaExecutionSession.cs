@@ -4,6 +4,12 @@ using MoonSharp.Interpreter;
 namespace Core.Scripting
 {
     /// <summary>A gameplay action that takes time, such as walking. Dispose stops it and cleans up its resources.</summary>
+    /// <remarks>
+    /// LuaExecutionSession owns a returned action. It supplies finite, nonnegative frame deltas,
+    /// ticks before checking completion, and disposes the action once on success, cancellation or error.
+    /// It never ticks a disposed action. Tick must throw on interruption/failure; IsCompleted means success.
+    /// Actions own their operation's resources; CutsceneRunner owns the surrounding actor control claims.
+    /// </remarks>
     public interface ILuaAction : IDisposable
     {
         bool IsCompleted { get; }
