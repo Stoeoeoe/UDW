@@ -1,7 +1,7 @@
 using System;
 using System.IO;
+using Core.Common.Editor;
 using Core.Game;
-using Core.GameplayTags;
 using Core.Scripting;
 using NUnit.Framework;
 using UnityEngine;
@@ -10,11 +10,23 @@ namespace Core.Dialogue.Vulcanus.Editor
 {
     public sealed class VulcanusLuaDialogueScriptEngineTests
     {
+        private GameTestFixture _fixture;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _fixture = new GameTestFixture("Lua global state");
+            _fixture.AddSingleton<GameStateManager>();
+        }
+
+        [TearDown]
+        public void TearDown() => _fixture.Dispose();
+
         [Test]
         public void StoryFlagsAreSharedBetweenActionsAndConditions()
         {
-            var story = new StoryState();
-            var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine(story, new PlayerState(), new WorldState()));
+            var story = GameState.Story;
+            var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine());
 
             const string condition = "GameState.Story.HasFlag('met_blacksmith')";
             Assert.That(engine.EvaluateCondition(condition, null, out var initiallyVisible), Is.True);
@@ -32,8 +44,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void SharedEngineCanRunOutsideDialogue()
         {
-            var story = new StoryState();
-            var lua = new VulcanusLuaEngine(story, new PlayerState(), new WorldState());
+            var lua = new VulcanusLuaEngine();
 
             Assert.That(lua.EvaluateCondition("GameState.Story.HasFlag('cutscene_seen')"), Is.False);
             lua.Execute("GameState.Story.SetFlag('cutscene_seen')");
@@ -43,7 +54,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void StringBindingsStillValidateLuaArguments()
         {
-            var lua = new VulcanusLuaEngine(new StoryState(), new PlayerState(), new WorldState());
+            var lua = new VulcanusLuaEngine();
 
             Assert.That(() => lua.EvaluateCondition("GameState.Story.HasFlag(42)"), Throws.Exception);
             Assert.That(() => lua.EvaluateCondition("GameState.Story.HasFlag('a', 'b')"), Throws.Exception);
@@ -52,19 +63,17 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void PlayerTagsUseTheLiveCharacterAndCacheParsedQueries()
         {
-            var first = new TagSet();
+            var first = _fixture.CreateCharacter().Tags;
             first.SetSourceTags("boon", new[] { "State.Blessed.Mercury" });
-            TagSet current = first;
-            var lua = new VulcanusLuaEngine(new StoryState(), new PlayerState(), new WorldState(), () => current);
+            var lua = new VulcanusLuaEngine();
 
             Assert.That(lua.EvaluateCondition("Player.Tags.Has('State.Blessed')"), Is.True);
             Assert.That(lua.EvaluateCondition("Player.Tags.HasExact('State.Blessed')"), Is.False);
             const string query = "Player.Tags.Matches('all(State.Blessed, none(State.Cursed))')";
             Assert.That(lua.EvaluateCondition(query), Is.True);
 
-            var second = new TagSet();
+            var second = _fixture.CreateCharacter().Tags;
             second.SetSourceTags("condition", new[] { "State.Cursed" });
-            current = second;
             Assert.That(lua.EvaluateCondition(query), Is.False, "Compiled Lua and tag queries must read the current character tags.");
             Assert.That(lua.EvaluateCondition("Player.Tags.Has('State.Cursed')"), Is.True);
             Assert.That(() => lua.EvaluateCondition("Player.Tags.Matches('all(State..Blessed)')"), Throws.Exception);
@@ -73,7 +82,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void PlayerTagsFailClearlyWithoutACharacter()
         {
-            var lua = new VulcanusLuaEngine(new StoryState(), new PlayerState(), new WorldState(), () => null);
+            var lua = new VulcanusLuaEngine();
             Assert.That(() => lua.EvaluateCondition("Player.Tags.Has('State.Blessed')"), Throws.Exception);
         }
 
@@ -98,9 +107,9 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void PlayerSkillsAndTypedWorldStateAreAvailable()
         {
-            var player = new PlayerState();
-            var world = new WorldState();
-            var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine(new StoryState(), player, world));
+            var player = GameState.Player;
+            var world = GameState.World;
+            var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine());
 
             Assert.That(engine.EvaluateCondition("GameState.Player.Skills.GetLevel('base:hammer_mastery') == 0", null, out var levelMatches), Is.True);
             Assert.That(levelMatches, Is.True);
@@ -120,7 +129,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void HostFileAndOsLibrariesAreNotExposed()
         {
-            var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine(new StoryState(), new PlayerState(), new WorldState()));
+            var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine());
 
             Assert.That(engine.EvaluateCondition("os == nil and io == nil and dofile == nil", null, out var isolated), Is.True);
             Assert.That(isolated, Is.True);

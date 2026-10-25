@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Character;
-using Core.Game;
-using Core.GameplayTags;
+using Core.Dialogue.Vulcanus;
 using MoonSharp.Interpreter;
 
 namespace Core.Scripting
@@ -13,37 +13,38 @@ namespace Core.Scripting
         private const int InstructionsPerSlice = 1000;
         private const int MaxSlices = 128;
 
-        private readonly LuaBindingRegistry _bindings;
+        private readonly LuaBindingRegistry _bindings = new(DefaultModules.Select(module => module.Create()).ToArray());
         private readonly Dictionary<string, DynValue> _conditions = new(StringComparer.Ordinal);
         private Script _conditionScript;
 
-        public VulcanusLuaEngine()
-            : this(() => GameState.Story, () => GameState.Player, () => GameState.World, null)
+        private static readonly (Type Type, Func<object> Create)[] DefaultModules = DiscoverModules();
+
+        private static (Type Type, Func<object> Create)[] DiscoverModules()
         {
+            var sceneModules = CutsceneBindings.ActionModules(null, null).Select(module => module.Type);
+            // Only shipped APIs live in this assembly; editor fixtures are in a separate assembly.
+            return typeof(LuaModuleAttribute).Assembly.GetTypes()
+                .Where(type => type.IsDefined(typeof(LuaModuleAttribute), false))
+                .Except(sceneModules)
+                .Select(type => (type, (Func<object>)(() => Activator.CreateInstance(type, nonPublic: true))))
+                .ToArray();
         }
 
-        public VulcanusLuaEngine(StoryState story, PlayerState player, WorldState world, Func<TagSet> playerTags = null)
-            : this(Fixed(story, nameof(story)), Fixed(player, nameof(player)), Fixed(world, nameof(world)), playerTags)
-        {
-        }
+        internal static (Type Type, Func<object> Create)[] Modules(VulcanusDialogueRunner dialogueRunner,
+            Action<MapActorLuaApi> bindActors) => DefaultModules
+            .Concat(CutsceneBindings.ActionModules(dialogueRunner, bindActors)).ToArray();
 
-        private VulcanusLuaEngine(Func<StoryState> story, Func<PlayerState> player, Func<WorldState> world,
-            Func<TagSet> playerTags)
-        {
-            _bindings = new LuaBindingRegistry(
-                new StoryLuaApi(story),
-                new SkillsLuaApi(player),
-                new WorldLuaApi(world),
-                new CharacterTagLuaApi(playerTags ?? (() => MainCharacter.CurrentMainCharacter?.Tags)));
-        }
+        // Infer the exported type from the factory rather than declaring it separately.
+        internal static (Type Type, Func<object> Create) Module<T>(Func<T> create) where T : class =>
+            (typeof(T), () => create());
 
         /// <summary>Lists the supported Lua APIs, including actions that need a map when they run.</summary>
         public static LuaBindingManifest DescribeBindings() => InspectBindings().Describe();
 
         /// <summary>Inspects shipped API signatures and authored values without constructing scene APIs.</summary>
         public static LuaBindingRegistry InspectBindings() => LuaBindingRegistry.InspectTypes(
-            typeof(StoryLuaApi), typeof(SkillsLuaApi), typeof(WorldLuaApi), typeof(CharacterTagLuaApi),
-            typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi));
+            // Only inspect factory types. Export has no live state or scene dependencies.
+            Modules(null, null).Select(module => module.Type).ToArray());
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
             string context = "cutscene") =>
@@ -93,9 +94,5 @@ namespace Core.Scripting
             throw new InvalidOperationException("Lua script exceeded its instruction budget.");
         }
 
-        private static Func<T> Fixed<T>(T value, string name) where T : class
-        {
-            return value == null ? throw new ArgumentNullException(name) : () => value;
-        }
     }
 }

@@ -12,6 +12,19 @@ namespace Core.Scripting
     /// <summary>Prepares the Lua modules and validates every sequence step before any action starts.</summary>
     public static class CutsceneBindings
     {
+        // Export reads these factory types without invoking them. Playback supplies the live dependencies.
+        internal static (Type Type, Func<object> Create)[] ActionModules(VulcanusDialogueRunner dialogueRunner,
+            Action<MapActorLuaApi> bindActors) => new[]
+        {
+            VulcanusLuaEngine.Module(() =>
+            {
+                var actors = MapActorLuaApi.BindCurrentMap();
+                bindActors(actors);
+                return actors;
+            }),
+            VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter))
+        };
+
         public static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
             VulcanusDialogueRunner dialogueRunner) =>
             BindCurrentMap(definition, dialogueRunner, out _);
@@ -31,10 +44,7 @@ namespace Core.Scripting
             try
             {
                 MapActorLuaApi actorApi = null;
-                var bindings = BindSequence(definition.Steps, "cutscene",
-                    (typeof(MapActorLuaApi), () => actorApi = MapActorLuaApi.BindCurrentMap()),
-                    (typeof(DialogueLuaApi), () => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
-                    (typeof(CutsceneLuaApi), () => new CutsceneLuaApi()));
+                var bindings = BindSequence(definition.Steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, actors => actorApi = actors));
                 // An endpoint can reference an actor even when no sequence action moves it.
                 if (definition.OnComplete.ActorPlacements.Count > 0)
                     actorApi ??= MapActorLuaApi.BindCurrentMap();

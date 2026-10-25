@@ -1,42 +1,32 @@
-using System;
 using Core.Game;
 
 namespace Core.Scripting
 {
-    // These are scripting APIs, not persisted state types. Their getters resolve the current
-    // state on every call, including after a save is loaded into a new game session.
+    // Resolve global state on each call: loading a save replaces the live state objects.
     [LuaModule("GameState.Story")]
     internal sealed class StoryLuaApi
     {
-        private readonly Func<StoryState> _state;
-
-        public StoryLuaApi(Func<StoryState> state) => _state = state;
-
         [LuaCall]
-        public bool HasFlag(string flag) => _state().HasFlag(flag);
+        public bool HasFlag(string flag) => GameState.Story.HasFlag(flag);
 
         [LuaCall(writesState: true)]
-        public bool SetFlag(string flag) => _state().SetFlag(flag);
+        public bool SetFlag(string flag) => GameState.Story.SetFlag(flag);
 
         [LuaCall(writesState: true)]
-        public bool ClearFlag(string flag) => _state().ClearFlag(flag);
+        public bool ClearFlag(string flag) => GameState.Story.ClearFlag(flag);
     }
 
     [LuaModule("GameState.Player.Skills")]
     internal sealed class SkillsLuaApi
     {
-        private readonly Func<PlayerState> _state;
-
-        public SkillsLuaApi(Func<PlayerState> state) => _state = state;
+        [LuaCall]
+        public int GetLevel(string skillId) => GameState.Player.Skills.GetLevel(skillId);
 
         [LuaCall]
-        public int GetLevel(string skillId) => _state().Skills.GetLevel(skillId);
-
-        [LuaCall]
-        public bool HasUnlocked(string skillId) => _state().Skills.HasUnlocked(skillId);
+        public bool HasUnlocked(string skillId) => GameState.Player.Skills.HasUnlocked(skillId);
 
         [LuaCall(writesState: true)]
-        public bool TryLevelUp(string skillId) => _state().Skills.TryLevelUp(skillId);
+        public bool TryLevelUp(string skillId) => GameState.Player.Skills.TryLevelUp(skillId);
     }
 
     [LuaTable]
@@ -49,15 +39,11 @@ namespace Core.Scripting
     [LuaModule("GameState.World")]
     internal sealed class WorldLuaApi
     {
-        private readonly Func<WorldState> _state;
-
-        public WorldLuaApi(Func<WorldState> state) => _state = state;
-
         // A returned table is a snapshot. Changing it in Lua does not mutate WorldState.
         [LuaCall]
         public FarmlandLuaView GetFarmland(string locationId, string objectId)
         {
-            if (!_state().TryGet<FarmlandState>(locationId, objectId, out var farmland))
+            if (!GameState.World.TryGet<FarmlandState>(locationId, objectId, out var farmland))
                 return null;
 
             return new FarmlandLuaView { plowed = farmland.plowed, irrigated = farmland.irrigated };
@@ -67,9 +53,9 @@ namespace Core.Scripting
         public void SetFarmland(string locationId, string objectId, bool plowed, bool irrigated)
         {
             if (!plowed && !irrigated)
-                _state().Remove(locationId, objectId);
+                GameState.World.Remove(locationId, objectId);
             else
-                _state().Set(locationId, objectId, new FarmlandState { plowed = plowed, irrigated = irrigated });
+                GameState.World.Set(locationId, objectId, new FarmlandState { plowed = plowed, irrigated = irrigated });
         }
     }
 }

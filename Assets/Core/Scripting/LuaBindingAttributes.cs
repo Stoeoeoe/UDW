@@ -3,9 +3,9 @@ using UnityEngine.Scripting;
 
 namespace Core.Scripting
 {
-    /// <summary>Names the Lua table containing an API, such as GameState.Story.</summary>
+    /// <summary>Discovers and preserves an API under its Lua table, such as GameState.Story.</summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public sealed class LuaModuleAttribute : Attribute
+    public sealed class LuaModuleAttribute : PreserveAttribute
     {
         public string Path { get; }
         public LuaModuleAttribute(string path) => Path = path;

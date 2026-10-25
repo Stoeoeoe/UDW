@@ -115,8 +115,20 @@ methods for stripped player builds, and session actions remain excluded from
 synchronous execution and condition evaluation.
 
 The binder discovers actions and their checks through these attributes. Adding
-an action to an existing API module needs no binder change. A new API module
-still needs its construction function wired into `CutsceneBindings`.
+an action to an existing API module needs no binder change. `[LuaModule]` classes
+in the game's assembly are discovered once. Parameterless APIs need no registration
+entry; the attribute also preserves their types and default constructors in player
+builds. Modules needing scene dependencies have explicit factories in
+`CutsceneBindings.ActionModules`. A discovered module without either constructor
+or factory fails when its bindings are initialized; construction uses .NET's
+`Activator.CreateInstance` rather than a separate constructor-validation pass.
+Runtime construction and manifest export use the same discovered modules and
+scene factories. Export reads types without constructing APIs. Playback creates
+only the modules used by its sequence; editor test APIs are in a separate assembly
+and are not discovered as shipped modules.
+State APIs read `GameState` directly on each call; they do not receive or cache
+state objects. Tag queries likewise resolve the current main character. Loading
+a save therefore changes what subsequent Lua calls read without rebinding.
 
 `CutsceneBindings.BindSequence` orders the already-validated named arguments for
 reflection, creates the modules used by the sequence, and checks live references.
