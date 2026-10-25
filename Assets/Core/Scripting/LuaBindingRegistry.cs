@@ -64,6 +64,10 @@ namespace Core.Scripting
             {
                 var call = method.GetCustomAttribute<LuaCallAttribute>();
                 var action = method.GetCustomAttribute<LuaActionAttribute>();
+                var preview = method.GetCustomAttribute<LuaPreviewAttribute>();
+                var effects = method.GetCustomAttributes<LuaPreviewEffectAttribute>().ToArray();
+                if (action == null && (preview != null || effects.Length > 0))
+                    throw Invalid(method, "preview metadata requires [LuaAction]");
                 if (call == null && action == null) continue;
                 if (!method.IsPublic || method.IsStatic || method.IsGenericMethod || method.IsSpecialName)
                     throw Invalid(method, "must be a public instance method");
@@ -80,9 +84,75 @@ namespace Core.Scripting
                     throw Invalid(method, "must opt in to [LuaAction] to return an awaitable");
                 if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ILuaAction) && !IsPrimitive(method.ReturnType))
                     ValidateDto(method.ReturnType);
-                methods.Add(new Method(api, method, parameters, action != null || call.WritesState, action, FindValidator(method, action, parameters)));
+                methods.Add(new Method(api, method, parameters, action != null || call.WritesState, action,
+                    FindValidator(method, action, parameters), ReadPreview(method, parameters, preview, effects)));
             }
             return methods;
+        }
+
+        private static LuaActionPreviewDescription ReadPreview(MethodInfo method, ParameterInfo[] parameters,
+            LuaPreviewAttribute preview, LuaPreviewEffectAttribute[] effects)
+        {
+            if (preview == null)
+            {
+                if (effects.Length > 0) throw Invalid(method, "preview effects require [LuaPreview]");
+                return null; // No declaration means unavailable, not a spatial no-op.
+            }
+            if (preview.Version != 1) throw Invalid(method, $"has unsupported preview version {preview.Version}");
+            var spatialState = preview.SpatialState switch
+            {
+                LuaPreviewSpatialState.Described => "described",
+                LuaPreviewSpatialState.Unknown => "unknown",
+                _ => throw Invalid(method, "has unsupported preview spatial state")
+            };
+            var orders = new HashSet<int>();
+            var descriptions = new List<LuaPreviewEffectDescription>();
+            foreach (var effect in effects.OrderBy(effect => effect.Order))
+            {
+                if (effect.Order < 0 || !orders.Add(effect.Order))
+                    throw Invalid(method, "preview effect order must be nonnegative and unique");
+                string kind;
+                switch (effect.Kind)
+                {
+                    case LuaPreviewEffectKind.MoveActorToAnchor:
+                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
+                        RequireParameter(effect.AnchorParameter, "anchorRef", "mapAnchor");
+                        if (effect.TargetActorParameter != null || effect.DialogueParameter != null || effect.Facing != "unknown")
+                            throw Invalid(method, "moveActorToAnchor preview requires facing 'unknown' and forbids targetActorParameter/dialogueParameter");
+                        kind = "moveActorToAnchor";
+                        break;
+                    case LuaPreviewEffectKind.FaceActorTowardActor:
+                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
+                        RequireParameter(effect.TargetActorParameter, "actorRef", "mapActor");
+                        if (effect.AnchorParameter != null || effect.DialogueParameter != null || effect.Facing != null)
+                            throw Invalid(method, "faceActorTowardActor preview forbids anchorParameter/dialogueParameter/facing");
+                        kind = "faceActorTowardActor";
+                        break;
+                    case LuaPreviewEffectKind.ShowDialogue:
+                        RequireParameter(effect.DialogueParameter, "dialogueRef", "dialogue");
+                        if (effect.ActorParameter != null || effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.Facing != null)
+                            throw Invalid(method, "showDialogue preview forbids actorParameter/anchorParameter/targetActorParameter/facing");
+                        kind = "showDialogue";
+                        break;
+                    default: throw Invalid(method, "has unsupported preview effect kind");
+                }
+                descriptions.Add(new LuaPreviewEffectDescription
+                {
+                    kind = kind, actorParameter = effect.ActorParameter, anchorParameter = effect.AnchorParameter,
+                    targetActorParameter = effect.TargetActorParameter, dialogueParameter = effect.DialogueParameter,
+                    facing = effect.Facing
+                });
+            }
+            return new LuaActionPreviewDescription { version = preview.Version, spatialState = spatialState, effects = descriptions.ToArray() };
+
+            void RequireParameter(string name, string semanticType, string picker)
+            {
+                var parameter = parameters.SingleOrDefault(parameter => parameter.Name == name);
+                var reference = parameter?.GetCustomAttribute<LuaReferenceAttribute>();
+                if (string.IsNullOrWhiteSpace(name) || parameter == null || parameter.ParameterType != typeof(string) ||
+                    reference == null || reference.Type != semanticType || reference.Picker != picker)
+                    throw Invalid(method, $"preview parameter '{name}' requires a declared string parameter with {semanticType}/{picker}");
+            }
         }
 
         // These checks are shared by runtime registration and editor export. Neither
@@ -141,7 +211,8 @@ namespace Core.Scripting
                     id = action.Id, displayName = action.DisplayName,
                     category = action.Category, description = action.Description,
                     contexts = action.Contexts.OrderBy(context => context, StringComparer.Ordinal).ToArray(),
-                    execution = method.Info.ReturnType == typeof(ILuaAction) ? "awaitable" : "immediate"
+                    execution = method.Info.ReturnType == typeof(ILuaAction) ? "awaitable" : "immediate",
+                    preview = method.Preview
                 }
             };
         }
@@ -324,6 +395,6 @@ namespace Core.Scripting
         private sealed record Module(string[] Path, List<Method> Methods);
 
         internal sealed record Method(object Api, MethodInfo Info, ParameterInfo[] Parameters,
-            bool WritesState, LuaActionAttribute Action, MethodInfo Validator);
+            bool WritesState, LuaActionAttribute Action, MethodInfo Validator, LuaActionPreviewDescription Preview);
     }
 }

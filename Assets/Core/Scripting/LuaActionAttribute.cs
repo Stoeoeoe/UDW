@@ -47,4 +47,32 @@ namespace Core.Scripting
         public string Picker { get; }
         public LuaReferenceAttribute(string type, string picker) { Type = type; Picker = picker; }
     }
+
+    public enum LuaPreviewSpatialState { Described, Unknown }
+    public enum LuaPreviewEffectKind { MoveActorToAnchor, FaceActorTowardActor, ShowDialogue }
+
+    /// <summary>Declares schematic state after successful action completion, never a gameplay simulation.</summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class LuaPreviewAttribute : Attribute
+    {
+        public int Version { get; set; } = 1;
+        public LuaPreviewSpatialState SpatialState { get; }
+        public LuaPreviewAttribute(LuaPreviewSpatialState spatialState) => SpatialState = spatialState;
+    }
+
+    /// <summary>Maps one ordered visual effect to declared method parameters, not literal world IDs.</summary>
+    /// <remarks>Order is nonnegative and unique per method. Only move effects require Facing = "unknown" in v1.</remarks>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public sealed class LuaPreviewEffectAttribute : Attribute
+    {
+        public int Order { get; }
+        public LuaPreviewEffectKind Kind { get; }
+        public string ActorParameter { get; set; }
+        public string AnchorParameter { get; set; }
+        public string TargetActorParameter { get; set; }
+        public string DialogueParameter { get; set; }
+        public string Facing { get; set; }
+
+        public LuaPreviewEffectAttribute(int order, LuaPreviewEffectKind kind) { Order = order; Kind = kind; }
+    }
 }

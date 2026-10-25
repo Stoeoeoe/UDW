@@ -32,7 +32,18 @@
               "cutscene",
               "npcRoutine"
             ],
-            "execution": "immediate"
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "faceActorTowardActor",
+                  "actorParameter": "actor",
+                  "targetActorParameter": "target"
+                }
+              ]
+            }
           }
         },
         {
@@ -63,7 +74,19 @@
               "cutscene",
               "npcRoutine"
             ],
-            "execution": "awaitable"
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "moveActorToAnchor",
+                  "actorParameter": "actor",
+                  "anchorParameter": "destination",
+                  "facing": "unknown"
+                }
+              ]
+            }
           }
         }
       ]
@@ -92,7 +115,17 @@
             "contexts": [
               "cutscene"
             ],
-            "execution": "awaitable"
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": [
+                {
+                  "kind": "showDialogue",
+                  "dialogueParameter": "dialogue"
+                }
+              ]
+            }
           }
         }
       ]

@@ -54,5 +54,25 @@ namespace Core.Scripting
         public string description;
         public string[] contexts;
         public string execution;
+        public LuaActionPreviewDescription preview;
+    }
+
+    [Serializable]
+    public sealed class LuaActionPreviewDescription
+    {
+        public int version;
+        public string spatialState;
+        public LuaPreviewEffectDescription[] effects;
+    }
+
+    [Serializable]
+    public sealed class LuaPreviewEffectDescription
+    {
+        public string kind;
+        public string actorParameter;
+        public string anchorParameter;
+        public string targetActorParameter;
+        public string dialogueParameter;
+        public string facing;
     }
 }

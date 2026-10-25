@@ -31,7 +31,7 @@ namespace Core.Scripting.Editor
             }
         }
 
-        private static bool WriteIfChanged(string path, LuaBindingManifest manifest)
+        internal static bool WriteIfChanged(string path, LuaBindingManifest manifest)
         {
             var content = Serialize(manifest) + "\n";
             if (File.Exists(path) && File.ReadAllText(path) == content) return false;

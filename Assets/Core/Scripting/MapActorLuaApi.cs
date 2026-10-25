@@ -79,6 +79,8 @@ namespace Core.Scripting
 
         /// <summary>Finds the character and anchor, then starts walking to the anchor's world position.</summary>
         [LuaAction("actors.moveTo", "Move to anchor", "Movement", "Walk an existing actor to a map anchor.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo))]
+        [LuaPreview(LuaPreviewSpatialState.Described)]
+        [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "actor", AnchorParameter = "destination", Facing = "unknown")]
         public ILuaAction MoveTo([LuaReference("actorRef", "mapActor")] string actor,
             [LuaReference("anchorRef", "mapAnchor")] string destination)
         {
@@ -92,6 +94,8 @@ namespace Core.Scripting
 
         /// <summary>Turns one character toward another. Completes immediately.</summary>
         [LuaAction("actors.face", "Face actor", "Movement", "Turn an existing actor toward another actor.", "cutscene", "npcRoutine", Validator = nameof(ValidateFace))]
+        [LuaPreview(LuaPreviewSpatialState.Described)]
+        [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "actor", TargetActorParameter = "target")]
         public void Face([LuaReference("actorRef", "mapActor")] string actor,
             [LuaReference("actorRef", "mapActor")] string target)
         {
