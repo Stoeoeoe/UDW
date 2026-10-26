@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Character;
 using Core.Common;
 using UnityEngine;
 
@@ -34,9 +35,9 @@ namespace Core.Scripting
             if (steps == null || lua == null || (steps.Length > 0 && string.IsNullOrWhiteSpace(lua)))
                 errors.Add(new ConfigurationError(owner, "onComplete.steps", "Requires compiled completion steps; an empty list and script are allowed."));
             if (characterPlacements == null || characterPlacements.Any(placement => placement == null ||
-                    string.IsNullOrWhiteSpace(placement.Character) || !placement.HasValidPosition) ||
+                    string.IsNullOrWhiteSpace(placement.Character) || !placement.HasValidPosition || !placement.HasValidFacing) ||
                 characterPlacements.Select(placement => placement.Character).Distinct(StringComparer.Ordinal).Count() != characterPlacements.Length)
-                errors.Add(new ConfigurationError(owner, "onComplete.characterPlacements", "Requires unique characters and a valid anchor or pixel position for each endpoint; an empty list is allowed."));
+                errors.Add(new ConfigurationError(owner, "onComplete.characterPlacements", "Requires unique characters, a valid anchor or pixel position, and an optional valid final facing; an empty list is allowed."));
         }
     }
 
@@ -47,16 +48,20 @@ namespace Core.Scripting
         [SerializeField] private string anchor;
         [SerializeField] private MapPosition position;
         [SerializeField] private bool hasPosition;
+        [SerializeField] private string facing;
         public string Character => character;
         public string Anchor => anchor;
+        public string Facing => facing;
+        internal bool HasValidFacing => string.IsNullOrEmpty(facing) || facing == "preserve" || CardinalDirections.Values.ContainsKey(facing);
         public MapPosition Position => hasPosition ? position : new MapPosition(anchor);
         internal bool HasValidPosition => hasPosition
             ? !position.IsAnchor && double.IsFinite(position.X) && double.IsFinite(position.Y) && position.X >= 0 && position.Y >= 0
             : !string.IsNullOrWhiteSpace(anchor);
-        public CutsceneCharacterPlacement(string character, string anchor) { this.character = character; this.anchor = anchor; }
-        public CutsceneCharacterPlacement(string character, MapPosition position)
+        public CutsceneCharacterPlacement(string character, string anchor, string facing = null) { this.character = character; this.anchor = anchor; this.facing = facing; }
+        public CutsceneCharacterPlacement(string character, MapPosition position, string facing = null)
         {
             this.character = character;
+            this.facing = facing;
             this.position = position;
             hasPosition = !position.IsAnchor;
             anchor = position.IsAnchor ? position.Anchor : null;

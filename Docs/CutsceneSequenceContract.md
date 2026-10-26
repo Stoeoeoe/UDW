@@ -547,9 +547,11 @@ endpoint after uncertainty; if its origin is unknown, show the endpoint without 
 fabricated origin, movement arrow or ghost. Do not infer knowledge of other characters.
 
 The completion end-state view remains separate: start from the pre-run character
-placement/facing, apply `onComplete.characterPlacements`, then fold `onComplete.steps`
-preview effects in order. It must give the same result when the sequence is
-skipped; never use the last movement beat as an implicit endpoint. Completion
+positions, apply `onComplete.characterPlacements`, then fold `onComplete.steps`
+preview effects in order.
+Facing preserved from playback is unspecified in this view because skipping can
+retain a different direction; explicit endpoint/anchor facing is shown. Never use
+the last movement beat as an implicit completion position. Completion
 Lua remains opaque to this preview. Existing manifest serialization includes preview metadata in its
 dependency hash and write-if-changed comparison, so metadata edits update the same
 watched file and unchanged exports leave its timestamp untouched.
@@ -606,15 +608,20 @@ Each endpoint may instead store `{ "character": "player", "position": { "x": 168
 Coordinates are integer map pixels from the top left, with the character's feet
 aligned to that point. Grid picks save tile centers in this same format. An
 endpoint must contain exactly one of `anchor` or `position`; the position object
-contains only `x` and `y`. Coordinate endpoints retain pre-run facing, while
+contains only `x` and `y`. Coordinate endpoints retain current playback facing, while
 anchors retain their existing nonzero-facing override. This endpoint plan is
 shared by normal completion and skipping and runs before completion steps.
 
 The runner captures the initial positions and facing of referenced characters before
 execution. Normal completion and skip both stop transient actions and apply the
 same prepared endpoints. Unlisted characters return to their pre-run placement. An
-anchor's nonzero facing overrides the character's direction; zero retains its pre-run
-direction. Structured completion steps execute afterward, so an explicit final
+anchor's nonzero facing overrides the character's direction; zero retains its current
+playback direction. Unlisted characters also keep current facing when restored to
+their pre-run position. Each endpoint can optionally specify `facing`: `North`,
+`East`, `South`, `West`, or `preserve`. A direction overrides anchor facing, and
+`preserve` suppresses the anchor override. Omitting it uses current facing for
+coordinate endpoints and the anchor's nonzero facing for anchors. Cancellation
+still restores the initial facing. Structured completion steps execute afterward, so an explicit final
 FaceDirection can override that facing. Spawned character endpoints update the existing live spawn state. The
 completion marker is saved before terminal notifications.
 Cancellation, location leave, death, disabled presentation and exceptions

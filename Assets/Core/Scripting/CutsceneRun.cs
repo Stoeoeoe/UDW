@@ -59,8 +59,8 @@ namespace Core.Scripting
             _originalPosition = character.transform.position;
             _originalFacing = character.Orientation.FacingDirection;
             _endpoint = endpoint;
-            // Zero is the anchor's explicit 'no facing override'; retain the pre-run direction on either terminal path.
-            _endpointFacing = facing == Vector2.zero ? _originalFacing : facing;
+            // Zero means keep the live facing at completion; cancellation uses the pre-run snapshot.
+            _endpointFacing = facing;
         }
 
         internal static CutscenePlacement[] Prepare(CutsceneDefinition definition, LuaBindingRegistry bindings, MapActorLuaApi characters)
@@ -87,8 +87,10 @@ namespace Core.Scripting
             var anchor = placement != null && placement.Position.IsAnchor ? characters.ResolveAnchor(placement.Position.Anchor) : null;
             var endpoint = placement == null ? character.transform.position
                 : characters.ResolvePosition(placement.Position) - (character.Graphics.position - character.transform.position);
-            return new CutscenePlacement(character, endpoint,
-                anchor ? anchor.FacingDirection : character.Orientation.FacingDirection);
+            var facing = placement == null || placement.Facing == "preserve" ? Vector2.zero
+                : !string.IsNullOrEmpty(placement.Facing) ? CardinalDirections.Resolve(placement.Facing)
+                : anchor ? anchor.FacingDirection : Vector2.zero;
+            return new CutscenePlacement(character, endpoint, facing);
         }
 
         internal void RequireLive()
@@ -102,10 +104,11 @@ namespace Core.Scripting
             // Completion has checked all characters before moving any; cancellation can outlive a destroyed character.
             if (!completed && (!Character || !_root || !_body)) return;
             var position = completed ? _endpoint : _originalPosition;
+            var facing = completed ? (_endpointFacing == Vector2.zero ? Character.Orientation.FacingDirection : _endpointFacing) : _originalFacing;
             Character.Controller.Stop();
             _root.position += position - Character.transform.position;
             _body.position = position;
-            Character.Orientation.ForceDirection(completed ? _endpointFacing : _originalFacing);
+            Character.Orientation.ForceDirection(facing);
             Character.SetMovementState(MovementState.Idle);
             Character.Tiles.OnPlaced();
             if (_spawn) _spawn.SavePosition();

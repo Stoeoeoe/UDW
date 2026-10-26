@@ -35,6 +35,29 @@ namespace Core.Tile.Editor.Vulcanus
             CatalogDiscovery.RefreshAll();
         }
 
+        [TestCase("West", true)]
+        [TestCase("preserve", true)]
+        [TestCase("West", false)]
+        [TestCase("preserve", false)]
+        public void ImportsExplicitFinalFacingForAnchorAndCoordinateEndpoints(string facing, bool anchor)
+        {
+            var source = Source("test:final-facing");
+            var endpoint = new JObject { ["character"] = "player", ["facing"] = facing };
+            if (anchor) endpoint["anchor"] = "meeting";
+            else endpoint["position"] = new JObject { ["x"] = 168, ["y"] = 104 };
+            source["onComplete"]["characterPlacements"] = new JArray(endpoint);
+            var definition = Parse(source);
+            try
+            {
+                var placement = definition.OnComplete.CharacterPlacements.Single();
+                Assert.That(placement.Facing, Is.EqualTo(facing));
+                Assert.That(JsonUtility.FromJson<CutsceneCharacterPlacement>(JsonUtility.ToJson(placement)).Facing, Is.EqualTo(facing));
+            }
+            finally { Object.DestroyImmediate(definition); }
+            endpoint["facing"] = "Diagonal";
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+        }
+
         [Test]
         public void SourcePreservesIdentityMapAndCompiledStepMapping()
         {
@@ -370,7 +393,7 @@ namespace Core.Tile.Editor.Vulcanus
             ["id"] = id,
             ["mapId"] = "map-1",
             ["allowSkip"] = false,
-            ["onComplete"] = new JObject { ["characterPlacements"] = new JArray() },
+            ["onComplete"] = new JObject { ["characterPlacements"] = new JArray(), ["steps"] = new JArray() },
             ["sequence"] = new JArray(new JObject
             {
                 ["id"] = "speak", ["action"] = "dialogue.play",

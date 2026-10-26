@@ -82,7 +82,54 @@ namespace Core.Scripting.Editor
             type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { completed });
             var expected = completed ? point.ToWorld(MapManager.Instance.CurrentMap) : original;
             Assert.That(Vector3.Distance(_actor.Graphics.position, expected), Is.LessThan(0.0001f));
-            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(completed ? Vector2.up : Vector2.right));
+        }
+
+        [TestCase(true, null)]
+        [TestCase(false, null)]
+        [TestCase(true, "West")]
+        [TestCase(false, "West")]
+        [TestCase(true, "preserve")]
+        public void CompletionKeepsLiveFacingUnlessAnEndpointOverridesIt(bool completed, string facing)
+        {
+            _actor.Orientation.ForceDirection(Vector2.right);
+            var original = _actor.transform.position;
+            var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "facing.json", out var steps);
+            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            var endpoints = facing == null ? Array.Empty<CutsceneCharacterPlacement>() : new[] { new CutsceneCharacterPlacement("player", new MapPosition(168, 104), facing) };
+            definition.Configure("test:completion-facing", "test:characters", lua, steps, true,
+                new CutsceneCompletion(endpoints, "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
+            var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
+            var placement = type.GetMethod("PrepareActor", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { definition, _api, "player" });
+            _api.Place("player", new MapPosition(32, 32));
+            _actor.Orientation.ForceDirection(Vector2.up);
+            type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { completed });
+            var expected = !completed ? Vector2.right : facing == "West" ? Vector2.left : Vector2.up;
+            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(expected));
+            if (facing == null || !completed) Assert.That(_actor.transform.position, Is.EqualTo(original));
+        }
+
+        [TestCase(null, 0, 1)]
+        [TestCase("preserve", -1, 0)]
+        [TestCase("South", 0, -1)]
+        public void AnchorFinalFacingCanBeUsedPreservedOrOverridden(string facing, int x, int y)
+        {
+            var map = MapManager.Instance.CurrentMap;
+            var anchor = new GameObject("Meeting", typeof(VulcanusMapAnchor)).GetComponent<VulcanusMapAnchor>();
+            anchor.transform.SetParent(map.transform);
+            anchor.transform.position = new Vector3(5, 8, 0);
+            anchor.Configure("meeting", "Meeting", Vector2.up, Array.Empty<string>());
+            var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "facing.json", out var steps);
+            _api = (MapActorLuaApi)typeof(MapActorLuaApi).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
+                .Invoke(new object[] { map, _actor, Array.Empty<SpawnedObject>() });
+            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            definition.Configure("test:anchor-facing", "test:characters", lua, steps, true,
+                new CutsceneCompletion(new[] { new CutsceneCharacterPlacement("player", "meeting", facing) }, "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
+            var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
+            var placement = type.GetMethod("PrepareActor", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { definition, _api, "player" });
+            _actor.Orientation.ForceDirection(Vector2.left);
+            type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { true });
+            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(new Vector2(x, y)));
         }
 
         [TestCase("North", 0, 1)]
