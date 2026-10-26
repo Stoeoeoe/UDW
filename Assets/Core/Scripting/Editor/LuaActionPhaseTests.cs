@@ -11,9 +11,9 @@ namespace Core.Scripting.Editor
         {
             var actions = VulcanusLuaEngine.DescribeBindings().modules.SelectMany(module => module.methods)
                 .Where(method => method.action != null).ToDictionary(method => method.action.id);
-            Assert.That(actions["actors.face"].action.phases, Is.EqualTo(new[] { "completion", "sequence", "setup" }));
-            Assert.That(actions["actors.face"].action.contexts, Is.EqualTo(new[] { "cutscene", "npcRoutine" }));
-            foreach (var id in new[] { "actors.moveTo", "cutscene.wait", "dialogue.play", "actors.playAnimation" })
+            Assert.That(actions["characters.face"].action.phases, Is.EqualTo(new[] { "completion", "sequence", "setup" }));
+            Assert.That(actions["characters.face"].action.contexts, Is.EqualTo(new[] { "cutscene", "npcRoutine" }));
+            foreach (var id in new[] { "characters.moveTo", "cutscene.wait", "dialogue.play", "characters.playAnimation" })
             {
                 Assert.That(actions[id].action.execution, Is.EqualTo("awaitable"), id);
                 Assert.That(actions[id].action.phases, Is.EqualTo(new[] { "sequence" }), id);

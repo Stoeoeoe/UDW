@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "character.schema.json",
+  "title": "Character",
+  "description": "An character definition (*.character.json).",
+  "type": "object",
+  "required": ["id", "name", "icon"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "description": "Stable identifier for this character, with a required namespace (for example base:gagaa).",
+      "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string", "pattern": "\\S",
+      "description": "Display name shown in the editor and game."
+    },
+    "icon": {
+      "type": "string", "pattern": "\\S",
+      "description": "Icon identifier used to represent this character in the editor."
+    },
+    "emotions": {
+      "type": "array", "items": { "type": "string" },
+      "description": "List of emotion IDs available for this character in dialogue line nodes."
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'NPCs/Villagers'). Empty string or absent = root."
+    }
+  }
+}

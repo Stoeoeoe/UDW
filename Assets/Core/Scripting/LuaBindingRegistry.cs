@@ -77,12 +77,15 @@ namespace Core.Scripting
                 var parameters = method.GetParameters();
                 foreach (var parameter in parameters)
                 {
-                    if (parameter.IsOptional || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPixelPosition)))
+                    if (parameter.IsOptional || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPath)))
                         throw Invalid(method, $"has unsupported parameter '{parameter.Name}'");
                     var position = parameter.GetCustomAttribute<LuaPositionAttribute>();
-                    if ((parameter.ParameterType == typeof(MapPixelPosition)) != (position != null))
-                        throw Invalid(method, $"position parameter '{parameter.Name}' requires MapPixelPosition and [LuaPosition] together");
-                    if (position != null && (parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
+                    var path = parameter.GetCustomAttribute<LuaPathAttribute>();
+                    if ((parameter.ParameterType == typeof(MapPath)) != (path != null))
+                        throw Invalid(method, $"path parameter '{parameter.Name}' requires MapPath and [LuaPath] together");
+                    if ((parameter.ParameterType == typeof(MapPosition)) != (position != null))
+                        throw Invalid(method, $"position parameter '{parameter.Name}' requires MapPosition and [LuaPosition] together");
+                    if ((position != null || path != null) && (parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
                         parameter.GetCustomAttribute<LuaResourceAttribute>() != null))
                         throw Invalid(method, $"position parameter '{parameter.Name}' cannot also declare reference/resource metadata");
                 }
@@ -119,57 +122,83 @@ namespace Core.Scripting
             {
                 if (effect.Order < 0 || !orders.Add(effect.Order))
                     throw Invalid(method, "preview effect order must be nonnegative and unique");
+                if (effect.PathParameter != null && effect.Kind != LuaPreviewEffectKind.MoveCharacterAlongPath)
+                    throw Invalid(method, "only moveCharacterAlongPath permits pathParameter");
                 string kind;
                 switch (effect.Kind)
                 {
-                    case LuaPreviewEffectKind.MoveActorToAnchor:
-                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
-                        RequireParameter(effect.AnchorParameter, "anchorRef", "mapAnchor");
-                        if (effect.TargetActorParameter != null || effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != "unknown")
-                            throw Invalid(method, "moveActorToAnchor preview requires facing 'unknown' and forbids targetActorParameter/dialogueParameter/directionParameter");
-                        kind = "moveActorToAnchor";
+                    case LuaPreviewEffectKind.MoveCharacterAlongPath:
+                        if (preview.Version != 2) throw Invalid(method, "moveCharacterAlongPath requires preview version 2");
+                        RequireParameter(effect.CharacterParameter, "characterRef", "mapCharacter");
+                        var path = parameters.SingleOrDefault(parameter => parameter.Name == effect.PathParameter);
+                        if (path == null || path.ParameterType != typeof(MapPath) || path.GetCustomAttribute<LuaPathAttribute>() == null)
+                            throw Invalid(method, "preview requires a pathParameter declared with [LuaPath]");
+                        if (effect.DefinitionParameter != null || effect.AnchorParameter != null || effect.TargetCharacterParameter != null ||
+                            effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != "unknown")
+                            throw Invalid(method, "moveCharacterAlongPath requires facing 'unknown' and forbids definition/anchor/target/dialogue/direction/position fields");
+                        kind = "moveCharacterAlongPath";
                         break;
-                    case LuaPreviewEffectKind.FaceActorTowardActor:
-                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
-                        RequireParameter(effect.TargetActorParameter, "actorRef", "mapActor");
-                        if (effect.AnchorParameter != null || effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != null)
-                            throw Invalid(method, "faceActorTowardActor preview forbids anchorParameter/dialogueParameter/directionParameter/facing");
-                        kind = "faceActorTowardActor";
+                    case LuaPreviewEffectKind.MoveCharacterToAnchor:
+                        RequireParameter(effect.CharacterParameter, "characterRef", "mapCharacter");
+                        RequireParameter(effect.AnchorParameter, "anchorRef", "mapAnchor");
+                        if (effect.DefinitionParameter != null || effect.TargetCharacterParameter != null || effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != "unknown")
+                            throw Invalid(method, "moveCharacterToAnchor preview requires facing 'unknown' and forbids targetCharacterParameter/dialogueParameter/directionParameter");
+                        kind = "moveCharacterToAnchor";
+                        break;
+                    case LuaPreviewEffectKind.FaceCharacterTowardCharacter:
+                        RequireParameter(effect.CharacterParameter, "characterRef", "mapCharacter");
+                        RequireParameter(effect.TargetCharacterParameter, "characterRef", "mapCharacter");
+                        if (effect.DefinitionParameter != null || effect.AnchorParameter != null || effect.DialogueParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != null)
+                            throw Invalid(method, "faceCharacterTowardCharacter preview forbids anchorParameter/dialogueParameter/directionParameter/facing");
+                        kind = "faceCharacterTowardCharacter";
                         break;
                     case LuaPreviewEffectKind.ShowDialogue:
                         RequireParameter(effect.DialogueParameter, "dialogueRef", "dialogue");
-                        if (effect.ActorParameter != null || effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != null)
-                            throw Invalid(method, "showDialogue preview forbids actorParameter/anchorParameter/targetActorParameter/directionParameter/facing");
+                        if (effect.DefinitionParameter != null || effect.CharacterParameter != null || effect.AnchorParameter != null || effect.TargetCharacterParameter != null || effect.DirectionParameter != null || effect.PositionParameter != null || effect.Facing != null)
+                            throw Invalid(method, "showDialogue preview forbids characterParameter/anchorParameter/targetCharacterParameter/directionParameter/facing");
                         kind = "showDialogue";
                         break;
-                    case LuaPreviewEffectKind.FaceActorDirection:
-                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
+                    case LuaPreviewEffectKind.FaceCharacterDirection:
+                        RequireParameter(effect.CharacterParameter, "characterRef", "mapCharacter");
                         var direction = parameters.SingleOrDefault(parameter => parameter.Name == effect.DirectionParameter);
                         if (direction == null || direction.ParameterType != typeof(string) ||
                             direction.GetCustomAttribute<LuaResourceAttribute>()?.Type != "direction")
-                            throw Invalid(method, "faceActorDirection preview requires a string directionParameter with resource type 'direction'");
-                        if (effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.DialogueParameter != null || effect.PositionParameter != null || effect.Facing != null)
-                            throw Invalid(method, "faceActorDirection preview forbids anchorParameter/targetActorParameter/dialogueParameter/facing");
-                        kind = "faceActorDirection";
+                            throw Invalid(method, "faceCharacterDirection preview requires a string directionParameter with resource type 'direction'");
+                        if (effect.DefinitionParameter != null || effect.AnchorParameter != null || effect.TargetCharacterParameter != null || effect.DialogueParameter != null || effect.PositionParameter != null || effect.Facing != null)
+                            throw Invalid(method, "faceCharacterDirection preview forbids anchorParameter/targetCharacterParameter/dialogueParameter/facing");
+                        kind = "faceCharacterDirection";
                         break;
-                    case LuaPreviewEffectKind.SetActorPosition:
-                        if (preview.Version != 2) throw Invalid(method, "setActorPosition requires preview version 2");
-                        RequireParameter(effect.ActorParameter, "actorRef", "mapActor");
-                        var point = parameters.SingleOrDefault(parameter => parameter.Name == effect.PositionParameter);
-                        if (point == null || point.ParameterType != typeof(MapPixelPosition) || point.GetCustomAttribute<LuaPositionAttribute>() == null)
-                            throw Invalid(method, "setActorPosition requires a positionParameter declared with [LuaPosition]");
-                        if (effect.AnchorParameter != null || effect.TargetActorParameter != null || effect.DialogueParameter != null ||
+                    case LuaPreviewEffectKind.SetCharacterPosition:
+                        if (preview.Version != 2) throw Invalid(method, "setCharacterPosition requires preview version 2");
+                        RequireParameter(effect.CharacterParameter, "characterRef", "mapCharacter");
+                        RequirePosition(effect.PositionParameter);
+                        if (effect.DefinitionParameter != null || effect.AnchorParameter != null || effect.TargetCharacterParameter != null || effect.DialogueParameter != null ||
                             effect.DirectionParameter != null || effect.Facing != "preserve")
-                            throw Invalid(method, "setActorPosition requires facing 'preserve' and forbids anchor/target/dialogue/direction fields");
-                        kind = "setActorPosition";
+                            throw Invalid(method, "setCharacterPosition requires facing 'preserve' and forbids anchor/target/dialogue/direction fields");
+                        kind = "setCharacterPosition";
+                        break;
+                    case LuaPreviewEffectKind.SpawnCharacter:
+                        if (preview.Version != 2) throw Invalid(method, "spawnCharacter requires preview version 2");
+                        var declaration = parameters.SingleOrDefault(parameter => parameter.Name == effect.CharacterParameter);
+                        if (declaration?.GetCustomAttribute<LuaCharacterDeclarationAttribute>() == null)
+                            throw Invalid(method, "spawnCharacter requires a characterParameter marked [LuaCharacterDeclaration]");
+                        var definition = parameters.SingleOrDefault(parameter => parameter.Name == effect.DefinitionParameter);
+                        if (definition?.GetCustomAttribute<LuaResourceAttribute>()?.Type != "character")
+                            throw Invalid(method, "spawnCharacter requires a definitionParameter with character resource type");
+                        RequirePosition(effect.PositionParameter);
+                        if (effect.AnchorParameter != null || effect.TargetCharacterParameter != null || effect.DialogueParameter != null ||
+                            effect.DirectionParameter != null || effect.Facing != "unknown")
+                            throw Invalid(method, "spawnCharacter requires facing 'unknown' and forbids anchor/target/dialogue/direction fields");
+                        kind = "spawnCharacter";
                         break;
                     default: throw Invalid(method, "has unsupported preview effect kind");
                 }
                 descriptions.Add(new LuaPreviewEffectDescription
                 {
-                    kind = kind, actorParameter = effect.ActorParameter, anchorParameter = effect.AnchorParameter,
-                    targetActorParameter = effect.TargetActorParameter, dialogueParameter = effect.DialogueParameter,
-                    facing = effect.Facing, directionParameter = effect.DirectionParameter, positionParameter = effect.PositionParameter
+                    kind = kind, characterParameter = effect.CharacterParameter, anchorParameter = effect.AnchorParameter,
+                    targetCharacterParameter = effect.TargetCharacterParameter, dialogueParameter = effect.DialogueParameter,
+                    facing = effect.Facing, directionParameter = effect.DirectionParameter, positionParameter = effect.PositionParameter,
+                    definitionParameter = effect.DefinitionParameter, pathParameter = effect.PathParameter
                 });
             }
             return new LuaActionPreviewDescription { version = preview.Version, spatialState = spatialState, effects = descriptions.ToArray() };
@@ -181,6 +210,13 @@ namespace Core.Scripting
                 if (string.IsNullOrWhiteSpace(name) || parameter == null || parameter.ParameterType != typeof(string) ||
                     reference == null || reference.Type != semanticType || reference.Picker != picker)
                     throw Invalid(method, $"preview parameter '{name}' requires a declared string parameter with {semanticType}/{picker}");
+            }
+
+            void RequirePosition(string name)
+            {
+                var point = parameters.SingleOrDefault(parameter => parameter.Name == name);
+                if (point == null || point.ParameterType != typeof(MapPosition) || point.GetCustomAttribute<LuaPositionAttribute>() == null)
+                    throw Invalid(method, "preview requires a positionParameter declared with [LuaPosition]");
             }
         }
 
@@ -210,12 +246,16 @@ namespace Core.Scripting
                 var reference = parameter.GetCustomAttribute<LuaReferenceAttribute>();
                 if (reference != null && (parameter.ParameterType != typeof(string) ||
                     (reference.Type, reference.Picker) is not
-                        (("actorRef", "mapActor") or ("anchorRef", "mapAnchor") or ("dialogueRef", "dialogue"))))
+                        (("characterRef", "mapCharacter") or ("anchorRef", "mapAnchor") or ("dialogueRef", "dialogue"))))
                     throw Invalid(method, "has unsupported semantic reference metadata");
                 var resource = parameter.GetCustomAttribute<LuaResourceAttribute>();
                 if (resource != null && (parameter.ParameterType != typeof(string) ||
                     string.IsNullOrWhiteSpace(resource.Type) || reference != null))
                     throw Invalid(method, "resource parameters must be string IDs with a named resource type and no scene reference picker");
+                if (parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null &&
+                    (parameter.ParameterType != typeof(string) || reference != null || resource != null ||
+                     !phases.SetEquals(new[] { "setup" }) || !contexts.SetEquals(new[] { "cutscene" })))
+                    throw Invalid(method, "character declarations require a string on a cutscene-only setup action, without reference/resource pickers");
             }
         }
 
@@ -262,15 +302,17 @@ namespace Core.Scripting
         private static LuaParameterDescription DescribeParameter(ParameterInfo parameter)
         {
             var reference = parameter.GetCustomAttribute<LuaReferenceAttribute>();
-            var position = parameter.GetCustomAttribute<LuaPositionAttribute>() != null;
+            var path = parameter.GetCustomAttribute<LuaPathAttribute>() != null;
+            var position = path || parameter.GetCustomAttribute<LuaPositionAttribute>() != null;
             return new LuaParameterDescription
             {
                 name = parameter.Name, type = LuaTypeName(parameter.ParameterType),
-                semanticType = reference?.Type, picker = position ? "mapPosition" : reference?.Picker,
+                semanticType = parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null ? "characterDeclaration" : reference?.Type,
+                picker = path ? "mapPath" : position ? "mapPosition" : reference?.Picker,
                 resourceType = parameter.GetCustomAttribute<LuaResourceAttribute>()?.Type,
                 coordinateSpace = position ? "mapPixels" : null, origin = position ? "topLeft" : null,
-                placementModes = position ? new[] { "tile", "pixel" } : null,
-                tileAnchor = position ? "center" : null, actorPivot = position ? "feet" : null
+                placementModes = position ? new[] { "tile", "pixel", "anchor" } : null,
+                tileAnchor = position ? "center" : null, characterPivot = position ? "feet" : null
             };
         }
 
@@ -350,7 +392,8 @@ namespace Core.Scripting
             if (action.Validator == null)
             {
                 if (parameters.Any(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
-                    parameter.GetCustomAttribute<LuaResourceAttribute>() != null || parameter.GetCustomAttribute<LuaPositionAttribute>() != null))
+                    parameter.GetCustomAttribute<LuaResourceAttribute>() != null || parameter.GetCustomAttribute<LuaPositionAttribute>() != null || parameter.GetCustomAttribute<LuaPathAttribute>() != null ||
+                    parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null))
                     throw Invalid(method, "needs a Validator to check its reference/resource arguments before playback");
                 return null; // Actions without references may have nothing to check before playback.
             }
@@ -405,8 +448,26 @@ namespace Core.Scripting
 
         private static object FromLua(DynValue value, Type type, string parameter)
         {
-            if (type == typeof(MapPixelPosition))
+            if (type == typeof(MapPath))
             {
+                if (value.Type != DataType.Table || value.Table.MetaTable != null || value.Table.Length == 0 ||
+                    value.Table.Pairs.Any(pair => pair.Key.Type != DataType.Number || pair.Key.Number != Math.Truncate(pair.Key.Number) ||
+                        pair.Key.Number < 1 || pair.Key.Number > value.Table.Length))
+                    throw new ArgumentException($"{parameter} must be a nonempty, contiguous list of positions.");
+                var points = new MapPosition[value.Table.Length];
+                for (var i = 0; i < points.Length; i++)
+                    points[i] = (MapPosition)FromLua(value.Table.Get(i + 1), typeof(MapPosition), $"{parameter}[{i + 1}]");
+                return new MapPath(points);
+            }
+            if (type == typeof(MapPosition))
+            {
+                if (value.Type == DataType.Table && value.Table.MetaTable == null && value.Table.Get("anchor").Type != DataType.Nil)
+                {
+                    if (value.Table.Get("anchor").Type != DataType.String || value.Table.Pairs.Any(pair =>
+                        pair.Key.Type != DataType.String || pair.Key.String != "anchor"))
+                        throw new ArgumentException($"{parameter} must contain only a nonempty anchor ID.");
+                    return new MapPosition(value.Table.Get("anchor").String);
+                }
                 if (value.Type != DataType.Table || value.Table.MetaTable != null || value.Table.Pairs.Any(pair =>
                     pair.Key.Type != DataType.String || pair.Key.String is not ("x" or "y")))
                     throw new ArgumentException($"{parameter} must be a plain position table with only x/y numbers.");
@@ -414,7 +475,7 @@ namespace Core.Scripting
                 var y = value.Table.Get("y");
                 if (x.Type != DataType.Number || y.Type != DataType.Number)
                     throw new ArgumentException($"{parameter} requires numeric x and y coordinates.");
-                return new MapPixelPosition(x.Number, y.Number);
+                return new MapPosition(x.Number, y.Number);
             }
             return value.Type switch
             {
@@ -457,7 +518,8 @@ namespace Core.Scripting
             if (type == typeof(bool)) return "boolean";
             if (type == typeof(int)) return "integer";
             if (type == typeof(double)) return "number";
-            if (type == typeof(MapPixelPosition)) return "position";
+            if (type == typeof(MapPosition)) return "position";
+            if (type == typeof(MapPath)) return "path";
             return type.Name; // [LuaTable] types were validated during registration.
         }
 

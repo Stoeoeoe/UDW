@@ -1,7 +1,0 @@
-{
-  "$schema": "../schemas/actor.schema.json",
-  "id": "base:player",
-  "name": "Player",
-  "icon": "GiAbstract009",
-  "emotions": []
-}

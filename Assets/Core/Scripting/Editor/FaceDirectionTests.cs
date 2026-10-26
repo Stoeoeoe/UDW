@@ -39,10 +39,10 @@ namespace Core.Scripting.Editor
             _actor.EnsureRuntimeInitialized();
             _actor.transform.parent.gameObject.SetActive(true);
             // Facing and coordinate conversion need a valid map, not the playable map's textures/water bake.
-            var mapRoot = new GameObject("Empty actor test map", typeof(Grid), typeof(VulcanusImportedMap));
+            var mapRoot = new GameObject("Empty character test map", typeof(Grid), typeof(VulcanusImportedMap));
             mapRoot.transform.SetParent(_fixture.Root.transform);
             var map = mapRoot.GetComponent<VulcanusImportedMap>();
-            map.Configure("test:actors", "Actor test map", 32, 24, 16);
+            map.Configure("test:characters", "Character test map", 32, 24, 16);
             Tilemap Layer(string name)
             {
                 var layer = new GameObject(name, typeof(Tilemap));
@@ -60,6 +60,30 @@ namespace Core.Scripting.Editor
 
         [TearDown]
         public void TearDown() => _fixture.Dispose();
+
+        [TestCase(168, 104, true)]
+        [TestCase(171, 106, true)]
+        [TestCase(171, 106, false)]
+        public void CompletionPixelsAlignFeetAndCancellationRestoresOriginalStaging(int x, int y, bool completed)
+        {
+            _actor.Orientation.ForceDirection(Vector2.right);
+            var original = _actor.Graphics.position;
+            var point = new MapPosition(x, y);
+            var lua = CutsceneSequenceCompiler.Compile(Sequence("East"), "endpoint.json", out var steps);
+            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            definition.Configure("test:pixel-endpoint", "test:characters", lua, steps, true,
+                new CutsceneCompletion(new[] { new CutsceneCharacterPlacement("player", point) }, "", "", Array.Empty<CutsceneStep>()),
+                "", Array.Empty<CutsceneStep>());
+            var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
+            var placement = type.GetMethod("PrepareActor", BindingFlags.Static | BindingFlags.NonPublic)
+                .Invoke(null, new object[] { definition, _api, "player" });
+            _api.Place("player", new MapPosition(32, 32));
+            _actor.Orientation.ForceDirection(Vector2.up);
+            type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { completed });
+            var expected = completed ? point.ToWorld(MapManager.Instance.CurrentMap) : original;
+            Assert.That(Vector3.Distance(_actor.Graphics.position, expected), Is.LessThan(0.0001f));
+            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+        }
 
         [TestCase("North", 0, 1)]
         [TestCase("East", 1, 0)]
@@ -130,6 +154,8 @@ namespace Core.Scripting.Editor
         [TestCase("{'x':NaN,'y':2}")]
         [TestCase("{'x':1,'y':Infinity}")]
         [TestCase("{'x':1,'y':2,'mode':'tile'}")]
+        [TestCase("{'anchor':''}")]
+        [TestCase("{'anchor':'meeting','x':1,'y':2}")]
         [TestCase("[1,2]")]
         public void InvalidPositionsFailCompilationWithStepIdentity(string json)
         {
@@ -141,10 +167,12 @@ namespace Core.Scripting.Editor
         [TestCase("{ x = '1', y = 2 }")]
         [TestCase("{ x = 0/0, y = 2 }")]
         [TestCase("{ x = 1, y = 2, mode = 'tile' }")]
+        [TestCase("{ anchor = '' }")]
+        [TestCase("{ anchor = 'meeting', x = 1, y = 2 }")]
         public void DirectLuaRejectsMalformedPositionTables(string literal)
         {
             var before = _actor.transform.position;
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(_api), $"Actors.Place('player', {literal})", "bad-position");
+            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(_api), $"Characters.Place('player', {literal})", "bad-position");
             Assert.That(() => run.Tick(0), Throws.InvalidOperationException);
             Assert.That(_actor.transform.position, Is.EqualTo(before));
         }
@@ -154,7 +182,7 @@ namespace Core.Scripting.Editor
         {
             var map = MapManager.Instance.CurrentMap;
             var before = _actor.transform.position;
-            Assert.That(() => _api.ValidatePlace("player", new MapPixelPosition((double)map.Width * map.TileSize + 1, 0)),
+            Assert.That(() => _api.ValidatePlace("player", new MapPosition((double)map.Width * map.TileSize + 1, 0)),
                 Throws.TypeOf<ArgumentOutOfRangeException>().With.Message.Contains("outside map"));
             Assert.That(_actor.transform.position, Is.EqualTo(before));
         }
@@ -162,9 +190,9 @@ namespace Core.Scripting.Editor
         [Test]
         public void ATextArgumentCannotSilentlyBecomeTheMapOrigin()
         {
-            var steps = new[] { new CutsceneStep("place-player", "actors.place", new[]
+            var steps = new[] { new CutsceneStep("place-player", "characters.place", new[]
             {
-                new CutsceneArgument("actor", "player"), new CutsceneArgument("position", "168,104")
+                new CutsceneArgument("character", "player"), new CutsceneArgument("position", "168,104")
             }) };
             Assert.That(() => CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api)),
                 Throws.InvalidOperationException.With.Message.Contains("position").And.Message.Contains("not a position"));
@@ -173,43 +201,163 @@ namespace Core.Scripting.Editor
         [Test]
         public void PositionHintsAndVersionTwoPreviewAreExported()
         {
-            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Actors")
+            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Characters")
                 .methods.Single(method => method.name == "Place");
             var parameter = method.parameters.Single(parameter => parameter.name == "position");
             Assert.That(parameter.type, Is.EqualTo("position"));
             Assert.That(parameter.picker, Is.EqualTo("mapPosition"));
             Assert.That(parameter.coordinateSpace, Is.EqualTo("mapPixels"));
             Assert.That(parameter.origin, Is.EqualTo("topLeft"));
-            Assert.That(parameter.placementModes, Is.EqualTo(new[] { "tile", "pixel" }));
+            Assert.That(parameter.placementModes, Is.EqualTo(new[] { "tile", "pixel", "anchor" }));
             Assert.That(parameter.tileAnchor, Is.EqualTo("center"));
-            Assert.That(parameter.actorPivot, Is.EqualTo("feet"));
+            Assert.That(parameter.characterPivot, Is.EqualTo("feet"));
             Assert.That(method.action.phases, Is.EqualTo(new[] { "completion", "sequence", "setup" }));
             Assert.That(method.action.preview.version, Is.EqualTo(2));
             var effect = method.action.preview.effects.Single();
-            Assert.That(effect.kind, Is.EqualTo("setActorPosition"));
+            Assert.That(effect.kind, Is.EqualTo("setCharacterPosition"));
             Assert.That(effect.positionParameter, Is.EqualTo("position"));
             Assert.That(effect.facing, Is.EqualTo("preserve"));
         }
 
         private static JArray PlaceStep(JToken position) => new(new JObject
         {
-            ["id"] = "place-player", ["action"] = "actors.place",
-            ["arguments"] = new JObject { ["actor"] = "player", ["position"] = position }
+            ["id"] = "place-player", ["action"] = "characters.place",
+            ["arguments"] = new JObject { ["character"] = "player", ["position"] = position }
         });
+
+        [Test]
+        public void AnchorPositionsRoundTripAndPlaceFeetWithoutApplyingAnchorFacing()
+        {
+            var map = MapManager.Instance.CurrentMap;
+            var anchor = new GameObject("Meeting", typeof(VulcanusMapAnchor)).GetComponent<VulcanusMapAnchor>();
+            anchor.transform.SetParent(map.transform);
+            anchor.transform.position = new Vector3(5, 8, 0);
+            anchor.Configure("meeting", "Meeting", Vector2.up, Array.Empty<string>());
+            _actor.Orientation.ForceDirection(Vector2.right);
+            var lua = CutsceneSequenceCompiler.Compile(PlaceStep(new JObject { ["anchor"] = "meeting" }), "anchor.json", out var steps);
+            var restored = JsonUtility.FromJson<CutsceneStep>(JsonUtility.ToJson(steps.Single()));
+            Assert.That(restored.Arguments.Single(argument => argument.Name == "position").Position.Anchor, Is.EqualTo("meeting"));
+            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
+            using var session = VulcanusLuaEngine.StartSession(bindings, lua, "anchor.json");
+            session.Tick(0);
+            Assert.That(Vector3.Distance(_actor.Graphics.position, anchor.transform.position), Is.LessThan(0.0001f));
+            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+            Assert.That(() => _api.ValidatePlace("player", new MapPosition("missing")),
+                Throws.InvalidOperationException.With.Message.Contains("missing"));
+        }
+
+        [Test]
+        public void SpawnPreflightDeclaresRolesWithoutCreatingWorldObjects()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/CutscenePrototypeHost.prefab").GetComponent<SpawnedObject>();
+            var catalog = _fixture.Own(ScriptableObject.CreateInstance<SpawnableCatalog>());
+            catalog.Synchronize(new[] { prefab });
+            var spawner = _fixture.AddSingleton<WorldObjectSpawner>(value =>
+                typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(value, catalog));
+            _api.ValidateSpawn("guest", "base:cutscene-prototype-host", new MapPosition(168, 104));
+            _api.ValidateFaceDirection("guest", "North");
+            _api.ValidateFace("player", "guest");
+            _api.ValidatePlace("guest", new MapPosition(171, 106));
+            Assert.That(spawner.SpawnedObjects, Is.Empty);
+            Assert.That(() => _api.ValidateSpawn("guest", "base:cutscene-prototype-host", new MapPosition(1, 1)),
+                Throws.InvalidOperationException.With.Message.Contains("unique"));
+            Assert.That(() => _api.ValidateSpawn("player", "base:cutscene-prototype-host", new MapPosition(1, 1)),
+                Throws.InvalidOperationException.With.Message.Contains("unique"));
+            Assert.That(() => _api.ValidateFaceDirection("not-declared", "North"), Throws.InvalidOperationException);
+            Assert.That(() => _api.ValidateSpawn("other", "base:cutscene-prototype-host", new MapPosition("missing")),
+                Throws.InvalidOperationException.With.Message.Contains("missing"));
+            Assert.That(() => _api.ValidateFaceDirection("other", "North"), Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void SpawnExportsResourceAndRoleDeclarationAndIsLimitedToSetup()
+        {
+            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Characters")
+                .methods.Single(method => method.name == "Spawn");
+            Assert.That(method.parameters.Single(parameter => parameter.name == "character").semanticType, Is.EqualTo("characterDeclaration"));
+            Assert.That(method.parameters.Single(parameter => parameter.name == "definition").resourceType, Is.EqualTo("character"));
+            Assert.That(method.action.phases, Is.EqualTo(new[] { "setup" }));
+            Assert.That(method.action.preview.effects.Single().definitionParameter, Is.EqualTo("definition"));
+            var source = new JArray(new JObject { ["id"] = "create-guest", ["action"] = "characters.spawn",
+                ["arguments"] = new JObject { ["character"] = "guest", ["definition"] = "base:cutscene-prototype-host",
+                    ["position"] = new JObject { ["x"] = 168, ["y"] = 104 } } });
+            Assert.That(() => CutsceneSequenceCompiler.Compile(source, "spawn.json"), Throws.TypeOf<FormatException>());
+            Assert.That(CutsceneSequenceCompiler.Compile(source, "spawn.json", out _, "setup"), Does.Contain("Characters.Spawn"));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void SpawnCreatesPlacedControlledActorAndKeepsOrRemovesItsSavedRecord(bool keep)
+        {
+            var holder = new GameObject("Spawn fixture templates");
+            holder.SetActive(false);
+            holder.transform.SetParent(_fixture.Root.transform);
+            var template = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Content/Spawnables/CutscenePrototypeHost.prefab"), holder.transform);
+            Object.DestroyImmediate(template.GetComponent<SpawnedObject>());
+            var prefab = template.AddComponent<EditModeSpawnedActor>();
+            typeof(SpawnedObject).GetField("prefabId", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(prefab, "base:cutscene-prototype-host");
+            var catalog = _fixture.Own(ScriptableObject.CreateInstance<SpawnableCatalog>());
+            catalog.Synchronize(new SpawnedObject[] { prefab });
+            var spawner = _fixture.AddSingleton<WorldObjectSpawner>(value =>
+                typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(value, catalog));
+            spawner.gameObject.SetActive(true);
+            var location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+            location.id = "test:characters";
+            spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
+            var point = new MapPosition(168, 104);
+            _api.ValidateSpawn("guest", "base:cutscene-prototype-host", point);
+            var bindings = new LuaBindingRegistry(_api);
+            var lua = CutsceneSequenceCompiler.Compile(new JArray(new JObject { ["id"] = "turn", ["action"] = "characters.faceDirection",
+                ["arguments"] = new JObject { ["character"] = "guest", ["direction"] = "East" } }), "spawn.json", out var steps);
+            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            definition.Configure("test:spawn", location.id, lua, steps, true,
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
+            using var sequence = VulcanusLuaEngine.StartSession(bindings, lua, "spawn.json");
+            var owner = _fixture.RegisterSingleton<CutsceneRunner>();
+            var placementType = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
+            var run = (CutsceneRun)typeof(CutsceneRun).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
+                .Invoke(new object[] { owner, definition, sequence, Array.CreateInstance(placementType, 0), bindings, _api });
+            typeof(MapActorLuaApi).GetMethod("BeginRun", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { run });
+            using (var setup = VulcanusLuaEngine.StartSession(bindings,
+                "Characters.Spawn('guest', 'base:cutscene-prototype-host', { x = 168, y = 104 })", "spawn.json:setup", phase: "setup"))
+            {
+                setup.Tick(0);
+                Assert.That(setup.IsRunning, Is.False);
+            }
+            var spawn = spawner.SpawnedObjects.Single();
+            var character = spawn.GetComponentInChildren<GameCharacter>(true);
+            Assert.That(character.IsRuntimeInitialized, Is.True);
+            Assert.That(character.IsControlBlocked, Is.True);
+            Assert.That(Vector3.Distance(character.Graphics.position, point.ToWorld(MapManager.Instance.CurrentMap)), Is.LessThan(0.0001f));
+            sequence.Tick(0);
+            Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+            var id = spawn.PersistentId;
+            Assert.That(GameState.World.TryGet(location.id, id, out SpawnedObjectState state), Is.True);
+            Assert.That(state.position, Is.EqualTo(spawn.transform.position));
+            character.SetControlBlocked(run, false);
+            // These callbacks were invoked explicitly in OnStateBound, so release their EditMode bindings explicitly too.
+            GameTestFixture.Invoke(character.PerformPrimaryAction, "OnDestroy");
+            GameTestFixture.Invoke(character, "OnDestroy");
+            typeof(MapActorLuaApi).GetMethod("FinishSpawns", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { keep });
+            Assert.That(GameState.World.TryGet(location.id, id, out SpawnedObjectState _), Is.EqualTo(keep));
+            Assert.That(spawner.SpawnedObjects.Count, Is.EqualTo(keep ? 1 : 0));
+        }
 
         [Test]
         public void ManifestExportsDirectionResourceAndPreviewArgumentMapping()
         {
             var manifest = VulcanusLuaEngine.DescribeBindings();
-            var method = manifest.modules.Single(module => module.path == "Actors").methods.Single(method => method.name == "FaceDirection");
-            Assert.That(method.action.id, Is.EqualTo("actors.faceDirection"));
+            var method = manifest.modules.Single(module => module.path == "Characters").methods.Single(method => method.name == "FaceDirection");
+            Assert.That(method.action.id, Is.EqualTo("characters.faceDirection"));
             Assert.That(method.action.execution, Is.EqualTo("immediate"));
             Assert.That(method.action.contexts, Is.EqualTo(new[] { "cutscene", "npcRoutine" }));
             Assert.That(method.action.phases, Is.EqualTo(new[] { "completion", "sequence", "setup" }));
             Assert.That(method.parameters.Single(parameter => parameter.name == "direction").resourceType, Is.EqualTo("direction"));
             var effect = method.action.preview.effects.Single();
-            Assert.That(effect.kind, Is.EqualTo("faceActorDirection"));
-            Assert.That(effect.actorParameter, Is.EqualTo("actor"));
+            Assert.That(effect.kind, Is.EqualTo("faceCharacterDirection"));
+            Assert.That(effect.characterParameter, Is.EqualTo("character"));
             Assert.That(effect.directionParameter, Is.EqualTo("direction"));
             var catalog = Resources.Load<Character.Animations.CharacterAnimationCatalog>(Character.Animations.CharacterAnimationCatalog.ResourceName);
             LuaBindingManifestExporter.PopulateResources(manifest, catalog, new[] { _actor.Animator.AnimationLibrary });
@@ -225,8 +373,8 @@ namespace Core.Scripting.Editor
 
         private static JArray Sequence(string direction) => new(new JObject
         {
-            ["id"] = "turn", ["action"] = "actors.faceDirection",
-            ["arguments"] = new JObject { ["actor"] = "player", ["direction"] = direction }
+            ["id"] = "turn", ["action"] = "characters.faceDirection",
+            ["arguments"] = new JObject { ["character"] = "player", ["direction"] = direction }
         });
 
         [LuaModule("WrongResource")]
@@ -234,9 +382,28 @@ namespace Core.Scripting.Editor
         {
             [LuaAction("test.wrongDirection", "Wrong", "Test", "Wrong resource mapping.", "cutscene", Phases = new[] { "sequence" }, Validator = nameof(Check))]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorDirection, ActorParameter = "actor", DirectionParameter = "direction")]
-            public void Run([LuaReference("actorRef", "mapActor")] string actor, [LuaResource("animation")] string direction) { }
-            [Preserve] public void Check(string actor, string direction) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceCharacterDirection, CharacterParameter = "character", DirectionParameter = "direction")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string character, [LuaResource("animation")] string direction) { }
+            [Preserve] public void Check(string character, string direction) { }
+        }
+    }
+
+    // EditMode does not run Awake on instantiated characters. Establish the same required bindings before Spawn returns.
+    public sealed class EditModeSpawnedActor : SpawnedObject
+    {
+        protected override void OnStateBound()
+        {
+            var character = GetComponentInChildren<GameCharacter>(true);
+            GameTestFixture.Invoke(character.GetComponent<Controller2D>(), "Awake");
+            character.MainInventory.EnsureInitialized();
+            GameTestFixture.Invoke(character, "Awake");
+            foreach (var ability in character.GetComponentsInChildren<Character.Abilities.CharacterAbility>(true))
+                typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(ability, character);
+            typeof(Character.Abilities.CharacterPerformPrimaryActionAbility).GetProperty("ActionExecutor")
+                .SetValue(character.PerformPrimaryAction, new Interaction.ActionExecutor(character,
+                    () => Core.Context.PlayerInteractionContext.Instance.CurrentSnapshot));
+            GameTestFixture.Invoke(character.Occupation, "Awake");
+            character.EnsureRuntimeInitialized();
         }
     }
 }

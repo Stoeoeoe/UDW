@@ -50,8 +50,13 @@ namespace Core.Scripting.Editor
                 var animation = json["resources"]["animation"].Single(resource => (string)resource["id"] == "base:pass-out");
                 Assert.That((string)animation["description"], Is.EqualTo("PassOut"));
                 var action = json["modules"].SelectMany(module => module["methods"])
-                    .Single(method => (string)method["action"]?["id"] == "actors.playAnimation");
+                    .Single(method => (string)method["action"]?["id"] == "characters.playAnimation");
                 Assert.That((string)action["parameters"].Single(parameter => (string)parameter["name"] == "animation")["resourceType"], Is.EqualTo("animation"));
+                Assert.That(json["resources"]["character"], Is.Null, "Vulcanus owns the character list, regardless of Unity prefab mappings.");
+                Assert.That(json["resources"]["actor"], Is.Null);
+                var spawn = json["modules"].SelectMany(module => module["methods"])
+                    .Single(method => (string)method["action"]?["id"] == "characters.spawn");
+                Assert.That((string)spawn["parameters"].Single(parameter => (string)parameter["name"] == "definition")["resourceType"], Is.EqualTo("character"));
             }
             finally { File.Delete(path); }
         }

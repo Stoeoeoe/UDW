@@ -8,7 +8,7 @@ namespace Core.Scripting
     /// LuaExecutionSession owns a returned action. It supplies finite, nonnegative frame deltas,
     /// ticks before checking completion, and disposes the action once on success, cancellation or error.
     /// It never ticks a disposed action. Tick must throw on interruption/failure; IsCompleted means success.
-    /// Actions own their operation's resources; CutsceneRunner owns the surrounding actor control claims.
+    /// Actions own their operation's resources; CutsceneRunner owns the surrounding character control claims.
     /// </remarks>
     public interface ILuaAction : IDisposable
     {

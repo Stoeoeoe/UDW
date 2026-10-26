@@ -14,7 +14,7 @@ wrapper is:
   "mapId": "map-1",
   "allowSkip": false,
   "onStart": [],
-  "onComplete": { "actions": "GameState.Story.SetFlag('introduced')", "actorPlacements": [], "steps": [] },
+  "onComplete": { "actions": "GameState.Story.SetFlag('introduced')", "characterPlacements": [], "steps": [] },
   "sequence": [
     { "id": "talk", "action": "dialogue.play", "arguments": { "dialogue": "base:greeting" } }
   ]
@@ -32,13 +32,13 @@ Importing a definition does not start it. The Systems prefab provides one
 [
   {
     "id": "approach",
-    "action": "actors.moveTo",
-    "arguments": { "actor": "npc-placement-id", "destination": "meeting-anchor-id" }
+    "action": "characters.moveTo",
+    "arguments": { "character": "npc-placement-id", "destination": "meeting-anchor-id" }
   },
   {
     "id": "greet",
-    "action": "actors.face",
-    "arguments": { "actor": "npc-placement-id", "target": "player" }
+    "action": "characters.face",
+    "arguments": { "character": "npc-placement-id", "target": "player" }
   },
   {
     "id": "talk",
@@ -53,10 +53,10 @@ exactly. Reordering or renaming a step's display label must retain its ID.
 Action IDs and argument names come from `Generated/Scripting/bindings.json`.
 Only actions allowing the `cutscene` context are accepted. Movement and dialogue
 actions take non-empty string references.
-`actors.faceDirection` takes `actor` and `direction` string arguments, for example
-`Actors.FaceDirection("player", "North")`. Direction IDs are exactly `North`,
+`characters.faceDirection` takes `character` and `direction` string arguments, for example
+`Characters.FaceDirection("player", "North")`. Direction IDs are exactly `North`,
 `East`, `South` and `West`, mapped to world vectors `(0, 1)`, `(1, 0)`, `(0, -1)`
-and `(-1, 0)`. The action turns immediately without moving the actor. It supports
+and `(-1, 0)`. The action turns immediately without moving the character. It supports
 all three authoring phases and both execution contexts. The direction parameter
 declares `resourceType: "direction"`; `resources.direction` in `bindings.json`
 supplies the choices. Invalid directions fail binding before sequence playback.
@@ -65,18 +65,18 @@ supplies the choices. Invalid directions fail binding before sequence playback.
 It compiles to `Cutscene.Wait(0.5)` and waits for scaled gameplay seconds through
 the session's frame clock. A zero duration yields until the next session tick.
 Negative and nonfinite durations fail import and direct Lua calls. Its preview
-is `described` with no effects, preserving actor placement and facing.
+is `described` with no effects, preserving character placement and facing.
 
-`actors.playAnimation` takes `actor` and `animation` string references, for example
-`{ "id": "wave", "action": "actors.playAnimation", "arguments": { "actor": "player", "animation": "base:wave" } }`.
-It compiles to `Actors.PlayAnimation("player", "base:wave")` and waits for the
+`characters.playAnimation` takes `character` and `animation` string references, for example
+`{ "id": "wave", "action": "characters.playAnimation", "arguments": { "character": "player", "animation": "base:wave" } }`.
+It compiles to `Characters.PlayAnimation("player", "base:wave")` and waits for the
 native animation state to finish, then releases playback. CutsceneRunner owns
-actor control for the whole sequence; this action adds no second control claim.
+character control for the whole sequence; this action adds no second control claim.
 Cancellation releases playback. Interruption fails the sequence;
 it does not report successful animation completion. Sets and looping clips are
 not accepted. Directional animations must have finite, non-looping clips for all
-four facings in the selected actor's library; binding checks this before any step
-runs. This also covers a preceding Face action changing the actor's direction.
+four facings in the selected character's library; binding checks this before any step
+runs. This also covers a preceding Face action changing the character's direction.
 The spatial preview is `unknown`: arbitrary clips can animate artwork transforms,
 and the schematic preview does not interpret Unity animation curves.
 
@@ -91,10 +91,10 @@ The animation parameter is marked `[LuaResource("animation")]` and exports
 contains `resources: { "animation": [{ "id": "base:wave", "description": "Wave" }] }`.
 The external editor can populate a generic resource selector from
 `resources[parameter.resourceType]`; Lua still receives the selected string ID.
-Scene-specific actor and anchor pickers retain their existing reference metadata.
+Scene-specific character and anchor pickers retain their existing reference metadata.
 Choices are sorted by exact ID and include only enabled single animations with a
 finite fixed clip or complete one-shot clips in at least one authored Memao
-library. Actor compatibility is still checked at binding. The choices file is
+library. Character compatibility is still checked at binding. The choices file is
 regenerated with the bindings after script reload and animation/catalog asset
 changes, or with Tools > Scripting > Regenerate Lua bindings.json. New resource
 types can use the same parameter attribute and add their choices in the manifest
@@ -139,7 +139,7 @@ failed edit cannot run through an older retained Unity import artifact.
 
 `CutsceneBindings.BindCurrentMap(definition, dialogueRunner)`
 checks the definition's map against the ready loaded map, then validates every
-step through the existing actor/anchor/dialogue APIs. It returns the Lua binding
+step through the existing character/anchor/dialogue APIs. It returns the Lua binding
 registry after all references resolve. It does not execute actions, open
 dialogue or claim player controls. Errors include the cutscene ID and authored
 step ID. Only API modules used by the sequence are bound.
@@ -184,15 +184,15 @@ API methods and attaches calls to Lua; it does not interpret cutscene steps.
 
 ## Position arguments and immediate placement
 
-`Actors.Place("player", { x = 168, y = 104 })` immediately places an existing
-actor's feet at a map point and preserves facing. Its action ID is `actors.place`,
+`Characters.Place("player", { x = 168, y = 104 })` immediately places an existing
+character's feet at a map point and preserves facing. Its action ID is `characters.place`,
 with `cutscene` context and `setup`, `sequence`, `completion` phases. It stops
 movement, updates the Rigidbody2D and tile context, and updates a spawned
-actor's existing placement record. The cutscene's captured staging still restores
+character's existing placement record. The cutscene's captured staging still restores
 the original placement on cancellation; completion placements/steps define the
 final result on completion or skip.
 
-The C# parameter is `[LuaPosition] MapPixelPosition position`. The shared binding
+The C# parameter is `[LuaPosition] MapPosition position`. The shared binding
 registry exports the reusable parameter contract, independent of the action ID:
 
 ```json
@@ -202,13 +202,16 @@ registry exports the reusable parameter contract, independent of the action ID:
   "picker": "mapPosition",
   "coordinateSpace": "mapPixels",
   "origin": "topLeft",
-  "placementModes": ["tile", "pixel"],
+  "placementModes": ["tile", "pixel", "anchor"],
   "tileAnchor": "center",
-  "actorPivot": "feet"
+  "characterPivot": "feet"
 }
 ```
 
-The source argument is an object with exactly numeric `x` and `y` fields.
+The source argument is either an object with exactly numeric `x` and `y` fields,
+or `{ "anchor": "meeting" }`. Anchor IDs resolve against the current map before
+playback; mixing anchor and pixel fields is invalid. An anchor chooses its world
+point without applying its facing.
 Coordinates must be finite and nonnegative; binding rejects points beyond the
 map's pixel rectangle rather than clamping them. Rectangle edges are valid points.
 Fractional coordinates are preserved, including centers of odd-sized tiles.
@@ -223,27 +226,91 @@ the point to map-local `(x / tileSize, mapHeight - y / tileSize, 0)`, then appli
 the map transform. The authored CharacterGraphics sprite pivot is the feet
 origin; placement compensates for its offset from the character/rigidbody root.
 
-Vulcanus should render a generic picker for this parameter metadata: tile/pixel
-mode, X/Y fields and Pick on map. Map picking shows a ghost of the selected actor
+Vulcanus should render a generic picker for this parameter metadata: tile/pixel/anchor
+mode, X/Y fields or an anchor selector, and Pick on map. Map picking shows a ghost of the selected character
 with its feet on the chosen point. Tile mode snaps to tile centers; pixel mode
 selects individual map pixels. Click confirms, Escape cancels, and drag/scroll
 continue navigating the map. Cancelling a pick must preserve the previous value.
-For Place, identify the ghost actor through the preview effect whose
-`positionParameter` names this input, then read its `actorParameter`; do not
+For Place, identify the ghost character through the preview effect whose
+`positionParameter` names this input, then read its `characterParameter`; do not
 hardcode an API or parameter name in the picker.
 These controls belong to the external editor and are not implemented in Unity.
 
-The placement preview is version 2, with `kind: "setActorPosition"`,
-`actorParameter: "actor"`, `positionParameter: "position"` and
+The placement preview is version 2, with `kind: "setCharacterPosition"`,
+`characterParameter: "character"`, `positionParameter: "position"` and
 `facing: "preserve"`. It requires a position argument carrying the metadata
-above. Move the actor marker immediately, preserve known/unknown facing as-is,
+above. Move the character marker immediately, preserve known/unknown facing as-is,
 and add no movement segment. Subsequent steps use the new position, including
 target-facing calculations. Convert map pixels into the preview's common
-coordinate space before combining them with existing actor/anchor positions.
+coordinate space before combining them with existing character/anchor positions.
 Version 2 also accepts existing version 1 effect kinds; version 1 cannot declare
-`setActorPosition`. Unknown preview versions/effects must be shown as unavailable,
+`setCharacterPosition` or `spawnCharacter`. Unknown preview versions/effects must be shown as unavailable,
 not silently ignored. The v2 fixture is
 [`Examples/LuaActionPreview.v2.json`](Examples/LuaActionPreview.v2.json).
+
+## Walk an inline path
+
+`Characters.WalkPath("guest", { { x = 168, y = 104 }, { anchor = "meeting" }, { x = 208, y = 120 } })`
+walks through each point in order. It is awaitable and sequence-only; all points
+resolve before movement starts. Cancellation/skip disposes the active movement
+segment, and the existing completion plan determines the final staging.
+
+The `path` parameter exports `type: "path"`, `picker: "mapPath"`, and the same
+map-pixel, top-left, Grid/Pixel/Anchor, feet-pivot hints as position parameters.
+Cutscene arguments store the nonempty ordered array directly. The importer
+preserves its order in typed arguments and generated Lua.
+
+Preview v2 declares `spatialState: "described"` with a
+`moveCharacterAlongPath` effect mapping `characterParameter`, `pathParameter`,
+and `facing: "unknown"`. Vulcanus draws numbered waypoints and known movement
+legs, uses the last point for subsequent previews, and never invents a starting
+position or connects across an unresolved waypoint. It does not simulate
+navigation, collisions or duration. The regular bindings exporter publishes the
+action and its metadata to the watched manifest.
+
+## Spawn character and editor handoff
+
+`Characters.Spawn("guest", "base:cutscene-prototype-host", { anchor = "meeting" })`
+creates a persistent NPC at the selected point. `characters.spawn` is an immediate
+**setup-only** action: creation runs before the sequence, including when the player
+skips it. Successful completion/skip keeps the character and its saved spawn record;
+cancellation or playback failure removes both. The character is controlled by the
+cutscene until it finishes. Existing completion placements and steps can refer to it.
+
+The `character` string declares a new cutscene-local role, exported with
+`semanticType: "characterDeclaration"`. It must be nonempty and cannot shadow the
+player, a placed instance ID, or an earlier declaration. Later setup steps and
+all sequence/completion steps may use that role wherever `characterRef` is accepted.
+References before the declaration fail binding. This role is transient; the
+spawner assigns a separate persistent instance ID that survives save/load.
+
+The `definition` string has `resourceType: "character"`. Vulcanus supplies this selector
+from its own project character definitions; Unity does not export a character list
+in `bindings.json` or filter those definitions by prefab availability. Unity imports
+`characters/*.character.json` independently of prefab mappings. A character definition
+supplies identity; spawning it requires a mapped runtime prefab. Author that prefab
+under `Assets/Content/Spawnables` with a root
+`SpawnedObject` and exactly one active NPC referencing that definition. The existing
+SpawnableCatalog discovery handles registration; each character definition needs one
+unambiguous prefab. The player is referenced through its existing `player` role.
+
+Editor changes:
+
+- Render `characterDeclaration` as a role-name input and add its value to subsequent
+  character pickers in authored setup order. Recompute when declarations move or change.
+- Populate the definition selector from Vulcanus project characters; do not mix definition
+  IDs with existing map instance IDs.
+- Reuse the position picker for all three modes. Tile/pixel save `{x,y}`;
+  anchor saves `{anchor:"id"}`. Spawn and Place share this argument contract.
+- Fold preview v2 `spawnCharacter` using `characterParameter`, `definitionParameter`,
+  `positionParameter`, and `facing: "unknown"`. Add the declared character marker at
+  the resolved point and use it for subsequent effects. Definition identifies its
+  visual; the role identifies this instance. Invalid/unresolved references must
+  remain visibly unresolved.
+
+For a spawn ghost, obtain the character visual through the effect's
+`definitionParameter`; for an existing character use `characterParameter`. Both align
+their feet with the selected point. No API-name-specific picker logic is needed.
 
 ## Before start, completion steps and action phases
 
@@ -259,6 +326,9 @@ is `onStart`: an optional ordered array of the same `{ id, action, arguments }`
 objects used by `sequence`. Omission or an empty array explicitly means no setup.
 `onComplete.steps` is an optional ordered array with the same step shape;
 omission or an empty array means no structured completion actions.
+`onComplete.actions` is optional Lua; omission, an empty string, or whitespace
+means no Lua completion actions. `null` is invalid. An empty completion block
+uses `{ "characterPlacements": [], "steps": [] }`.
 Setup uses the existing action bindings and resource/reference parameter metadata;
 it has no raw Lua field. There is still one Lua execution system.
 
@@ -269,8 +339,8 @@ For example, this fragment sets an initial and a final facing around dialogue:
   "onStart": [
     {
       "id": "stage-player",
-      "action": "actors.faceDirection",
-      "arguments": { "actor": "player", "direction": "East" }
+      "action": "characters.faceDirection",
+      "arguments": { "character": "player", "direction": "East" }
     }
   ],
   "sequence": [
@@ -281,10 +351,10 @@ For example, this fragment sets an initial and a final facing around dialogue:
     }
   ],
   "onComplete": {
-    "actorPlacements": [],
+    "characterPlacements": [],
     "actions": "",
     "steps": [
-      { "id": "finish-player", "action": "actors.faceDirection", "arguments": { "actor": "player", "direction": "West" } }
+      { "id": "finish-player", "action": "characters.faceDirection", "arguments": { "character": "player", "direction": "West" } }
     ]
   }
 }
@@ -336,22 +406,22 @@ bypass the editor filter. Ordinary argument, reference and resource validation
 also applies before any setup action executes.
 
 `completion` describes eligibility for `onComplete.steps`. The existing
-`onComplete.actions` Lua string and `actorPlacements` retain their formats.
+`onComplete.actions` Lua string and `characterPlacements` retain their formats.
 Completion remains distinct from the last sequence
 step: both normal completion and skip apply it; cancellation does not.
 
 ### Runtime ownership, restoration and preview
 
 The runner validates and binds setup, sequence and completion references before
-mutating the scene. Actors referenced only by setup must participate in the
-same actor preparation and control ownership as sequence actors. Capture original
-actor position/facing **before** applying setup.
+mutating the scene. Characters referenced only by setup must participate in the
+same character preparation and control ownership as sequence characters. Capture original
+character position/facing **before** applying setup.
 Acquire the run's control claims, execute setup once in authored order, then
 start the sequence. Setup must finish before the scene's first visible sequence
 frame and before publishing the run's Started notification. Reuse the action
 bindings and Lua execution path; do not introduce a second command interpreter.
 
-Setup may establish temporary actor placement/facing and presentation overrides.
+Setup may establish temporary character placement/facing and presentation overrides.
 It must not commit story outcomes or irreversible gameplay changes. If setup
 fails, abort the run, restore captured staging, release ownership and report the
 phase/step failure. Cancellation likewise restores the pre-setup staging. On
@@ -388,8 +458,8 @@ runtime implementation or exported cutscene source format.
 
 ```csharp
 [LuaPreview(LuaPreviewSpatialState.Described)]
-[LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor,
-    ActorParameter = "actor", AnchorParameter = "destination", Facing = "unknown")]
+[LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor,
+    CharacterParameter = "character", AnchorParameter = "destination", Facing = "unknown")]
 ```
 
 Use these companion attributes on an existing `[LuaAction]` method. The first
@@ -408,7 +478,7 @@ Preview fields:
 | `spatialState` | `described` or `unknown`. |
 | `effects` | Ordered array, explicitly allowed to be empty. |
 
-`described` means effects fully account for spatial changes; unmodified actor
+`described` means effects fully account for spatial changes; unmodified character
 positions/facing may carry forward. `unknown` means reference cues are useful but
 spatial assumptions after the step are invalid. There is no runtime guarantee that
 dialogue action nodes preserve position or facing, so `Dialogue.Play` declares
@@ -424,17 +494,17 @@ Version 1 effect fields (all parameter fields name **method arguments**, not IDs
 
 | `kind` | Required fields | Meaning |
 | --- | --- | --- |
-| `moveActorToAnchor` | `actorParameter`, `anchorParameter`, `facing: "unknown"` | Set schematic actor position to the referenced anchor; record previous known position and new position. |
-| `faceActorTowardActor` | `actorParameter`, `targetActorParameter` | Change facing toward the target's accumulated position; neither actor moves. |
-| `faceActorDirection` | `actorParameter`, `directionParameter` | Set facing to the chosen cardinal world direction without changing position. |
+| `moveCharacterToAnchor` | `characterParameter`, `anchorParameter`, `facing: "unknown"` | Set schematic character position to the referenced anchor; record previous known position and new position. |
+| `faceCharacterTowardCharacter` | `characterParameter`, `targetCharacterParameter` | Change facing toward the target's accumulated position; neither character moves. |
+| `faceCharacterDirection` | `characterParameter`, `directionParameter` | Set facing to the chosen cardinal world direction without changing position. |
 | `showDialogue` | `dialogueParameter` | Show a dialogue reference cue; do not execute flow or choose an answer. |
 
 Each kind forbids the other kinds' fields. Only movement has a `facing` field, and
 `unknown` is its only supported value in version 1. Current `MoveTo` passes only
 anchor position to `CharacterNavigation`: it does not apply anchor facing or
-declare the final facing produced while navigating. Target-actor facing leaves
+declare the final facing produced while navigating. Target-character facing leaves
 direction unknown when either position is unknown or their difference is zero.
-Cardinal facing is known even when the actor's position is unknown: read the
+Cardinal facing is known even when the character's position is unknown: read the
 argument named by `directionParameter` and map North/East/South/West to the world
 vectors above. This is an additive v1 effect; an editor that does not recognize
 it must treat its facing result as unknown rather than preserve stale facing.
@@ -443,41 +513,41 @@ The shared `LuaBindingRegistry` registration/type-inspection boundary rejects
 unsupported versions, spatial states, effect kinds, negative/duplicate order,
 missing/forbidden fields, absent argument names and incompatible mappings, with
 the declaring method in the error. Mapped parameters must be strings annotated
-with exactly `actorRef/mapActor`, `anchorRef/mapAnchor` or `dialogueRef/dialogue`
+with exactly `characterRef/mapCharacter`, `anchorRef/mapAnchor` or `dialogueRef/dialogue`
 for their respective role; `directionParameter` instead requires
 `[LuaResource("direction")]`. Existing action contexts and reference validators remain
 authoritative; preview metadata does not expose additional Lua methods.
 
 ### Cumulative consumer handoff
 
-Start with authored placed-actor world positions and fold declarations only through
+Start with authored placed-character world positions and fold declarations only through
 the selected step. Recompute from that starting state when selecting an earlier
 beat; never retain changes from later beats. Reserved `player` has no invented
-authored starting position. Resolve actor/anchor/dialogue IDs from the step's named
+authored starting position. Resolve character/anchor/dialogue IDs from the step's named
 arguments, not from module names, labels or action IDs.
 
 The example host starts at `(1, 2)` and its meeting anchor at `(4, 2)`:
 
-1. After `approach` (`actors.moveTo`), the host is at `(4, 2)` with unknown facing.
+1. After `approach` (`characters.moveTo`), the host is at `(4, 2)` with unknown facing.
    Show movement arrow 1 from `(1, 2)` to `(4, 2)`, an old-position ghost and a
    distinct resulting-position marker. The anchor's facing is not applied.
-2. After `greet` (`actors.face` toward `player`), the host remains at `(4, 2)`.
+2. After `greet` (`characters.face` toward `player`), the host remains at `(4, 2)`.
    Player position is unknown, so no facing direction can be fabricated. Keep the
    previous movement segment as history; a known facing direction would use a
    visually distinct direction arrow, not another displacement arrow.
 3. After `talk` (`dialogue.play`), show the `greeting` reference cue. Position and
    facing are now unknown because dialogue may mutate the world. Historical arrows
-   describe earlier movements, not a guaranteed current actor position.
+   describe earlier movements, not a guaranteed current character position.
 
 Highlight the selected step and subdue earlier movements. Displacement arrows are
 straight schematic indicators, not routes: no collision, reachability, speed,
 duration, pathfinding, animation or intermediate time is simulated. Missing world
 references must remain explicit diagnostics. A later move can re-establish a known
 endpoint after uncertainty; if its origin is unknown, show the endpoint without a
-fabricated origin, movement arrow or ghost. Do not infer knowledge of other actors.
+fabricated origin, movement arrow or ghost. Do not infer knowledge of other characters.
 
-The completion end-state view remains separate: start from the pre-run actor
-placement/facing, apply `onComplete.actorPlacements`, then fold `onComplete.steps`
+The completion end-state view remains separate: start from the pre-run character
+placement/facing, apply `onComplete.characterPlacements`, then fold `onComplete.steps`
 preview effects in order. It must give the same result when the sequence is
 skipped; never use the last movement beat as an implicit endpoint. Completion
 Lua remains opaque to this preview. Existing manifest serialization includes preview metadata in its
@@ -506,7 +576,7 @@ it never dismisses a standalone dialogue. Pause menus are unavailable during v1
 staging. Camera, animation and audio commands remain outside the initial action
 set.
 
-All actor/anchor/dialogue references resolve before claims are acquired. Referenced
+All character/anchor/dialogue references resolve before claims are acquired. Referenced
 dialogues, including dialogue jumps, must have no import diagnostics. Dialogue
 choices use ordinary action nodes to set story flags or perform other supported
 Lua actions immediately. These changes survive a later cutscene interruption.
@@ -516,7 +586,7 @@ Dialogue actions do not need access to a cutscene-specific Lua environment.
 
 `allowSkip` and `onComplete` are required authored fields. `onComplete` contains
 `actions`, a synchronous Lua block using the same state APIs as dialogue actions,
-`actorPlacements`, and optional structured `steps`. Empty actions, steps and placement lists are valid. Lua syntax is
+`characterPlacements`, and optional structured `steps`. Empty actions, steps and placement lists are valid. Lua syntax is
 checked during import. There is no cutscene outcome string or `SetOutcome` action.
 
 Normal playback and skipping both apply the prepared placements, execute
@@ -528,19 +598,27 @@ If they throw, the exception propagates and the cutscene is not marked completed
 Scenes requiring a player decision use `allowSkip: false`; skipping does not
 execute the remaining dialogue choices or invent answers.
 
-`onComplete.actorPlacements` is an ordered list of
-`{ "actor": "placed-instance-id", "anchor": "anchor-id" }` endpoints, with
-each actor listed at most once. Empty lists are valid.
+`onComplete.characterPlacements` is an ordered list of
+`{ "character": "placed-instance-id", "anchor": "anchor-id" }` endpoints, with
+each character listed at most once. Empty lists are valid.
 
-The runner captures the initial positions and facing of referenced actors before
+Each endpoint may instead store `{ "character": "player", "position": { "x": 168, "y": 104 } }`.
+Coordinates are integer map pixels from the top left, with the character's feet
+aligned to that point. Grid picks save tile centers in this same format. An
+endpoint must contain exactly one of `anchor` or `position`; the position object
+contains only `x` and `y`. Coordinate endpoints retain pre-run facing, while
+anchors retain their existing nonzero-facing override. This endpoint plan is
+shared by normal completion and skipping and runs before completion steps.
+
+The runner captures the initial positions and facing of referenced characters before
 execution. Normal completion and skip both stop transient actions and apply the
-same prepared endpoints. Unlisted actors return to their pre-run placement. An
-anchor's nonzero facing overrides the actor's direction; zero retains its pre-run
+same prepared endpoints. Unlisted characters return to their pre-run placement. An
+anchor's nonzero facing overrides the character's direction; zero retains its pre-run
 direction. Structured completion steps execute afterward, so an explicit final
-FaceDirection can override that facing. Spawned actor endpoints update the existing live spawn state. The
+FaceDirection can override that facing. Spawned character endpoints update the existing live spawn state. The
 completion marker is saved before terminal notifications.
 Cancellation, location leave, death, disabled presentation and exceptions
-stop pending movement/dialogue and restore surviving actors.
+stop pending movement/dialogue and restore surviving characters.
 Cleanup releases only the run's own control and calendar claims.
 
 `GameStateManager.Save` rejects direct saves while staging. Save after `Finished`,

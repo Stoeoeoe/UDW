@@ -49,9 +49,13 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 definition.name = (string)source["id"];
                 var completion = source["onComplete"];
-                var placements = completion["actorPlacements"].Select(placement =>
-                    new CutsceneActorPlacement((string)placement["actor"], (string)placement["anchor"])).ToArray();
-                var actions = (string)completion["actions"];
+                var placements = completion["characterPlacements"].Select(placement =>
+                    placement["anchor"] != null
+                        ? new CutsceneCharacterPlacement((string)placement["character"], (string)placement["anchor"])
+                        : new CutsceneCharacterPlacement((string)placement["character"], CutsceneSequenceCompiler.RequiredPosition(
+                            placement["position"], path, "onComplete.characterPlacements.position"))).ToArray();
+                // Omitted completion Lua explicitly means no actions, like an empty steps list.
+                var actions = (string)completion["actions"] ?? "";
                 try { new Script(CoreModules.Preset_HardSandbox).LoadString(actions, null, path + ":onComplete"); }
                 catch (SyntaxErrorException error)
                 {

@@ -42,8 +42,8 @@ namespace Core.Scripting
 
     /// <summary>Describes a string argument's semantic reference type and visual editor picker.</summary>
     /// <remarks>
-    /// Supported pairs are actorRef/mapActor, anchorRef/mapAnchor and dialogueRef/dialogue.
-    /// Registration validates the metadata; resolving IDs against live actors or authored
+    /// Supported pairs are characterRef/mapCharacter, anchorRef/mapAnchor and dialogueRef/dialogue.
+    /// Registration validates the metadata; resolving IDs against live characters or authored
     /// content belongs to the action's binding boundary. No Unity object is passed through Lua.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Parameter)]
@@ -54,8 +54,8 @@ namespace Core.Scripting
         public LuaReferenceAttribute(string type, string picker) { Type = type; Picker = picker; }
     }
 
-    /// <summary>A string ID selected from the named resources list in bindings.json.</summary>
-    /// <remarks>The exporter supplies choices; the action's validator resolves the selected ID before playback.</remarks>
+    /// <summary>A string ID selected from a named resource list.</summary>
+    /// <remarks>Unity exports its resource choices; Vulcanus supplies project characters. The action's validator resolves the selected ID before playback.</remarks>
     [AttributeUsage(AttributeTargets.Parameter)]
     public sealed class LuaResourceAttribute : Attribute
     {
@@ -63,12 +63,20 @@ namespace Core.Scripting
         public LuaResourceAttribute(string type) => Type = type;
     }
 
-    /// <summary>Exposes a MapPixelPosition through the reusable top-left map-pixel picker.</summary>
+    /// <summary>Exposes a MapPosition through the reusable top-left map-pixel picker.</summary>
     [AttributeUsage(AttributeTargets.Parameter)]
     public sealed class LuaPositionAttribute : Attribute { }
 
+    /// <summary>An ordered, nonempty list edited as a route on the map.</summary>
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public sealed class LuaPathAttribute : Attribute { }
+
+    /// <summary>Declares a cutscene-local character name created by a setup spawn action.</summary>
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public sealed class LuaCharacterDeclarationAttribute : Attribute { }
+
     public enum LuaPreviewSpatialState { Described, Unknown }
-    public enum LuaPreviewEffectKind { MoveActorToAnchor, FaceActorTowardActor, ShowDialogue, FaceActorDirection, SetActorPosition }
+    public enum LuaPreviewEffectKind { MoveCharacterToAnchor, FaceCharacterTowardCharacter, ShowDialogue, FaceCharacterDirection, SetCharacterPosition, SpawnCharacter, MoveCharacterAlongPath }
 
     /// <summary>Declares schematic state after successful action completion, never a gameplay simulation.</summary>
     [AttributeUsage(AttributeTargets.Method)]
@@ -86,12 +94,14 @@ namespace Core.Scripting
     {
         public int Order { get; }
         public LuaPreviewEffectKind Kind { get; }
-        public string ActorParameter { get; set; }
+        public string CharacterParameter { get; set; }
         public string AnchorParameter { get; set; }
-        public string TargetActorParameter { get; set; }
+        public string TargetCharacterParameter { get; set; }
         public string DialogueParameter { get; set; }
         public string DirectionParameter { get; set; }
         public string PositionParameter { get; set; }
+        public string PathParameter { get; set; }
+        public string DefinitionParameter { get; set; }
         public string Facing { get; set; }
 
         public LuaPreviewEffectAttribute(int order, LuaPreviewEffectKind kind) { Order = order; Kind = kind; }

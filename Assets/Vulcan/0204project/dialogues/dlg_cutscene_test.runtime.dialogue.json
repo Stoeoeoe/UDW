@@ -1,0 +1,20 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "base:dlg_cutscene_test",
+  "name": "Cutscene Test",
+  "oneShot": false,
+  "startNodeId": "step_1",
+  "tags": [],
+  "createdAt": "2026-10-26T11:34:14.712Z",
+  "updatedAt": "2026-10-26T11:34:18.961Z",
+  "nodes": [
+    {
+      "id": "step_1",
+      "type": "line",
+      "text": "Hello",
+      "msgKey": "dlg.base:dlg_cutscene_test.01",
+      "next": null
+    }
+  ]
+}

@@ -48,10 +48,11 @@ namespace Character
             _destination = destination;
 
             // Check the actual character footprint before starting. This version cannot take a detour.
-            if (!HasClearDirectRoute())
+            if (!HasClearDirectRoute(out var obstruction))
             {
                 Status = NavigationMoveStatus.Unreachable;
-                Error = "No clear straight-line route to the destination.";
+                Error = $"No clear straight-line route to the destination. Character '{actor.name}', " +
+                    $"from {_body.position.ToString("F3")} to {_destination.ToString("F3")}: {obstruction}";
                 _disposed = true;
                 return;
             }
@@ -61,8 +62,9 @@ namespace Character
             _actor.SetControlBlocked(this, true);
         }
 
-        private bool HasClearDirectRoute()
+        private bool HasClearDirectRoute(out string obstruction)
         {
+            obstruction = null;
             var colliders = _body.GetComponentsInChildren<Collider2D>(true);
             var hasFootprint = false;
             var remaining = _destination - _body.position;
@@ -75,7 +77,13 @@ namespace Character
                 var filter = new ContactFilter2D { useTriggers = false };
                 filter.SetLayerMask(Physics2D.GetLayerCollisionMask(collider.gameObject.layer));
                 if (remaining.magnitude > ArrivalDistance && collider.Cast(remaining.normalized, filter, hits, remaining.magnitude) > 0)
+                {
+                    var hit = hits[0];
+                    obstruction = $"'{hit.collider.name}' ({hit.collider.GetType().Name}, " +
+                        $"layer '{LayerMask.LayerToName(hit.collider.gameObject.layer)}') blocks '{collider.name}' " +
+                        $"at distance {hit.distance:F3}, hit point {hit.point.ToString("F3")}.";
                     return false;
+                }
             }
             if (!hasFootprint) throw new InvalidOperationException("Character navigation requires an active physical collider.");
             return true;

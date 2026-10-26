@@ -54,12 +54,22 @@ namespace Core.Scripting.Editor
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
+                    if (parameter.type == "path")
+                    {
+                        if (arguments[parameter.name] is not JArray points || points.Count == 0)
+                            throw Invalid(location, $"'{parameter.name}' requires a nonempty ordered list of positions.");
+                        var path = new MapPath(points.Select((point, index) => RequiredPosition(point, location, $"{parameter.name}[{index}]")).ToArray());
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, path);
+                        values[parameterIndex] = path;
+                        literals[parameterIndex] = "{ " + string.Join(", ", path.Points.Select(PositionLiteral)) + " }";
+                        continue;
+                    }
                     if (parameter.type == "position")
                     {
                         var position = RequiredPosition(arguments[parameter.name], location, parameter.name);
                         importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, position);
                         values[parameterIndex] = position;
-                        literals[parameterIndex] = $"{{ x = {position.X.ToString("R", CultureInfo.InvariantCulture)}, y = {position.Y.ToString("R", CultureInfo.InvariantCulture)} }}";
+                        literals[parameterIndex] = PositionLiteral(position);
                         continue;
                     }
                     string value;
@@ -94,6 +104,9 @@ namespace Core.Scripting.Editor
             return lua.ToString();
         }
 
+        private static string PositionLiteral(MapPosition position) => position.IsAnchor ? $"{{ anchor = {LuaString(position.Anchor)} }}" :
+            $"{{ x = {position.X.ToString("R", CultureInfo.InvariantCulture)}, y = {position.Y.ToString("R", CultureInfo.InvariantCulture)} }}";
+
         private static string RequiredString(JToken value, string location, string name)
         {
             if (value?.Type != JTokenType.String || string.IsNullOrWhiteSpace(value.Value<string>()))
@@ -101,14 +114,19 @@ namespace Core.Scripting.Editor
             return value.Value<string>();
         }
 
-        private static MapPixelPosition RequiredPosition(JToken token, string location, string name)
+        internal static MapPosition RequiredPosition(JToken token, string location, string name)
         {
             if (token is not JObject point) throw Invalid(location, $"'{name}' requires a position object with x/y numbers.");
+            if (point.Property("anchor") != null)
+            {
+                RejectUnknownFields(point, new[] { "anchor" }, location + "." + name);
+                return new MapPosition(RequiredString(point["anchor"], location, name + ".anchor"));
+            }
             RejectUnknownFields(point, new[] { "x", "y" }, location + "." + name);
             foreach (var axis in new[] { "x", "y" })
                 if (point[axis] == null || point[axis].Type is not (JTokenType.Integer or JTokenType.Float))
                     throw Invalid(location, $"'{name}.{axis}' requires a finite, nonnegative number.");
-            try { return new MapPixelPosition(point["x"].Value<double>(), point["y"].Value<double>()); }
+            try { return new MapPosition(point["x"].Value<double>(), point["y"].Value<double>()); }
             catch (ArgumentOutOfRangeException error) { throw new FormatException($"{location}: '{name}': {error.Message}", error); }
         }
 

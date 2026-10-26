@@ -18,9 +18,9 @@ namespace Core.Scripting
         {
             VulcanusLuaEngine.Module(() =>
             {
-                var actors = MapActorLuaApi.BindCurrentMap();
-                bindActors(actors);
-                return actors;
+                var characters = MapActorLuaApi.BindCurrentMap();
+                bindActors(characters);
+                return characters;
             }),
             VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter))
         };
@@ -30,7 +30,7 @@ namespace Core.Scripting
             BindCurrentMap(definition, dialogueRunner, out _);
 
         internal static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
-            VulcanusDialogueRunner dialogueRunner, out MapActorLuaApi actors)
+            VulcanusDialogueRunner dialogueRunner, out MapActorLuaApi characters)
         {
             if (!definition) throw new ArgumentNullException(nameof(definition));
             if (!LevelManager.Instance.SceneReady)
@@ -47,11 +47,11 @@ namespace Core.Scripting
                 var steps = definition.OnStart.Select(step => ("setup", step))
                     .Concat(definition.Steps.Select(step => ("sequence", step)))
                     .Concat(definition.OnComplete.Steps.Select(step => ("completion", step)));
-                var bindings = BindSteps(steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, actors => actorApi = actors));
-                // An endpoint can reference an actor even when no sequence action moves it.
-                if (definition.OnComplete.ActorPlacements.Count > 0)
+                var bindings = BindSteps(steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, characters => actorApi = characters));
+                // An endpoint can reference a character even when no sequence action moves it.
+                if (definition.OnComplete.CharacterPlacements.Count > 0)
                     actorApi ??= MapActorLuaApi.BindCurrentMap();
-                actors = actorApi;
+                characters = actorApi;
                 return bindings;
             }
             catch (Exception error)
@@ -88,7 +88,8 @@ namespace Core.Scripting
                         var argument = step.Arguments.Single(argument => argument.Name == parameter.Name);
                         if (parameter.ParameterType == typeof(string)) return (object)argument.Value;
                         if (parameter.ParameterType == typeof(double)) return double.Parse(argument.Value, CultureInfo.InvariantCulture);
-                        if (parameter.ParameterType == typeof(MapPixelPosition)) return argument.Position;
+                        if (parameter.ParameterType == typeof(MapPosition)) return argument.Position;
+                        if (parameter.ParameterType == typeof(MapPath)) return argument.Path;
                         throw new InvalidOperationException($"Unsupported sequence parameter type '{parameter.ParameterType}'.");
                     }).ToArray();
                     var type = method.Info.DeclaringType;

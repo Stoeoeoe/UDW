@@ -14,5 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Dialogue.Vulcanus.VulcanusDialogueDatabase
   project: {fileID: -1814933055721424766, guid: 970770d7999d5f945b71ec98f97650ba, type: 3}
   dialogues:
-  - {fileID: 2757037704936936944, guid: f9ec580aa05a8544789d27cee1cbafac, type: 3}
-  - {fileID: 2757037704936936944, guid: 485e7015c14884c4cb8e78aaa1959f19, type: 3}
+  - {fileID: 2757037704936936944, guid: f8a9105e804ffdc459df3f8bb0c6006a, type: 3}

@@ -57,6 +57,8 @@ namespace Core.Catalogs.Editor
                 foreach (var catalog in FindCatalogs())
                     try { Refresh(catalog); }
                     catch (Exception exception) { Debug.LogError(exception.Message, catalog); }
+                try { Core.Dialogue.Vulcanus.Editor.DialogueDatabaseDiscovery.RefreshAll(); }
+                catch (Exception exception) { Debug.LogError(exception.Message); }
             };
         }
 
@@ -66,8 +68,9 @@ namespace Core.Catalogs.Editor
                 (path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase) ||
-                 path.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".character.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".runtime.cutscene.json", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".runtime.dialogue.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase)) &&
                 !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) Schedule();
         }
@@ -82,6 +85,7 @@ namespace Core.Catalogs.Editor
         {
             DefaultCatalogAssets.CreateMissingCatalogs();
             foreach (var catalog in FindCatalogs()) Refresh(catalog);
+            Core.Dialogue.Vulcanus.Editor.DialogueDatabaseDiscovery.RefreshAll();
         }
     }
 

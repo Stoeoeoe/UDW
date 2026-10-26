@@ -2,32 +2,32 @@
   "schemaVersion": 2,
   "modules": [
     {
-      "path": "Actors",
+      "path": "Characters",
       "methods": [
         {
           "name": "Face",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "target",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             }
           ],
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.face",
-            "displayName": "Face actor",
+            "id": "characters.face",
+            "displayName": "Face character",
             "category": "Movement",
-            "description": "Turn an existing actor toward another actor.",
+            "description": "Turn an existing character toward another character.",
             "contexts": [
               "cutscene",
               "npcRoutine"
@@ -43,9 +43,9 @@
               "spatialState": "described",
               "effects": [
                 {
-                  "kind": "faceActorTowardActor",
-                  "actorParameter": "actor",
-                  "targetActorParameter": "target"
+                  "kind": "faceCharacterTowardCharacter",
+                  "characterParameter": "character",
+                  "targetCharacterParameter": "target"
                 }
               ]
             }
@@ -55,10 +55,10 @@
           "name": "FaceDirection",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "direction",
@@ -70,10 +70,10 @@
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.faceDirection",
+            "id": "characters.faceDirection",
             "displayName": "Face direction",
             "category": "Movement",
-            "description": "Turn an actor toward North, East, South or West.",
+            "description": "Turn a character toward North, East, South or West.",
             "contexts": [
               "cutscene",
               "npcRoutine"
@@ -89,8 +89,8 @@
               "spatialState": "described",
               "effects": [
                 {
-                  "kind": "faceActorDirection",
-                  "actorParameter": "actor",
+                  "kind": "faceCharacterDirection",
+                  "characterParameter": "character",
                   "directionParameter": "direction"
                 }
               ]
@@ -101,10 +101,10 @@
           "name": "MoveTo",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "destination",
@@ -117,10 +117,10 @@
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.moveTo",
+            "id": "characters.moveTo",
             "displayName": "Move to anchor",
             "category": "Movement",
-            "description": "Walk an existing actor to a map anchor.",
+            "description": "Walk an existing character to a map anchor.",
             "contexts": [
               "cutscene",
               "npcRoutine"
@@ -134,8 +134,8 @@
               "spatialState": "described",
               "effects": [
                 {
-                  "kind": "moveActorToAnchor",
-                  "actorParameter": "actor",
+                  "kind": "moveCharacterToAnchor",
+                  "characterParameter": "character",
                   "anchorParameter": "destination",
                   "facing": "unknown"
                 }
@@ -147,10 +147,10 @@
           "name": "Place",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "position",
@@ -160,17 +160,18 @@
               "origin": "topLeft",
               "placementModes": [
                 "tile",
-                "pixel"
+                "pixel",
+                "anchor"
               ],
               "tileAnchor": "center",
-              "actorPivot": "feet"
+              "characterPivot": "feet"
             }
           ],
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.place",
+            "id": "characters.place",
             "displayName": "Place character",
             "category": "Placement",
             "description": "Immediately place a character at a map position.",
@@ -188,8 +189,8 @@
               "spatialState": "described",
               "effects": [
                 {
-                  "kind": "setActorPosition",
-                  "actorParameter": "actor",
+                  "kind": "setCharacterPosition",
+                  "characterParameter": "character",
                   "positionParameter": "position",
                   "facing": "preserve"
                 }
@@ -201,10 +202,10 @@
           "name": "PlayAnimation",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "animation",
@@ -216,10 +217,10 @@
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.playAnimation",
+            "id": "characters.playAnimation",
             "displayName": "Play animation",
             "category": "Animation",
-            "description": "Play a finite animation on an actor and wait for completion.",
+            "description": "Play a finite animation on a character and wait for completion.",
             "contexts": [
               "cutscene"
             ],
@@ -231,6 +232,118 @@
               "version": 1,
               "spatialState": "unknown",
               "effects": []
+            }
+          }
+        },
+        {
+          "name": "Spawn",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterDeclaration"
+            },
+            {
+              "name": "definition",
+              "type": "string",
+              "resourceType": "character"
+            },
+            {
+              "name": "position",
+              "type": "position",
+              "picker": "mapPosition",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.spawn",
+            "displayName": "Spawn character",
+            "category": "Placement",
+            "description": "Spawn a persistent NPC and declare its cutscene-local character name.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "spawnCharacter",
+                  "characterParameter": "character",
+                  "positionParameter": "position",
+                  "definitionParameter": "definition",
+                  "facing": "unknown"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "WalkPath",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "path",
+              "type": "path",
+              "picker": "mapPath",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.walkPath",
+            "displayName": "Walk path",
+            "category": "Movement",
+            "description": "Walk through an ordered list of map positions and anchors.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "moveCharacterAlongPath",
+                  "characterParameter": "character",
+                  "pathParameter": "path",
+                  "facing": "unknown"
+                }
+              ]
             }
           }
         }

@@ -1,0 +1,14 @@
+{
+  "dialogueId": "base:dlg_cutscene_test",
+  "dialogueName": "Cutscene Test",
+  "generatedAt": "2026-10-26T11:34:19.666Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:dlg_cutscene_test.01",
+      "text": "Hello",
+      "nodeId": "step_1",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../schemas/dialogue-i18n.schema.json"
+}

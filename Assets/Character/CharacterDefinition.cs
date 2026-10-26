@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Character
 {
-    /// <summary>Imported Vulcanus actor/NPC identity, available without a loaded scene view.</summary>
+    /// <summary>Imported Vulcanus character identity, available without a prefab or loaded scene view.</summary>
     public sealed class CharacterDefinition : ValidatedScriptableObject<CharacterDefinitionValidator>
     {
         [SerializeField, ReadOnly, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)] private string characterId;

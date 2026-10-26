@@ -54,7 +54,8 @@ namespace Core.Scripting.Editor
             manifest.resources.Add("direction", CardinalDirections.Values.Keys.OrderBy(id => id, StringComparer.Ordinal)
                 .Select(id => new LuaResourceDescription { id = id, description = id }).ToArray());
             foreach (var parameter in manifest.modules.SelectMany(module => module.methods).SelectMany(method => method.parameters))
-                if (parameter.resourceType != null && !manifest.resources.ContainsKey(parameter.resourceType))
+                // Vulcanus owns the character definitions and supplies this selector itself.
+                if (parameter.resourceType != null && parameter.resourceType != "character" && !manifest.resources.ContainsKey(parameter.resourceType))
                     throw new InvalidOperationException($"No resources exported for type '{parameter.resourceType}'.");
         }
 
@@ -63,7 +64,7 @@ namespace Core.Scripting.Editor
             var errors = animation.ValidateConfiguration();
             if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
             if (animation.Clip) return !animation.Clip.isLooping && animation.Clip.length > 0;
-            // Different characters can offer different actions; binding checks the selected actor's library.
+            // Different characters can offer different actions; binding checks the selected character's library.
             return libraries.Any(library => new[] { Vector2.down, Vector2.up, Vector2.left, Vector2.right }.All(facing =>
                 library.TryGet(MemaoAnimationLibrary.DirectionalName(animation.MemaoAction, facing), out var clip) &&
                 !clip.isLooping && clip.length > 0));

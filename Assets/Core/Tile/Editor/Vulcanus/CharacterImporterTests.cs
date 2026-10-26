@@ -16,7 +16,7 @@ namespace Core.Tile.Editor.Vulcanus
     {
         private const string SchemaFolder = "Assets/Vulcan/0204project/schemas/";
         private static CharacterDefinition Parse(string json, bool npc) =>
-            CharacterImporter.Parse(json, SchemaFolder + (npc ? "npc" : "actor") + ".schema.json", "character-test.json");
+            CharacterImporter.Parse(json, SchemaFolder + (npc ? "npc" : "character") + ".schema.json", "character-test.json");
 
         [TestCase(true)]
         [TestCase(false)]
@@ -51,7 +51,7 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
-        public void ActorsPreserveNamespacedIdsAndIconIdentifiers()
+        public void CharactersPreserveNamespacedIdsAndIconIdentifiers()
         {
             var definition = Parse("{\"id\":\"base:gagaa\",\"name\":\"Gagaa\",\"icon\":\"GiAbstract041\"}", false);
             try
@@ -78,7 +78,7 @@ namespace Core.Tile.Editor.Vulcanus
 
         [TestCase("{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\",\"emotions\":[3]}")]
         [TestCase("{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\",\"folderPath\":3}")]
-        public void ActorSchemaRejectsInvalidOptionalFields(string json) =>
+        public void CharacterSchemaRejectsInvalidOptionalFields(string json) =>
             Assert.Throws<FormatException>(() => Parse(json, false));
 
         [Test]
@@ -86,26 +86,26 @@ namespace Core.Tile.Editor.Vulcanus
         {
             string path = Path.Combine("Temp", "character-schema-" + Guid.NewGuid().ToString("N") + ".json");
             const string json = "{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\"}";
-            var schema = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(SchemaFolder + "actor.schema.json"));
+            var schema = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(SchemaFolder + "character.schema.json"));
             try
             {
                 File.WriteAllText(path, schema.ToString());
-                Object.DestroyImmediate(CharacterImporter.Parse(json, path, "test.actor.json"));
+                Object.DestroyImmediate(CharacterImporter.Parse(json, path, "test.character.json"));
                 schema["properties"]["name"]["pattern"] = "^[A-Z]+$";
                 File.WriteAllText(path, schema.ToString());
-                var error = Assert.Throws<FormatException>(() => CharacterImporter.Parse(json, path, "test.actor.json"));
+                var error = Assert.Throws<FormatException>(() => CharacterImporter.Parse(json, path, "test.character.json"));
                 Assert.That(error.Message, Does.Contain("name"));
             }
             finally { File.Delete(path); }
         }
 
         [Test]
-        public void ExistingActorAndPlayerReferencesComeFromVulcanusSources()
+        public void ExistingCharacterAndPlayerReferencesComeFromVulcanusSources()
         {
-            var actor = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/actors/gagaa.actor.json");
-            var player = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/actors/player.actor.json");
-            Assert.That(CharacterCatalog.Require("base:gagaa"), Is.SameAs(actor));
-            Assert.That(actor.Icon, Is.EqualTo("GiAbstract041"));
+            var character = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/characters/gagaa.character.json");
+            var player = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/characters/player.character.json");
+            Assert.That(CharacterCatalog.Require("base:gagaa"), Is.SameAs(character));
+            Assert.That(character.Icon, Is.EqualTo("GiAbstract041"));
             Assert.That(CharacterCatalog.Require("base:player"), Is.SameAs(player));
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
             Assert.That(prefab.GetComponent<GameCharacter>().Definition, Is.SameAs(player));
@@ -113,20 +113,44 @@ namespace Core.Tile.Editor.Vulcanus
                 .GetComponent<Core.Inventory.PersistentContainer>().Owner, Is.SameAs(player));
         }
 
+        [Test]
+        public void UnmappedCharacterImportsIntoTheCatalogWithoutAPrefab()
+        {
+            var folder = "Assets/__UnmappedCharacter_" + Guid.NewGuid().ToString("N");
+            AssetDatabase.CreateFolder("Assets", Path.GetFileName(folder));
+            var path = folder + "/visitor.character.json";
+            var catalog = CatalogResources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
+            try
+            {
+                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:unmapped-visitor\",\"name\":\"Unmapped Visitor\",\"icon\":\"VisitorIcon\"}");
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                var definition = AssetDatabase.LoadAssetAtPath<CharacterDefinition>(path);
+                Assert.That(definition, Is.Not.Null);
+                CatalogDiscovery.Refresh(catalog);
+                Assert.That(catalog.Get("test:unmapped-visitor"), Is.SameAs(definition));
+                Assert.That(definition.DisplayName, Is.EqualTo("Unmapped Visitor"));
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(folder);
+                CatalogDiscovery.Refresh(catalog);
+            }
+        }
+
         [UnityTest]
         public IEnumerator ImportAndSourceEditsRefreshTheRegistryAutomatically()
         {
             string folder = "Assets/__CharacterImportTests_" + Guid.NewGuid().ToString("N");
             AssetDatabase.CreateFolder("Assets", folder.Substring("Assets/".Length));
-            string path = folder + "/visitor.actor.json";
+            string path = folder + "/visitor.character.json";
             var catalog = CatalogResources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
             try
             {
-                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/actor.schema.json\",\"id\":\"test:visitor\",\"name\":\"Visitor\",\"icon\":\"🧑\",\"emotions\":[]}");
+                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:visitor\",\"name\":\"Visitor\",\"icon\":\"🧑\",\"emotions\":[]}");
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
                 for (int i=0; i<20 && !catalog.Get("test:visitor"); i++) yield return null;
                 Assert.That(catalog.Get("test:visitor").DisplayName, Is.EqualTo("Visitor"));
-                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/actor.schema.json\",\"id\":\"test:visitor\",\"name\":\"Updated Visitor\",\"icon\":\"🧑\"}");
+                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:visitor\",\"name\":\"Updated Visitor\",\"icon\":\"🧑\"}");
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
                 yield return null;
                 yield return null;

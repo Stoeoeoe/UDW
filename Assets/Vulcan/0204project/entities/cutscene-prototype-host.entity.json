@@ -1,9 +1,0 @@
-{
-  "$schema": "../schemas/entity-type.schema.json",
-  "id": "cutscene-prototype-host",
-  "displayName": "Cutscene prototype host",
-  "category": "npc",
-  "placeholderColor": "#bf9b61",
-  "properties": [],
-  "folderPath": "Prototypes"
-}

@@ -1,13 +1,13 @@
 {
   "actions": {
-    "actors.faceDirection": {
+    "characters.faceDirection": {
       "version": 1,
       "spatialState": "described",
       "effects": [
-        { "kind": "faceActorDirection", "actorParameter": "actor", "directionParameter": "direction" }
+        { "kind": "faceCharacterDirection", "characterParameter": "character", "directionParameter": "direction" }
       ]
     },
-    "actors.playAnimation": {
+    "characters.playAnimation": {
       "version": 1,
       "spatialState": "unknown",
       "effects": []
@@ -17,18 +17,18 @@
       "spatialState": "described",
       "effects": []
     },
-    "actors.moveTo": {
+    "characters.moveTo": {
       "version": 1,
       "spatialState": "described",
       "effects": [
-        { "kind": "moveActorToAnchor", "actorParameter": "actor", "anchorParameter": "destination", "facing": "unknown" }
+        { "kind": "moveCharacterToAnchor", "characterParameter": "character", "anchorParameter": "destination", "facing": "unknown" }
       ]
     },
-    "actors.face": {
+    "characters.face": {
       "version": 1,
       "spatialState": "described",
       "effects": [
-        { "kind": "faceActorTowardActor", "actorParameter": "actor", "targetActorParameter": "target" }
+        { "kind": "faceCharacterTowardCharacter", "characterParameter": "character", "targetCharacterParameter": "target" }
       ]
     },
     "dialogue.play": {
@@ -47,36 +47,36 @@
     },
     "anchors": { "meeting": { "position": [4, 2], "facing": [0, -1] } },
     "sequence": [
-      { "id": "approach", "action": "actors.moveTo", "arguments": { "actor": "host-01", "destination": "meeting" } },
-      { "id": "greet", "action": "actors.face", "arguments": { "actor": "host-01", "target": "player" } },
+      { "id": "approach", "action": "characters.moveTo", "arguments": { "character": "host-01", "destination": "meeting" } },
+      { "id": "greet", "action": "characters.face", "arguments": { "character": "host-01", "target": "player" } },
       { "id": "talk", "action": "dialogue.play", "arguments": { "dialogue": "greeting" } }
     ],
     "afterSelectedStep": [
       {
         "step": "approach",
-        "actors": {
+        "characters": {
           "host-01": { "position": [4, 2], "facing": null },
           "player": { "position": null, "facing": null }
         },
-        "movementSegments": [{ "step": "approach", "number": 1, "actor": "host-01", "from": [1, 2], "to": [4, 2] }],
+        "movementSegments": [{ "step": "approach", "number": 1, "character": "host-01", "from": [1, 2], "to": [4, 2] }],
         "dialogueCue": null
       },
       {
         "step": "greet",
-        "actors": {
+        "characters": {
           "host-01": { "position": [4, 2], "facing": null },
           "player": { "position": null, "facing": null }
         },
-        "movementSegments": [{ "step": "approach", "number": 1, "actor": "host-01", "from": [1, 2], "to": [4, 2] }],
+        "movementSegments": [{ "step": "approach", "number": 1, "character": "host-01", "from": [1, 2], "to": [4, 2] }],
         "dialogueCue": null
       },
       {
         "step": "talk",
-        "actors": {
+        "characters": {
           "host-01": { "position": null, "facing": null },
           "player": { "position": null, "facing": null }
         },
-        "movementSegments": [{ "step": "approach", "number": 1, "actor": "host-01", "from": [1, 2], "to": [4, 2] }],
+        "movementSegments": [{ "step": "approach", "number": 1, "character": "host-01", "from": [1, 2], "to": [4, 2] }],
         "dialogueCue": "greeting"
       }
     ]

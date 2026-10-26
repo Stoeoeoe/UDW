@@ -138,8 +138,8 @@ namespace Core.Scripting.Editor
         [Test]
         public void ManifestAndCompilerExposeTheAnimationPicker()
         {
-            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Actors")
-                .methods.Single(method => method.action.id == "actors.playAnimation");
+            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Characters")
+                .methods.Single(method => method.action.id == "characters.playAnimation");
             Assert.That(method.action.execution, Is.EqualTo("awaitable"));
             Assert.That(method.action.contexts, Is.EqualTo(new[] { "cutscene" }));
             var parameter = method.parameters.Single(parameter => parameter.name == "animation");
@@ -147,9 +147,9 @@ namespace Core.Scripting.Editor
             Assert.That(parameter.semanticType, Is.Null);
             Assert.That(parameter.picker, Is.Null);
             Assert.That(method.action.preview.spatialState, Is.EqualTo("unknown"));
-            var sequence = JArray.Parse("[{'id':'gesture','action':'actors.playAnimation','arguments':{'actor':'player','animation':'base:pass-out'}}]");
+            var sequence = JArray.Parse("[{'id':'gesture','action':'characters.playAnimation','arguments':{'character':'player','animation':'base:pass-out'}}]");
             Assert.That(CutsceneSequenceCompiler.Compile(sequence, "animation.json"),
-                Is.EqualTo("Actors.PlayAnimation(\"player\", \"base:pass-out\");\n"));
+                Is.EqualTo("Characters.PlayAnimation(\"player\", \"base:pass-out\");\n"));
         }
 
         [Test]
@@ -216,7 +216,7 @@ namespace Core.Scripting.Editor
             private readonly GameCharacter _actor;
             private readonly CharacterAnimation _animation;
             public bool Finished;
-            public PlaybackApi(GameCharacter actor, CharacterAnimation animation) { _actor = actor; _animation = animation; }
+            public PlaybackApi(GameCharacter character, CharacterAnimation animation) { _actor = character; _animation = animation; }
             [LuaAction("test.play", "Play", "Test", "Play the fixture animation.", "cutscene", Phases = new[] { "sequence" })]
             public ILuaAction Play() => new PlayAnimationAction(_actor, _animation);
             [LuaAction("test.finish", "Finish", "Test", "Observe completion.", "cutscene", Phases = new[] { "sequence" })]

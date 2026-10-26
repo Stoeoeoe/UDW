@@ -1,40 +1,83 @@
 {
   "$schema": "../schemas/cutscene.schema.json",
-  "formatVersion": 1,
+  "formatVersion": 2,
   "id": "base:cutscene-prototype",
   "mapId": "base:map-1",
   "allowSkip": true,
-  "onComplete": {
-    "actorPlacements": [
-      {
-        "actor": "cutscene-prototype-host-01",
-        "anchor": "prototype-meeting"
+  "onStart": [
+    {
+      "id": "beat-cbefce62-2265-41cf-98e5-4cfe2378f5bf",
+      "action": "characters.place",
+      "arguments": {
+        "character": "player",
+        "position": {
+          "x": 152,
+          "y": 88
+        }
       }
-    ],
-    "actions": ""
+    }
+  ],
+  "onComplete": {
+    "steps": [],
+    "characterPlacements": [
+      {
+        "character": "player",
+        "position": {
+          "x": 216,
+          "y": 200
+        }
+      }
+    ]
   },
   "sequence": [
     {
-      "id": "approach",
-      "action": "actors.moveTo",
+      "id": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662",
+      "action": "cutscene.wait",
       "arguments": {
-        "actor": "cutscene-prototype-host-01",
-        "destination": "prototype-meeting"
+        "seconds": 0.2
       }
     },
     {
-      "id": "greet",
-      "action": "actors.face",
+      "id": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
+      "action": "characters.walkPath",
       "arguments": {
-        "actor": "cutscene-prototype-host-01",
-        "target": "player"
+        "character": "player",
+        "path": [
+          {
+            "x": 168,
+            "y": 104
+          },
+          {
+            "x": 200,
+            "y": 120
+          },
+          {
+            "x": 216,
+            "y": 168
+          }
+        ]
       }
     },
     {
-      "id": "talk",
+      "id": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
       "action": "dialogue.play",
       "arguments": {
-        "dialogue": "prototype_greeting"
+        "dialogue": "base:dlg_cutscene_test"
+      }
+    },
+    {
+      "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
+      "action": "cutscene.wait",
+      "arguments": {
+        "seconds": 2
+      }
+    },
+    {
+      "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
+      "action": "characters.playAnimation",
+      "arguments": {
+        "character": "player",
+        "animation": "base:pass-out"
       }
     }
   ]

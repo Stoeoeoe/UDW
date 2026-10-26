@@ -32,13 +32,18 @@ namespace Core.Scripting
     {
         [SerializeField, ReadOnly] private string name;
         [SerializeField, ReadOnly] private string value;
-        [SerializeField, ReadOnly] private MapPixelPosition position;
+        [SerializeField, ReadOnly] private MapPosition position;
         [SerializeField, ReadOnly] private bool isPosition;
+        [SerializeField, ReadOnly] private MapPath path;
+        // Inline Unity serialization materializes null MapPath fields; retain the authored kind explicitly.
+        [SerializeField, ReadOnly] private bool isPath;
         public string Name => name;
         /// <summary>String contents or invariant numeric text. Position arguments use Position instead.</summary>
-        public string Value => !isPosition ? value : throw new InvalidOperationException($"Argument '{name}' is a position, not text.");
-        public MapPixelPosition Position => isPosition ? position : throw new InvalidOperationException($"Argument '{name}' is not a position.");
-        public CutsceneArgument(string name, string value) { this.name = name; this.value = value; position = default; isPosition = false; }
-        public CutsceneArgument(string name, MapPixelPosition position) { this.name = name; this.position = position; value = null; isPosition = true; }
+        public string Value => !isPosition && !isPath ? value : throw new InvalidOperationException($"Argument '{name}' is a position or path, not text.");
+        public MapPosition Position => isPosition ? position : throw new InvalidOperationException($"Argument '{name}' is not a position.");
+        public MapPath Path => isPath && path != null ? path : throw new InvalidOperationException($"Argument '{name}' is not a path.");
+        public CutsceneArgument(string name, string value) { this.name = name; this.value = value; position = default; isPosition = false; path = null; isPath = false; }
+        public CutsceneArgument(string name, MapPosition position) { this.name = name; this.position = position; value = null; isPosition = true; path = null; isPath = false; }
+        public CutsceneArgument(string name, MapPath path) { this.name = name; this.path = path ?? throw new ArgumentNullException(nameof(path)); value = null; position = default; isPosition = false; isPath = true; }
     }
 }

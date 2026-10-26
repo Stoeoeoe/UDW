@@ -841,7 +841,7 @@ namespace Core.Tile.Editor.Vulcanus
                         var extension = Path.GetExtension(filePath);
                         return filePath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)
                                      || filePath.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase)
-                                     || filePath.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase)
+                                     || filePath.EndsWith(".character.json", StringComparison.OrdinalIgnoreCase)
                                      || extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)
                                      || extension.Equals(".vmap", StringComparison.OrdinalIgnoreCase)
                                      || extension.Equals(".vts", StringComparison.OrdinalIgnoreCase)
@@ -1054,7 +1054,7 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 if (filePath.EndsWith(".entity.json", StringComparison.OrdinalIgnoreCase)) return SourceKind.EntityDefinition;
                 if (filePath.EndsWith(".npc.json", StringComparison.OrdinalIgnoreCase) ||
-                    filePath.EndsWith(".actor.json", StringComparison.OrdinalIgnoreCase)) return SourceKind.Character;
+                    filePath.EndsWith(".character.json", StringComparison.OrdinalIgnoreCase)) return SourceKind.Character;
 
                 var extension = Path.GetExtension(filePath);
                 if (extension.Equals(".vproj", StringComparison.OrdinalIgnoreCase)) return SourceKind.Project;

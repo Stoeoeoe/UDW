@@ -544,7 +544,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93d22a3520456dd4f8279ed5d42b4494, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.GameCharacter
-  definition: {fileID: 8476815486123167853, guid: c21ff465ad3e7fb4fae9576897b67fc9, type: 3}
+  definition: {fileID: 8476815486123167853, guid: cb6af10516bc306459a47afea08af5a8, type: 3}
   animator: {fileID: 647813239521730212}
   interactionSensor: {fileID: 2857205774705344525}
   performPrimaryActionAbility: {fileID: 3005468383041148162}

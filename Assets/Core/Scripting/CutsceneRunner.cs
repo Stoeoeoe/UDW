@@ -69,16 +69,18 @@ namespace Core.Scripting
 
             // Resolve everything before acquiring control. A bad reference cannot leave half a scene staged.
             var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance,
-                out var actors);
-            var placements = CutscenePlacement.Prepare(definition, bindings, actors);
-            if (placements.Any(placement => placement.Actor.IsControlBlocked || placement.Actor.Controller.IsMovementOwned)) return false;
+                out var characters);
+            var placements = CutscenePlacement.Prepare(definition, bindings, characters);
+            if (placements.Any(placement => placement.Character.IsControlBlocked || placement.Character.Controller.IsMovementOwned)) return false;
             var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId);
-            run = new CutsceneRun(this, definition, session, placements, bindings);
+            run = new CutsceneRun(this, definition, session, placements, bindings, characters);
             ActiveRun = run;
+            // Character-only modules are absent for cutscenes containing just waits/dialogue.
+            characters?.BeginRun(run);
             _player = player;
             _player.OnConditionStateChanged += OnPlayerConditionChanged;
             _player.SetControlBlocked(run, true);
-            foreach (var placement in placements) placement.Actor.SetControlBlocked(run, true);
+            foreach (var placement in placements) placement.Character.SetControlBlocked(run, true);
             _gui.SetCutsceneActive(true);
             try { ExecuteImmediate(run, definition.OnStartLua, definition.OnStart, "setup"); }
             catch
@@ -146,6 +148,7 @@ namespace Core.Scripting
             if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning) return;
             // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
             run.IsRunning = false;
+            var committed = false;
             try
             {
                 run.Session.Dispose();
@@ -156,6 +159,7 @@ namespace Core.Scripting
                     ExecuteImmediate(run, run.Definition.OnComplete.Lua, run.Definition.OnComplete.Steps, "completion");
                     _completionActions.Execute(run.Definition.OnComplete.Actions);
                     GameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
+                    committed = true;
                 }
             }
             catch
@@ -166,7 +170,8 @@ namespace Core.Scripting
             finally
             {
                 foreach (var placement in run.Placements)
-                    if (placement.Actor) placement.Actor.SetControlBlocked(run, false);
+                    if (placement.Character) placement.Character.SetControlBlocked(run, false);
+                run.Characters?.FinishSpawns(keep: committed);
                 if (_player)
                 {
                     _player.OnConditionStateChanged -= OnPlayerConditionChanged;

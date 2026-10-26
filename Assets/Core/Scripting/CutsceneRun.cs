@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Character;
@@ -18,11 +19,19 @@ namespace Core.Scripting
         internal string CurrentStepId => Session.ActionsStarted == 0 ? null : Definition.Steps[Session.ActionsStarted - 1].Id;
         internal LuaExecutionSession Session { get; }
         internal LuaBindingRegistry Bindings { get; }
-        internal CutscenePlacement[] Placements { get; }
+        internal List<CutscenePlacement> Placements { get; }
+        internal MapActorLuaApi Characters { get; }
 
         internal CutsceneRun(CutsceneRunner owner, CutsceneDefinition definition,
-            LuaExecutionSession session, CutscenePlacement[] placements, LuaBindingRegistry bindings)
-        { _owner = owner; Definition = definition; Session = session; Placements = placements; Bindings = bindings; }
+            LuaExecutionSession session, CutscenePlacement[] placements, LuaBindingRegistry bindings, MapActorLuaApi characters)
+        { _owner = owner; Definition = definition; Session = session; Placements = placements.ToList(); Bindings = bindings; Characters = characters; }
+
+        internal void AddSpawnedActor(MapActorLuaApi characters, string id)
+        {
+            var placement = CutscenePlacement.PrepareActor(Definition, characters, id);
+            placement.Character.SetControlBlocked(this, true);
+            Placements.Add(placement);
+        }
 
         public void Cancel() => _owner.Cancel(this);
         public bool Skip() => _owner.Skip(this);
@@ -32,63 +41,73 @@ namespace Core.Scripting
     /// <summary>Prepared placements contain live references only; none of this transient staging is saved.</summary>
     internal sealed class CutscenePlacement
     {
-        internal GameCharacter Actor { get; }
+        internal GameCharacter Character { get; }
         private readonly Rigidbody2D _body;
         private readonly SpawnedObject _spawn;
         private readonly Transform _root;
         private readonly Vector3 _originalPosition, _endpoint;
         private readonly Vector2 _originalFacing, _endpointFacing;
 
-        private CutscenePlacement(GameCharacter actor, Vector3 endpoint, Vector2 facing)
+        private CutscenePlacement(GameCharacter character, Vector3 endpoint, Vector2 facing)
         {
-            Actor = actor;
-            _body = actor.GetComponent<Rigidbody2D>();
-            if (!_body || !_body.simulated || !actor.Controller.isActiveAndEnabled)
-                throw new InvalidOperationException($"Cutscene actor '{actor.name}' requires its live physics and controller.");
-            _spawn = actor.GetComponentInParent<SpawnedObject>();
-            _root = _spawn ? _spawn.transform : actor.transform; // The player has no spawn record.
-            _originalPosition = actor.transform.position;
-            _originalFacing = actor.Orientation.FacingDirection;
+            Character = character;
+            _body = character.GetComponent<Rigidbody2D>();
+            if (!_body || !_body.simulated || !character.Controller.isActiveAndEnabled)
+                throw new InvalidOperationException($"Cutscene character '{character.name}' requires its live physics and controller.");
+            _spawn = character.GetComponentInParent<SpawnedObject>();
+            _root = _spawn ? _spawn.transform : character.transform; // The player has no spawn record.
+            _originalPosition = character.transform.position;
+            _originalFacing = character.Orientation.FacingDirection;
             _endpoint = endpoint;
             // Zero is the anchor's explicit 'no facing override'; retain the pre-run direction on either terminal path.
             _endpointFacing = facing == Vector2.zero ? _originalFacing : facing;
         }
 
-        internal static CutscenePlacement[] Prepare(CutsceneDefinition definition, LuaBindingRegistry bindings, MapActorLuaApi actors)
+        internal static CutscenePlacement[] Prepare(CutsceneDefinition definition, LuaBindingRegistry bindings, MapActorLuaApi characters)
         {
             var actions = bindings.GetActions().ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
             var ids = definition.OnStart.Concat(definition.Steps).Concat(definition.OnComplete.Steps)
                 .SelectMany(step => actions[step.ActionId].Parameters
-                    .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "actorRef")
+                    .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "characterRef")
                     .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name).Value))
-                .Concat(definition.OnComplete.ActorPlacements.Select(placement => placement.Actor)).Distinct(StringComparer.Ordinal);
-            return ids.Select(id =>
+                .Concat(definition.OnComplete.CharacterPlacements.Select(placement => placement.Character)).Distinct(StringComparer.Ordinal).ToArray();
+            foreach (var id in ids)
             {
-                var actor = actors.ResolveActor(id);
-                var placement = definition.OnComplete.ActorPlacements.SingleOrDefault(value => value.Actor == id);
-                var anchor = placement == null ? null : actors.ResolveAnchor(placement.Anchor);
-                return new CutscenePlacement(actor, anchor ? anchor.transform.position : actor.transform.position,
-                    anchor ? anchor.FacingDirection : actor.Orientation.FacingDirection);
-            }).ToArray();
+                characters.RequireKnownActor(id);
+                var placement = definition.OnComplete.CharacterPlacements.SingleOrDefault(value => value.Character == id);
+                if (placement != null) characters.ResolvePosition(placement.Position);
+            }
+            return ids.Where(id => !characters.IsPlanned(id)).Select(id => PrepareActor(definition, characters, id)).ToArray();
+        }
+
+        internal static CutscenePlacement PrepareActor(CutsceneDefinition definition, MapActorLuaApi characters, string id)
+        {
+            var character = characters.ResolveActor(id);
+            var placement = definition.OnComplete.CharacterPlacements.SingleOrDefault(value => value.Character == id);
+            var anchor = placement != null && placement.Position.IsAnchor ? characters.ResolveAnchor(placement.Position.Anchor) : null;
+            var endpoint = placement == null ? character.transform.position
+                : characters.ResolvePosition(placement.Position) - (character.Graphics.position - character.transform.position);
+            return new CutscenePlacement(character, endpoint,
+                anchor ? anchor.FacingDirection : character.Orientation.FacingDirection);
         }
 
         internal void RequireLive()
         {
-            if (!Actor || !Actor.isActiveAndEnabled || !_root || !_body || !_body.simulated)
-                throw new InvalidOperationException("A required cutscene actor left the live world.");
+            if (!Character || !Character.isActiveAndEnabled || !_root || !_body || !_body.simulated)
+                throw new InvalidOperationException("A required cutscene character left the live world.");
         }
 
         internal void Apply(bool completed)
         {
-            // Completion has checked all actors before moving any; cancellation can outlive a destroyed actor.
-            if (!completed && (!Actor || !_root || !_body)) return;
+            // Completion has checked all characters before moving any; cancellation can outlive a destroyed character.
+            if (!completed && (!Character || !_root || !_body)) return;
             var position = completed ? _endpoint : _originalPosition;
-            Actor.Controller.Stop();
-            _root.position += position - Actor.transform.position;
+            Character.Controller.Stop();
+            _root.position += position - Character.transform.position;
             _body.position = position;
-            Actor.Orientation.ForceDirection(completed ? _endpointFacing : _originalFacing);
-            Actor.SetMovementState(MovementState.Idle);
-            Actor.Tiles.OnPlaced();
+            Character.Orientation.ForceDirection(completed ? _endpointFacing : _originalFacing);
+            Character.SetMovementState(MovementState.Idle);
+            Character.Tiles.OnPlaced();
             if (_spawn) _spawn.SavePosition();
         }
     }

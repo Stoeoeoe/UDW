@@ -23,6 +23,7 @@ namespace Core.Spawning
 
         /// <summary>Objects currently spawned in this location, including those restored from a save.</summary>
         public IReadOnlyCollection<SpawnedObject> SpawnedObjects => _instances.Values;
+        public IReadOnlyCollection<SpawnedObject> RegisteredPrefabs => _prefabs.Values;
 
         protected override void OnAwake()
         {

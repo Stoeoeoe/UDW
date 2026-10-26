@@ -122,21 +122,21 @@ namespace Core.Scripting.Editor
         public void GlobalManifestIncludesMapActionsWithoutLoadingAMap()
         {
             var manifest = VulcanusLuaEngine.DescribeBindings();
-            var methods = manifest.modules.Single(module => module.path == "Actors").methods;
+            var methods = manifest.modules.Single(module => module.path == "Characters").methods;
             var move = methods.Single(method => method.name == "MoveTo");
             Assert.That(move.name, Is.EqualTo("MoveTo"));
-            Assert.That(move.action.id, Is.EqualTo("actors.moveTo"));
+            Assert.That(move.action.id, Is.EqualTo("characters.moveTo"));
             Assert.That(move.action.execution, Is.EqualTo("awaitable"));
             Assert.That(move.action.contexts, Is.EqualTo(new[] { "cutscene", "npcRoutine" }));
-            Assert.That(move.parameters[0].semanticType, Is.EqualTo("actorRef"));
-            Assert.That(move.parameters[0].picker, Is.EqualTo("mapActor"));
+            Assert.That(move.parameters[0].semanticType, Is.EqualTo("characterRef"));
+            Assert.That(move.parameters[0].picker, Is.EqualTo("mapCharacter"));
             Assert.That(move.parameters[1].semanticType, Is.EqualTo("anchorRef"));
             Assert.That(move.parameters[1].picker, Is.EqualTo("mapAnchor"));
             var face = methods.Single(method => method.name == "Face");
-            Assert.That(face.action.id, Is.EqualTo("actors.face"));
+            Assert.That(face.action.id, Is.EqualTo("characters.face"));
             Assert.That(face.action.execution, Is.EqualTo("immediate"));
             Assert.That(face.returnType, Is.EqualTo("nil"));
-            Assert.That(face.parameters.Select(parameter => parameter.semanticType), Is.EqualTo(new[] { "actorRef", "actorRef" }));
+            Assert.That(face.parameters.Select(parameter => parameter.semanticType), Is.EqualTo(new[] { "characterRef", "characterRef" }));
             var play = manifest.modules.Single(module => module.path == "Dialogue").methods.Single();
             Assert.That(play.action.id, Is.EqualTo("dialogue.play"));
             Assert.That(play.action.execution, Is.EqualTo("awaitable"));
@@ -162,7 +162,7 @@ namespace Core.Scripting.Editor
             var api = new ValidationApi();
             var step = new CutsceneStep("new-step", "test.newAction", new[]
             {
-                new CutsceneArgument("destination", "square"), new CutsceneArgument("actor", "player")
+                new CutsceneArgument("destination", "square"), new CutsceneArgument("character", "player")
             });
             var registry = CutsceneBindings.BindSequence(new[] { step }, "cutscene",
                 (typeof(ValidationApi), () => api),
@@ -180,11 +180,11 @@ namespace Core.Scripting.Editor
         {
             var step = new CutsceneStep("bad-step", "test.newAction", new[]
             {
-                new CutsceneArgument("actor", "missing"), new CutsceneArgument("destination", "square")
+                new CutsceneArgument("character", "missing"), new CutsceneArgument("destination", "square")
             });
             Assert.That(() => CutsceneBindings.BindSequence(new[] { step }, "cutscene",
                 (typeof(ValidationApi), () => new ValidationApi())),
-                Throws.InvalidOperationException.With.Message.Contains("step 'bad-step'").And.Message.Contains("Unknown actor"));
+                Throws.InvalidOperationException.With.Message.Contains("step 'bad-step'").And.Message.Contains("Unknown character"));
         }
 
         [TestCase(typeof(MissingValidatorApi), "needs a Validator")]
@@ -201,12 +201,12 @@ namespace Core.Scripting.Editor
             public string Checked;
             public bool Executed;
             [LuaAction("test.newAction", "New", "Test", "New action", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
-            public void NewAction([LuaReference("actorRef", "mapActor")] string actor, string destination) => Executed = true;
+            public void NewAction([LuaReference("characterRef", "mapCharacter")] string character, string destination) => Executed = true;
             [UnityEngine.Scripting.Preserve]
-            private void Check(string actor, string destination)
+            private void Check(string character, string destination)
             {
-                if (actor != "player") throw new InvalidOperationException("Unknown actor");
-                Checked = actor + ":" + destination;
+                if (character != "player") throw new InvalidOperationException("Unknown character");
+                Checked = character + ":" + destination;
             }
         }
 
@@ -214,16 +214,16 @@ namespace Core.Scripting.Editor
         private sealed class MissingValidatorApi
         {
             [LuaAction("test.missing", "Missing", "Test", "Missing validator", "cutscene", Phases = new[] { "sequence" })]
-            public void Run([LuaReference("actorRef", "mapActor")] string actor) { }
+            public void Run([LuaReference("characterRef", "mapCharacter")] string character) { }
         }
 
         [LuaModule("WrongValidator")]
         private sealed class WrongValidatorApi
         {
             [LuaAction("test.wrong", "Wrong", "Test", "Wrong signature", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
-            public void Run(string actor) { }
+            public void Run(string character) { }
             [UnityEngine.Scripting.Preserve]
-            private void Check(int actor) { }
+            private void Check(int character) { }
         }
 
         [LuaModule("RequiresGame")]

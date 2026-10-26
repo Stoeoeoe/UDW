@@ -50,7 +50,7 @@ namespace Core.Scripting
         public string origin;
         public string[] placementModes;
         public string tileAnchor;
-        public string actorPivot;
+        public string characterPivot;
     }
 
     [Serializable]
@@ -85,12 +85,14 @@ namespace Core.Scripting
     public sealed class LuaPreviewEffectDescription
     {
         public string kind;
-        public string actorParameter;
+        public string characterParameter;
         public string anchorParameter;
-        public string targetActorParameter;
+        public string targetCharacterParameter;
         public string dialogueParameter;
         public string directionParameter;
         public string positionParameter;
+        public string pathParameter;
+        public string definitionParameter;
         public string facing;
     }
 }

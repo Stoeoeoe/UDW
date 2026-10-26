@@ -29,6 +29,30 @@ namespace Core.Scripting.Editor
         }
 
         [Test]
+        public void WalkPathExportsTheSharedPathPickerAndMappedRoutePreview()
+        {
+            var method = LuaBindingRegistry.DescribeTypes(typeof(MapActorLuaApi)).modules.Single().methods
+                .Single(method => method.name == "WalkPath");
+            var path = method.parameters.Single(parameter => parameter.name == "path");
+            Assert.That(method.action.id, Is.EqualTo("characters.walkPath"));
+            Assert.That(method.action.execution, Is.EqualTo("awaitable"));
+            Assert.That(method.action.phases, Is.EqualTo(new[] { "sequence" }));
+            Assert.That(path.type, Is.EqualTo("path"));
+            Assert.That(path.picker, Is.EqualTo("mapPath"));
+            Assert.That(path.placementModes, Is.EqualTo(new[] { "tile", "pixel", "anchor" }));
+            Assert.That(path.coordinateSpace, Is.EqualTo("mapPixels"));
+            Assert.That(path.origin, Is.EqualTo("topLeft"));
+            Assert.That(path.characterPivot, Is.EqualTo("feet"));
+            Assert.That(method.action.preview.version, Is.EqualTo(2));
+            Assert.That(method.action.preview.spatialState, Is.EqualTo("described"));
+            var effect = method.action.preview.effects.Single();
+            Assert.That(effect.kind, Is.EqualTo("moveCharacterAlongPath"));
+            Assert.That(effect.characterParameter, Is.EqualTo("character"));
+            Assert.That(effect.pathParameter, Is.EqualTo("path"));
+            Assert.That(effect.facing, Is.EqualTo("unknown"));
+        }
+
+        [Test]
         public void ExplicitNoOpIsDistinctFromAbsentPreviewMetadata()
         {
             var methods = LuaBindingRegistry.DescribeTypes(typeof(NoOpApi)).modules.Single().methods;
@@ -52,11 +76,11 @@ namespace Core.Scripting.Editor
             Assert.That(method.action.contexts, Is.EqualTo(new[] { "cutscene" }));
             Assert.That(preview.spatialState, Is.EqualTo("unknown"));
             Assert.That(preview.effects.Select(effect => effect.kind), Is.EqualTo(new[]
-                { "moveActorToAnchor", "faceActorTowardActor", "showDialogue" }));
-            Assert.That(preview.effects[0].actorParameter, Is.EqualTo("traveller"));
+                { "moveCharacterToAnchor", "faceCharacterTowardCharacter", "showDialogue" }));
+            Assert.That(preview.effects[0].characterParameter, Is.EqualTo("traveller"));
             Assert.That(preview.effects[0].anchorParameter, Is.EqualTo("meeting"));
             Assert.That(preview.effects[0].facing, Is.EqualTo("unknown"));
-            Assert.That(preview.effects[1].targetActorParameter, Is.EqualTo("host"));
+            Assert.That(preview.effects[1].targetCharacterParameter, Is.EqualTo("host"));
             Assert.That(preview.effects[2].dialogueParameter, Is.EqualTo("conversation"));
             Assert.That(Json(LuaBindingRegistry.DescribeTypes(typeof(CompositeApi))), Is.EqualTo(Json(registry.Describe())));
             Assert.That(api.Calls, Is.Zero, "Inspecting declarations must not run actions or reference validators.");
@@ -98,10 +122,10 @@ namespace Core.Scripting.Editor
 
         [TestCase(typeof(MissingParameterApi), "preview parameter 'missing'")]
         [TestCase(typeof(MissingMappingApi), "preview parameter ''")]
-        [TestCase(typeof(WrongSemanticApi), "actorRef/mapActor")]
+        [TestCase(typeof(WrongSemanticApi), "characterRef/mapCharacter")]
         [TestCase(typeof(WrongPickerApi), "semantic reference")]
         [TestCase(typeof(WrongTypeApi), "semantic reference")]
-        [TestCase(typeof(UnmarkedParameterApi), "actorRef/mapActor")]
+        [TestCase(typeof(UnmarkedParameterApi), "characterRef/mapCharacter")]
         [TestCase(typeof(UnknownKindApi), "unsupported preview effect kind")]
         [TestCase(typeof(UnknownVersionApi), "unsupported preview version")]
         [TestCase(typeof(UnknownSpatialApi), "unsupported preview spatial state")]
@@ -112,9 +136,12 @@ namespace Core.Scripting.Editor
         [TestCase(typeof(NegativeOrderApi), "order must be nonnegative and unique")]
         [TestCase(typeof(MissingMoveFacingApi), "requires facing 'unknown'")]
         [TestCase(typeof(UnsupportedMoveFacingApi), "requires facing 'unknown'")]
-        [TestCase(typeof(ForbiddenMoveFieldApi), "forbids targetActorParameter")]
+        [TestCase(typeof(ForbiddenMoveFieldApi), "forbids targetCharacterParameter")]
         [TestCase(typeof(ForbiddenFaceFieldApi), "forbids anchorParameter")]
-        [TestCase(typeof(ForbiddenDialogueFieldApi), "forbids actorParameter")]
+        [TestCase(typeof(ForbiddenDialogueFieldApi), "forbids characterParameter")]
+        [TestCase(typeof(WrongPathMappingApi), "pathParameter declared with [LuaPath]")]
+        [TestCase(typeof(OldPathVersionApi), "requires preview version 2")]
+        [TestCase(typeof(ForbiddenPathFieldApi), "only moveCharacterAlongPath permits pathParameter")]
         public void InvalidDeclarationsFailDuringTypeExportAndRuntimeRegistration(Type type, string reason)
         {
             Assert.That(() => LuaBindingRegistry.DescribeTypes(type),
@@ -140,11 +167,11 @@ namespace Core.Scripting.Editor
             [LuaAction("custom:escort", "Visit", "Test", "Composite metadata fixture", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
             [LuaPreviewEffect(20, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "conversation")]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "traveller", AnchorParameter = "meeting", Facing = "unknown")]
-            [LuaPreviewEffect(10, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "traveller", TargetActorParameter = "host")]
-            public void Visit([LuaReference("actorRef", "mapActor")] string traveller,
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor, CharacterParameter = "traveller", AnchorParameter = "meeting", Facing = "unknown")]
+            [LuaPreviewEffect(10, LuaPreviewEffectKind.FaceCharacterTowardCharacter, CharacterParameter = "traveller", TargetCharacterParameter = "host")]
+            public void Visit([LuaReference("characterRef", "mapCharacter")] string traveller,
                 [LuaReference("anchorRef", "mapAnchor")] string meeting,
-                [LuaReference("actorRef", "mapActor")] string host,
+                [LuaReference("characterRef", "mapCharacter")] string host,
                 [LuaReference("dialogueRef", "dialogue")] string conversation) => Calls++;
             [Preserve] private void Check(string traveller, string meeting, string host, string conversation) =>
                 throw new InvalidOperationException("Preview export must not run validators.");
@@ -161,6 +188,33 @@ namespace Core.Scripting.Editor
 
         [LuaModule("InvalidPreview")]
         private abstract class InvalidApi { }
+
+        private sealed class WrongPathMappingApi : InvalidApi
+        {
+            [LuaAction("test.invalid", "Invalid", "Test", "Wrong path mapping", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
+            [LuaPreview(LuaPreviewSpatialState.Described, Version = 2)]
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterAlongPath, CharacterParameter = "who", PathParameter = "who", Facing = "unknown")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who, [LuaPath] MapPath route) { }
+            [Preserve] private void Check(string who, MapPath route) { }
+        }
+
+        private sealed class OldPathVersionApi : InvalidApi
+        {
+            [LuaAction("test.invalid", "Invalid", "Test", "Wrong preview version", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
+            [LuaPreview(LuaPreviewSpatialState.Described)]
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterAlongPath, CharacterParameter = "who", PathParameter = "route", Facing = "unknown")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who, [LuaPath] MapPath route) { }
+            [Preserve] private void Check(string who, MapPath route) { }
+        }
+
+        private sealed class ForbiddenPathFieldApi : InvalidApi
+        {
+            [LuaAction("test.invalid", "Invalid", "Test", "Forbidden path mapping", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
+            [LuaPreview(LuaPreviewSpatialState.Described)]
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor, CharacterParameter = "who", AnchorParameter = "where", PathParameter = "route", Facing = "unknown")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who, [LuaReference("anchorRef", "mapAnchor")] string where, [LuaPath] MapPath route) { }
+            [Preserve] private void Check(string who, string where, MapPath route) { }
+        }
 
         private sealed class MissingParameterApi : InvalidApi
         {
@@ -180,7 +234,7 @@ namespace Core.Scripting.Editor
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Wrong semantic role", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceCharacterTowardCharacter, CharacterParameter = "who", TargetCharacterParameter = "who")]
             public void Run([LuaReference("dialogueRef", "dialogue")] string who) { }
             [Preserve] private void Check(string who) { }
         }
@@ -188,23 +242,23 @@ namespace Core.Scripting.Editor
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Wrong picker", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
-            public void Run([LuaReference("actorRef", "dialogue")] string who) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceCharacterTowardCharacter, CharacterParameter = "who", TargetCharacterParameter = "who")]
+            public void Run([LuaReference("characterRef", "dialogue")] string who) { }
             [Preserve] private void Check(string who) { }
         }
         private sealed class WrongTypeApi : InvalidApi
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Wrong argument type", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
-            public void Run([LuaReference("actorRef", "mapActor")] int who) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceCharacterTowardCharacter, CharacterParameter = "who", TargetCharacterParameter = "who")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] int who) { }
             [Preserve] private void Check(int who) { }
         }
         private sealed class UnmarkedParameterApi : InvalidApi
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Missing semantic annotation", "cutscene", Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who")]
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceCharacterTowardCharacter, CharacterParameter = "who", TargetCharacterParameter = "who")]
             public void Run(string who) { }
         }
         private sealed class UnknownKindApi : InvalidApi
@@ -262,39 +316,39 @@ namespace Core.Scripting.Editor
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Missing facing certainty", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "who", AnchorParameter = "where")]
-            public void Run([LuaReference("actorRef", "mapActor")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor, CharacterParameter = "who", AnchorParameter = "where")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
             [Preserve] private void Check(string who, string where) { }
         }
         private sealed class UnsupportedMoveFacingApi : InvalidApi
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Invented facing rule", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "who", AnchorParameter = "where", Facing = "anchor")]
-            public void Run([LuaReference("actorRef", "mapActor")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor, CharacterParameter = "who", AnchorParameter = "where", Facing = "anchor")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
             [Preserve] private void Check(string who, string where) { }
         }
         private sealed class ForbiddenMoveFieldApi : InvalidApi
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Forbidden move field", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveActorToAnchor, ActorParameter = "who", AnchorParameter = "where", Facing = "unknown", TargetActorParameter = "who")]
-            public void Run([LuaReference("actorRef", "mapActor")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor, CharacterParameter = "who", AnchorParameter = "where", Facing = "unknown", TargetCharacterParameter = "who")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who, [LuaReference("anchorRef", "mapAnchor")] string where) { }
             [Preserve] private void Check(string who, string where) { }
         }
         private sealed class ForbiddenFaceFieldApi : InvalidApi
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Forbidden facing field", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Described)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceActorTowardActor, ActorParameter = "who", TargetActorParameter = "who", Facing = "unknown")]
-            public void Run([LuaReference("actorRef", "mapActor")] string who) { }
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.FaceCharacterTowardCharacter, CharacterParameter = "who", TargetCharacterParameter = "who", Facing = "unknown")]
+            public void Run([LuaReference("characterRef", "mapCharacter")] string who) { }
             [Preserve] private void Check(string who) { }
         }
         private sealed class ForbiddenDialogueFieldApi : InvalidApi
         {
             [LuaAction("test.invalid", "Invalid", "Test", "Forbidden dialogue field", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             [LuaPreview(LuaPreviewSpatialState.Unknown)]
-            [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "talk", ActorParameter = "talk")]
+            [LuaPreviewEffect(0, LuaPreviewEffectKind.ShowDialogue, DialogueParameter = "talk", CharacterParameter = "talk")]
             public void Run([LuaReference("dialogueRef", "dialogue")] string talk) { }
             [Preserve] private void Check(string talk) { }
         }

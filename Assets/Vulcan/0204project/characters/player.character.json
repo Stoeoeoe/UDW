@@ -1,0 +1,8 @@
+{
+  "$schema": "../schemas/character.schema.json",
+  "id": "base:player",
+  "name": "Player",
+  "icon": "GiPerson",
+  "emotions": [],
+  "folderPath": ""
+}

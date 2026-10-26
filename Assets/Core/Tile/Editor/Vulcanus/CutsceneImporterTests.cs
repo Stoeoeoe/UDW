@@ -56,6 +56,30 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
+        public void WalkPathImportsOrderedPixelsAndAnchorsAndRejectsIncompletePoints()
+        {
+            var source = Source("test:walk-path");
+            source["sequence"] = JArray.Parse("[{'id':'walk','action':'characters.walkPath','arguments':{'character':'player','path':[{'x':168,'y':104},{'anchor':'meeting'},{'x':208,'y':120}]}}]");
+            var definition = Parse(source);
+            try
+            {
+                var path = definition.Steps.Single().Arguments.Single(argument => argument.Name == "path").Path;
+                Assert.That(path.Points.Count, Is.EqualTo(3));
+                Assert.That(path.Points[0].X, Is.EqualTo(168));
+                Assert.That(path.Points[0].Y, Is.EqualTo(104));
+                Assert.That(path.Points[1].Anchor, Is.EqualTo("meeting"));
+                Assert.That(path.Points[2].X, Is.EqualTo(208));
+                Assert.That(definition.Lua, Does.StartWith("Characters.WalkPath(\"player\", "));
+                Assert.That(definition.Lua, Does.Contain("{ x = 168, y = 104 }, { anchor = \"meeting\" }, { x = 208, y = 120 }"));
+            }
+            finally { Object.DestroyImmediate(definition); }
+            source["sequence"][0]["arguments"]["path"] = new JArray();
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("nonempty ordered list"));
+            source["sequence"][0]["arguments"]["path"] = JArray.Parse("[{'x':168}]");
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("path[0]"));
+        }
+
+        [Test]
         public void ImportsNumericWaitAndRejectsInvalidDurationAtImport()
         {
             var source = Source("test:wait");
@@ -95,9 +119,9 @@ namespace Core.Tile.Editor.Vulcanus
             var definition = Parse(source);
             try
             {
-                Assert.That(definition.OnStartLua, Is.EqualTo("Actors.FaceDirection(\"player\", \"East\");\n"));
+                Assert.That(definition.OnStartLua, Is.EqualTo("Characters.FaceDirection(\"player\", \"East\");\n"));
                 Assert.That(definition.OnStart.Single().Id, Is.EqualTo("stage"));
-                Assert.That(definition.OnComplete.Lua, Is.EqualTo("Actors.FaceDirection(\"player\", \"West\");\n"));
+                Assert.That(definition.OnComplete.Lua, Is.EqualTo("Characters.FaceDirection(\"player\", \"West\");\n"));
                 Assert.That(definition.OnComplete.Steps.Single().Id, Is.EqualTo("finish"));
                 Assert.That(definition.Lua, Is.EqualTo("Dialogue.Play(\"base:greeting\");\n"));
             }
@@ -106,9 +130,9 @@ namespace Core.Tile.Editor.Vulcanus
 
         [TestCase("setup", "cutscene.wait", "{'seconds':0}")]
         [TestCase("completion", "cutscene.wait", "{'seconds':0}")]
-        [TestCase("setup", "actors.moveTo", "{'actor':'player','destination':'meeting'}")]
+        [TestCase("setup", "characters.moveTo", "{'character':'player','destination':'meeting'}")]
         [TestCase("completion", "dialogue.play", "{'dialogue':'base:greeting'}")]
-        [TestCase("setup", "actors.playAnimation", "{'actor':'player','animation':'base:pass-out'}")]
+        [TestCase("setup", "characters.playAnimation", "{'character':'player','animation':'base:pass-out'}")]
         public void RejectsAwaitableActionsInImmediateSections(string phase, string action, string arguments)
         {
             var source = Source("test:phases");
@@ -147,17 +171,44 @@ namespace Core.Tile.Editor.Vulcanus
                     Assert.That(definition.OnStartLua, Is.Empty);
                     Assert.That(definition.OnComplete.Steps, Is.Empty);
                     Assert.That(definition.OnComplete.Lua, Is.Empty);
+                    Assert.That(definition.OnComplete.Actions, Is.Empty);
+                    Assert.That(definition.ValidateConfiguration(), Is.Empty);
                 }
                 finally { Object.DestroyImmediate(definition); }
             }
-            source["onStart"] = "Actors.FaceDirection('player', 'East')";
+            source["onStart"] = "Characters.FaceDirection('player', 'East')";
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+        }
+
+        [TestCase("")]
+        [TestCase(" \n\t")]
+        public void EmptyCompletionLuaImportsAsANoOp(string actions)
+        {
+            var source = Source("test:empty-actions");
+            source["onStart"] = new JArray();
+            source["onComplete"]["steps"] = new JArray();
+            source["onComplete"]["actions"] = actions;
+            var definition = Parse(source);
+            try
+            {
+                Assert.That(definition.OnComplete.Actions, Is.EqualTo(actions));
+                Assert.That(definition.ValidateConfiguration(), Is.Empty);
+            }
+            finally { Object.DestroyImmediate(definition); }
+        }
+
+        [Test]
+        public void NullCompletionLuaIsRejectedByTheSchema()
+        {
+            var source = Source("test:null-actions");
+            source["onComplete"]["actions"] = JValue.CreateNull();
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("schema validation failed"));
         }
 
         private static JObject Turn(string id, string direction) => new()
         {
-            ["id"] = id, ["action"] = "actors.faceDirection",
-            ["arguments"] = new JObject { ["actor"] = "player", ["direction"] = direction }
+            ["id"] = id, ["action"] = "characters.faceDirection",
+            ["arguments"] = new JObject { ["character"] = "player", ["direction"] = direction }
         };
 
         [Test]
@@ -166,8 +217,8 @@ namespace Core.Tile.Editor.Vulcanus
             var source = Source("test:place-phases");
             JObject Place(string id, int x) => new()
             {
-                ["id"] = id, ["action"] = "actors.place",
-                ["arguments"] = new JObject { ["actor"] = "player", ["position"] = new JObject { ["x"] = x, ["y"] = 104 } }
+                ["id"] = id, ["action"] = "characters.place",
+                ["arguments"] = new JObject { ["character"] = "player", ["position"] = new JObject { ["x"] = x, ["y"] = 104 } }
             };
             source["onStart"] = new JArray(Place("stage", 168));
             source["sequence"] = new JArray(Place("place", 171));
@@ -183,6 +234,24 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
+        public void SpawnWithAnchorPositionImportsAndRetainsItsDeclaredRole()
+        {
+            var source = Source("test:spawn-anchor");
+            source["onStart"] = JArray.Parse("[{'id':'spawn-guest','action':'characters.spawn','arguments':{'character':'guest','definition':'base:cutscene-prototype-host','position':{'anchor':'meeting'}}}]");
+            var definition = Parse(source);
+            try
+            {
+                var spawn = definition.OnStart.Single();
+                Assert.That(spawn.Arguments.Single(argument => argument.Name == "character").Value, Is.EqualTo("guest"));
+                Assert.That(spawn.Arguments.Single(argument => argument.Name == "position").Position.Anchor, Is.EqualTo("meeting"));
+                Assert.That(definition.OnStartLua, Does.Contain("Characters.Spawn").And.Contain("{ anchor = \"meeting\" }"));
+            }
+            finally { Object.DestroyImmediate(definition); }
+            source["onStart"][0]["arguments"]["position"]["x"] = 1;
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+        }
+
+        [Test]
         public void ImportValidatesActionArgumentsWithSourceAndStepIdentity()
         {
             var source = Source("test:intro");
@@ -195,24 +264,46 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var source = Source("test:outcomes");
             source["allowSkip"] = true;
-            source["onComplete"] = JObject.Parse("{ 'actions':\"GameState.Story.SetFlag('introduced')\", 'actorPlacements':[{'actor':'host-01','anchor':'meeting'}] }");
+            source["onComplete"] = JObject.Parse("{ 'actions':\"GameState.Story.SetFlag('introduced')\", 'characterPlacements':[{'character':'host-01','anchor':'meeting'}] }");
             var definition = Parse(source);
             try
             {
                 Assert.That(definition.AllowSkip, Is.True);
                 Assert.That(definition.OnComplete.Actions, Is.EqualTo("GameState.Story.SetFlag('introduced')"));
-                Assert.That(definition.OnComplete.ActorPlacements[0].Actor, Is.EqualTo("host-01"));
-                Assert.That(definition.OnComplete.ActorPlacements[0].Anchor, Is.EqualTo("meeting"));
+                Assert.That(definition.OnComplete.CharacterPlacements[0].Character, Is.EqualTo("host-01"));
+                Assert.That(definition.OnComplete.CharacterPlacements[0].Anchor, Is.EqualTo("meeting"));
             }
             finally { Object.DestroyImmediate(definition); }
+        }
+
+        [Test]
+        public void CompletionImportsPixelEndpointsAndRejectsMixedPositionForms()
+        {
+            var source = Source("test:pixel-endpoint");
+            source["onComplete"]["characterPlacements"] = JArray.Parse("[{'character':'player','position':{'x':168,'y':104}}]");
+            var definition = Parse(source);
+            try
+            {
+                var endpoint = definition.OnComplete.CharacterPlacements.Single();
+                Assert.That(endpoint.Character, Is.EqualTo("player"));
+                Assert.That(endpoint.Position.IsAnchor, Is.False);
+                Assert.That(endpoint.Position.X, Is.EqualTo(168));
+                Assert.That(endpoint.Position.Y, Is.EqualTo(104));
+                Assert.That(definition.ValidateConfiguration(), Is.Empty);
+            }
+            finally { Object.DestroyImmediate(definition); }
+            source["onComplete"]["characterPlacements"][0]["anchor"] = "meeting";
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+            source["onComplete"]["characterPlacements"] = JArray.Parse("[{'character':'player','position':{'x':168}}]");
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
         }
 
         [Test]
         public void DuplicateTerminalActorsFailBeforePlayback()
         {
             var source = Source("test:outcomes");
-            source["onComplete"]["actorPlacements"] = JArray.Parse("[{'actor':'host','anchor':'a'},{'actor':'host','anchor':'b'}]");
-            Assert.That(() => Parse(source), Throws.Exception.With.Message.Contains("unique actors"));
+            source["onComplete"]["characterPlacements"] = JArray.Parse("[{'character':'host','anchor':'a'},{'character':'host','anchor':'b'}]");
+            Assert.That(() => Parse(source), Throws.Exception.With.Message.Contains("unique characters"));
         }
 
         [Test]
@@ -275,11 +366,11 @@ namespace Core.Tile.Editor.Vulcanus
         private static JObject Source(string id) => new()
         {
             ["$schema"] = "../Vulcan/0204project/schemas/cutscene.schema.json",
-            ["formatVersion"] = 1,
+            ["formatVersion"] = 2,
             ["id"] = id,
             ["mapId"] = "map-1",
             ["allowSkip"] = false,
-            ["onComplete"] = new JObject { ["actorPlacements"] = new JArray(), ["actions"] = "" },
+            ["onComplete"] = new JObject { ["characterPlacements"] = new JArray() },
             ["sequence"] = new JArray(new JObject
             {
                 ["id"] = "speak", ["action"] = "dialogue.play",
