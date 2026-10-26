@@ -1,0 +1,130 @@
+<div id="cutscene-concept" class="viz-carousel" aria-label="Cutscene editor layouts">
+  <section data-variant="Sequence first" aria-label="Sequence first editor"></section>
+  <section data-variant="Map first" aria-label="Map first editor" hidden></section>
+</div>
+<style>
+#cutscene-concept{font:13px/1.5 'Segoe UI',sans-serif;color:#dce3ed;color-scheme:dark;--cs-bg:#111418;--cs-panel:#1c2129;--cs-border:#2b333e;--cs-muted:#97a6b9;--cs-blue:#74c5f7;--cs-pink:#f28eb5}
+#cutscene-concept *{box-sizing:border-box}
+#cutscene-concept .cs-shell{background:var(--cs-bg);min-height:780px;border:1px solid var(--cs-border);border-radius:8px;overflow:hidden}
+#cutscene-concept button,#cutscene-concept input,#cutscene-concept select,#cutscene-concept textarea{font:inherit;color:inherit}
+#cutscene-concept button{cursor:pointer;background:transparent;border:0;text-align:left}
+#cutscene-concept button:focus-visible{outline:2px solid var(--cs-blue);outline-offset:2px}
+#cutscene-concept .cs-bar{display:flex;align-items:center;gap:22px;padding:12px 16px;background:#1c2129;border-bottom:1px solid var(--cs-border)}
+#cutscene-concept .cs-logo{background:#2b6db0;border-radius:5px;padding:3px 6px;font-weight:600;color:#fff}
+#cutscene-concept .cs-muted{color:var(--cs-muted);font-size:11px}
+#cutscene-concept .cs-body{display:grid;grid-template-columns:145px minmax(0,1fr)}
+#cutscene-concept .cs-nav{background:#101318;border-right:1px solid var(--cs-border);padding:19px 8px}
+#cutscene-concept .cs-eyebrow{font-size:11px;letter-spacing:1px;color:var(--cs-muted);font-weight:600;text-transform:uppercase}
+#cutscene-concept .cs-navhead{display:flex;justify-content:space-between;margin:22px 0 7px;padding:8px;background:#1a2027;border-radius:3px;color:#a4b4c8;font-size:11px;font-weight:600;letter-spacing:.8px}
+#cutscene-concept .cs-navhead.pink{background:#271e29;color:var(--cs-pink)}
+#cutscene-concept .cs-navitem{display:flex;align-items:center;gap:7px;padding:8px;color:#a5b0bf;font-size:12px}
+#cutscene-concept .cs-navitem.active{background:#3a2535;color:#fff;border-radius:4px}
+#cutscene-concept .cs-bottomnav{margin-top:75px}
+#cutscene-concept .cs-tabbar{display:flex;gap:6px;background:#0d1014;padding:8px 12px;border-bottom:1px solid var(--cs-border)}
+#cutscene-concept .cs-tab{padding:6px 10px;color:var(--cs-muted);border:1px solid transparent;border-radius:5px;font-size:12px}
+#cutscene-concept .cs-tab.active{border-color:#386c92;background:#1c2631;color:#edf3fa}
+#cutscene-concept .cs-workspace{display:grid;grid-template-columns:minmax(0,1fr) 255px;min-height:686px}
+#cutscene-concept .cs-main{min-width:0}
+#cutscene-concept .cs-toolbar{padding:15px 17px;border-bottom:1px solid var(--cs-border);display:flex;align-items:center;gap:10px}
+#cutscene-concept .cs-title{font-weight:600;font-size:15px;flex:1;min-width:0}
+#cutscene-concept .cs-control{border:1px solid #3c4655;border-radius:5px;padding:5px 9px;background:#242b35;white-space:nowrap;font-size:12px}
+#cutscene-concept .cs-sequence{padding:16px 16px 9px}
+#cutscene-concept .cs-sectionline{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#cutscene-concept .cs-card{width:100%;display:block;border:1px solid #333c49;border-left:3px solid var(--beat-color);background:#20262f;border-radius:6px;padding:12px 13px;position:relative}
+#cutscene-concept .cs-card.selected{background:#25303b;border-color:#65b8ec;box-shadow:0 0 0 1px #65b8ec}
+#cutscene-concept .cs-cardhead{display:flex;gap:9px;align-items:center;font-size:11px;color:var(--beat-color);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+#cutscene-concept .cs-number{color:var(--cs-muted);font-weight:400}
+#cutscene-concept .cs-grip{margin-left:auto;color:#7d8a9c;letter-spacing:-2px}
+#cutscene-concept .cs-issueflag{color:#ffc4be;background:#4b2d33;padding:1px 5px;border-radius:3px;font-weight:400;letter-spacing:0;text-transform:none}
+#cutscene-concept .cs-summary{display:block;margin-top:7px;font-size:14px;color:#e2e8f1}
+#cutscene-concept .cs-sub{display:block;margin-top:3px;font-size:11px;color:#9aaabd}
+#cutscene-concept .cs-insert{display:block;width:100%;text-align:center;color:#8a98ac;font-size:11px;padding:5px}
+#cutscene-concept .cs-append{width:100%;border:1px dashed #394352;border-radius:4px;text-align:center;padding:7px;color:#b6c3d4;font-size:12px;margin-top:10px}
+#cutscene-concept .cs-finish{margin-top:15px;width:100%;padding:10px 12px;border:1px solid #303946;background:#191f27;border-radius:5px;display:flex;gap:10px;align-items:center}
+#cutscene-concept .cs-finish.selected{border-color:var(--cs-blue)}
+#cutscene-concept .cs-finish strong{font-size:12px;font-weight:500}
+#cutscene-concept .cs-mapblock{margin:15px 16px 16px;border:1px solid var(--cs-border);border-radius:6px;overflow:hidden;background:#171d24}
+#cutscene-concept .cs-maphead{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#1b222b;border-bottom:1px solid var(--cs-border);font-size:11px;color:var(--cs-muted)}
+#cutscene-concept .cs-zoom{display:flex;gap:3px;align-items:center}
+#cutscene-concept .cs-zoom button{background:#29323e;border-radius:3px;text-align:center;min-width:25px;padding:1px 5px}
+#cutscene-concept .cs-map{height:180px;overflow:hidden;position:relative;background:#273427;touch-action:pan-y}
+#cutscene-concept .cs-map svg{display:block;width:100%;height:100%}
+#cutscene-concept .cs-mapfoot{padding:6px 10px;display:flex;justify-content:space-between;font-size:11px;color:var(--cs-muted)}
+#cutscene-concept .cs-inspector{background:var(--cs-panel);border-left:1px solid var(--cs-border);min-width:0}
+#cutscene-concept .cs-inspectorhead{padding:17px 16px;border-bottom:1px solid var(--cs-border);background:#14191f}
+#cutscene-concept .cs-inspectorhead strong{font-size:15px;font-weight:600;display:block;margin:4px 0}
+#cutscene-concept .cs-fields{padding:16px}
+#cutscene-concept .cs-fields label{display:block;font-size:11px;color:#b6c2d2;margin-bottom:15px;font-weight:500}
+#cutscene-concept .cs-fields select,#cutscene-concept .cs-fields input[type=text],#cutscene-concept .cs-fields textarea{display:block;width:100%;margin-top:6px;background:#10151b;border:1px solid #343e4b;border-radius:4px;padding:8px;min-width:0;font-size:12px}
+#cutscene-concept .cs-fields textarea{height:110px;resize:vertical;font-family:Consolas,monospace}
+#cutscene-concept .cs-fields .cs-id{font-family:Consolas,monospace;font-size:11px;color:var(--cs-muted);word-break:break-all;margin:-8px 0 18px}
+#cutscene-concept .cs-fields .cs-pick{font-size:12px;color:var(--cs-blue);padding:0;margin:-4px 0 20px}
+#cutscene-concept .cs-fields details{border-top:1px solid var(--cs-border);padding-top:14px;margin-top:24px;color:var(--cs-muted);font-size:11px}
+#cutscene-concept .cs-fields summary{cursor:pointer;margin-bottom:12px}
+#cutscene-concept .cs-error{padding:10px;border:1px solid #985c58;background:#3c2529;color:#ffc4be;font-size:12px;border-radius:4px;margin-bottom:16px}
+#cutscene-concept .cs-palette{padding:9px;display:flex;flex-wrap:wrap;gap:6px;background:#171e27;border:1px solid #3f4f62;border-radius:5px;margin:7px 0}
+#cutscene-concept .cs-palette[hidden]{display:none}
+#cutscene-concept .cs-mapfirst .cs-map{height:340px}
+#cutscene-concept .cs-mapfirst .cs-main{display:flex;flex-direction:column}
+#cutscene-concept .cs-mapfirst .cs-mapblock{order:1;margin-bottom:4px}
+#cutscene-concept .cs-mapfirst .cs-sequence{order:2;padding-top:12px}
+#cutscene-concept .cs-mapfirst .cs-card{padding:8px 11px}
+#cutscene-concept .cs-mapfirst .cs-summary{font-size:12px;margin-top:3px}
+#cutscene-concept .cs-mapfirst .cs-sub{display:none}
+#cutscene-concept .cs-mapfirst .cs-insert{padding:2px}
+#cutscene-concept .cs-mapfirst .cs-finish{margin-top:8px}
+@media(max-width:850px){#cutscene-concept .cs-body{grid-template-columns:110px minmax(0,1fr)}#cutscene-concept .cs-workspace{grid-template-columns:minmax(0,1fr) 225px}#cutscene-concept .cs-navitem{font-size:11px}#cutscene-concept .cs-toolbar{flex-wrap:wrap}#cutscene-concept .cs-title{flex-basis:100%}}
+@media(max-width:650px){#cutscene-concept .cs-nav{display:none}#cutscene-concept .cs-body{display:block}#cutscene-concept .cs-workspace{grid-template-columns:minmax(0,1fr)}#cutscene-concept .cs-inspector{border-left:0;border-top:1px solid var(--cs-border)}#cutscene-concept .cs-tabbar{flex-wrap:wrap}#cutscene-concept .cs-bar{gap:12px}#cutscene-concept .cs-mapfirst .cs-map{height:240px}#cutscene-concept .cs-shell{min-height:780px}}
+</style>
+<script>
+(()=>{
+const root=document.getElementById('cutscene-concept');
+const prior=window.openai?.widgetState?.modelContent;
+const settings={showReferenceIssue:false};
+const designs=[...root.querySelectorAll('[data-variant]')];
+const map=`<svg viewBox="0 0 600 290" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Village map showing the host moving from the inn to the meeting point near the player">
+<defs><pattern id="grass-cs" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#35462e"/><path d="M3 9h3m9 10h3m-2-15h2" stroke="#455c39" stroke-width="2"/></pattern><pattern id="stone-cs" width="20" height="18" patternUnits="userSpaceOnUse"><rect width="20" height="18" fill="#8c7956"/><path d="M0 1h19v7H0m10 2v7m-10 0h20" fill="none" stroke="#594e3b" stroke-width="2"/></pattern></defs>
+<rect width="600" height="290" fill="url(#grass-cs)"/><path d="M-10 225H610M300-10V300M300 105h210" stroke="#9b7845" stroke-width="45"/><path d="M-10 225H610M300-10V300M300 105h210" stroke="url(#stone-cs)" stroke-width="28"/>
+<rect x="415" y="-15" width="130" height="75" rx="8" fill="#356b7b"/><path d="M420 55h120" stroke="#658d86" stroke-width="5"/>
+<g fill="#233c2b" stroke="#51643a" stroke-width="4"><path d="M85 20l-19 50h38zM105 140l-20 50h40zM550 155l-20 50h40zM42 220l-20 50h40zM400 220l-20 50h40z"/></g>
+<g><rect x="75" y="50" width="112" height="84" fill="#b49a6a" stroke="#59432d" stroke-width="4"/><path d="M60 57l72-46 72 46v17H60z" fill="#745041" stroke="#382f28" stroke-width="5"/><rect x="119" y="97" width="27" height="37" fill="#3e3329"/><rect x="87" y="83" width="19" height="19" fill="#dab666"/><rect x="156" y="83" width="19" height="19" fill="#dab666"/></g>
+<g><rect x="421" y="112" width="106" height="65" fill="#ae8b58" stroke="#59432d" stroke-width="4"/><path d="M410 114l63-33 65 33v15H410z" fill="#6c7950" stroke="#37432e" stroke-width="5"/><rect x="463" y="143" width="23" height="34" fill="#493a2c"/></g>
+<path class="cs-route" d="M146 149H245Q300 149 300 181" fill="none" stroke="#8bd8ff" stroke-width="4" stroke-dasharray="8 5"/><circle cx="147" cy="149" r="9" fill="#9fdfff" stroke="#153b51" stroke-width="3"/><circle cx="300" cy="181" r="12" fill="#1d303d" stroke="#9fdfff" stroke-width="3"/><path d="M295 177l5 8 5-8" fill="none" stroke="#9fdfff" stroke-width="2"/>
+<g fill="#263949" stroke="#b5d4e3" stroke-width="2"><rect x="323" y="189" width="12" height="15"/><circle cx="329" cy="184" r="6"/></g>
+<g font-family="Segoe UI,sans-serif" font-size="12" fill="#e7f1fa"><rect x="105" y="160" width="77" height="23" rx="4" fill="#18252e"/><text x="115" y="176">Host · start</text><rect x="242" y="140" width="117" height="23" rx="4" fill="#18252e"/><text x="253" y="156">① Meeting point</text><rect x="342" y="182" width="51" height="23" rx="4" fill="#18252e"/><text x="350" y="198">Player</text></g></svg>`;
+designs.forEach((stage,index)=>{
+let selection=prior?.selectedBeat||'move',zoom=100,insertAt=0;
+const beats=[{id:'move',type:'Move to anchor',color:'#78c9ef',summary:'Host → Meeting point',sub:'Walk to the village square · wait until arrived'},{id:'face',type:'Face actor',color:'#e7bc76',summary:'Host faces Player',sub:'Turn toward the player · continue immediately'},{id:'dialogue',type:'Play dialogue',color:'#bca0ed',summary:'Village greeting',sub:'Wait for the conversation to finish'}];
+stage.innerHTML=`<div class="cs-shell ${index?'cs-mapfirst':''}"><div class="cs-bar"><span class="cs-logo">VE</span><span>0204 Project Tests</span><span class="cs-muted">File</span><span class="cs-muted">Edit</span></div><div class="cs-body"><aside class="cs-nav"><div class="cs-eyebrow">Project</div><div class="cs-navhead">⌄ TILESETS <span>+</span></div><div class="cs-navitem">▦ Village tileset</div><div class="cs-navhead">⌄ ACTORS <span>+</span></div><div class="cs-navitem">♙ Host</div><div class="cs-navitem">♙ Player</div><div class="cs-navhead">⌄ ENTITIES <span>+</span></div><div class="cs-navitem">◇ Torch</div><div class="cs-navhead">⌄ DIALOGUES <span>+</span></div><div class="cs-navitem">▤ Village greeting</div><div class="cs-navhead pink">⌄ CUTSCENES <span>+</span></div><div class="cs-navitem active">▥ First meeting</div><div class="cs-bottomnav"><div class="cs-navitem">⌘ Scripting</div><div class="cs-navitem">⚙ Settings</div></div></aside><div><div class="cs-tabbar"><span class="cs-tab">♧ Map 1　×</span><span class="cs-tab active">▥ First meeting　<span style="color:#e9ae64">●</span>　×</span></div><div class="cs-workspace"><main class="cs-main"><div class="cs-toolbar"><div class="cs-title">First meeting<div class="cs-muted">Map 1 · base:first-meeting</div></div><button class="cs-control" data-select="scene">Scene settings</button></div><section class="cs-sequence"><div class="cs-sectionline"><span class="cs-eyebrow">Sequence</span><span class="cs-muted cs-count">3 beats</span></div><div class="cs-beats"></div><button class="cs-append" data-add="end">+ Add beat</button><div class="cs-palette" hidden></div><button class="cs-finish" data-select="finish"><span>↳</span><span><strong>On completion</strong><span class="cs-sub">Host stays at Meeting point · no Lua actions</span></span><span class="cs-muted" style="margin-left:auto">›</span></button></section><section class="cs-mapblock"><div class="cs-maphead"><span>MAP PREVIEW · Map 1</span><div class="cs-zoom"><button aria-label="Zoom out" data-zoom="-">−</button><span class="cs-zoomvalue">100%</span><button aria-label="Zoom in" data-zoom="+">+</button><button data-zoom="fit">Fit</button></div></div><div class="cs-map">${map}</div><div class="cs-mapfoot"><span class="cs-mapcaption">① Host → Meeting point</span><span>Spatial preview</span></div></section></main><aside class="cs-inspector" aria-live="polite"><div class="cs-inspectorhead"></div><div class="cs-fields"></div></aside></div></div></div></div>`;
+const q=s=>stage.querySelector(s);
+function save(){window.openai?.setWidgetState?.({modelContent:{layout:stage.dataset.variant,selectedBeat:selection},privateContent:{zoom}})?.catch(()=>{});}
+function renderCards(){q('.cs-beats').innerHTML=beats.map((b,i)=>`${i?`<button class="cs-insert" data-add="${i}">+ insert</button>`:''}<button class="cs-card ${selection===b.id?'selected':''}" style="--beat-color:${b.color}" data-select="${b.id}" aria-pressed="${selection===b.id}"><span class="cs-cardhead"><span class="cs-number">${i+1}</span>${b.type}<span class="cs-grip">⠿</span></span><span class="cs-summary">${b.summary}</span><span class="cs-sub">${b.sub}</span></button>`).join('');q('.cs-count').textContent=beats.length+' beats';stage.querySelectorAll('.cs-finish').forEach(el=>el.classList.toggle('selected',selection==='finish'));}
+const field=(label,options)=>`<label>${label}<select>${options.map(x=>`<option>${x}</option>`).join('')}</select></label>`;
+function render(){renderCards();let title='',tag='',fields='';
+if(selection==='scene'){title='First meeting';tag='Cutscene';fields=`<label>Name<input type="text" value="First meeting"></label>${field('Map',['Map 1'])}<label><input type="checkbox" checked> Allow skipping</label><div class="cs-muted">Skipping applies the same final positions and completion actions.</div><details><summary>Resource details</summary><span>base:first-meeting</span></details>`;}
+else if(selection==='finish'){title='On completion';tag='After watching or skipping';fields=`<div class="cs-eyebrow" style="margin-bottom:14px">Final actor positions</div>${field('Host',['Meeting point','Restore original'])}<div class="cs-muted">Other actors return to their original positions.</div><label style="margin-top:24px">Completion actions · Lua<textarea placeholder="-- Optional state changes"></textarea></label>`;}
+else {const b=beats.find(b=>b.id===selection)||beats[0];title=b.type;tag='Beat '+(beats.indexOf(b)+1)+' of '+beats.length;
+if(b.type==='Move to anchor') fields=`${field('Actor',['Host','Player'])}<div class="cs-id">host-01</div>${field('Destination',['Meeting point','Inn entrance','Choose an anchor…'])}<button class="cs-pick">⌖ Locate on map</button><div class="cs-muted">Waits for the actor to arrive before continuing.</div>`;
+else if(b.type==='Face actor') fields=`${field('Actor',['Host','Player'])}${field('Face toward',['Player','Host'])}<div class="cs-muted">Turns immediately, then continues to the next beat.</div>`;
+else fields=`${field('Dialogue',['Village greeting','Choose a dialogue…'])}<div class="cs-muted">Continues when the conversation ends.</div>`;
+if(settings.showReferenceIssue&&b.type==='Move to anchor')fields=`<div class="cs-error" role="alert">Meeting point no longer exists on Map 1. Choose another destination.</div>`+fields;
+fields+=`<details><summary>Beat details</summary><label>Beat ID<input type="text" value="${b.id}"></label><label>Label<input type="text" value=""></label></details>`;
+}
+if(settings.showReferenceIssue){const header=q('[data-select="move"] .cs-cardhead');if(header)header.insertAdjacentHTML('beforeend','<span class="cs-issueflag">Missing destination</span>');}
+q('.cs-inspectorhead').innerHTML=`<div class="cs-eyebrow">Inspector</div><strong>${title}</strong><span class="cs-muted">${tag}</span>`;q('.cs-fields').innerHTML=fields;
+q('.cs-mapcaption').textContent=selection==='face'?'② Host faces Player':selection==='dialogue'?'③ Village greeting':selection==='finish'?'Final position · Host at Meeting point':'① Host → Meeting point';
+q('.cs-route').style.opacity=selection==='move'?'1':'.25';
+}
+stage.addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;
+if(button.dataset.select){selection=button.dataset.select;render();save();}
+if(button.dataset.add){insertAt=button.dataset.add==='end'?beats.length:Number(button.dataset.add);const p=q('.cs-palette');p.hidden=!p.hidden;p.innerHTML=['Move to anchor','Face actor','Play dialogue'].map(t=>`<button class="cs-control" data-type="${t}">${t}</button>`).join('');}
+if(button.dataset.type){const template=beats.find(b=>b.type===button.dataset.type);const b={...template,id:'beat-'+Date.now()};beats.splice(insertAt,0,b);selection=b.id;q('.cs-palette').hidden=true;render();save();}
+if(button.dataset.zoom){zoom=button.dataset.zoom==='fit'?100:Math.max(50,Math.min(200,zoom+(button.dataset.zoom==='+'?25:-25)));q('.cs-zoomvalue').textContent=zoom+'%';q('.cs-map svg').style.transform=`scale(${zoom/100})`;save();}
+if(button.classList.contains('cs-pick')){q('.cs-mapblock').scrollIntoView({behavior:'smooth',block:'nearest'});q('.cs-mapcaption').textContent='Meeting point · selected destination';}
+});
+render();
+window.addEventListener('openai:set_globals',event=>{const saved=event.detail?.globals?.widgetState?.modelContent;if(saved?.selectedBeat){selection=saved.selectedBeat;render();}});
+if(globalThis.Tweak){const tweak=new Tweak({container:stage,onChange:render});tweak.addToggle(settings,'showReferenceIssue',{label:'Missing destination example'});}
+});
+})();
+</script>
