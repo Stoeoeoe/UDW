@@ -61,7 +61,7 @@ export const WorkspaceEditDialog: React.FC<{
   }
 
   if (
-    (metadataFlow === 'actor' && state.document.kind === 'actor') ||
+    (metadataFlow === 'character' && state.document.kind === 'character') ||
     (metadataFlow === 'entity' && state.document.kind === 'entity') ||
     (metadataFlow === 'item' && state.document.kind === 'item')
   ) {

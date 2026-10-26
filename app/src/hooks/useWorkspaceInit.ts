@@ -32,7 +32,7 @@ export function useWorkspaceInit() {
   const maps = useEditorStore((state) => state.maps);
   const tilesets = useEditorStore((state) => state.tilesets);
   const entityTypes = useEditorStore((state) => state.entityTypes);
-  const actors = useEditorStore((state) => state.actors);
+  const characters = useEditorStore((state) => state.characters);
   const items = useEditorStore((state) => state.items);
   const dialogues = useEditorStore((state) => state.dialogues);
   const cutscenes = useEditorStore((s) => s.cutscenes);
@@ -54,7 +54,7 @@ export function useWorkspaceInit() {
       buildWorkspaceTree({
         maps,
         tilesets,
-        actors,
+        characters,
         entityTypes,
         items,
         dialogues: Array.from(dialogues.values()),
@@ -66,7 +66,7 @@ export function useWorkspaceInit() {
     [
       maps,
       tilesets,
-      actors,
+      characters,
       entityTypes,
       items,
       dialogues,
@@ -111,7 +111,7 @@ export function useWorkspaceInit() {
     const snapshot = {
       maps,
       tilesets,
-      actors,
+      characters,
       entityTypes,
       items,
       dialogues: Array.from(dialogues.values()),
@@ -148,7 +148,7 @@ export function useWorkspaceInit() {
     resourcesLoaded,
     maps,
     tilesets,
-    actors,
+    characters,
     entityTypes,
     items,
     dialogues,
@@ -169,7 +169,7 @@ export function useWorkspaceInit() {
       const document = documentFromHash(window.location.hash, {
         maps,
         tilesets,
-        actors,
+        characters,
         entityTypes,
         items,
         dialogues: Array.from(dialogues.values()),
@@ -192,7 +192,7 @@ export function useWorkspaceInit() {
     resourcesLoaded,
     maps,
     tilesets,
-    actors,
+    characters,
     entityTypes,
     items,
     dialogues,

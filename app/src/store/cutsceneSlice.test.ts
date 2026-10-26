@@ -90,7 +90,7 @@ describe('cutscene document lifecycle', () => {
   it('saves only the requested file even when another file is invalid and has unsaved metadata', async () => {
     const sibling = addSavedSibling();
     useEditorStore.getState().editCutscenes((documents, labels, folders) => {
-      documents.find((scene) => scene.id === sibling)!.sequence[0].arguments.actor = 'missing';
+      documents.find((scene) => scene.id === sibling)!.sequence[0].arguments.character = 'missing';
       labels[sibling] = 'Unsaved sibling label';
       folders[sibling] = 'Unsaved folder';
       labels[prototype.id] = 'Saved current label';
@@ -239,7 +239,11 @@ describe('cutscene document lifecycle', () => {
         ...parseCutscene(prototype),
         id: 'base:second',
         sequence: [
-          { id: 'bad', action: 'actors.face', arguments: { actor: 'missing', target: 'player' } },
+          {
+            id: 'bad',
+            action: 'characters.face',
+            arguments: { character: 'missing', target: 'player' },
+          },
         ],
       });
     });

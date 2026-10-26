@@ -9,7 +9,11 @@ describe('namespaced file persistence', () => {
   function setup(entries: { filename: string; data: unknown }[] = []) {
     const invoke = vi.fn(async (channel: string) => {
       if (channel === 'app:open-project')
-        return { projectPath: '/game', projectFilename: 'game.vproj', project: { id: 'game', idPrefix: 'base' } };
+        return {
+          projectPath: '/game',
+          projectFilename: 'game.vproj',
+          project: { id: 'game', idPrefix: 'base' },
+        };
       if (channel === 'app:fs-read-dir') return entries;
       return null;
     });
@@ -19,28 +23,31 @@ describe('namespaced file persistence', () => {
 
   it('updates, reads and deletes namespaced resource files without duplicates', async () => {
     const { fs, invoke } = setup([
-      { filename: 'myactor.actor.json', data: { id: 'base:myactor', name: 'My Actor' } },
+      {
+        filename: 'mycharacter.character.json',
+        data: { id: 'base:mycharacter', name: 'My Character' },
+      },
     ]);
     expect((await fs.openProject()).project).toMatchObject({ id: 'game', idPrefix: 'base' });
-    const [actor] = await fs.loadAllActors();
-    expect(actor.id).toBe('base:myactor');
-    await fs.saveJson('actors', `${actor.id}.actor.json`, actor);
+    const [character] = await fs.loadAllCharacters();
+    expect(character.id).toBe('base:mycharacter');
+    await fs.saveJson('characters', `${character.id}.character.json`, character);
     expect(invoke).toHaveBeenLastCalledWith(
       'app:fs-write-json',
       expect.objectContaining({
-        filename: 'myactor.actor.json',
-        data: expect.objectContaining({ id: 'base:myactor' }),
+        filename: 'mycharacter.character.json',
+        data: expect.objectContaining({ id: 'base:mycharacter' }),
       }),
     );
-    await fs.readJson('actors', `${actor.id}.actor.json`);
+    await fs.readJson('characters', `${character.id}.character.json`);
     expect(invoke).toHaveBeenLastCalledWith(
       'app:fs-read-json',
-      expect.objectContaining({ filename: 'myactor.actor.json' }),
+      expect.objectContaining({ filename: 'mycharacter.character.json' }),
     );
-    await fs.deleteJson('actors', `${actor.id}.actor.json`);
+    await fs.deleteJson('characters', `${character.id}.character.json`);
     expect(invoke).toHaveBeenLastCalledWith(
       'app:fs-delete-json',
-      expect.objectContaining({ filename: 'myactor.actor.json' }),
+      expect.objectContaining({ filename: 'mycharacter.character.json' }),
     );
     expect(fs.resolveFilename('', 'game.vproj')).toBe('game.vproj');
   });
@@ -56,7 +63,10 @@ describe('namespaced file persistence', () => {
           nodes: [],
         },
       },
-      { filename: 'Intro.runtime.dialogue.json', data: { id: 'base:intro', name: 'Intro', nodes: [] } },
+      {
+        filename: 'Intro.runtime.dialogue.json',
+        data: { id: 'base:intro', name: 'Intro', nodes: [] },
+      },
       { filename: 'Intro.i18n.json', data: { dialogueId: 'base:intro', messages: [] } },
     ]);
     await fs.openProject();
@@ -71,11 +81,11 @@ describe('namespaced file persistence', () => {
 
   it('rejects resource collisions rather than silently overwriting an entry', async () => {
     const { fs } = setup([
-      { filename: 'first.actor.json', data: { id: 'base:myactor' } },
-      { filename: 'second.actor.json', data: { id: 'base:myactor' } },
+      { filename: 'first.character.json', data: { id: 'base:mycharacter' } },
+      { filename: 'second.character.json', data: { id: 'base:mycharacter' } },
     ]);
     await fs.openProject();
-    await expect(fs.loadAllActors()).rejects.toThrow('Duplicate ID');
+    await expect(fs.loadAllCharacters()).rejects.toThrow('Duplicate ID');
   });
 
   it('writes new mod resources and cross-mod references with qualified lowercase IDs', async () => {
@@ -93,7 +103,7 @@ describe('namespaced file persistence', () => {
     await fs.saveJson('dialogues', 'Intro.dialogue.json', {
       id: 'Intro',
       startNodeId: 'Step1',
-      nodes: [{ id: 'Step1', type: 'line', speaker: 'BASE:MyActor' }],
+      nodes: [{ id: 'Step1', type: 'line', speaker: 'BASE:MyCharacter' }],
     });
     expect(invoke).toHaveBeenLastCalledWith(
       'app:fs-write-json',
@@ -102,7 +112,7 @@ describe('namespaced file persistence', () => {
         data: expect.objectContaining({
           id: 'mymod:intro',
           startNodeId: 'step1',
-          nodes: [{ id: 'step1', type: 'line', speaker: 'base:myactor' }],
+          nodes: [{ id: 'step1', type: 'line', speaker: 'base:mycharacter' }],
         }),
       }),
     );

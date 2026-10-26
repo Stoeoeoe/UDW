@@ -5,11 +5,11 @@ Projects define `idPrefix` in their `.vproj` manifest. New projects default to
 creating a mod project. The prefix is fixed after creation because changing it
 would change resource identities and invalidate references from other projects.
 
-Actors, entities, items, maps, tilesets and dialogues use lowercase qualified IDs
+Characters, entities, items, maps, tilesets and dialogues use lowercase qualified IDs
 in editor state and serialized files: `<idPrefix>:<localId>`. For example,
-`myActor` in a legacy base project becomes `base:myactor`. References to these
+`myCharacter` in a legacy base project becomes `base:mycharacter`. References to these
 resources use the same complete ID, including references across namespaces such
-as a mod dialogue's `speaker: "base:myactor"`.
+as a mod dialogue's `speaker: "base:mycharacter"`.
 
 IDs within a resource (dialogue nodes/options, map layers/instances/anchors,
 tileset object definitions) and project-contained definitions remain local and
@@ -25,7 +25,7 @@ ID literals embedded in Lua or arbitrary custom property values are authored
 content and must be updated by their author; they are not rewritten as strings.
 
 Logical IDs are separate from physical filenames because Windows forbids `:`.
-New files use the local ID within their own namespace (`myactor.actor.json`), or
+New files use the local ID within their own namespace (`mycharacter.character.json`), or
 `<namespace>~<localId>` for foreign namespaces. Windows-reserved names receive a
 leading `~`. Existing filenames, including their casing, are retained on save,
 read, delete, and reveal in Explorer. Dialogue companion exports share the
@@ -48,7 +48,7 @@ resource registry use these definitions. The registry imports no schemas, stores
 or browser APIs. JSON schemas validate the serialized format and contain no
 editor behavior annotations.
 
-For example, the actor entry ties `actors/`, `.actor.json`, `actor.schema.json`,
+For example, the character entry ties `characters/`, `.character.json`, `character.schema.json`,
 resource ID scope and legacy `npcs/*.npc.json` support together. Dialogue source,
 runtime and localization exports have separate entries linked by `sourceKind`.
 Original-file lookup uses a logical file key; physical filenames remain Windows

@@ -78,7 +78,7 @@ export const WorkspaceLoadingScreen: React.FC<WorkspaceLoadingScreenProps> = ({
           <HStack spacing="2" flexWrap="wrap">
             <Badge variant="editor">Locations</Badge>
             <Badge variant="editor">Tilesets</Badge>
-            <Badge variant="editor">Actors</Badge>
+            <Badge variant="editor">Characters</Badge>
             <Badge variant="editor">Dialogues</Badge>
           </HStack>
 

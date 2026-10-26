@@ -13,7 +13,7 @@ import bindings from './__fixtures__/cutscene-bindings.json';
 import prototype from './__fixtures__/prototype.v2.runtime.cutscene.json';
 
 const actions = readCutsceneActions(bindings);
-const face = actions.find((a) => a.id === 'actors.face')!;
+const face = actions.find((a) => a.id === 'characters.face')!;
 const npc = { id: 'base:host', category: 'npc', displayName: 'Host' } as EntityType;
 const map = {
   id: prototype.mapId,
@@ -36,14 +36,14 @@ const source = () =>
       {
         id: 'prepare-facing',
         action: face.id,
-        arguments: { actor: 'cutscene-prototype-host-01', target: 'player' },
+        arguments: { character: 'cutscene-prototype-host-01', target: 'player' },
       },
     ],
   });
 
 describe('cutscene setup phase', () => {
   it('offers only explicitly permitted immediate cutscene actions', () => {
-    expect(actionsForCutscenePhase(actions, 'setup').map((a) => a.id)).toEqual(['actors.face']);
+    expect(actionsForCutscenePhase(actions, 'setup').map((a) => a.id)).toEqual(['characters.face']);
     expect(actionsForCutscenePhase([{ ...face, execution: 'awaitable' }], 'setup')).toEqual([]);
     expect(actionsForCutscenePhase([{ ...face, contexts: ['npcRoutine'] }], 'setup')).toEqual([]);
     expect(actionsForCutscenePhase([{ ...face, phases: undefined }], 'setup')).toEqual([]);
@@ -72,7 +72,7 @@ describe('cutscene setup phase', () => {
       expect.objectContaining({
         phase: 'setup',
         stepId: 'invalid-walk',
-        message: 'Action actors.moveTo is not allowed in setup',
+        message: 'Action characters.moveTo is not allowed in setup',
       }),
     );
     expect(() => parseCutscene({ ...scene, onStart: 'raw Lua' })).toThrow();
@@ -102,7 +102,7 @@ describe('cutscene setup phase', () => {
   it('previews setup first, establishes player context, and does not invent walking during setup', () => {
     // Synthetic binding fixture: tests metadata consumption, not an additional shipped API.
     const place: CutsceneAction = {
-      ...actions.find((a) => a.id === 'actors.moveTo')!,
+      ...actions.find((a) => a.id === 'characters.moveTo')!,
       id: 'test.immediatePlacement',
       execution: 'immediate',
       phases: ['setup'],
@@ -112,15 +112,15 @@ describe('cutscene setup phase', () => {
       {
         id: 'place-player',
         action: place.id,
-        arguments: { actor: 'player', destination: 'player-start' },
+        arguments: { character: 'player', destination: 'player-start' },
       },
       ...scene.onStart!,
     ];
     const api = [...actions, place];
     const initial = previewCutscene(scene, map, [npc], api, { kind: 'scene' }, refs.dialogueIds);
-    expect(initial.actors.find((a) => a.id === 'player')!.position).toBeNull();
+    expect(initial.characters.find((a) => a.id === 'player')!.position).toBeNull();
     const prepared = previewCutscene(scene, map, [npc], api, { kind: 'setup' }, refs.dialogueIds);
-    expect(prepared.actors.find((a) => a.id === 'player')!.position).toEqual([96, 80]);
+    expect(prepared.characters.find((a) => a.id === 'player')!.position).toEqual([96, 80]);
     expect(prepared.segments.every((s) => s.kind !== 'move')).toBe(true);
     const selected = previewCutscene(
       scene,
@@ -130,7 +130,7 @@ describe('cutscene setup phase', () => {
       { kind: 'step', id: 'greet' },
       refs.dialogueIds,
     );
-    expect(selected.actors.find((a) => a.id === 'cutscene-prototype-host-01')!.facing).toEqual([
+    expect(selected.characters.find((a) => a.id === 'cutscene-prototype-host-01')!.facing).toEqual([
       1, 0,
     ]);
     expect(selected.notices).toEqual([]);
@@ -142,7 +142,7 @@ describe('cutscene setup phase', () => {
       { kind: 'completion' },
       refs.dialogueIds,
     );
-    expect(completion.actors.find((a) => a.id === 'player')!.position).toBeNull();
+    expect(completion.characters.find((a) => a.id === 'player')!.position).toBeNull();
     expect(scene.onStart[0].id).toBe('place-player');
   });
   it('propagates unknown setup effects into subsequent sequence previews', () => {
@@ -156,7 +156,7 @@ describe('cutscene setup phase', () => {
       {
         id: 'opaque',
         action: opaque.id,
-        arguments: { actor: 'player', target: 'cutscene-prototype-host-01' },
+        arguments: { character: 'player', target: 'cutscene-prototype-host-01' },
       },
     ];
     const result = previewCutscene(
@@ -173,7 +173,7 @@ describe('cutscene setup phase', () => {
       ),
     ).toBe(true);
     expect(result.segments.filter((s) => s.kind === 'move')).toEqual([]);
-    expect(result.actors.find((a) => a.id === 'cutscene-prototype-host-01')!.position).toEqual([
+    expect(result.characters.find((a) => a.id === 'cutscene-prototype-host-01')!.position).toEqual([
       64, 80,
     ]);
   });

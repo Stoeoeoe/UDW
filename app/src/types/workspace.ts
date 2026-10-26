@@ -1,7 +1,7 @@
 import {
   Map as GameMap,
   Tileset,
-  Actor,
+  Character,
   EntityType,
   Item,
   DialogueDocument,
@@ -13,7 +13,7 @@ import { EditorResourceTypeId } from './editorResource';
 export type WorkspaceScreenKind =
   | 'cutscenes'
   | 'entities'
-  | 'actors'
+  | 'characters'
   | 'items'
   | 'dialogues'
   | 'scripting';
@@ -51,9 +51,9 @@ export type WorkspaceDocument =
       saveUnitId: 'configuration';
     }
   | {
-      kind: 'actors';
+      kind: 'characters';
       label: string;
-      saveUnitId: 'actors';
+      saveUnitId: 'characters';
     }
   | {
       kind: 'items';
@@ -71,8 +71,8 @@ export type WorkspaceDocument =
       saveUnitId: 'configuration';
     }
   | {
-      kind: 'actor';
-      actorId: string;
+      kind: 'character';
+      characterId: string;
       label: string;
       saveUnitId: string;
     }
@@ -176,7 +176,7 @@ export type LocationWorkspaceLeaf = {
 export interface WorkspaceProjectSnapshot {
   maps: GameMap[];
   tilesets: Map<string, Tileset>;
-  actors?: Actor[];
+  characters?: Character[];
   entityTypes?: EntityType[];
   items?: Item[];
   dialogues?: DialogueDocument[];

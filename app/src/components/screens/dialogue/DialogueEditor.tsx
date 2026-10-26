@@ -71,7 +71,7 @@ export const DialogueEditor: React.FC = () => {
         <DialogueNodeInspector
           selectedDialogue={controller.selectedDialogue}
           selectedNode={controller.selectedNode}
-          actors={controller.actors}
+          characters={controller.characters}
           gameVariables={controller.gameVariables}
           scriptTables={controller.scriptTables}
           scriptFunctions={controller.scriptFunctions}

@@ -13,7 +13,7 @@ export const MapPreviewAnnotations: React.FC<{
   scale: number;
   pan: { x: number; y: number };
 }> = ({ overlays, width, height, scale, pan }) => {
-  const [movement, facing, actor, ghost, background, text] = useToken('colors', [
+  const [movement, facing, character, ghost, background, text] = useToken('colors', [
     'cyan.400',
     'orange.300',
     'blue.200',
@@ -21,7 +21,7 @@ export const MapPreviewAnnotations: React.FC<{
     'editorFieldBg',
     'cyan.50',
   ]);
-  const colors = { movement, facing, actor, ghost, background, text };
+  const colors = { movement, facing, character, ghost, background, text };
   const project = ([x, y]: Point): Point => [
     x * TILE_PIXELS * scale + pan.x,
     y * TILE_PIXELS * scale + pan.y,
@@ -30,7 +30,7 @@ export const MapPreviewAnnotations: React.FC<{
     const length = Math.hypot(to[0] - from[0], to[1] - from[1]);
     if (!length) return null;
     const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
-    // Keep movement heads outside the actor marker instead of hiding under it.
+    // Keep movement heads outside the character marker instead of hiding under it.
     const inset = Math.min(endpointInset, length * 0.2);
     const tip: Point = [to[0] - inset * Math.cos(angle), to[1] - inset * Math.sin(angle)];
     const headLength = Math.min(dashed ? 8 : 13, length * 0.5);
@@ -90,7 +90,7 @@ export const MapPreviewAnnotations: React.FC<{
         if (overlay.kind === 'placement') {
           const [x, y] = project(overlay.position);
           return (
-            <g key={index} stroke={colors.actor} strokeWidth={2} fill="none">
+            <g key={index} stroke={colors.character} strokeWidth={2} fill="none">
               {overlay.icon && (
                 <text
                   x={x}
@@ -128,9 +128,9 @@ export const MapPreviewAnnotations: React.FC<{
             </g>
           );
         }
-        if (overlay.kind === 'actor') {
+        if (overlay.kind === 'character') {
           const position = project(overlay.position);
-          const color = overlay.ghost ? colors.ghost : colors.actor;
+          const color = overlay.ghost ? colors.ghost : colors.character;
           return (
             <g key={index} opacity={overlay.opacity ?? 1}>
               {overlay.facing && facingArrow(position, overlay.facing, color)}

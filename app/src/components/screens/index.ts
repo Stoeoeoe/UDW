@@ -7,7 +7,7 @@ export type { ResizableEditorLayoutProps } from './common/ResizableEditorLayout'
 export { MapEditor } from './map/MapEditor';
 export { TilesetEditor } from './tileset/TilesetEditor';
 export { EntityEditor } from './entity/EntityEditor';
-export { default as ActorEditor } from './actor/ActorEditor';
+export { default as CharacterEditor } from './character/CharacterEditor';
 export { default as ItemEditor } from './item/ItemEditor';
 export { DialogueEditor } from './dialogue';
 export { VariableEditor } from './scripting/VariableEditor';

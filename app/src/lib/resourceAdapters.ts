@@ -3,7 +3,7 @@ import { ResourceKind, WorkspaceDocument } from '../types/workspace';
 import { EditorResourceDescriptor } from '../types/editorResource';
 import { createEditorResourceDocument, getEditorResourceSaveUnitId } from './editorResourceTypes';
 import {
-  Actor,
+  Character,
   DialogueDocument,
   EntityType,
   GameVariable,
@@ -19,11 +19,11 @@ export interface ResourceDescriptor extends EditorResourceDescriptor {
   document: WorkspaceDocument;
 }
 
-export function actorDocument(actor: Actor): WorkspaceDocument {
+export function characterDocument(character: Character): WorkspaceDocument {
   return createEditorResourceDocument({
-    type: 'actor',
-    id: getSchemaResourceId(actor),
-    name: getSchemaResourceName(actor),
+    type: 'character',
+    id: getSchemaResourceId(character),
+    name: getSchemaResourceName(character),
   });
 }
 
@@ -75,16 +75,16 @@ export function tilesetDocument(tileset: Tileset): WorkspaceDocument {
   });
 }
 
-export function listActorDescriptors(actors: Actor[]): ResourceDescriptor[] {
-  return actors.map((actor) => ({
-    type: 'actor',
-    kind: 'actor',
-    id: getSchemaResourceId(actor),
-    name: getSchemaResourceName(actor),
-    folderPath: normalizeFolderPath(actor.folderPath),
-    resourceIcon: actor.icon ? { type: 'game-icon', value: actor.icon } : undefined,
-    document: actorDocument(actor),
-    saveUnitId: getEditorResourceSaveUnitId('actor', actor.id),
+export function listCharacterDescriptors(characters: Character[]): ResourceDescriptor[] {
+  return characters.map((character) => ({
+    type: 'character',
+    kind: 'character',
+    id: getSchemaResourceId(character),
+    name: getSchemaResourceName(character),
+    folderPath: normalizeFolderPath(character.folderPath),
+    resourceIcon: character.icon ? { type: 'game-icon', value: character.icon } : undefined,
+    document: characterDocument(character),
+    saveUnitId: getEditorResourceSaveUnitId('character', character.id),
   }));
 }
 
@@ -185,7 +185,7 @@ export function listTilesetDescriptors(tilesets: Map<string, Tileset>): Resource
 export interface AllResourceDescriptors {
   locations: ResourceDescriptor[];
   tilesets: ResourceDescriptor[];
-  actors: ResourceDescriptor[];
+  characters: ResourceDescriptor[];
   entities: ResourceDescriptor[];
   items: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
@@ -196,7 +196,7 @@ export interface AllResourceDescriptors {
 export function buildAllResourceDescriptors(state: {
   maps: GameMap[];
   tilesets: Map<string, Tileset>;
-  actors: Actor[];
+  characters: Character[];
   entityTypes: EntityType[];
   items: Item[];
   dialogues: Map<string, DialogueDocument>;
@@ -208,7 +208,7 @@ export function buildAllResourceDescriptors(state: {
   return {
     locations: listLocationDescriptors(state.maps),
     tilesets: listTilesetDescriptors(state.tilesets),
-    actors: listActorDescriptors(state.actors),
+    characters: listCharacterDescriptors(state.characters),
     entities: listEntityDescriptors(state.entityTypes),
     items: listItemDescriptors(state.items),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
@@ -233,11 +233,11 @@ export function normalizeFolderPath(folderPath: string | null | undefined): stri
 
 export function canCreateResourceKind(
   kind: ResourceKind,
-): kind is 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' | 'cutscene' {
+): kind is 'location' | 'tileset' | 'character' | 'entity' | 'item' | 'dialogue' | 'cutscene' {
   return (
     kind === 'location' ||
     kind === 'tileset' ||
-    kind === 'actor' ||
+    kind === 'character' ||
     kind === 'entity' ||
     kind === 'item' ||
     kind === 'dialogue' ||
@@ -259,8 +259,8 @@ export async function setResourceFolderPath(
         folders[id] = normalizedFolderPath;
       });
       break;
-    case 'actor':
-      await store.updateActor(id, { folderPath: normalizedFolderPath });
+    case 'character':
+      await store.updateCharacter(id, { folderPath: normalizedFolderPath });
       break;
     case 'item':
       await store.updateItem(id, { folderPath: normalizedFolderPath });
@@ -318,8 +318,8 @@ function listDescriptorsForKind(
       return listLocationDescriptors(state.maps);
     case 'tileset':
       return listTilesetDescriptors(state.tilesets);
-    case 'actor':
-      return listActorDescriptors(state.actors);
+    case 'character':
+      return listCharacterDescriptors(state.characters);
     case 'entity':
       return listEntityDescriptors(state.entityTypes);
     case 'item':

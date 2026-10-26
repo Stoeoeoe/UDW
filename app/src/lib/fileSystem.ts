@@ -17,7 +17,7 @@ import {
  */
 
 import {
-  Actor,
+  Character,
   DialogueDocument,
   EntityType,
   Item,
@@ -225,17 +225,17 @@ export class FileSystemManager {
   }
 
   /**
-   * Load all actors from actors/ (preferred) with legacy npcs/ fallback.
+   * Load all characters from characters/ (preferred) with legacy npcs/ fallback.
    */
-  async loadAllActors(): Promise<Actor[]> {
-    const actors = await this.readDirectory<Actor>(
-      resourceRegistry.actor.folder,
-      resourceRegistry.actor.extension,
+  async loadAllCharacters(): Promise<Character[]> {
+    const characters = await this.readDirectory<Character>(
+      resourceRegistry.character.folder,
+      resourceRegistry.character.extension,
       true,
     );
-    if (actors.length > 0) return actors;
-    const legacy = resourceRegistry.actor.legacyFiles![0];
-    return this.readDirectory<Actor>(legacy.folder, legacy.extension, true);
+    if (characters.length > 0) return characters;
+    const legacy = resourceRegistry.character.legacyFiles![0];
+    return this.readDirectory<Character>(legacy.folder, legacy.extension, true);
   }
 
   /**

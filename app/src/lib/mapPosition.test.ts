@@ -13,7 +13,7 @@ const manifest = {
   modules: [...bindings.modules, { path: 'PositionFixture', methods: [method] }],
 };
 const actions = readCutsceneActions(manifest);
-const place = actions.find((a) => a.id === 'actors.place')!;
+const place = actions.find((a) => a.id === 'characters.place')!;
 const npc = { id: 'base:host', category: 'npc', displayName: 'Host' } as EntityType;
 const host = 'cutscene-prototype-host-01';
 const map = {
@@ -37,7 +37,7 @@ const source = () =>
       {
         id: 'place-player',
         action: place.id,
-        arguments: { actor: 'player', position: { x: 168, y: 104 } },
+        arguments: { character: 'player', position: { x: 168, y: 104 } },
       },
     ],
   });
@@ -90,15 +90,19 @@ describe('declarative map position parameters', () => {
       refs.dialogueIds,
       16,
     );
-    expect(preview.actors.find((a) => a.id === 'player')!.position).toEqual([168, 104]);
-    expect(preview.facings).toContainEqual({ stepId: 'greet', actorId: host, targetId: 'player' });
+    expect(preview.characters.find((a) => a.id === 'player')!.position).toEqual([168, 104]);
+    expect(preview.facings).toContainEqual({
+      stepId: 'greet',
+      characterId: host,
+      targetId: 'player',
+    });
     expect(
       preview.segments.filter((s) => s.kind === 'move').every((s) => s.stepId !== 'place-player'),
     ).toBe(true);
     expect(preview.notices).toEqual([]);
     expect(preview.placements).toContainEqual({
       stepId: 'place-player',
-      actorId: 'player',
+      characterId: 'player',
       position: [168, 104],
     });
   });
@@ -115,8 +119,8 @@ describe('declarative map position parameters', () => {
         spatialState: 'described',
         effects: [
           {
-            kind: 'setActorPosition',
-            actorParameter: 'who',
+            kind: 'setCharacterPosition',
+            characterParameter: 'who',
             positionParameter: 'where',
             facing: 'preserve',
           },
@@ -125,10 +129,10 @@ describe('declarative map position parameters', () => {
     };
     const scene = source();
     scene.onComplete.steps = [
-      { id: 'face', action: 'actors.face', arguments: { actor: host, target: 'player' } },
+      { id: 'face', action: 'characters.face', arguments: { character: host, target: 'player' } },
       { id: 'place', action: custom.id, arguments: { who: host, where: { x: 200, y: 120 } } },
     ];
-    scene.onComplete.actorPlacements.push({ actor: 'player', anchor: 'player-spot' });
+    scene.onComplete.characterPlacements.push({ character: 'player', anchor: 'player-spot' });
     const before = previewCutscene(
       scene,
       map,
@@ -145,10 +149,10 @@ describe('declarative map position parameters', () => {
       { kind: 'completion' },
       refs.dialogueIds,
     );
-    expect(before.actors.find((a) => a.id === host)!.facing).toEqual([1, 0]);
-    expect(after.actors.find((a) => a.id === host)!.facing).toEqual(
-      before.actors.find((a) => a.id === host)!.facing,
+    expect(before.characters.find((a) => a.id === host)!.facing).toEqual([1, 0]);
+    expect(after.characters.find((a) => a.id === host)!.facing).toEqual(
+      before.characters.find((a) => a.id === host)!.facing,
     );
-    expect(after.actors.find((a) => a.id === host)!.position).toEqual([200, 120]);
+    expect(after.characters.find((a) => a.id === host)!.position).toEqual([200, 120]);
   });
 });

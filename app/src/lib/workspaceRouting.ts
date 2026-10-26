@@ -41,11 +41,11 @@ export function createWorkspaceScreenDocument(kind: WorkspaceScreenKind): Worksp
         label: 'Entities',
         saveUnitId: 'configuration',
       };
-    case 'actors':
+    case 'characters':
       return {
         kind,
-        label: 'Actors',
-        saveUnitId: 'actors',
+        label: 'Characters',
+        saveUnitId: 'characters',
       };
     case 'items':
       return {
@@ -87,9 +87,9 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'config');
       if (document.configTab) params.set('tab', document.configTab);
       break;
-    case 'actor':
-      params.set('doc', 'actor');
-      params.set('id', document.actorId);
+    case 'character':
+      params.set('doc', 'character');
+      params.set('id', document.characterId);
       break;
     case 'entity':
       params.set('doc', 'entity');
@@ -112,7 +112,7 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('id', document.variableKey);
       break;
     case 'entities':
-    case 'actors':
+    case 'characters':
     case 'items':
     case 'dialogues':
     case 'cutscenes':
@@ -181,15 +181,15 @@ export function documentFromHash(
     };
   }
 
-  if (doc === 'actor') {
-    const actorId = params.get('id');
-    if (!actorId) return null;
-    const actor = snapshot.actors?.find((a) => a.id === actorId);
-    if (!actor) return null;
+  if (doc === 'character') {
+    const characterId = params.get('id');
+    if (!characterId) return null;
+    const character = snapshot.characters?.find((a) => a.id === characterId);
+    if (!character) return null;
     return createEditorResourceDocument({
-      type: 'actor',
-      id: actor.id,
-      name: actor.name,
+      type: 'character',
+      id: character.id,
+      name: character.name,
     });
   }
 
@@ -255,7 +255,7 @@ export function documentFromHash(
   if (
     doc === 'cutscenes' ||
     doc === 'entities' ||
-    doc === 'actors' ||
+    doc === 'characters' ||
     doc === 'items' ||
     doc === 'dialogues' ||
     doc === 'scripting'
@@ -267,7 +267,7 @@ export function documentFromHash(
     const mode = params.get('mode');
     if (
       mode === 'entities' ||
-      mode === 'actors' ||
+      mode === 'characters' ||
       mode === 'items' ||
       mode === 'dialogues' ||
       mode === 'scripting'

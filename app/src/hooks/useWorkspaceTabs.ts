@@ -10,7 +10,7 @@ import { WorkspaceDocument, WorkspaceTreeNode } from '../types/workspace';
 
 export function useWorkspaceTabs() {
   const selectedEntityTypeId = useEditorStore((state) => state.selectedEntityTypeId);
-  const selectedActorId = useEditorStore((state) => state.selectedActorId);
+  const selectedCharacterId = useEditorStore((state) => state.selectedCharacterId);
   const selectedItemId = useEditorStore((state) => state.selectedItemId);
   const selectedDialogueId = useEditorStore((state) => state.selectedDialogueId);
 
@@ -113,8 +113,8 @@ export function useWorkspaceTabs() {
       markRecentResource(`tileset:${doc.tilesetId}`);
       return;
     }
-    if (doc.kind === 'actor') {
-      markRecentResource(`actor:${doc.actorId}`);
+    if (doc.kind === 'character') {
+      markRecentResource(`character:${doc.characterId}`);
       return;
     }
     if (doc.kind === 'entity') {
@@ -138,8 +138,8 @@ export function useWorkspaceTabs() {
       markRecentResource(`entity:${selectedEntityTypeId}`);
       return;
     }
-    if (doc.kind === 'actors' && selectedActorId) {
-      markRecentResource(`actor:${selectedActorId}`);
+    if (doc.kind === 'characters' && selectedCharacterId) {
+      markRecentResource(`character:${selectedCharacterId}`);
       return;
     }
     if (doc.kind === 'items' && selectedItemId) {
@@ -152,7 +152,7 @@ export function useWorkspaceTabs() {
   }, [
     activeTab,
     markRecentResource,
-    selectedActorId,
+    selectedCharacterId,
     selectedDialogueId,
     selectedEntityTypeId,
     selectedItemId,

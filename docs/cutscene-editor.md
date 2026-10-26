@@ -3,7 +3,7 @@
 The cutscene workspace has **Before start**, **Sequence** and **On completion**
 tabs, with a shared Inspector and persistent resizable map preview. Select a
 step to edit its parameters, or Scene settings to edit name, map and skip
-eligibility. Final actor positions remain editable in the completion Inspector.
+eligibility. Final character positions remain editable in the completion Inspector.
 
 Before start and On completion offer only immediate actions explicitly allowed
 in their manifest phase and cutscene context. Sequence offers sequence actions.
@@ -26,13 +26,13 @@ are errors and never replace authored values. Numeric fields preserve decimals
 and zero as JSON numbers; blank/nonfinite values are invalid. API-specific ranges
 remain Unity's responsibility unless exported as metadata.
 
-Actor references use placed NPC-instance IDs, reserved `player`, and roles declared
+Character references use placed NPC-instance IDs, reserved `player`, and roles declared
 by preceding setup steps. Spawn appears only in Before start because its bindings
-allow only `setup`. Its Character selector lists the project's actors. Instance
+allow only `setup`. Its Character selector lists the project's characters. Instance
 name identifies the spawned copy and is suggested automatically when choosing a
 character. Unity prefab registration is not checked by the editor. Blank,
 duplicate and forward references are errors; renaming or reordering declarations
-updates actor selectors without replacing saved IDs. Anchor and dialogue IDs refer
+updates character selectors without replacing saved IDs. Anchor and dialogue IDs refer
 to existing map/project resources. Renaming labels does not change references.
 
 ## Preview
@@ -50,7 +50,7 @@ unknown. The runtime player has no invented origin; declared setup effects can
 establish a known position when such an action exists in the bindings.
 
 Movement arrows show schematic displacement and previous-position ghosts, not
-navigation paths. Facing identifies the turning actor and target; movement
+navigation paths. Facing identifies the turning character and target; movement
 history is optional while inspecting facing. Dialogue is a reference cue, not
 executed flow. Physics, collision and timing verification belongs in Unity.
 
@@ -66,7 +66,7 @@ per file. Saving/discarding one scene does not commit another scene's drafts,
 metadata or pending deletion. Export rechecks current bindings/resources.
 
 Sources now use **formatVersion 2**, with `onStart`, `sequence` and
-`onComplete: { actorPlacements, steps }`. See [the v2 contract](cutscene-source-v2.md)
+`onComplete: { characterPlacements, steps }`. See [the v2 contract](cutscene-source-v2.md)
 for exact execution order, skipping, migration and Unity acceptance requirements.
 Empty legacy completion Lua can migrate losslessly; nonempty Lua requires manual
 conversion and is never discarded. Unity's current v1 importer must be updated
@@ -80,17 +80,21 @@ Grid snaps the character's feet to tile centers; Pixel uses integer map pixels;
 Anchor selects an existing map anchor. Coordinates save `{x,y}` and anchors save
 `{anchor}` with no mixed fields or editing-mode property. Pick on map stages a
 feet marker until click confirmation; Escape cancels. Left drag and wheel zoom
-remain available while picking. Definition icons identify spawned actors and
+remain available while picking. Definition icons identify spawned characters and
 placement ghosts; runtime prefab sprites are not present in the bindings.
 
 ## Choosing a character to spawn
 
-Spawn's **Character** selector uses the project's Actors list and saves the actor
+Spawn's **Character** selector uses the project's Characters list and saves the character
 ID. Unity resolves that ID to its runtime prefab and reports registration errors
-there. `resources.actor` from the bindings does not restrict the editor's choices.
+there. `resources.character` from the bindings does not restrict the editor's choices.
 
 **Instance name** identifies this particular copy of the character in later steps.
 Choosing a character suggests a unique name when the field is empty; explicit names
 are retained. Several instances can share one character definition while keeping
 separate instance names. The existing runtime player is selected with the `player`
-reference in Place and other actor actions; Spawn creates a new NPC instance.
+reference in Place and other character actions; Spawn creates a new NPC instance.
+
+Character terminology applies to code and saved data, including `characters/`,
+`.character.json`, `characterRef`, and `characters.*` Lua actions. Pre-rename resources and bindings require recreation; no migration for the old
+`actors/` resources or `actorRef` metadata is provided.

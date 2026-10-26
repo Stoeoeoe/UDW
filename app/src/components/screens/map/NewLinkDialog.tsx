@@ -184,7 +184,7 @@ const NewLinkDialogForm: React.FC<{
                           ))}
                         </Select>
                         <Text fontSize="10px" color="gray.500" mt={1}>
-                          Anchor on the target map that sets where actors arrive.
+                          Anchor on the target map that sets where characters arrive.
                         </Text>
                       </FormControl>
                     )}

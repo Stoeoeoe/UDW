@@ -6,7 +6,7 @@ Use this guide whenever you add or refactor an editor-like screen.
 
 ### ResizableEditorLayout — list + detail form side by side
 
-Use when selecting an item should immediately show its editable form without a separate click. The form lives in the center as a card. Good for: EntityEditor, ActorEditor.
+Use when selecting an item should immediately show its editable form without a separate click. The form lives in the center as a card. Good for: EntityEditor, CharacterEditor.
 
 ```
 ResizableEditorLayout

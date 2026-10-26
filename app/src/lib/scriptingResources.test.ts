@@ -13,12 +13,12 @@ const refs = { maps: [map], entityTypes: [], dialogueIds: [], resources: manifes
 const source = () =>
   parseCutscene({
     ...prototype,
-    onComplete: { steps: [], actorPlacements: [] },
+    onComplete: { steps: [], characterPlacements: [] },
     sequence: [
       {
         id: 'gesture',
-        action: 'actors.playAnimation',
-        arguments: { actor: 'player', animation: 'base:pass-out' },
+        action: 'characters.playAnimation',
+        arguments: { character: 'player', animation: 'base:pass-out' },
       },
     ],
   });
@@ -35,7 +35,7 @@ describe('manifest resource catalogs', () => {
   });
   it('supports arbitrary resource types and unrelated action/parameter names', () => {
     const custom = {
-      ...actions.find((a) => a.id === 'actors.playAnimation')!,
+      ...actions.find((a) => a.id === 'characters.playAnimation')!,
       id: 'custom.select',
       parameters: [{ name: 'asset', type: 'string', resourceType: 'anyCatalog' }],
     };
@@ -76,6 +76,6 @@ describe('manifest resource catalogs', () => {
     const scene = source();
     const result = previewCutscene(scene, map, [], actions, { kind: 'step', id: 'gesture' }, []);
     expect(result.notices.some((n) => n.message.includes('Spatial state is unknown'))).toBe(true);
-    expect(result.actors.every((a) => a.position === null && a.facing === null)).toBe(true);
+    expect(result.characters.every((a) => a.position === null && a.facing === null)).toBe(true);
   });
 });

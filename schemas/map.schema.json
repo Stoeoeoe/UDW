@@ -25,7 +25,7 @@
     "id": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
-      "description": "Lowercase qualified resource ID, e.g. base:myactor."
+      "description": "Lowercase qualified resource ID, e.g. base:mycharacter."
     },
     "name": {
       "type": "string",

@@ -38,8 +38,8 @@ import {
 } from '../../../lib/scriptingManifest';
 import {
   createCutsceneStep,
-  mapActorInstances,
-  declaredActorsBefore,
+  mapCharacterInstances,
+  declaredCharactersBefore,
   validateCutscene,
   actionsForCutscenePhase,
 } from '../../../lib/cutscenes';
@@ -76,7 +76,7 @@ export const CutsceneDetail: React.FC<{
 }> = ({ scene, leftPanel, notice }) => {
   const maps = useEditorStore((s) => s.maps);
   const currentMap = useEditorStore((s) => s.currentMap);
-  const actorDefinitions = useEditorStore((s) => s.actors);
+  const characterDefinitions = useEditorStore((s) => s.characters);
   const types = useEditorStore((s) => s.entityTypes);
   const dialogues = useEditorStore((s) => s.dialogues);
   const tileSize = useEditorStore((s) => s.project?.tileSize ?? 16);
@@ -87,11 +87,11 @@ export const CutsceneDetail: React.FC<{
   const manifestResources = useScriptingManifestStore(
     (s) => s.manifest?.resources ?? EMPTY_SCRIPTING_RESOURCES,
   );
-  const resources = withProjectCharacters(manifestResources, actorDefinitions);
+  const resources = withProjectCharacters(manifestResources, characterDefinitions);
   const edit = useEditorStore((s) => s.editCutscenes);
   const [selection, setSelection] = useState<Selection>({ kind: 'scene' });
   const [activePhase, setActivePhase] = useState<'onStart' | 'sequence' | 'completion'>('sequence');
-  const [endpointActor, setEndpointActor] = useState('');
+  const [endpointCharacter, setEndpointCharacter] = useState('');
   const [picking, setPicking] = useState<{
     stepId: string;
     parameter: string;
@@ -122,10 +122,10 @@ export const CutsceneDetail: React.FC<{
   const eligible = (section: 'onStart' | 'sequence' | 'completion') =>
     actionsForCutscenePhase(actions, phaseFor(section));
   const map = currentMap?.id === scene.mapId ? currentMap : maps.find((m) => m.id === scene.mapId);
-  const actors = map ? mapActorInstances(map, types) : [];
-  const baseActorOptions = [
+  const characters = map ? mapCharacterInstances(map, types) : [];
+  const baseCharacterOptions = [
     { id: 'player', label: 'Player' },
-    ...actors.map((a) => ({
+    ...characters.map((a) => ({
       id: a.id,
       label: a.label || types.find((t) => t.id === a.typeId)?.displayName || a.id,
     })),
@@ -141,12 +141,12 @@ export const CutsceneDetail: React.FC<{
     selection.kind === 'step'
       ? [...setupSteps, ...scene.sequence, ...completionSteps].find((s) => s.id === selection.id)
       : undefined;
-  const actorOptions = [
-    ...baseActorOptions,
-    ...declaredActorsBefore(
+  const characterOptions = [
+    ...baseCharacterOptions,
+    ...declaredCharactersBefore(
       scene,
       actions,
-      baseActorOptions.map((a) => a.id),
+      baseCharacterOptions.map((a) => a.id),
       selectedStep?.id,
     ).map((id) => ({ id, label: id })),
   ];
@@ -195,8 +195,8 @@ export const CutsceneDetail: React.FC<{
         id: entry.id,
         label: entry.description || entry.id,
       }));
-    if (parameter.semanticType === 'actorRef' && parameter.picker === 'mapActor')
-      return actorOptions;
+    if (parameter.semanticType === 'characterRef' && parameter.picker === 'mapCharacter')
+      return characterOptions;
     if (parameter.semanticType === 'anchorRef' && parameter.picker === 'mapAnchor')
       return anchorOptions;
     if (parameter.semanticType === 'dialogueRef' && parameter.picker === 'dialogue')
@@ -204,11 +204,13 @@ export const CutsceneDetail: React.FC<{
     return null;
   };
   const parameterLabel = (parameter: CutsceneAction['parameters'][number]) =>
-    parameter.semanticType === 'actorDeclaration'
+    parameter.semanticType === 'characterDeclaration'
       ? 'Instance name'
-      : parameter.resourceType === 'actor'
+      : parameter.resourceType === 'character'
         ? 'Character'
-        : parameter.name;
+        : parameter.name === 'character'
+          ? 'Character'
+          : parameter.name;
   const referenceLabel = (
     value: CutsceneStep['arguments'][string],
     parameter: CutsceneAction['parameters'][number],
@@ -381,55 +383,55 @@ export const CutsceneDetail: React.FC<{
       to,
       label:
         segment.kind === 'face'
-          ? `Faces ${preview?.actors.find((a) => a.id === preview.facings.find((f) => f.stepId === segment.stepId && f.actorId === segment.actorId)?.targetId)?.label || 'target'}`
+          ? `Faces ${preview?.characters.find((a) => a.id === preview.facings.find((f) => f.stepId === segment.stepId && f.characterId === segment.characterId)?.targetId)?.label || 'target'}`
           : String(segment.number),
       dashed: segment.kind === 'face',
       opacity: selected ? 1 : 0.35,
     });
     if (segment.kind === 'move')
       overlays.push({
-        kind: 'actor',
+        kind: 'character',
         position: from,
         label: '',
         ghost: true,
         opacity: selected ? 0.75 : 0.3,
       });
   }
-  for (const actor of preview?.actors ?? []) {
-    if (actor.position)
+  for (const character of preview?.characters ?? []) {
+    if (character.position)
       overlays.push({
-        kind: 'actor',
-        position: toTiles(actor.position),
-        actorId: actor.id,
-        icon: actorDefinitions.find((d) => d.id === actor.definitionId)?.icon,
-        label: actor.label,
-        facing: actor.facing,
+        kind: 'character',
+        position: toTiles(character.position),
+        characterId: character.id,
+        icon: characterDefinitions.find((d) => d.id === character.definitionId)?.icon,
+        label: character.label,
+        facing: character.facing,
       });
   }
   const positionEffect =
     picking && selectedStep
       ? readActionPreview(actionFor(selectedStep))?.effects.find(
           (effect) =>
-            (effect.kind === 'setActorPosition' || effect.kind === 'spawnActor') &&
+            (effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter') &&
             effect.positionParameter === picking.parameter,
         )
       : undefined;
-  const placementActorId =
-    positionEffect?.kind === 'setActorPosition' || positionEffect?.kind === 'spawnActor'
-      ? selectedStep?.arguments[positionEffect.actorParameter]
+  const placementCharacterId =
+    positionEffect?.kind === 'setCharacterPosition' || positionEffect?.kind === 'spawnCharacter'
+      ? selectedStep?.arguments[positionEffect.characterParameter]
       : undefined;
   const placementLabel =
-    typeof placementActorId === 'string'
-      ? actorOptions.find((a) => a.id === placementActorId)?.label || placementActorId
+    typeof placementCharacterId === 'string'
+      ? characterOptions.find((a) => a.id === placementCharacterId)?.label || placementCharacterId
       : 'position';
   const placementDefinition =
-    positionEffect?.kind === 'spawnActor'
+    positionEffect?.kind === 'spawnCharacter'
       ? selectedStep?.arguments[positionEffect.definitionParameter]
-      : preview?.actors.find((a) => a.id === placementActorId)?.definitionId;
+      : preview?.characters.find((a) => a.id === placementCharacterId)?.definitionId;
   if (picking && hoverPosition)
     overlays.push({
       kind: 'placement',
-      icon: actorDefinitions.find((d) => d.id === placementDefinition)?.icon,
+      icon: characterDefinitions.find((d) => d.id === placementDefinition)?.icon,
       position: [hoverPosition.x / tileSize, hoverPosition.y / tileSize],
       label: `${placementLabel} (${hoverPosition.x}, ${hoverPosition.y})`,
     });
@@ -500,12 +502,12 @@ export const CutsceneDetail: React.FC<{
   );
   const completionFields = (
     <>
-      <InspectorSection title="Final actor positions">
+      <InspectorSection title="Final character positions">
         <Text textStyle="helperText">
-          Placements apply before completion steps, both after watching and skipping. Other actors
-          restore their original positions.
+          Placements apply before completion steps, both after watching and skipping. Other
+          characters restore their original positions.
         </Text>
-        {scene.onComplete.actorPlacements.map((placement, index) => (
+        {scene.onComplete.characterPlacements.map((placement, index) => (
           <VStack
             key={index}
             align="stretch"
@@ -514,13 +516,13 @@ export const CutsceneDetail: React.FC<{
             p={3}
             borderRadius="md"
           >
-            <Field label="Actor">
+            <Field label="Character">
               <ReferenceSelect
-                value={placement.actor}
-                options={actorOptions}
-                onChange={(actor) =>
+                value={placement.character}
+                options={characterOptions}
+                onChange={(character) =>
                   update((draft) => {
-                    draft.onComplete.actorPlacements[index].actor = actor;
+                    draft.onComplete.characterPlacements[index].character = character;
                   })
                 }
               />
@@ -531,7 +533,7 @@ export const CutsceneDetail: React.FC<{
                 options={anchorOptions}
                 onChange={(anchor) =>
                   update((draft) => {
-                    draft.onComplete.actorPlacements[index].anchor = anchor;
+                    draft.onComplete.characterPlacements[index].anchor = anchor;
                   })
                 }
               />
@@ -541,7 +543,7 @@ export const CutsceneDetail: React.FC<{
               variant="ghost"
               onClick={() =>
                 update((draft) => {
-                  draft.onComplete.actorPlacements.splice(index, 1);
+                  draft.onComplete.characterPlacements.splice(index, 1);
                 })
               }
             >
@@ -550,13 +552,13 @@ export const CutsceneDetail: React.FC<{
           </VStack>
         ))}
         <Select
-          aria-label="New endpoint actor"
-          placeholder="Add actor…"
-          value={endpointActor}
-          onChange={(e) => setEndpointActor(e.target.value)}
+          aria-label="New endpoint character"
+          placeholder="Add character…"
+          value={endpointCharacter}
+          onChange={(e) => setEndpointCharacter(e.target.value)}
         >
-          {actorOptions
-            .filter((a) => !scene.onComplete.actorPlacements.some((p) => p.actor === a.id))
+          {characterOptions
+            .filter((a) => !scene.onComplete.characterPlacements.some((p) => p.character === a.id))
             .map((a) => (
               <option key={a.id} value={a.id}>
                 {a.label} · {a.id}
@@ -565,12 +567,15 @@ export const CutsceneDetail: React.FC<{
         </Select>
         <Button
           size="xs"
-          isDisabled={!endpointActor}
+          isDisabled={!endpointCharacter}
           onClick={() => {
             update((draft) => {
-              draft.onComplete.actorPlacements.push({ actor: endpointActor, anchor: '' });
+              draft.onComplete.characterPlacements.push({
+                character: endpointCharacter,
+                anchor: '',
+              });
             });
-            setEndpointActor('');
+            setEndpointCharacter('');
           }}
         >
           Specify final position
@@ -586,8 +591,16 @@ export const CutsceneDetail: React.FC<{
       {[...(actionFor(selectedStep)?.parameters ?? [])]
         .sort(
           (a, b) =>
-            (a.resourceType === 'actor' ? -1 : a.semanticType === 'actorDeclaration' ? 0 : 1) -
-            (b.resourceType === 'actor' ? -1 : b.semanticType === 'actorDeclaration' ? 0 : 1),
+            (a.resourceType === 'character'
+              ? -1
+              : a.semanticType === 'characterDeclaration'
+                ? 0
+                : 1) -
+            (b.resourceType === 'character'
+              ? -1
+              : b.semanticType === 'characterDeclaration'
+                ? 0
+                : 1),
         )
         .map((parameter) => {
           const options = optionsFor(parameter);
@@ -611,7 +624,7 @@ export const CutsceneDetail: React.FC<{
                 : undefined
             : undefined;
           const supported =
-            parameter.semanticType === 'actorDeclaration' ||
+            parameter.semanticType === 'characterDeclaration' ||
             Boolean(positionMetadata) ||
             numeric ||
             (parameter.type === 'string' &&
@@ -624,9 +637,9 @@ export const CutsceneDetail: React.FC<{
               helperText={
                 resourceIssue ??
                 (supported
-                  ? parameter.semanticType === 'actorDeclaration'
+                  ? parameter.semanticType === 'characterDeclaration'
                     ? 'A unique name for this copy of the character, such as guest. Later steps use this name.'
-                    : parameter.resourceType === 'actor'
+                    : parameter.resourceType === 'character'
                       ? 'Choose a character defined in this project. Unity resolves its runtime prefab.'
                       : undefined
                   : `Unsupported manifest parameter: ${parameter.type} ${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`)
@@ -697,18 +710,19 @@ export const CutsceneDetail: React.FC<{
                       [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
                         (s) => s.id === selectedStep.id,
                       )!.arguments[parameter.name] = value;
-                      if (parameter.resourceType === 'actor' && value) {
+                      if (parameter.resourceType === 'character' && value) {
                         const step = [
                           ...(draft.onStart ?? []),
                           ...draft.sequence,
                           ...draft.onComplete.steps,
                         ].find((s) => s.id === selectedStep.id)!;
                         const declaration = actionFor(selectedStep)?.parameters.find(
-                          (p) => p.semanticType === 'actorDeclaration',
+                          (p) => p.semanticType === 'characterDeclaration',
                         );
                         if (declaration && !step.arguments[declaration.name]) {
                           const label =
-                            actorDefinitions.find((actor) => actor.id === value)?.name ||
+                            characterDefinitions.find((character) => character.id === value)
+                              ?.name ||
                             value.split(':').pop() ||
                             'guest';
                           const base =
@@ -717,8 +731,8 @@ export const CutsceneDetail: React.FC<{
                               .replace(/[^a-z0-9_-]+/g, '-')
                               .replace(/^-+|-+$/g, '') || 'guest';
                           const used = new Set([
-                            ...baseActorOptions.map((actor) => actor.id),
-                            ...declaredActorsBefore(draft, actions, []),
+                            ...baseCharacterOptions.map((character) => character.id),
+                            ...declaredCharactersBefore(draft, actions, []),
                           ]);
                           let name = base;
                           for (let suffix = 2; used.has(name); suffix++) name = `${base}-${suffix}`;
@@ -1043,16 +1057,16 @@ export const CutsceneDetail: React.FC<{
                             borderLeftColor="editorMutedText"
                             onClick={() => setSelection({ kind: 'completion' })}
                           >
-                            <Text fontWeight="semibold">Final actor positions</Text>
+                            <Text fontWeight="semibold">Final character positions</Text>
                             <Text textStyle="helperText">
-                              {scene.onComplete.actorPlacements.length
-                                ? scene.onComplete.actorPlacements
+                              {scene.onComplete.characterPlacements.length
+                                ? scene.onComplete.characterPlacements
                                     .map(
                                       (p) =>
-                                        `${actorOptions.find((a) => a.id === p.actor)?.label || p.actor} → ${anchorOptions.find((a) => a.id === p.anchor)?.label || p.anchor || 'Not set'}`,
+                                        `${characterOptions.find((a) => a.id === p.character)?.label || p.character} → ${anchorOptions.find((a) => a.id === p.anchor)?.label || p.anchor || 'Not set'}`,
                                     )
                                     .join(' · ')
-                                : 'Restore original actor positions'}
+                                : 'Restore original character positions'}
                             </Text>
                             {completionIssues.length > 0 && (
                               <Text color="editorDangerText" fontSize="xs">

@@ -2,50 +2,43 @@
   "schemaVersion": 2,
   "modules": [
     {
-      "path": "Actors",
+      "path": "Characters",
       "methods": [
         {
           "name": "Face",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "target",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             }
           ],
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.face",
-            "displayName": "Face actor",
+            "id": "characters.face",
+            "displayName": "Face character",
             "category": "Movement",
-            "description": "Turn an existing actor toward another actor.",
-            "contexts": [
-              "cutscene",
-              "npcRoutine"
-            ],
-            "phases": [
-              "completion",
-              "sequence",
-              "setup"
-            ],
+            "description": "Turn an existing character toward another character.",
+            "contexts": ["cutscene", "npcRoutine"],
+            "phases": ["completion", "sequence", "setup"],
             "execution": "immediate",
             "preview": {
               "version": 1,
               "spatialState": "described",
               "effects": [
                 {
-                  "kind": "faceActorTowardActor",
-                  "actorParameter": "actor",
-                  "targetActorParameter": "target"
+                  "kind": "faceCharacterTowardCharacter",
+                  "characterParameter": "character",
+                  "targetCharacterParameter": "target"
                 }
               ]
             }
@@ -55,10 +48,10 @@
           "name": "MoveTo",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "destination",
@@ -71,25 +64,20 @@
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.moveTo",
+            "id": "characters.moveTo",
             "displayName": "Move to anchor",
             "category": "Movement",
-            "description": "Walk an existing actor to a map anchor.",
-            "contexts": [
-              "cutscene",
-              "npcRoutine"
-            ],
-            "phases": [
-              "sequence"
-            ],
+            "description": "Walk an existing character to a map anchor.",
+            "contexts": ["cutscene", "npcRoutine"],
+            "phases": ["sequence"],
             "execution": "awaitable",
             "preview": {
               "version": 1,
               "spatialState": "described",
               "effects": [
                 {
-                  "kind": "moveActorToAnchor",
-                  "actorParameter": "actor",
+                  "kind": "moveCharacterToAnchor",
+                  "characterParameter": "character",
                   "anchorParameter": "destination",
                   "facing": "unknown"
                 }
@@ -101,10 +89,10 @@
           "name": "PlayAnimation",
           "parameters": [
             {
-              "name": "actor",
+              "name": "character",
               "type": "string",
-              "semanticType": "actorRef",
-              "picker": "mapActor"
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
             },
             {
               "name": "animation",
@@ -116,16 +104,12 @@
           "returnNullable": false,
           "writesState": true,
           "action": {
-            "id": "actors.playAnimation",
+            "id": "characters.playAnimation",
             "displayName": "Play animation",
             "category": "Animation",
-            "description": "Play a finite animation on an actor and wait for completion.",
-            "contexts": [
-              "cutscene"
-            ],
-            "phases": [
-              "sequence"
-            ],
+            "description": "Play a finite animation on an character and wait for completion.",
+            "contexts": ["cutscene"],
+            "phases": ["sequence"],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -155,12 +139,8 @@
             "displayName": "Wait",
             "category": "Timing",
             "description": "Wait for gameplay seconds.",
-            "contexts": [
-              "cutscene"
-            ],
-            "phases": [
-              "sequence"
-            ],
+            "contexts": ["cutscene"],
+            "phases": ["sequence"],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -192,12 +172,8 @@
             "displayName": "Play dialogue",
             "category": "Dialogue",
             "description": "Wait for a conversation to finish through its flow.",
-            "contexts": [
-              "cutscene"
-            ],
-            "phases": [
-              "sequence"
-            ],
+            "contexts": ["cutscene"],
+            "phases": ["sequence"],
             "execution": "awaitable",
             "preview": {
               "version": 1,

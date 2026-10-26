@@ -42,8 +42,8 @@ interface MapPreviewPickerProps {
 export type MapPreviewOverlay =
   | { kind: 'placement'; position: [number, number]; label: string; icon?: string }
   | {
-      kind: 'actor';
-      actorId?: string;
+      kind: 'character';
+      characterId?: string;
       icon?: string;
       position: [number, number];
       label: string;

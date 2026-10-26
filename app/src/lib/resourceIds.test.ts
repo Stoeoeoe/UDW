@@ -16,12 +16,12 @@ import type { Project } from '../types/schema';
 describe('resource namespaces', () => {
   it('uses document metadata for resource file types and dialogue exports', () => {
     expect(getResourceDefinition('items', 'food.vitm')?.kind).toBe('item');
-    expect(getResourceDefinition('actors', 'villager.actor.json')?.kind).toBe('actor');
+    expect(getResourceDefinition('characters', 'villager.character.json')?.kind).toBe('character');
     expect(getResourceDefinition('dialogues', 'intro.runtime.dialogue.json')?.kind).toBe(
       'dialogue-runtime',
     );
     expect(getResourceDefinition('dialogues', 'intro.i18n.json')?.kind).toBe('dialogue-i18n');
-    expect(getResourceDefinition('actors', 'notes.json')).toBeUndefined();
+    expect(getResourceDefinition('characters', 'notes.json')).toBeUndefined();
   });
 
   it('owns storage details while schemas contain only format validation', () => {
@@ -35,20 +35,25 @@ describe('resource namespaces', () => {
       );
       expect(JSON.stringify(schema)).not.toContain('x-editor-');
     }
-    expect(resourceFilename('actor', 'base:myactor')).toBe('myactor.actor.json');
-    expect(resourceFilename('actor', 'other:myactor')).toBe('other~myactor.actor.json');
+    expect(resourceFilename('character', 'base:mycharacter')).toBe('mycharacter.character.json');
+    expect(resourceFilename('character', 'other:mycharacter')).toBe(
+      'other~mycharacter.character.json',
+    );
     expect(resourceFilename('project', 'my-project')).toBe('my-project.vproj');
   });
 
   it('does not treat unrelated field names or user property values as references', () => {
-    const actor = {
+    const character = {
       id: 'base:villager',
       speaker: 'Display Name',
       typeId: 'UnrelatedType',
       data: ['Arbitrary:Text'],
-      properties: { id: 'UserId', actorId: 'CustomValue' },
+      properties: { id: 'UserId', characterId: 'CustomValue' },
     };
-    expect(normalizeResourceDocument(actor, 'actor')).toEqual({ ...actor, id: 'base:villager' });
+    expect(normalizeResourceDocument(character, 'character')).toEqual({
+      ...character,
+      id: 'base:villager',
+    });
     const map = {
       id: 'base:map',
       entities: [
@@ -73,16 +78,24 @@ describe('resource namespaces', () => {
   });
 
   it('keeps resource schema constraints consistent with editor ID validation', () => {
-    for (const resource of ['actor', 'npc', 'item', 'entity-type', 'map', 'tileset', 'dialogue']) {
+    for (const resource of [
+      'character',
+      'npc',
+      'item',
+      'entity-type',
+      'map',
+      'tileset',
+      'dialogue',
+    ]) {
       const schema = JSON.parse(
         readFileSync(resolve(process.cwd(), '../schemas', `${resource}.schema.json`), 'utf8'),
       );
       const pattern = new RegExp(schema.properties.id.pattern);
-      expect(pattern.test('base:myactor'), resource).toBe(true);
-      expect(pattern.test('mymod:myactor'), resource).toBe(true);
-      expect(pattern.test('myactor'), resource).toBe(false);
-      expect(pattern.test('base:MyActor'), resource).toBe(false);
-      expect(pattern.test('base:base:myactor'), resource).toBe(false);
+      expect(pattern.test('base:mycharacter'), resource).toBe(true);
+      expect(pattern.test('mymod:mycharacter'), resource).toBe(true);
+      expect(pattern.test('mycharacter'), resource).toBe(false);
+      expect(pattern.test('base:MyCharacter'), resource).toBe(false);
+      expect(pattern.test('base:base:mycharacter'), resource).toBe(false);
     }
   });
   it('preserves explicit project and foreign resource namespaces', () => {
@@ -90,10 +103,10 @@ describe('resource namespaces', () => {
       id: 'game',
       idPrefix: 'mod',
     });
-    expect(qualifyResourceId('Other:MyActor', 'mod')).toBe('other:myactor');
-    expect(qualifyResourceId('base:myactor')).toBe('base:myactor');
-    expect(() => qualifyResourceId('base:base:actor')).toThrow();
-    expect(() => qualifyResourceId('../actor')).toThrow();
+    expect(qualifyResourceId('Other:MyCharacter', 'mod')).toBe('other:mycharacter');
+    expect(qualifyResourceId('base:mycharacter')).toBe('base:mycharacter');
+    expect(() => qualifyResourceId('base:base:character')).toThrow();
+    expect(() => qualifyResourceId('../character')).toThrow();
   });
 
   it('preserves qualified resource references, local nodes and authored content', () => {
@@ -104,8 +117,8 @@ describe('resource namespaces', () => {
         {
           id: 'linea',
           type: 'line',
-          speaker: 'base:myactor',
-          text: 'MyActor',
+          speaker: 'base:mycharacter',
+          text: 'MyCharacter',
           msgKey: 'Intro.LineA',
           next: 'jumpb',
         },
@@ -114,11 +127,11 @@ describe('resource namespaces', () => {
           type: 'jump',
           targetDialogueId: 'other:intro',
           targetNodeId: 'linea',
-          lua: 'find("MyActor")',
+          lua: 'find("MyCharacter")',
         },
       ],
-      properties: { actorId: 'UserValue' },
-      sprite: { path: 'Assets/MyActor.png' },
+      properties: { characterId: 'UserValue' },
+      sprite: { path: 'Assets/MyCharacter.png' },
     };
     const migrated = normalizeResourceDocument(original, 'dialogue');
     expect(migrated).toMatchObject({
@@ -127,8 +140,8 @@ describe('resource namespaces', () => {
       nodes: [
         {
           id: 'linea',
-          speaker: 'base:myactor',
-          text: 'MyActor',
+          speaker: 'base:mycharacter',
+          text: 'MyCharacter',
           msgKey: 'Intro.LineA',
           next: 'jumpb',
         },
@@ -136,7 +149,7 @@ describe('resource namespaces', () => {
           id: 'jumpb',
           targetDialogueId: 'other:intro',
           targetNodeId: 'linea',
-          lua: 'find("MyActor")',
+          lua: 'find("MyCharacter")',
         },
       ],
       properties: original.properties,
@@ -197,10 +210,10 @@ describe('resource namespaces', () => {
   });
 
   it('uses distinct Windows-compatible filenames for separate namespaces', () => {
-    expect(resourceIdToFileStem('base:myactor')).toBe('myactor');
-    expect(resourceIdToFileStem('mod:myactor')).toBe('mod~myactor');
+    expect(resourceIdToFileStem('base:mycharacter')).toBe('mycharacter');
+    expect(resourceIdToFileStem('mod:mycharacter')).toBe('mod~mycharacter');
     expect(resourceIdToFileStem('base:con')).toBe('~con');
-    expect(() => resourceIdToFileStem('base:actor.')).toThrow();
+    expect(() => resourceIdToFileStem('base:character.')).toThrow();
   });
 
   it('round trips qualified tile references', () => {

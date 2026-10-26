@@ -681,7 +681,7 @@ export const VariableEditor: React.FC = () => {
             onDeleteItem={(id) => s.deleteScriptContextType(id)}
             emptyIcon="🎭"
             emptyTitle="No context types"
-            emptyDescription="Create context definitions for actor, cutscene, or event script scopes."
+            emptyDescription="Create context definitions for character, cutscene, or event script scopes."
           />
         );
     }

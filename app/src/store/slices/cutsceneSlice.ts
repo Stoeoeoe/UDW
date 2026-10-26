@@ -166,7 +166,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
           id,
           mapId: '',
           allowSkip: false,
-          onComplete: { steps: [], actorPlacements: [] },
+          onComplete: { steps: [], characterPlacements: [] },
           sequence: [],
         });
         labels[id] = name;
@@ -296,7 +296,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
                 maps,
                 entityTypes: state.entityTypes,
                 dialogueIds: [...state.dialogues.keys()],
-                resources: withProjectCharacters(manifest.resources, state.actors),
+                resources: withProjectCharacters(manifest.resources, state.characters),
                 tileSize: state.project?.tileSize ?? 16,
               },
             );

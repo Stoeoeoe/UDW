@@ -48,12 +48,12 @@ function screenDocument(kind: PreviewableScreenKind): WorkspaceDocument {
   }
 }
 
-function actorDocument(actorId: string): WorkspaceDocument {
+function characterDocument(characterId: string): WorkspaceDocument {
   return {
-    kind: 'actor',
-    actorId,
-    label: actorId,
-    saveUnitId: `actor:${actorId}`,
+    kind: 'character',
+    characterId,
+    label: characterId,
+    saveUnitId: `character:${characterId}`,
   };
 }
 
@@ -178,24 +178,24 @@ describe('useWorkspaceStore', () => {
   });
 
   it('uses first-class tab ids for resource documents', () => {
-    expect(getWorkspaceTabId(actorDocument('marcus'))).toBe('actor:marcus');
+    expect(getWorkspaceTabId(characterDocument('marcus'))).toBe('character:marcus');
 
     const tab = useWorkspaceStore
       .getState()
-      .openDocument(actorDocument('marcus'), { preview: true });
-    expect(tab.id).toBe('actor:marcus');
+      .openDocument(characterDocument('marcus'), { preview: true });
+    expect(tab.id).toBe('character:marcus');
     expect(tab.isPreview).toBe(true);
   });
 
   it('tracks recent resources in last-accessed order without duplicates', () => {
     useWorkspaceStore.getState().markRecentResource('location:map-1');
     useWorkspaceStore.getState().markRecentResource('tileset:tileset-1');
-    useWorkspaceStore.getState().markRecentResource('actor:marcus');
+    useWorkspaceStore.getState().markRecentResource('character:marcus');
     useWorkspaceStore.getState().markRecentResource('location:map-1');
 
     expect(useWorkspaceStore.getState().recentResourceKeys).toEqual([
       'location:map-1',
-      'actor:marcus',
+      'character:marcus',
       'tileset:tileset-1',
     ]);
   });

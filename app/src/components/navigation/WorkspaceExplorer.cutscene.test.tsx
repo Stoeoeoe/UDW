@@ -31,7 +31,7 @@ describe('cutscene explorer resources', () => {
     return buildWorkspaceTree({
       maps: [],
       tilesets: new Map(),
-      actors: [],
+      characters: [],
       entityTypes: [],
       items: [],
       dialogues: [],

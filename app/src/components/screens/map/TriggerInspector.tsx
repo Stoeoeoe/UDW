@@ -23,7 +23,7 @@ const TRIGGER_TYPES: { value: TriggerType; label: string; description: string }[
   {
     value: 'locationLinkTrigger',
     label: 'Location Link Trigger',
-    description: 'Fires a map transition when an actor enters this zone.',
+    description: 'Fires a map transition when an character enters this zone.',
   },
 ];
 

@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const editorResourceTypeIds = [
   'location',
   'tileset',
-  'actor',
+  'character',
   'entity',
   'item',
   'dialogue',
@@ -26,7 +26,7 @@ export type EditorResourceMetadataFlow =
   | 'none'
   | 'location'
   | 'tileset'
-  | 'actor'
+  | 'character'
   | 'entity'
   | 'item'
   | 'dialogue';

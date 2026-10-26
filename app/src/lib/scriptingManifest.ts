@@ -12,7 +12,7 @@ const parameterSchema = z
     origin: z.string().optional(),
     placementModes: z.array(z.string()).optional(),
     tileAnchor: z.string().optional(),
-    actorPivot: z.string().optional(),
+    characterPivot: z.string().optional(),
   })
   .passthrough();
 const actionSchema = z
@@ -121,7 +121,7 @@ export function withProjectCharacters(
 ): ScriptingResources {
   return {
     ...resources,
-    actor: characters.map((character) => ({
+    character: characters.map((character) => ({
       id: character.id,
       description: character.name || character.id,
     })),

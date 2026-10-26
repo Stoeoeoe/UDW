@@ -10,7 +10,7 @@ describe('vector map annotations', () => {
   it('projects world positions while preserving readable screen-space strokes, labels and markers', () => {
     const overlays: MapPreviewOverlay[] = [
       { kind: 'segment', from: [1, 2], to: [3, 2], label: '1' },
-      { kind: 'actor', position: [3, 2], label: 'Host', icon: 'H' },
+      { kind: 'character', position: [3, 2], label: 'Host', icon: 'H' },
     ];
     const view = (scale: number) => (
       <ChakraProvider theme={theme}>

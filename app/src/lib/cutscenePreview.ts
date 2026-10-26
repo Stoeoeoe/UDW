@@ -3,7 +3,7 @@ import type { ScriptingResources } from './scriptingManifest';
 import { resolveMapPosition, positionPickerMetadata } from './mapPosition';
 import type { Cutscene, CutsceneAction } from '../types/cutscene';
 import type { EntityType, Map as GameMap } from '../types/schema';
-import { mapActorInstances, actionsForCutscenePhase } from './cutscenes';
+import { mapCharacterInstances, actionsForCutscenePhase } from './cutscenes';
 
 type Point = [number, number];
 const parameter = z.string().min(1);
@@ -15,23 +15,23 @@ const previewSchema = z
       z.discriminatedUnion('kind', [
         z
           .object({
-            kind: z.literal('moveActorToAnchor'),
-            actorParameter: parameter,
+            kind: z.literal('moveCharacterToAnchor'),
+            characterParameter: parameter,
             anchorParameter: parameter,
             facing: z.literal('unknown'),
           })
           .strict(),
         z
           .object({
-            kind: z.literal('faceActorTowardActor'),
-            actorParameter: parameter,
-            targetActorParameter: parameter,
+            kind: z.literal('faceCharacterTowardCharacter'),
+            characterParameter: parameter,
+            targetCharacterParameter: parameter,
           })
           .strict(),
         z
           .object({
-            kind: z.literal('spawnActor'),
-            actorParameter: parameter,
+            kind: z.literal('spawnCharacter'),
+            characterParameter: parameter,
             definitionParameter: parameter,
             positionParameter: parameter,
             facing: z.literal('unknown'),
@@ -39,16 +39,16 @@ const previewSchema = z
           .strict(),
         z
           .object({
-            kind: z.literal('faceActorDirection'),
-            actorParameter: parameter,
+            kind: z.literal('faceCharacterDirection'),
+            characterParameter: parameter,
             directionParameter: parameter,
           })
           .strict(),
         z.object({ kind: z.literal('showDialogue'), dialogueParameter: parameter }).strict(),
         z
           .object({
-            kind: z.literal('setActorPosition'),
-            actorParameter: parameter,
+            kind: z.literal('setCharacterPosition'),
+            characterParameter: parameter,
             positionParameter: parameter,
             facing: z.literal('preserve'),
           })
@@ -63,7 +63,7 @@ export type PreviewSelection =
   | { kind: 'setup' }
   | { kind: 'step'; id: string }
   | { kind: 'completion' };
-export interface PreviewActor {
+export interface PreviewCharacter {
   id: string;
   label: string;
   definitionId?: string;
@@ -73,17 +73,17 @@ export interface PreviewActor {
 export interface PreviewSegment {
   stepId: string;
   number: number;
-  actorId: string;
+  characterId: string;
   kind: 'move' | 'face';
   from: Point;
   to: Point;
 }
 export interface CutscenePreview {
-  actors: PreviewActor[];
+  characters: PreviewCharacter[];
   segments: PreviewSegment[];
   cues: { stepId: string; dialogueId: string }[];
-  placements: { stepId: string; actorId: string; position: Point }[];
-  facings: { stepId: string; actorId: string; targetId: string }[];
+  placements: { stepId: string; characterId: string; position: Point }[];
+  facings: { stepId: string; characterId: string; targetId: string }[];
   notices: { stepId?: string; message: string }[];
 }
 
@@ -94,42 +94,42 @@ export function readActionPreview(action: CutsceneAction | undefined) {
   if (
     parsed.data.version === 1 &&
     parsed.data.effects.some(
-      (effect) => effect.kind === 'setActorPosition' || effect.kind === 'spawnActor',
+      (effect) => effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter',
     )
   )
     return null;
   const pairs: Record<string, string> = {
-    actorParameter: 'actorRef/mapActor',
-    targetActorParameter: 'actorRef/mapActor',
+    characterParameter: 'characterRef/mapCharacter',
+    targetCharacterParameter: 'characterRef/mapCharacter',
     anchorParameter: 'anchorRef/mapAnchor',
     dialogueParameter: 'dialogueRef/dialogue',
   };
   for (const effect of parsed.data.effects) {
     if (
-      (effect.kind === 'setActorPosition' || effect.kind === 'spawnActor') &&
+      (effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter') &&
       !positionPickerMetadata(action.parameters.find((p) => p.name === effect.positionParameter))
     )
       return null;
-    if (effect.kind === 'spawnActor') {
-      const declaration = action.parameters.find((p) => p.name === effect.actorParameter);
+    if (effect.kind === 'spawnCharacter') {
+      const declaration = action.parameters.find((p) => p.name === effect.characterParameter);
       const definition = action.parameters.find((p) => p.name === effect.definitionParameter);
       if (
         declaration?.type !== 'string' ||
-        declaration.semanticType !== 'actorDeclaration' ||
+        declaration.semanticType !== 'characterDeclaration' ||
         definition?.type !== 'string' ||
-        definition.resourceType !== 'actor'
+        definition.resourceType !== 'character'
       )
         return null;
     }
     if (
-      effect.kind === 'faceActorDirection' &&
+      effect.kind === 'faceCharacterDirection' &&
       action.parameters.find((p) => p.name === effect.directionParameter)?.resourceType !==
         'direction'
     )
       return null;
     for (const [role, expected] of Object.entries(pairs)) {
       const name = (effect as Record<string, unknown>)[role];
-      if (!name || (role === 'actorParameter' && effect.kind === 'spawnActor')) continue;
+      if (!name || (role === 'characterParameter' && effect.kind === 'spawnCharacter')) continue;
       const p = action.parameters.find((p) => p.name === name);
       if (!p || p.type !== 'string' || `${p.semanticType}/${p.picker}` !== expected) return null;
     }
@@ -148,23 +148,25 @@ export function previewCutscene(
   tileSize = 16,
   resources: ScriptingResources = {},
 ): CutscenePreview {
-  const actors = new Map<string, PreviewActor>(
-    mapActorInstances(map, entityTypes).map((actor) => [
-      actor.id,
+  const characters = new Map<string, PreviewCharacter>(
+    mapCharacterInstances(map, entityTypes).map((character) => [
+      character.id,
       {
-        id: actor.id,
-        definitionId: actor.typeId,
+        id: character.id,
+        definitionId: character.typeId,
         label:
-          actor.label || entityTypes.find((t) => t.id === actor.typeId)?.displayName || actor.id,
-        position: [...actor.position] as Point,
+          character.label ||
+          entityTypes.find((t) => t.id === character.typeId)?.displayName ||
+          character.id,
+        position: [...character.position] as Point,
         facing: null,
       },
     ]),
   );
-  actors.set('player', { id: 'player', label: 'Player', position: null, facing: null });
+  characters.set('player', { id: 'player', label: 'Player', position: null, facing: null });
   const anchors = new Map((map.spatialPrimitives?.anchors ?? []).map((a) => [a.id, a]));
   const result: CutscenePreview = {
-    actors: [],
+    characters: [],
     segments: [],
     cues: [],
     facings: [],
@@ -173,13 +175,13 @@ export function previewCutscene(
   };
   const notice = (message: string, stepId?: string) => result.notices.push({ stepId, message });
   const invalidate = () => {
-    for (const actor of actors.values()) {
-      actor.position = null;
-      actor.facing = null;
+    for (const character of characters.values()) {
+      character.position = null;
+      character.facing = null;
     }
   };
   const finish = () => {
-    result.actors = [...actors.values()];
+    result.characters = [...characters.values()];
     return result;
   };
   if (selection.kind === 'scene') return finish();
@@ -188,18 +190,18 @@ export function previewCutscene(
   const completing = selection.kind === 'completion' || completionIndex >= 0;
   const spawn = (
     step: Cutscene['sequence'][number],
-    effect: { actorParameter: string; definitionParameter: string; positionParameter: string },
+    effect: { characterParameter: string; definitionParameter: string; positionParameter: string },
   ) => {
-    const id = step.arguments[effect.actorParameter],
+    const id = step.arguments[effect.characterParameter],
       definition = step.arguments[effect.definitionParameter];
-    if (typeof id !== 'string' || !id.trim() || actors.has(id)) {
-      notice('Spawn preview unavailable: empty or duplicate actor name.', step.id);
+    if (typeof id !== 'string' || !id.trim() || characters.has(id)) {
+      notice('Spawn preview unavailable: empty or duplicate character name.', step.id);
       return;
     }
-    const registered = resources.actor?.some((entry) => entry.id === definition);
-    if (typeof definition !== 'string' || !registered) {
+    const knownDefinition = resources.character?.some((entry) => entry.id === definition);
+    if (typeof definition !== 'string' || !knownDefinition) {
       notice(
-        `Spawn preview unavailable: unregistered actor definition ${typeof definition === 'string' ? definition : '(not set)'}.`,
+        `Spawn preview unavailable: missing character definition ${typeof definition === 'string' ? definition : '(not set)'}.`,
         step.id,
       );
       return;
@@ -211,39 +213,40 @@ export function previewCutscene(
       map.height,
       tileSize,
     );
-    actors.set(id, {
+    characters.set(id, {
       id,
       label: id,
       definitionId: definition,
       position: position ? [...position] : null,
       facing: null,
     });
-    if (position) result.placements.push({ stepId: step.id, actorId: id, position: [...position] });
+    if (position)
+      result.placements.push({ stepId: step.id, characterId: id, position: [...position] });
     else notice('Spawn preview unavailable: unresolved map position.', step.id);
   };
   if (completing) {
-    // Spawn captures its initial placement at creation. Existing actors restore pre-run staging.
+    // Spawn captures its initial placement at creation. Existing characters restore pre-run staging.
     for (const step of scene.onStart ?? []) {
       const action = actions.find((a) => a.id === step.action);
       if (!action || !actionsForCutscenePhase([action], 'setup').length) continue;
       for (const effect of readActionPreview(action)?.effects ?? [])
-        if (effect.kind === 'spawnActor') spawn(step, effect);
+        if (effect.kind === 'spawnCharacter') spawn(step, effect);
     }
-    for (const placement of scene.onComplete.actorPlacements) {
-      const actor = actors.get(placement.actor),
+    for (const placement of scene.onComplete.characterPlacements) {
+      const character = characters.get(placement.character),
         anchor = anchors.get(placement.anchor);
-      if (!actor || !anchor) {
-        if (actor) {
-          actor.position = null;
-          actor.facing = null;
+      if (!character || !anchor) {
+        if (character) {
+          character.position = null;
+          character.facing = null;
         }
         notice(
-          `Final position unavailable: missing ${!actor ? `actor ${placement.actor}` : `anchor ${placement.anchor}`}.`,
+          `Final position unavailable: missing ${!character ? `character ${placement.character}` : `anchor ${placement.anchor}`}.`,
         );
         continue;
       }
-      actor.position = [...anchor.position];
-      actor.facing = anchor.facing?.some((n) => n !== 0) ? [...anchor.facing] : null;
+      character.position = [...anchor.position];
+      character.facing = anchor.facing?.some((n) => n !== 0) ? [...anchor.facing] : null;
     }
   }
   const setup = scene.onStart ?? [];
@@ -287,18 +290,18 @@ export function previewCutscene(
         else notice(`Dialogue preview unavailable: ${id || 'no dialogue selected'}.`, step.id);
         continue;
       }
-      if (effect.kind === 'spawnActor') {
+      if (effect.kind === 'spawnCharacter') {
         spawn(step, effect);
         continue;
       }
-      const actorId = reference(effect.actorParameter),
-        actor = actors.get(actorId);
-      if (!actor) {
+      const characterId = reference(effect.characterParameter),
+        character = characters.get(characterId);
+      if (!character) {
         invalidate();
-        notice(`Preview unavailable: missing actor ${actorId || '(not set)'}.`, step.id);
+        notice(`Preview unavailable: missing character ${characterId || '(not set)'}.`, step.id);
         continue;
       }
-      if (effect.kind === 'setActorPosition') {
+      if (effect.kind === 'setCharacterPosition') {
         const position = resolveMapPosition(
           step.arguments[effect.positionParameter],
           [...anchors.values()],
@@ -307,78 +310,81 @@ export function previewCutscene(
           tileSize,
         );
         if (!position) {
-          actor.position = null;
+          character.position = null;
           notice('Placement preview unavailable: invalid or unresolved map position.', step.id);
           continue;
         }
-        actor.position = [...position];
-        result.placements.push({ stepId: step.id, actorId, position: [...actor.position] });
+        character.position = [...position];
+        result.placements.push({ stepId: step.id, characterId, position: [...character.position] });
         continue;
       }
-      if (effect.kind === 'faceActorDirection') {
+      if (effect.kind === 'faceCharacterDirection') {
         const directions: Record<string, Point> = {
           North: [0, -1],
           East: [1, 0],
           South: [0, 1],
           West: [-1, 0],
         };
-        actor.facing = directions[reference(effect.directionParameter)] ?? null;
-        if (!actor.facing) notice('Facing preview unavailable: unresolved direction.', step.id);
+        character.facing = directions[reference(effect.directionParameter)] ?? null;
+        if (!character.facing) notice('Facing preview unavailable: unresolved direction.', step.id);
         continue;
       }
-      if (effect.kind === 'moveActorToAnchor') {
+      if (effect.kind === 'moveCharacterToAnchor') {
         const anchorId = reference(effect.anchorParameter),
           anchor = anchors.get(anchorId);
         if (!anchor) {
-          actor.position = null;
-          actor.facing = null;
+          character.position = null;
+          character.facing = null;
           notice(`Preview unavailable: missing anchor ${anchorId || '(not set)'}.`, step.id);
           continue;
         }
-        if (actor.position && phase === 'sequence')
+        if (character.position && phase === 'sequence')
           result.segments.push({
             stepId: step.id,
             number: index + 1,
-            actorId,
+            characterId,
             kind: 'move',
-            from: [...actor.position],
+            from: [...character.position],
             to: [...anchor.position],
           });
-        else if (!actor.position && phase === 'sequence')
+        else if (!character.position && phase === 'sequence')
           notice(
-            `${actor.label}: starting position unknown; showing the destination only.`,
+            `${character.label}: starting position unknown; showing the destination only.`,
             step.id,
           );
-        actor.position = [...anchor.position];
-        actor.facing = null;
+        character.position = [...anchor.position];
+        character.facing = null;
       } else {
-        const targetId = reference(effect.targetActorParameter),
-          target = actors.get(targetId);
-        result.facings.push({ stepId: step.id, actorId, targetId });
-        actor.facing = null;
-        if (!actor.position || !target?.position) {
+        const targetId = reference(effect.targetCharacterParameter),
+          target = characters.get(targetId);
+        result.facings.push({ stepId: step.id, characterId, targetId });
+        character.facing = null;
+        if (!character.position || !target?.position) {
           notice(
             targetId === 'player' && !target?.position
               ? 'Player position is determined at runtime. The player marker and facing direction cannot be shown yet.'
-              : `${actor.label}: facing unknown because ${!actor.position ? 'its' : target?.label || targetId || 'the target’s'} position is unknown.`,
+              : `${character.label}: facing unknown because ${!character.position ? 'its' : target?.label || targetId || 'the target’s'} position is unknown.`,
             step.id,
           );
           continue;
         }
-        const dx = target.position[0] - actor.position[0],
-          dy = target.position[1] - actor.position[1],
+        const dx = target.position[0] - character.position[0],
+          dy = target.position[1] - character.position[1],
           length = Math.hypot(dx, dy);
         if (!length) {
-          notice(`${actor.label}: facing unknown because both actors share a position.`, step.id);
+          notice(
+            `${character.label}: facing unknown because both characters share a position.`,
+            step.id,
+          );
           continue;
         }
-        actor.facing = [dx / length, dy / length];
+        character.facing = [dx / length, dy / length];
         result.segments.push({
           stepId: step.id,
           number: index + 1,
-          actorId,
+          characterId,
           kind: 'face',
-          from: [...actor.position],
+          from: [...character.position],
           to: [...target.position],
         });
       }

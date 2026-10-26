@@ -101,9 +101,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
       />
       <NavIcon
         icon={FcBusinessman}
-        label="Actors"
-        mode="actors"
-        active={activeMode === 'actors'}
+        label="Characters"
+        mode="characters"
+        active={activeMode === 'characters'}
         onClick={onModeChange}
       />
       <NavIcon

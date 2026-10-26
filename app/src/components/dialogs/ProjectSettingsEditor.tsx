@@ -139,7 +139,8 @@ export const ProjectSettingsEditor: React.FC<ProjectSettingsEditorProps> = ({
               />
               <FormErrorMessage>{errors.idPrefix?.message}</FormErrorMessage>
               <FormHelperText>
-                Resources use IDs such as base:myactor. The prefix is fixed after project creation.
+                Resources use IDs such as base:mycharacter. The prefix is fixed after project
+                creation.
               </FormHelperText>
             </FormControl>
             <SimpleGrid columns={2} spacing={4}>

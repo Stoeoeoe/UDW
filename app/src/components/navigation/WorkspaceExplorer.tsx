@@ -61,7 +61,7 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiGrid;
     case 'entities':
       return FiBox;
-    case 'actors':
+    case 'characters':
       return FiUsers;
     case 'items':
       return FiPackage;
@@ -527,7 +527,7 @@ function getFallbackTabId(document: WorkspaceDocument): string | null {
     case 'configuration':
       return 'config';
     case 'entities':
-    case 'actors':
+    case 'characters':
     case 'items':
     case 'dialogues':
     case 'cutscenes':

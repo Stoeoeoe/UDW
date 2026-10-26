@@ -14,7 +14,7 @@ export interface Cutscene {
   onStart?: CutsceneStep[];
   onComplete: {
     steps: CutsceneStep[];
-    actorPlacements: { actor: string; anchor: string }[];
+    characterPlacements: { character: string; anchor: string }[];
   };
   sequence: CutsceneStep[];
 }

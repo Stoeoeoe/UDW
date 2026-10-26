@@ -1,6 +1,6 @@
 import { resourceFileKey, resourceRegistry } from '../lib/resourceRegistry';
 /**
- * Loads all project resources (tilesets, maps, actors, dialogues, etc.) into
+ * Loads all project resources (tilesets, maps, characters, dialogues, etc.) into
  * the store. Extracted from useEditorStore to keep that file focused on wiring.
  */
 
@@ -137,12 +137,12 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       });
     }
 
-    setResourceLoadingState(set, 'Loading actors and items', 0.48);
+    setResourceLoadingState(set, 'Loading characters and items', 0.48);
 
-    // 1.8 Actors
-    const actors = await fileSystem.loadAllActors();
+    // 1.8 Characters
+    const characters = await fileSystem.loadAllCharacters();
     set((state) => {
-      state.actors = castDraft(actors);
+      state.characters = castDraft(characters);
     });
 
     // 1.81 Item classes (project-level, stored on project)

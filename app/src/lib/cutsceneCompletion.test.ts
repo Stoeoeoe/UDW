@@ -34,7 +34,11 @@ const source = () =>
     onComplete: {
       ...prototype.onComplete,
       steps: [
-        { id: 'final-face', action: 'actors.face', arguments: { actor: host, target: 'guest' } },
+        {
+          id: 'final-face',
+          action: 'characters.face',
+          arguments: { character: host, target: 'guest' },
+        },
       ],
     },
   });
@@ -42,7 +46,7 @@ const source = () =>
 describe('typed completion v2 contract', () => {
   it('restricts completion to explicitly permitted immediate actions', () => {
     expect(actionsForCutscenePhase(actions, 'completion').map((a) => a.id)).toEqual([
-      'actors.face',
+      'characters.face',
     ]);
     expect(
       actionsForCutscenePhase(
@@ -61,7 +65,7 @@ describe('typed completion v2 contract', () => {
       exported = exportCutscene(scene, actions, refs);
     expect(exported.formatVersion).toBe(2);
     expect(exported.onComplete).toEqual(scene.onComplete);
-    expect(Object.keys(exported.onComplete).sort()).toEqual(['actorPlacements', 'steps']);
+    expect(Object.keys(exported.onComplete).sort()).toEqual(['characterPlacements', 'steps']);
     expect(parseCutscene(JSON.parse(JSON.stringify(exported)))).toEqual(exported);
     expect(() =>
       parseCutscene({ ...exported, onComplete: { ...exported.onComplete, actions: '' } }),
@@ -110,18 +114,22 @@ describe('typed completion v2 contract', () => {
     const preview = () =>
       previewCutscene(scene, map, [npc], actions, { kind: 'completion' }, refs.dialogueIds);
     const watched = preview();
-    const actor = watched.actors.find((a) => a.id === host)!;
-    expect(actor.position).toEqual([64, 80]);
-    expect(actor.facing).toEqual([1, 0]);
+    const character = watched.characters.find((a) => a.id === host)!;
+    expect(character.position).toEqual([64, 80]);
+    expect(character.facing).toEqual([1, 0]);
     scene.sequence = [
       {
         id: 'unplayed',
-        action: 'actors.moveTo',
-        arguments: { actor: 'guest', destination: 'prototype-meeting' },
+        action: 'characters.moveTo',
+        arguments: { character: 'guest', destination: 'prototype-meeting' },
       },
     ];
     scene.onStart = [
-      { id: 'unused-setup', action: 'actors.face', arguments: { actor: 'guest', target: host } },
+      {
+        id: 'unused-setup',
+        action: 'characters.face',
+        arguments: { character: 'guest', target: host },
+      },
     ];
     expect(preview()).toEqual(watched); // Skipping uses the same explicit terminal plan.
   });
@@ -129,8 +137,8 @@ describe('typed completion v2 contract', () => {
     const scene = source();
     scene.onComplete.steps.push({
       id: 'face-back',
-      action: 'actors.face',
-      arguments: { actor: 'guest', target: host },
+      action: 'characters.face',
+      arguments: { character: 'guest', target: host },
     });
     const first = previewCutscene(
       scene,
@@ -140,7 +148,7 @@ describe('typed completion v2 contract', () => {
       { kind: 'step', id: 'final-face' },
       refs.dialogueIds,
     );
-    expect(first.actors.find((a) => a.id === 'guest')!.facing).toBeNull();
+    expect(first.characters.find((a) => a.id === 'guest')!.facing).toBeNull();
     const all = previewCutscene(
       scene,
       map,
@@ -149,7 +157,7 @@ describe('typed completion v2 contract', () => {
       { kind: 'completion' },
       refs.dialogueIds,
     );
-    expect(all.actors.find((a) => a.id === 'guest')!.facing).toEqual([-1, 0]);
+    expect(all.characters.find((a) => a.id === 'guest')!.facing).toEqual([-1, 0]);
   });
   it('upgrades v1 with empty Lua losslessly without mutating the original source', () => {
     const before = JSON.stringify(legacy),
@@ -158,7 +166,7 @@ describe('typed completion v2 contract', () => {
     expect(result.sequence).toEqual(legacy.sequence);
     expect(result.onComplete).toEqual({
       steps: [],
-      actorPlacements: legacy.onComplete.actorPlacements,
+      characterPlacements: legacy.onComplete.characterPlacements,
     });
     expect(JSON.stringify(legacy)).toBe(before);
   });

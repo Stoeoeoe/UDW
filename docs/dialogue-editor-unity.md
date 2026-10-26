@@ -114,7 +114,7 @@ interface DialogueDocument {
 ```ts
 interface DialogueLineNode {
   id: string;
-  type: 'line';
+  type: "line";
   speaker?: string;
   emotion?: string;
   text: string;
@@ -126,8 +126,8 @@ interface DialogueLineNode {
 Behavior:
 
 - Show a dialogue line.
-- `speaker` is usually an `Actor.id`.
-- `emotion` is a free string, usually matching an actor emotion label.
+- `speaker` is usually an `Character.id`.
+- `emotion` is a free string, usually matching an character emotion label.
 - `msgKey` is the localization key.
 - Continue to `next`; if `next` is null, the dialogue ends.
 
@@ -149,7 +149,7 @@ interface DialogueChoiceOption {
 
 interface DialogueChoiceNode {
   id: string;
-  type: 'choice';
+  type: "choice";
   options: DialogueChoiceOption[];
 }
 ```
@@ -171,7 +171,7 @@ Unity recommendation:
 ```ts
 interface DialogueActionNode {
   id: string;
-  type: 'action';
+  type: "action";
   lua: string;
   next?: string | null;
 }
@@ -189,7 +189,7 @@ This is a full Lua chunk, not a boolean condition.
 ```ts
 interface DialogueJumpNode {
   id: string;
-  type: 'jump';
+  type: "jump";
   targetDialogueId?: string | null;
   targetNodeId: string;
 }
@@ -205,7 +205,7 @@ Behavior:
 ```ts
 interface DialogueCommentNode {
   id: string;
-  type: 'comment';
+  type: "comment";
   text: string;
 }
 ```
@@ -225,7 +225,7 @@ Unity recommendation:
 ```ts
 interface DialogueEndNode {
   id: string;
-  type: 'end';
+  type: "end";
 }
 ```
 
@@ -293,7 +293,7 @@ interface DialogueI18nExport {
     msgKey: string;
     text: string;
     nodeId: string;
-    sourceType: 'line' | 'choiceOption';
+    sourceType: "line" | "choiceOption";
     optionId?: string;
   }[];
 }

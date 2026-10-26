@@ -1,7 +1,7 @@
 import {
   Map as GameMap,
   Tileset,
-  Actor,
+  Character,
   EntityType,
   Item,
   DialogueDocument,
@@ -11,7 +11,7 @@ import { ResourceKind, WorkspaceTreeNode } from '../types/workspace';
 import {
   listLocationDescriptors,
   listTilesetDescriptors,
-  listActorDescriptors,
+  listCharacterDescriptors,
   listEntityDescriptors,
   listItemDescriptors,
   listDialogueDescriptors,
@@ -25,7 +25,7 @@ import { createWorkspaceScreenDocument } from './workspaceRouting';
 export interface WorkspaceTreeInput {
   maps: GameMap[];
   tilesets: Map<string, Tileset>;
-  actors: Actor[];
+  characters: Character[];
   entityTypes: EntityType[];
   items: Item[];
   dialogues: DialogueDocument[];
@@ -54,12 +54,12 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
     'tileset',
   );
 
-  const actorNodes = buildResourceSection(
-    'actor',
-    'Actors',
-    'actors',
-    listActorDescriptors(input.actors),
-    'actors',
+  const characterNodes = buildResourceSection(
+    'character',
+    'Characters',
+    'characters',
+    listCharacterDescriptors(input.characters),
+    'characters',
   );
 
   const entityNodes = buildResourceSection(
@@ -89,7 +89,7 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
   return [
     locationNodes,
     tilesetNodes,
-    actorNodes,
+    characterNodes,
     entityNodes,
     itemNodes,
     dialogueNodes,
@@ -234,8 +234,8 @@ function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
       return 'locations';
     case 'tileset':
       return 'tilesets';
-    case 'actor':
-      return 'actors';
+    case 'character':
+      return 'characters';
     case 'entity':
       return 'entities';
     case 'item':

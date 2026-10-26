@@ -4,7 +4,7 @@ import {
   Map,
   LayerDefinition,
   EntityType,
-  Actor,
+  Character,
   DialogueDocument,
   GameVariable,
   ScriptTable,
@@ -112,9 +112,9 @@ export interface EditorState {
   // Project-level location metadata definitions (applies to maps/locations)
   locationMetadataDefinitions: PropertyDefinition[];
 
-  // Actor definitions (persisted in actors/ or legacy npcs/ directory)
-  actors: Actor[];
-  selectedActorId: string | null;
+  // Character definitions (persisted in characters/ or legacy npcs/ directory)
+  characters: Character[];
+  selectedCharacterId: string | null;
 
   // Dialogue database (stored separately from project)
   dialogues: globalThis.Map<string, DialogueDocument>;
@@ -202,7 +202,7 @@ export type EditorMode =
   | 'maps'
   | 'tilesets'
   | 'entities'
-  | 'actors'
+  | 'characters'
   | 'items'
   | 'dialogues'
   | 'scripting'

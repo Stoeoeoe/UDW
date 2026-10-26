@@ -4,7 +4,7 @@ import prototype from './__fixtures__/prototype.v2.runtime.cutscene.json';
 import {
   createCutsceneStep,
   exportCutscene,
-  mapActorInstances,
+  mapCharacterInstances,
   parseCutscene,
   readCutsceneActions,
   validateCutscene,
@@ -52,13 +52,13 @@ const scene = (): Cutscene => parseCutscene(prototype);
 describe('Unity cutscene contract', () => {
   it('reads the current Unity export, excluding ordinary synchronous calls and other contexts', () => {
     expect(actions.map((a) => a.id).sort()).toEqual([
-      'actors.face',
-      'actors.moveTo',
-      'actors.playAnimation',
+      'characters.face',
+      'characters.moveTo',
+      'characters.playAnimation',
       'cutscene.wait',
       'dialogue.play',
     ]);
-    expect(actions.find((a) => a.id === 'actors.moveTo')?.parameters[1]).toMatchObject({
+    expect(actions.find((a) => a.id === 'characters.moveTo')?.parameters[1]).toMatchObject({
       semanticType: 'anchorRef',
       picker: 'mapAnchor',
     });
@@ -70,7 +70,7 @@ describe('Unity cutscene contract', () => {
     const changedOrder = scene();
     changedOrder.sequence[0].arguments = {
       destination: 'prototype-meeting',
-      actor: 'cutscene-prototype-host-01',
+      character: 'cutscene-prototype-host-01',
     };
     expect(JSON.stringify(exportCutscene(changedOrder, actions, refs()))).toBe(
       JSON.stringify(exportCutscene(scene(), actions, refs())),
@@ -81,12 +81,12 @@ describe('Unity cutscene contract', () => {
   it('drives new actions from metadata without adding a fixed editor capability list', () => {
     const extended = structuredClone(manifest);
     const method = structuredClone(extended.modules[0].methods[0]);
-    method.action = { ...method.action!, id: 'actors.wave', displayName: 'Wave' };
+    method.action = { ...method.action!, id: 'characters.wave', displayName: 'Wave' };
     extended.modules[0].methods.push(method);
     const palette = readCutsceneActions(extended);
-    expect(palette.find((a) => a.id === 'actors.wave')?.displayName).toBe('Wave');
-    const step = createCutsceneStep(palette.find((a) => a.id === 'actors.wave')!);
-    expect(Object.keys(step.arguments)).toEqual(['actor', 'target']);
+    expect(palette.find((a) => a.id === 'characters.wave')?.displayName).toBe('Wave');
+    const step = createCutsceneStep(palette.find((a) => a.id === 'characters.wave')!);
+    expect(Object.keys(step.arguments)).toEqual(['character', 'target']);
   });
 
   it.each([
@@ -117,7 +117,7 @@ describe('Unity cutscene contract', () => {
     [
       'blank argument',
       (s: Record<string, any>) => {
-        s.sequence[0].arguments.actor = ' ';
+        s.sequence[0].arguments.character = ' ';
       },
     ],
     [
@@ -171,8 +171,8 @@ describe('Unity cutscene contract', () => {
   it('picks NPC placement IDs across root and layer entities, excluding props', () => {
     const map = fixtureMap();
     map.layers.push({
-      id: 'actors',
-      name: 'Actors',
+      id: 'characters',
+      name: 'Characters',
       kind: 'entity',
       visible: true,
       opacity: 1,
@@ -180,7 +180,9 @@ describe('Unity cutscene contract', () => {
       entities: [...map.entities],
     });
     map.entities.push({ id: 'chest', typeId: 'base:chest', position: [0, 0], properties: {} });
-    expect(mapActorInstances(map, [npc]).map((e) => e.id)).toEqual(['cutscene-prototype-host-01']);
+    expect(mapCharacterInstances(map, [npc]).map((e) => e.id)).toEqual([
+      'cutscene-prototype-host-01',
+    ]);
     const unchanged = scene();
     map.entities[0].label = 'A new display name';
     map.entities[0].position = [99, 100];
@@ -188,13 +190,16 @@ describe('Unity cutscene contract', () => {
     expect(validateCutscene(unchanged, actions, { ...refs(), maps: [map] })).toEqual([]);
   });
 
-  it('allows endpoint-only actors and rejects duplicate or missing endpoint references', () => {
+  it('allows endpoint-only characters and rejects duplicate or missing endpoint references', () => {
     const map = fixtureMap();
     map.entities.push({ ...map.entities[0], id: 'another-host' });
     const s = scene();
-    s.onComplete.actorPlacements.push({ actor: 'another-host', anchor: 'prototype-meeting' });
+    s.onComplete.characterPlacements.push({
+      character: 'another-host',
+      anchor: 'prototype-meeting',
+    });
     expect(validateCutscene(s, actions, { ...refs(), maps: [map] })).toEqual([]);
-    s.onComplete.actorPlacements.push({ actor: 'another-host', anchor: 'absent' });
+    s.onComplete.characterPlacements.push({ character: 'another-host', anchor: 'absent' });
     const errors = validateCutscene(s, actions, { ...refs(), maps: [map] });
     expect(errors.some((e) => e.message.includes('Duplicate endpoint'))).toBe(true);
     expect(errors.some((e) => e.message.includes('Missing anchor'))).toBe(true);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildWorkspaceTree } from './workspaceTree';
 import {
-  Actor,
+  Character,
   DialogueDocument,
   EntityType,
   GameVariable,
@@ -29,7 +29,7 @@ function createTreeInput(
   overrides: {
     maps?: GameMap[];
     tilesets?: Map<string, Tileset>;
-    actors?: Actor[];
+    characters?: Character[];
     entityTypes?: EntityType[];
     items?: Item[];
     dialogues?: DialogueDocument[];
@@ -39,7 +39,7 @@ function createTreeInput(
   return {
     maps: overrides.maps ?? [],
     tilesets: overrides.tilesets ?? new Map<string, Tileset>(),
-    actors: overrides.actors ?? [],
+    characters: overrides.characters ?? [],
     entityTypes: overrides.entityTypes ?? [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
@@ -117,7 +117,7 @@ describe('buildWorkspaceTree', () => {
   it('keeps scripting as a single overview screen and builds resource sections for the rest', () => {
     const tree = buildWorkspaceTree(
       createTreeInput({
-        actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+        characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
         entityTypes: [
           {
             id: 'merchant-stall',
@@ -164,7 +164,7 @@ describe('buildWorkspaceTree', () => {
     expect(tree.map((node) => node.id)).toEqual([
       'group:locations',
       'group:tilesets',
-      'group:actors',
+      'group:characters',
       'group:entities',
       'group:items',
       'group:dialogues',
@@ -173,11 +173,15 @@ describe('buildWorkspaceTree', () => {
       'settings',
       'config',
     ]);
-    expect(tree.find((node) => node.id === 'group:actors')?.children?.[0]?.document).toMatchObject({
-      kind: 'actor',
-      actorId: 'marcus',
+    expect(
+      tree.find((node) => node.id === 'group:characters')?.children?.[0]?.document,
+    ).toMatchObject({
+      kind: 'character',
+      characterId: 'marcus',
     });
-    expect(tree.find((node) => node.id === 'group:actors')?.children?.[0]?.resourceIcon).toEqual({
+    expect(
+      tree.find((node) => node.id === 'group:characters')?.children?.[0]?.resourceIcon,
+    ).toEqual({
       type: 'game-icon',
       value: 'GiPerson',
     });

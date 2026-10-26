@@ -48,23 +48,26 @@ export const CutscenePreviewPanel: React.FC<{
   const selectedSegments = preview?.segments.filter((s) => s.stepId === selectedStepId) ?? [];
   const selectedPlacements = preview?.placements.filter((p) => p.stepId === selectedStepId) ?? [];
   const selectedFacings = preview?.facings.filter((f) => f.stepId === selectedStepId) ?? [];
-  const actorName = (id: string) =>
-    preview?.actors.find((a) => a.id === id)?.label || id || 'Not set';
+  const characterName = (id: string) =>
+    preview?.characters.find((a) => a.id === id)?.label || id || 'Not set';
   const visibleOverlays = overlays
     .filter(
       (o) =>
         !selectedFacings.length ||
         showMovementHistory ||
-        (o.kind !== 'segment' && !(o.kind === 'actor' && o.ghost)) ||
+        (o.kind !== 'segment' && !(o.kind === 'character' && o.ghost)) ||
         (o.kind === 'segment' && o.dashed && o.opacity === 1),
     )
     .map((o) => {
-      if (o.kind !== 'actor' || o.ghost) return o;
+      if (o.kind !== 'character' || o.ghost) return o;
       const facing = selectedFacings.find(
-        (f) => f.actorId === o.actorId || f.targetId === o.actorId,
+        (f) => f.characterId === o.characterId || f.targetId === o.characterId,
       );
       return facing
-        ? { ...o, label: `${o.label} (${facing.actorId === o.actorId ? 'turning' : 'target'})` }
+        ? {
+            ...o,
+            label: `${o.label} (${facing.characterId === o.characterId ? 'turning' : 'target'})`,
+          }
         : o;
     });
   const focusPositions: [number, number][] = selectedSegments.length
@@ -77,8 +80,8 @@ export const CutscenePreviewPanel: React.FC<{
       ? selectedPlacements.map((p) => [p.position[0] / tileSize, p.position[1] / tileSize])
       : overlays
           .filter(
-            (o): o is Extract<MapPreviewOverlay, { kind: 'actor' }> =>
-              o.kind === 'actor' && !o.ghost,
+            (o): o is Extract<MapPreviewOverlay, { kind: 'character' }> =>
+              o.kind === 'character' && !o.ghost,
           )
           .map((o) => o.position);
   const selectedNotices =
@@ -121,7 +124,7 @@ export const CutscenePreviewPanel: React.FC<{
         >
           {selectedFacings.map((f, i) => (
             <Text key={i} fontSize="sm" fontWeight="semibold">
-              {actorName(f.actorId)} faces {actorName(f.targetId)}
+              {characterName(f.characterId)} faces {characterName(f.targetId)}
             </Text>
           ))}
           {selectedNotices.map((n, i) => (

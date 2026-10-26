@@ -173,8 +173,8 @@ export function applyTabSession(tab: WorkspaceTab | null): void {
     return;
   }
 
-  if (tab.document.kind === 'actors') {
-    editor.setMode('actors');
+  if (tab.document.kind === 'characters') {
+    editor.setMode('characters');
     return;
   }
 

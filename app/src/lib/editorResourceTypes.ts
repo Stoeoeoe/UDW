@@ -68,36 +68,40 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     getFolderPath: (resourceId) =>
       useEditorStore.getState().tilesets.get(resourceId)?.folderPath ?? '',
   },
-  actor: {
-    id: 'actor',
-    documentDefinition: resourceRegistry.actor,
-    label: 'Actor',
-    collectionLabel: 'Actors',
-    editorIcon: 'actors',
+  character: {
+    id: 'character',
+    documentDefinition: resourceRegistry.character,
+    label: 'Character',
+    collectionLabel: 'Characters',
+    editorIcon: 'characters',
     createFlow: 'simple',
-    metadataFlow: 'actor',
-    metadataTitle: 'Edit Actor',
+    metadataFlow: 'character',
+    metadataTitle: 'Edit Character',
     getMetadataFields: () => [
       { key: 'name', label: 'Name', type: 'text' },
       { key: 'icon', label: 'Icon', type: 'icon' },
     ],
     getMetadataInitialValues: (resourceId) => {
-      const actor = useEditorStore.getState().actors.find((entry) => entry.id === resourceId);
-      if (!actor) return null;
+      const character = useEditorStore
+        .getState()
+        .characters.find((entry) => entry.id === resourceId);
+      if (!character) return null;
       return {
-        name: actor.name,
-        icon: actor.icon || 'GiPerson',
+        name: character.name,
+        icon: character.icon || 'GiPerson',
       };
     },
     submitMetadata: async (resourceId, values) => {
-      const actor = useEditorStore.getState().actors.find((entry) => entry.id === resourceId);
-      if (!actor) return;
-      await useEditorStore.getState().updateActor(resourceId, {
-        name: String(values.name ?? '').trim() || actor.name,
+      const character = useEditorStore
+        .getState()
+        .characters.find((entry) => entry.id === resourceId);
+      if (!character) return;
+      await useEditorStore.getState().updateCharacter(resourceId, {
+        name: String(values.name ?? '').trim() || character.name,
         icon: String(values.icon ?? ''),
       });
     },
-    saveUnitPrefix: 'actor:',
+    saveUnitPrefix: 'character:',
     accentColor: 'orange.300',
     tint: 'rgba(251,146,60,0.12)',
     hoverTint: 'rgba(251,146,60,0.18)',
@@ -109,15 +113,16 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     canDelete: true,
     canRevealInFileExplorer: true,
     fileExplorerPath: (resourceId) =>
-      `${resourceRegistry.actor.folder}/${fileSystem.resolveFilename(resourceRegistry.actor.folder, resourceFileKey('actor', resourceId))}`,
+      `${resourceRegistry.character.folder}/${fileSystem.resolveFilename(resourceRegistry.character.folder, resourceFileKey('character', resourceId))}`,
     renameResource: async (resourceId, name) => {
-      await useEditorStore.getState().updateActor(resourceId, { name });
+      await useEditorStore.getState().updateCharacter(resourceId, { name });
     },
     deleteResource: async (resourceId) => {
-      await useEditorStore.getState().deleteActor(resourceId);
+      await useEditorStore.getState().deleteCharacter(resourceId);
     },
     getFolderPath: (resourceId) =>
-      useEditorStore.getState().actors.find((actor) => actor.id === resourceId)?.folderPath ?? '',
+      useEditorStore.getState().characters.find((character) => character.id === resourceId)
+        ?.folderPath ?? '',
   },
   entity: {
     id: 'entity',
@@ -464,8 +469,8 @@ export function getEditorResourceDocumentId(
       return document.mapId;
     case 'tileset':
       return document.tilesetId;
-    case 'actor':
-      return document.actorId;
+    case 'character':
+      return document.characterId;
     case 'entity':
       return document.entityTypeId;
     case 'item':
@@ -569,10 +574,10 @@ export function createEditorResourceDocument(
         label: resource.name,
         saveUnitId,
       };
-    case 'actor':
+    case 'character':
       return {
-        kind: 'actor',
-        actorId: resource.id,
+        kind: 'character',
+        characterId: resource.id,
         label: resource.name,
         saveUnitId,
       };
@@ -615,7 +620,7 @@ export function getEditorResourceTypeFromDocument(
   switch (document?.kind) {
     case 'location':
     case 'tileset':
-    case 'actor':
+    case 'character':
     case 'entity':
     case 'item':
     case 'dialogue':

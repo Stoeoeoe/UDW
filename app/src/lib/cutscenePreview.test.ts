@@ -33,18 +33,18 @@ const scene = (sequence: CutsceneStep[]): Cutscene => ({
   mapId: 'base:map',
   allowSkip: true,
   sequence,
-  onComplete: { steps: [], actorPlacements: [] },
+  onComplete: { steps: [], characterPlacements: [] },
 });
 const actions = readCutsceneActions(bindings);
 const sequence = [
-  step('move', 'actors.moveTo', { actor: 'host', destination: 'meeting' }),
-  step('face', 'actors.face', { actor: 'host', target: 'guest' }),
+  step('move', 'characters.moveTo', { character: 'host', destination: 'meeting' }),
+  step('face', 'characters.face', { character: 'host', target: 'guest' }),
   step('talk', 'dialogue.play', { dialogue: 'greeting' }),
 ];
 const run = (source: Cutscene, id: string, api = actions) =>
   previewCutscene(source, map(), [npc], api, { kind: 'step', id }, ['greeting']);
-const actor = (result: ReturnType<typeof run>, id = 'host') =>
-  result.actors.find((a) => a.id === id)!;
+const character = (result: ReturnType<typeof run>, id = 'host') =>
+  result.characters.find((a) => a.id === id)!;
 
 describe('manifest-driven cutscene preview', () => {
   it('folds only through the selected step, preserving authored inputs and previous snapshots', () => {
@@ -54,15 +54,22 @@ describe('manifest-driven cutscene preview', () => {
     const moved = previewCutscene(source, world, [npc], actions, { kind: 'step', id: 'move' }, [
       'greeting',
     ]);
-    expect(actor(moved).position).toEqual([64, 32]);
-    expect(actor(moved).facing).toBeNull(); // The anchor's facing is not a movement guarantee.
+    expect(character(moved).position).toEqual([64, 32]);
+    expect(character(moved).facing).toBeNull(); // The anchor's facing is not a movement guarantee.
     expect(moved.segments).toEqual([
-      { stepId: 'move', number: 1, actorId: 'host', kind: 'move', from: [16, 32], to: [64, 32] },
+      {
+        stepId: 'move',
+        number: 1,
+        characterId: 'host',
+        kind: 'move',
+        from: [16, 32],
+        to: [64, 32],
+      },
     ]);
     const faced = run(source, 'face');
-    expect(actor(faced).position).toEqual([64, 32]);
-    expect(actor(faced).facing).toEqual([1, 0]);
-    expect(actor(faced, 'guest').position).toEqual([80, 32]);
+    expect(character(faced).position).toEqual([64, 32]);
+    expect(character(faced).facing).toEqual([1, 0]);
+    expect(character(faced, 'guest').position).toEqual([80, 32]);
     expect(faced.segments[1].kind).toBe('face');
     expect(moved.segments).toHaveLength(1);
     expect(run(source, 'move')).toEqual(moved);
@@ -71,19 +78,19 @@ describe('manifest-driven cutscene preview', () => {
 
   it('uses declared mappings for unrelated action IDs and differently named/reordered arguments', () => {
     const custom: CutsceneAction = {
-      ...actions.find((a) => a.id === 'actors.moveTo')!,
+      ...actions.find((a) => a.id === 'characters.moveTo')!,
       id: 'anything.relocate',
       parameters: [
         { name: 'where', type: 'string', semanticType: 'anchorRef', picker: 'mapAnchor' },
-        { name: 'who', type: 'string', semanticType: 'actorRef', picker: 'mapActor' },
+        { name: 'who', type: 'string', semanticType: 'characterRef', picker: 'mapCharacter' },
       ],
       preview: {
         version: 1,
         spatialState: 'described',
         effects: [
           {
-            kind: 'moveActorToAnchor',
-            actorParameter: 'who',
+            kind: 'moveCharacterToAnchor',
+            characterParameter: 'who',
             anchorParameter: 'where',
             facing: 'unknown',
           },
@@ -95,7 +102,7 @@ describe('manifest-driven cutscene preview', () => {
       'custom',
       [custom],
     );
-    expect(actor(result).position).toEqual([64, 32]);
+    expect(character(result).position).toEqual([64, 32]);
     expect(result.segments).toHaveLength(1);
   });
 
@@ -104,31 +111,35 @@ describe('manifest-driven cutscene preview', () => {
       ...actions[0],
       id: 'custom.composite',
       parameters: [
-        ...actions.find((a) => a.id === 'actors.moveTo')!.parameters,
-        { name: 'target', type: 'string', semanticType: 'actorRef', picker: 'mapActor' },
+        ...actions.find((a) => a.id === 'characters.moveTo')!.parameters,
+        { name: 'target', type: 'string', semanticType: 'characterRef', picker: 'mapCharacter' },
       ],
       preview: {
         version: 1,
         spatialState: 'described',
         effects: [
           {
-            kind: 'moveActorToAnchor',
-            actorParameter: 'actor',
+            kind: 'moveCharacterToAnchor',
+            characterParameter: 'character',
             anchorParameter: 'destination',
             facing: 'unknown',
           },
-          { kind: 'faceActorTowardActor', actorParameter: 'actor', targetActorParameter: 'target' },
+          {
+            kind: 'faceCharacterTowardCharacter',
+            characterParameter: 'character',
+            targetCharacterParameter: 'target',
+          },
         ],
       },
     };
     const result = run(
       scene([
-        step('both', composite.id, { actor: 'host', destination: 'meeting', target: 'guest' }),
+        step('both', composite.id, { character: 'host', destination: 'meeting', target: 'guest' }),
       ]),
       'both',
       [composite],
     );
-    expect(actor(result).facing).toEqual([1, 0]);
+    expect(character(result).facing).toEqual([1, 0]);
     expect(result.segments.map((s) => s.kind)).toEqual(['move', 'face']);
   });
 
@@ -140,7 +151,7 @@ describe('manifest-driven cutscene preview', () => {
     ]);
     const before = run(source, 'face'),
       after = run(source, 'pause');
-    expect(after.actors).toEqual(before.actors);
+    expect(after.characters).toEqual(before.characters);
     expect(after.segments).toEqual(before.segments);
     expect(after.notices).toEqual([]);
   });
@@ -148,7 +159,7 @@ describe('manifest-driven cutscene preview', () => {
   it('shows the dialogue cue but invalidates spatial certainty while retaining historical arrows', () => {
     const result = run(scene(sequence), 'talk');
     expect(result.cues).toEqual([{ stepId: 'talk', dialogueId: 'greeting' }]);
-    expect(result.actors.every((a) => a.position === null && a.facing === null)).toBe(true);
+    expect(result.characters.every((a) => a.position === null && a.facing === null)).toBe(true);
     expect(result.segments).toHaveLength(2);
     expect(result.notices.some((n) => n.message.includes('history only'))).toBe(true);
   });
@@ -162,8 +173,8 @@ describe('manifest-driven cutscene preview', () => {
       spatialState: 'described',
       effects: [
         {
-          kind: 'moveActorToAnchor',
-          actorParameter: 'missing',
+          kind: 'moveCharacterToAnchor',
+          characterParameter: 'missing',
           anchorParameter: 'destination',
           facing: 'unknown',
         },
@@ -174,9 +185,9 @@ describe('manifest-driven cutscene preview', () => {
       spatialState: 'described',
       effects: [
         {
-          kind: 'moveActorToAnchor',
-          actorParameter: 'destination',
-          anchorParameter: 'actor',
+          kind: 'moveCharacterToAnchor',
+          characterParameter: 'destination',
+          anchorParameter: 'character',
           facing: 'unknown',
         },
       ],
@@ -184,17 +195,19 @@ describe('manifest-driven cutscene preview', () => {
     {
       version: 1,
       spatialState: 'described',
-      effects: [{ kind: 'showDialogue', dialogueParameter: 'actor', actorParameter: 'actor' }],
+      effects: [
+        { kind: 'showDialogue', dialogueParameter: 'character', characterParameter: 'character' },
+      ],
     },
   ])(
     'treats unsupported/malformed preview metadata as unavailable rather than unchanged: %j',
     (preview) => {
       const unsupported: CutsceneAction = {
-        ...actions.find((a) => a.id === 'actors.moveTo')!,
+        ...actions.find((a) => a.id === 'characters.moveTo')!,
         preview,
       };
       const result = run(scene([sequence[0]]), 'move', [unsupported]);
-      expect(actor(result).position).toBeNull();
+      expect(character(result).position).toBeNull();
       expect(result.segments).toEqual([]);
       expect(result.notices[0].message).toContain('no supported preview declaration');
     },
@@ -211,49 +224,51 @@ describe('manifest-driven cutscene preview', () => {
       sequence[0],
       step('noop', noop.id, {}),
       step('opaque', unknown.id, {}),
-      step('recover', 'actors.moveTo', { actor: 'host', destination: 'gate' }),
+      step('recover', 'characters.moveTo', { character: 'host', destination: 'gate' }),
     ]);
-    expect(actor(run(source, 'noop', [...actions, noop, unknown])).position).toEqual([64, 32]);
+    expect(character(run(source, 'noop', [...actions, noop, unknown])).position).toEqual([64, 32]);
     const result = run(source, 'recover', [...actions, noop, unknown]);
-    expect(actor(result).position).toEqual([96, 64]);
-    expect(actor(result, 'guest').position).toBeNull();
+    expect(character(result).position).toEqual([96, 64]);
+    expect(character(result, 'guest').position).toBeNull();
     expect(result.segments).toHaveLength(1); // No fabricated recovery arrow or origin.
     expect(result.notices.some((n) => n.message.includes('destination only'))).toBe(true);
   });
 
   it('never invents a player start or a facing vector for unknown/coincident positions', () => {
     const source = scene([
-      step('playerMove', 'actors.moveTo', { actor: 'player', destination: 'meeting' }),
-      step('face', 'actors.face', { actor: 'host', target: 'player' }),
+      step('playerMove', 'characters.moveTo', { character: 'player', destination: 'meeting' }),
+      step('face', 'characters.face', { character: 'host', target: 'player' }),
     ]);
     expect(
-      actor(
+      character(
         run(
-          scene([step('unknownFace', 'actors.face', { actor: 'host', target: 'player' })]),
+          scene([step('unknownFace', 'characters.face', { character: 'host', target: 'player' })]),
           'unknownFace',
         ),
       ).facing,
     ).toBeNull();
     const result = run(source, 'playerMove');
-    expect(actor(result, 'player').position).toEqual([64, 32]);
+    expect(character(result, 'player').position).toEqual([64, 32]);
     expect(result.segments).toEqual([]);
     source.sequence.push(
-      step('coincidentMove', 'actors.moveTo', { actor: 'host', destination: 'meeting' }),
-      step('coincidentFace', 'actors.face', { actor: 'host', target: 'player' }),
+      step('coincidentMove', 'characters.moveTo', { character: 'host', destination: 'meeting' }),
+      step('coincidentFace', 'characters.face', { character: 'host', target: 'player' }),
     );
-    expect(actor(run(source, 'coincidentFace')).facing).toBeNull();
+    expect(character(run(source, 'coincidentFace')).facing).toBeNull();
   });
 
-  it('reports missing references without retaining a false actor endpoint', () => {
-    const source = scene([step('bad', 'actors.moveTo', { actor: 'host', destination: 'deleted' })]);
+  it('reports missing references without retaining a false character endpoint', () => {
+    const source = scene([
+      step('bad', 'characters.moveTo', { character: 'host', destination: 'deleted' }),
+    ]);
     const result = run(source, 'bad');
-    expect(actor(result).position).toBeNull();
+    expect(character(result).position).toBeNull();
     expect(result.notices[0].message).toContain('missing anchor deleted');
-    const missingActor = run(
-      scene([step('bad', 'actors.moveTo', { actor: 'deleted', destination: 'meeting' })]),
+    const missingCharacter = run(
+      scene([step('bad', 'characters.moveTo', { character: 'deleted', destination: 'meeting' })]),
       'bad',
     );
-    expect(missingActor.notices[0].message).toContain('missing actor deleted');
+    expect(missingCharacter.notices[0].message).toContain('missing character deleted');
     const missingDialogue = run(
       scene([step('bad', 'dialogue.play', { dialogue: 'deleted' })]),
       'bad',
@@ -265,13 +280,13 @@ describe('manifest-driven cutscene preview', () => {
   it('keeps original and completion views separate from the last sequence position', () => {
     const source = scene(sequence);
     const initial = previewCutscene(source, map(), [npc], actions, { kind: 'scene' }, []);
-    expect(actor(initial).position).toEqual([16, 32]);
+    expect(character(initial).position).toEqual([16, 32]);
     expect(initial.segments).toEqual([]);
-    source.onComplete.actorPlacements = [{ actor: 'guest', anchor: 'meeting' }];
+    source.onComplete.characterPlacements = [{ character: 'guest', anchor: 'meeting' }];
     const final = previewCutscene(source, map(), [npc], actions, { kind: 'completion' }, []);
-    expect(actor(final).position).toEqual([16, 32]);
-    expect(actor(final, 'guest').position).toEqual([64, 32]);
-    expect(actor(final, 'guest').facing).toEqual([0, -1]);
+    expect(character(final).position).toEqual([16, 32]);
+    expect(character(final, 'guest').position).toEqual([64, 32]);
+    expect(character(final, 'guest').facing).toEqual([0, -1]);
     expect(final.segments).toEqual([]);
     const opaque = {
       ...actions[0],
@@ -288,7 +303,7 @@ describe('manifest-driven cutscene preview', () => {
       { kind: 'completion' },
       [],
     );
-    expect(actor(opaqueFinal).position).toBeNull();
+    expect(character(opaqueFinal).position).toBeNull();
     expect(opaqueFinal.notices[0].message).toContain('Spatial state is unknown');
   });
 });

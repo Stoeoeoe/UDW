@@ -12,7 +12,7 @@ const refs = {
 };
 const source = (seconds: unknown) => ({
   ...prototype,
-  onComplete: { steps: [], actorPlacements: [] },
+  onComplete: { steps: [], characterPlacements: [] },
   sequence: [{ id: 'pause', action: 'cutscene.wait', arguments: { seconds } }],
 });
 
@@ -40,7 +40,11 @@ describe('numeric cutscene arguments', () => {
     const raw = {
       ...prototype,
       sequence: [
-        { id: 'move', action: 'actors.moveTo', arguments: { actor: 5, destination: 'anchor' } },
+        {
+          id: 'move',
+          action: 'characters.moveTo',
+          arguments: { character: 5, destination: 'anchor' },
+        },
       ],
     };
     expect(

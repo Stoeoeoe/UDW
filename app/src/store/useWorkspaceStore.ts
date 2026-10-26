@@ -59,7 +59,7 @@ export function getWorkspaceTabId(document: WorkspaceDocument): string {
     case 'configuration':
       return 'config';
     case 'entities':
-    case 'actors':
+    case 'characters':
     case 'items':
     case 'cutscenes':
     case 'dialogues':
@@ -94,7 +94,7 @@ function defaultExpandedNodeIds(): string[] {
   return [
     'group:locations',
     'group:tilesets',
-    'group:actors',
+    'group:characters',
     'group:entities',
     'group:items',
     'group:dialogues',

@@ -35,7 +35,7 @@ import {
 } from './dialogueMutations';
 
 export interface DialogueEditorController {
-  actors: ReturnType<typeof useEditorStore.getState>['actors'];
+  characters: ReturnType<typeof useEditorStore.getState>['characters'];
   gameVariables: ReturnType<typeof useEditorStore.getState>['gameVariables'];
   scriptTables: ReturnType<typeof useEditorStore.getState>['scriptTables'];
   scriptFunctions: ReturnType<typeof useEditorStore.getState>['scriptFunctions'];
@@ -88,7 +88,7 @@ export interface DialogueEditorController {
 
 export function useDialogueEditorController(): DialogueEditorController {
   const project = useEditorStore((state) => state.project);
-  const actors = useEditorStore((state) => state.actors);
+  const characters = useEditorStore((state) => state.characters);
   const storedSelectedDialogueId = useEditorStore((state) => state.selectedDialogueId);
   const storeDialogues = useEditorStore((state) => state.dialogues);
   const gameVariables = useEditorStore((state) => state.gameVariables);
@@ -503,7 +503,7 @@ export function useDialogueEditorController(): DialogueEditorController {
   );
 
   return {
-    actors,
+    characters,
     gameVariables,
     scriptTables,
     scriptFunctions,

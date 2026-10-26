@@ -24,7 +24,7 @@ export const positionPickerSchema = z
       .nonempty()
       .refine((modes) => new Set(modes).size === modes.length),
     tileAnchor: z.literal('center'),
-    actorPivot: z.literal('feet'),
+    characterPivot: z.literal('feet'),
   })
   .passthrough();
 export function positionPickerMetadata(parameter: unknown) {

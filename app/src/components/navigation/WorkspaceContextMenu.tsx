@@ -33,7 +33,7 @@ interface WorkspaceContextMenuProps {
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
   onCreateResource: (
-    kind: 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' | 'cutscene',
+    kind: 'location' | 'tileset' | 'character' | 'entity' | 'item' | 'dialogue' | 'cutscene',
     folderPath: string,
   ) => void;
 }
@@ -123,7 +123,7 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
 };
 
 export const CreateNewResourceDialog: React.FC<{
-  kind: 'actor' | 'entity' | 'item' | 'cutscene';
+  kind: 'character' | 'entity' | 'item' | 'cutscene';
   folderPath: string;
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
@@ -134,8 +134,8 @@ export const CreateNewResourceDialog: React.FC<{
     switch (kind) {
       case 'cutscene':
         return useEditorStore.getState().cutscenes.map((scene) => scene.id);
-      case 'actor':
-        return useEditorStore.getState().actors.map((actor) => actor.id);
+      case 'character':
+        return useEditorStore.getState().characters.map((character) => character.id);
       case 'entity':
         return useEditorStore.getState().entityTypes.map((entityType) => entityType.id);
       case 'item':
@@ -152,9 +152,9 @@ export const CreateNewResourceDialog: React.FC<{
             pin: true,
           });
           break;
-        case 'actor':
-          await store.addActor({ id, name, icon: 'GiPerson', emotions: [], folderPath });
-          onOpenDocument(createEditorResourceDocument({ type: 'actor', id, name }), {
+        case 'character':
+          await store.addCharacter({ id, name, icon: 'GiPerson', emotions: [], folderPath });
+          onOpenDocument(createEditorResourceDocument({ type: 'character', id, name }), {
             pin: true,
           });
           break;
@@ -223,7 +223,7 @@ function buildMenuItems(
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void,
   onClose: () => void,
   onCreateResource: (
-    kind: 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' | 'cutscene',
+    kind: 'location' | 'tileset' | 'character' | 'entity' | 'item' | 'dialogue' | 'cutscene',
     folderPath: string,
   ) => void,
 ): MenuDefinition[] {
@@ -247,7 +247,7 @@ function buildMenuItems(
           resourceKind as
             | 'location'
             | 'tileset'
-            | 'actor'
+            | 'character'
             | 'entity'
             | 'item'
             | 'dialogue'

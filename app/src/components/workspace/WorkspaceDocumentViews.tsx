@@ -2,7 +2,7 @@ import React from 'react';
 import { CutsceneEditor } from '../screens/cutscene/CutsceneEditor';
 import { EmptyScreen } from '../screens/common/EmptyScreen';
 import {
-  ActorEditor,
+  CharacterEditor,
   DialogueEditor,
   EntityEditor,
   ItemEditor,
@@ -38,8 +38,8 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <ConfigurationWorkspaceDocument document={tab.document} />;
     case 'entities':
       return <EntityEditor />;
-    case 'actors':
-      return <ActorEditor />;
+    case 'characters':
+      return <CharacterEditor />;
     case 'items':
       return <ItemEditor />;
     case 'cutscene':
@@ -50,8 +50,8 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <DialogueEditor />;
     case 'scripting':
       return <VariableEditor />;
-    case 'actor':
-      return <ActorResourceDocument actorId={tab.document.actorId} />;
+    case 'character':
+      return <CharacterResourceDocument characterId={tab.document.characterId} />;
     case 'entity':
       return <EntityResourceDocument entityTypeId={tab.document.entityTypeId} />;
     case 'item':
@@ -86,12 +86,12 @@ const ConfigurationWorkspaceDocument: React.FC<{
   );
 };
 
-const ActorResourceDocument: React.FC<{ actorId: string }> = ({ actorId }) => {
-  const setSelectedActor = useEditorStore((state) => state.setSelectedActor);
+const CharacterResourceDocument: React.FC<{ characterId: string }> = ({ characterId }) => {
+  const setSelectedCharacter = useEditorStore((state) => state.setSelectedCharacter);
   React.useEffect(() => {
-    setSelectedActor(actorId);
-  }, [actorId, setSelectedActor]);
-  return <ActorEditor />;
+    setSelectedCharacter(characterId);
+  }, [characterId, setSelectedCharacter]);
+  return <CharacterEditor />;
 };
 
 const EntityResourceDocument: React.FC<{ entityTypeId: string }> = ({ entityTypeId }) => {

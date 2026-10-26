@@ -25,33 +25,37 @@ import { FormLabelUppercase } from '../../common/FormLabel';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
 
-export const ActorEditor: React.FC = () => {
-  const actors = useEditorStore((state) => state.actors);
-  const selectedActorId = useEditorStore((state) => state.selectedActorId);
-  const updateActor = useEditorStore((state) => state.updateActor);
-  const addActor = useEditorStore((state) => state.addActor);
+export const CharacterEditor: React.FC = () => {
+  const characters = useEditorStore((state) => state.characters);
+  const selectedCharacterId = useEditorStore((state) => state.selectedCharacterId);
+  const updateCharacter = useEditorStore((state) => state.updateCharacter);
+  const addCharacter = useEditorStore((state) => state.addCharacter);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [newActorIcon, setNewActorIcon] = useState('GiPerson');
+  const [newCharacterIcon, setNewCharacterIcon] = useState('GiPerson');
 
-  const selectedActor = actors.find((a) => a.id === selectedActorId);
+  const selectedCharacter = characters.find((a) => a.id === selectedCharacterId);
 
   const content = (
     <EmptyScreen
       icon={<GiPerson />}
-      title={actors.length ? 'No Actor Selected' : 'No Actors'}
+      title={characters.length ? 'No Character Selected' : 'No Characters'}
       description={
-        actors.length
-          ? 'Select an actor from the list to edit details.'
+        characters.length
+          ? 'Select an character from the list to edit details.'
           : 'Define characters or named roles available to dialogue and gameplay systems.'
       }
-      buttonLabel={actors.length ? undefined : 'Create First Actor'}
-      onCreate={actors.length ? undefined : onOpen}
+      buttonLabel={characters.length ? undefined : 'Create First Character'}
+      onCreate={characters.length ? undefined : onOpen}
     />
   );
 
-  const centerContent = selectedActor ? (
-    <DetailPanel key={selectedActor.id} maxWidth="1180px">
-      <ActorDetail key={selectedActor.id} actor={selectedActor} onUpdate={updateActor} />
+  const centerContent = selectedCharacter ? (
+    <DetailPanel key={selectedCharacter.id} maxWidth="1180px">
+      <CharacterDetail
+        key={selectedCharacter.id}
+        character={selectedCharacter}
+        onUpdate={updateCharacter}
+      />
     </DetailPanel>
   ) : (
     content
@@ -61,8 +65,8 @@ export const ActorEditor: React.FC = () => {
     <>
       <ResizableEditorLayout
         header={{
-          title: 'Actors',
-          subtitle: `${actors.length} actor${actors.length !== 1 ? 's' : ''} defined`,
+          title: 'Characters',
+          subtitle: `${characters.length} character${characters.length !== 1 ? 's' : ''} defined`,
         }}
         content={centerContent}
       />
@@ -70,19 +74,19 @@ export const ActorEditor: React.FC = () => {
       <CreateItemDialog
         idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
         isOpen={isOpen}
-        title="New Actor"
-        itemType="Actor"
-        existingIds={actors.map((a) => a.id)}
+        title="New Character"
+        itemType="Character"
+        existingIds={characters.map((a) => a.id)}
         onClose={onClose}
         onSubmit={async ({ id, name }) => {
-          await addActor({ id, name, icon: newActorIcon, emotions: [] });
-          setNewActorIcon('GiPerson');
+          await addCharacter({ id, name, icon: newCharacterIcon, emotions: [] });
+          setNewCharacterIcon('GiPerson');
           onClose();
         }}
         additionalFields={
           <FormControl>
             <FormLabelUppercase mb={1}>Icon</FormLabelUppercase>
-            <IconPicker value={newActorIcon} onChange={(v) => setNewActorIcon(v ?? '')} />
+            <IconPicker value={newCharacterIcon} onChange={(v) => setNewCharacterIcon(v ?? '')} />
           </FormControl>
         }
       />
@@ -90,18 +94,18 @@ export const ActorEditor: React.FC = () => {
   );
 };
 
-const ActorDetail: React.FC<{
-  actor: { id: string; name: string; icon: string };
+const CharacterDetail: React.FC<{
+  character: { id: string; name: string; icon: string };
   onUpdate: (id: string, updates: Partial<{ name: string; icon: string }>) => void;
-}> = ({ actor, onUpdate }) => {
+}> = ({ character, onUpdate }) => {
   let form: ReturnType<typeof useForm<any, any, any, any, any, any, any, any, any, any, any, any>>;
   form = useForm({
     defaultValues: {
-      name: actor.name,
-      icon: actor.icon,
+      name: character.name,
+      icon: character.icon,
     },
     onSubmit: async ({ value }) => {
-      onUpdate(actor.id, value);
+      onUpdate(character.id, value);
       form.reset(value);
     },
   });
@@ -133,14 +137,14 @@ const ActorDetail: React.FC<{
               justifyContent="center"
               flexShrink={0}
             >
-              <GameIcon iconName={actor.icon} size={26} fallback={<GiPerson />} />
+              <GameIcon iconName={character.icon} size={26} fallback={<GiPerson />} />
             </Box>
             <VStack align="start" spacing={1}>
               <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
-                {actor.name}
+                {character.name}
               </Text>
-              <Text textStyle="monoMeta">{actor.id}</Text>
-              <Badge variant="editor">Actor</Badge>
+              <Text textStyle="monoMeta">{character.id}</Text>
+              <Badge variant="editor">Character</Badge>
             </VStack>
           </HStack>
         </HStack>
@@ -150,7 +154,7 @@ const ActorDetail: React.FC<{
             <VStack align="stretch" spacing={4}>
               <FormControl>
                 <FieldLabel>ID</FieldLabel>
-                <ReadOnlyIdField value={actor.id} />
+                <ReadOnlyIdField value={character.id} />
               </FormControl>
 
               <form.Field name="name">
@@ -213,4 +217,4 @@ const FormAutosave: React.FC<{
   return null;
 };
 
-export default ActorEditor;
+export default CharacterEditor;

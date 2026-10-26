@@ -43,7 +43,7 @@ describe('workspaceCommandPalette', () => {
         properties: [],
       },
     ],
-    actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+    characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
     items: [
       {
         id: 'apple',
@@ -77,10 +77,10 @@ describe('workspaceCommandPalette', () => {
   });
 
   it('filters by resource type chip', () => {
-    const matches = searchCommandPaletteResources(resources, 'mar', 'actors');
+    const matches = searchCommandPaletteResources(resources, 'mar', 'characters');
 
     expect(matches).toHaveLength(1);
-    expect(matches[0]?.resource.type).toBe('actor');
+    expect(matches[0]?.resource.type).toBe('character');
     expect(matches[0]?.resource.label).toBe('Marcus');
   });
 
@@ -92,7 +92,7 @@ describe('workspaceCommandPalette', () => {
   });
 
   it('exposes per-resource documents and folder paths for non-map resources', () => {
-    const actor = resources.find((resource) => resource.key === 'actor:marcus');
+    const character = resources.find((resource) => resource.key === 'character:marcus');
     const entity = buildCommandPaletteResources({
       maps: [],
       tilesets: new Map(),
@@ -106,15 +106,17 @@ describe('workspaceCommandPalette', () => {
           folderPath: 'World/Town',
         },
       ],
-      actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson', folderPath: 'NPCs/Villagers' }],
+      characters: [
+        { id: 'marcus', name: 'Marcus', icon: 'GiPerson', folderPath: 'NPCs/Villagers' },
+      ],
       items: [],
       dialogues: [],
     });
 
-    expect(actor).toMatchObject({
+    expect(character).toMatchObject({
       document: {
-        kind: 'actor',
-        actorId: 'marcus',
+        kind: 'character',
+        characterId: 'marcus',
       },
     });
     expect(entity[0]).toMatchObject({

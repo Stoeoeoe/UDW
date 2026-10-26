@@ -52,7 +52,7 @@ export const cutsceneSchema = z
     onComplete: z
       .object({
         steps: z.array(stepSchema),
-        actorPlacements: z.array(z.object({ actor: nonblank, anchor: nonblank }).strict()),
+        characterPlacements: z.array(z.object({ character: nonblank, anchor: nonblank }).strict()),
       })
       .strict(),
     sequence: z.array(stepSchema).min(1),
@@ -71,7 +71,9 @@ export function parseCutscene(raw: unknown): Cutscene {
         onComplete: z
           .object({
             actions: z.string(),
-            actorPlacements: z.array(z.object({ actor: nonblank, anchor: nonblank }).strict()),
+            characterPlacements: z.array(
+              z.object({ character: nonblank, anchor: nonblank }).strict(),
+            ),
           })
           .strict(),
       })
@@ -83,7 +85,7 @@ export function parseCutscene(raw: unknown): Cutscene {
     raw = {
       ...legacy,
       formatVersion: 2,
-      onComplete: { steps: [], actorPlacements: legacy.onComplete.actorPlacements },
+      onComplete: { steps: [], characterPlacements: legacy.onComplete.characterPlacements },
     };
   }
 
@@ -98,15 +100,15 @@ export function parseCutscene(raw: unknown): Cutscene {
     throw new Error(
       `Cutscene ${result.data.id}: duplicate step ID across setup, sequence and completion`,
     );
-  const actors = result.data.onComplete.actorPlacements.map((p) => p.actor);
-  if (new Set(actors).size !== actors.length)
-    throw new Error(`Cutscene ${result.data.id}: duplicate endpoint actor`);
+  const characters = result.data.onComplete.characterPlacements.map((p) => p.character);
+  if (new Set(characters).size !== characters.length)
+    throw new Error(`Cutscene ${result.data.id}: duplicate endpoint character`);
   return result.data;
 }
 
-export function mapActorInstances(map: GameMap, entityTypes: EntityType[]): EntityInstance[] {
+export function mapCharacterInstances(map: GameMap, entityTypes: EntityType[]): EntityInstance[] {
   // The shipped importer creates characters for NPC entities. Ordinary props and
-  // character definitions are not live actor bindings.
+  // character definitions are not live character bindings.
   const npcTypes = new Set(entityTypes.filter((t) => t.category === 'npc').map((t) => t.id));
   const byId = new Map<string, EntityInstance>();
   for (const entity of [...map.entities, ...map.layers.flatMap((l) => l.entities ?? [])]) {
@@ -190,9 +192,9 @@ export function validateCutscene(
     });
   const map = refs.maps.find((m) => m.id === scene.mapId);
   if (!map) report('mapId', `Map ${scene.mapId} does not exist`);
-  const actors = new Set([
+  const characters = new Set([
     'player',
-    ...(map ? mapActorInstances(map, refs.entityTypes).map((a) => a.id) : []),
+    ...(map ? mapCharacterInstances(map, refs.entityTypes).map((a) => a.id) : []),
   ]);
   const anchors = new Set(map?.spatialPrimitives?.anchors?.map((a) => a.id) ?? []);
   const dialogues = new Set(refs.dialogueIds);
@@ -226,12 +228,13 @@ export function validateCutscene(
     for (const parameter of action.parameters) {
       const value = step.arguments[parameter.name];
       const argumentPath = `${path}.arguments.${parameter.name}`;
-      if (parameter.semanticType === 'actorDeclaration') {
+      if (parameter.semanticType === 'characterDeclaration') {
         if (phase !== 'setup')
-          report(argumentPath, 'Actor declarations are only allowed in setup', step.id);
+          report(argumentPath, 'Character declarations are only allowed in setup', step.id);
         if (typeof value !== 'string' || !value.trim())
-          report(argumentPath, 'Enter a new actor name', step.id);
-        else if (actors.has(value)) report(argumentPath, `Duplicate actor name: ${value}`, step.id);
+          report(argumentPath, 'Enter a new character name', step.id);
+        else if (characters.has(value))
+          report(argumentPath, `Duplicate character name: ${value}`, step.id);
         continue;
       }
       if (parameter.type === 'position') {
@@ -278,8 +281,8 @@ export function validateCutscene(
       }
       const pair = `${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`;
       const values =
-        pair === 'actorRef/mapActor'
-          ? actors
+        pair === 'characterRef/mapCharacter'
+          ? characters
           : pair === 'anchorRef/mapAnchor'
             ? anchors
             : pair === 'dialogueRef/dialogue'
@@ -301,18 +304,18 @@ export function validateCutscene(
     // Declarations become visible only after the entire setup step, independently of parameter order.
     if (phase === 'setup' && actionsForCutscenePhase([action], phase).length)
       for (const p of action.parameters.filter(
-        (p) => p.type === 'string' && p.semanticType === 'actorDeclaration',
+        (p) => p.type === 'string' && p.semanticType === 'characterDeclaration',
       )) {
         const name = step.arguments[p.name];
-        if (typeof name === 'string' && name.trim() && !actors.has(name)) actors.add(name);
+        if (typeof name === 'string' && name.trim() && !characters.has(name)) characters.add(name);
       }
   });
   const endpoints = new Set<string>();
-  scene.onComplete.actorPlacements.forEach((p, index) => {
-    const path = `onComplete.actorPlacements.${index}`;
-    if (endpoints.has(p.actor)) report(path, `Duplicate endpoint for ${p.actor}`);
-    endpoints.add(p.actor);
-    if (!actors.has(p.actor)) report(path, `Missing actor instance ${p.actor}`);
+  scene.onComplete.characterPlacements.forEach((p, index) => {
+    const path = `onComplete.characterPlacements.${index}`;
+    if (endpoints.has(p.character)) report(path, `Duplicate endpoint for ${p.character}`);
+    endpoints.add(p.character);
+    if (!characters.has(p.character)) report(path, `Missing character instance ${p.character}`);
     if (!anchors.has(p.anchor)) report(path, `Missing anchor ${p.anchor}`);
   });
   for (const candidate of refs.maps)
@@ -355,8 +358,8 @@ export function exportCutscene(
     ...(scene.onStart !== undefined ? { onStart: scene.onStart.map(serializeStep) } : {}),
     onComplete: {
       steps: scene.onComplete.steps.map(serializeStep),
-      actorPlacements: scene.onComplete.actorPlacements.map((p) => ({
-        actor: p.actor,
+      characterPlacements: scene.onComplete.characterPlacements.map((p) => ({
+        character: p.character,
         anchor: p.anchor,
       })),
     },
@@ -373,7 +376,7 @@ export function createCutsceneStep(action: CutsceneAction): CutsceneStep {
 }
 
 /** Scope is authored setup order; no declaration can shadow a live map role. */
-export function declaredActorsBefore(
+export function declaredCharactersBefore(
   scene: Cutscene,
   actions: CutsceneAction[],
   existing: readonly string[],
@@ -389,7 +392,7 @@ export function declaredActorsBefore(
       const value = step.arguments[p.name];
       if (
         p.type === 'string' &&
-        p.semanticType === 'actorDeclaration' &&
+        p.semanticType === 'characterDeclaration' &&
         typeof value === 'string' &&
         value.trim() &&
         !known.has(value)

@@ -10,7 +10,7 @@
   - Tiles / Tileset
   - Layers
   - Entities
-  - Actors / NPCs
+  - Characters / NPCs
   - Dialogue
   - Scripting / Variables
   - Terrain

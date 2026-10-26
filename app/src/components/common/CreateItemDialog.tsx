@@ -8,7 +8,7 @@ import EditorModal from './EditorModal';
 
 interface CreateItemDialogProps {
   title: string;
-  itemType: string; // e.g., "Actor", "Entity Type"
+  itemType: string; // e.g., "Character", "Entity Type"
   existingIds: string[];
   defaultName?: string;
   onSubmit: (data: { id: string; name: string }) => void;

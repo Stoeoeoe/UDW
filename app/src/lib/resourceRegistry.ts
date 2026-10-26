@@ -1,5 +1,5 @@
 import type {
-  Actor,
+  Character,
   DialogueDocument,
   DialogueI18nExport,
   DialogueNode,
@@ -31,7 +31,7 @@ export interface ResourceDocuments {
   project: Project;
   location: GameMap;
   tileset: Tileset;
-  actor: Actor;
+  character: Character;
   item: Item;
   entity: EntityType;
   dialogue: DialogueDocument;
@@ -43,7 +43,7 @@ export type ResourceFolder =
   | ''
   | 'maps'
   | 'tilesets'
-  | 'actors'
+  | 'characters'
   | 'npcs'
   | 'items'
   | 'entities'
@@ -344,14 +344,17 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
     idScope: 'resource',
     normalize: normalizeTileset,
   },
-  actor: {
-    kind: 'actor',
-    folder: 'actors',
-    extension: '.actor.json',
-    schemaFile: 'actor.schema.json',
+  character: {
+    kind: 'character',
+    folder: 'characters',
+    extension: '.character.json',
+    schemaFile: 'character.schema.json',
     idScope: 'resource',
     legacyFiles: [{ folder: 'npcs', extension: '.npc.json' }],
-    normalize: (actor, prefix) => ({ ...actor, id: qualifyResourceId(actor.id, prefix) }),
+    normalize: (character, prefix) => ({
+      ...character,
+      id: qualifyResourceId(character.id, prefix),
+    }),
   },
   item: {
     kind: 'item',

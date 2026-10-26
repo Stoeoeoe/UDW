@@ -1,5 +1,5 @@
 import {
-  Actor,
+  Character,
   DialogueDocument,
   EntityType,
   Item,
@@ -15,7 +15,7 @@ export type CommandPaletteFilter =
   | 'locations'
   | 'tilesets'
   | 'entities'
-  | 'actors'
+  | 'characters'
   | 'items'
   | 'dialogues'
   | 'cutscenes';
@@ -24,7 +24,7 @@ export type CommandPaletteResourceType =
   | 'location'
   | 'tileset'
   | 'entity'
-  | 'actor'
+  | 'character'
   | 'item'
   | 'dialogue'
   | 'cutscene';
@@ -51,7 +51,7 @@ export interface BuildCommandPaletteResourcesOptions {
   maps: GameMap[];
   tilesets: Map<string, Tileset>;
   entityTypes: EntityType[];
-  actors: Actor[];
+  characters: Character[];
   items: Item[];
   dialogues: DialogueDocument[];
   cutscenes?: import('../types/cutscene').Cutscene[];
@@ -114,22 +114,22 @@ export function buildCommandPaletteResources(
       });
     });
 
-  options.actors
+  options.characters
     .slice()
     .sort((left, right) => left.name.localeCompare(right.name))
-    .forEach((actor) => {
+    .forEach((character) => {
       resources.push({
-        key: `actor:${actor.id}`,
-        type: 'actor',
-        typeLabel: 'Actor',
-        label: actor.name,
-        secondaryLabel: actor.folderPath || undefined,
+        key: `character:${character.id}`,
+        type: 'character',
+        typeLabel: 'Character',
+        label: character.name,
+        secondaryLabel: character.folderPath || undefined,
         document: createEditorResourceDocument({
-          type: 'actor',
-          id: actor.id,
-          name: actor.name,
+          type: 'character',
+          id: character.id,
+          name: character.name,
         }),
-        resourceId: actor.id,
+        resourceId: character.id,
       });
     });
 
@@ -363,8 +363,8 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'tileset';
     case 'entities':
       return resource.type === 'entity';
-    case 'actors':
-      return resource.type === 'actor';
+    case 'characters':
+      return resource.type === 'character';
     case 'items':
       return resource.type === 'item';
     case 'cutscenes':

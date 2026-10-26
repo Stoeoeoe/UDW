@@ -37,7 +37,7 @@ const FILTER_OPTIONS: Array<{ id: CommandPaletteFilter; label: string }> = [
   { id: 'locations', label: 'Locations' },
   { id: 'tilesets', label: 'Tilesets' },
   { id: 'entities', label: 'Entities' },
-  { id: 'actors', label: 'Actors' },
+  { id: 'characters', label: 'Characters' },
   { id: 'items', label: 'Items' },
   { id: 'dialogues', label: 'Dialogues' },
   { id: 'cutscenes', label: 'Cutscenes' },

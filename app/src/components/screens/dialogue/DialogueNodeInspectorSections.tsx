@@ -18,7 +18,7 @@ import { FieldLabel } from '../../common/Typography.tsx';
 import { NodeIdField } from './DialogueNodeWidgets';
 import { ActionLuaValidation } from './dialogueUtils';
 import {
-  Actor,
+  Character,
   DialogueChoiceNode,
   DialogueDocument,
   DialogueNode,
@@ -37,7 +37,7 @@ interface BaseSectionProps {
 
 interface LineSectionProps extends BaseSectionProps {
   node: Extract<DialogueNode, { type: 'line' }>;
-  actors: Actor[];
+  characters: Character[];
   duplicateMsgKeys: Set<string>;
   updateSelectedNode: (updater: (node: DialogueNode) => DialogueNode) => void;
 }
@@ -45,7 +45,7 @@ interface LineSectionProps extends BaseSectionProps {
 export const DialogueLineInspectorSection: React.FC<LineSectionProps> = ({
   selectedDialogue,
   node,
-  actors,
+  characters,
   duplicateMsgKeys,
   updateSelectedNode,
   renameNode,
@@ -69,22 +69,22 @@ export const DialogueLineInspectorSection: React.FC<LineSectionProps> = ({
         size="xs"
         value={node.speaker ?? ''}
         onChange={(event) => {
-          const actorId = event.target.value || undefined;
-          const actor = actors.find((item) => item.id === actorId);
+          const characterId = event.target.value || undefined;
+          const character = characters.find((item) => item.id === characterId);
           updateSelectedNode((current) => {
             if (current.type !== 'line') return current;
             return {
               ...current,
-              speaker: actorId,
-              emotion: actor?.emotions?.[0] ?? undefined,
+              speaker: characterId,
+              emotion: character?.emotions?.[0] ?? undefined,
             };
           });
         }}
       >
         <option value="">Narrator</option>
-        {actors.map((actor) => (
-          <option key={actor.id} value={actor.id}>
-            {actor.name}
+        {characters.map((character) => (
+          <option key={character.id} value={character.id}>
+            {character.name}
           </option>
         ))}
       </Select>
@@ -106,11 +106,13 @@ export const DialogueLineInspectorSection: React.FC<LineSectionProps> = ({
         }
       >
         <option value="">None</option>
-        {(actors.find((actor) => actor.id === node.speaker)?.emotions ?? []).map((emotion) => (
-          <option key={emotion} value={emotion}>
-            {emotion}
-          </option>
-        ))}
+        {(characters.find((character) => character.id === node.speaker)?.emotions ?? []).map(
+          (emotion) => (
+            <option key={emotion} value={emotion}>
+              {emotion}
+            </option>
+          ),
+        )}
       </Select>
     </FormControl>
 

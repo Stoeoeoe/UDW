@@ -130,7 +130,9 @@ describe('cutscene authoring', () => {
     expect(screen.getByRole('region', { name: 'Map preview' })).toContainElement(
       screen.getByText('Map preview'),
     );
-    expect(screen.queryByText('Walk an existing actor to a map anchor.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Walk an existing character to a map anchor.'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Search cutscenes...')).not.toBeInTheDocument();
     rerender(view(prototype.id));
     expect(screen.getByDisplayValue(prototype.id)).toBeInTheDocument();
@@ -201,7 +203,7 @@ describe('cutscene authoring', () => {
     expect(screen.queryByLabelText('Completion actions (Lua)')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'On completion', exact: true }));
     fireEvent.click(screen.getByRole('button', { name: 'Restore original' }));
-    expect(useEditorStore.getState().cutscenes[0].onComplete.actorPlacements).toEqual([]);
+    expect(useEditorStore.getState().cutscenes[0].onComplete.characterPlacements).toEqual([]);
     expect(screen.queryByRole('button', { name: /validate.*export/i })).not.toBeInTheDocument();
     await act(async () => {
       await saveWorkspaceTab({
@@ -217,7 +219,7 @@ describe('cutscene authoring', () => {
       expect(fileSystem.saveJson).toHaveBeenCalledWith(
         'cutscenes',
         `${prototype.id}.runtime.cutscene.json`,
-        expect.objectContaining({ onComplete: { steps: [], actorPlacements: [] } }),
+        expect.objectContaining({ onComplete: { steps: [], characterPlacements: [] } }),
       ),
     );
     expect(fileSystem.saveJson).toHaveBeenCalledWith('', 'cutscene-editor.json', {
@@ -231,10 +233,10 @@ describe('cutscene authoring', () => {
     fireEvent.click(screen.getAllByRole('button', { name: '+ insert', exact: true })[1]);
     fireEvent.click(await screen.findByRole('button', { name: 'Move to anchor', exact: true }));
     const step = useEditorStore.getState().cutscenes[0].sequence[1];
-    expect(Object.keys(step.arguments)).toEqual(['actor', 'destination']);
+    expect(Object.keys(step.arguments)).toEqual(['character', 'destination']);
     expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
     expect(screen.getAllByText(/Must not be blank/).length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('actor')).toBeInTheDocument();
+    expect(screen.getByLabelText('Character')).toBeInTheDocument();
     expect(screen.getByLabelText('destination')).toBeInTheDocument();
   });
 
@@ -245,8 +247,8 @@ describe('cutscene authoring', () => {
     expect(previewProps.mock.lastCall![0].overlays).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: 'segment', from: [2, 3], to: [4, 5], label: '1' }),
-        expect.objectContaining({ kind: 'actor', ghost: true, position: [2, 3] }),
-        expect.objectContaining({ kind: 'actor', position: [4, 5], label: 'Host definition' }),
+        expect.objectContaining({ kind: 'character', ghost: true, position: [2, 3] }),
+        expect.objectContaining({ kind: 'character', position: [4, 5], label: 'Host definition' }),
       ]),
     );
     const changed = structuredClone(manifest);
@@ -261,7 +263,8 @@ describe('cutscene authoring', () => {
     );
     expect(
       previewProps.mock.lastCall![0].overlays.filter(
-        (overlay: { kind: string; ghost?: boolean }) => overlay.kind === 'actor' && !overlay.ghost,
+        (overlay: { kind: string; ghost?: boolean }) =>
+          overlay.kind === 'character' && !overlay.ghost,
       ),
     ).toEqual([]);
     fireEvent.click(screen.getByRole('button', { name: 'Greeting', exact: true }));
@@ -328,10 +331,10 @@ describe('cutscene authoring', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
     fireEvent.click(await screen.findByRole('button', { name: 'Play animation', exact: true }));
     expect(screen.getByRole('option', { name: /PassOut/ })).toHaveValue('base:pass-out');
-    fireEvent.change(screen.getByLabelText('actor'), { target: { value: 'player' } });
+    fireEvent.change(screen.getByLabelText('Character'), { target: { value: 'player' } });
     fireEvent.change(screen.getByLabelText('animation'), { target: { value: 'base:pass-out' } });
     expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments).toEqual({
-      actor: 'player',
+      character: 'player',
       animation: 'base:pass-out',
     });
     await act(async () => {
@@ -343,8 +346,8 @@ describe('cutscene authoring', () => {
       expect.objectContaining({
         sequence: expect.arrayContaining([
           expect.objectContaining({
-            action: 'actors.playAnimation',
-            arguments: { actor: 'player', animation: 'base:pass-out' },
+            action: 'characters.playAnimation',
+            arguments: { character: 'player', animation: 'base:pass-out' },
           }),
         ]),
       }),
@@ -403,21 +406,21 @@ describe('cutscene authoring', () => {
     expect(screen.queryByLabelText('Completion actions (Lua)')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add setup step', exact: true }));
     expect(
-      await screen.findByRole('button', { name: 'Face actor', exact: true }),
+      await screen.findByRole('button', { name: 'Face character', exact: true }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Move to anchor', exact: true }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Wait', exact: true })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Face actor', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Face character', exact: true }));
     const step = useEditorStore.getState().cutscenes[0].onStart![0];
-    expect(step.action).toBe('actors.face');
+    expect(step.action).toBe('characters.face');
     expect(screen.getByText('Setup step 1 of 1')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('actor'), { target: { value: 'player' } });
+    fireEvent.change(screen.getByLabelText('Character'), { target: { value: 'player' } });
     fireEvent.change(screen.getByLabelText('target'), {
       target: { value: 'cutscene-prototype-host-01' },
     });
-    expect(useEditorStore.getState().cutscenes[0].onStart![0].arguments.actor).toBe('player');
+    expect(useEditorStore.getState().cutscenes[0].onStart![0].arguments.character).toBe('player');
     fireEvent.click(screen.getByRole('button', { name: 'On completion', exact: true }));
     expect(
       screen.getByRole('button', { name: 'Add completion step', exact: true }),
@@ -507,7 +510,7 @@ describe('cutscene authoring', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Before start', exact: true }));
     fireEvent.click(screen.getByRole('button', { name: 'Add setup step', exact: true }));
     fireEvent.click(await screen.findByRole('button', { name: 'Place character', exact: true }));
-    fireEvent.change(screen.getByLabelText('actor'), { target: { value: 'player' } });
+    fireEvent.change(screen.getByLabelText('Character'), { target: { value: 'player' } });
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Position X' }), {
       target: { value: '171' },
     });
@@ -541,7 +544,9 @@ describe('cutscene authoring', () => {
       `${prototype.id}.runtime.cutscene.json`,
       expect.objectContaining({
         onStart: [
-          expect.objectContaining({ arguments: { actor: 'player', position: { x: 168, y: 104 } } }),
+          expect.objectContaining({
+            arguments: { character: 'player', position: { x: 168, y: 104 } },
+          }),
         ],
       }),
     );
@@ -561,18 +566,22 @@ describe('cutscene authoring', () => {
     scene.onStart = [
       {
         id: 'spawn-guest',
-        action: 'actors.spawn',
+        action: 'characters.spawn',
         arguments: {
-          actor: 'guest',
+          character: 'guest',
           definition: 'base:cutscene-prototype-host',
           position: { anchor: 'prototype-meeting' },
         },
       },
-      { id: 'face-guest', action: 'actors.face', arguments: { actor: 'guest', target: 'player' } },
+      {
+        id: 'face-guest',
+        action: 'characters.face',
+        arguments: { character: 'guest', target: 'player' },
+      },
     ];
     useEditorStore.setState({
       cutscenes: [scene],
-      actors: [{ id: 'base:cutscene-prototype-host', name: 'Host', icon: 'H' }],
+      characters: [{ id: 'base:cutscene-prototype-host', name: 'Host', icon: 'H' }],
       maps: useEditorStore.getState().maps.map((m) => ({ ...m, width: 32, height: 32 })),
     });
     mount();
@@ -606,28 +615,28 @@ describe('cutscene authoring', () => {
       anchor: 'prototype-meeting',
     });
     fireEvent.click(screen.getByRole('button', { name: /^guest.*Player$/ }));
-    expect(screen.getByLabelText('actor')).toHaveValue('guest');
+    expect(screen.getByLabelText('Character')).toHaveValue('guest');
     expect(screen.getAllByRole('option', { name: /guest/ }).length).toBe(2);
     act(() =>
       useEditorStore.getState().editCutscenes((draft) => {
         draft[0].onStart!.reverse();
       }),
     );
-    expect(screen.getByLabelText('actor')).toHaveValue('guest');
+    expect(screen.getByLabelText('Character')).toHaveValue('guest');
     expect(screen.getByRole('option', { name: /Missing: guest/ })).toBeInTheDocument();
     act(() =>
       useEditorStore.getState().editCutscenes((draft) => {
         draft[0].onStart!.reverse();
-        draft[0].onStart![0].arguments.actor = 'visitor';
+        draft[0].onStart![0].arguments.character = 'visitor';
       }),
     );
     expect(screen.getAllByRole('option', { name: /visitor/ }).length).toBe(2);
-    expect(screen.getByLabelText('actor')).toHaveValue('guest');
+    expect(screen.getByLabelText('Character')).toHaveValue('guest');
     fireEvent.click(screen.getByRole('button', { name: 'On completion', exact: true }));
     expect(screen.getAllByRole('option', { name: /visitor/ }).length).toBeGreaterThan(0);
   }, 30000);
 
-  it('uses project actors for spawning and suggests a unique instance name', async () => {
+  it('uses project characters for spawning and suggests a unique instance name', async () => {
     useScriptingManifestStore.setState({
       refresh: vi.fn(async () => parseScriptingManifest(unityBindings)),
     });
@@ -641,13 +650,13 @@ describe('cutscene authoring', () => {
     scene.onStart = [
       {
         id: 'spawn',
-        action: 'actors.spawn',
-        arguments: { actor: '', definition: '', position: { anchor: 'prototype-meeting' } },
+        action: 'characters.spawn',
+        arguments: { character: '', definition: '', position: { anchor: 'prototype-meeting' } },
       },
     ];
     useEditorStore.setState({
       cutscenes: [scene],
-      actors: [
+      characters: [
         { id: 'base:cutscene-prototype-host', name: 'Gagaa', icon: 'G' },
         { id: 'base:player', name: 'Player', icon: 'P' },
       ],
@@ -673,7 +682,7 @@ describe('cutscene authoring', () => {
         onStart: [
           expect.objectContaining({
             arguments: {
-              actor: 'gagaa',
+              character: 'gagaa',
               definition: 'base:player',
               position: { anchor: 'prototype-meeting' },
             },
@@ -683,14 +692,14 @@ describe('cutscene authoring', () => {
     );
 
     expect(previewProps.mock.lastCall![0].overlays).toEqual(
-      expect.arrayContaining([expect.objectContaining({ actorId: 'gagaa', icon: 'P' })]),
+      expect.arrayContaining([expect.objectContaining({ characterId: 'gagaa', icon: 'P' })]),
     );
     fireEvent.change(screen.getByLabelText('Character'), {
       target: { value: 'base:cutscene-prototype-host' },
     });
 
     expect(useEditorStore.getState().cutscenes[0].onStart![0].arguments).toEqual({
-      actor: 'gagaa',
+      character: 'gagaa',
       definition: 'base:cutscene-prototype-host',
       position: { anchor: 'prototype-meeting' },
     });
@@ -708,15 +717,15 @@ describe('cutscene authoring', () => {
     expect(screen.queryByLabelText('Completion actions (Lua)')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add completion step', exact: true }));
     expect(
-      await screen.findByRole('button', { name: 'Face actor', exact: true }),
+      await screen.findByRole('button', { name: 'Face character', exact: true }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Wait', exact: true })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Play animation', exact: true }),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Face actor', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Face character', exact: true }));
     expect(screen.getAllByText(/Must not be blank/).length).toBeGreaterThan(0);
-    fireEvent.change(screen.getByLabelText('actor'), {
+    fireEvent.change(screen.getByLabelText('Character'), {
       target: { value: 'cutscene-prototype-host-01' },
     });
     fireEvent.change(screen.getByLabelText('target'), { target: { value: 'player' } });

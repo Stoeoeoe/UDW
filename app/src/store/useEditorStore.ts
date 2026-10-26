@@ -28,7 +28,7 @@ import {
 } from './storeHelpers';
 import { loadProjectResources, loadSprite } from './projectLoader';
 import { createCutsceneSlice, CutsceneSlice } from './slices/cutsceneSlice';
-import { createActorSlice, ActorSlice } from './slices/actorSlice';
+import { createCharacterSlice, CharacterSlice } from './slices/characterSlice';
 import { createItemSlice, ItemSlice } from './slices/itemSlice';
 import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
 import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
@@ -56,7 +56,7 @@ import { createCollisionSlice, CollisionSlice } from './slices/collisionSlice';
 export interface EditorStore
   extends
     CutsceneSlice,
-    ActorSlice,
+    CharacterSlice,
     ItemSlice,
     ItemClassSlice,
     TerrainSlice,
@@ -283,7 +283,7 @@ export const useEditorStore = create<EditorStore>()(
         immer((set, get) => ({
           // ── Slices ────────────────────────────────────────────────────────
           ...createCutsceneSlice(set, get, {} as never),
-          ...createActorSlice(set, get, {} as never),
+          ...createCharacterSlice(set, get, {} as never),
           ...createItemSlice(set, get, {} as never),
           ...createItemClassSlice(set, get, {} as never),
           ...createTerrainSlice(set, get, {} as never),
@@ -390,8 +390,8 @@ export const useEditorStore = create<EditorStore>()(
                   state.scriptFunctions = [];
                   state.scriptNamespaces = [];
                   state.scriptContextTypes = [];
-                  state.actors = [];
-                  state.selectedActorId = null;
+                  state.characters = [];
+                  state.selectedCharacterId = null;
                   state.dialogues = new globalThis.Map();
                   state.selectedDialogueId = null;
                   state.selectedDialogueNodeId = null;

@@ -10,7 +10,7 @@ import {
   DialogueLineInspectorSection,
 } from './DialogueNodeInspectorSections';
 import {
-  Actor,
+  Character,
   DialogueChoiceNode,
   DialogueDocument,
   DialogueNode,
@@ -24,7 +24,7 @@ import {
 interface DialogueNodeInspectorProps {
   selectedDialogue: DialogueDocument | null;
   selectedNode: DialogueNode | null;
-  actors: Actor[];
+  characters: Character[];
   gameVariables: GameVariable[];
   scriptTables: ScriptTable[];
   scriptFunctions: ScriptFunction[];
@@ -58,7 +58,7 @@ interface DialogueNodeInspectorProps {
 export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
   selectedDialogue,
   selectedNode,
-  actors,
+  characters,
   gameVariables,
   scriptTables,
   scriptFunctions,
@@ -96,7 +96,7 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
         <DialogueLineInspectorSection
           selectedDialogue={selectedDialogue}
           node={selectedNode}
-          actors={actors}
+          characters={characters}
           duplicateMsgKeys={duplicateMsgKeys}
           updateSelectedNode={updateSelectedNode}
           renameNode={renameNode}

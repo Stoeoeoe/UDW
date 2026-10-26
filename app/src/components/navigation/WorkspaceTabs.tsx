@@ -38,7 +38,7 @@ function getDocumentIcon(tab: WorkspaceTab) {
       return FiSliders;
     case 'entities':
       return FiBox;
-    case 'actors':
+    case 'characters':
       return FiUsers;
     case 'items':
       return FiPackage;

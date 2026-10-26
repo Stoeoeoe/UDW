@@ -488,8 +488,8 @@ export interface Item extends NamedEditorResource {
   classProperties?: PropertyValues; // Values for the extra properties defined by the assigned ItemClass
 }
 
-// Actor Definitions
-export interface Actor extends NamedEditorResource {
+// Character Definitions
+export interface Character extends NamedEditorResource {
   icon: string; // Emoji icon for display
   emotions?: string[]; // Named emotions available for line nodes
 }
@@ -598,7 +598,7 @@ export interface EntityType extends DisplayNamedEditorResource {
   category: EntityCategory;
   description?: string;
   icon?: string; // Emoji or icon identifier for display
-  group?: string; // Grouping label (e.g., "Actors", "Interactables")
+  group?: string; // Grouping label (e.g., "Characters", "Interactables")
   placeholderColor: string; // Hex color for editor rendering
   placeholderIcon?: string; // Optional icon identifier (deprecated, use icon)
   properties: PropertyDefinition[];

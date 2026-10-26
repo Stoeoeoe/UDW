@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { documentFromHash, documentToHash } from './workspaceRouting';
 import {
-  Actor,
+  Character,
   DialogueDocument,
   EntityType,
   GameVariable,
@@ -29,7 +29,7 @@ function createSnapshot(
   overrides: {
     maps?: GameMap[];
     tilesets?: Map<string, Tileset>;
-    actors?: Actor[];
+    characters?: Character[];
     entityTypes?: EntityType[];
     items?: Item[];
     dialogues?: DialogueDocument[];
@@ -39,7 +39,7 @@ function createSnapshot(
   return {
     maps: overrides.maps ?? [],
     tilesets: overrides.tilesets ?? new Map<string, Tileset>(),
-    actors: overrides.actors ?? [],
+    characters: overrides.characters ?? [],
     entityTypes: overrides.entityTypes ?? [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
@@ -84,7 +84,7 @@ describe('workspaceRouting', () => {
 
   it('round-trips first-class resource routes for non-map documents', () => {
     const snapshot = createSnapshot({
-      actors: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+      characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
       entityTypes: [
         {
           id: 'merchant-stall',
@@ -130,14 +130,14 @@ describe('workspaceRouting', () => {
     expect(
       documentFromHash(
         documentToHash({
-          kind: 'actor',
-          actorId: 'marcus',
+          kind: 'character',
+          characterId: 'marcus',
           label: 'Marcus',
-          saveUnitId: 'actor:marcus',
+          saveUnitId: 'character:marcus',
         }),
         snapshot,
       ),
-    ).toMatchObject({ kind: 'actor', actorId: 'marcus' });
+    ).toMatchObject({ kind: 'character', characterId: 'marcus' });
 
     expect(
       documentFromHash(

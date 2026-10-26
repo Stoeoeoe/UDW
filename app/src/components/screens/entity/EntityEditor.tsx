@@ -73,7 +73,7 @@ export const EntityEditor: React.FC = () => {
       description={
         entityTypes.length
           ? 'Select an entity type from the list to edit its data and property schema.'
-          : 'Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements.'
+          : 'Define entity blueprints that can be placed on maps. Entity types describe objects, characters, triggers, and other game elements.'
       }
       buttonLabel={entityTypes.length ? undefined : 'Create First Entity'}
       onCreate={entityTypes.length ? undefined : onOpen}

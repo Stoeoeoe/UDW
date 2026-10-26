@@ -94,16 +94,16 @@
     "onComplete": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["actorPlacements", "steps"],
+      "required": ["characterPlacements", "steps"],
       "properties": {
-        "actorPlacements": {
+        "characterPlacements": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["actor", "anchor"],
+            "required": ["character", "anchor"],
             "properties": {
-              "actor": {
+              "character": {
                 "type": "string",
                 "pattern": "\\S"
               },

@@ -5,9 +5,9 @@
   "mapId": "base:map-1",
   "allowSkip": true,
   "onComplete": {
-    "actorPlacements": [
+    "characterPlacements": [
       {
-        "actor": "cutscene-prototype-host-01",
+        "character": "cutscene-prototype-host-01",
         "anchor": "prototype-meeting"
       }
     ],
@@ -16,17 +16,17 @@
   "sequence": [
     {
       "id": "approach",
-      "action": "actors.moveTo",
+      "action": "characters.moveTo",
       "arguments": {
-        "actor": "cutscene-prototype-host-01",
+        "character": "cutscene-prototype-host-01",
         "destination": "prototype-meeting"
       }
     },
     {
       "id": "greet",
-      "action": "actors.face",
+      "action": "characters.face",
       "arguments": {
-        "actor": "cutscene-prototype-host-01",
+        "character": "cutscene-prototype-host-01",
         "target": "player"
       }
     },
