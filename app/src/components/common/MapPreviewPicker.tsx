@@ -40,6 +40,7 @@ interface MapPreviewPickerProps {
 }
 
 export type MapPreviewOverlay =
+  | { kind: 'waypoint'; position: [number, number]; label: string; opacity?: number }
   | { kind: 'placement'; position: [number, number]; label: string; icon?: string }
   | {
       kind: 'character';

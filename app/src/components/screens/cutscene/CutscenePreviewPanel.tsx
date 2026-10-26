@@ -55,7 +55,7 @@ export const CutscenePreviewPanel: React.FC<{
       (o) =>
         !selectedFacings.length ||
         showMovementHistory ||
-        (o.kind !== 'segment' && !(o.kind === 'character' && o.ghost)) ||
+        (o.kind !== 'segment' && o.kind !== 'waypoint' && !(o.kind === 'character' && o.ghost)) ||
         (o.kind === 'segment' && o.dashed && o.opacity === 1),
     )
     .map((o) => {
@@ -70,14 +70,12 @@ export const CutscenePreviewPanel: React.FC<{
           }
         : o;
     });
-  const focusPositions: [number, number][] = selectedSegments.length
-    ? selectedSegments.flatMap((segment) =>
-        [segment.from, segment.to].map(
-          (point) => [point[0] / tileSize, point[1] / tileSize] as [number, number],
-        ),
-      )
-    : selectedPlacements.length
-      ? selectedPlacements.map((p) => [p.position[0] / tileSize, p.position[1] / tileSize])
+  const focusPositions: [number, number][] =
+    selectedSegments.length || selectedPlacements.length
+      ? [
+          ...selectedSegments.flatMap((s) => [s.from, s.to]),
+          ...selectedPlacements.map((p) => p.position),
+        ].map((p) => [p[0] / tileSize, p[1] / tileSize])
       : overlays
           .filter(
             (o): o is Extract<MapPreviewOverlay, { kind: 'character' }> =>

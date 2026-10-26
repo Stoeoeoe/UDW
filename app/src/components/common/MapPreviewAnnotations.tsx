@@ -87,6 +87,31 @@ export const MapPreviewAnnotations: React.FC<{
       shapeRendering="geometricPrecision"
     >
       {overlays?.map((overlay, index) => {
+        if (overlay.kind === 'waypoint') {
+          const [x, y] = project(overlay.position);
+          return (
+            <g key={index} opacity={overlay.opacity ?? 1}>
+              <circle
+                cx={x}
+                cy={y}
+                r={9}
+                fill={colors.background}
+                stroke={colors.movement}
+                strokeWidth={2}
+              />
+              <text
+                x={x}
+                y={y + 4}
+                textAnchor="middle"
+                fontFamily="sans-serif"
+                fontSize={11}
+                fill={colors.text}
+              >
+                {overlay.label}
+              </text>
+            </g>
+          );
+        }
         if (overlay.kind === 'placement') {
           const [x, y] = project(overlay.position);
           return (

@@ -1,10 +1,21 @@
 export interface CutsceneStep {
   id: string;
   action: string;
-  arguments: Record<string, string | number | import('../lib/mapPosition').PositionArgument>;
+  arguments: Record<
+    string,
+    | string
+    | number
+    | import('../lib/mapPosition').PositionArgument
+    | import('../lib/mapPosition').PathArgument
+  >;
 }
 
 /** Unity source contract. Display labels belong to editor state, never this object. */
+export type CompletionPlacement = { character: string } & (
+  | { anchor: string; position?: never }
+  | { position: import('../lib/mapPosition').MapPosition | ''; anchor?: never }
+);
+
 export interface Cutscene {
   $schema: string;
   formatVersion: 2;
@@ -14,7 +25,7 @@ export interface Cutscene {
   onStart?: CutsceneStep[];
   onComplete: {
     steps: CutsceneStep[];
-    characterPlacements: { character: string; anchor: string }[];
+    characterPlacements: CompletionPlacement[];
   };
   sequence: CutsceneStep[];
 }

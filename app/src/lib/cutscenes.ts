@@ -1,19 +1,57 @@
 import { z } from 'zod';
-import { mapPositionSchema, positionPickerMetadata, isAnchorPosition } from './mapPosition';
+import {
+  mapPositionSchema,
+  pixelPositionSchema,
+  positionPickerMetadata,
+  isAnchorPosition,
+  mapPathSchema,
+  pathPickerMetadata,
+} from './mapPosition';
 import {
   getManifestActions,
   parseScriptingManifest,
   type ScriptingResources,
 } from './scriptingManifest';
-import type { Cutscene, CutsceneAction, CutsceneDiagnostic, CutsceneStep } from '../types/cutscene';
+import type {
+  Cutscene,
+  CutsceneAction,
+  CutsceneDiagnostic,
+  CutsceneStep,
+  CompletionPlacement,
+} from '../types/cutscene';
+import type { PositionArgument } from './mapPosition';
 import type { EntityInstance, EntityType, Map as GameMap } from '../types/schema';
 
 const nonblank = z.string().regex(/\S/, 'Must not be blank');
+const completionPlacementSchema = z.union([
+  z.object({ character: nonblank, anchor: nonblank }).strict(),
+  z.object({ character: nonblank, position: pixelPositionSchema }).strict(),
+]);
+
+export function completionPosition(placement: CompletionPlacement): PositionArgument | '' {
+  return placement.anchor !== undefined
+    ? placement.anchor
+      ? { anchor: placement.anchor }
+      : ''
+    : placement.position;
+}
+
+export function completionPlacement(
+  character: string,
+  position: PositionArgument | '',
+): CompletionPlacement {
+  return isAnchorPosition(position)
+    ? { character, anchor: position.anchor }
+    : { character, position };
+}
 const stepSchema = z
   .object({
     id: nonblank,
     action: nonblank,
-    arguments: z.record(z.string(), z.union([nonblank, z.number().finite(), mapPositionSchema])),
+    arguments: z.record(
+      z.string(),
+      z.union([nonblank, z.number().finite(), mapPositionSchema, mapPathSchema]),
+    ),
   })
   .strict();
 export function actionsForCutscenePhase(
@@ -52,7 +90,7 @@ export const cutsceneSchema = z
     onComplete: z
       .object({
         steps: z.array(stepSchema),
-        characterPlacements: z.array(z.object({ character: nonblank, anchor: nonblank }).strict()),
+        characterPlacements: z.array(completionPlacementSchema),
       })
       .strict(),
     sequence: z.array(stepSchema).min(1),
@@ -166,9 +204,25 @@ export function validateCutscene(
           ? candidate?.onStart
           : candidate?.sequence;
       const step = typeof index === 'number' ? list?.[index] : undefined;
+      const argumentIndex = issue.path.indexOf('arguments');
+      const argumentName = argumentIndex >= 0 ? issue.path[argumentIndex + 1] : undefined;
+      const parameter = actions
+        .find((a) => a.id === step?.action)
+        ?.parameters.find((p) => p.name === argumentName);
+      const value = typeof argumentName === 'string' ? step?.arguments[argumentName] : undefined;
+      const invalidWaypoint = Array.isArray(value)
+        ? value.findIndex((p) => !mapPositionSchema.safeParse(p).success)
+        : -1;
       return {
         path: issue.path.join('.'),
-        message: issue.message,
+        message:
+          issue.path[0] === 'onComplete' && issue.path[1] === 'characterPlacements'
+            ? 'Final position requires a character and either an anchor or integer pixel coordinates'
+            : parameter?.type === 'path'
+              ? invalidWaypoint >= 0
+                ? `Waypoint ${invalidWaypoint + 1}: choose integer map pixels or a map anchor`
+                : 'Add at least one valid waypoint'
+              : issue.message,
         stepId: step?.id,
         ...(step ? { phase } : {}),
       };
@@ -235,6 +289,30 @@ export function validateCutscene(
           report(argumentPath, 'Enter a new character name', step.id);
         else if (characters.has(value))
           report(argumentPath, `Duplicate character name: ${value}`, step.id);
+        continue;
+      }
+      if (parameter.type === 'path') {
+        if (!pathPickerMetadata(parameter))
+          report(argumentPath, 'Unsupported map path picker metadata', step.id);
+        const path = mapPathSchema.safeParse(value);
+        if (!path.success) report(argumentPath, 'Add at least one valid waypoint', step.id);
+        else
+          path.data.forEach((point, index) => {
+            const pointPath = `${argumentPath}.${index}`;
+            if (isAnchorPosition(point)) {
+              if (!anchors.has(point.anchor))
+                report(pointPath, `Waypoint ${index + 1}: missing anchor ${point.anchor}`, step.id);
+            } else if (
+              map &&
+              (point.x >= map.width * (refs.tileSize ?? 16) ||
+                point.y >= map.height * (refs.tileSize ?? 16))
+            )
+              report(
+                pointPath,
+                `Waypoint ${index + 1}: position is outside the selected map`,
+                step.id,
+              );
+          });
         continue;
       }
       if (parameter.type === 'position') {
@@ -316,7 +394,17 @@ export function validateCutscene(
     if (endpoints.has(p.character)) report(path, `Duplicate endpoint for ${p.character}`);
     endpoints.add(p.character);
     if (!characters.has(p.character)) report(path, `Missing character instance ${p.character}`);
-    if (!anchors.has(p.anchor)) report(path, `Missing anchor ${p.anchor}`);
+    const position = completionPosition(p);
+    if (isAnchorPosition(position)) {
+      if (!anchors.has(position.anchor)) report(path, `Missing anchor ${position.anchor}`);
+    } else if (
+      map &&
+      position &&
+      (position.x >= map.width * (refs.tileSize ?? 16) ||
+        position.y >= map.height * (refs.tileSize ?? 16))
+    ) {
+      report(path, 'Final position is outside the selected map');
+    }
   });
   for (const candidate of refs.maps)
     for (const trigger of candidate.spatialPrimitives?.triggers ?? []) {
@@ -358,10 +446,9 @@ export function exportCutscene(
     ...(scene.onStart !== undefined ? { onStart: scene.onStart.map(serializeStep) } : {}),
     onComplete: {
       steps: scene.onComplete.steps.map(serializeStep),
-      characterPlacements: scene.onComplete.characterPlacements.map((p) => ({
-        character: p.character,
-        anchor: p.anchor,
-      })),
+      characterPlacements: scene.onComplete.characterPlacements.map((p) =>
+        completionPlacement(p.character, completionPosition(p)),
+      ),
     },
     sequence: scene.sequence.map(serializeStep),
   };
@@ -371,7 +458,9 @@ export function createCutsceneStep(action: CutsceneAction): CutsceneStep {
   return {
     id: `beat-${crypto.randomUUID()}`,
     action: action.id,
-    arguments: Object.fromEntries(action.parameters.map((p) => [p.name, ''])),
+    arguments: Object.fromEntries(
+      action.parameters.map((p) => [p.name, p.type === 'path' ? [] : '']),
+    ),
   };
 }
 

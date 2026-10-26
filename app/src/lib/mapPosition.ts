@@ -31,6 +31,18 @@ export function positionPickerMetadata(parameter: unknown) {
   const result = positionPickerSchema.safeParse(parameter);
   return result.success ? result.data : null;
 }
+export function pathPickerMetadata(parameter: unknown) {
+  const result = positionPickerSchema
+    .extend({ type: z.literal('path'), picker: z.literal('mapPath') })
+    .safeParse(parameter);
+  return result.success ? result.data : null;
+}
+export const mapPathSchema = z.array(mapPositionSchema).nonempty();
+/** Drafts retain empty points until the shared position field has a complete value. */
+export type PathArgument = (PositionArgument | '')[];
+export function isMapPath(value: unknown): value is PositionArgument[] {
+  return mapPathSchema.safeParse(value).success;
+}
 export function isMapPosition(value: unknown): value is MapPosition {
   return pixelPositionSchema.safeParse(value).success;
 }

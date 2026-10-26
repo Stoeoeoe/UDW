@@ -710,6 +710,154 @@ describe('cutscene authoring', () => {
     expect(screen.getByLabelText('Instance name')).toHaveValue('guest');
   });
 
+  it('authors and reorders path waypoints using the shared map picker and saves the ordered route', async () => {
+    const extended = unityBindings;
+    useScriptingManifestStore.setState({
+      refresh: vi.fn(async () => parseScriptingManifest(extended)),
+    });
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: extended,
+      error: null,
+    });
+    useEditorStore.setState({
+      maps: useEditorStore.getState().maps.map((m) => ({ ...m, width: 32, height: 32 })),
+    });
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Walk path', exact: true }));
+    fireEvent.change(screen.getByLabelText('Character'), {
+      target: { value: 'cutscene-prototype-host-01' },
+    });
+    const path = () => useEditorStore.getState().cutscenes[0].sequence.at(-1)!.arguments.path;
+    fireEvent.click(screen.getByRole('button', { name: 'Add waypoint' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    act(() => previewProps.mock.lastCall![0].positionPick.onHover({ x: 168, y: 104 }));
+    expect(path()).toEqual(['']);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(path()).toEqual(['']);
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    act(() => previewProps.mock.lastCall![0].positionPick.onPick({ x: 168, y: 104 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add waypoint' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Anchor' }));
+    fireEvent.change(screen.getByLabelText('Position anchor'), {
+      target: { value: 'prototype-meeting' },
+    });
+    expect(path()).toEqual([{ x: 168, y: 104 }, { anchor: 'prototype-meeting' }]);
+    expect(previewProps.mock.lastCall![0].overlays).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'waypoint', label: '1', position: [10.5, 6.5] }),
+        expect.objectContaining({ kind: 'waypoint', label: '2', position: [4, 5] }),
+      ]),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Move waypoint 2 up' }));
+    expect(path()).toEqual([{ anchor: 'prototype-meeting' }, { x: 168, y: 104 }]);
+    act(() => useEditorStore.getState().undoCutscene(prototype.id));
+    expect(path()).toEqual([{ x: 168, y: 104 }, { anchor: 'prototype-meeting' }]);
+    act(() => useEditorStore.getState().redoCutscene(prototype.id));
+    expect(path()).toEqual([{ anchor: 'prototype-meeting' }, { x: 168, y: 104 }]);
+
+    await act(async () => {
+      await useEditorStore.getState().saveCutscene(prototype.id);
+    });
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'characters.walkPath',
+            arguments: {
+              character: 'cutscene-prototype-host-01',
+              path: [{ anchor: 'prototype-meeting' }, { x: 168, y: 104 }],
+            },
+          }),
+        ]),
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Remove waypoint 1' }));
+    expect(path()).toEqual([{ x: 168, y: 104 }]);
+    fireEvent.click(screen.getByRole('button', { name: /^1\. \(168, 104\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    const unsupported = structuredClone(parseScriptingManifest(extended));
+    unsupported.modules
+      .flatMap((module) => module.methods)
+      .find((method) => method.action?.id === 'characters.walkPath')!
+      .parameters.find((parameter) => parameter.type === 'path')!.picker = 'unsupported';
+    act(() =>
+      useScriptingManifestStore.getState().acceptUpdate({
+        path: 'C:/Unity/bindings.json',
+        revision: 3,
+        content: unsupported,
+        error: null,
+      }),
+    );
+    expect(previewProps.mock.lastCall![0].positionPick).toBeUndefined();
+    expect(path()).toEqual([{ x: 168, y: 104 }]);
+  }, 30000);
+
+  it('picks final positions as Grid, Pixel or Anchor and saves the same endpoint plan', async () => {
+    useEditorStore.setState({
+      maps: useEditorStore.getState().maps.map((map) => ({ ...map, width: 32, height: 24 })),
+    });
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'On completion', exact: true }));
+    expect(screen.getByRole('radio', { name: 'Anchor' })).toBeChecked();
+    const placement = () =>
+      useEditorStore.getState().cutscenes[0].onComplete.characterPlacements[0];
+    fireEvent.click(screen.getByRole('radio', { name: 'Grid' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    act(() => previewProps.mock.lastCall![0].positionPick.onHover({ x: 168, y: 104 }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(placement()).toEqual({
+      character: 'cutscene-prototype-host-01',
+      anchor: 'prototype-meeting',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    act(() => previewProps.mock.lastCall![0].positionPick.onPick({ x: 168, y: 104 }));
+    expect(placement()).toEqual({
+      character: 'cutscene-prototype-host-01',
+      position: { x: 168, y: 104 },
+    });
+    expect(previewProps.mock.lastCall![0].overlays).toContainEqual(
+      expect.objectContaining({ characterId: 'cutscene-prototype-host-01', position: [10.5, 6.5] }),
+    );
+    act(() => useEditorStore.getState().undoCutscene(prototype.id));
+    expect(placement()).toHaveProperty('anchor', 'prototype-meeting');
+    act(() => useEditorStore.getState().redoCutscene(prototype.id));
+    fireEvent.click(screen.getByRole('radio', { name: 'Pixel' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Position X' }), {
+      target: { value: '171' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Position Y' }), {
+      target: { value: '106' },
+    });
+    await act(async () => {
+      await useEditorStore.getState().saveCutscene(prototype.id);
+    });
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        onComplete: {
+          steps: [],
+          characterPlacements: [
+            { character: 'cutscene-prototype-host-01', position: { x: 171, y: 106 } },
+          ],
+        },
+      }),
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'Anchor' }));
+    fireEvent.change(screen.getByLabelText('Position anchor'), {
+      target: { value: 'prototype-meeting' },
+    });
+    expect(placement()).toEqual({
+      character: 'cutscene-prototype-host-01',
+      anchor: 'prototype-meeting',
+    });
+  });
+
   it('shows concrete completion step issues and keeps raw Lua out of all phases', async () => {
     mount();
     expect(screen.queryByText(/Live validation|Valid cutscene/)).not.toBeInTheDocument();

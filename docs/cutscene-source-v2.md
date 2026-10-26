@@ -43,7 +43,8 @@ which may be empty. It contains no `actions` Lua string. Unknown fields are erro
 Every step has exactly `id`, `action` and `arguments`. IDs are stable, nonblank,
 and unique across all three arrays. Reordering or moving a step between phases
 preserves its ID, arguments and editor label; duplication creates a new ID.
-Arguments are nonblank strings, finite JSON numbers, or strict position objects, checked against the
+Arguments are nonblank strings, finite JSON numbers, strict position objects, or nonempty ordered arrays of
+position objects, checked against the
 manifest signature without coercion. Resource/reference IDs remain strings.
 
 ## Eligibility
@@ -100,6 +101,22 @@ Unimplemented preview effects do not grant new runtime capabilities.
 
 ## Existing files and Unity handoff
 
+Final character endpoints accept exactly one of an anchor or a pixel position:
+
+```json
+[
+  { "character": "host-01", "anchor": "meeting" },
+  { "character": "player", "position": { "x": 168, "y": 104 } }
+]
+```
+
+Grid picks save tile centers in map pixels, using the same coordinate shape as
+Pixel picks. Editing mode is not stored, and anchor/position fields cannot be
+mixed. Coordinate endpoints preserve pre-run facing; anchor endpoints can override
+it with the anchor's nonzero facing. Completion steps run after these placements.
+Unity aligns the character's feet to either type of endpoint. Existing anchor
+endpoints keep their original source and compiled representation.
+
 Vulcanus can losslessly load v1 files whose completion Lua is empty/whitespace:
 it retains IDs, setup, sequence and placements, creates empty completion steps,
 and saves v2 on the next successful save. Parsing alone does not write files.
@@ -153,3 +170,6 @@ The editor needs no lifetime setting. Completion preview starts existing charact
 at their pre-run staging and spawned characters at their creation points, applies
 explicit completion placements, then folds completion steps. Sequence changes
 are not used as completion endpoints.
+
+Path arguments and the `moveCharacterAlongPath` preview effect are documented in
+[the walk-path handoff](cutscene-walk-path.md).

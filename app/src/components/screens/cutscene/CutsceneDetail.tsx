@@ -42,21 +42,31 @@ import {
   declaredCharactersBefore,
   validateCutscene,
   actionsForCutscenePhase,
+  completionPosition,
+  completionPlacement,
 } from '../../../lib/cutscenes';
 import {
   isMapPosition,
   isAnchorPosition,
   positionPickerMetadata,
+  pathPickerMetadata,
+  type PathArgument,
   type MapPosition,
   type PlacementMode,
 } from '../../../lib/mapPosition';
+import { MapPathField } from '../../common/MapPathField';
 import { MapPositionField } from '../../common/MapPositionField';
 import {
   previewCutscene,
   readActionPreview,
   type PreviewSelection,
 } from '../../../lib/cutscenePreview';
-import type { Cutscene, CutsceneAction, CutsceneStep } from '../../../types/cutscene';
+import type {
+  Cutscene,
+  CutsceneAction,
+  CutsceneStep,
+  CompletionPlacement,
+} from '../../../types/cutscene';
 import { Field, ReadOnlyIdField, InspectorSection } from '../../common/Fields';
 import { type MapPreviewOverlay } from '../../common/MapPreviewPicker';
 import { SequenceCard, SequenceTypeMenu, SortableSequenceItem } from '../../common/SequenceEditor';
@@ -97,8 +107,15 @@ export const CutsceneDetail: React.FC<{
     parameter: string;
     mapId: string;
     mode: PlacementMode;
+    waypoint?: number;
   } | null>(null);
   const [hoverPosition, setHoverPosition] = useState<MapPosition | null>(null);
+  const [endpointPicking, setEndpointPicking] = useState<{
+    index: number;
+    character: string;
+    mapId: string;
+    mode: PlacementMode;
+  } | null>(null);
   const setupSteps = scene.onStart ?? [];
   const completionSteps = scene.onComplete.steps;
   const sectionOf = (id: string): 'onStart' | 'sequence' | 'completion' =>
@@ -160,21 +177,35 @@ export const CutsceneDetail: React.FC<{
   const actionFor = (step: CutsceneStep) => actions.find((a) => a.id === step.action);
   const cancelPicking = () => {
     setPicking(null);
+    setEndpointPicking(null);
     setHoverPosition(null);
   };
   useEffect(() => {
-    if (!picking) return;
-    const metadata = positionPickerMetadata(
-      actions
-        .find((a) => a.id === selectedStep?.action)
-        ?.parameters.find((p) => p.name === picking.parameter),
-    );
+    if (!picking && !endpointPicking) return;
+    const metadata =
+      picking &&
+      (picking.waypoint === undefined ? positionPickerMetadata : pathPickerMetadata)(
+        actions
+          .find((a) => a.id === selectedStep?.action)
+          ?.parameters.find((p) => p.name === picking.parameter),
+      );
     if (
-      selectedStep?.id !== picking.stepId ||
-      scene.mapId !== picking.mapId ||
-      !metadata?.placementModes.includes(picking.mode)
+      (endpointPicking &&
+        (panel !== 'completion' ||
+          scene.mapId !== endpointPicking.mapId ||
+          scene.onComplete.characterPlacements[endpointPicking.index]?.character !==
+            endpointPicking.character)) ||
+      (picking &&
+        (selectedStep?.id !== picking.stepId ||
+          scene.mapId !== picking.mapId ||
+          !metadata?.placementModes.includes(picking.mode) ||
+          (picking.waypoint !== undefined &&
+            (!Array.isArray(selectedStep?.arguments[picking.parameter]) ||
+              picking.waypoint >=
+                (selectedStep?.arguments[picking.parameter] as PathArgument).length))))
     ) {
       setPicking(null);
+      setEndpointPicking(null);
       setHoverPosition(null);
       return;
     }
@@ -182,12 +213,21 @@ export const CutsceneDetail: React.FC<{
       if (event.key === 'Escape') {
         event.preventDefault();
         setPicking(null);
+        setEndpointPicking(null);
         setHoverPosition(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [picking, selectedStep, scene.mapId, actions]);
+  }, [
+    picking,
+    endpointPicking,
+    panel,
+    selectedStep,
+    scene.mapId,
+    scene.onComplete.characterPlacements,
+    actions,
+  ]);
 
   const optionsFor = (parameter: CutsceneAction['parameters'][number]) => {
     if (parameter.resourceType)
@@ -215,13 +255,16 @@ export const CutsceneDetail: React.FC<{
     value: CutsceneStep['arguments'][string],
     parameter: CutsceneAction['parameters'][number],
   ) =>
-    isAnchorPosition(value)
-      ? anchorOptions.find((a) => a.id === value.anchor)?.label || `Missing anchor: ${value.anchor}`
-      : isMapPosition(value)
-        ? `(${value.x}, ${value.y})`
-        : typeof value === 'number'
-          ? String(value)
-          : optionsFor(parameter)?.find((o) => o.id === value)?.label || value || 'Not set';
+    Array.isArray(value)
+      ? `${value.length} waypoint${value.length === 1 ? '' : 's'}`
+      : isAnchorPosition(value)
+        ? anchorOptions.find((a) => a.id === value.anchor)?.label ||
+          `Missing anchor: ${value.anchor}`
+        : isMapPosition(value)
+          ? `(${value.x}, ${value.y})`
+          : typeof value === 'number'
+            ? String(value)
+            : optionsFor(parameter)?.find((o) => o.id === value)?.label || value || 'Not set';
   const summary = (step: CutsceneStep) => {
     const action = actionFor(step);
     if (!action) return step.action;
@@ -384,11 +427,13 @@ export const CutsceneDetail: React.FC<{
       label:
         segment.kind === 'face'
           ? `Faces ${preview?.characters.find((a) => a.id === preview.facings.find((f) => f.stepId === segment.stepId && f.characterId === segment.characterId)?.targetId)?.label || 'target'}`
-          : String(segment.number),
+          : segment.waypoint
+            ? `${segment.number}.${segment.waypoint}`
+            : String(segment.number),
       dashed: segment.kind === 'face',
       opacity: selected ? 1 : 0.35,
     });
-    if (segment.kind === 'move')
+    if (segment.kind === 'move' && (!segment.waypoint || segment.waypoint === 1))
       overlays.push({
         kind: 'character',
         position: from,
@@ -408,16 +453,30 @@ export const CutsceneDetail: React.FC<{
         facing: character.facing,
       });
   }
+  for (const point of preview?.placements ?? []) {
+    if (point.waypoint)
+      overlays.push({
+        kind: 'waypoint',
+        position: toTiles(point.position),
+        label: String(point.waypoint),
+        opacity: selection.kind === 'step' && point.stepId === selection.id ? 1 : 0.35,
+      });
+  }
   const positionEffect =
     picking && selectedStep
       ? readActionPreview(actionFor(selectedStep))?.effects.find(
           (effect) =>
-            (effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter') &&
-            effect.positionParameter === picking.parameter,
+            ((effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter') &&
+              effect.positionParameter === picking.parameter) ||
+            (effect.kind === 'moveCharacterAlongPath' &&
+              effect.pathParameter === picking.parameter),
         )
       : undefined;
-  const placementCharacterId =
-    positionEffect?.kind === 'setCharacterPosition' || positionEffect?.kind === 'spawnCharacter'
+  const placementCharacterId = endpointPicking
+    ? endpointPicking.character
+    : positionEffect?.kind === 'setCharacterPosition' ||
+        positionEffect?.kind === 'spawnCharacter' ||
+        positionEffect?.kind === 'moveCharacterAlongPath'
       ? selectedStep?.arguments[positionEffect.characterParameter]
       : undefined;
   const placementLabel =
@@ -428,32 +487,55 @@ export const CutsceneDetail: React.FC<{
     positionEffect?.kind === 'spawnCharacter'
       ? selectedStep?.arguments[positionEffect.definitionParameter]
       : preview?.characters.find((a) => a.id === placementCharacterId)?.definitionId;
-  if (picking && hoverPosition)
+  if ((picking || endpointPicking) && hoverPosition)
     overlays.push({
       kind: 'placement',
       icon: characterDefinitions.find((d) => d.id === placementDefinition)?.icon,
       position: [hoverPosition.x / tileSize, hoverPosition.y / tileSize],
       label: `${placementLabel} (${hoverPosition.x}, ${hoverPosition.y})`,
     });
-  const positionPick = picking
+  const positionPick = endpointPicking
     ? {
-        mode: picking.mode,
-        label: placementLabel,
+        mode: endpointPicking.mode,
+        label: `${placementLabel} final position`,
         onCancel: cancelPicking,
         onHover: setHoverPosition,
         onPick: (position: MapPosition) => {
           update((draft) => {
-            const step = [
-              ...(draft.onStart ?? []),
-              ...draft.sequence,
-              ...draft.onComplete.steps,
-            ].find((s) => s.id === picking.stepId);
-            if (step) step.arguments[picking.parameter] = position;
+            draft.onComplete.characterPlacements[endpointPicking.index] = completionPlacement(
+              endpointPicking.character,
+              position,
+            );
           });
           cancelPicking();
         },
       }
-    : undefined;
+    : picking
+      ? {
+          mode: picking.mode,
+          label:
+            picking.waypoint === undefined
+              ? placementLabel
+              : `${placementLabel} waypoint ${picking.waypoint + 1}`,
+          onCancel: cancelPicking,
+          onHover: setHoverPosition,
+          onPick: (position: MapPosition) => {
+            update((draft) => {
+              const step = [
+                ...(draft.onStart ?? []),
+                ...draft.sequence,
+                ...draft.onComplete.steps,
+              ].find((s) => s.id === picking.stepId);
+              if (step) {
+                if (picking.waypoint === undefined) step.arguments[picking.parameter] = position;
+                else if (Array.isArray(step.arguments[picking.parameter]))
+                  (step.arguments[picking.parameter] as PathArgument)[picking.waypoint] = position;
+              }
+            });
+            cancelPicking();
+          },
+        }
+      : undefined;
   const sceneFields = (
     <>
       <Field label="Name">
@@ -500,6 +582,14 @@ export const CutsceneDetail: React.FC<{
       </Box>
     </>
   );
+  const finalPositionLabel = (placement: CompletionPlacement) => {
+    const position = completionPosition(placement);
+    return isAnchorPosition(position)
+      ? anchorOptions.find((anchor) => anchor.id === position.anchor)?.label || position.anchor
+      : isMapPosition(position)
+        ? `(${position.x}, ${position.y})`
+        : 'Not set';
+  };
   const completionFields = (
     <>
       <InspectorSection title="Final character positions">
@@ -520,32 +610,56 @@ export const CutsceneDetail: React.FC<{
               <ReferenceSelect
                 value={placement.character}
                 options={characterOptions}
-                onChange={(character) =>
+                onChange={(character) => {
+                  cancelPicking();
                   update((draft) => {
                     draft.onComplete.characterPlacements[index].character = character;
-                  })
-                }
+                  });
+                }}
               />
             </Field>
             <Field label="Final position">
-              <ReferenceSelect
-                value={placement.anchor}
-                options={anchorOptions}
-                onChange={(anchor) =>
+              <MapPositionField
+                value={completionPosition(placement)}
+                modes={['tile', 'pixel', 'anchor']}
+                anchors={anchorOptions}
+                isPicking={endpointPicking?.index === index}
+                onChange={(position) =>
                   update((draft) => {
-                    draft.onComplete.characterPlacements[index].anchor = anchor;
+                    draft.onComplete.characterPlacements[index] = completionPlacement(
+                      placement.character,
+                      position,
+                    );
                   })
                 }
+                onPick={(mode) => {
+                  cancelPicking();
+                  setEndpointPicking({
+                    index,
+                    character: placement.character,
+                    mapId: scene.mapId,
+                    mode,
+                  });
+                }}
+                onModeChange={(mode) => {
+                  if (mode === 'anchor') cancelPicking();
+                  else if (endpointPicking?.index === index) {
+                    setHoverPosition(null);
+                    setEndpointPicking({ ...endpointPicking, mode });
+                  }
+                }}
+                onCancel={cancelPicking}
               />
             </Field>
             <Button
               size="xs"
               variant="ghost"
-              onClick={() =>
+              onClick={() => {
+                cancelPicking();
                 update((draft) => {
                   draft.onComplete.characterPlacements.splice(index, 1);
-                })
-              }
+                });
+              }}
             >
               Restore original
             </Button>
@@ -605,6 +719,7 @@ export const CutsceneDetail: React.FC<{
         .map((parameter) => {
           const options = optionsFor(parameter);
           const positionMetadata = positionPickerMetadata(parameter);
+          const pathMetadata = pathPickerMetadata(parameter);
           const numeric =
             parameter.type === 'number' &&
             !parameter.semanticType &&
@@ -626,6 +741,7 @@ export const CutsceneDetail: React.FC<{
           const supported =
             parameter.semanticType === 'characterDeclaration' ||
             Boolean(positionMetadata) ||
+            Boolean(pathMetadata) ||
             numeric ||
             (parameter.type === 'string' &&
               (options !== null || (!parameter.semanticType && !parameter.picker)));
@@ -645,7 +761,44 @@ export const CutsceneDetail: React.FC<{
                   : `Unsupported manifest parameter: ${parameter.type} ${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`)
               }
             >
-              {positionMetadata ? (
+              {pathMetadata ? (
+                <MapPathField
+                  key={selectedStep.id + '/' + parameter.name}
+                  value={selectedStep.arguments[parameter.name]}
+                  modes={pathMetadata.placementModes}
+                  anchors={anchorOptions}
+                  pickingIndex={
+                    picking?.stepId === selectedStep.id && picking.parameter === parameter.name
+                      ? picking.waypoint
+                      : undefined
+                  }
+                  onChange={(value) =>
+                    update((draft) => {
+                      [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
+                        (s) => s.id === selectedStep.id,
+                      )!.arguments[parameter.name] = value;
+                    })
+                  }
+                  onPick={(waypoint, mode) => {
+                    setHoverPosition(null);
+                    setPicking({
+                      stepId: selectedStep.id,
+                      parameter: parameter.name,
+                      mapId: scene.mapId,
+                      mode,
+                      waypoint,
+                    });
+                  }}
+                  onModeChange={(mode) => {
+                    if (mode === 'anchor') cancelPicking();
+                    else if (picking?.parameter === parameter.name) {
+                      setPicking({ ...picking, mode });
+                      setHoverPosition(null);
+                    }
+                  }}
+                  onCancel={cancelPicking}
+                />
+              ) : positionMetadata ? (
                 <MapPositionField
                   key={selectedStep.id + '/' + parameter.name}
                   value={selectedStep.arguments[parameter.name]}
@@ -1063,7 +1216,7 @@ export const CutsceneDetail: React.FC<{
                                 ? scene.onComplete.characterPlacements
                                     .map(
                                       (p) =>
-                                        `${characterOptions.find((a) => a.id === p.character)?.label || p.character} → ${anchorOptions.find((a) => a.id === p.anchor)?.label || p.anchor || 'Not set'}`,
+                                        `${characterOptions.find((a) => a.id === p.character)?.label || p.character} → ${finalPositionLabel(p)}`,
                                     )
                                     .join(' · ')
                                 : 'Restore original character positions'}

@@ -4,6 +4,9 @@ The cutscene workspace has **Before start**, **Sequence** and **On completion**
 tabs, with a shared Inspector and persistent resizable map preview. Select a
 step to edit its parameters, or Scene settings to edit name, map and skip
 eligibility. Final character positions remain editable in the completion Inspector.
+They share the Grid, Pixel and Anchor picker used by placement steps. Grid picks
+tile centers; Pixel picks individual map pixels. Picking is staged until a click
+confirms it, and Escape cancels. The same endpoints apply after watching or skipping.
 
 Before start and On completion offer only immediate actions explicitly allowed
 in their manifest phase and cutscene context. Sequence offers sequence actions.
@@ -98,3 +101,7 @@ reference in Place and other character actions; Spawn creates a new NPC instance
 Character terminology applies to code and saved data, including `characters/`,
 `.character.json`, `characterRef`, and `characters.*` Lua actions. Pre-rename resources and bindings require recreation; no migration for the old
 `actors/` resources or `actorRef` metadata is provided.
+
+Path parameters use ordered waypoints with the same position picker. Add, reorder
+or remove points in the Inspector; the preview draws numbered waypoints and
+route arrows. See [walk-path support and the Unity handoff](cutscene-walk-path.md).

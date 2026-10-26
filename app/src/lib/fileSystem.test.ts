@@ -25,7 +25,11 @@ describe('namespaced file persistence', () => {
     const { fs, invoke } = setup([
       {
         filename: 'mycharacter.character.json',
-        data: { id: 'base:mycharacter', name: 'My Character' },
+        data: {
+          id: 'base:mycharacter',
+          name: 'My Character',
+          $schema: '../../schemas/character.schema.json',
+        },
       },
     ]);
     expect((await fs.openProject()).project).toMatchObject({ id: 'game', idPrefix: 'base' });
@@ -36,7 +40,10 @@ describe('namespaced file persistence', () => {
       'app:fs-write-json',
       expect.objectContaining({
         filename: 'mycharacter.character.json',
-        data: expect.objectContaining({ id: 'base:mycharacter' }),
+        data: expect.objectContaining({
+          id: 'base:mycharacter',
+          $schema: '../schemas/character.schema.json',
+        }),
       }),
     );
     await fs.readJson('characters', `${character.id}.character.json`);

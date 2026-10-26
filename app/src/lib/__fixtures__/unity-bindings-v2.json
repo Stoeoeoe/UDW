@@ -28,8 +28,15 @@
             "displayName": "Face character",
             "category": "Movement",
             "description": "Turn an existing character toward another character.",
-            "contexts": ["cutscene", "npcRoutine"],
-            "phases": ["completion", "sequence", "setup"],
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
             "execution": "immediate",
             "preview": {
               "version": 1,
@@ -66,9 +73,16 @@
             "id": "characters.faceDirection",
             "displayName": "Face direction",
             "category": "Movement",
-            "description": "Turn an character toward North, East, South or West.",
-            "contexts": ["cutscene", "npcRoutine"],
-            "phases": ["completion", "sequence", "setup"],
+            "description": "Turn a character toward North, East, South or West.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
             "execution": "immediate",
             "preview": {
               "version": 1,
@@ -107,8 +121,13 @@
             "displayName": "Move to anchor",
             "category": "Movement",
             "description": "Walk an existing character to a map anchor.",
-            "contexts": ["cutscene", "npcRoutine"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -139,7 +158,11 @@
               "picker": "mapPosition",
               "coordinateSpace": "mapPixels",
               "origin": "topLeft",
-              "placementModes": ["tile", "pixel", "anchor"],
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
               "tileAnchor": "center",
               "characterPivot": "feet"
             }
@@ -152,8 +175,14 @@
             "displayName": "Place character",
             "category": "Placement",
             "description": "Immediately place a character at a map position.",
-            "contexts": ["cutscene"],
-            "phases": ["completion", "sequence", "setup"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
             "execution": "immediate",
             "preview": {
               "version": 2,
@@ -191,9 +220,13 @@
             "id": "characters.playAnimation",
             "displayName": "Play animation",
             "category": "Animation",
-            "description": "Play a finite animation on an character and wait for completion.",
-            "contexts": ["cutscene"],
-            "phases": ["sequence"],
+            "description": "Play a finite animation on a character and wait for completion.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -221,7 +254,11 @@
               "picker": "mapPosition",
               "coordinateSpace": "mapPixels",
               "origin": "topLeft",
-              "placementModes": ["tile", "pixel", "anchor"],
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
               "tileAnchor": "center",
               "characterPivot": "feet"
             }
@@ -234,8 +271,12 @@
             "displayName": "Spawn character",
             "category": "Placement",
             "description": "Spawn a persistent NPC and declare its cutscene-local character name.",
-            "contexts": ["cutscene"],
-            "phases": ["setup"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "setup"
+            ],
             "execution": "immediate",
             "preview": {
               "version": 2,
@@ -246,6 +287,60 @@
                   "characterParameter": "character",
                   "positionParameter": "position",
                   "definitionParameter": "definition",
+                  "facing": "unknown"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "WalkPath",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "path",
+              "type": "path",
+              "picker": "mapPath",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.walkPath",
+            "displayName": "Walk path",
+            "category": "Movement",
+            "description": "Walk through an ordered list of map positions and anchors.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "moveCharacterAlongPath",
+                  "characterParameter": "character",
+                  "pathParameter": "path",
                   "facing": "unknown"
                 }
               ]
@@ -273,8 +368,12 @@
             "displayName": "Wait",
             "category": "Timing",
             "description": "Wait for gameplay seconds.",
-            "contexts": ["cutscene"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -306,8 +405,12 @@
             "displayName": "Play dialogue",
             "category": "Dialogue",
             "description": "Wait for a conversation to finish through its flow.",
-            "contexts": ["cutscene"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -534,12 +637,6 @@
       {
         "id": "West",
         "description": "West"
-      }
-    ],
-    "character": [
-      {
-        "id": "base:cutscene-prototype-host",
-        "description": "Cutscene prototype host"
       }
     ]
   }

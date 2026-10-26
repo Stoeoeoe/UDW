@@ -42,6 +42,17 @@ describe('resource namespaces', () => {
     expect(resourceFilename('project', 'my-project')).toBe('my-project.vproj');
   });
 
+  it('resolves every schema reference inside the exported project schemas folder', () => {
+    const projectRoot = resolve(process.cwd(), 'test-project');
+    for (const definition of Object.values(resourceRegistry)) {
+      expect(resolve(projectRoot, definition.folder, resourceSchemaPath(definition.kind))).toBe(
+        resolve(projectRoot, 'schemas', definition.schemaFile),
+      );
+    }
+    expect(resourceSchemaPath('character')).toBe('../schemas/character.schema.json');
+    expect(resourceSchemaPath('project')).toBe('schemas/project.schema.json');
+  });
+
   it('does not treat unrelated field names or user property values as references', () => {
     const character = {
       id: 'base:villager',

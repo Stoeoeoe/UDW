@@ -8,12 +8,14 @@ import {
   validateCutscene,
 } from './cutscenes';
 import { previewCutscene, readActionPreview } from './cutscenePreview';
-import { parseScriptingManifest } from './scriptingManifest';
+import { parseScriptingManifest, withProjectCharacters } from './scriptingManifest';
 import bindings from './__fixtures__/unity-bindings-v2.json';
 import type { Cutscene, CutsceneStep } from '../types/cutscene';
 import type { Map as GameMap } from '../types/schema';
 const actions = readCutsceneActions(bindings);
-const resources = parseScriptingManifest(bindings).resources!;
+const resources = withProjectCharacters(parseScriptingManifest(bindings).resources, [
+  { id: 'base:cutscene-prototype-host', name: 'Host' },
+]);
 const definition = resources.character[0].id;
 const map = {
   id: 'base:map',

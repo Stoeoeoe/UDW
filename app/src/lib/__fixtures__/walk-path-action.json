@@ -1,0 +1,53 @@
+{
+  "name": "WalkPath",
+  "parameters": [
+    {
+      "name": "character",
+      "type": "string",
+      "semanticType": "characterRef",
+      "picker": "mapCharacter"
+    },
+    {
+      "name": "path",
+      "type": "path",
+      "picker": "mapPath",
+      "coordinateSpace": "mapPixels",
+      "origin": "topLeft",
+      "placementModes": [
+        "tile",
+        "pixel",
+        "anchor"
+      ],
+      "tileAnchor": "center",
+      "characterPivot": "feet"
+    }
+  ],
+  "returnType": "nil",
+  "returnNullable": false,
+  "writesState": true,
+  "action": {
+    "id": "characters.walkPath",
+    "displayName": "Walk path",
+    "category": "Movement",
+    "description": "Walk through the ordered waypoints.",
+    "contexts": [
+      "cutscene"
+    ],
+    "phases": [
+      "sequence"
+    ],
+    "execution": "awaitable",
+    "preview": {
+      "version": 2,
+      "spatialState": "described",
+      "effects": [
+        {
+          "kind": "moveCharacterAlongPath",
+          "characterParameter": "character",
+          "pathParameter": "path",
+          "facing": "unknown"
+        }
+      ]
+    }
+  }
+}

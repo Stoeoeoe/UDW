@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { ScriptingResources } from './scriptingManifest';
-import { resolveMapPosition, positionPickerMetadata } from './mapPosition';
+import { resolveMapPosition, positionPickerMetadata, pathPickerMetadata } from './mapPosition';
 import type { Cutscene, CutsceneAction } from '../types/cutscene';
 import type { EntityType, Map as GameMap } from '../types/schema';
-import { mapCharacterInstances, actionsForCutscenePhase } from './cutscenes';
+import { mapCharacterInstances, actionsForCutscenePhase, completionPosition } from './cutscenes';
 
 type Point = [number, number];
 const parameter = z.string().min(1);
@@ -44,6 +44,14 @@ const previewSchema = z
             directionParameter: parameter,
           })
           .strict(),
+        z
+          .object({
+            kind: z.literal('moveCharacterAlongPath'),
+            characterParameter: parameter,
+            pathParameter: parameter,
+            facing: z.literal('unknown'),
+          })
+          .strict(),
         z.object({ kind: z.literal('showDialogue'), dialogueParameter: parameter }).strict(),
         z
           .object({
@@ -75,6 +83,7 @@ export interface PreviewSegment {
   number: number;
   characterId: string;
   kind: 'move' | 'face';
+  waypoint?: number;
   from: Point;
   to: Point;
 }
@@ -82,7 +91,7 @@ export interface CutscenePreview {
   characters: PreviewCharacter[];
   segments: PreviewSegment[];
   cues: { stepId: string; dialogueId: string }[];
-  placements: { stepId: string; characterId: string; position: Point }[];
+  placements: { stepId: string; characterId: string; position: Point; waypoint?: number }[];
   facings: { stepId: string; characterId: string; targetId: string }[];
   notices: { stepId?: string; message: string }[];
 }
@@ -94,7 +103,10 @@ export function readActionPreview(action: CutsceneAction | undefined) {
   if (
     parsed.data.version === 1 &&
     parsed.data.effects.some(
-      (effect) => effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter',
+      (effect) =>
+        effect.kind === 'setCharacterPosition' ||
+        effect.kind === 'spawnCharacter' ||
+        effect.kind === 'moveCharacterAlongPath',
     )
   )
     return null;
@@ -105,6 +117,11 @@ export function readActionPreview(action: CutsceneAction | undefined) {
     dialogueParameter: 'dialogueRef/dialogue',
   };
   for (const effect of parsed.data.effects) {
+    if (
+      effect.kind === 'moveCharacterAlongPath' &&
+      !pathPickerMetadata(action.parameters.find((p) => p.name === effect.pathParameter))
+    )
+      return null;
     if (
       (effect.kind === 'setCharacterPosition' || effect.kind === 'spawnCharacter') &&
       !positionPickerMetadata(action.parameters.find((p) => p.name === effect.positionParameter))
@@ -233,20 +250,28 @@ export function previewCutscene(
         if (effect.kind === 'spawnCharacter') spawn(step, effect);
     }
     for (const placement of scene.onComplete.characterPlacements) {
-      const character = characters.get(placement.character),
-        anchor = anchors.get(placement.anchor);
-      if (!character || !anchor) {
+      const character = characters.get(placement.character);
+      const position = completionPosition(placement);
+      const point = resolveMapPosition(
+        position,
+        [...anchors.values()],
+        map.width,
+        map.height,
+        tileSize,
+      );
+      const anchor = placement.anchor !== undefined ? anchors.get(placement.anchor) : undefined;
+      if (!character || !point) {
         if (character) {
           character.position = null;
           character.facing = null;
         }
         notice(
-          `Final position unavailable: missing ${!character ? `character ${placement.character}` : `anchor ${placement.anchor}`}.`,
+          `Final position unavailable: ${!character ? `missing character ${placement.character}` : placement.anchor !== undefined ? `missing anchor ${placement.anchor}` : 'invalid map position'}.`,
         );
         continue;
       }
-      character.position = [...anchor.position];
-      character.facing = anchor.facing?.some((n) => n !== 0) ? [...anchor.facing] : null;
+      character.position = [...point];
+      if (anchor?.facing?.some((n) => n !== 0)) character.facing = [...anchor.facing];
     }
   }
   const setup = scene.onStart ?? [];
@@ -299,6 +324,55 @@ export function previewCutscene(
       if (!character) {
         invalidate();
         notice(`Preview unavailable: missing character ${characterId || '(not set)'}.`, step.id);
+        continue;
+      }
+      if (effect.kind === 'moveCharacterAlongPath') {
+        const path = step.arguments[effect.pathParameter];
+        if (!Array.isArray(path) || !path.length) {
+          character.position = null;
+          character.facing = null;
+          notice('Path preview unavailable: add valid waypoints.', step.id);
+          continue;
+        }
+        let from = character.position;
+        for (const [waypoint, point] of path.entries()) {
+          const to = resolveMapPosition(
+            point,
+            [...anchors.values()],
+            map.width,
+            map.height,
+            tileSize,
+          );
+          if (!to) {
+            from = null;
+            notice(`Waypoint ${waypoint + 1}: position is invalid or unresolved.`, step.id);
+            continue;
+          }
+          if (from && phase === 'sequence')
+            result.segments.push({
+              stepId: step.id,
+              number: index + 1,
+              characterId,
+              kind: 'move',
+              from: [...from],
+              to: [...to],
+              waypoint: waypoint + 1,
+            });
+          else if (!from && phase === 'sequence')
+            notice(
+              `Waypoint ${waypoint + 1}: previous position unknown; showing the waypoint only.`,
+              step.id,
+            );
+          result.placements.push({
+            stepId: step.id,
+            characterId,
+            position: [...to],
+            waypoint: waypoint + 1,
+          });
+          from = [...to];
+        }
+        character.position = from;
+        character.facing = null;
         continue;
       }
       if (effect.kind === 'setCharacterPosition') {

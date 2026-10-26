@@ -488,6 +488,9 @@ function isDialogueSourceDocument(value: unknown): value is DialogueDocument {
     Array.isArray(record.nodes) &&
     typeof record.id === 'string' &&
     typeof record.name === 'string' &&
-    record.$schema === resourceSchemaPath('dialogue')
+    // Identify the schema itself so the incorrect parent path written by older
+    // exports does not prevent opening and re-saving a source with the fixed path.
+    typeof record.$schema === 'string' &&
+    record.$schema.split(/[\\/]/).pop() === resourceRegistry.dialogue.schemaFile
   );
 }

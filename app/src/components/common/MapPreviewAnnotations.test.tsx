@@ -11,6 +11,7 @@ describe('vector map annotations', () => {
     const overlays: MapPreviewOverlay[] = [
       { kind: 'segment', from: [1, 2], to: [3, 2], label: '1' },
       { kind: 'character', position: [3, 2], label: 'Host', icon: 'H' },
+      { kind: 'waypoint', position: [4, 2], label: '2' },
     ];
     const view = (scale: number) => (
       <ChakraProvider theme={theme}>
@@ -31,7 +32,11 @@ describe('vector map annotations', () => {
     expect(screen.getByText('H')).toHaveAttribute('y', '52');
     expect(screen.getByText('H')).toHaveAttribute('dominant-baseline', 'text-after-edge');
     expect(screen.getByText('Host')).toHaveAttribute('font-size', '12');
+    expect(screen.getByText('2')).toHaveAttribute('font-size', '11');
+    expect(screen.getByText('2')).toHaveAttribute('x', '74');
     rerender(view(4));
+    expect(screen.getByText('2')).toHaveAttribute('font-size', '11');
+    expect(screen.getByText('2')).toHaveAttribute('x', '266');
     expect(container.querySelector('line')).toHaveAttribute('x1', '74');
     expect(container.querySelector('circle')).toHaveAttribute('cx', '202');
     expect(container.querySelector('circle')).toHaveAttribute('r', '5');

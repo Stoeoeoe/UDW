@@ -421,8 +421,7 @@ export function normalizeResourceDocument<K extends ResourceDocumentKind>(
 }
 export function resourceSchemaPath(kind: ResourceDocumentKind): string {
   const definition = resourceRegistry[kind];
-  if (kind === 'cutscene') return '../schemas/cutscene.schema.json';
-  return `${definition.folder ? '../../' : '../'}schemas/${definition.schemaFile}`;
+  return `${definition.folder ? '../' : ''}schemas/${definition.schemaFile}`;
 }
 /** Logical filename used for original-file lookup; physical filenames are resolved separately. */
 export function resourceFileKey(kind: ResourceDocumentKind, id: string): string {
