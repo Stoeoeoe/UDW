@@ -8,13 +8,32 @@ const parameterSchema = z
     semanticType: z.string().optional(),
     picker: z.string().optional(),
     resourceType: nonblank.optional(),
+    optional: z.boolean().optional(),
+    defaultValue: z.union([z.boolean(), z.number().finite(), z.string()]).optional(),
     coordinateSpace: z.string().optional(),
     origin: z.string().optional(),
     placementModes: z.array(z.string()).optional(),
     tileAnchor: z.string().optional(),
     characterPivot: z.string().optional(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((parameter, context) => {
+    if (parameter.defaultValue === undefined) {
+      if (parameter.optional === true)
+        context.addIssue({
+          code: 'custom',
+          path: ['defaultValue'],
+          message: 'Optional parameters require a default value',
+        });
+      return;
+    }
+    if (typeof parameter.defaultValue !== parameter.type)
+      context.addIssue({
+        code: 'custom',
+        path: ['defaultValue'],
+        message: 'Default value must match the parameter type',
+      });
+  });
 const actionSchema = z
   .object({
     id: nonblank,

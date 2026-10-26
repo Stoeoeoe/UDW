@@ -287,8 +287,17 @@ export function validateCutscene(
         report(`${path}.arguments.${name}`, 'Unknown argument', step.id);
     }
     for (const parameter of action.parameters) {
-      const value = step.arguments[parameter.name];
+      const authoredValue = step.arguments[parameter.name];
+      const value = authoredValue === undefined && parameter.optional === true
+        ? parameter.defaultValue : authoredValue;
       const argumentPath = `${path}.arguments.${parameter.name}`;
+      if (parameter.type === 'boolean') {
+        if (typeof value !== 'boolean')
+          report(argumentPath, 'Expected a boolean argument', step.id);
+        if (parameter.semanticType || parameter.picker || parameter.resourceType)
+          report(argumentPath, 'Boolean parameters cannot use reference pickers', step.id);
+        continue;
+      }
       if (parameter.semanticType === 'characterDeclaration') {
         if (phase !== 'setup')
           report(argumentPath, 'Character declarations are only allowed in setup', step.id);
@@ -466,7 +475,8 @@ export function createCutsceneStep(action: CutsceneAction): CutsceneStep {
     id: `beat-${crypto.randomUUID()}`,
     action: action.id,
     arguments: Object.fromEntries(
-      action.parameters.map((p) => [p.name, p.type === 'path' ? [] : '']),
+      action.parameters.map((p) => [p.name, p.optional === true && p.defaultValue !== undefined
+        ? p.defaultValue : p.type === 'boolean' ? false : p.type === 'path' ? [] : '']),
     ),
   };
 }

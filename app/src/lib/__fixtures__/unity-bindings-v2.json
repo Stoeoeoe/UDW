@@ -2,6 +2,105 @@
   "schemaVersion": 2,
   "modules": [
     {
+      "path": "Camera",
+      "methods": [
+        {
+          "name": "Flash",
+          "parameters": [
+            {
+              "name": "color",
+              "type": "string",
+              "optional": true,
+              "defaultValue": "#FFFFFF"
+            },
+            {
+              "name": "durationSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.3
+            },
+            {
+              "name": "easeInSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.05
+            },
+            {
+              "name": "holdSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.2
+            },
+            {
+              "name": "easeOutSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.05
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "camera.flash",
+            "displayName": "Screen flash",
+            "category": "Camera",
+            "description": "Flash the screen with an HTML color. Uses real seconds, including while paused. Phase times scale to durationSeconds. Defaults: white, 0.3 seconds total, 0.05 in / 0.2 hold / 0.05 out. Continues immediately; a new flash replaces the previous one.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "Shake",
+          "parameters": [
+            {
+              "name": "durationSeconds",
+              "type": "number"
+            },
+            {
+              "name": "strength",
+              "type": "number"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "camera.shake",
+            "displayName": "Screen shake",
+            "category": "Camera",
+            "description": "Shake the screen for gameplay seconds, fading out. Strength is in world units (try 0.1). Continues immediately; a new shake replaces the previous one.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "Characters",
       "methods": [
         {

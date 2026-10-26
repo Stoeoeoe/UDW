@@ -752,7 +752,9 @@ export const CutsceneDetail: React.FC<{
             !parameter.semanticType &&
             !parameter.picker &&
             !parameter.resourceType;
-          const currentValue = selectedStep.arguments[parameter.name];
+          const authoredValue = selectedStep.arguments[parameter.name];
+          const currentValue = authoredValue === undefined && parameter.optional === true
+            ? parameter.defaultValue : authoredValue;
           const resourceList = parameter.resourceType
             ? resources[parameter.resourceType]
             : undefined;
@@ -865,9 +867,9 @@ export const CutsceneDetail: React.FC<{
               ) : numeric ? (
                 <NumericCutsceneArgument
                   value={
-                    typeof selectedStep.arguments[parameter.name] === 'object'
+                    typeof currentValue === 'object'
                       ? ''
-                      : ((selectedStep.arguments[parameter.name] as string | number) ?? '')
+                      : ((currentValue as string | number) ?? '')
                   }
                   onChange={(value) =>
                     update((draft) => {
@@ -926,9 +928,9 @@ export const CutsceneDetail: React.FC<{
                 <Input
                   isDisabled={!supported}
                   value={
-                    typeof selectedStep.arguments[parameter.name] === 'object'
+                    typeof currentValue === 'object'
                       ? ''
-                      : ((selectedStep.arguments[parameter.name] as string | number) ?? '')
+                      : ((currentValue as string | number) ?? '')
                   }
                   onChange={(e) =>
                     update((draft) => {

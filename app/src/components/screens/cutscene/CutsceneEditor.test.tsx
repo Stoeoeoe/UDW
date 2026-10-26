@@ -95,6 +95,48 @@ describe('cutscene authoring', () => {
       </ChakraProvider>,
     );
 
+  it('authors a screen flash with exported defaults and saves edited color and duration', async () => {
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: unityBindings,
+      error: null,
+    });
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(unityBindings),
+    );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Screen flash', exact: true }));
+    expect(screen.getByRole('textbox', { name: 'color' })).toHaveValue('#FFFFFF');
+    expect(screen.getByRole('spinbutton', { name: 'durationSeconds' })).toHaveValue('1.1');
+    fireEvent.change(screen.getByRole('textbox', { name: 'color' }), {
+      target: { value: '#FF0000' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'durationSeconds' }), {
+      target: { value: '0.4' },
+    });
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'camera.flash',
+            arguments: {
+              color: '#FF0000',
+              durationSeconds: 0.4,
+              easeInSeconds: 0.05,
+              holdSeconds: 1,
+              easeOutSeconds: 0.05,
+            },
+          }),
+        ]),
+      }),
+    );
+  });
+
   it('updates the shared insertion palette while the manifest changes', async () => {
     mount();
     expect(screen.queryByRole('button', { name: /import.*manifest/i })).not.toBeInTheDocument();
