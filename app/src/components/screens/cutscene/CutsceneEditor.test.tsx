@@ -627,7 +627,7 @@ describe('cutscene authoring', () => {
     expect(screen.getAllByRole('option', { name: /visitor/ }).length).toBeGreaterThan(0);
   }, 30000);
 
-  it('uses project actors for spawning and suggests a unique instance name', () => {
+  it('uses project actors for spawning and suggests a unique instance name', async () => {
     useScriptingManifestStore.setState({
       refresh: vi.fn(async () => parseScriptingManifest(unityBindings)),
     });
@@ -656,11 +656,39 @@ describe('cutscene authoring', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Before start/ }));
     fireEvent.click(screen.getByRole('button', { name: /Not set.*Not set.*Meeting/ }));
     expect(screen.getByRole('option', { name: /Gagaa/ })).toBeEnabled();
-    expect(screen.getByRole('option', { name: /Player.*not registered in Unity/ })).toBeDisabled();
+    expect(screen.getByRole('option', { name: /Player/ })).toBeEnabled();
     fireEvent.change(screen.getByLabelText('Character'), {
       target: { value: 'base:cutscene-prototype-host' },
     });
     expect(screen.getByLabelText('Instance name')).toHaveValue('gagaa');
+    fireEvent.change(screen.getByLabelText('Character'), { target: { value: 'base:player' } });
+    expect(screen.getByLabelText('Character')).toHaveValue('base:player');
+    await act(async () => {
+      await useEditorStore.getState().saveCutscene(prototype.id);
+    });
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        onStart: [
+          expect.objectContaining({
+            arguments: {
+              actor: 'gagaa',
+              definition: 'base:player',
+              position: { anchor: 'prototype-meeting' },
+            },
+          }),
+        ],
+      }),
+    );
+
+    expect(previewProps.mock.lastCall![0].overlays).toEqual(
+      expect.arrayContaining([expect.objectContaining({ actorId: 'gagaa', icon: 'P' })]),
+    );
+    fireEvent.change(screen.getByLabelText('Character'), {
+      target: { value: 'base:cutscene-prototype-host' },
+    });
+
     expect(useEditorStore.getState().cutscenes[0].onStart![0].arguments).toEqual({
       actor: 'gagaa',
       definition: 'base:cutscene-prototype-host',

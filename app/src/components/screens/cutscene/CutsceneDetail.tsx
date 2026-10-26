@@ -31,7 +31,11 @@ import {
 } from '@dnd-kit/sortable';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
-import { EMPTY_SCRIPTING_ACTIONS, EMPTY_SCRIPTING_RESOURCES } from '../../../lib/scriptingManifest';
+import {
+  EMPTY_SCRIPTING_ACTIONS,
+  EMPTY_SCRIPTING_RESOURCES,
+  withProjectCharacters,
+} from '../../../lib/scriptingManifest';
 import {
   createCutsceneStep,
   mapActorInstances,
@@ -80,9 +84,10 @@ export const CutsceneDetail: React.FC<{
     (s) => s.actionsByContext.cutscene ?? EMPTY_SCRIPTING_ACTIONS,
   );
   const labels = useEditorStore((s) => s.cutsceneLabels);
-  const resources = useScriptingManifestStore(
+  const manifestResources = useScriptingManifestStore(
     (s) => s.manifest?.resources ?? EMPTY_SCRIPTING_RESOURCES,
   );
+  const resources = withProjectCharacters(manifestResources, actorDefinitions);
   const edit = useEditorStore((s) => s.editCutscenes);
   const [selection, setSelection] = useState<Selection>({ kind: 'scene' });
   const [activePhase, setActivePhase] = useState<'onStart' | 'sequence' | 'completion'>('sequence');
@@ -185,27 +190,6 @@ export const CutsceneDetail: React.FC<{
   }, [picking, selectedStep, scene.mapId, actions]);
 
   const optionsFor = (parameter: CutsceneAction['parameters'][number]) => {
-    if (parameter.resourceType === 'actor') {
-      const registered = resources.actor ?? [];
-      return [
-        ...actorDefinitions.map((actor) => ({
-          id: actor.id,
-          label: actor.name || actor.id,
-          disabled: !registered.some((entry) => entry.id === actor.id),
-          note: registered.some((entry) => entry.id === actor.id)
-            ? undefined
-            : 'not registered in Unity',
-        })),
-        ...registered
-          .filter((entry) => !actorDefinitions.some((actor) => actor.id === entry.id))
-          .map((entry) => ({
-            id: entry.id,
-            label: entry.description || entry.id,
-            disabled: false,
-            note: 'not in this project',
-          })),
-      ];
-    }
     if (parameter.resourceType)
       return (resources[parameter.resourceType] ?? []).map((entry) => ({
         id: entry.id,
@@ -623,9 +607,7 @@ export const CutsceneDetail: React.FC<{
               : typeof currentValue === 'string' &&
                   currentValue &&
                   !resourceList.some((entry) => entry.id === currentValue)
-                ? parameter.resourceType === 'actor'
-                  ? `${actorDefinitions.find((actor) => actor.id === currentValue)?.name || currentValue} has no registered Unity NPC prefab.`
-                  : `Missing ${parameter.resourceType} resource: ${currentValue}`
+                ? `Missing ${parameter.resourceType} resource: ${currentValue}`
                 : undefined
             : undefined;
           const supported =
@@ -645,7 +627,7 @@ export const CutsceneDetail: React.FC<{
                   ? parameter.semanticType === 'actorDeclaration'
                     ? 'A unique name for this copy of the character, such as guest. Later steps use this name.'
                     : parameter.resourceType === 'actor'
-                      ? 'Characters come from Actors in this project. Spawning requires a registered Unity NPC prefab. Entries marked not in this project come only from the Unity bindings.'
+                      ? 'Choose a character defined in this project. Unity resolves its runtime prefab.'
                       : undefined
                   : `Unsupported manifest parameter: ${parameter.type} ${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`)
               }

@@ -116,8 +116,9 @@ role in setup. Names must be nonblank and unique across the player, placed NPCs,
 and preceding declarations. A role is usable only after its declaration step;
 all setup roles are available in sequence and completion. Renaming or reordering
 recomputes scope without rewriting unresolved references. The actor-definition
-parameter uses `resourceType: "actor"`; only registered Unity prefabs listed in
-`resources.actor` can be selected, regardless of local actor definitions.
+parameter uses `resourceType: "actor"`; the editor resolves this catalog from the project's actor definitions. Unity
+resolves prefab availability during import/playback; its `resources.actor` list
+does not restrict authoring.
 
 ```json
 {

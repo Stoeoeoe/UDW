@@ -28,11 +28,12 @@ remain Unity's responsibility unless exported as metadata.
 
 Actor references use placed NPC-instance IDs, reserved `player`, and roles declared
 by preceding setup steps. Spawn appears only in Before start because its bindings
-allow only `setup`. Its Character selector lists project actors by name and checks their IDs against
-`resources.actor`; unregistered actors are disabled. Instance name identifies the
-spawned copy and is suggested automatically when choosing a character. Blank, duplicate and forward references are errors; renaming
-or reordering declarations updates actor selectors without replacing saved IDs. Anchor and dialogue IDs refer to
-existing map/project resources. Renaming labels does not change references.
+allow only `setup`. Its Character selector lists the project's actors. Instance
+name identifies the spawned copy and is suggested automatically when choosing a
+character. Unity prefab registration is not checked by the editor. Blank,
+duplicate and forward references are errors; renaming or reordering declarations
+updates actor selectors without replacing saved IDs. Anchor and dialogue IDs refer
+to existing map/project resources. Renaming labels does not change references.
 
 ## Preview
 
@@ -85,10 +86,8 @@ placement ghosts; runtime prefab sprites are not present in the bindings.
 ## Choosing a character to spawn
 
 Spawn's **Character** selector uses the project's Actors list and saves the actor
-ID. Actors without a matching entry in `resources.actor` are visibly disabled:
-Unity must register a spawnable NPC prefab for that ID. Registered binding entries
-without a local actor remain available and are labelled **not in this project**.
-Vulcanus does not infer prefab availability from the presence of an actor definition.
+ID. Unity resolves that ID to its runtime prefab and reports registration errors
+there. `resources.actor` from the bindings does not restrict the editor's choices.
 
 **Instance name** identifies this particular copy of the character in later steps.
 Choosing a character suggests a unique name when the field is empty; explicit names

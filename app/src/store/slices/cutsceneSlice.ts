@@ -13,7 +13,7 @@ import { fileSystem } from '../../lib/fileSystem';
 import { resourceFileKey } from '../../lib/resourceRegistry';
 import { qualifyResourceId } from '../../lib/resourceIds';
 import { cancelPendingSaveUnit, scheduleSaveUnit, useSaveStore } from '../../lib/saveManager';
-import { getManifestActions } from '../../lib/scriptingManifest';
+import { getManifestActions, withProjectCharacters } from '../../lib/scriptingManifest';
 import { useScriptingManifestStore } from '../useScriptingManifestStore';
 
 export interface CutsceneSnapshot {
@@ -296,7 +296,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
                 maps,
                 entityTypes: state.entityTypes,
                 dialogueIds: [...state.dialogues.keys()],
-                resources: manifest.resources,
+                resources: withProjectCharacters(manifest.resources, state.actors),
                 tileSize: state.project?.tileSize ?? 16,
               },
             );

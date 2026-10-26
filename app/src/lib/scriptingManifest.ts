@@ -113,3 +113,17 @@ export function getManifestActions(
 
 export const EMPTY_SCRIPTING_ACTIONS: ScriptingAction[] = [];
 export const EMPTY_SCRIPTING_RESOURCES: ScriptingResources = {};
+
+/** Project character definitions are editor resources; Unity prefab resolution is external. */
+export function withProjectCharacters(
+  resources: ScriptingResources | undefined,
+  characters: readonly { id: string; name: string }[],
+): ScriptingResources {
+  return {
+    ...resources,
+    actor: characters.map((character) => ({
+      id: character.id,
+      description: character.name || character.id,
+    })),
+  };
+}
