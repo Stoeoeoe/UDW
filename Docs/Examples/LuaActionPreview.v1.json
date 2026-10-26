@@ -1,5 +1,7 @@
 {
   "actions": {
+    "camera.flash": { "version": 1, "spatialState": "described", "effects": [] },
+    "camera.shake": { "version": 1, "spatialState": "described", "effects": [] },
     "characters.faceDirection": {
       "version": 1,
       "spatialState": "described",

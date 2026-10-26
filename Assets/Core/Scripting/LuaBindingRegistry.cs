@@ -77,7 +77,7 @@ namespace Core.Scripting
                 var parameters = method.GetParameters();
                 foreach (var parameter in parameters)
                 {
-                    if (parameter.IsOptional || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPath)))
+                    if ((parameter.IsOptional && (!IsPrimitive(parameter.ParameterType) || parameter.DefaultValue == null)) || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPath)))
                         throw Invalid(method, $"has unsupported parameter '{parameter.Name}'");
                     var position = parameter.GetCustomAttribute<LuaPositionAttribute>();
                     var path = parameter.GetCustomAttribute<LuaPathAttribute>();
@@ -307,6 +307,8 @@ namespace Core.Scripting
             return new LuaParameterDescription
             {
                 name = parameter.Name, type = LuaTypeName(parameter.ParameterType),
+                optional = parameter.IsOptional ? true : null,
+                defaultValue = parameter.IsOptional ? parameter.DefaultValue : null,
                 semanticType = parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null ? "characterDeclaration" : reference?.Type,
                 picker = path ? "mapPath" : position ? "mapPosition" : reference?.Picker,
                 resourceType = parameter.GetCustomAttribute<LuaResourceAttribute>()?.Type,
@@ -354,10 +356,11 @@ namespace Core.Scripting
         private DynValue Invoke(Script script, Method method, CallbackArguments args, Func<ILuaAction, DynValue> awaitAction = null)
         {
             var parameters = method.Parameters;
-            if (args.Count != parameters.Length)
+            if (args.Count > parameters.Length || args.Count < parameters.Count(parameter => !parameter.IsOptional))
                 throw new ArgumentException($"{method.Info.Name} expects {parameters.Length} argument(s).");
 
-            var values = parameters.Select((parameter, index) => FromLua(args[index], parameter.ParameterType, parameter.Name)).ToArray();
+            var values = parameters.Select((parameter, index) => index < args.Count
+                ? FromLua(args[index], parameter.ParameterType, parameter.Name) : parameter.DefaultValue).ToArray();
             var result = InvokeReflected(method.Info, method.Api, values);
             return method.Info.ReturnType == typeof(ILuaAction)
                 ? awaitAction((ILuaAction)result) : ToLua(script, result, method.Info.ReturnType);

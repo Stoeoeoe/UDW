@@ -3,6 +3,7 @@ using Character;
 using Core.Events;
 using Core.Location;
 using Core.Tile;
+using DG.Tweening;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -26,8 +27,151 @@ namespace Core.Camera
 
         [SerializeField] CinemachineConfiner2D confiner;
 
+        private float _shakeDuration, _shakeElapsed, _shakeStrength;
+        internal Vector3 ShakeOffset { get; private set; }
+
+        [Tooltip("Easing used for both screen flash fades.")]
+        [SerializeField] private Ease flashEase = Ease.InOutQuad;
+
+        private UnityEngine.UI.Image _flashImage;
+        private Color _flashColor;
+        private float _flashDuration, _flashElapsed, _flashInEnd, _flashOutStart;
+
+        internal void PrepareFlash()
+        {
+            if (_flashImage) return; // This manager owns one overlay, shared by every flash.
+            var overlay = new GameObject("ScreenFlash", typeof(RectTransform), typeof(Canvas));
+            overlay.transform.SetParent(transform, false);
+            var canvas = overlay.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = short.MaxValue;
+            var panel = new GameObject("Color", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            panel.transform.SetParent(overlay.transform, false);
+            var rect = (RectTransform)panel.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            _flashImage = panel.GetComponent<UnityEngine.UI.Image>();
+            _flashImage.raycastTarget = false;
+            _flashImage.enabled = false;
+        }
+
+        public static void ValidateFlash(double durationSeconds, double easeInSeconds, double holdSeconds, double easeOutSeconds)
+        {
+            ValidateTime(durationSeconds, nameof(durationSeconds));
+            ValidateTime(easeInSeconds, nameof(easeInSeconds));
+            ValidateTime(holdSeconds, nameof(holdSeconds));
+            ValidateTime(easeOutSeconds, nameof(easeOutSeconds));
+            if (easeInSeconds + holdSeconds + easeOutSeconds == 0)
+                throw new ArgumentException("A flash requires at least one nonzero phase time.");
+
+            static void ValidateTime(double value, string name)
+            {
+                if (!double.IsFinite(value) || value < 0 || value > float.MaxValue)
+                    throw new ArgumentOutOfRangeException(name, "Flash times must be finite and nonnegative.");
+            }
+        }
+
+        /// <summary>Flashes the whole screen, replacing the current flash. Phase times scale to the total duration.</summary>
+        public void Flash(Color color, float durationSeconds = 1.1f, float easeInSeconds = 0.05f,
+            float holdSeconds = 1f, float easeOutSeconds = 0.05f)
+        {
+            ValidateFlash(durationSeconds, easeInSeconds, holdSeconds, easeOutSeconds);
+            for (var channel = 0; channel < 4; channel++)
+                if (!float.IsFinite(color[channel]) || color[channel] < 0 || color[channel] > 1)
+                    throw new ArgumentOutOfRangeException(nameof(color), "Flash color channels must be between zero and one.");
+            PrepareFlash();
+            var total = (double)easeInSeconds + holdSeconds + easeOutSeconds;
+            _flashInEnd = (float)(easeInSeconds / total);
+            _flashOutStart = (float)((easeInSeconds + (double)holdSeconds) / total);
+            _flashColor = color;
+            _flashDuration = durationSeconds;
+            _flashElapsed = 0;
+            _flashImage.enabled = durationSeconds > 0;
+            AdvanceFlash(0);
+        }
+
+        private void AdvanceFlash(float deltaTime)
+        {
+            if (_flashDuration == 0) return;
+            _flashElapsed += deltaTime;
+            if (_flashElapsed >= _flashDuration) { StopFlash(); return; }
+            var progress = _flashElapsed / _flashDuration;
+            var opacity = progress < _flashInEnd
+                ? DOVirtual.EasedValue(0, 1, progress / _flashInEnd, flashEase)
+                : progress < _flashOutStart ? 1f
+                : DOVirtual.EasedValue(1, 0, (progress - _flashOutStart) / (1 - _flashOutStart), flashEase);
+            var color = _flashColor;
+            color.a *= opacity;
+            _flashImage.color = color;
+        }
+
+        private void StopFlash()
+        {
+            _flashDuration = _flashElapsed = 0;
+            _flashImage.enabled = false;
+        }
+
+        internal void PrepareShake()
+        {
+            if (!playerFollowVCam)
+                throw new InvalidOperationException("Screen shake requires the configured player-follow Cinemachine camera.");
+            AttachShake(playerFollowVCam);
+        }
+
+        private void AttachShake(CinemachineCamera camera)
+        {
+            var extension = camera.GetComponent<ScreenShakeExtension>();
+            if (!extension) extension = camera.gameObject.AddComponent<ScreenShakeExtension>();
+            extension.Bind(this);
+        }
+
+        public static void ValidateShake(double durationSeconds, double strength)
+        {
+            if (!double.IsFinite(durationSeconds) || durationSeconds < 0 || durationSeconds > float.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds), "Shake duration must be finite and nonnegative.");
+            if (!double.IsFinite(strength) || strength < 0 || strength > float.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(strength), "Shake strength must be finite and nonnegative.");
+        }
+
+        /// <summary>Starts a camera-space shake, replacing any current shake. Strength is in world units.</summary>
+        public void Shake(float durationSeconds, float strength)
+        {
+            ValidateShake(durationSeconds, strength);
+            PrepareShake();
+            _shakeDuration = durationSeconds;
+            _shakeStrength = strength;
+            _shakeElapsed = 0;
+            if (durationSeconds == 0 || strength == 0) StopShake();
+            else AdvanceShake(0);
+        }
+
+        public void StopShake()
+        {
+            _shakeDuration = _shakeElapsed = _shakeStrength = 0;
+            ShakeOffset = Vector3.zero;
+        }
+
+        private void Update()
+        {
+            AdvanceShake(Time.deltaTime);
+            AdvanceFlash(Time.unscaledDeltaTime);
+        }
+
+        private void AdvanceShake(float deltaTime)
+        {
+            if (_shakeDuration == 0) return;
+            _shakeElapsed += deltaTime;
+            if (_shakeElapsed >= _shakeDuration) { StopShake(); return; }
+            var amplitude = _shakeStrength * (1 - _shakeElapsed / _shakeDuration);
+            var phase = _shakeElapsed * 25;
+            ShakeOffset = new Vector3(Mathf.PerlinNoise(phase, 0.37f) * 2 - 1,
+                Mathf.PerlinNoise(0.73f, phase) * 2 - 1, 0) * amplitude;
+        }
+
         protected override void OnAwake()
         {
+            PrepareFlash();
             if (playerFollowVCam == null)
                 playerFollowVCam = FindFirstObjectByType<CinemachineCamera>();
 
@@ -48,6 +192,8 @@ namespace Core.Camera
 
         private void OnDisable()
         {
+            StopShake();
+            StopFlash();
             this.Unsubscribe();
             LevelManager.Instance.UnregisterLifecycle(this);
         }
@@ -81,7 +227,10 @@ namespace Core.Camera
         public void ActivateVCam(CinemachineCamera vcam, int priority = 20)
         {
             if (vcam != null)
+            {
+                AttachShake(vcam);
                 vcam.Priority = priority;
+            }
         }
 
         /// <summary>Returns a vcam to inactive state (priority 0), restoring player follow.</summary>
@@ -142,6 +291,7 @@ namespace Core.Camera
 
         public void OnLocationLeave(LocationData location)
         {
+            StopShake();
         }
     }
 }

@@ -22,7 +22,8 @@ namespace Core.Scripting
                 bindActors(characters);
                 return characters;
             }),
-            VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter))
+            VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
+            VulcanusLuaEngine.Module(CameraLuaApi.BindCurrentCamera)
         };
 
         public static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
@@ -85,9 +86,12 @@ namespace Core.Scripting
                     // Imported arguments already match this signature. Only arrange them for reflection.
                     var arguments = method.Parameters.Select(parameter =>
                     {
+                        if (parameter.IsOptional && !step.Arguments.Any(argument => argument.Name == parameter.Name))
+                            return parameter.DefaultValue;
                         var argument = step.Arguments.Single(argument => argument.Name == parameter.Name);
                         if (parameter.ParameterType == typeof(string)) return (object)argument.Value;
                         if (parameter.ParameterType == typeof(double)) return double.Parse(argument.Value, CultureInfo.InvariantCulture);
+                        if (parameter.ParameterType == typeof(bool)) return bool.Parse(argument.Value);
                         if (parameter.ParameterType == typeof(MapPosition)) return argument.Position;
                         if (parameter.ParameterType == typeof(MapPath)) return argument.Path;
                         throw new InvalidOperationException($"Unsupported sequence parameter type '{parameter.ParameterType}'.");

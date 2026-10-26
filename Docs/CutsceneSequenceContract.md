@@ -556,6 +556,24 @@ Lua remains opaque to this preview. Existing manifest serialization includes pre
 dependency hash and write-if-changed comparison, so metadata edits update the same
 watched file and unchanged exports leave its timestamp untouched.
 
+## Screen flashes
+
+`Camera.Flash()` / `camera.flash` starts a global screen overlay and continues
+the script immediately. Its optional arguments, in order, are `color` (HTML name
+or `#RRGGBB` / `#RRGGBBAA`, default `#FFFFFF`), `durationSeconds` (default `1.1`),
+`easeInSeconds` (`0.05`), `holdSeconds` (`1`), and `easeOutSeconds` (`0.05`).
+The three phase times are scaled proportionally to the requested total duration.
+For example, `Camera.Flash("#FFFFFF", 0.4, 0.05, 0.3, 0.05)` flashes for 0.4 seconds.
+Omitted named arguments in authored cutscene steps use the same defaults.
+
+Flash timing uses unscaled seconds. Both fades use quadratic InOut easing,
+configurable through `CameraManager.flashEase` in the Inspector. A new flash
+replaces the previous flash; zero duration clears it immediately. Individual
+phase times may be zero, but at least one phase must be positive. Invalid colors,
+negative times and nonfinite times fail during import/binding. The overlay does
+not intercept input or alter the scene transition fader. Flashes are available
+in setup, sequence and completion phases and do not change spatial preview state.
+
 ## Running a cutscene
 
 The runner loads the shared `Resources/CutsceneCatalog` through `CatalogResources`

@@ -54,6 +54,20 @@ namespace Core.Scripting.Editor
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
+                    var authoredValue = arguments[parameter.name];
+                    if (authoredValue == null && parameter.optional == true)
+                        authoredValue = JToken.FromObject(parameter.defaultValue);
+                    if (parameter.type == "boolean")
+                    {
+                        var token = authoredValue;
+                        if (token?.Type != JTokenType.Boolean)
+                            throw Invalid(location, $"'{parameter.name}' requires a boolean.");
+                        var boolean = token.Value<bool>();
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, boolean ? "true" : "false");
+                        values[parameterIndex] = boolean;
+                        literals[parameterIndex] = boolean ? "true" : "false";
+                        continue;
+                    }
                     if (parameter.type == "path")
                     {
                         if (arguments[parameter.name] is not JArray points || points.Count == 0)
@@ -75,13 +89,13 @@ namespace Core.Scripting.Editor
                     string value;
                     if (parameter.type == "string")
                     {
-                        value = RequiredString(arguments[parameter.name], location, parameter.name);
+                        value = RequiredString(authoredValue, location, parameter.name);
                         values[parameterIndex] = value;
                         literals[parameterIndex] = LuaString(value);
                     }
                     else if (parameter.type == "number")
                     {
-                        var token = arguments[parameter.name];
+                        var token = authoredValue;
                         if (token == null || (token.Type != JTokenType.Integer && token.Type != JTokenType.Float))
                             throw Invalid(location, $"'{parameter.name}' requires a finite number.");
                         var number = token.Value<double>();
