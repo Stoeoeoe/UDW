@@ -126,6 +126,26 @@ export function listDialogueDescriptors(dialogues: DialogueDocument[]): Resource
   }));
 }
 
+export function listCutsceneDescriptors(
+  cutscenes: import('../types/cutscene').Cutscene[],
+  labels: Record<string, string> = {},
+  folders: Record<string, string> = {},
+): ResourceDescriptor[] {
+  return cutscenes.map((scene) => ({
+    type: 'cutscene',
+    kind: 'cutscene',
+    id: scene.id,
+    name: labels[scene.id] || scene.id,
+    folderPath: normalizeFolderPath(folders[scene.id]),
+    saveUnitId: getEditorResourceSaveUnitId('cutscene', scene.id),
+    document: createEditorResourceDocument({
+      type: 'cutscene',
+      id: scene.id,
+      name: labels[scene.id] || scene.id,
+    }),
+  }));
+}
+
 export function listVariableDescriptors(variables: GameVariable[]): ResourceDescriptor[] {
   return variables.map((variable) => ({
     type: 'variable',
@@ -169,6 +189,7 @@ export interface AllResourceDescriptors {
   entities: ResourceDescriptor[];
   items: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
+  cutscenes: ResourceDescriptor[];
   variables: ResourceDescriptor[];
 }
 
@@ -179,6 +200,9 @@ export function buildAllResourceDescriptors(state: {
   entityTypes: EntityType[];
   items: Item[];
   dialogues: Map<string, DialogueDocument>;
+  cutscenes?: import('../types/cutscene').Cutscene[];
+  cutsceneLabels?: Record<string, string>;
+  cutsceneFolders?: Record<string, string>;
   gameVariables: GameVariable[];
 }): AllResourceDescriptors {
   return {
@@ -189,6 +213,11 @@ export function buildAllResourceDescriptors(state: {
     items: listItemDescriptors(state.items),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
     variables: listVariableDescriptors(state.gameVariables),
+    cutscenes: listCutsceneDescriptors(
+      state.cutscenes ?? [],
+      state.cutsceneLabels,
+      state.cutsceneFolders,
+    ),
   };
 }
 
@@ -204,14 +233,15 @@ export function normalizeFolderPath(folderPath: string | null | undefined): stri
 
 export function canCreateResourceKind(
   kind: ResourceKind,
-): kind is 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' {
+): kind is 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' | 'cutscene' {
   return (
     kind === 'location' ||
     kind === 'tileset' ||
     kind === 'actor' ||
     kind === 'entity' ||
     kind === 'item' ||
-    kind === 'dialogue'
+    kind === 'dialogue' ||
+    kind === 'cutscene'
   );
 }
 
@@ -224,6 +254,11 @@ export async function setResourceFolderPath(
   const store = useEditorStore.getState();
 
   switch (kind) {
+    case 'cutscene':
+      store.editCutscenes((_documents, _labels, folders) => {
+        folders[id] = normalizedFolderPath;
+      });
+      break;
     case 'actor':
       await store.updateActor(id, { folderPath: normalizedFolderPath });
       break;
@@ -277,6 +312,8 @@ function listDescriptorsForKind(
   state: ReturnType<typeof useEditorStore.getState>,
 ): ResourceDescriptor[] {
   switch (kind) {
+    case 'cutscene':
+      return listCutsceneDescriptors(state.cutscenes, state.cutsceneLabels, state.cutsceneFolders);
     case 'location':
       return listLocationDescriptors(state.maps);
     case 'tileset':

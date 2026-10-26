@@ -26,6 +26,8 @@ function filterCommandPaletteMatch(
       return match.resource.type === 'actor';
     case 'items':
       return match.resource.type === 'item';
+    case 'cutscenes':
+      return match.resource.type === 'cutscene';
     case 'dialogues':
       return match.resource.type === 'dialogue';
     default:
@@ -40,6 +42,8 @@ export function useCommandPalette() {
   const actors = useEditorStore((state) => state.actors);
   const items = useEditorStore((state) => state.items);
   const dialogues = useEditorStore((state) => state.dialogues);
+  const cutscenes = useEditorStore((s) => s.cutscenes);
+  const cutsceneLabels = useEditorStore((s) => s.cutsceneLabels);
 
   const recentResourceKeys = useWorkspaceStore((state) => state.recentResourceKeys);
   const openDocument = useWorkspaceStore((state) => state.openDocument);
@@ -59,8 +63,10 @@ export function useCommandPalette() {
         actors,
         items,
         dialogues: Array.from(dialogues.values()),
+        cutscenes,
+        cutsceneLabels,
       }),
-    [actors, dialogues, entityTypes, items, maps, tilesets],
+    [actors, dialogues, cutscenes, cutsceneLabels, entityTypes, items, maps, tilesets],
   );
 
   const resourceMap = React.useMemo(
@@ -108,7 +114,7 @@ export function useCommandPalette() {
       markRecentResource(result.resource.key);
       close();
     },
-    [activateTab, close, markRecentResource, openDocument, supportsPreviewTab],
+    [activateTab, close, markRecentResource, openDocument],
   );
 
   React.useEffect(() => {

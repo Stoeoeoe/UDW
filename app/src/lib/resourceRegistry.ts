@@ -23,8 +23,11 @@ import {
   resourceIdToFileStem,
 } from './resourceIds';
 import { splitTileRef } from './tileRef';
+import type { Cutscene } from '../types/cutscene';
+import { parseCutscene } from './cutscenes';
 
 export interface ResourceDocuments {
+  cutscene: Cutscene;
   project: Project;
   location: GameMap;
   tileset: Tileset;
@@ -44,7 +47,8 @@ export type ResourceFolder =
   | 'npcs'
   | 'items'
   | 'entities'
-  | 'dialogues';
+  | 'dialogues'
+  | 'cutscenes';
 
 export interface ResourceDefinition<K extends ResourceDocumentKind = ResourceDocumentKind> {
   kind: K;
@@ -172,7 +176,10 @@ function normalizeMap(map: GameMap, prefix: string): GameMap {
       paths: collection(spatial.paths, localDefinition),
       areas: collection(spatial.areas, localDefinition),
       anchors: collection(spatial.anchors, localDefinition),
-      triggers: collection(spatial.triggers, localDefinition),
+      triggers: collection(spatial.triggers, (trigger) => ({
+        ...localDefinition(trigger),
+        cutsceneId: resourceReference(trigger.cutsceneId, prefix),
+      })),
       collisions: collection(spatial.collisions, localDefinition),
     },
     metadata: map.metadata && {
@@ -305,6 +312,14 @@ export function normalizeProject(project: Project): Project {
 
 /** Pure registry shared by Electron, persistence and the UI; no store, browser or schema imports. */
 export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition<K> } = {
+  cutscene: {
+    kind: 'cutscene',
+    folder: 'cutscenes',
+    extension: '.runtime.cutscene.json',
+    schemaFile: 'cutscene.schema.json',
+    idScope: 'resource',
+    normalize: parseCutscene,
+  },
   project: {
     kind: 'project',
     folder: '',
@@ -403,6 +418,7 @@ export function normalizeResourceDocument<K extends ResourceDocumentKind>(
 }
 export function resourceSchemaPath(kind: ResourceDocumentKind): string {
   const definition = resourceRegistry[kind];
+  if (kind === 'cutscene') return '../schemas/cutscene.schema.json';
   return `${definition.folder ? '../../' : '../'}schemas/${definition.schemaFile}`;
 }
 /** Logical filename used for original-file lookup; physical filenames are resolved separately. */

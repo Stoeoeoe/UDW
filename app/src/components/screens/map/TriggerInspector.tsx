@@ -16,6 +16,11 @@ import {
 
 const TRIGGER_TYPES: { value: TriggerType; label: string; description: string }[] = [
   {
+    value: 'cutscene',
+    label: 'Cutscene',
+    description: 'Starts a cutscene for this map after location reveal.',
+  },
+  {
     value: 'locationLinkTrigger',
     label: 'Location Link Trigger',
     description: 'Fires a map transition when an actor enters this zone.',
@@ -27,6 +32,7 @@ const TriggerInspectorContent: React.FC<{ trigger: MapTrigger }> = ({ trigger })
   const projectTileSize = useEditorStore((s) => s.project?.tileSize ?? 16);
   const currentMap = useEditorStore((s) => s.currentMap);
   const maps = useEditorStore((s) => s.maps);
+  const cutscenes = useEditorStore((s) => s.cutscenes);
   const updateLocationLink = useEditorStore((s) => s.updateLocationLink);
   const removeLocationLink = useEditorStore((s) => s.removeLocationLink);
   const selectLink = useEditorStore((s) => s.selectLink);
@@ -103,6 +109,36 @@ const TriggerInspectorContent: React.FC<{ trigger: MapTrigger }> = ({ trigger })
         </Field>
       </InspectorSection>
 
+      {trigger.type === 'cutscene' && (
+        <InspectorSection title="Cutscene">
+          <Field
+            label="Cutscene"
+            helperText="Only cutscenes on this map can be selected. Busy requests do not queue."
+          >
+            <CompactSelect
+              value={trigger.cutsceneId ?? ''}
+              onChange={(event) => update({ cutsceneId: event.target.value })}
+            >
+              <option value="">Select a cutscene</option>
+              {trigger.cutsceneId &&
+                !cutscenes.some(
+                  (c) => c.id === trigger.cutsceneId && c.mapId === currentMap?.id,
+                ) && (
+                  <option value={trigger.cutsceneId}>
+                    Missing or wrong map: {trigger.cutsceneId}
+                  </option>
+                )}
+              {cutscenes
+                .filter((c) => c.mapId === currentMap?.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id}
+                  </option>
+                ))}
+            </CompactSelect>
+          </Field>
+        </InspectorSection>
+      )}
       <InspectorSection title="Shape">
         <Field label="Shape Type">
           <CompactSelect

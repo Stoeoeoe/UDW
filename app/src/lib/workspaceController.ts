@@ -183,6 +183,16 @@ export function applyTabSession(tab: WorkspaceTab | null): void {
     return;
   }
 
+  if (tab.document.kind === 'cutscene') {
+    editor.setMode('cutscenes');
+    useEditorStore.setState({ selectedCutsceneId: tab.document.cutsceneId });
+    return;
+  }
+  if (tab.document.kind === 'cutscenes') {
+    editor.setMode('cutscenes');
+    return;
+  }
+
   if (tab.document.kind === 'dialogues') {
     editor.setMode('dialogues');
     return;

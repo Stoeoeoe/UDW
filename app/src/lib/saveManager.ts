@@ -4,6 +4,8 @@ import { resourceFileKey, resourceRegistry, resourceSchemaPath } from './resourc
  */
 
 import { create } from 'zustand';
+import { validateCutsceneTriggers } from './cutscenes';
+import type { Cutscene } from '../types/cutscene';
 import { fileSystem } from './fileSystem';
 import { DialogueDocument, Map as GameMap, Project, Tileset } from '../types/schema';
 import { serializeMap } from './mapMigration';
@@ -38,6 +40,7 @@ interface SaveStore extends SaveState {
 }
 
 interface SaveAccessors {
+  getCutscenes?: () => Cutscene[];
   getMapById?: (mapId: string) => GameMap | null;
   getProject?: () => Project | null;
   getTilesetById?: (tilesetId: string) => Tileset | null;
@@ -175,6 +178,7 @@ const mapSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let projectSaveTimer: ReturnType<typeof setTimeout> | null = null;
 const dialogueDocSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const tilesetSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const resourceSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const DEBOUNCE_DELAY = 1000;
 const SAVED_DISPLAY_DURATION = 2000;
@@ -212,11 +216,31 @@ export function markSaveUnitDirty(saveUnitId: string): void {
   useSaveStore.getState().markDirty(saveUnitId);
 }
 
+/** Use the normal autosave preference and debounce for individual resources. */
+export function scheduleSaveUnit(saveUnitId: string, save: () => Promise<void>): void {
+  cancelPendingSaveUnit(saveUnitId);
+  markSaveUnitDirty(saveUnitId);
+  if (!shouldAutosave()) return;
+  resourceSaveTimers.set(
+    saveUnitId,
+    setTimeout(() => {
+      resourceSaveTimers.delete(saveUnitId);
+      // The save implementation records failures on its save unit.
+      void save().catch(() => undefined);
+    }, DEBOUNCE_DELAY),
+  );
+}
+
 export function clearSaveUnit(saveUnitId: string): void {
   useSaveStore.getState().clearUnit(saveUnitId);
 }
 
 export function cancelPendingSaveUnit(saveUnitId: string): void {
+  const resourceTimer = resourceSaveTimers.get(saveUnitId);
+  if (resourceTimer) {
+    clearTimeout(resourceTimer);
+    resourceSaveTimers.delete(saveUnitId);
+  }
   if (saveUnitId.startsWith('location:')) {
     const mapId = saveUnitId.slice('location:'.length);
     const existing = mapSaveTimers.get(mapId);
@@ -268,6 +292,8 @@ export async function saveMapImmediate(map: GameMap): Promise<void> {
   useSaveStore.getState().markSaving(saveUnitId);
 
   try {
+    const errors = validateCutsceneTriggers(map, saveAccessors.getCutscenes?.() ?? []);
+    if (errors.length) throw new Error(errors.join('; '));
     await fileSystem.saveJson(
       resourceRegistry.location.folder,
       resourceFileKey('location', map.id),
@@ -312,7 +338,8 @@ export async function saveProjectImmediate(
   useSaveStore.getState().markSaving(saveUnitId);
 
   try {
-    const { entityTypes: _legacyEntityTypes, ...projectToSave } = project;
+    const projectToSave = { ...project };
+    delete projectToSave.entityTypes;
     await fileSystem.saveJson(
       resourceRegistry.project.folder,
       resourceFileKey('project', project.id),
@@ -400,6 +427,8 @@ export async function saveDialogueImmediate(dialogue: DialogueDocument): Promise
 }
 
 export async function flushPendingSaves(): Promise<void> {
+  for (const timer of resourceSaveTimers.values()) clearTimeout(timer);
+  resourceSaveTimers.clear();
   for (const timer of mapSaveTimers.values()) {
     clearTimeout(timer);
   }

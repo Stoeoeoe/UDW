@@ -495,7 +495,7 @@
         },
         "type": {
           "type": "string",
-          "enum": ["locationLinkTrigger"]
+          "enum": ["locationLinkTrigger", "cutscene"]
         },
         "shape": {
           "type": "string",
@@ -537,8 +537,31 @@
           "items": {
             "type": "string"
           }
+        },
+        "cutsceneId": {
+          "type": "string",
+          "pattern": "^[^\\s:]+:[^\\s]+$"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cutscene"
+              }
+            }
+          },
+          "then": {
+            "required": ["cutsceneId"]
+          },
+          "else": {
+            "not": {
+              "required": ["cutsceneId"]
+            }
+          }
+        }
+      ]
     },
     "MapCollision": {
       "type": "object",

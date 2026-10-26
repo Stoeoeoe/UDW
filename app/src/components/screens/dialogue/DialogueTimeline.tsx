@@ -1,4 +1,5 @@
 import React from 'react';
+import { SequenceCard, SequenceToolbar } from '../../common/SequenceEditor';
 import { Badge, Box, Button, Flex, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon, WarningIcon } from '@chakra-ui/icons';
 import {
@@ -42,9 +43,9 @@ interface DialogueTimelineProps {
 }
 
 const DIALOGUE_SURFACES = {
-  defaultBg: '#242a34',
-  defaultBorder: '#3b4658',
-  defaultHoverBorder: '#556277',
+  defaultBg: 'editorSequenceBg',
+  defaultBorder: 'editorSequenceBorder',
+  defaultHoverBorder: 'editorSequenceHoverBorder',
   selectedBorder: '#63b3ed',
   commentBg: '#20252d',
   commentBorder: '#4a5360',
@@ -177,9 +178,9 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             : DIALOGUE_SURFACES.defaultBg;
 
     return (
-      <Box
+      <SequenceCard
         key={node.id}
-        role="group"
+        selected={selected}
         onClick={(event) => {
           event.stopPropagation();
           setSelectedNodeId(node.id);
@@ -191,7 +192,6 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             });
           }
         }}
-        border="1px"
         borderStyle={isComment ? 'dashed' : 'solid'}
         borderColor={
           selected
@@ -208,13 +208,9 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
               ? undefined
               : typeColor
         }
-        borderRadius="md"
         bg={cardBg}
         p={isComment ? 2 : 3}
-        mb={2}
-        cursor="pointer"
         opacity={isComment ? 0.92 : 1}
-        boxShadow={selected ? '0 0 0 1px rgba(99, 179, 237, 0.22)' : 'none'}
         _hover={{
           borderColor: selected
             ? DIALOGUE_SURFACES.selectedBorder
@@ -383,7 +379,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             <Box w="full" h="1px" bg={DIALOGUE_SURFACES.endLine} />
           </Flex>
         )}
-      </Box>
+      </SequenceCard>
     );
   };
 
@@ -412,16 +408,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
 
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="hidden" bg="editorWorkspaceBg">
-      <Flex
-        px={4}
-        py={2}
-        bg="editorSectionBg"
-        borderBottom="1px"
-        borderColor="editorShellBorder"
-        align="center"
-        gap={2}
-        minH="40px"
-      >
+      <SequenceToolbar>
         <Text fontSize="13px" color="gray.50" fontWeight="semibold" flexShrink={0}>
           {selectedDialogue.name}
         </Text>
@@ -468,7 +455,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             {isTimelineHeaderCollapsed ? '> info' : 'v info'}
           </Button>
         </HStack>
-      </Flex>
+      </SequenceToolbar>
 
       <Box
         flex={1}

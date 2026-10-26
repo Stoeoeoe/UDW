@@ -14,3 +14,4 @@ dist-electron/
 *.log
 release/
 .claude/settings.local.json
+.playwright-mcp/

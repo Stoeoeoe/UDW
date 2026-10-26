@@ -105,6 +105,9 @@ export const theme = extendTheme({
       editorFieldBorderHover: {
         default: '#2b3b4d',
       },
+      editorSequenceBg: { default: '#242a34' },
+      editorSequenceBorder: { default: '#3b4658' },
+      editorSequenceHoverBorder: { default: '#556277' },
       editorInlineBg: {
         default: '#12151a',
       },

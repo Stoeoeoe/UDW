@@ -1,7 +1,11 @@
 import { defineConfig } from 'vitest/config';
+import path from 'node:path';
 
 // Keep unit tests independent of Electron builds and Storybook browser setup.
 export default defineConfig({
+  resolve: {
+    alias: { fengari: path.resolve('node_modules/fengari-web/dist/fengari-web.bundle.js') },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

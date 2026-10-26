@@ -287,7 +287,7 @@ export interface SpatialPrimitives {
 // Map Triggers — collision-less zones that fire game events
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TriggerType = 'locationLinkTrigger';
+export type TriggerType = 'locationLinkTrigger' | 'cutscene';
 
 export type TriggerShape = 'rectangle' | 'polygon';
 
@@ -295,6 +295,7 @@ export interface MapTrigger {
   id: string;
   label?: string;
   type: TriggerType;
+  cutsceneId?: string;
   shape: TriggerShape;
   // Rectangle: [x, y] origin + width/height via size.  Polygon: list of absolute pixel vertices.
   position: [number, number]; // Pixel coords [x, y] — top-left for rect, first vertex for polygon
@@ -606,6 +607,7 @@ export interface EntityType extends DisplayNamedEditorResource {
 }
 
 export type EntityCategory =
+  | 'npc' // Permanent placed character instances
   | 'object' // Physical world objects
   | 'trigger' // Invisible trigger zones
   | 'spawn' // Spawn points

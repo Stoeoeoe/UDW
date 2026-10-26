@@ -5,6 +5,7 @@ export interface TopTabbedEditorTab<T extends string> {
   id: T;
   label: string;
   badge?: number;
+  issueCount?: number;
 }
 
 interface TopTabbedEditorLayoutProps<T extends string> {
@@ -15,6 +16,7 @@ interface TopTabbedEditorLayoutProps<T extends string> {
   mainContent: React.ReactNode;
   sidebarContent?: React.ReactNode;
   footerContent?: React.ReactNode;
+  headerActions?: React.ReactNode;
   sidebarWidth?: string;
 }
 
@@ -26,22 +28,26 @@ export function TopTabbedEditorLayout<T extends string>({
   mainContent,
   sidebarContent,
   footerContent,
+  headerActions,
   sidebarWidth = '320px',
 }: TopTabbedEditorLayoutProps<T>) {
   return (
     <Flex direction="column" h="full" overflow="hidden">
       <HStack
         px={4}
-        h="10"
+        minH="10"
+        flexWrap="wrap"
         bg="editorPanelBg"
         borderBottom="1px"
         borderColor="editorShellBorder"
         flexShrink={0}
         spacing={1}
       >
-        <Text fontWeight="bold" fontSize="sm" color="editorText" mr={3}>
-          {title}
-        </Text>
+        {title && (
+          <Text fontWeight="bold" fontSize="sm" color="editorText" mr={3}>
+            {title}
+          </Text>
+        )}
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = tab.badge ?? 0;
@@ -71,9 +77,19 @@ export function TopTabbedEditorLayout<T extends string>({
                   {count}
                 </Badge>
               )}
+              {!!tab.issueCount && (
+                <Badge ml={1} fontSize="9px" colorScheme="red">
+                  {tab.issueCount} {tab.issueCount === 1 ? 'issue' : 'issues'}
+                </Badge>
+              )}
             </Button>
           );
         })}
+        {headerActions && (
+          <HStack ml="auto" spacing={2}>
+            {headerActions}
+          </HStack>
+        )}
       </HStack>
 
       <Flex flex={1} overflow="hidden">

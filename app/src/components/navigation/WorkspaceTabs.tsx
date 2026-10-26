@@ -3,6 +3,7 @@ import { Box, HStack, Icon, IconButton, Text, Tooltip } from '@chakra-ui/react';
 import { CloseIcon } from '@chakra-ui/icons';
 import {
   FiBox,
+  FiFilm,
   FiCode,
   FiGrid,
   FiMap,
@@ -41,6 +42,9 @@ function getDocumentIcon(tab: WorkspaceTab) {
       return FiUsers;
     case 'items':
       return FiPackage;
+    case 'cutscenes':
+    case 'cutscene':
+      return FiFilm;
     case 'dialogues':
       return FiMessageSquare;
     case 'scripting':

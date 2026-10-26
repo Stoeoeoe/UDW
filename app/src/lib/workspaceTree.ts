@@ -15,6 +15,7 @@ import {
   listEntityDescriptors,
   listItemDescriptors,
   listDialogueDescriptors,
+  listCutsceneDescriptors,
   ResourceDescriptor,
 } from './resourceAdapters';
 import { createWorkspaceScreenDocument } from './workspaceRouting';
@@ -28,6 +29,9 @@ export interface WorkspaceTreeInput {
   entityTypes: EntityType[];
   items: Item[];
   dialogues: DialogueDocument[];
+  cutscenes?: import('../types/cutscene').Cutscene[];
+  cutsceneLabels?: Record<string, string>;
+  cutsceneFolders?: Record<string, string>;
   gameVariables: GameVariable[];
 }
 
@@ -89,6 +93,13 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
     entityNodes,
     itemNodes,
     dialogueNodes,
+    buildResourceSection(
+      'cutscene',
+      'Cutscenes',
+      'cutscene',
+      listCutsceneDescriptors(input.cutscenes ?? [], input.cutsceneLabels, input.cutsceneFolders),
+      'cutscene',
+    ),
     {
       id: 'scripting',
       kind: 'leaf',
@@ -229,6 +240,8 @@ function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
       return 'entities';
     case 'item':
       return 'items';
+    case 'cutscene':
+      return 'cutscenes';
     case 'dialogue':
       return 'dialogues';
     case 'variable':

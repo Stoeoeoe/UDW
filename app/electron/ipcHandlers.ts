@@ -8,8 +8,28 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import chokidar from 'chokidar';
 import type { FSWatcher } from 'chokidar';
+import { ScriptingManifestWatcher } from './scriptingManifestWatcher';
 
 export function setupIpcHandlers(win: BrowserWindow | null) {
+  const manifestWatcher = new ScriptingManifestWatcher((update) => {
+    win?.webContents.send('app:scripting-manifest-changed', update);
+  });
+  win?.once('closed', () => {
+    void manifestWatcher.close();
+  });
+  ipcMain.handle('app:scripting-manifest-select', async () => {
+    if (!win) return null;
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Choose Lua manifest location',
+      filters: [{ name: 'Lua bindings manifest', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+  ipcMain.handle('app:scripting-manifest-watch', (_event, filename: string | null) =>
+    manifestWatcher.watch(filename),
+  );
+  ipcMain.handle('app:scripting-manifest-refresh', () => manifestWatcher.refresh());
   // Map of active chokidar watchers per projectPath so we can stop them when switching projects
   const activeWatchers: Map<string, FSWatcher[]> = new Map();
 

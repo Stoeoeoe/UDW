@@ -1,12 +1,19 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Box, Text, Flex, Spinner, HStack, IconButton, Tooltip } from '@chakra-ui/react';
+import { MapPreviewAnnotations } from './MapPreviewAnnotations';
 import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveTileAt } from '../../lib/mapUtils';
 import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
 import { Map as GameMap, Tileset } from '../../types/schema';
 import { useProject } from '../../hooks/useProject';
+import { pickMapPosition, type MapPosition, type PlacementMode } from '../../lib/mapPosition';
 
+export interface MapPositionPick {
+  mode: PlacementMode;
+  onPick: (position: MapPosition) => void;
+  onHover: (position: MapPosition | null) => void;
+}
 interface MapPreviewPickerProps {
   /** The map to render and pick from */
   mapId: string;
@@ -14,16 +21,44 @@ interface MapPreviewPickerProps {
   selectedPosition?: [number, number] | null;
   /** Called when the user clicks a tile */
   onSelect?: (x: number, y: number) => void;
+  positionPick?: MapPositionPick;
   /** Container display size in px */
   width?: number;
   height?: number;
   /** Whether clicking is enabled */
   interactive?: boolean;
+  /** Disable wheel capture in scrollable editors; explicit zoom controls remain available. */
+  wheelZoom?: boolean;
+  /** Use the primary mouse button to navigate a standalone preview rather than pick tiles. */
+  leftDragPan?: boolean;
+  initialZoom?: number;
+  /** Tile coordinates to frame when the selected step changes. */
+  focusPositions?: [number, number][];
+  focusKey?: string;
   /** Optional non-tile overlays such as trigger areas or arrival markers */
   overlays?: MapPreviewOverlay[];
 }
 
 export type MapPreviewOverlay =
+  | { kind: 'placement'; position: [number, number]; label: string; icon?: string }
+  | {
+      kind: 'actor';
+      actorId?: string;
+      icon?: string;
+      position: [number, number];
+      label: string;
+      facing?: [number, number] | null;
+      ghost?: boolean;
+      opacity?: number;
+    }
+  | {
+      kind: 'segment';
+      from: [number, number];
+      to: [number, number];
+      label: string;
+      dashed?: boolean;
+      opacity?: number;
+    }
   | {
       kind: 'trigger';
       position: [number, number];
@@ -55,7 +90,6 @@ function renderToCanvas(
   sprites: Map<string, HTMLImageElement>,
   hovered: [number, number] | null,
   selectedPosition: [number, number] | null | undefined,
-  overlays: MapPreviewOverlay[] | undefined,
   tileSize: number,
 ) {
   const ts = NATIVE_TILE_PX;
@@ -145,95 +179,6 @@ function renderToCanvas(
     ctx.stroke();
   }
 
-  if (overlays?.length) {
-    const drawArrivalArrow = (
-      position: [number, number],
-      facing: [number, number],
-      color: string,
-    ) => {
-      const centerX = position[0] * ts + ts / 2;
-      const centerY = position[1] * ts + ts / 2;
-      const [dx, dy] = facing;
-      const length = Math.sqrt(dx * dx + dy * dy) || 1;
-      const normX = dx / length;
-      const normY = dy / length;
-      const arrowLength = ts * 0.65;
-      const endX = centerX + normX * arrowLength;
-      const endY = centerY + normY * arrowLength;
-      const wingScale = ts * 0.18;
-      const perpX = -normY;
-      const perpY = normX;
-
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, ts * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.lineTo(endX, endY);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(endX, endY);
-      ctx.lineTo(
-        endX - normX * ts * 0.25 + perpX * wingScale,
-        endY - normY * ts * 0.25 + perpY * wingScale,
-      );
-      ctx.moveTo(endX, endY);
-      ctx.lineTo(
-        endX - normX * ts * 0.25 - perpX * wingScale,
-        endY - normY * ts * 0.25 - perpY * wingScale,
-      );
-      ctx.stroke();
-    };
-
-    for (const overlay of overlays) {
-      if (overlay.kind === 'trigger') {
-        const [x, y] = overlay.position;
-        const [w, h] = overlay.size ?? [1, 1];
-        const color = overlay.color ?? 'rgba(245, 158, 11, 0.95)';
-
-        ctx.fillStyle = color.replace('0.95', '0.20');
-        ctx.fillRect(x * ts, y * ts, w * ts, h * ts);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(x * ts + 0.75, y * ts + 0.75, w * ts - 1.5, h * ts - 1.5);
-      }
-
-      if (overlay.kind === 'anchor') {
-        const [ax, ay] = overlay.position;
-        const centerX = ax * ts + ts / 2;
-        const centerY = ay * ts + ts / 2;
-        const color = overlay.color ?? 'rgba(246, 173, 85, 0.95)';
-        const markerSize = ts * 0.18;
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, markerSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(centerX - ts * 0.35, centerY);
-        ctx.lineTo(centerX + ts * 0.35, centerY);
-        ctx.moveTo(centerX, centerY - ts * 0.35);
-        ctx.lineTo(centerX, centerY + ts * 0.35);
-        ctx.stroke();
-        drawArrivalArrow(overlay.position, overlay.facing ?? [0, 1], color);
-      }
-
-      if (overlay.kind === 'arrival') {
-        drawArrivalArrow(
-          overlay.position,
-          overlay.facing ?? [0, 1],
-          overlay.color ?? 'rgba(34, 211, 238, 0.95)',
-        );
-      }
-    }
-  }
-
   // Hover tile
   if (hovered) {
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -247,9 +192,15 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   mapId,
   selectedPosition,
   onSelect,
+  positionPick,
   width = 480,
   height = 320,
   interactive = true,
+  wheelZoom = true,
+  leftDragPan = false,
+  initialZoom = 2,
+  focusPositions,
+  focusKey,
   overlays,
 }) => {
   const { tileSize } = useProject();
@@ -263,13 +214,15 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   // Zoom: CSS scale factor applied to the canvas (1 = fit-to-container, higher = zoom in)
-  const [zoom, setZoom] = useState(2);
+  const [zoom, setZoom] = useState(initialZoom);
   // Pan offset in CSS pixels (from top-left of the canvas at zoom=1)
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const isPanningRef = useRef(false);
+  const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ mx: 0, my: 0, px: 0, py: 0 });
 
-  const map = maps.find((m) => m.id === mapId);
+  const currentMap = useEditorStore((s) => s.currentMap);
+  const map = currentMap?.id === mapId ? currentMap : maps.find((m) => m.id === mapId);
 
   // Fit-to-container base scale: make the whole map visible at zoom=1
   const baseScale = map
@@ -289,36 +242,51 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
       const minX = Math.min(0, width - dw);
       const minY = Math.min(0, height - dh);
       return {
-        x: Math.max(minX, Math.min(0, px)),
-        y: Math.max(minY, Math.min(0, py)),
+        x: dw < width ? (width - dw) / 2 : Math.max(minX, Math.min(0, px)),
+        y: dh < height ? (height - dh) / 2 : Math.max(minY, Math.min(0, py)),
       };
     },
     [map, width, height, baseScale],
   );
 
-  // Reset pan when zoom resets to 1
+  // Keep a fitted map centered as the pane changes size.
   useEffect(() => {
-    if (zoom === 1) setPan({ x: 0, y: 0 });
-    else setPan((p) => clampPan(p.x, p.y, zoom));
+    setPan((p) => clampPan(p.x, p.y, zoom));
   }, [zoom, clampPan]);
+
+  const focusSignature = JSON.stringify(focusPositions ?? []);
+  useEffect(() => {
+    const points: [number, number][] = JSON.parse(focusSignature);
+    if (!map || !points.length) return;
+    const xs = points.map((p) => p[0] * NATIVE_TILE_PX),
+      ys = points.map((p) => p[1] * NATIVE_TILE_PX);
+    const minX = Math.min(...xs),
+      maxX = Math.max(...xs),
+      minY = Math.min(...ys),
+      maxY = Math.max(...ys);
+    const scale = Math.min(
+      Math.max(1, width - 96) / Math.max(160, maxX - minX),
+      Math.max(1, height - 96) / Math.max(160, maxY - minY),
+    );
+    const next = Math.max(1, Math.min(8, scale / baseScale));
+    setZoom(next);
+    setPan(
+      clampPan(
+        width / 2 - ((minX + maxX) / 2) * baseScale * next,
+        height / 2 - ((minY + maxY) / 2) * baseScale * next,
+        next,
+      ),
+    );
+  }, [focusSignature, focusKey, map, width, height, baseScale, clampPan]);
 
   // ── Draw ──────────────────────────────────────────────────────────────────
   const draw = useCallback(() => {
     if (!canvasRef.current || !map) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-    renderToCanvas(
-      ctx,
-      map,
-      tilesets,
-      loadedSprites,
-      hovered,
-      selectedPosition,
-      overlays,
-      tileSize,
-    );
+    renderToCanvas(ctx, map, tilesets, loadedSprites, hovered, selectedPosition, tileSize);
     setIsLoading(false);
-  }, [map, tilesets, loadedSprites, hovered, selectedPosition, overlays, tileSize]);
+  }, [map, tilesets, loadedSprites, hovered, selectedPosition, tileSize]);
 
   useEffect(() => {
     draw();
@@ -341,6 +309,18 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
     [map, pan, effectiveScale],
   );
 
+  const getPosition = useCallback(
+    (e: React.MouseEvent): MapPosition | null => {
+      if (!map || !containerRef.current || !positionPick) return null;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left - pan.x) / (NATIVE_TILE_PX * effectiveScale);
+      const y = (e.clientY - rect.top - pan.y) / (NATIVE_TILE_PX * effectiveScale);
+      if (x < 0 || y < 0 || x >= map.width || y >= map.height) return null;
+      return pickMapPosition(x, y, tileSize, positionPick.mode);
+    },
+    [map, pan, effectiveScale, tileSize, positionPick],
+  );
+
   // ── Mouse events ─────────────────────────────────────────────────────────
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -350,29 +330,45 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
         setPan(clampPan(panStartRef.current.px + dx, panStartRef.current.py + dy, zoom));
         return;
       }
+      if (positionPick) {
+        positionPick.onHover(getPosition(e));
+        return;
+      }
       if (!interactive) return;
       const tile = getTile(e);
       setHovered(tile);
     },
-    [interactive, getTile, clampPan, zoom],
+    [interactive, getTile, clampPan, zoom, positionPick, getPosition],
   );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      // Middle mouse or right mouse → pan
-      if (e.button === 1 || e.button === 2) {
+      if (e.button === 1 || e.button === 2 || (e.button === 0 && leftDragPan)) {
         e.preventDefault();
         isPanningRef.current = true;
+        setIsPanning(true);
         panStartRef.current = { mx: e.clientX, my: e.clientY, px: pan.x, py: pan.y };
       }
     },
-    [pan],
+    [pan, leftDragPan],
   );
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      const dragged =
+        Math.hypot(e.clientX - panStartRef.current.mx, e.clientY - panStartRef.current.my) >= 4;
       if (isPanningRef.current) {
         isPanningRef.current = false;
+        setIsPanning(false);
+        if (e.button === 0 && !dragged && positionPick) {
+          const point = getPosition(e);
+          if (point) positionPick.onPick(point);
+        }
+        return;
+      }
+      if (e.button === 0 && positionPick) {
+        const point = getPosition(e);
+        if (point) positionPick.onPick(point);
         return;
       }
       if (e.button === 0 && interactive && onSelect) {
@@ -380,17 +376,19 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
         if (tile) onSelect(tile[0], tile[1]);
       }
     },
-    [interactive, onSelect, getTile],
+    [interactive, onSelect, getTile, positionPick, getPosition],
   );
 
   const handleMouseLeave = useCallback(() => {
     setHovered(null);
+    positionPick?.onHover(null);
     isPanningRef.current = false;
-  }, []);
+    setIsPanning(false);
+  }, [positionPick]);
 
   // Scroll wheel zoom — zooms toward cursor position
   const handleWheel = useCallback(
-    (e: React.WheelEvent<HTMLDivElement>) => {
+    (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (!map || !containerRef.current) return;
@@ -413,11 +411,19 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
     [map, pan, baseScale, clampPan],
   );
 
+  // A native non-passive listener lets wheel zoom consume scrolling inside the preview.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || !wheelZoom) return;
+    element.addEventListener('wheel', handleWheel, { passive: false });
+    return () => element.removeEventListener('wheel', handleWheel);
+  }, [handleWheel, wheelZoom, map]);
+
   const zoomIn = () => setZoom((z) => Math.min(8, +(z * 1.5).toFixed(2)));
   const zoomOut = () => setZoom((z) => Math.max(1, +(z / 1.5).toFixed(2)));
   const zoomReset = () => {
-    setZoom(2);
-    setPan({ x: 0, y: 0 });
+    setZoom(1);
+    setPan(clampPan(0, 0, 1));
   };
 
   if (!map) {
@@ -452,17 +458,23 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
         borderRadius="md"
         border="1px solid rgba(255,255,255,0.08)"
         cursor={
-          isPanningRef.current ? 'grabbing' : interactive && onSelect ? 'crosshair' : 'default'
+          isPanning
+            ? 'grabbing'
+            : positionPick
+              ? 'crosshair'
+              : leftDragPan
+                ? 'grab'
+                : interactive && onSelect
+                  ? 'crosshair'
+                  : 'default'
         }
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        onWheelCapture={handleWheel}
-        onWheel={handleWheel}
         onContextMenu={(e) => e.preventDefault()}
         userSelect="none"
-        overscrollBehavior="contain"
+        overscrollBehavior={wheelZoom ? 'contain' : undefined}
       >
         {isLoading && (
           <Flex position="absolute" inset={0} align="center" justify="center" zIndex={2}>
@@ -484,6 +496,14 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
             imageRendering: 'pixelated',
             pointerEvents: 'none', // container handles events
           }}
+        />
+
+        <MapPreviewAnnotations
+          overlays={overlays}
+          width={width}
+          height={height}
+          scale={effectiveScale}
+          pan={pan}
         />
 
         {/* Coords overlay */}
@@ -527,7 +547,8 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
       {/* Zoom controls below canvas */}
       <HStack spacing={1} mt={1} justify="space-between">
         <Text fontSize="10px" color="gray.600">
-          Scroll to zoom · Right-drag to pan
+          {wheelZoom ? 'Scroll to zoom · ' : ''}
+          {leftDragPan ? 'Drag to pan' : 'Right-drag to pan'}
         </Text>
         <HStack spacing={1}>
           <Tooltip label="Zoom out" placement="top" hasArrow>
@@ -542,9 +563,10 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
               isDisabled={zoom <= 1}
             />
           </Tooltip>
-          <Tooltip label="Reset zoom" placement="top" hasArrow>
+          <Tooltip label="Fit map" placement="top" hasArrow>
             <Box
               as="button"
+              aria-label="Fit map"
               px={1.5}
               py={0.5}
               fontSize="10px"
@@ -554,7 +576,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
               borderRadius="sm"
               _hover={{ color: 'white' }}
             >
-              {Math.round(zoom * 100)}%
+              Fit
             </Box>
           </Tooltip>
           <Tooltip label="Zoom in" placement="top" hasArrow>

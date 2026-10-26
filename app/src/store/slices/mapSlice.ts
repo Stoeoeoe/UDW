@@ -441,6 +441,12 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
   addLocationLink: (link) => {
     set((state) => {
       if (!state.currentMap) return;
+      if (
+        state.currentMap.spatialPrimitives?.triggers?.some(
+          (t) => t.id === link.triggerId && t.type === 'cutscene',
+        )
+      )
+        throw new Error('A cutscene trigger cannot also be a location link.');
       if (!state.currentMap.locationLinks) state.currentMap.locationLinks = [];
       state.currentMap.locationLinks.push(castDraft(link));
       state.selectedLinkId = link.id;
@@ -455,7 +461,15 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
     set((state) => {
       if (!state.currentMap?.locationLinks) return;
       const link = state.currentMap.locationLinks.find((l) => l.id === id);
-      if (link) Object.assign(link, updates);
+      if (link) {
+        if (
+          state.currentMap.spatialPrimitives?.triggers?.some(
+            (t) => t.id === (updates.triggerId ?? link.triggerId) && t.type === 'cutscene',
+          )
+        )
+          throw new Error('A cutscene trigger cannot also be a location link.');
+        Object.assign(link, updates);
+      }
     });
     if (!skipSave) {
       const { currentMap } = get();

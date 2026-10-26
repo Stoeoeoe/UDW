@@ -1,0 +1,412 @@
+{
+  "schemaVersion": 2,
+  "modules": [
+    {
+      "path": "Actors",
+      "methods": [
+        {
+          "name": "Face",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "target",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.face",
+            "displayName": "Face actor",
+            "category": "Movement",
+            "description": "Turn an existing actor toward another actor.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "faceActorTowardActor",
+                  "actorParameter": "actor",
+                  "targetActorParameter": "target"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "MoveTo",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "destination",
+              "type": "string",
+              "semanticType": "anchorRef",
+              "picker": "mapAnchor"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.moveTo",
+            "displayName": "Move to anchor",
+            "category": "Movement",
+            "description": "Walk an existing actor to a map anchor.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "moveActorToAnchor",
+                  "actorParameter": "actor",
+                  "anchorParameter": "destination",
+                  "facing": "unknown"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PlayAnimation",
+          "parameters": [
+            {
+              "name": "actor",
+              "type": "string",
+              "semanticType": "actorRef",
+              "picker": "mapActor"
+            },
+            {
+              "name": "animation",
+              "type": "string",
+              "resourceType": "animation"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "actors.playAnimation",
+            "displayName": "Play animation",
+            "category": "Animation",
+            "description": "Play a finite animation on an actor and wait for completion.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "Cutscene",
+      "methods": [
+        {
+          "name": "Wait",
+          "parameters": [
+            {
+              "name": "seconds",
+              "type": "number"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "cutscene.wait",
+            "displayName": "Wait",
+            "category": "Timing",
+            "description": "Wait for gameplay seconds.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "Dialogue",
+      "methods": [
+        {
+          "name": "Play",
+          "parameters": [
+            {
+              "name": "dialogue",
+              "type": "string",
+              "semanticType": "dialogueRef",
+              "picker": "dialogue"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "dialogue.play",
+            "displayName": "Play dialogue",
+            "category": "Dialogue",
+            "description": "Wait for a conversation to finish through its flow.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": [
+                {
+                  "kind": "showDialogue",
+                  "dialogueParameter": "dialogue"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "GameState.Player.Skills",
+      "methods": [
+        {
+          "name": "GetLevel",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "HasUnlocked",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "TryLevelUp",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "GameState.Story",
+      "methods": [
+        {
+          "name": "ClearFlag",
+          "parameters": [
+            {
+              "name": "flag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "HasFlag",
+          "parameters": [
+            {
+              "name": "flag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "SetFlag",
+          "parameters": [
+            {
+              "name": "flag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "GameState.World",
+      "methods": [
+        {
+          "name": "GetFarmland",
+          "parameters": [
+            {
+              "name": "locationId",
+              "type": "string"
+            },
+            {
+              "name": "objectId",
+              "type": "string"
+            }
+          ],
+          "returnType": "FarmlandLuaView",
+          "returnNullable": true,
+          "writesState": false
+        },
+        {
+          "name": "SetFarmland",
+          "parameters": [
+            {
+              "name": "locationId",
+              "type": "string"
+            },
+            {
+              "name": "objectId",
+              "type": "string"
+            },
+            {
+              "name": "plowed",
+              "type": "boolean"
+            },
+            {
+              "name": "irrigated",
+              "type": "boolean"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "Player.Tags",
+      "methods": [
+        {
+          "name": "Has",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "HasExact",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Matches",
+          "parameters": [
+            {
+              "name": "expression",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "name": "FarmlandLuaView",
+      "fields": [
+        {
+          "name": "irrigated",
+          "type": "boolean"
+        },
+        {
+          "name": "plowed",
+          "type": "boolean"
+        }
+      ]
+    }
+  ],
+  "resources": {
+    "animation": [
+      {
+        "id": "base:pass-out",
+        "description": "PassOut"
+      },
+      {
+        "id": "base:prototype-sitting",
+        "description": "PrototypeSittingAnimation"
+      }
+    ]
+  }
+}

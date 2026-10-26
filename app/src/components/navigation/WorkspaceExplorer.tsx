@@ -4,6 +4,7 @@ import { Box, HStack, Icon, IconButton, Text, VStack } from '@chakra-ui/react';
 import { ContextMenuState, WorkspaceContextMenu } from './WorkspaceContextMenu';
 import {
   FiBox,
+  FiFilm,
   FiCode,
   FiChevronDown,
   FiChevronRight,
@@ -64,6 +65,8 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiUsers;
     case 'items':
       return FiPackage;
+    case 'cutscene':
+      return FiFilm;
     case 'dialogues':
       return FiMessageSquare;
     case 'scripting':
@@ -527,6 +530,7 @@ function getFallbackTabId(document: WorkspaceDocument): string | null {
     case 'actors':
     case 'items':
     case 'dialogues':
+    case 'cutscenes':
     case 'scripting':
       return document.kind;
     default:

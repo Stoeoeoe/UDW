@@ -61,6 +61,7 @@ export function getWorkspaceTabId(document: WorkspaceDocument): string {
     case 'entities':
     case 'actors':
     case 'items':
+    case 'cutscenes':
     case 'dialogues':
     case 'scripting':
       return document.kind;
@@ -97,6 +98,7 @@ function defaultExpandedNodeIds(): string[] {
     'group:entities',
     'group:items',
     'group:dialogues',
+    'group:cutscenes',
   ];
 }
 

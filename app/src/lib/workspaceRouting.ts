@@ -33,6 +33,8 @@ export function createLocationDocument(
 
 export function createWorkspaceScreenDocument(kind: WorkspaceScreenKind): WorkspaceDocument {
   switch (kind) {
+    case 'cutscenes':
+      return { kind, label: 'Cutscenes', saveUnitId: 'cutscenes' };
     case 'entities':
       return {
         kind,
@@ -97,6 +99,10 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'item');
       params.set('id', document.itemId);
       break;
+    case 'cutscene':
+      params.set('doc', 'cutscene');
+      params.set('id', document.cutsceneId);
+      break;
     case 'dialogue':
       params.set('doc', 'dialogue');
       params.set('id', document.dialogueId);
@@ -109,6 +115,7 @@ export function documentToHash(document: WorkspaceDocument): string {
     case 'actors':
     case 'items':
     case 'dialogues':
+    case 'cutscenes':
     case 'scripting':
       params.set('doc', document.kind);
       break;
@@ -210,6 +217,17 @@ export function documentFromHash(
     });
   }
 
+  if (doc === 'cutscene') {
+    const scene = snapshot.cutscenes?.find((scene) => scene.id === params.get('id'));
+    return scene
+      ? createEditorResourceDocument({
+          type: 'cutscene',
+          id: scene.id,
+          name: snapshot.cutsceneLabels?.[scene.id] || scene.id,
+        })
+      : null;
+  }
+
   if (doc === 'dialogue') {
     const dialogueId = params.get('id');
     if (!dialogueId) return null;
@@ -235,6 +253,7 @@ export function documentFromHash(
   }
 
   if (
+    doc === 'cutscenes' ||
     doc === 'entities' ||
     doc === 'actors' ||
     doc === 'items' ||

@@ -35,6 +35,9 @@ export function useWorkspaceInit() {
   const actors = useEditorStore((state) => state.actors);
   const items = useEditorStore((state) => state.items);
   const dialogues = useEditorStore((state) => state.dialogues);
+  const cutscenes = useEditorStore((s) => s.cutscenes);
+  const cutsceneLabels = useEditorStore((s) => s.cutsceneLabels);
+  const cutsceneFolders = useEditorStore((s) => s.cutsceneFolders);
   const gameVariables = useEditorStore((state) => state.gameVariables);
 
   const tabs = useWorkspaceStore((state) => state.tabs);
@@ -55,9 +58,23 @@ export function useWorkspaceInit() {
         entityTypes,
         items,
         dialogues: Array.from(dialogues.values()),
+        cutscenes,
+        cutsceneLabels,
+        cutsceneFolders,
         gameVariables,
       }),
-    [maps, tilesets, actors, entityTypes, items, dialogues, gameVariables],
+    [
+      maps,
+      tilesets,
+      actors,
+      entityTypes,
+      items,
+      dialogues,
+      cutscenes,
+      cutsceneLabels,
+      cutsceneFolders,
+      gameVariables,
+    ],
   );
 
   const initializedProjectPathRef = React.useRef<string | null>(null);
@@ -98,6 +115,9 @@ export function useWorkspaceInit() {
       entityTypes,
       items,
       dialogues: Array.from(dialogues.values()),
+      cutscenes,
+      cutsceneLabels,
+      cutsceneFolders,
       gameVariables,
     };
     const restored = restoreWorkspaceSession(projectPath, snapshot);
@@ -132,6 +152,9 @@ export function useWorkspaceInit() {
     entityTypes,
     items,
     dialogues,
+    cutscenes,
+    cutsceneLabels,
+    cutsceneFolders,
     gameVariables,
     treeNodes,
     openDocument,
@@ -150,6 +173,9 @@ export function useWorkspaceInit() {
         entityTypes,
         items,
         dialogues: Array.from(dialogues.values()),
+        cutscenes,
+        cutsceneLabels,
+        cutsceneFolders,
         gameVariables,
       });
       if (!document) return;
@@ -170,6 +196,9 @@ export function useWorkspaceInit() {
     entityTypes,
     items,
     dialogues,
+    cutscenes,
+    cutsceneLabels,
+    cutsceneFolders,
     gameVariables,
     openDocument,
     activateTab,

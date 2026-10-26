@@ -7,10 +7,12 @@ import { MapTrigger } from '../../../types/schema';
 
 const TRIGGER_TYPE_LABELS: Record<MapTrigger['type'], string> = {
   locationLinkTrigger: 'Link',
+  cutscene: 'Cutscene',
 };
 
 const TRIGGER_TYPE_COLORS: Record<MapTrigger['type'], string> = {
   locationLinkTrigger: 'purple',
+  cutscene: 'cyan',
 };
 
 export const TriggerBottomPanel: React.FC = () => {

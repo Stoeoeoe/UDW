@@ -52,7 +52,17 @@ export const createTriggerSlice: ImmerStateCreator<TriggerSlice> = (set, get) =>
       if (!state.currentMap?.spatialPrimitives?.triggers) return;
       const trigger = state.currentMap.spatialPrimitives.triggers.find((t) => t.id === id);
       if (!trigger) return;
+      if (updates.cutsceneId) {
+        const scene = state.cutscenes.find((c) => c.id === updates.cutsceneId);
+        if (!scene || scene.mapId !== state.currentMap.id)
+          throw new Error('Select a cutscene belonging to this map.');
+      }
       Object.assign(trigger, updates);
+      if (trigger.type === 'cutscene') {
+        state.currentMap.locationLinks = state.currentMap.locationLinks?.filter(
+          (link) => link.triggerId !== id,
+        );
+      } else delete trigger.cutsceneId;
     });
     if (!skipSave) {
       const map = get().currentMap;

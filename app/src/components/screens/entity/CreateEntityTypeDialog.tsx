@@ -7,6 +7,7 @@ import { IconPicker } from '../common/FormFields';
 import { FormLabel, FormLabelUppercase } from '../../common/FormLabel';
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
+  { value: 'npc', label: 'NPC', icon: 'GiPerson' },
   { value: 'object', label: 'Object', icon: '📦' },
   { value: 'trigger', label: 'Trigger', icon: '⚡' },
   { value: 'spawn', label: 'Spawn', icon: '🎯' },

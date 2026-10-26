@@ -125,6 +125,10 @@ export function useWorkspaceTabs() {
       markRecentResource(`item:${doc.itemId}`);
       return;
     }
+    if (doc.kind === 'cutscene') {
+      markRecentResource(`cutscene:${doc.cutsceneId}`);
+      return;
+    }
     if (doc.kind === 'dialogue') {
       markRecentResource(`dialogue:${doc.dialogueId}`);
       return;

@@ -1,0 +1,20 @@
+{
+  "name": "Place",
+  "parameters": [
+    { "name": "actor", "type": "string", "semanticType": "actorRef", "picker": "mapActor" },
+    { "name": "position", "type": "position", "picker": "mapPosition", "coordinateSpace": "mapPixels", "origin": "topLeft", "placementModes": ["tile", "pixel"], "tileAnchor": "center", "actorPivot": "feet" }
+  ],
+  "returnType": "nil",
+  "returnNullable": false,
+  "writesState": true,
+  "action": {
+    "id": "actors.place",
+    "displayName": "Place character",
+    "category": "Placement",
+    "description": "Immediately place a character at a map position.",
+    "contexts": ["cutscene"],
+    "phases": ["setup", "sequence", "completion"],
+    "execution": "immediate",
+    "preview": { "version": 2, "spatialState": "described", "effects": [{ "kind": "setActorPosition", "actorParameter": "actor", "positionParameter": "position", "facing": "preserve" }] }
+  }
+}

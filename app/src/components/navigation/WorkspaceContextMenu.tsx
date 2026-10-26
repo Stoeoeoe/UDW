@@ -33,7 +33,7 @@ interface WorkspaceContextMenuProps {
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
   onCreateResource: (
-    kind: 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue',
+    kind: 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' | 'cutscene',
     folderPath: string,
   ) => void;
 }
@@ -99,14 +99,16 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
               <MenuItem
                 key={item.key}
                 onClick={() => {
-                  void Promise.resolve().then(item.onClick).catch((error: unknown) => {
-                    toast({
-                      title: `${item.label} failed`,
-                      description: error instanceof Error ? error.message : String(error),
-                      status: 'error',
-                      isClosable: true,
+                  void Promise.resolve()
+                    .then(item.onClick)
+                    .catch((error: unknown) => {
+                      toast({
+                        title: `${item.label} failed`,
+                        description: error instanceof Error ? error.message : String(error),
+                        status: 'error',
+                        isClosable: true,
+                      });
                     });
-                  });
                 }}
                 color={item.color}
               >
@@ -121,7 +123,7 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
 };
 
 export const CreateNewResourceDialog: React.FC<{
-  kind: 'actor' | 'entity' | 'item';
+  kind: 'actor' | 'entity' | 'item' | 'cutscene';
   folderPath: string;
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
@@ -130,6 +132,8 @@ export const CreateNewResourceDialog: React.FC<{
 
   const existingIds = React.useMemo(() => {
     switch (kind) {
+      case 'cutscene':
+        return useEditorStore.getState().cutscenes.map((scene) => scene.id);
       case 'actor':
         return useEditorStore.getState().actors.map((actor) => actor.id);
       case 'entity':
@@ -142,6 +146,12 @@ export const CreateNewResourceDialog: React.FC<{
   const handleSubmit = useCallback(
     async ({ id, name }: { id: string; name: string }) => {
       switch (kind) {
+        case 'cutscene':
+          store.createCutscene(id, name, folderPath);
+          onOpenDocument(createEditorResourceDocument({ type: 'cutscene', id, name }), {
+            pin: true,
+          });
+          break;
         case 'actor':
           await store.addActor({ id, name, icon: 'GiPerson', emotions: [], folderPath });
           onOpenDocument(createEditorResourceDocument({ type: 'actor', id, name }), {
@@ -213,7 +223,7 @@ function buildMenuItems(
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void,
   onClose: () => void,
   onCreateResource: (
-    kind: 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue',
+    kind: 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue' | 'cutscene',
     folderPath: string,
   ) => void,
 ): MenuDefinition[] {
@@ -234,7 +244,14 @@ function buildMenuItems(
       label: `New ${kindLabel(resourceKind!)}...`,
       onClick: () => {
         onCreateResource(
-          resourceKind as 'location' | 'tileset' | 'actor' | 'entity' | 'item' | 'dialogue',
+          resourceKind as
+            | 'location'
+            | 'tileset'
+            | 'actor'
+            | 'entity'
+            | 'item'
+            | 'dialogue'
+            | 'cutscene',
           folderPathForNode,
         );
         onClose();

@@ -1,4 +1,5 @@
 import React from 'react';
+import { CutsceneEditor } from '../screens/cutscene/CutsceneEditor';
 import { EmptyScreen } from '../screens/common/EmptyScreen';
 import {
   ActorEditor,
@@ -41,6 +42,10 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <ActorEditor />;
     case 'items':
       return <ItemEditor />;
+    case 'cutscene':
+      return <CutsceneEditor cutsceneId={tab.document.cutsceneId} />;
+    case 'cutscenes':
+      return <CutsceneEditor />;
     case 'dialogues':
       return <DialogueEditor />;
     case 'scripting':

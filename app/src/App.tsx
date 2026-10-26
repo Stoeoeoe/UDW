@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
+import { watchScriptingManifest } from './store/useScriptingManifestStore';
 import { TopBar } from './components/layout/TopBar';
 import { AppShell } from './components/common/AppShell';
 import { LandingScreen } from './components/startup/LandingScreen';
@@ -10,7 +12,7 @@ import {
 } from './components/navigation/WorkspaceCommandPalette';
 import { WorkspaceTabs } from './components/navigation/WorkspaceTabs';
 import { ActiveWorkspaceDocument } from './components/workspace/WorkspaceDocumentViews';
-import { useEditorStore } from './store/useEditorStore';
+import { useEditorStore, runEditorHistoryCommand } from './store/useEditorStore';
 import { useWorkspaceStore } from './store/useWorkspaceStore';
 import { useWorkspaceInit, useBeforeUnloadGuard } from './hooks/useWorkspaceInit';
 import { useCommandPalette } from './hooks/useCommandPalette';
@@ -19,6 +21,18 @@ import { Panel, PanelGroup } from 'react-resizable-panels';
 import { EditorResizeHandle } from './components/common/EditorWorkspaceShell';
 
 function App() {
+  useEffect(watchScriptingManifest, []);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const command =
+        key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
+      if (command && runEditorHistoryCommand(command, event.target)) event.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
   const project = useEditorStore((state) => state.project);
   const resourcesLoaded = useEditorStore((state) => state.resourcesLoaded);
   const resourceLoadingLabel = useEditorStore((state) => state.resourceLoadingLabel);

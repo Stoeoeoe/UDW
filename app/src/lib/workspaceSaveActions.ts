@@ -49,6 +49,8 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'settings' ||
     tab.document.kind === 'entities' ||
     tab.document.kind === 'scripting' ||
+    tab.document.kind === 'cutscene' ||
+    tab.document.kind === 'cutscenes' ||
     tab.document.kind === 'dialogues'
   );
 }
@@ -64,6 +66,14 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
 
   const editor = useEditorStore.getState();
   const document = tab.document;
+  if (document.kind === 'cutscene') {
+    await editor.saveCutscene(document.cutsceneId);
+    return;
+  }
+  if (document.kind === 'cutscenes' && editor.selectedCutsceneId) {
+    await editor.saveCutscene(editor.selectedCutsceneId);
+    return;
+  }
 
   if (document.kind === 'location') {
     const map =
@@ -106,6 +116,10 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
   const dirtySaveUnits = getDirtySaveUnitIds();
 
   for (const saveUnitId of dirtySaveUnits) {
+    if (saveUnitId.startsWith('cutscene:')) {
+      await editor.saveCutscene(saveUnitId.slice('cutscene:'.length));
+      continue;
+    }
     if (saveUnitId.startsWith('location:')) {
       const mapId = saveUnitId.slice('location:'.length);
       const map =
@@ -188,6 +202,15 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   if (!tab) return;
 
   const { document } = tab;
+  if (document.kind === 'cutscene') {
+    useEditorStore.getState().discardCutscene(document.cutsceneId);
+    return;
+  }
+  if (document.kind === 'cutscenes') {
+    const editor = useEditorStore.getState();
+    if (editor.selectedCutsceneId) editor.discardCutscene(editor.selectedCutsceneId);
+    return;
+  }
   cancelPendingSaveUnit(document.saveUnitId);
 
   if (document.kind === 'settings') {

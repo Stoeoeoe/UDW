@@ -32,13 +32,14 @@ import { GlobalFunctionEditor } from './GlobalFunctionEditor';
 import { NamespaceEditor } from './NamespaceEditor';
 import { ContextTypeEditor } from './ContextTypeEditor';
 import { TableEditor } from './TableEditor';
+import { ScriptingManifestSettings } from './ScriptingManifestSettings';
 import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
 import { DialogListWorkspace } from '../common/DialogListWorkspace';
 import { EditorModal } from '../../common/EditorModal';
 import { EntityFormDialog } from '../common/EntityFormDialog';
 import { SectionLabel } from '../../common/Typography.tsx';
 
-type ScriptingTab = 'variables' | 'tables' | 'functions' | 'namespaces' | 'contexts';
+type ScriptingTab = 'manifest' | 'variables' | 'tables' | 'functions' | 'namespaces' | 'contexts';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -361,6 +362,7 @@ const TAB_DEFS: {
   { id: 'functions', label: 'Functions', badge: (s) => s.scriptFunctions.length },
   { id: 'namespaces', label: 'Namespaces', badge: (s) => s.scriptNamespaces.length },
   { id: 'contexts', label: 'Contexts', badge: (s) => s.scriptContextTypes.length },
+  { id: 'manifest', label: 'Lua Manifest', badge: () => 0 },
 ];
 
 function useScriptingState() {
@@ -600,6 +602,8 @@ export const VariableEditor: React.FC = () => {
   // Center workspace content depends on active tab
   const mainContent = useMemo(() => {
     switch (activeTab) {
+      case 'manifest':
+        return <ScriptingManifestSettings />;
       case 'variables':
         return (
           <DialogListWorkspace

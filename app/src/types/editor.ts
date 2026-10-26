@@ -197,6 +197,7 @@ export interface ValidationError {
 }
 
 export type EditorMode =
+  | 'cutscenes'
   | 'project'
   | 'maps'
   | 'tilesets'

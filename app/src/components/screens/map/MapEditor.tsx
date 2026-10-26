@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, useDisclosure, VStack } from '@chakra-ui/react';
-import { runEditorHistoryCommand, useEditorStore } from '../../../store/useEditorStore';
+import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewportPixi } from './MapViewportPixi';
@@ -106,17 +106,6 @@ export const MapEditor: React.FC = () => {
         event.preventDefault();
         setMapFullscreen(!mapFullscreen);
         return;
-      }
-
-      const command =
-        key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
-
-      if (!command) {
-        return;
-      }
-
-      if (runEditorHistoryCommand(command, event.target)) {
-        event.preventDefault();
       }
     };
 

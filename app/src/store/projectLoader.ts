@@ -201,6 +201,12 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       }),
     );
 
+    try {
+      await get().loadCutscenes();
+    } catch (error) {
+      console.error('Cutscene sources need correction:', error);
+    }
+
     setResourceLoadingState(set, 'Preparing workspace', 0.97);
 
     if (enrichedMaps.length > 0) {

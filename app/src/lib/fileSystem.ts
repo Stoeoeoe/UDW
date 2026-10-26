@@ -268,6 +268,10 @@ export class FileSystemManager {
     return (dialogue as DialogueDocument | null) ?? null;
   }
 
+  async loadAllCutscenes(): Promise<import('../types/cutscene').Cutscene[]> {
+    return this.readDirectory('cutscenes', resourceRegistry.cutscene.extension, true);
+  }
+
   async loadAllDialogues(): Promise<DialogueDocument[]> {
     const entries = await this.readDirectory<unknown>(
       resourceRegistry.dialogue.folder,
@@ -281,7 +285,11 @@ export class FileSystemManager {
   /**
    * Save a JSON file (Map, Tileset, or Project)
    */
-  async saveJson(subDir: ResourceFolder, filename: string, data: unknown): Promise<void> {
+  async saveJson(
+    subDir: ResourceFolder | 'schemas',
+    filename: string,
+    data: unknown,
+  ): Promise<void> {
     data = this.normalizeDocument(subDir, filename, data);
     const definition = getResourceDefinition(subDir, filename);
     if (definition && data && typeof data === 'object') {

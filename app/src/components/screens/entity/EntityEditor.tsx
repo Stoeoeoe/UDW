@@ -42,6 +42,7 @@ async function loadSpriteBlob(path: string): Promise<Blob> {
 }
 
 const CATEGORIES: { value: EntityCategory; label: string; icon: string }[] = [
+  { value: 'npc', label: 'NPC', icon: '👤' },
   { value: 'object', label: 'Object', icon: '📦' },
   { value: 'trigger', label: 'Trigger', icon: '⚡' },
   { value: 'spawn', label: 'Spawn', icon: '🎯' },
@@ -69,9 +70,11 @@ export const EntityEditor: React.FC = () => {
     <EmptyScreen
       icon={<GameIcon iconName="GiBox" size={48} />}
       title={entityTypes.length ? 'No Entity Type Selected' : 'No Entity Types'}
-      description={entityTypes.length
-        ? 'Select an entity type from the list to edit its data and property schema.'
-        : 'Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements.'}
+      description={
+        entityTypes.length
+          ? 'Select an entity type from the list to edit its data and property schema.'
+          : 'Define entity blueprints that can be placed on maps. Entity types describe objects, actors, triggers, and other game elements.'
+      }
       buttonLabel={entityTypes.length ? undefined : 'Create First Entity'}
       onCreate={entityTypes.length ? undefined : onOpen}
     />

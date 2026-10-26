@@ -48,6 +48,11 @@ function createSnapshot(
 }
 
 describe('workspaceRouting', () => {
+  it('restores the cutscene workspace route', () => {
+    const scene = documentFromHash('#/?doc=cutscenes', createSnapshot());
+    expect(scene).toEqual({ kind: 'cutscenes', label: 'Cutscenes', saveUnitId: 'cutscenes' });
+    expect(documentToHash(scene!)).toBe('#/?doc=cutscenes');
+  });
   it('does not force a base variation when a location has variations but no explicit variant', () => {
     const document = documentFromHash(
       '#/?doc=location&id=map-1',

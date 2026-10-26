@@ -10,9 +10,17 @@ import {
 import { ToolType } from './editor';
 import { EditorResourceTypeId } from './editorResource';
 
-export type WorkspaceScreenKind = 'entities' | 'actors' | 'items' | 'dialogues' | 'scripting';
+export type WorkspaceScreenKind =
+  | 'cutscenes'
+  | 'entities'
+  | 'actors'
+  | 'items'
+  | 'dialogues'
+  | 'scripting';
 
 export type WorkspaceDocument =
+  | { kind: 'cutscene'; cutsceneId: string; label: string; saveUnitId: string }
+  | { kind: 'cutscenes'; label: string; saveUnitId: 'cutscenes' }
   | {
       kind: 'location';
       mapId: string;
@@ -172,5 +180,8 @@ export interface WorkspaceProjectSnapshot {
   entityTypes?: EntityType[];
   items?: Item[];
   dialogues?: DialogueDocument[];
+  cutscenes?: import('./cutscene').Cutscene[];
+  cutsceneLabels?: Record<string, string>;
+  cutsceneFolders?: Record<string, string>;
   gameVariables?: GameVariable[];
 }

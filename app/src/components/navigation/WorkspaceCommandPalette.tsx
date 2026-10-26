@@ -40,6 +40,7 @@ const FILTER_OPTIONS: Array<{ id: CommandPaletteFilter; label: string }> = [
   { id: 'actors', label: 'Actors' },
   { id: 'items', label: 'Items' },
   { id: 'dialogues', label: 'Dialogues' },
+  { id: 'cutscenes', label: 'Cutscenes' },
 ];
 
 export const WorkspaceCommandPalette: React.FC<WorkspaceCommandPaletteProps> = ({

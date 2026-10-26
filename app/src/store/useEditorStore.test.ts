@@ -17,6 +17,8 @@ vi.mock('../lib/fileSystem', () => ({
   fileSystem: {
     resolveFilename: (_subDir: string, filename: string) => filename,
     saveJson: vi.fn(),
+    loadAllCutscenes: vi.fn(async () => []),
+    readJson: vi.fn(async () => null),
     loadAllTilesets: vi.fn(async () => []),
     loadAllMaps: vi.fn(async () => []),
   },

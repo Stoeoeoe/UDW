@@ -6,6 +6,7 @@ import {
   normalizeResourceDocument,
 } from '../lib/resourceRegistry';
 import { create } from 'zustand';
+import { useWorkspaceStore } from './useWorkspaceStore';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
@@ -26,6 +27,7 @@ import {
   registerTemporalStore,
 } from './storeHelpers';
 import { loadProjectResources, loadSprite } from './projectLoader';
+import { createCutsceneSlice, CutsceneSlice } from './slices/cutsceneSlice';
 import { createActorSlice, ActorSlice } from './slices/actorSlice';
 import { createItemSlice, ItemSlice } from './slices/itemSlice';
 import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
@@ -53,6 +55,7 @@ import { createCollisionSlice, CollisionSlice } from './slices/collisionSlice';
 
 export interface EditorStore
   extends
+    CutsceneSlice,
     ActorSlice,
     ItemSlice,
     ItemClassSlice,
@@ -231,12 +234,25 @@ export function runEditorHistoryCommand(
   target?: EventTarget | null,
 ): boolean {
   const state = useEditorStore.getState();
-  if (state.mode !== 'maps' || !state.currentMap) return false;
   if (
     isEditableTarget(target ?? (typeof document !== 'undefined' ? document.activeElement : null))
   ) {
     return false;
   }
+  const workspace = useWorkspaceStore.getState();
+  const activeDocument = workspace.tabs.find((tab) => tab.id === workspace.activeTabId)?.document;
+  const cutsceneId =
+    activeDocument?.kind === 'cutscene'
+      ? activeDocument.cutsceneId
+      : state.mode === 'cutscenes'
+        ? state.selectedCutsceneId
+        : null;
+  if (cutsceneId) {
+    if (command === 'undo') state.undoCutscene(cutsceneId);
+    else state.redoCutscene(cutsceneId);
+    return true;
+  }
+  if (state.mode !== 'maps' || !state.currentMap) return false;
   if (command === 'undo') undoEditorChange();
   else redoEditorChange();
   return true;
@@ -266,6 +282,7 @@ export const useEditorStore = create<EditorStore>()(
       subscribeWithSelector(
         immer((set, get) => ({
           // ── Slices ────────────────────────────────────────────────────────
+          ...createCutsceneSlice(set, get, {} as never),
           ...createActorSlice(set, get, {} as never),
           ...createItemSlice(set, get, {} as never),
           ...createItemClassSlice(set, get, {} as never),
@@ -306,6 +323,7 @@ export const useEditorStore = create<EditorStore>()(
 
           // ── Project actions ────────────────────────────────────────────────
           loadProject: async (path, project) => {
+            get().resetCutscenes();
             project = normalizeProject(project);
             withHistorySuppressed(
               () =>
@@ -337,6 +355,7 @@ export const useEditorStore = create<EditorStore>()(
           },
 
           closeProject: () => {
+            get().resetCutscenes();
             for (const timeoutId of pendingTilesetSaves.values()) clearTimeout(timeoutId);
             pendingTilesetSaves.clear();
 
@@ -434,6 +453,7 @@ export const useEditorStore = create<EditorStore>()(
 // Register temporal store reference (used by withHistorySuppressed in slices)
 registerTemporalStore(() => useEditorStore.temporal.getState());
 registerSaveAccessors({
+  getCutscenes: () => useEditorStore.getState().cutscenes,
   getMapById: (mapId) => {
     const state = useEditorStore.getState();
     if (state.currentMap?.id === mapId) {

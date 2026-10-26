@@ -17,7 +17,8 @@ export type CommandPaletteFilter =
   | 'entities'
   | 'actors'
   | 'items'
-  | 'dialogues';
+  | 'dialogues'
+  | 'cutscenes';
 
 export type CommandPaletteResourceType =
   | 'location'
@@ -25,7 +26,8 @@ export type CommandPaletteResourceType =
   | 'entity'
   | 'actor'
   | 'item'
-  | 'dialogue';
+  | 'dialogue'
+  | 'cutscene';
 
 export interface CommandPaletteResource {
   key: string;
@@ -52,6 +54,8 @@ export interface BuildCommandPaletteResourcesOptions {
   actors: Actor[];
   items: Item[];
   dialogues: DialogueDocument[];
+  cutscenes?: import('../types/cutscene').Cutscene[];
+  cutsceneLabels?: Record<string, string>;
 }
 
 const EMPTY_SECONDARY_MATCH: number[] = [];
@@ -167,6 +171,21 @@ export function buildCommandPaletteResources(
       });
     });
 
+  for (const scene of options.cutscenes ?? []) {
+    resources.push({
+      key: `cutscene:${scene.id}`,
+      type: 'cutscene',
+      typeLabel: 'Cutscene',
+      label: options.cutsceneLabels?.[scene.id] || scene.id,
+      secondaryLabel: scene.mapId,
+      resourceId: scene.id,
+      document: createEditorResourceDocument({
+        type: 'cutscene',
+        id: scene.id,
+        name: options.cutsceneLabels?.[scene.id] || scene.id,
+      }),
+    });
+  }
   return resources;
 }
 
@@ -348,6 +367,8 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'actor';
     case 'items':
       return resource.type === 'item';
+    case 'cutscenes':
+      return resource.type === 'cutscene';
     case 'dialogues':
       return resource.type === 'dialogue';
     default:

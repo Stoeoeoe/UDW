@@ -104,11 +104,13 @@ export const LinkInspector: React.FC = () => {
               <option value="" disabled>
                 Select a trigger
               </option>
-              {(currentMap?.spatialPrimitives?.triggers ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label || item.id}
-                </option>
-              ))}
+              {(currentMap?.spatialPrimitives?.triggers ?? [])
+                .filter((item) => item.type !== 'cutscene')
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label || item.id}
+                  </option>
+                ))}
             </CompactSelect>
             {trigger ? (
               <HStack spacing={2} mt={2}>

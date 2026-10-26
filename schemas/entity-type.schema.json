@@ -19,7 +19,7 @@
     },
     "category": {
       "type": "string",
-      "enum": ["object", "trigger", "spawn", "transition", "decoration"]
+      "enum": ["object", "trigger", "spawn", "transition", "decoration", "npc"]
     },
     "displayName": {
       "type": "string"

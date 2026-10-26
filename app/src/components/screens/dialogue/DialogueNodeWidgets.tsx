@@ -1,23 +1,9 @@
 import React from 'react';
-import {
-  Box,
-  Button,
-  FormControl,
-  Input,
-  Text,
-  VStack,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverBody,
-  useDisclosure,
-} from '@chakra-ui/react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { FormControl, Input, Text } from '@chakra-ui/react';
 import { DialogueNode, DialogueNodeType } from '../../../types/schema';
 import { FieldLabel } from '../../common/Typography.tsx';
-
-// ── NodeTypeMenu ──────────────────────────────────────────────────────────────
+import { SequenceTypeMenu } from '../../common/SequenceEditor';
+export { SortableSequenceItem as SortableGroupWrapper } from '../../common/SequenceEditor';
 
 const NODE_TYPES_MENU: Array<[DialogueNodeType, string]> = [
   ['line', 'Line'],
@@ -31,79 +17,15 @@ const NODE_TYPES_MENU: Array<[DialogueNodeType, string]> = [
 export const NodeTypeMenu: React.FC<{
   trigger: React.ReactElement;
   onSelect: (type: DialogueNodeType) => void;
-  placement?: React.ComponentProps<typeof Popover>['placement'];
-}> = ({ trigger, onSelect, placement = 'bottom' }) => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  return (
-    <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} placement={placement} isLazy>
-      <PopoverTrigger>{trigger}</PopoverTrigger>
-      <PopoverContent w="150px" bg="editorPanelBg" borderColor="editorShellBorder">
-        <PopoverBody p={1}>
-          <VStack align="stretch" spacing={0}>
-            {NODE_TYPES_MENU.map(([type, label]) => (
-              <Button
-                key={type}
-                size="xs"
-                variant="ghost"
-                justifyContent="flex-start"
-                fontWeight="normal"
-                onClick={() => {
-                  onSelect(type);
-                  onClose();
-                }}
-              >
-                {label}
-              </Button>
-            ))}
-          </VStack>
-        </PopoverBody>
-      </PopoverContent>
-    </Popover>
-  );
-};
-
-// ── SortableGroupWrapper ──────────────────────────────────────────────────────
-
-export const SortableGroupWrapper: React.FC<{ id: string; children: React.ReactNode }> = ({
-  id,
-  children,
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-  });
-  return (
-    <Box
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.4 : 1,
-      }}
-      position="relative"
-    >
-      <Box
-        {...attributes}
-        {...listeners}
-        position="absolute"
-        top="6px"
-        right="6px"
-        zIndex={1}
-        cursor="grab"
-        color="gray.600"
-        _hover={{ color: 'gray.400' }}
-        fontSize="11px"
-        lineHeight={1}
-        userSelect="none"
-        title="Drag to reorder"
-      >
-        ⠿
-      </Box>
-      {children}
-    </Box>
-  );
-};
-
-// ── NodeIdField ───────────────────────────────────────────────────────────────
+  placement?: React.ComponentProps<typeof SequenceTypeMenu>['placement'];
+}> = ({ trigger, onSelect, placement }) => (
+  <SequenceTypeMenu
+    trigger={trigger}
+    options={NODE_TYPES_MENU.map(([id, label]) => ({ id, label }))}
+    onSelect={onSelect}
+    placement={placement}
+  />
+);
 
 export const NodeIdField: React.FC<{
   id: string;

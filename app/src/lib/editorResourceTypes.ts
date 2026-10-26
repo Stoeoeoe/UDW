@@ -136,6 +136,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
         type: 'select',
         width: 'half',
         options: [
+          { label: 'NPC', value: 'npc' },
           { label: 'Object', value: 'object' },
           { label: 'Trigger', value: 'trigger' },
           { label: 'Spawn', value: 'spawn' },
@@ -165,7 +166,7 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
       if (!entity) return;
       await useEditorStore.getState().updateEntityType(resourceId, {
         displayName: String(values.displayName ?? '').trim() || entity.displayName,
-        category: String(values.category ?? entity.category) as any,
+        category: String(values.category ?? entity.category) as typeof entity.category,
         group: String(values.group ?? '').trim() || undefined,
         description: String(values.description ?? '').trim() || undefined,
         icon: String(values.icon ?? ''),
@@ -278,6 +279,37 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     },
     getFolderPath: (resourceId) =>
       useEditorStore.getState().items.find((item) => item.id === resourceId)?.folderPath ?? '',
+  },
+  cutscene: {
+    id: 'cutscene',
+    documentDefinition: resourceRegistry.cutscene,
+    label: 'Cutscene',
+    collectionLabel: 'Cutscenes',
+    editorIcon: 'cutscene',
+    createFlow: 'simple',
+    metadataFlow: 'none',
+    saveUnitPrefix: 'cutscene:',
+    accentColor: 'pink.300',
+    tint: 'rgba(236,72,153,0.12)',
+    hoverTint: 'rgba(236,72,153,0.18)',
+    rowGradient: 'linear(to-r, rgba(236,72,153,0.16), rgba(236,72,153,0.03) 72%, transparent)',
+    headerGradient: 'linear(to-r, rgba(236,72,153,0.12), rgba(236,72,153,0.035) 68%, transparent)',
+    canCreate: true,
+    canRename: true,
+    canEditMetadata: false,
+    canDelete: true,
+    canRevealInFileExplorer: true,
+    fileExplorerPath: (id) =>
+      `${resourceRegistry.cutscene.folder}/${fileSystem.resolveFilename(resourceRegistry.cutscene.folder, resourceFileKey('cutscene', id))}`,
+    renameResource: async (id, name) => {
+      useEditorStore.getState().editCutscenes((_documents, labels) => {
+        labels[id] = name;
+      });
+    },
+    deleteResource: async (id) => {
+      useEditorStore.getState().deleteCutscene(id);
+    },
+    getFolderPath: (id) => useEditorStore.getState().cutsceneFolders[id] ?? '',
   },
   dialogue: {
     id: 'dialogue',
@@ -438,6 +470,8 @@ export function getEditorResourceDocumentId(
       return document.entityTypeId;
     case 'item':
       return document.itemId;
+    case 'cutscene':
+      return document.cutsceneId;
     case 'dialogue':
       return document.dialogueId;
     case 'variable':
@@ -556,6 +590,8 @@ export function createEditorResourceDocument(
         label: resource.name,
         saveUnitId,
       };
+    case 'cutscene':
+      return { kind: 'cutscene', cutsceneId: resource.id, label: resource.name, saveUnitId };
     case 'dialogue':
       return {
         kind: 'dialogue',
@@ -583,6 +619,7 @@ export function getEditorResourceTypeFromDocument(
     case 'entity':
     case 'item':
     case 'dialogue':
+    case 'cutscene':
     case 'variable':
       return document.kind;
     default:
