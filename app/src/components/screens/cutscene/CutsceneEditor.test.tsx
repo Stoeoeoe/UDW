@@ -797,6 +797,58 @@ describe('cutscene authoring', () => {
     expect(path()).toEqual([{ x: 168, y: 104 }]);
   }, 30000);
 
+  it('edits final facing independently of position and preserves it through map picks, history, and save', async () => {
+    useEditorStore.setState({
+      maps: useEditorStore.getState().maps.map((map) => ({ ...map, width: 32, height: 24 })),
+    });
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'On completion', exact: true }));
+    expect(screen.getByRole('combobox', { name: 'Final facing' })).toHaveValue('anchor');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Final facing' }), {
+      target: { value: 'West' },
+    });
+    const placement = () =>
+      useEditorStore.getState().cutscenes[0].onComplete.characterPlacements[0];
+    expect(placement().facing).toBe('West');
+    fireEvent.click(screen.getByRole('radio', { name: 'Grid' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    act(() => previewProps.mock.lastCall![0].positionPick.onPick({ x: 168, y: 104 }));
+    expect(placement()).toEqual({
+      character: 'cutscene-prototype-host-01',
+      position: { x: 168, y: 104 },
+      facing: 'West',
+    });
+    act(() => useEditorStore.getState().undoCutscene(prototype.id));
+    expect(placement().facing).toBe('West');
+    expect(placement().anchor).toBe('prototype-meeting');
+    act(() => useEditorStore.getState().redoCutscene(prototype.id));
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        onComplete: expect.objectContaining({
+          characterPlacements: [
+            expect.objectContaining({ facing: 'West', position: { x: 168, y: 104 } }),
+          ],
+        }),
+      }),
+    );
+    fireEvent.change(screen.getByRole('combobox', { name: 'Final facing' }), {
+      target: { value: 'preserve' },
+    });
+    expect(placement().facing).toBe('preserve');
+    fireEvent.click(screen.getByRole('radio', { name: 'Anchor' }));
+    fireEvent.change(screen.getByLabelText('Position anchor'), {
+      target: { value: 'prototype-meeting' },
+    });
+    expect(placement().facing).toBe('preserve');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Final facing' }), {
+      target: { value: 'anchor' },
+    });
+    expect(placement()).not.toHaveProperty('facing');
+  });
+
   it('picks final positions as Grid, Pixel or Anchor and saves the same endpoint plan', async () => {
     useEditorStore.setState({
       maps: useEditorStore.getState().maps.map((map) => ({ ...map, width: 32, height: 24 })),

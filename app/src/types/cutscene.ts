@@ -11,7 +11,8 @@ export interface CutsceneStep {
 }
 
 /** Unity source contract. Display labels belong to editor state, never this object. */
-export type CompletionPlacement = { character: string } & (
+export type CompletionFacing = 'preserve' | 'North' | 'East' | 'South' | 'West';
+export type CompletionPlacement = { character: string; facing?: CompletionFacing } & (
   | { anchor: string; position?: never }
   | { position: import('../lib/mapPosition').MapPosition | ''; anchor?: never }
 );

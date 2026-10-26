@@ -6,6 +6,12 @@ import type { EntityType, Map as GameMap } from '../types/schema';
 import { mapCharacterInstances, actionsForCutscenePhase, completionPosition } from './cutscenes';
 
 type Point = [number, number];
+const cardinalDirections: Record<string, Point> = {
+  North: [0, -1],
+  East: [1, 0],
+  South: [0, 1],
+  West: [-1, 0],
+};
 const parameter = z.string().min(1);
 const previewSchema = z
   .object({
@@ -271,7 +277,10 @@ export function previewCutscene(
         continue;
       }
       character.position = [...point];
-      if (anchor?.facing?.some((n) => n !== 0)) character.facing = [...anchor.facing];
+      if (placement.facing && placement.facing !== 'preserve')
+        character.facing = [...cardinalDirections[placement.facing]];
+      else if (placement.facing !== 'preserve' && anchor?.facing?.some((n) => n !== 0))
+        character.facing = [...anchor.facing];
     }
   }
   const setup = scene.onStart ?? [];
@@ -393,13 +402,7 @@ export function previewCutscene(
         continue;
       }
       if (effect.kind === 'faceCharacterDirection') {
-        const directions: Record<string, Point> = {
-          North: [0, -1],
-          East: [1, 0],
-          South: [0, 1],
-          West: [-1, 0],
-        };
-        character.facing = directions[reference(effect.directionParameter)] ?? null;
+        character.facing = cardinalDirections[reference(effect.directionParameter)] ?? null;
         if (!character.facing) notice('Facing preview unavailable: unresolved direction.', step.id);
         continue;
       }

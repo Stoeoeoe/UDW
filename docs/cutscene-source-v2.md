@@ -70,7 +70,9 @@ when exported as explicitly phase-permitted actions.
 3. On normal completion **or skip**, stop transient sequence actions, restore
    unlisted staged characters to their captured original placements, and apply
    `onComplete.characterPlacements` in authored order. Nonzero anchor facing applies;
-   zero facing preserves the character's original direction.
+   zero facing preserves the character's current playback direction. Unlisted characters
+   and coordinate endpoints also keep their current direction; cancellation restores
+   the pre-run direction.
 4. Run `onComplete.steps` once in authored order using the existing action
    bindings. These steps see the restored/placed character state. They may explicitly
    override that state; placements must not run again after completion steps.
@@ -112,8 +114,11 @@ Final character endpoints accept exactly one of an anchor or a pixel position:
 
 Grid picks save tile centers in map pixels, using the same coordinate shape as
 Pixel picks. Editing mode is not stored, and anchor/position fields cannot be
-mixed. Coordinate endpoints preserve pre-run facing; anchor endpoints can override
-it with the anchor's nonzero facing. Completion steps run after these placements.
+mixed. Coordinate endpoints preserve current playback facing; anchor endpoints can override
+it with the anchor's nonzero facing. Optional `facing` accepts `North`, `East`, `South`,
+`West`, or `preserve`. An explicit direction overrides the anchor; `preserve` keeps
+the live facing even for anchors. Omitting `facing` uses the default above. Completion steps run after these placements.
+
 Unity aligns the character's feet to either type of endpoint. Existing anchor
 endpoints keep their original source and compiled representation.
 
@@ -169,7 +174,9 @@ Completion/skip keeps spawned characters; cancellation/failure removes them in U
 The editor needs no lifetime setting. Completion preview starts existing characters
 at their pre-run staging and spawned characters at their creation points, applies
 explicit completion placements, then folds completion steps. Sequence changes
-are not used as completion endpoints.
+are not used as completion positions. Preserved facing depends on the live playback
+state (and the point of skipping), so the schematic completion view cannot promise
+a fixed direction unless an endpoint, anchor, or completion step supplies one.
 
 Path arguments and the `moveCharacterAlongPath` preview effect are documented in
 [the walk-path handoff](cutscene-walk-path.md).

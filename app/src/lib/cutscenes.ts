@@ -18,14 +18,18 @@ import type {
   CutsceneDiagnostic,
   CutsceneStep,
   CompletionPlacement,
+  CompletionFacing,
 } from '../types/cutscene';
 import type { PositionArgument } from './mapPosition';
 import type { EntityInstance, EntityType, Map as GameMap } from '../types/schema';
 
 const nonblank = z.string().regex(/\S/, 'Must not be blank');
+const completionFacing = z.enum(['preserve', 'North', 'East', 'South', 'West']).optional();
 const completionPlacementSchema = z.union([
-  z.object({ character: nonblank, anchor: nonblank }).strict(),
-  z.object({ character: nonblank, position: pixelPositionSchema }).strict(),
+  z.object({ character: nonblank, anchor: nonblank, facing: completionFacing }).strict(),
+  z
+    .object({ character: nonblank, position: pixelPositionSchema, facing: completionFacing })
+    .strict(),
 ]);
 
 export function completionPosition(placement: CompletionPlacement): PositionArgument | '' {
@@ -39,10 +43,13 @@ export function completionPosition(placement: CompletionPlacement): PositionArgu
 export function completionPlacement(
   character: string,
   position: PositionArgument | '',
+  facing?: CompletionFacing,
 ): CompletionPlacement {
-  return isAnchorPosition(position)
+  const placement: CompletionPlacement = isAnchorPosition(position)
     ? { character, anchor: position.anchor }
     : { character, position };
+  if (facing !== undefined) placement.facing = facing;
+  return placement;
 }
 const stepSchema = z
   .object({
@@ -447,7 +454,7 @@ export function exportCutscene(
     onComplete: {
       steps: scene.onComplete.steps.map(serializeStep),
       characterPlacements: scene.onComplete.characterPlacements.map((p) =>
-        completionPlacement(p.character, completionPosition(p)),
+        completionPlacement(p.character, completionPosition(p), p.facing),
       ),
     },
     sequence: scene.sequence.map(serializeStep),

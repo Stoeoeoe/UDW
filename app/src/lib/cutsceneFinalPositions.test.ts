@@ -27,6 +27,53 @@ const refs = { maps: [map], entityTypes: [npc], dialogueIds: ['prototype_greetin
 const source = () => parseCutscene(prototype);
 
 describe('completion positions', () => {
+  it('round-trips explicit final facing and preserves it when changing position modes', () => {
+    const scene = source();
+    scene.onComplete.characterPlacements = [completionPlacement(host, { x: 168, y: 104 }, 'West')];
+    const saved = exportCutscene(scene, actions, refs);
+    expect(saved.onComplete.characterPlacements[0]).toEqual({
+      character: host,
+      position: { x: 168, y: 104 },
+      facing: 'West',
+    });
+    expect(parseCutscene(JSON.parse(JSON.stringify(saved))).onComplete.characterPlacements).toEqual(
+      saved.onComplete.characterPlacements,
+    );
+    expect(
+      completionPlacement(
+        host,
+        { anchor: 'prototype-meeting' },
+        saved.onComplete.characterPlacements[0].facing,
+      ),
+    ).toEqual({ character: host, anchor: 'prototype-meeting', facing: 'West' });
+    const preview = previewCutscene(scene, map, [npc], actions, { kind: 'completion' }, [], 16);
+    expect(preview.characters.find((character) => character.id === host)?.facing).toEqual([-1, 0]);
+  });
+  it('allows keeping current facing instead of an anchor override', () => {
+    const scene = source();
+    scene.onComplete.characterPlacements = [
+      completionPlacement(host, { anchor: 'prototype-meeting' }, 'preserve'),
+    ];
+    expect(exportCutscene(scene, actions, refs).onComplete.characterPlacements[0].facing).toBe(
+      'preserve',
+    );
+    expect(
+      previewCutscene(scene, map, [npc], actions, { kind: 'completion' }, [], 16).characters.find(
+        (character) => character.id === host,
+      )?.facing,
+    ).toBeNull();
+    expect(() =>
+      parseCutscene({
+        ...prototype,
+        onComplete: {
+          steps: [],
+          characterPlacements: [
+            { character: host, position: { x: 168, y: 104 }, facing: 'diagonal' },
+          ],
+        },
+      }),
+    ).toThrow();
+  });
   it('preserves anchor endpoints and round-trips pixel/tile-center coordinates without modes', () => {
     const scene = source();
     expect(completionPosition(scene.onComplete.characterPlacements[0])).toEqual({

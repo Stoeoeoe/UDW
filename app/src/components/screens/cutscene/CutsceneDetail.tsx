@@ -66,6 +66,7 @@ import type {
   CutsceneAction,
   CutsceneStep,
   CompletionPlacement,
+  CompletionFacing,
 } from '../../../types/cutscene';
 import { Field, ReadOnlyIdField, InspectorSection } from '../../common/Fields';
 import { type MapPreviewOverlay } from '../../common/MapPreviewPicker';
@@ -505,6 +506,7 @@ export const CutsceneDetail: React.FC<{
             draft.onComplete.characterPlacements[endpointPicking.index] = completionPlacement(
               endpointPicking.character,
               position,
+              draft.onComplete.characterPlacements[endpointPicking.index].facing,
             );
           });
           cancelPicking();
@@ -596,6 +598,7 @@ export const CutsceneDetail: React.FC<{
         <Text textStyle="helperText">
           Placements apply before completion steps, both after watching and skipping. Other
           characters restore their original positions.
+          Facing is kept unless a final facing or anchor direction overrides it.
         </Text>
         {scene.onComplete.characterPlacements.map((placement, index) => (
           <VStack
@@ -629,6 +632,7 @@ export const CutsceneDetail: React.FC<{
                     draft.onComplete.characterPlacements[index] = completionPlacement(
                       placement.character,
                       position,
+                      placement.facing,
                     );
                   })
                 }
@@ -650,6 +654,29 @@ export const CutsceneDetail: React.FC<{
                 }}
                 onCancel={cancelPicking}
               />
+            </Field>
+            <Field label="Final facing">
+              <Select
+                aria-label="Final facing"
+                value={placement.facing ?? (placement.anchor !== undefined ? 'anchor' : 'preserve')}
+                onChange={(e) =>
+                  update((draft) => {
+                    const endpoint = draft.onComplete.characterPlacements[index];
+                    if (e.target.value === 'anchor') delete endpoint.facing;
+                    else endpoint.facing = e.target.value as CompletionFacing;
+                  })
+                }
+              >
+                <option value="preserve">Keep current facing</option>
+                {placement.anchor !== undefined && (
+                  <option value="anchor">Use anchor facing</option>
+                )}
+                {(['North', 'East', 'South', 'West'] as const).map((direction) => (
+                  <option key={direction} value={direction}>
+                    {direction}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Button
               size="xs"

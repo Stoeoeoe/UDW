@@ -142,6 +142,10 @@
                 "type": "string",
                 "pattern": "\\S"
               },
+              "facing": {
+                "type": "string",
+                "enum": ["preserve", "North", "East", "South", "West"]
+              },
               "anchor": {
                 "type": "string",
                 "pattern": "\\S"
