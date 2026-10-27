@@ -344,6 +344,8 @@ export const DialogueActionInspectorSection: React.FC<ActionSectionProps> = ({
       <FieldLabel>Lua Script</FieldLabel>
       <Box border="1px" borderColor="editorInlineBorder" borderRadius="md" overflow="hidden">
         <LuaScriptEditor
+          documentId={`${selectedDialogue.id}/${node.id}`}
+          scope={{ mode: 'script', context: 'dialogue' }}
           value={node.lua}
           height="220px"
           onChange={(value) =>

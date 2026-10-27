@@ -8,6 +8,7 @@ const parameterSchema = z
     semanticType: z.string().optional(),
     picker: z.string().optional(),
     resourceType: nonblank.optional(),
+    nullable: z.boolean().optional(),
     optional: z.boolean().optional(),
     defaultValue: z.union([z.boolean(), z.number().finite(), z.string()]).optional(),
     coordinateSpace: z.string().optional(),

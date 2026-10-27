@@ -20,6 +20,15 @@ import { saveWorkspaceTab } from '../../../lib/workspaceSaveActions';
 import { createEditorResourceDocument } from '../../../lib/editorResourceTypes';
 
 const { previewProps } = vi.hoisted(() => ({ previewProps: vi.fn() }));
+vi.mock('../scripting/LuaScriptEditor', () => ({
+  LuaScriptEditor: (props: { value: string; onChange: (value: string) => void }) => (
+    <textarea
+      aria-label="Lua script"
+      value={props.value}
+      onChange={(event) => props.onChange(event.target.value)}
+    />
+  ),
+}));
 vi.mock('../../common/MapPreviewPicker', () => ({
   MapPreviewPicker: (props: unknown) => {
     previewProps(props);
@@ -35,6 +44,55 @@ vi.mock('../../../lib/fileSystem', () => ({
 }));
 
 describe('cutscene authoring', () => {
+  it('authors a metadata-driven Lua block with continuous syntax diagnostics and global history', async () => {
+    useWorkspaceStore
+      .getState()
+      .openDocument(
+        createEditorResourceDocument({ type: 'cutscene', id: prototype.id, name: 'Intro' }),
+        { pin: true },
+      );
+    const bindings = {
+      ...unityBindings,
+    };
+    act(() =>
+      useScriptingManifestStore.getState().acceptUpdate({
+        path: 'C:/Unity/bindings.json',
+        revision: 2,
+        content: bindings,
+        error: null,
+      }),
+    );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Run Lua', exact: true }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lua script' }), {
+      target: { value: 'if true then' },
+    });
+    expect(screen.getAllByText(/Lua syntax error/).length).toBeGreaterThan(0);
+    const code = 'local greeting = "hello"\nassert(greeting == "hello")';
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lua script' }), {
+      target: { value: code },
+    });
+    expect(screen.queryByText(/Lua syntax error/)).not.toBeInTheDocument();
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.code).toBe(code);
+    act(() => runEditorHistoryCommand('undo'));
+    expect(screen.getByRole('textbox', { name: 'Lua script' })).toHaveValue('if true then');
+    act(() => runEditorHistoryCommand('redo'));
+    expect(screen.getByRole('textbox', { name: 'Lua script' })).toHaveValue(code);
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(bindings),
+    );
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({ action: 'cutscene.runLua', arguments: { code } }),
+        ]),
+      }),
+    );
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     HTMLElement.prototype.scrollTo = vi.fn();
@@ -95,6 +153,68 @@ describe('cutscene authoring', () => {
       </ChakraProvider>,
     );
 
+  it('authors global and positioned sounds using exported resources and the shared map picker', async () => {
+    const bindings = {
+      ...unityBindings,
+      resources: {
+        ...unityBindings.resources,
+        sound: [{ id: 'test:bell', description: 'Town bell' }],
+      },
+    };
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: bindings,
+      error: null,
+    });
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(bindings),
+    );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Play sound', exact: true }));
+    fireEvent.change(screen.getByLabelText('sound'), { target: { value: 'test:bell' } });
+    expect(screen.getByRole('option', { name: /Town bell/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pick on map' })).not.toBeInTheDocument();
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.position).toBeNull();
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'audio.playSound',
+            arguments: { sound: 'test:bell', position: null },
+          }),
+        ]),
+      }),
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'At position', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pick on map' }));
+    act(() => previewProps.mock.lastCall![0].positionPick.onPick({ x: 168, y: 104 }));
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments).toEqual({
+      sound: 'test:bell',
+      position: { x: 168, y: 104 },
+    });
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'audio.playSound',
+            arguments: { sound: 'test:bell', position: { x: 168, y: 104 } },
+          }),
+        ]),
+      }),
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'Global', exact: true }));
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.position).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pick on map' })).not.toBeInTheDocument();
+  });
+
   it('authors a screen flash with exported defaults and saves edited color and duration', async () => {
     useScriptingManifestStore.getState().acceptUpdate({
       path: 'C:/Unity/bindings.json',
@@ -131,6 +251,77 @@ describe('cutscene authoring', () => {
               holdSeconds: 1,
               easeOutSeconds: 0.05,
             },
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it('authors screen shake using the exported numeric parameters and saves the action', async () => {
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: unityBindings,
+      error: null,
+    });
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(unityBindings),
+    );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Screen shake', exact: true }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'durationSeconds' }), {
+      target: { value: '0.5' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'strength' }), {
+      target: { value: '0.1' },
+    });
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'camera.shake',
+            arguments: { durationSeconds: 0.5, strength: 0.1 },
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it('edits and saves Hold last frame as a boolean with undo and redo', async () => {
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: unityBindings,
+      error: null,
+    });
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(unityBindings),
+    );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Play animation', exact: true }));
+    expect(screen.getByRole('checkbox', { name: 'Hold last frame' })).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText('Character'), { target: { value: 'player' } });
+    fireEvent.change(screen.getByLabelText('animation'), { target: { value: 'base:pass-out' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Hold last frame' }));
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.holdLastFrame).toBe(true);
+    act(() => useEditorStore.getState().undoCutscene(prototype.id));
+    expect(screen.getByRole('checkbox', { name: 'Hold last frame' })).not.toBeChecked();
+    act(() => useEditorStore.getState().redoCutscene(prototype.id));
+    expect(screen.getByRole('checkbox', { name: 'Hold last frame' })).toBeChecked();
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'characters.playAnimation',
+            arguments: { character: 'player', animation: 'base:pass-out', holdLastFrame: true },
           }),
         ]),
       }),
@@ -237,6 +428,21 @@ describe('cutscene authoring', () => {
     expect(runEditorHistoryCommand('undo', document.body)).toBe(true);
     expect(useEditorStore.getState().cutscenes[1].allowSkip).toBe(true);
     expect(useEditorStore.getState().cutscenes[0].allowSkip).toBe(false);
+  });
+
+  it('defaults transitions on with a per-scene opt-out and global timing controls', () => {
+    mount();
+    const toggle = screen.getByRole('checkbox', { name: 'Show transition' });
+    expect(toggle).toBeChecked();
+    expect(screen.queryByLabelText('Fade (seconds)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Reveal (seconds)')).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(useEditorStore.getState().cutscenes[0].transition?.enabled).toBe(false);
+    expect(screen.queryByLabelText('Fade (seconds)')).not.toBeInTheDocument();
+    act(() => {
+      useEditorStore.getState().undoCutscene();
+    });
+    expect(screen.getByRole('checkbox', { name: 'Show transition' })).toBeChecked();
   });
 
   it('edits scene settings and completion separately while saving only this file', async () => {

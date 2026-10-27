@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { ScriptingResources } from './scriptingManifest';
 import { resolveMapPosition, positionPickerMetadata, pathPickerMetadata } from './mapPosition';
 import type { Cutscene, CutsceneAction } from '../types/cutscene';
+import { isConditionalStep } from '../types/cutscene';
+import { previewSequence, type BranchPath } from './cutsceneBranches';
 import type { EntityType, Map as GameMap } from '../types/schema';
 import { mapCharacterInstances, actionsForCutscenePhase, completionPosition } from './cutscenes';
 
@@ -170,7 +172,13 @@ export function previewCutscene(
   dialogueIds: string[],
   tileSize = 16,
   resources: ScriptingResources = {},
+  branchChoices: Record<string, BranchPath> = {},
 ): CutscenePreview {
+  const sequence = previewSequence(
+    scene.sequence,
+    branchChoices,
+    selection.kind === 'step' ? selection.id : undefined,
+  );
   const characters = new Map<string, PreviewCharacter>(
     mapCharacterInstances(map, entityTypes).map((character) => [
       character.id,
@@ -286,7 +294,7 @@ export function previewCutscene(
   const setup = scene.onStart ?? [];
   const setupIndex = selection.kind === 'step' ? setup.findIndex((s) => s.id === selection.id) : -1;
   const sequenceIndex =
-    selection.kind === 'step' ? scene.sequence.findIndex((s) => s.id === selection.id) : -1;
+    selection.kind === 'step' ? sequence.findIndex((s) => s.id === selection.id) : -1;
   if (selection.kind === 'step' && setupIndex < 0 && sequenceIndex < 0 && completionIndex < 0) {
     notice('Selected step is unavailable.');
     return finish();
@@ -301,11 +309,18 @@ export function previewCutscene(
           .map((step, index) => ({ step, index, phase: 'setup' as const })),
         ...(selection.kind === 'setup' || setupIndex >= 0
           ? []
-          : scene.sequence
+          : sequence
               .slice(0, sequenceIndex + 1)
               .map((step, index) => ({ step, index, phase: 'sequence' as const }))),
       ];
   for (const { step, index, phase } of steps) {
+    if (isConditionalStep(step)) {
+      notice(
+        'Conditional preview uses the selected If/Else path; live game conditions are not evaluated.',
+        step.id,
+      );
+      continue;
+    }
     const reference = (name: string): string =>
       typeof step.arguments[name] === 'string' ? (step.arguments[name] as string) : '';
     const action = actions.find((a) => a.id === step.action && a.contexts.includes('cutscene'));

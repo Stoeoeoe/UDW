@@ -18,6 +18,22 @@ import {
   ScriptContextType,
 } from '../../../types/schema';
 import { getLspClient, LspDiagnostic, LspCompletionItem } from '../../../lib/lspClient';
+import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
+import { useEditorStore } from '../../../store/useEditorStore';
+import {
+  bindingSymbols,
+  bindingCompletions,
+  bindingSnippet,
+  luaCallContext,
+  luaCode,
+  bindingDiagnostics,
+  unavailableBindings,
+  SCRIPT_SCOPE,
+  bindingParameterDescription,
+  type LuaBindingScope,
+  type LuaArgumentReferences,
+} from '../../../lib/luaBindings';
+import { withProjectCharacters } from '../../../lib/scriptingManifest';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +48,10 @@ export interface LuaScriptEditorProps {
   activeContextType?: ScriptContextType | null;
   /** Unique identifier for this editor instance (used as LSP document URI) */
   documentId?: string;
+  /** Live character bindings available to this script (for example cutscene actors). */
+  characterReferences?: readonly { id: string; name: string }[];
+  scope?: LuaBindingScope;
+  argumentReferences?: LuaArgumentReferences;
 }
 
 // ─── Lua language configuration ──────────────────────────────────────────────
@@ -390,7 +410,7 @@ function lspCompletionToMonaco(
     kind,
     detail: item.detail,
     documentation,
-    insertText: item.insertText ?? item.label,
+    insertText: item.textEdit?.newText ?? item.insertText ?? item.label,
     insertTextRules: isSnippet
       ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
       : undefined,
@@ -458,9 +478,13 @@ function initLsp(): Promise<boolean> {
   if (!lspInitPromise) {
     lspInitPromise = (async () => {
       const client = getLspClient();
-      const available = await client.isAvailable();
-      if (!available) return false;
-      return client.start();
+      try {
+        const available = await client.isAvailable();
+        if (!available) return false;
+        return await client.start();
+      } catch {
+        return false;
+      }
     })();
   }
   return lspInitPromise;
@@ -480,12 +504,48 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   scriptNamespaces = [],
   activeContextType = null,
   documentId,
+  characterReferences,
+  scope = SCRIPT_SCOPE,
+  argumentReferences,
 }) => {
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const disposablesRef = useRef<Monaco.IDisposable[]>([]);
   const [lspReady, setLspReady] = useState(false);
-  const documentUri = useRef(documentId ?? `inmemory://lua-editor-${++instanceCounter}.lua`);
+  const [mounted, setMounted] = useState(false);
+  const [instanceId] = useState(() => ++instanceCounter);
+  const uri = `inmemory://lua-editor-${instanceId}/${encodeURIComponent(documentId ?? 'script')}.lua`;
+  const manifest = useScriptingManifestStore((s) => s.manifest);
+  const characters = useEditorStore((s) => s.characters);
+  const symbols = useMemo(() => bindingSymbols(manifest, scope), [manifest, scope]);
+  const unavailable = useMemo(() => unavailableBindings(manifest, scope), [manifest, scope]);
+
+  useEffect(() => {
+    if (!mounted || !monacoRef.current) return;
+    const monaco = monacoRef.current;
+    const model = editorRef.current?.getModel();
+    if (!model) return;
+    monaco.editor.setModelMarkers(
+      model,
+      'lua-bindings',
+      bindingDiagnostics(value, manifest, scope).map((issue) => {
+        const start = model.getPositionAt(issue.from);
+        const end = model.getPositionAt(issue.to);
+        return {
+          message: issue.message,
+          source: 'Lua bindings',
+          severity: monaco.MarkerSeverity.Warning,
+          startLineNumber: start.lineNumber,
+          startColumn: start.column,
+          endLineNumber: end.lineNumber,
+          endColumn: end.column,
+        };
+      }),
+    );
+    return () => {
+      if (!model.isDisposed()) monaco.editor.setModelMarkers(model, 'lua-bindings', []);
+    };
+  }, [mounted, value, manifest, scope, uri]);
 
   // Build static game completions
   const gameCompletionItems = useMemo(() => {
@@ -498,7 +558,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
       scriptNamespaces,
       activeContextType,
     );
-  }, [gameVariables, scriptTables, scriptFunctions, scriptNamespaces, activeContextType]);
+  }, [mounted, gameVariables, scriptTables, scriptFunctions, scriptNamespaces, activeContextType]);
 
   // Initialize LSP
   useEffect(() => {
@@ -515,60 +575,63 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   useEffect(() => {
     if (!lspReady) return;
     const client = getLspClient();
-    const uri = documentUri.current;
     client.openDocument(uri, value);
     return () => {
       client.closeDocument(uri);
     };
     // Only open/close on mount/unmount — updates are handled via onChange
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lspReady]);
+  }, [lspReady, uri]);
+
+  useEffect(() => {
+    if (lspReady) getLspClient().updateDocument(uri, value);
+  }, [lspReady, uri, value]);
 
   // Sync document content to LSP on change
   const handleChange = useCallback(
     (newValue: string) => {
       onChange(newValue);
-      if (lspReady) {
-        getLspClient().updateDocument(documentUri.current, newValue);
-      }
     },
-    [onChange, lspReady],
+    [onChange],
   );
 
   // Set up LSP diagnostics → Monaco markers
   useEffect(() => {
-    if (!lspReady || !monacoRef.current) return;
+    if (!mounted || !lspReady || !monacoRef.current) return;
     const monaco = monacoRef.current;
-    const uri = documentUri.current;
 
     const client = getLspClient();
-    client.setDiagnosticsHandler((diagUri: string, diagnostics: LspDiagnostic[]) => {
-      if (diagUri !== uri) return;
-      const model = editorRef.current?.getModel();
-      if (!model) return;
+    const unsubscribe = client.subscribeDiagnostics(
+      (diagUri: string, diagnostics: LspDiagnostic[]) => {
+        if (diagUri !== uri) return;
+        const model = editorRef.current?.getModel();
+        if (!model) return;
 
-      const markers: Monaco.editor.IMarkerData[] = diagnostics.map((d) => ({
-        severity: lspSeverityToMonaco(d.severity, monaco),
-        message: d.message,
-        startLineNumber: d.range.start.line + 1,
-        startColumn: d.range.start.character + 1,
-        endLineNumber: d.range.end.line + 1,
-        endColumn: d.range.end.character + 1,
-        source: d.source ?? 'LuaLS',
-      }));
+        const markers: Monaco.editor.IMarkerData[] = diagnostics.map((d) => ({
+          severity: lspSeverityToMonaco(d.severity, monaco),
+          message: d.message,
+          startLineNumber: d.range.start.line + 1,
+          startColumn: d.range.start.character + 1,
+          endLineNumber: d.range.end.line + 1,
+          endColumn: d.range.end.character + 1,
+          source: d.source ?? 'LuaLS',
+        }));
 
-      monaco.editor.setModelMarkers(model, 'lua-ls', markers);
-    });
+        monaco.editor.setModelMarkers(model, 'lua-ls', markers);
+      },
+    );
 
     return () => {
-      client.setDiagnosticsHandler(() => {});
+      unsubscribe();
+      const model = editorRef.current?.getModel();
+      if (model) monaco.editor.setModelMarkers(model, 'lua-ls', []);
     };
-  }, [lspReady]);
+  }, [mounted, lspReady, uri]);
 
   // Register providers
   useEffect(() => {
     const monaco = monacoRef.current;
-    if (!monaco) return;
+    if (!mounted || !monaco) return;
 
     // Dispose previous registrations
     for (const d of disposablesRef.current) d.dispose();
@@ -577,8 +640,9 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     // Completion provider: merges LSP results with static game completions
     disposablesRef.current.push(
       monaco.languages.registerCompletionItemProvider(LUA_LANGUAGE_ID, {
-        triggerCharacters: ['.', ':', '"', "'"],
+        triggerCharacters: ['.', ':', '"', "'", '(', ',', ' '],
         async provideCompletionItems(model: Monaco.editor.ITextModel, position: Monaco.Position) {
+          if (model !== editorRef.current?.getModel()) return { suggestions: [] };
           const word = model.getWordUntilPosition(position);
           const range: Monaco.IRange = {
             startLineNumber: position.lineNumber,
@@ -587,35 +651,63 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             endColumn: word.endColumn,
           };
 
-          // Start with static game completions
-          const lineContent = model.getLineContent(position.lineNumber);
-          const textBefore = lineContent.substring(0, position.column - 1);
-          const dotMatch = textBefore.match(/([\w]+)[.:]$/);
-
-          let staticItems = gameCompletionItems;
-          if (dotMatch) {
-            const prefix = dotMatch[1];
-            const sep = dotMatch[0].slice(-1);
-            staticItems = gameCompletionItems.filter((item) => {
-              const label = typeof item.label === 'string' ? item.label : item.label.label;
-              return label.startsWith(prefix + sep);
-            });
-          }
-
-          const suggestions: Monaco.languages.CompletionItem[] = staticItems.map((item) => ({
-            ...item,
-            range,
-          }));
+          const textBefore = model.getValue().slice(0, model.getOffsetAt(position));
+          const matches = bindingCompletions(
+            textBefore,
+            symbols,
+            withProjectCharacters(manifest?.resources, characters),
+            characterReferences,
+            argumentReferences,
+          );
+          const path = textBefore.slice(matches.from);
+          const start = model.getPositionAt(matches.from);
+          const staticRange = {
+            ...range,
+            startLineNumber: start.lineNumber,
+            startColumn: start.column,
+          };
+          const scanned = luaCode(textBefore);
+          const staticItems =
+            scanned.blocked || scanned.string || matches.argument
+              ? []
+              : gameCompletionItems.filter((item) => {
+                  const label = typeof item.label === 'string' ? item.label : item.label.label;
+                  return label.startsWith(path) && !unavailable.has(label);
+                });
+          const suggestions: Monaco.languages.CompletionItem[] = [
+            ...staticItems.map((item) => ({ ...item, range: staticRange })),
+            ...matches.options.map((symbol) => ({
+              label: symbol.label,
+              kind:
+                symbol.type === 'function'
+                  ? monaco.languages.CompletionItemKind.Function
+                  : symbol.type === 'constant'
+                    ? monaco.languages.CompletionItemKind.Constant
+                    : monaco.languages.CompletionItemKind.Module,
+              detail: symbol.detail,
+              documentation: symbol.description,
+              insertText: bindingSnippet(symbol),
+              insertTextRules: symbol.parameters
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                : undefined,
+              range: staticRange,
+            })),
+          ];
 
           // Add LSP completions if available
-          if (lspReady) {
+          if (lspReady && !matches.argument) {
             try {
               const lspItems = await getLspClient().completion(
-                documentUri.current,
+                uri,
                 position.lineNumber - 1,
                 position.column - 1,
               );
               for (const item of lspItems) {
+                const prefix = path.slice(
+                  0,
+                  Math.max(path.lastIndexOf('.'), path.lastIndexOf(':')) + 1,
+                );
+                if (unavailable.has(item.label) || unavailable.has(prefix + item.label)) continue;
                 suggestions.push(lspCompletionToMonaco(item, range, monaco));
               }
             } catch {
@@ -623,7 +715,62 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             }
           }
 
-          return { suggestions };
+          return {
+            suggestions: [
+              ...new Map(
+                suggestions.map((item) => [
+                  typeof item.label === 'string' ? item.label : item.label.label,
+                  item,
+                ]),
+              ).values(),
+            ],
+          };
+        },
+      }),
+    );
+
+    disposablesRef.current.push(
+      monaco.languages.registerHoverProvider(LUA_LANGUAGE_ID, {
+        provideHover(model, position) {
+          if (model !== editorRef.current?.getModel()) return null;
+          const line = model.getLineContent(position.lineNumber);
+          const before = line.slice(0, position.column - 1).match(/[\w.:]*$/)?.[0] ?? '';
+          const after = line.slice(position.column - 1).match(/^[\w.:]*/)?.[0] ?? '';
+          const symbol = symbols.find((s) => s.label === before + after);
+          const scanned = luaCode(model.getValue().slice(0, model.getOffsetAt(position)));
+          if (!symbol || scanned.blocked || scanned.string) return null;
+          return {
+            contents: [
+              { value: '```lua\n' + symbol.detail + '\n```' },
+              { value: symbol.description ?? '' },
+            ],
+          };
+        },
+      }),
+      monaco.languages.registerSignatureHelpProvider(LUA_LANGUAGE_ID, {
+        signatureHelpTriggerCharacters: ['(', ','],
+        provideSignatureHelp(model, position) {
+          if (model !== editorRef.current?.getModel()) return null;
+          const call = luaCallContext(model.getValue().slice(0, model.getOffsetAt(position)));
+          const symbol = symbols.find((s) => s.label === call?.name);
+          if (!symbol?.parameters) return null;
+          return {
+            value: {
+              signatures: [
+                {
+                  label: symbol.detail,
+                  documentation: symbol.description,
+                  parameters: symbol.parameters.map((p) => ({
+                    label: `${p.name}: ${p.type}`,
+                    documentation: bindingParameterDescription(p),
+                  })),
+                },
+              ],
+              activeSignature: 0,
+              activeParameter: Math.min(call!.argument, Math.max(0, symbol.parameters.length - 1)),
+            },
+            dispose() {},
+          };
         },
       }),
     );
@@ -633,9 +780,10 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
       disposablesRef.current.push(
         monaco.languages.registerHoverProvider(LUA_LANGUAGE_ID, {
           async provideHover(_model: Monaco.editor.ITextModel, position: Monaco.Position) {
+            if (_model !== editorRef.current?.getModel()) return null;
             try {
               const hover = await getLspClient().hover(
-                documentUri.current,
+                uri,
                 position.lineNumber - 1,
                 position.column - 1,
               );
@@ -675,9 +823,10 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
         monaco.languages.registerSignatureHelpProvider(LUA_LANGUAGE_ID, {
           signatureHelpTriggerCharacters: ['(', ','],
           async provideSignatureHelp(_model: Monaco.editor.ITextModel, position: Monaco.Position) {
+            if (_model !== editorRef.current?.getModel()) return null;
             try {
               const sigHelp = await getLspClient().signatureHelp(
-                documentUri.current,
+                uri,
                 position.lineNumber - 1,
                 position.column - 1,
               );
@@ -720,7 +869,19 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
       for (const d of disposablesRef.current) d.dispose();
       disposablesRef.current = [];
     };
-  }, [gameCompletionItems, lspReady]);
+  }, [
+    mounted,
+    gameCompletionItems,
+    lspReady,
+    uri,
+    symbols,
+    manifest,
+    characters,
+    characterReferences,
+    argumentReferences,
+    scope,
+    unavailable,
+  ]);
 
   const handleBeforeMount: BeforeMount = (monaco) => {
     monacoRef.current = monaco;
@@ -731,6 +892,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   const handleMount: OnMount = (editor, monaco) => {
     monacoRef.current = monaco;
     editorRef.current = editor;
+    setMounted(true);
 
     editor.updateOptions({
       minimap: { enabled: false },
@@ -762,6 +924,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   return (
     <Editor
       height={height}
+      path={uri}
       language={LUA_LANGUAGE_ID}
       theme={LUA_THEME_NAME}
       value={value}

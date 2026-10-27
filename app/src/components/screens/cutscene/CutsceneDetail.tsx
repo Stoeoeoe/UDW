@@ -56,6 +56,7 @@ import {
 } from '../../../lib/mapPosition';
 import { MapPathField } from '../../common/MapPathField';
 import { MapPositionField } from '../../common/MapPositionField';
+import { NullableMapPositionField } from '../../common/NullableMapPositionField';
 import {
   previewCutscene,
   readActionPreview,
@@ -73,6 +74,18 @@ import { type MapPreviewOverlay } from '../../common/MapPreviewPicker';
 import { SequenceCard, SequenceTypeMenu, SortableSequenceItem } from '../../common/SequenceEditor';
 import { SplitEditorCanvas } from '../../common/SplitEditorCanvas';
 import { NumericCutsceneArgument } from './NumericCutsceneArgument';
+import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
+import { ConditionEditor } from '../scripting/ConditionEditor';
+import { isConditionalStep } from '../../../types/cutscene';
+import {
+  allCutsceneSteps,
+  allSequenceSteps,
+  cutsceneStepList,
+  createCutsceneCondition,
+  duplicateCutsceneStep,
+  type BranchPath,
+} from '../../../lib/cutsceneBranches';
+import { DEFAULT_CUTSCENE_TRANSITION } from '../../../types/cutscene';
 import { CutscenePreviewPanel } from './CutscenePreviewPanel';
 import { InspectorPanel } from '../common/InspectorPanel';
 import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
@@ -100,6 +113,10 @@ export const CutsceneDetail: React.FC<{
   );
   const resources = withProjectCharacters(manifestResources, characterDefinitions);
   const edit = useEditorStore((s) => s.editCutscenes);
+  const gameVariables = useEditorStore((s) => s.gameVariables);
+  const scriptTables = useEditorStore((s) => s.scriptTables);
+  const scriptFunctions = useEditorStore((s) => s.scriptFunctions);
+  const scriptNamespaces = useEditorStore((s) => s.scriptNamespaces);
   const [selection, setSelection] = useState<Selection>({ kind: 'scene' });
   const [activePhase, setActivePhase] = useState<'onStart' | 'sequence' | 'completion'>('sequence');
   const [endpointCharacter, setEndpointCharacter] = useState('');
@@ -118,6 +135,7 @@ export const CutsceneDetail: React.FC<{
     mode: PlacementMode;
   } | null>(null);
   const setupSteps = scene.onStart ?? [];
+  const [branchChoices, setBranchChoices] = useState<Record<string, BranchPath>>({});
   const completionSteps = scene.onComplete.steps;
   const sectionOf = (id: string): 'onStart' | 'sequence' | 'completion' =>
     setupSteps.some((s) => s.id === id)
@@ -157,7 +175,7 @@ export const CutsceneDetail: React.FC<{
     });
   const selectedStep =
     selection.kind === 'step'
-      ? [...setupSteps, ...scene.sequence, ...completionSteps].find((s) => s.id === selection.id)
+      ? allCutsceneSteps(scene).find((s) => s.id === selection.id)
       : undefined;
   const characterOptions = [
     ...baseCharacterOptions,
@@ -169,7 +187,9 @@ export const CutsceneDetail: React.FC<{
     ).map((id) => ({ id, label: id })),
   ];
   const selectedSection = selectedStep ? sectionOf(selectedStep.id) : 'sequence';
-  const selectedList = sectionSteps(selectedSection);
+  const selectedList = selectedStep
+    ? cutsceneStepList(scene, selectedStep.id)!
+    : sectionSteps(selectedSection);
   useEffect(() => {
     if (selectedStep) setActivePhase(selectedSection);
   }, [selectedSection, selectedStep]);
@@ -245,31 +265,51 @@ export const CutsceneDetail: React.FC<{
     return null;
   };
   const parameterLabel = (parameter: CutsceneAction['parameters'][number]) =>
-    parameter.semanticType === 'characterDeclaration'
-      ? 'Instance name'
-      : parameter.resourceType === 'character'
-        ? 'Character'
-        : parameter.name === 'character'
+    parameter.type === 'boolean'
+      ? parameter.name
+          .replace(/([a-z])([A-Z])/g, '$1 $2')
+          .toLowerCase()
+          .replace(/^./, (first) => first.toUpperCase())
+      : parameter.semanticType === 'characterDeclaration'
+        ? 'Instance name'
+        : parameter.resourceType === 'character'
           ? 'Character'
-          : parameter.name;
+          : parameter.name === 'character'
+            ? 'Character'
+            : parameter.name;
   const referenceLabel = (
     value: CutsceneStep['arguments'][string],
     parameter: CutsceneAction['parameters'][number],
   ) =>
-    Array.isArray(value)
-      ? `${value.length} waypoint${value.length === 1 ? '' : 's'}`
-      : isAnchorPosition(value)
-        ? anchorOptions.find((a) => a.id === value.anchor)?.label ||
-          `Missing anchor: ${value.anchor}`
-        : isMapPosition(value)
-          ? `(${value.x}, ${value.y})`
-          : typeof value === 'number'
-            ? String(value)
-            : optionsFor(parameter)?.find((o) => o.id === value)?.label || value || 'Not set';
+    parameter.type === 'boolean'
+      ? `${parameterLabel(parameter)}: ${(typeof value === 'boolean' ? value : parameter.defaultValue) ? 'On' : 'Off'}`
+      : value === null && parameter.type === 'position' && parameter.nullable === true
+        ? 'Global'
+        : Array.isArray(value)
+          ? `${value.length} waypoint${value.length === 1 ? '' : 's'}`
+          : isAnchorPosition(value)
+            ? anchorOptions.find((a) => a.id === value.anchor)?.label ||
+              `Missing anchor: ${value.anchor}`
+            : isMapPosition(value)
+              ? `(${value.x}, ${value.y})`
+              : typeof value === 'number'
+                ? String(value)
+                : optionsFor(parameter)?.find((o) => o.id === value)?.label || value || 'Not set';
   const summary = (step: CutsceneStep) => {
+    if (isConditionalStep(step)) return String(step.arguments.condition || 'Enter a Lua condition');
     const action = actionFor(step);
     if (!action) return step.action;
-    return action.parameters.map((p) => referenceLabel(step.arguments[p.name], p)).join(' → ');
+    return action.parameters
+      .map((p) => {
+        const value = step.arguments[p.name];
+        return p.semanticType === 'lua' && p.picker === 'lua' && typeof value === 'string'
+          ? value
+              .split(/\r?\n/)
+              .find((line) => line.trim())
+              ?.slice(0, 100) || 'Enter a Lua script'
+          : referenceLabel(value, p);
+      })
+      .join(' → ');
   };
   const diagnostics = validateCutscene(scene, actions, {
     maps: maps.map((m) => (m.id === currentMap?.id ? currentMap : m)),
@@ -290,9 +330,7 @@ export const CutsceneDetail: React.FC<{
           : rootIssues;
   const issueMessage = (issue: (typeof diagnostics)[number]) => {
     const name = issue.path.split('.arguments.')[1]?.split('.')[0];
-    const step = [...setupSteps, ...scene.sequence, ...completionSteps].find(
-      (step) => step.id === issue.stepId,
-    );
+    const step = allCutsceneSteps(scene).find((step) => step.id === issue.stepId);
     const parameter =
       step && actionFor(step)?.parameters.find((parameter) => parameter.name === name);
     return parameter ? `${parameterLabel(parameter)}: ${issue.message}` : issue.message;
@@ -307,20 +345,28 @@ export const CutsceneDetail: React.FC<{
         ))}
       </VStack>
     ) : null;
-  const collection = (draft: Cutscene, section: 'onStart' | 'sequence' | 'completion') =>
-    section === 'onStart'
-      ? (draft.onStart ??= [])
-      : section === 'completion'
-        ? draft.onComplete.steps
-        : draft.sequence;
+  type PathLocation = { branchId: string; path: BranchPath };
+  const collection = (
+    draft: Cutscene,
+    section: 'onStart' | 'sequence' | 'completion',
+    location?: PathLocation,
+  ) =>
+    location
+      ? draft.sequence.find((step) => step.id === location.branchId)![location.path]!
+      : section === 'onStart'
+        ? (draft.onStart ??= [])
+        : section === 'completion'
+          ? draft.onComplete.steps
+          : draft.sequence;
   const reorder = (
     from: number,
     to: number,
     section: 'onStart' | 'sequence' | 'completion' = 'sequence',
+    location?: PathLocation,
   ) => {
     if (from < 0 || to < 0 || from === to) return;
     update((draft) => {
-      const list = collection(draft, section);
+      const list = collection(draft, section, location);
       const [step] = list.splice(from, 1);
       list.splice(to, 0, step);
     });
@@ -329,24 +375,22 @@ export const CutsceneDetail: React.FC<{
     actionId: string,
     index: number,
     section: 'onStart' | 'sequence' | 'completion' = 'sequence',
+    location?: PathLocation,
   ) => {
     const action = eligible(section).find((a) => a.id === actionId);
-    if (!action) return;
-    const step = createCutsceneStep(action);
+    if (!action && (actionId !== 'control.if' || section !== 'sequence' || location)) return;
+    const step = action ? createCutsceneStep(action) : createCutsceneCondition();
     update((draft) => {
-      collection(draft, section).splice(index, 0, step);
+      collection(draft, section, location).splice(index, 0, step);
     });
     setSelection({ kind: 'step', id: step.id });
     setActivePhase(section);
   };
   const duplicate = (step: CutsceneStep, index: number) => {
-    const id = `step-${crypto.randomUUID()}`;
+    const copy = duplicateCutsceneStep(step);
+    const id = copy.id;
     edit((draft, draftLabels) => {
-      collection(draft.find((s) => s.id === scene.id)!, sectionOf(step.id)).splice(index + 1, 0, {
-        ...step,
-        id,
-        arguments: { ...step.arguments },
-      });
+      cutsceneStepList(draft.find((s) => s.id === scene.id)!, step.id)!.splice(index + 1, 0, copy);
       if (labels[`${scene.id}/${step.id}`])
         draftLabels[`${scene.id}/${id}`] = labels[`${scene.id}/${step.id}`];
     });
@@ -355,19 +399,20 @@ export const CutsceneDetail: React.FC<{
   };
   const remove = (step: CutsceneStep) => {
     edit((draft, draftLabels) => {
-      const list = collection(draft.find((s) => s.id === scene.id)!, sectionOf(step.id));
+      const list = cutsceneStepList(draft.find((s) => s.id === scene.id)!, step.id)!;
       list.splice(
         list.findIndex((s) => s.id === step.id),
         1,
       );
-      delete draftLabels[`${scene.id}/${step.id}`];
+      for (const removed of allSequenceSteps([step]))
+        delete draftLabels[`${scene.id}/${removed.id}`];
     });
     if (selectedStep?.id === step.id) setSelection({ kind: 'scene' });
   };
   const moveToSection = (step: CutsceneStep, target: 'onStart' | 'sequence' | 'completion') => {
     if (!eligible(target).some((a) => a.id === step.action)) return;
     update((draft) => {
-      const from = collection(draft, sectionOf(step.id));
+      const from = cutsceneStepList(draft, step.id)!;
       const [moved] = from.splice(
         from.findIndex((s) => s.id === step.id),
         1,
@@ -381,11 +426,17 @@ export const CutsceneDetail: React.FC<{
     trigger: React.ReactElement,
     index: number,
     section: 'onStart' | 'sequence' | 'completion' = 'sequence',
+    location?: PathLocation,
   ) => (
     <SequenceTypeMenu
       trigger={trigger}
-      options={eligible(section).map((a) => ({ id: a.id, label: a.displayName }))}
-      onSelect={(id) => add(id, index, section)}
+      options={[
+        ...eligible(section).map((a) => ({ id: a.id, label: a.displayName })),
+        ...(section === 'sequence' && !location
+          ? [{ id: 'control.if', label: 'Conditional branch' }]
+          : []),
+      ]}
+      onSelect={(id) => add(id, index, section, location)}
     />
   );
   const sensors = useSensors(
@@ -402,6 +453,7 @@ export const CutsceneDetail: React.FC<{
         [...dialogues.keys()],
         tileSize,
         resources,
+        branchChoices,
       )
     : null;
   const toTiles = (position: [number, number]): [number, number] => [
@@ -523,11 +575,7 @@ export const CutsceneDetail: React.FC<{
           onHover: setHoverPosition,
           onPick: (position: MapPosition) => {
             update((draft) => {
-              const step = [
-                ...(draft.onStart ?? []),
-                ...draft.sequence,
-                ...draft.onComplete.steps,
-              ].find((s) => s.id === picking.stepId);
+              const step = allCutsceneSteps(draft).find((s) => s.id === picking.stepId);
               if (step) {
                 if (picking.waypoint === undefined) step.arguments[picking.parameter] = position;
                 else if (Array.isArray(step.arguments[picking.parameter]))
@@ -574,6 +622,23 @@ export const CutsceneDetail: React.FC<{
           }
         />
       </Field>
+      <Field
+        label="Show transition"
+        helperText="Fade to black, hold, then open from the center at both ends. Shared timings are configured in Unity's CutscenePresentation settings asset."
+      >
+        <Switch
+          aria-label="Show transition"
+          isChecked={(scene.transition ?? DEFAULT_CUTSCENE_TRANSITION).enabled}
+          onChange={(e) =>
+            update((draft) => {
+              draft.transition = {
+                ...(draft.transition ?? DEFAULT_CUTSCENE_TRANSITION),
+                enabled: e.target.checked,
+              };
+            })
+          }
+        />
+      </Field>
       <Box as="details">
         <Box as="summary" textStyle="helperText" cursor="pointer" mb={3}>
           Resource details
@@ -597,8 +662,8 @@ export const CutsceneDetail: React.FC<{
       <InspectorSection title="Final character positions">
         <Text textStyle="helperText">
           Placements apply before completion steps, both after watching and skipping. Other
-          characters restore their original positions.
-          Facing is kept unless a final facing or anchor direction overrides it.
+          characters restore their original positions. Facing is kept unless a final facing or
+          anchor direction overrides it.
         </Text>
         {scene.onComplete.characterPlacements.map((placement, index) => (
           <VStack
@@ -746,15 +811,28 @@ export const CutsceneDetail: React.FC<{
         .map((parameter) => {
           const options = optionsFor(parameter);
           const positionMetadata = positionPickerMetadata(parameter);
+          const PositionField =
+            parameter.nullable === true ? NullableMapPositionField : MapPositionField;
           const pathMetadata = pathPickerMetadata(parameter);
+          const luaCode =
+            parameter.type === 'string' &&
+            parameter.semanticType === 'lua' &&
+            parameter.picker === 'lua';
           const numeric =
             parameter.type === 'number' &&
             !parameter.semanticType &&
             !parameter.picker &&
             !parameter.resourceType;
+          const boolean =
+            parameter.type === 'boolean' &&
+            !parameter.semanticType &&
+            !parameter.picker &&
+            !parameter.resourceType;
           const authoredValue = selectedStep.arguments[parameter.name];
-          const currentValue = authoredValue === undefined && parameter.optional === true
-            ? parameter.defaultValue : authoredValue;
+          const currentValue =
+            authoredValue === undefined && parameter.optional === true
+              ? parameter.defaultValue
+              : authoredValue;
           const resourceList = parameter.resourceType
             ? resources[parameter.resourceType]
             : undefined;
@@ -768,6 +846,8 @@ export const CutsceneDetail: React.FC<{
                 : undefined
             : undefined;
           const supported =
+            boolean ||
+            luaCode ||
             parameter.semanticType === 'characterDeclaration' ||
             Boolean(positionMetadata) ||
             Boolean(pathMetadata) ||
@@ -790,7 +870,50 @@ export const CutsceneDetail: React.FC<{
                   : `Unsupported manifest parameter: ${parameter.type} ${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`)
               }
             >
-              {pathMetadata ? (
+              {luaCode ? (
+                <Box
+                  border="1px"
+                  borderColor="editorInlineBorder"
+                  borderRadius="md"
+                  overflow="hidden"
+                >
+                  <LuaScriptEditor
+                    value={typeof currentValue === 'string' ? currentValue : ''}
+                    height="260px"
+                    documentId={`cutscene/${scene.id}/${selectedStep.id}/${parameter.name}`}
+                    scope={{
+                      mode: 'script',
+                      context: 'cutscene',
+                      phase: phaseFor(selectedSection),
+                    }}
+                    argumentReferences={{
+                      anchors: anchorOptions.map((anchor) => ({
+                        id: anchor.id,
+                        name: anchor.label,
+                      })),
+                      dialogues: [...dialogues.values()].map((dialogue) => ({
+                        id: dialogue.id,
+                        name: dialogue.name,
+                      })),
+                    }}
+                    characterReferences={characterOptions.map((actor) => ({
+                      id: actor.id,
+                      name: actor.label,
+                    }))}
+                    gameVariables={gameVariables}
+                    scriptTables={scriptTables}
+                    scriptFunctions={scriptFunctions}
+                    scriptNamespaces={scriptNamespaces}
+                    onChange={(value) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find(
+                          (step) => step.id === selectedStep.id,
+                        )!.arguments[parameter.name] = value;
+                      })
+                    }
+                  />
+                </Box>
+              ) : pathMetadata ? (
                 <MapPathField
                   key={selectedStep.id + '/' + parameter.name}
                   value={selectedStep.arguments[parameter.name]}
@@ -803,9 +926,9 @@ export const CutsceneDetail: React.FC<{
                   }
                   onChange={(value) =>
                     update((draft) => {
-                      [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
-                        (s) => s.id === selectedStep.id,
-                      )!.arguments[parameter.name] = value;
+                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                        parameter.name
+                      ] = value;
                     })
                   }
                   onPick={(waypoint, mode) => {
@@ -828,7 +951,7 @@ export const CutsceneDetail: React.FC<{
                   onCancel={cancelPicking}
                 />
               ) : positionMetadata ? (
-                <MapPositionField
+                <PositionField
                   key={selectedStep.id + '/' + parameter.name}
                   value={selectedStep.arguments[parameter.name]}
                   modes={positionMetadata.placementModes}
@@ -838,9 +961,9 @@ export const CutsceneDetail: React.FC<{
                   }
                   onChange={(value) =>
                     update((draft) => {
-                      [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
-                        (s) => s.id === selectedStep.id,
-                      )!.arguments[parameter.name] = value;
+                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                        parameter.name
+                      ] = value;
                     })
                   }
                   onPick={(mode) => {
@@ -864,6 +987,22 @@ export const CutsceneDetail: React.FC<{
                   }}
                   onCancel={cancelPicking}
                 />
+              ) : boolean ? (
+                <Switch
+                  aria-label={parameterLabel(parameter)}
+                  isChecked={
+                    typeof currentValue === 'boolean'
+                      ? currentValue
+                      : parameter.defaultValue === true
+                  }
+                  onChange={(e) =>
+                    update((draft) => {
+                      allCutsceneSteps(draft).find(
+                        (step) => step.id === selectedStep.id,
+                      )!.arguments[parameter.name] = e.target.checked;
+                    })
+                  }
+                />
               ) : numeric ? (
                 <NumericCutsceneArgument
                   value={
@@ -873,9 +1012,9 @@ export const CutsceneDetail: React.FC<{
                   }
                   onChange={(value) =>
                     update((draft) => {
-                      [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
-                        (s) => s.id === selectedStep.id,
-                      )!.arguments[parameter.name] = value;
+                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                        parameter.name
+                      ] = value;
                     })
                   }
                 />
@@ -889,15 +1028,11 @@ export const CutsceneDetail: React.FC<{
                   options={options}
                   onChange={(value) =>
                     update((draft) => {
-                      [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
-                        (s) => s.id === selectedStep.id,
-                      )!.arguments[parameter.name] = value;
+                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                        parameter.name
+                      ] = value;
                       if (parameter.resourceType === 'character' && value) {
-                        const step = [
-                          ...(draft.onStart ?? []),
-                          ...draft.sequence,
-                          ...draft.onComplete.steps,
-                        ].find((s) => s.id === selectedStep.id)!;
+                        const step = allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!;
                         const declaration = actionFor(selectedStep)?.parameters.find(
                           (p) => p.semanticType === 'characterDeclaration',
                         );
@@ -934,9 +1069,9 @@ export const CutsceneDetail: React.FC<{
                   }
                   onChange={(e) =>
                     update((draft) => {
-                      [...(draft.onStart ?? []), ...draft.sequence, ...draft.onComplete.steps].find(
-                        (s) => s.id === selectedStep.id,
-                      )!.arguments[parameter.name] = e.target.value;
+                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                        parameter.name
+                      ] = e.target.value;
                     })
                   }
                 />
@@ -972,8 +1107,11 @@ export const CutsceneDetail: React.FC<{
       </Box>
     </>
   );
-  const renderSteps = (section: 'onStart' | 'sequence' | 'completion') => {
-    const list = sectionSteps(section);
+  const renderSteps = (section: 'onStart' | 'sequence' | 'completion', location?: PathLocation) => {
+    const list =
+      section === 'onStart' && !location
+        ? (scene.onStart ?? [])
+        : collection(scene, section, location);
     return (
       <DndContext
         sensors={sensors}
@@ -984,12 +1122,86 @@ export const CutsceneDetail: React.FC<{
               list.findIndex((s) => s.id === active.id),
               list.findIndex((s) => s.id === over.id),
               section,
+              location,
             );
         }}
       >
         <SortableContext items={list.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <Box>
             {list.map((step, index) => {
+              if (isConditionalStep(step))
+                return (
+                  <SortableSequenceItem key={step.id} id={step.id}>
+                    <SequenceCard
+                      selected={selectedStep?.id === step.id}
+                      borderLeftColor="blue.300"
+                      onClick={() => setSelection({ kind: 'step', id: step.id })}
+                    >
+                      <HStack pr={4} justify="space-between" flexWrap="wrap">
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => setSelection({ kind: 'step', id: step.id })}
+                        >
+                          Step {index + 1} · Conditional branch
+                        </Button>
+                        <HStack>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              duplicate(step, index);
+                            }}
+                          >
+                            Duplicate branch
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            color="editorDangerText"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              remove(step);
+                            }}
+                          >
+                            Delete branch
+                          </Button>
+                        </HStack>
+                      </HStack>
+                      <Text fontFamily="mono" fontSize="xs" my={2} overflowWrap="anywhere">
+                        {summary(step)}
+                      </Text>
+                      {(['then', 'else'] as const).map((path) => (
+                        <Box
+                          key={path}
+                          borderLeft="2px solid"
+                          borderColor="editorSequenceBorder"
+                          pl={3}
+                          mt={3}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Text textStyle="sectionLabel">
+                            {path === 'then' ? 'If true' : 'Else'}
+                          </Text>
+                          {renderSteps('sequence', { branchId: step.id, path })}
+                          {palette(
+                            <Button size="xs" variant="outline" mt={2}>
+                              Add {path === 'then' ? 'If' : 'Else'} step
+                            </Button>,
+                            step[path]!.length,
+                            'sequence',
+                            { branchId: step.id, path },
+                          )}
+                        </Box>
+                      ))}
+                      <Text textStyle="helperText" mt={3}>
+                        Paths rejoin here. Continue with the next sequence step.
+                      </Text>
+                      {showIssues(diagnostics.filter((issue) => issue.stepId === step.id))}
+                    </SequenceCard>
+                  </SortableSequenceItem>
+                );
               const action = actionFor(step);
               const issues = diagnostics.filter((d) => d.stepId === step.id);
               const color = action?.parameters.some((p) => p.semanticType === 'dialogueRef')
@@ -1012,6 +1224,7 @@ export const CutsceneDetail: React.FC<{
                       </Button>,
                       index,
                       section,
+                      location,
                     )}
                   </Box>
                   <SequenceCard
@@ -1044,13 +1257,13 @@ export const CutsceneDetail: React.FC<{
                                   </MenuItem>
                                   <MenuItem
                                     isDisabled={!index}
-                                    onClick={() => reorder(index, index - 1, section)}
+                                    onClick={() => reorder(index, index - 1, section, location)}
                                   >
                                     Move up
                                   </MenuItem>
                                   <MenuItem
                                     isDisabled={index === list.length - 1}
-                                    onClick={() => reorder(index, index + 1, section)}
+                                    onClick={() => reorder(index, index + 1, section, location)}
                                   >
                                     Move down
                                   </MenuItem>
@@ -1124,7 +1337,9 @@ export const CutsceneDetail: React.FC<{
                 ? 'On completion'
                 : panel === 'setup'
                   ? 'Before start'
-                  : actionFor(selectedStep!)?.displayName || selectedStep!.action
+                  : isConditionalStep(selectedStep!)
+                    ? 'Conditional branch'
+                    : actionFor(selectedStep!)?.displayName || selectedStep!.action
           }
           subtitle={
             panel === 'step'
@@ -1144,6 +1359,48 @@ export const CutsceneDetail: React.FC<{
               Runs once before the sequence. Only immediate actions explicitly allowed in setup are
               available. Select a setup step to edit its parameters.
             </Text>
+          ) : selectedStep && isConditionalStep(selectedStep) ? (
+            <VStack align="stretch" spacing={4}>
+              <Field label="Lua condition">
+                <ConditionEditor
+                  syntaxOnly
+                  value={String(selectedStep.arguments.condition ?? '')}
+                  variables={gameVariables}
+                  tables={scriptTables}
+                  functions={scriptFunctions}
+                  namespaces={scriptNamespaces}
+                  onChange={(condition) =>
+                    update((draft) => {
+                      draft.sequence.find(
+                        (step) => step.id === selectedStep.id,
+                      )!.arguments.condition = condition;
+                    })
+                  }
+                />
+              </Field>
+              <Text textStyle="helperText">
+                Evaluated once when this step is reached. True runs the If path; false runs Else.
+                Both paths then continue with the next step. An empty path does nothing.
+              </Text>
+              <Field label="Preview path">
+                <Select
+                  size="sm"
+                  value={branchChoices[selectedStep.id] ?? 'then'}
+                  onChange={(event) =>
+                    setBranchChoices((choices) => ({
+                      ...choices,
+                      [selectedStep.id]: event.target.value as BranchPath,
+                    }))
+                  }
+                >
+                  <option value="then">If true</option>
+                  <option value="else">Else</option>
+                </Select>
+              </Field>
+              <Text textStyle="helperText">
+                Preview choice only. Playback uses live game state.
+              </Text>
+            </VStack>
           ) : (
             stepFields
           )}

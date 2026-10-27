@@ -80,6 +80,7 @@ export class LuaLspClient {
   private nextId = 1;
   private initialized = false;
   private onDiagnostics: ((uri: string, diagnostics: LspDiagnostic[]) => void) | null = null;
+  private diagnosticsListeners = new Set<(uri: string, diagnostics: LspDiagnostic[]) => void>();
   private messageHandlers: MessageHandler[] = [];
   private openDocuments = new Map<string, { version: number; content: string }>();
   private listening = false;
@@ -90,6 +91,13 @@ export class LuaLspClient {
   /** Register a diagnostics callback */
   setDiagnosticsHandler(handler: (uri: string, diagnostics: LspDiagnostic[]) => void) {
     this.onDiagnostics = handler;
+  }
+
+  subscribeDiagnostics(handler: (uri: string, diagnostics: LspDiagnostic[]) => void) {
+    this.diagnosticsListeners.add(handler);
+    return () => {
+      this.diagnosticsListeners.delete(handler);
+    };
   }
 
   /** Start the language server and initialize the LSP session */
@@ -321,6 +329,7 @@ export class LuaLspClient {
     if (msg.method === 'textDocument/publishDiagnostics' && msg.params) {
       const { uri, diagnostics } = msg.params as { uri: string; diagnostics: LspDiagnostic[] };
       this.onDiagnostics?.(uri, diagnostics);
+      for (const listener of this.diagnosticsListeners) listener(uri, diagnostics);
     }
 
     // Forward to registered handlers

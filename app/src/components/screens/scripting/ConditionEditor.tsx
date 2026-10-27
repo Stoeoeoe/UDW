@@ -20,15 +20,38 @@ import {
   Input,
 } from '@chakra-ui/react';
 import { CheckIcon, WarningIcon } from '@chakra-ui/icons';
-import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
+import CodeMirror from '@uiw/react-codemirror';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { EditorView } from '@codemirror/view';
+import {
+  EditorView,
+  hoverTooltip,
+  keymap,
+  showTooltip,
+  type Tooltip as CodeTooltip,
+} from '@codemirror/view';
+import { StreamLanguage } from '@codemirror/language';
+import { lua } from '@codemirror/legacy-modes/mode/lua';
+import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
+import { useEditorStore } from '../../../store/useEditorStore';
+import {
+  bindingSymbols,
+  bindingCompletions,
+  bindingSnippet,
+  luaCallContext,
+  luaCode,
+  bindingDiagnostics,
+  unavailableBindings,
+  CONDITION_SCOPE,
+  bindingParameterDescription,
+} from '../../../lib/luaBindings';
+import { withProjectCharacters } from '../../../lib/scriptingManifest';
 import {
   autocompletion,
   completionStatus,
   startCompletion,
   CompletionContext,
   CompletionResult,
+  snippetCompletion,
 } from '@codemirror/autocomplete';
 import {
   GameVariable,
@@ -39,8 +62,8 @@ import {
   ScriptContextType,
   ScriptPrimitiveType,
 } from '../../../types/schema';
-import { evalLuaCondition } from '../../../lib/luaRunner';
-import { Prec } from '@codemirror/state';
+import { evalLuaCondition, validateLuaChunk } from '../../../lib/luaRunner';
+import { Prec, StateField, type EditorState } from '@codemirror/state';
 import { LUA_STDLIB_COMPLETIONS } from '../../../config/luaStandardLibrary';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -63,6 +86,8 @@ type FieldType = {
 };
 
 export interface ConditionEditorProps {
+  /** Author runtime expressions without evaluating live bindings against preview mocks. */
+  syntaxOnly?: boolean;
   value: string;
   onChange: (expr: string) => void;
   variables: GameVariable[];
@@ -579,17 +604,31 @@ const TestPanel: React.FC<{
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+const EMPTY_TABLES: ScriptTable[] = [];
+const EMPTY_FUNCTIONS: ScriptFunction[] = [];
+const EMPTY_NAMESPACES: ScriptNamespace[] = [];
+
 export const ConditionEditor: React.FC<ConditionEditorProps> = ({
+  syntaxOnly = false,
   value,
   onChange,
   variables,
-  tables = [],
-  functions = [],
-  namespaces = [],
+  tables = EMPTY_TABLES,
+  functions = EMPTY_FUNCTIONS,
+  namespaces = EMPTY_NAMESPACES,
   activeContextType,
   label,
 }) => {
   const [showAdvancedStdlib, setShowAdvancedStdlib] = useState(false);
+  const manifest = useScriptingManifestStore((s) => s.manifest);
+  const characters = useEditorStore((s) => s.characters);
+  const symbols = useMemo(() => bindingSymbols(manifest, CONDITION_SCOPE), [manifest]);
+  const unavailable = useMemo(() => unavailableBindings(manifest, CONDITION_SCOPE), [manifest]);
+  const contextIssues = useMemo(
+    () => bindingDiagnostics(value, manifest, CONDITION_SCOPE),
+    [value, manifest],
+  );
+  const contextError = contextIssues[0]?.message;
 
   const allCompletions = useMemo(() => {
     const items: { label: string; type: string; detail?: string }[] = [];
@@ -726,8 +765,8 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   );
 
   const result = useMemo(
-    () => evalLuaCondition(value, testVarMap as Record<string, unknown>, luaStubs),
-    [value, testVarMap, luaStubs],
+    () => syntaxOnly ? validateLuaChunk(`return (${value || 'true'})`) : evalLuaCondition(value, testVarMap as Record<string, unknown>, luaStubs),
+    [value, testVarMap, luaStubs, syntaxOnly],
   );
 
   const updateTestValue = useCallback((path: string, val: unknown) => {
@@ -750,48 +789,104 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
     setFnMocks((prev) => prev.map((m) => (m.path === path ? { ...m, returnValue: val } : m)));
   }, []);
 
-  const isValid = value.trim() === '' || result.ok;
+  const isValid = value.trim() === '' || (result.ok && !contextError);
   const hasResult = value.trim() !== '' && result.ok && result.value !== undefined;
-
-  // Inside ConditionEditor
-  const editorRef = React.useRef<ReactCodeMirrorRef>(null);
-
-  // Update your useEffect to bridge the event
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.code === 'Space') {
-        console.log('✅ Forcing Autocomplete via Bridge');
-        const view = editorRef.current?.view;
-        if (view) {
-          // This bypasses the keymap system and calls the command directly
-          startCompletion(view);
-          // Prevent Chakra or the browser from doing anything else
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }
-    };
-
-    // Keep 'true' for capture phase to beat Chakra's internal listeners
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, []);
 
   const extensions = useMemo(() => {
     const completionSource = (context: CompletionContext): CompletionResult | null => {
-      const word = context.matchBefore(/[\w.:]+/);
-      if (!word && !context.explicit) return null;
-
-      const from = word ? word.from : context.pos;
-      const q = word ? word.text.toLowerCase() : '';
-      const options = allCompletions
-        .filter((c) => !q || c.label.toLowerCase().includes(q))
-        .map((c) => ({ label: c.label, type: c.type, detail: c.detail }));
-
-      return { from, options };
+      const text = context.state.doc.sliceString(0, context.pos);
+      const matches = bindingCompletions(
+        text,
+        symbols,
+        withProjectCharacters(manifest?.resources, characters),
+      );
+      const q = text.slice(matches.from);
+      if (!q && !context.explicit && !matches.string && !matches.argument) return null;
+      const scanned = luaCode(text);
+      const legacy =
+        scanned.blocked || scanned.string || matches.argument
+          ? []
+          : allCompletions
+              .filter((c) => c.label.startsWith(q) && !unavailable.has(c.label))
+              .map((c) => ({ label: c.label, type: c.type, detail: c.detail }));
+      const bindings = matches.options.map((symbol) =>
+        symbol.parameters
+          ? snippetCompletion(bindingSnippet(symbol), {
+              label: symbol.label,
+              type: symbol.type,
+              detail: symbol.detail,
+              info: symbol.description,
+            })
+          : {
+              label: symbol.label,
+              type: symbol.type,
+              detail: symbol.detail,
+              info: symbol.description,
+              apply: symbol.insertText ?? symbol.label,
+            },
+      );
+      return {
+        from: matches.from,
+        options: [...new Map([...legacy, ...bindings].map((c) => [c.label, c])).values()],
+      };
     };
 
+    const signatureTooltip = (state: EditorState): readonly CodeTooltip[] => {
+      if (!state.selection.main.empty) return [];
+      const call = luaCallContext(state.doc.sliceString(0, state.selection.main.head));
+      const symbol = symbols.find((s) => s.label === call?.name);
+      if (!symbol?.parameters) return [];
+      return [
+        {
+          pos: state.selection.main.head,
+          above: true,
+          create: () => {
+            const dom = document.createElement('div');
+            dom.className = 'cm-lua-signature';
+            const signature = document.createElement('div');
+            signature.textContent = symbol.detail;
+            dom.append(signature);
+            const parameter = symbol.parameters?.[call!.argument];
+            if (parameter) {
+              const active = document.createElement('strong');
+              active.textContent = `${parameter.name}: ${parameter.type} - ${bindingParameterDescription(parameter)}`;
+              dom.append(active);
+            }
+            return { dom };
+          },
+        },
+      ];
+    };
+    const signatures = StateField.define<readonly CodeTooltip[]>({
+      create: signatureTooltip,
+      update: (_value, transaction) => signatureTooltip(transaction.state),
+      provide: (field) => showTooltip.computeN([field], (state) => state.field(field)),
+    });
+
     return [
+      StreamLanguage.define(lua),
+      signatures,
+      keymap.of([{ key: 'Ctrl-Space', run: startCompletion }]),
+      hoverTooltip((view, pos) => {
+        const text = view.state.doc.toString();
+        const scanned = luaCode(text.slice(0, pos));
+        if (scanned.blocked || scanned.string) return null;
+        const before = text.slice(0, pos).match(/[\w.:]*$/)?.[0] ?? '';
+        const after = text.slice(pos).match(/^[\w.:]*/)?.[0] ?? '';
+        const symbol = symbols.find((s) => s.label === before + after);
+        if (!symbol) return null;
+        return {
+          pos: pos - before.length,
+          end: pos + after.length,
+          above: true,
+          create: () => {
+            const dom = document.createElement('div');
+            dom.className = 'cm-lua-signature';
+            dom.textContent = [symbol.detail, symbol.description].filter(Boolean).join(' - ');
+            return { dom };
+          },
+        };
+      }),
       // 1. Register the autocompletion engine with default keys enabled
       autocompletion({
         override: [completionSource],
@@ -803,6 +898,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         '&': { fontSize: '12px' },
         '.cm-content': { fontFamily: 'monospace', padding: '3px 6px' },
         '.cm-gutters': { display: 'none' },
+        '.cm-lua-signature': { padding: '4px 8px', maxWidth: '500px', whiteSpace: 'normal' },
       }),
 
       // 3. The Single-Line Hack (Moved to lowest priority)
@@ -823,7 +919,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         }),
       ),
     ];
-  }, [allCompletions]);
+  }, [allCompletions, symbols, manifest, characters, unavailable]);
 
   return (
     <Box>
@@ -853,16 +949,18 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
             basicSetup={false}
             height="24px"
             placeholder="e.g. weather.isRain == true"
-            ref={editorRef}
           />
         </Box>
 
         {/* Fixed-width validation icon slot */}
         <Box w="16px" flexShrink={0} display="flex" alignItems="center" justifyContent="center">
           {value.trim() !== '' && (
-            <Tooltip label={result.ok ? 'Valid Lua' : (result.error ?? 'Syntax error')} hasArrow>
-              <Box color={result.ok ? 'green.400' : 'red.400'} fontSize="xs" lineHeight={1}>
-                {result.ok ? <CheckIcon /> : <WarningIcon />}
+            <Tooltip
+              label={isValid ? 'Valid Lua' : (contextError ?? result.error ?? 'Syntax error')}
+              hasArrow
+            >
+              <Box color={isValid ? 'green.400' : 'red.400'} fontSize="xs" lineHeight={1}>
+                {isValid ? <CheckIcon /> : <WarningIcon />}
               </Box>
             </Tooltip>
           )}
@@ -879,7 +977,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         noOfLines={1}
         visibility={!isValid && value.trim() !== '' ? 'visible' : 'hidden'}
       >
-        {result.error ?? ' '}
+        {contextError ?? result.error ?? ' '}
       </Text>
 
       {/* Footer */}
@@ -900,6 +998,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
             onChange={(e) => setShowAdvancedStdlib(e.target.checked)}
           />
           <Button
+            hidden={syntaxOnly}
             size="xs"
             variant="ghost"
             color={showTest ? 'blue.300' : 'gray.500'}

@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { validateLuaChunk } from './luaRunner';
+import { CUTSCENE_CONDITION_ACTION, isConditionalStep } from '../types/cutscene';
+import { allCutsceneSteps } from './cutsceneBranches';
 import {
   mapPositionSchema,
   pixelPositionSchema,
@@ -54,11 +57,30 @@ export function completionPlacement(
 const stepSchema = z
   .object({
     id: nonblank,
-    action: nonblank,
+    action: nonblank.refine(
+      (action) => action !== CUTSCENE_CONDITION_ACTION,
+      'Conditional branches require If and Else paths',
+    ),
     arguments: z.record(
       z.string(),
-      z.union([nonblank, z.number().finite(), mapPositionSchema, mapPathSchema]),
+      z.union([
+        nonblank,
+        z.number().finite(),
+        z.boolean(),
+        mapPositionSchema,
+        mapPathSchema,
+        z.null(),
+      ]),
     ),
+  })
+  .strict();
+const conditionalSchema = z
+  .object({
+    id: nonblank,
+    action: z.literal(CUTSCENE_CONDITION_ACTION),
+    arguments: z.object({ condition: nonblank }).strict(),
+    then: z.array(stepSchema),
+    else: z.array(stepSchema),
   })
   .strict();
 export function actionsForCutscenePhase(
@@ -93,6 +115,12 @@ export const cutsceneSchema = z
     id: z.string().regex(/^[^\s:]+:[^\s]+$/, 'Use namespace:name'),
     mapId: nonblank,
     allowSkip: z.boolean(),
+    transition: z
+      .object({
+        enabled: z.boolean(),
+      })
+      .strict()
+      .optional(),
     onStart: z.array(stepSchema).optional(),
     onComplete: z
       .object({
@@ -100,7 +128,7 @@ export const cutsceneSchema = z
         characterPlacements: z.array(completionPlacementSchema),
       })
       .strict(),
-    sequence: z.array(stepSchema).min(1),
+    sequence: z.array(z.union([stepSchema, conditionalSchema])).min(1),
   })
   .strict();
 
@@ -136,11 +164,7 @@ export function parseCutscene(raw: unknown): Cutscene {
 
   const result = cutsceneSchema.safeParse(raw);
   if (!result.success) throw new Error(`Invalid cutscene source: ${result.error.message}`);
-  const ids = [
-    ...(result.data.onStart ?? []),
-    ...result.data.sequence,
-    ...result.data.onComplete.steps,
-  ].map((step) => step.id);
+  const ids = allCutsceneSteps(result.data).map((step) => step.id);
   if (new Set(ids).size !== ids.length)
     throw new Error(
       `Cutscene ${result.data.id}: duplicate step ID across setup, sequence and completion`,
@@ -234,7 +258,7 @@ export function validateCutscene(
         ...(step ? { phase } : {}),
       };
     });
-  const scene = shape.data;
+  const scene: Cutscene = shape.data;
   const diagnostics: CutsceneDiagnostic[] = [];
   const report = (path: string, message: string, stepId?: string) =>
     diagnostics.push({
@@ -262,17 +286,43 @@ export function validateCutscene(
   const seen = new Set<string>();
   const phaseSteps = [
     ...(scene.onStart ?? []).map((step, index) => ({ step, index, section: 'onStart' as const })),
-    ...scene.sequence.map((step, index) => ({ step, index, section: 'sequence' as const })),
+    ...scene.sequence.flatMap((step, index) => [
+      { step, index, section: 'sequence' as const, nestedPath: '' },
+      ...(step.then ?? []).map((child, childIndex) => ({
+        step: child,
+        index,
+        section: 'sequence' as const,
+        nestedPath: `.then.${childIndex}`,
+      })),
+      ...(step.else ?? []).map((child, childIndex) => ({
+        step: child,
+        index,
+        section: 'sequence' as const,
+        nestedPath: `.else.${childIndex}`,
+      })),
+    ]),
     ...scene.onComplete.steps.map((step, index) => ({
       step,
       index,
       section: 'onComplete.steps' as const,
     })),
   ];
-  phaseSteps.forEach(({ step, index, section }) => {
-    const path = `${section}.${index}`;
+  phaseSteps.forEach((entry) => {
+    const { step, index, section } = entry;
+    const path = `${section}.${index}${'nestedPath' in entry ? entry.nestedPath : ''}`;
     if (seen.has(step.id)) report(`${path}.id`, 'Duplicate step ID', step.id);
     seen.add(step.id);
+    if (isConditionalStep(step)) {
+      const condition = step.arguments.condition;
+      const syntax = validateLuaChunk(`return (${condition})`);
+      if (!syntax.ok)
+        report(
+          `${path}.arguments.condition`,
+          `Lua condition syntax error: ${syntax.error}`,
+          step.id,
+        );
+      return;
+    }
     const action = actions.find((a) => a.id === step.action && a.contexts.includes('cutscene'));
     if (!action) {
       report(path, `Unsupported cutscene action ${step.action}`, step.id);
@@ -288,8 +338,10 @@ export function validateCutscene(
     }
     for (const parameter of action.parameters) {
       const authoredValue = step.arguments[parameter.name];
-      const value = authoredValue === undefined && parameter.optional === true
-        ? parameter.defaultValue : authoredValue;
+      const value =
+        authoredValue === undefined && parameter.optional === true
+          ? parameter.defaultValue
+          : authoredValue;
       const argumentPath = `${path}.arguments.${parameter.name}`;
       if (parameter.type === 'boolean') {
         if (typeof value !== 'boolean')
@@ -298,6 +350,13 @@ export function validateCutscene(
           report(argumentPath, 'Boolean parameters cannot use reference pickers', step.id);
         continue;
       }
+      if (
+        value === null &&
+        parameter.type === 'position' &&
+        parameter.nullable === true &&
+        positionPickerMetadata(parameter)
+      )
+        continue;
       if (parameter.semanticType === 'characterDeclaration') {
         if (phase !== 'setup')
           report(argumentPath, 'Character declarations are only allowed in setup', step.id);
@@ -374,6 +433,16 @@ export function validateCutscene(
         continue;
       }
       const pair = `${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`;
+      if (pair === 'lua/lua') {
+        if (typeof value !== 'string' || !value.trim()) {
+          report(argumentPath, 'Enter a Lua script', step.id);
+        } else {
+          const syntax = validateLuaChunk(value);
+          if (!syntax.ok)
+            report(argumentPath, `Lua syntax error: ${syntax.error ?? 'Invalid script'}`, step.id);
+        }
+        continue;
+      }
       const values =
         pair === 'characterRef/mapCharacter'
           ? characters
@@ -444,21 +513,31 @@ export function exportCutscene(
     throw new Error(
       `Cutscene ${scene.id}: ${diagnostics.map((d) => `${d.phase ? `${d.phase} ` : ''}${d.stepId ?? d.path}: ${d.message}`).join('; ')}`,
     );
-  const serializeStep = (step: CutsceneStep): CutsceneStep => ({
-    id: step.id,
-    action: step.action,
-    arguments: Object.fromEntries(
-      actions
-        .find((a) => a.id === step.action)!
-        .parameters.map((p) => [p.name, step.arguments[p.name]]),
-    ),
-  });
+  const serializeStep = (step: CutsceneStep): CutsceneStep =>
+    isConditionalStep(step)
+      ? {
+          id: step.id,
+          action: CUTSCENE_CONDITION_ACTION,
+          arguments: { condition: step.arguments.condition },
+          then: step.then!.map(serializeStep),
+          else: step.else!.map(serializeStep),
+        }
+      : {
+          id: step.id,
+          action: step.action,
+          arguments: Object.fromEntries(
+            actions
+              .find((a) => a.id === step.action)!
+              .parameters.map((p) => [p.name, step.arguments[p.name]]),
+          ),
+        };
   return {
     $schema: '../schemas/cutscene.schema.json',
     formatVersion: 2,
     id: scene.id,
     mapId: scene.mapId,
     allowSkip: scene.allowSkip,
+    ...(scene.transition ? { transition: { ...scene.transition } } : {}),
     ...(scene.onStart !== undefined ? { onStart: scene.onStart.map(serializeStep) } : {}),
     onComplete: {
       steps: scene.onComplete.steps.map(serializeStep),
@@ -475,8 +554,18 @@ export function createCutsceneStep(action: CutsceneAction): CutsceneStep {
     id: `beat-${crypto.randomUUID()}`,
     action: action.id,
     arguments: Object.fromEntries(
-      action.parameters.map((p) => [p.name, p.optional === true && p.defaultValue !== undefined
-        ? p.defaultValue : p.type === 'boolean' ? false : p.type === 'path' ? [] : '']),
+      action.parameters.map((p) => [
+        p.name,
+        p.optional === true && p.defaultValue !== undefined
+          ? p.defaultValue
+          : p.type === 'boolean'
+            ? false
+            : p.type === 'position' && p.nullable === true
+              ? null
+              : p.type === 'path'
+                ? []
+                : '',
+      ]),
     ),
   };
 }

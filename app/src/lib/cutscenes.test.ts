@@ -160,7 +160,7 @@ describe('Unity cutscene contract', () => {
         d.message.includes('Unsupported picker'),
       ),
     ).toBe(true);
-    changed[0].parameters[0].type = 'boolean';
+    changed[0].parameters[0].type = 'table';
     expect(
       validateCutscene(scene(), changed, refs()).some((d) =>
         d.message.includes('Unsupported parameter type'),

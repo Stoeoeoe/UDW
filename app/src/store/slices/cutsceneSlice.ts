@@ -3,6 +3,7 @@ import { castDraft } from 'immer';
 import type { StateCreator } from 'zustand';
 import type { EditorStore } from '../useEditorStore';
 import type { Cutscene } from '../../types/cutscene';
+import { DEFAULT_CUTSCENE_TRANSITION } from '../../types/cutscene';
 import {
   exportCutscene,
   parseCutscene,
@@ -166,6 +167,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
           id,
           mapId: '',
           allowSkip: false,
+          transition: { ...DEFAULT_CUTSCENE_TRANSITION },
           onComplete: { steps: [], characterPlacements: [] },
           sequence: [],
         });

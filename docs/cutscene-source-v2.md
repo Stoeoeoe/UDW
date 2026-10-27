@@ -40,6 +40,25 @@ array mean no setup. Other root fields are required. `sequence` must contain at
 least one step. `onComplete` requires both `characterPlacements` and `steps`, each of
 which may be empty. It contains no `actions` Lua string. Unknown fields are errors.
 
+The optional `transition` metadata controls both entrance and exit:
+
+```json
+"transition": { "enabled": true }
+```
+
+Omission enables the transition. Vulcanus exposes Show transition beside Allow
+skipping. Timings are finite, nonnegative seconds configured globally in
+Unity's `Assets/Resources/CutscenePresentation.asset`: 0.3 seconds fade, 1.7
+seconds hold on black, then 0.12 seconds reveal, for both intro and outro.
+The entrance fades to black and reveals a horizontal opening from the center
+toward the top and bottom. Setup waits for the fade and hold, then the sequence starts
+alongside the reveal. At normal completion or skip, script progression stops;
+the scene fades to black before transient actions are stopped and completion
+placements and steps apply under cover, then the final scene is revealed. Input
+and world interaction remain blocked through the final reveal. Cancellation or
+failure clears the overlay immediately and follows the existing rollback policy.
+Disabling the transition retains immediate start/completion behavior.
+
 Every step has exactly `id`, `action` and `arguments`. IDs are stable, nonblank,
 and unique across all three arrays. Reordering or moving a step between phases
 preserves its ID, arguments and editor label; duplication creates a new ID.
@@ -118,7 +137,6 @@ mixed. Coordinate endpoints preserve current playback facing; anchor endpoints c
 it with the anchor's nonzero facing. Optional `facing` accepts `North`, `East`, `South`,
 `West`, or `preserve`. An explicit direction overrides the anchor; `preserve` keeps
 the live facing even for anchors. Omitting `facing` uses the default above. Completion steps run after these placements.
-
 Unity aligns the character's feet to either type of endpoint. Existing anchor
 endpoints keep their original source and compiled representation.
 
@@ -180,3 +198,30 @@ a fixed direction unless an endpoint, anchor, or completion step supplies one.
 
 Path arguments and the `moveCharacterAlongPath` preview effect are documented in
 [the walk-path handoff](cutscene-walk-path.md).
+
+## Lua script steps
+
+`cutscene.runLua` is an immediate Sequence action. Its string parameter uses
+`semanticType: "lua", picker: "lua"`, so the Inspector reuses the dialogue Lua
+editor and performs syntax checks as the author types. These hints apply to any
+action with a Lua parameter; the editor does not recognize API names.
+
+```json
+{
+  "id": "script",
+  "action": "cutscene.runLua",
+  "arguments": { "code": "local ready = true\nassert(ready)" }
+}
+```
+
+Unity validates syntax at import without running the block. At playback the
+block executes once in the existing writable scripting sandbox with its
+instruction budget. It uses the same synchronous scripting API as dialogue
+scripts; awaited movement/dialogue/wait actions remain separate structured steps.
+Each block has its own Lua local scope; changes made through the scripting API
+persist normally. Errors fail the cutscene. Skipping bypasses remaining sequence
+blocks and still runs completion. Setup and completion do not offer this action.
+
+Its preview is `spatialState: "unknown", effects: []`. The editor never executes
+authored Lua to infer positions. No source format change is required: the code
+is saved as an ordinary string argument, preserving newlines and quotes.
