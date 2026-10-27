@@ -19,7 +19,7 @@ namespace Core.Camera
     /// </summary>
     public class CameraManager : Singleton<CameraManager>, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
     {
-        [Tooltip("The virtual camera used to follow the player. Auto-discovered if left empty.")] [SerializeField]
+        [Tooltip("The required virtual camera used to follow the player.")] [SerializeField]
         private CinemachineCamera playerFollowVCam;
 
         [Tooltip("Base priority of the player follow cam. Cutscene cams should use a higher value.")] [SerializeField]
@@ -172,11 +172,10 @@ namespace Core.Camera
         protected override void OnAwake()
         {
             PrepareFlash();
-            if (playerFollowVCam == null)
-                playerFollowVCam = FindFirstObjectByType<CinemachineCamera>();
-
-            if (playerFollowVCam != null)
-                playerFollowVCam.Priority = playerFollowPriority;
+            if (!playerFollowVCam || !confiner || confiner.gameObject != playerFollowVCam.gameObject
+                || confiner.BoundingShape2D is not BoxCollider2D)
+                throw new InvalidOperationException("CameraManager requires a player-follow camera with its map BoxCollider2D confiner assigned.");
+            playerFollowVCam.Priority = playerFollowPriority;
 
             // In case the player already exists (e.g. persistent character, re-loaded scene)
             var existing = MainCharacter.CurrentMainCharacter;
@@ -242,16 +241,14 @@ namespace Core.Camera
 
         public void OnLocationEnter(LocationData location)
         {
-            if (confiner == null) return;
-
             var bounds = MapManager.Instance.CurrentBounds;
             var mapCollider = confiner.BoundingShape2D as BoxCollider2D;
             if (!mapCollider)
             {
                 throw new InvalidOperationException("Map collider is not a box collider.");
             }
-            // Ignore empty bounds
-            if (bounds.size == Vector3.zero) return;
+            if (bounds.size.x <= 0 || bounds.size.y <= 0)
+                throw new InvalidOperationException("Camera confinement requires initialized, nonempty map bounds.");
 
             var colliderTransform = mapCollider.transform;
             var worldMin = bounds.min;
@@ -272,13 +269,15 @@ namespace Core.Camera
             mapCollider.offset = (localMin + localMax) * 0.5f;
             mapCollider.size = localMax - localMin;
 
+            var framing = playerFollowVCam.GetComponent<MapCameraFraming>();
+            if (!framing) framing = playerFollowVCam.gameObject.AddComponent<MapCameraFraming>();
+            framing.Bind(confiner, bounds);
+
             // TODO: Check if we really always need to call this? Expensive operation, apparently!
             confiner.InvalidateBoundingShapeCache();
             if (!confiner.BoundingShapeIsBaked)
             {
-                // Ensure we have a valid vcam to bake with; try to auto-find if not assigned
-                var bakeCam = playerFollowVCam ?? FindFirstObjectByType<CinemachineCamera>();
-                confiner.BakeBoundingShape(bakeCam, 5);
+                confiner.BakeBoundingShape(playerFollowVCam, 5);
             }
             
             // Also follow character
