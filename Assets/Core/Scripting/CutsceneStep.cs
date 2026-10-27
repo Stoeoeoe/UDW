@@ -7,7 +7,7 @@ namespace Core.Scripting
 {
     /// <summary>Retains an authored action's arguments for validation before the Lua script starts.</summary>
     [Serializable]
-    public sealed class CutsceneStep
+    public sealed class CutsceneStep : ISerializationCallbackReceiver
     {
         [SerializeField, ReadOnly] private string id;
         [SerializeField, ReadOnly] private string actionId;
@@ -18,6 +18,9 @@ namespace Core.Scripting
         public string ActionId => actionId;
         public bool IsCondition => actionId == "control.if";
         public IReadOnlyList<CutsceneArgument> Arguments => _arguments ??= Array.AsReadOnly(arguments);
+
+        public void OnBeforeSerialize() { }
+        public void OnAfterDeserialize() => _arguments = null;
 
         public CutsceneStep(string id, string actionId, CutsceneArgument[] arguments)
         {

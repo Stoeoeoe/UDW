@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Core.Scripting
 {
     /// <summary>The compiled script and authored step IDs imported from one cutscene source.</summary>
-    public sealed class CutsceneDefinition : ValidatedScriptableObject
+    public sealed class CutsceneDefinition : ValidatedScriptableObject, ISerializationCallbackReceiver
     {
         [SerializeField, ReadOnly] private string cutsceneId;
         [SerializeField, ReadOnly] private string mapId;
@@ -31,6 +31,16 @@ namespace Core.Scripting
         public IReadOnlyList<CutsceneStep> Steps => _steps ??= Array.AsReadOnly(steps);
         public string OnStartLua => onStartLua;
         public IReadOnlyList<CutsceneStep> OnStart => _onStart ??= Array.AsReadOnly(onStart);
+
+        public void OnBeforeSerialize() { }
+
+        public void OnAfterDeserialize()
+        {
+            // Reimport replaces serialized arrays on the existing asset instance.
+            // Playback must bind the steps that belong to the newly compiled Lua.
+            _steps = null;
+            _onStart = null;
+        }
 
 #if UNITY_EDITOR
         public void Configure(string id, string map, string script, IEnumerable<CutsceneStep> importedSteps,

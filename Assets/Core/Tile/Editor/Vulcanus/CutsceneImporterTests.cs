@@ -434,6 +434,26 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
+        public void ReimportRefreshesPreviouslyReadSetupStepsAndArguments()
+        {
+            var path = _folder + "/weather.runtime.cutscene.json";
+            var source = Source("test:weather-reimport");
+            Write(path, source);
+            var definition = AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(path);
+            Assert.That(definition.OnStart, Is.Empty);
+            Assert.That(definition.Steps[0].Arguments[0].Value, Is.EqualTo("base:greeting"));
+
+            source["onStart"] = JArray.Parse("[{ 'id':'clear', 'action':'weather.setWeather', 'arguments':{ 'weather':'Sunny' } }]");
+            source["sequence"][0]["arguments"]["dialogue"] = "base:updated";
+            Write(path, source);
+            definition = AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(path);
+            Assert.That(definition.OnStartLua, Does.Contain("Weather.SetWeather(\"Sunny\")"));
+            Assert.That(definition.OnStart.Single().ActionId, Is.EqualTo("weather.setWeather"));
+            Assert.That(definition.OnStart[0].Arguments.Single().Value, Is.EqualTo("Sunny"));
+            Assert.That(definition.Steps[0].Arguments[0].Value, Is.EqualTo("base:updated"));
+        }
+
+        [Test]
         public void BrokenCurrentSourceBlocksPlaybackEvenAfterAnEarlierSuccessfulImport()
         {
             var path = _folder + "/intro.runtime.cutscene.json";
