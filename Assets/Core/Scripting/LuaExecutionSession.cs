@@ -32,6 +32,7 @@ namespace Core.Scripting
         public bool IsRunning { get; private set; } = true;
         public string Source { get; }
         public int ActionsStarted { get; private set; }
+        public string CurrentStepId { get; private set; }
 
         internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context, string phase)
         {
@@ -39,6 +40,16 @@ namespace Core.Scripting
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
             Source = source;
             var script = new Script(CoreModules.Preset_HardSandbox);
+            // Conditions run in the same read-only, instruction-budgeted API used by dialogue.
+            // A separate environment prevents expressions from calling actions or writable bindings.
+            VulcanusLuaEngine conditions = null;
+            script.Globals.Set("__cutsceneCondition", DynValue.NewCallback((_, args) =>
+                DynValue.NewBoolean((conditions ??= new VulcanusLuaEngine()).EvaluateCondition(args[0].String))));
+            script.Globals.Set("__cutsceneStep", DynValue.NewCallback((_, args) =>
+            {
+                CurrentStepId = args[0].String;
+                return DynValue.Nil;
+            }));
             // Give this script only the actions allowed in its context, e.g. "cutscene".
             bindings.BindActions(script, context, phase, Await, () => ActionsStarted++);
             _routine = script.CreateCoroutine(script.LoadString(chunk, null, source)).Coroutine;

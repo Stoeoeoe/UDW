@@ -34,7 +34,7 @@ namespace Core.Tile.Editor.Vulcanus
             var errors = schema.Validate(json);
             if (errors.Count != 0)
                 throw new FormatException($"{sourcePath}: schema validation failed ({schemaPath}):\n" +
-                    string.Join("\n", errors.Select(error => $"{error.Path}: {error.Kind}")));
+                    string.Join("\n", errors.Select(error => error.ToString())));
             return JsonConvert.DeserializeObject<T>(json);
         }
     }

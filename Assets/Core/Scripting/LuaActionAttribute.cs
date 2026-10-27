@@ -71,6 +71,10 @@ namespace Core.Scripting
     [AttributeUsage(AttributeTargets.Parameter)]
     public sealed class LuaPathAttribute : Attribute { }
 
+    /// <summary>A Lua chunk edited using the shared script editor and checked before playback.</summary>
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public sealed class LuaCodeAttribute : Attribute { }
+
     /// <summary>Declares a cutscene-local character name created by a setup spawn action.</summary>
     [AttributeUsage(AttributeTargets.Parameter)]
     public sealed class LuaCharacterDeclarationAttribute : Attribute { }

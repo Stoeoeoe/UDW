@@ -11,6 +11,7 @@ using Core.TimeAndWeather;
 using UI.Shared;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using DG.Tweening;
 
 namespace Core.Scripting
 {
@@ -19,10 +20,15 @@ namespace Core.Scripting
     public sealed class CutsceneRunner : Singleton<CutsceneRunner>, IEventListener<DayTransitionStarted>
     {
         private CutsceneCatalog _catalog;
+        [ShowInInspector, ReadOnly] private CutscenePresentationSettings _presentation;
         private readonly VulcanusLuaEngine _completionActions = new();
         private LevelManager _level;
         private UrGUIManager _gui;
         private MainCharacter _player;
+        private enum TransitionPhase { None, EntranceCover, EntranceReveal, ExitCover, ExitReveal }
+        private TransitionPhase _transitionPhase;
+        private Tween _transition;
+        private bool _finishRequested, _completionCommitted, _settlingOutcome;
         [field: NonSerialized]
         [ShowInInspector, ReadOnly] public CutsceneRun ActiveRun { get; private set; }
         [ShowInInspector, ReadOnly] public string CurrentStepId => ActiveRun?.CurrentStepId;
@@ -33,6 +39,9 @@ namespace Core.Scripting
         protected override void OnAwake()
         {
             _catalog = CatalogResources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName);
+            _presentation = Resources.Load<CutscenePresentationSettings>(CutscenePresentationSettings.ResourceName);
+            if (!_presentation) throw new InvalidOperationException("Cutscenes require Resources/CutscenePresentation settings.");
+            _presentation.RequireValidConfiguration();
         }
 
         private void OnEnable()
@@ -82,32 +91,93 @@ namespace Core.Scripting
             _player.SetControlBlocked(run, true);
             foreach (var placement in placements) placement.Character.SetControlBlocked(run, true);
             _gui.SetCutsceneActive(true);
-            try { ExecuteImmediate(run, definition.OnStartLua, definition.OnStart, "setup"); }
+            try
+            {
+                if (definition.Transition.Enabled)
+                {
+                    _transitionPhase = TransitionPhase.EntranceCover;
+                    _transition = _gui.CoverCutscene(_presentation.FadeSeconds, _presentation.HoldSeconds);
+                }
+                else StartSequence(run);
+            }
             catch
             {
                 Finish(run, completed: false, notify: false);
                 throw;
             }
-            Started?.Invoke(run);
             return true;
+        }
+
+        private void StartSequence(CutsceneRun run)
+        {
+            ExecuteImmediate(run, run.Definition.OnStartLua, run.Definition.OnStart, "setup");
+            Started?.Invoke(run);
         }
 
         private void Update()
         {
             var run = ActiveRun;
             if (run == null) return;
-            if (Input.InputManager.Instance.SkipCutscenePressed && Skip(run)) return;
             try
             {
+                AdvanceTransition(run);
+                if (!ReferenceEquals(ActiveRun, run)) return;
+                if (Input.InputManager.Instance.SkipCutscenePressed && Skip(run)) return;
+                if (_transitionPhase == TransitionPhase.EntranceCover) return;
+                if (_finishRequested)
+                {
+                    if (_transitionPhase == TransitionPhase.None) BeginExit(run);
+                    return;
+                }
                 foreach (var placement in run.Placements) placement.RequireLive();
                 run.Session.Tick(Time.deltaTime);
+                if (!run.Session.IsRunning) RequestCompletion(run);
             }
             catch (Exception error)
             {
                 Cancel(run);
                 throw new InvalidOperationException(DescribeError(run, error.Message), error);
             }
-            if (!run.Session.IsRunning) Finish(run, completed: true);
+        }
+
+        private void AdvanceTransition(CutsceneRun run)
+        {
+            if (_transitionPhase == TransitionPhase.None || (_transition.IsActive() && !_transition.IsComplete())) return;
+            switch (_transitionPhase)
+            {
+                case TransitionPhase.EntranceCover:
+                    StartSequence(run);
+                    if (!ReferenceEquals(ActiveRun, run)) return;
+                    _transitionPhase = TransitionPhase.EntranceReveal;
+                    _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
+                    break;
+                case TransitionPhase.EntranceReveal:
+                    _transitionPhase = TransitionPhase.None;
+                    _transition = null;
+                    break;
+                case TransitionPhase.ExitCover:
+                    _completionCommitted = ApplyOutcome(run, completed: true);
+                    _transitionPhase = TransitionPhase.ExitReveal;
+                    _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
+                    break;
+                case TransitionPhase.ExitReveal:
+                    Finish(run, completed: true);
+                    break;
+            }
+        }
+
+        private void RequestCompletion(CutsceneRun run)
+        {
+            // Skip freezes script progression now; the active action is disposed under the exit cover.
+            _finishRequested = true;
+            if (_transitionPhase == TransitionPhase.None) BeginExit(run);
+        }
+
+        private void BeginExit(CutsceneRun run)
+        {
+            if (!run.Definition.Transition.Enabled) { Finish(run, completed: true); return; }
+            _transitionPhase = TransitionPhase.ExitCover;
+            _transition = _gui.CoverCutscene(_presentation.FadeSeconds, _presentation.HoldSeconds);
         }
 
         private static string DescribeError(CutsceneRun run, string message) => run.CurrentStepId is string step
@@ -121,9 +191,9 @@ namespace Core.Scripting
 
         internal bool Skip(CutsceneRun run)
         {
-            if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || !run.Definition.AllowSkip) return false;
+            if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || _finishRequested || !run.Definition.AllowSkip) return false;
             run.Skipped = true;
-            Finish(run, completed: true);
+            RequestCompletion(run);
             return true;
         }
 
@@ -143,12 +213,10 @@ namespace Core.Scripting
             }
         }
 
-        private void Finish(CutsceneRun run, bool completed, bool notify = true)
+        private bool ApplyOutcome(CutsceneRun run, bool completed)
         {
-            if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning) return;
-            // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
-            run.IsRunning = false;
-            var committed = false;
+            // Completion actions can publish events that re-enter cancellation.
+            _settlingOutcome = true;
             try
             {
                 run.Session.Dispose();
@@ -159,16 +227,33 @@ namespace Core.Scripting
                     ExecuteImmediate(run, run.Definition.OnComplete.Lua, run.Definition.OnComplete.Steps, "completion");
                     _completionActions.Execute(run.Definition.OnComplete.Actions);
                     GameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
-                    committed = true;
                 }
+                return completed;
             }
             catch
             {
                 foreach (var placement in run.Placements) placement.Apply(false);
                 throw;
             }
+            finally { _settlingOutcome = false; }
+        }
+
+        private void Finish(CutsceneRun run, bool completed, bool notify = true)
+        {
+            if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || _settlingOutcome) return;
+            // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
+            run.IsRunning = false;
+            var committed = _completionCommitted;
+            try
+            {
+                if (!committed) committed = ApplyOutcome(run, completed);
+            }
             finally
             {
+                if (_transitionPhase != TransitionPhase.None) _gui.ResetTransition();
+                _transition = null;
+                _transitionPhase = TransitionPhase.None;
+                _finishRequested = _completionCommitted = false;
                 foreach (var placement in run.Placements)
                     if (placement.Character) placement.Character.SetControlBlocked(run, false);
                 run.Characters?.FinishSpawns(keep: committed);

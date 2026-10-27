@@ -5,6 +5,7 @@ using System.Text;
 using Character;
 using Character.Animations;
 using Core.Catalogs.Editor;
+using Core.TimeAndWeather;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -31,8 +32,12 @@ namespace Core.Scripting.Editor
                 var catalog = AssetDatabase.LoadAssetAtPath<CharacterAnimationCatalog>(
                     $"Assets/Resources/{CharacterAnimationCatalog.ResourceName}.asset");
                 CatalogDiscovery.Refresh(catalog);
+                var sounds = AssetDatabase.LoadAssetAtPath<SoundCatalog>($"Assets/Resources/{SoundCatalog.ResourceName}.asset");
+                CatalogDiscovery.Refresh(sounds);
+                var weather = AssetDatabase.LoadAssetAtPath<WeatherCatalog>($"Assets/Resources/{WeatherCatalog.ResourceName}.asset");
+                CatalogDiscovery.Refresh(weather);
                 var libraries = CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray();
-                PopulateResources(manifest, catalog, libraries);
+                PopulateResources(manifest, catalog, libraries, sounds, weather);
                 AssetDatabase.RegisterCustomDependency(DependencyName, Hash128.Compute(Serialize(manifest)));
                 var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), RelativePath);
                 if (!WriteIfChanged(path, manifest)) return;
@@ -45,8 +50,12 @@ namespace Core.Scripting.Editor
             }
         }
 
-        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries)
+        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries, SoundCatalog sounds, WeatherCatalog weather)
         {
+            manifest.resources.Add("weather", weather.EnabledDefinitions.OrderBy(definition => definition.id, StringComparer.Ordinal)
+                .Select(definition => new LuaResourceDescription { id = definition.id, description = definition.label }).ToArray());
+            manifest.resources.Add("sound", sounds.EnabledDefinitions.OrderBy(sound => sound.Id, StringComparer.Ordinal)
+                .Select(sound => new LuaResourceDescription { id = sound.Id, description = sound.name }).ToArray());
             manifest.resources.Add("animation", catalog.EnabledDefinitions.OfType<CharacterAnimation>()
                 .Where(animation => IsOneShotCandidate(animation, libraries))
                 .OrderBy(animation => animation.Id, StringComparer.Ordinal)

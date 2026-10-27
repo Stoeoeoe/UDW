@@ -1,4 +1,5 @@
 using System;
+using MoonSharp.Interpreter;
 using UnityEngine.Scripting;
 
 namespace Core.Scripting
@@ -6,6 +7,25 @@ namespace Core.Scripting
     [LuaModule("Cutscene")]
     public sealed class CutsceneLuaApi
     {
+        [LuaAction("cutscene.runLua", "Run Lua", "Scripting",
+            "Run a Lua script immediately using the scripting API. Timed actions remain separate steps.",
+            "cutscene", Validator = nameof(ValidateLua), Phases = new[] { "sequence" })]
+        [LuaPreview(LuaPreviewSpatialState.Unknown)]
+        public void RunLua([LuaCode] string code)
+        {
+            ValidateLua(code);
+            new VulcanusLuaEngine().Execute(code);
+        }
+
+        [Preserve]
+        public static void ValidateLua(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                throw new ArgumentException("Enter a Lua script.", nameof(code));
+            // Compile without executing: import validation must never mutate game state.
+            new Script(CoreModules.Preset_HardSandbox).LoadString(code, null, "Cutscene Lua block");
+        }
+
         [LuaAction("cutscene.wait", "Wait", "Timing", "Wait for gameplay seconds.", "cutscene", Validator = nameof(ValidateWait), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Described)]
         public ILuaAction Wait(double seconds)

@@ -13,28 +13,32 @@ MonoBehaviour:
   m_Name: Lake_1
   m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Water.WaterProfile
   material: {fileID: 2100000, guid: 8a8d7f18ef894b2ab376bcc659cbd40c, type: 2}
-  deepColor: {r: 0.14901961, g: 0.26666668, b: 0.32156864, a: 1}
+  deepColor: {r: 0.11764706, g: 0.22745098, b: 0.2901961, a: 1}
   baseColor: {r: 0.17254902, g: 0.3019608, b: 0.34901962, a: 1}
-  waveColor: {r: 0.21176471, g: 0.3529412, b: 0.4, a: 1}
-  highlightColor: {r: 0.28235295, g: 0.42352942, b: 0.45490196, a: 1}
-  waveSpeed: 0.16
+  waveColor: {r: 0.21960784, g: 0.36078432, b: 0.40784314, a: 1}
+  highlightColor: {r: 0.36078432, g: 0.5176471, b: 0.5411765, a: 1}
+  animationFps: 8
+  waveSpeed: 0.2
   waveScale: 1.5
-  causticIntensity: 0.1
+  causticIntensity: 0.15
   causticScale: 2
   flowDirection: {x: 1, y: 0.12}
   shorelineEnabled: 1
   foamEnabled: 1
-  foamWidth: 1.25
-  foamIntensity: 0.22
+  foamWidth: 2
+  foamIntensity: 0.2
   foamSpeed: 0.3
   shoreWavesEnabled: 1
   shoreWaveFrequency: 0.071428575
-  shoreWaveWidth: 0.8
-  shoreWaveSpeed: 1.2
+  shoreWaveWidth: 1
+  shoreWaveSpeed: 1.5
   shallowWaterEnabled: 0
   shallowWaterWidth: 3
+  depthEnabled: 0
+  depthStartPixels: 6
+  depthBlendPixels: 4
   flowEnabled: 0
-  flowSpeed: 0.3
+  flowSpeed: 0.9
   flowStrength: 1
   flowMap: {fileID: 0}
   flowMapWorldOrigin: {x: 0, y: 0}
@@ -49,3 +53,6 @@ MonoBehaviour:
   objectReflectionOpacity: 0.35
   objectReflectionRipplePixels: 1
   objectReflectionRippleSpeed: 0.5
+  interactionRipplesEnabled: 1
+  rainSplashesEnabled: 1
+  contactFoamEnabled: 1

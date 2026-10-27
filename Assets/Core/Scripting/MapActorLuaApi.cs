@@ -248,20 +248,20 @@ namespace Core.Scripting
         }
 
         [UnityEngine.Scripting.Preserve]
-        public void ValidatePlayAnimation(string character, string animation)
+        public void ValidatePlayAnimation(string character, string animation, bool holdLastFrame = false)
         {
             RequireCurrentMap();
             RequireKnownActor(character).Animator.ValidateOneShot(CharacterAnimationCatalog.RequireOneShot(animation));
         }
 
-        [LuaAction("characters.playAnimation", "Play animation", "Animation", "Play a finite animation on a character and wait for completion.",
+        [LuaAction("characters.playAnimation", "Play animation", "Animation", "Play a finite animation and wait for completion. Hold last frame keeps the final pose until another animation starts or movement resumes.",
             "cutscene", Validator = nameof(ValidatePlayAnimation), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Unknown)]
         public ILuaAction PlayAnimation([LuaReference("characterRef", "mapCharacter")] string character,
-            [LuaResource("animation")] string animation)
+            [LuaResource("animation")] string animation, bool holdLastFrame = false)
         {
             RequireCurrentMap();
-            return new PlayAnimationAction(ResolveActor(character), CharacterAnimationCatalog.RequireOneShot(animation));
+            return new PlayAnimationAction(ResolveActor(character), CharacterAnimationCatalog.RequireOneShot(animation), holdLastFrame);
         }
 
         private void RequireCurrentMap()

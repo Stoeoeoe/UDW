@@ -34,6 +34,8 @@ namespace Character
         private float _variationDelay;
         private Vector2 _interactionFacing;
         private OneShotPlayback _oneShot;
+        private bool _holdingLastFrame;
+        internal OneShotPlayback HeldPlayback => _holdingLastFrame ? _oneShot : null;
 
         private void Awake() => ValidateConfiguration();
 
@@ -110,9 +112,16 @@ namespace Character
             _isBound = false;
         }
         private void OnFacingDirectionChanged(Vector2 direction) => RefreshAnimation();
-        private void OnMovementStateChanged(MovementState state) => RefreshAnimation();
+        private void OnMovementStateChanged(MovementState state)
+        {
+            if (_holdingLastFrame && state is MovementState.Walking or MovementState.Running)
+                EndInteractionAnimation();
+            RefreshAnimation();
+        }
         private void RefreshAnimation()
         {
+            if (_holdingLastFrame && _actions != null && _actions.CurrentAction is UseToolAction)
+                EndInteractionAnimation();
             if (_interactionAnimationActive || _namedAnimationActive) return;
             var facing = character.Orientation.FacingDirection;
             if (_actions != null && _actions.CurrentAction is UseToolAction)
@@ -171,27 +180,37 @@ namespace Character
                 animationLibrary.ValidateAction(animation.MemaoAction, oneShot: true);
         }
 
-        /// <summary>Claims finite playback until the caller releases it, including cancellation.</summary>
-        public OneShotPlayback PlayOneShot(CharacterAnimation animation)
+        /// <summary>Claims finite playback; an optional finished pose survives handle disposal until movement or replacement.</summary>
+        public OneShotPlayback PlayOneShot(CharacterAnimation animation, bool holdLastFrame = false)
         {
             ValidateOneShot(animation);
             if (!isActiveAndEnabled) throw new InvalidOperationException("One-shot playback requires an active animator.");
             var state = PlayInteractionAnimation(animation);
-            return _oneShot = new OneShotPlayback(this, state);
+            return _oneShot = new OneShotPlayback(this, state, holdLastFrame);
         }
 
         public sealed class OneShotPlayback : IDisposable
         {
             private readonly UrCharacterAnimator _owner;
             private readonly AnimancerState _state;
-            internal OneShotPlayback(UrCharacterAnimator owner, AnimancerState state) { _owner = owner; _state = state; }
+            private readonly bool _holdLastFrame;
+            internal OneShotPlayback(UrCharacterAnimator owner, AnimancerState state, bool holdLastFrame)
+            { _owner = owner; _state = state; _holdLastFrame = holdLastFrame; }
             public bool IsInterrupted => !ReferenceEquals(_owner._oneShot, this) ||
                 (!_state.IsPlaying && _state.NormalizedTime < 1f);
             public bool IsCompleted => !IsInterrupted && _state.NormalizedTime >= 1f;
             public void Dispose()
             {
                 // A stale handle must not stop a replacement, even if it reuses the same clip's native state.
-                if (ReferenceEquals(_owner._oneShot, this)) _owner.EndInteractionAnimation();
+                if (!ReferenceEquals(_owner._oneShot, this)) return;
+                if (_holdLastFrame && IsCompleted)
+                {
+                    _state.Time = _state.Length;
+                    _state.IsPlaying = false;
+                    _owner._holdingLastFrame = true;
+                    _owner.animancer.Evaluate();
+                }
+                else _owner.EndInteractionAnimation();
             }
         }
         private void PlayInteractionBase(CharacterAnimation animation)
@@ -204,6 +223,7 @@ namespace Character
         }
         private void ClearInteractionAnimation()
         {
+            _holdingLastFrame = false;
             _oneShot = null;
             _interactionAnimationActive = false;
             _interactionSet = null;
@@ -250,11 +270,12 @@ namespace Character
         {
             if (string.IsNullOrWhiteSpace(action)) throw new ArgumentException("A Memao action name is required.", nameof(action));
             if (!isActiveAndEnabled) return false;
-            if (_interactionAnimationActive) return false;
+            if (_interactionAnimationActive && !_holdingLastFrame) return false;
             // Some optional actions (Paint) intentionally have only left/right clips.
             if (!animationLibrary.TryGet(MemaoAnimationLibrary.DirectionalName(action, character.Orientation.FacingDirection), out var clip)) return false;
             if (clip.isLooping || clip.length <= 0f)
                 throw new InvalidOperationException($"Named action '{action}' requires a finite, non-looping clip.");
+            if (_holdingLastFrame) EndInteractionAnimation();
             EndNamedAnimation();
             _namedAnimationActive = true;
             _namedState = PlayClip(clip);

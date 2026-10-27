@@ -14,6 +14,8 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords:
   - _RAINENABLED_ON
+  - _RAINSPLASHES_ON
+  - _RAINWORLDANCHORED_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -24,12 +26,22 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _CloudTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _NoiseTex:
         m_Texture: {fileID: 2800000, guid: 48da24d771916524899d36e4bfe7f762, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _CloudDistortStrength: 0.05
+    - _CloudEnabled: 0
+    - _CloudOpacity: 0.7
+    - _CloudSize: 1
+    - _CloudSpeed: 0.2
+    - _CloudWorldScale: 300
     - _DustDensity: 2.16
     - _DustDirection: 0.7
     - _DustEnabled: 0
@@ -40,18 +52,23 @@ Material:
     - _InternalResX: 320
     - _InternalResY: 240
     - _PixelSnap: 1
-    - _RainDropletDensity: 78
-    - _RainDropletFade: 0.193
-    - _RainDropletSize: 0.00488
-    - _RainDropletSpeed: 1.64
+    - _PixelsPerUnit: 16
+    - _RainAutoResolution: 1
+    - _RainDensity: 0.079
     - _RainEnabled: 1
-    - _RainStreakDensity: 18
-    - _RainStreakFade: 0.707
-    - _RainStreakLength: 0.1681
-    - _RainStreakSpeed: 1.88
-    - _RainStreakWidth: 0.00042
-    - _RainWindDirection: 0.2
-    - _RainWindVariation: 0.261
+    - _RainFallFrames: 4
+    - _RainFallTime: 0.082
+    - _RainFarLayer: 0.4
+    - _RainFps: 12
+    - _RainOvercast: 0.08
+    - _RainSceneLit: 0.6
+    - _RainSnapStreaks: 0
+    - _RainSpeed: 6
+    - _RainSplashes: 1
+    - _RainStreakLength: 17.2
+    - _RainStreakWidth: 0.35
+    - _RainWind: 0.124
+    - _RainWorldAnchored: 1
     - _SnowEnabled: 0
     - _SnowHeavyDensity: 314
     - _SnowHeavySize: 0.01695
@@ -64,9 +81,10 @@ Material:
     - _SnowWindDirection: -0.011
     - _SnowWindVariation: 0.407
     m_Colors:
+    - _CloudColor: {r: 1, g: 1, b: 1, a: 0.7}
+    - _CloudDirection: {r: 1, g: 0, b: 0, a: 0}
     - _DustColor: {r: 0.8, g: 0.7, b: 0.5, a: 0.3}
-    - _RainDropletColor: {r: 0.8, g: 0.85, b: 0.95, a: 1}
-    - _RainStreakColor: {r: 0.7, g: 0.8, b: 0.9, a: 0.6}
+    - _RainStreakColor: {r: 0.72, g: 0.8, b: 0.9, a: 0.5}
     - _SnowHeavyColor: {r: 1, g: 1, b: 1, a: 0.9}
     - _SnowLightColor: {r: 1, g: 1, b: 1, a: 0.6}
   m_BuildTextureStacks: []

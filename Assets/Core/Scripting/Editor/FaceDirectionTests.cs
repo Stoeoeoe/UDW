@@ -132,6 +132,28 @@ namespace Core.Scripting.Editor
             Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(new Vector2(x, y)));
         }
 
+        [Test]
+        public void CancellingAfterACompletedAnimationClearsItsNewHeldPose()
+        {
+            _actor.Graphics.gameObject.SetActive(true);
+            GameTestFixture.Invoke(_actor.Animator, "Awake");
+            GameTestFixture.Invoke(_actor.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true), "Awake");
+            var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "hold-rollback.json", out var steps);
+            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            definition.Configure("test:hold-rollback", "test:characters", lua, steps, true,
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
+            var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
+            var placement = type.GetMethod("PrepareActor", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { definition, _api, "player" });
+            using var action = new PlayAnimationAction(_actor, _actor.PassOutAnimation, true);
+            var field = typeof(UrCharacterAnimator).GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic);
+            var state = (Animancer.AnimancerState)field.GetValue(_actor.Animator);
+            state.Time = state.Length;
+            action.Dispose();
+            Assert.That(field.GetValue(_actor.Animator), Is.SameAs(state));
+            type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { false });
+            Assert.That(field.GetValue(_actor.Animator), Is.Null);
+        }
+
         [TestCase("North", 0, 1)]
         [TestCase("East", 1, 0)]
         [TestCase("South", 0, -1)]
@@ -407,7 +429,7 @@ namespace Core.Scripting.Editor
             Assert.That(effect.characterParameter, Is.EqualTo("character"));
             Assert.That(effect.directionParameter, Is.EqualTo("direction"));
             var catalog = Resources.Load<Character.Animations.CharacterAnimationCatalog>(Character.Animations.CharacterAnimationCatalog.ResourceName);
-            LuaBindingManifestExporter.PopulateResources(manifest, catalog, new[] { _actor.Animator.AnimationLibrary });
+            LuaBindingManifestExporter.PopulateResources(manifest, catalog, new[] { _actor.Animator.AnimationLibrary }, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName));
             Assert.That(manifest.resources["direction"].Select(resource => resource.id), Is.EquivalentTo(new[] { "North", "East", "South", "West" }));
         }
 

@@ -24,7 +24,9 @@ namespace Core.Location
         private CanvasGroup _canvasGroup;
         private UnityEngine.UI.Image _image;
         private Material _runtimeMaterial, _originalMaterial;
+        private Color _originalColor;
         private Tween _fade;
+        private RectTransform _upperPanel, _lowerPanel;
         private float _progress;
         private Transform _focus;
         private UnityEngine.Camera _focusCamera;
@@ -40,13 +42,14 @@ namespace Core.Location
         {
             _canvasGroup = GetComponent<CanvasGroup>();
             _image = GetComponent<UnityEngine.UI.Image>();
+            _originalMaterial = _image.material;
+            _originalColor = _image.color;
             if (_effect != Effect.Opacity)
             {
                 if (!_wipeMaterial || !_wipeMaterial.HasProperty(Progress) || !_wipeMaterial.HasProperty(Style))
                     throw new InvalidOperationException("Mosaic and iris transitions require a ScreenWipe material.");
 
                 // Each fader owns its progress; never animate the shared material asset.
-                _originalMaterial = _image.material;
                 _runtimeMaterial = new Material(_wipeMaterial) { hideFlags = HideFlags.DontSave };
                 _runtimeMaterial.SetFloat(Style, _effect == Effect.Iris ? 1f : 0f);
                 _runtimeMaterial.SetFloat(TileSize, _tileSize);
@@ -68,6 +71,7 @@ namespace Core.Location
 
         private Tween FadeTo(float target, Transform focus)
         {
+            RestoreNormalPresentation();
             if (_effect == Effect.Iris)
             {
                 if (!focus) throw new ArgumentNullException(nameof(focus), "An iris transition requires its subject.");
@@ -120,8 +124,80 @@ namespace Core.Location
         public void ShowSceneImmediately()
         {
             _fade?.Kill();
+            RestoreNormalPresentation();
             SetProgress(0f);
             _canvasGroup.blocksRaycasts = false;
+        }
+
+        public Tween CoverCutscene(float duration, float holdSeconds = 0)
+        {
+            _fade?.Kill();
+            RestoreNormalPresentation();
+            _image.material = null;
+            _image.color = Color.black;
+            _canvasGroup.alpha = 0f;
+            _canvasGroup.blocksRaycasts = true;
+            _fade = DOTween.Sequence().Append(_canvasGroup.DOFade(1f, duration).SetEase(Ease.Linear))
+                .AppendInterval(holdSeconds).SetUpdate(true)
+                .SetRecyclable(false).OnKill(() => _fade = null);
+            return _fade;
+        }
+
+        public Tween RevealCutscene(float duration)
+        {
+            _fade?.Kill();
+            if (!_upperPanel)
+            {
+                _upperPanel = CreatePanel("CutsceneUpperPanel");
+                _lowerPanel = CreatePanel("CutsceneLowerPanel");
+            }
+            _image.material = null;
+            _image.color = Color.clear;
+            _upperPanel.gameObject.SetActive(true);
+            _lowerPanel.gameObject.SetActive(true);
+            _canvasGroup.alpha = 1f;
+            _canvasGroup.blocksRaycasts = true;
+            SetCenterOpening(0f);
+            var opening = 0f;
+            _fade = DOTween.To(() => opening, value => { opening = value; SetCenterOpening(value); }, 1f, duration)
+                .SetEase(Ease.OutCubic).SetUpdate(true).SetRecyclable(false)
+                .OnComplete(() =>
+                {
+                    RestoreNormalPresentation();
+                    SetProgress(0f);
+                    _canvasGroup.blocksRaycasts = false;
+                }).OnKill(() => _fade = null);
+            return _fade;
+        }
+
+        private RectTransform CreatePanel(string panelName)
+        {
+            var panel = new GameObject(panelName, typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            panel.layer = gameObject.layer;
+            panel.transform.SetParent(transform, false);
+            var image = panel.GetComponent<UnityEngine.UI.Image>();
+            image.color = Color.black;
+            image.raycastTarget = false;
+            return (RectTransform)panel.transform;
+        }
+
+        private void SetCenterOpening(float opening)
+        {
+            _lowerPanel.anchorMin = Vector2.zero;
+            _lowerPanel.anchorMax = new Vector2(1f, (1f - opening) * 0.5f);
+            _upperPanel.anchorMin = new Vector2(0f, (1f + opening) * 0.5f);
+            _upperPanel.anchorMax = Vector2.one;
+            _lowerPanel.offsetMin = _lowerPanel.offsetMax = Vector2.zero;
+            _upperPanel.offsetMin = _upperPanel.offsetMax = Vector2.zero;
+        }
+
+        private void RestoreNormalPresentation()
+        {
+            if (_upperPanel) _upperPanel.gameObject.SetActive(false);
+            if (_lowerPanel) _lowerPanel.gameObject.SetActive(false);
+            _image.enabled = true;
+            _image.color = _originalColor;
+            _image.material = _runtimeMaterial ? _runtimeMaterial : _originalMaterial;
         }
 
         private void OnDestroy()

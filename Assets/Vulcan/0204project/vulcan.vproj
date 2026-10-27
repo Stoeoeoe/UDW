@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/project.schema.json",
+  "$schema": "schemas/project.schema.json",
   "version": "1.0",
   "id": "vulcan",
   "name": "0204 Project Tests",

@@ -77,13 +77,13 @@ namespace Core.Scripting
                 var parameters = method.GetParameters();
                 foreach (var parameter in parameters)
                 {
-                    if ((parameter.IsOptional && (!IsPrimitive(parameter.ParameterType) || parameter.DefaultValue == null)) || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPath)))
+                    if ((parameter.IsOptional && (!IsPrimitive(parameter.ParameterType) || parameter.DefaultValue == null)) || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPosition?) && parameter.ParameterType != typeof(MapPath)))
                         throw Invalid(method, $"has unsupported parameter '{parameter.Name}'");
                     var position = parameter.GetCustomAttribute<LuaPositionAttribute>();
                     var path = parameter.GetCustomAttribute<LuaPathAttribute>();
                     if ((parameter.ParameterType == typeof(MapPath)) != (path != null))
                         throw Invalid(method, $"path parameter '{parameter.Name}' requires MapPath and [LuaPath] together");
-                    if ((parameter.ParameterType == typeof(MapPosition)) != (position != null))
+                    if ((parameter.ParameterType == typeof(MapPosition) || parameter.ParameterType == typeof(MapPosition?)) != (position != null))
                         throw Invalid(method, $"position parameter '{parameter.Name}' requires MapPosition and [LuaPosition] together");
                     if ((position != null || path != null) && (parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
                         parameter.GetCustomAttribute<LuaResourceAttribute>() != null))
@@ -249,6 +249,12 @@ namespace Core.Scripting
                         (("characterRef", "mapCharacter") or ("anchorRef", "mapAnchor") or ("dialogueRef", "dialogue"))))
                     throw Invalid(method, "has unsupported semantic reference metadata");
                 var resource = parameter.GetCustomAttribute<LuaResourceAttribute>();
+                if (parameter.GetCustomAttribute<LuaCodeAttribute>() != null &&
+                    (parameter.ParameterType != typeof(string) || reference != null || resource != null ||
+                     parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null ||
+                     parameter.GetCustomAttribute<LuaPositionAttribute>() != null ||
+                     parameter.GetCustomAttribute<LuaPathAttribute>() != null))
+                    throw Invalid(method, "Lua code requires a string without other pickers");
                 if (resource != null && (parameter.ParameterType != typeof(string) ||
                     string.IsNullOrWhiteSpace(resource.Type) || reference != null))
                     throw Invalid(method, "resource parameters must be string IDs with a named resource type and no scene reference picker");
@@ -304,13 +310,15 @@ namespace Core.Scripting
             var reference = parameter.GetCustomAttribute<LuaReferenceAttribute>();
             var path = parameter.GetCustomAttribute<LuaPathAttribute>() != null;
             var position = path || parameter.GetCustomAttribute<LuaPositionAttribute>() != null;
+            var code = parameter.GetCustomAttribute<LuaCodeAttribute>() != null;
             return new LuaParameterDescription
             {
                 name = parameter.Name, type = LuaTypeName(parameter.ParameterType),
+                nullable = parameter.ParameterType == typeof(MapPosition?) ? true : null,
                 optional = parameter.IsOptional ? true : null,
                 defaultValue = parameter.IsOptional ? parameter.DefaultValue : null,
-                semanticType = parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null ? "characterDeclaration" : reference?.Type,
-                picker = path ? "mapPath" : position ? "mapPosition" : reference?.Picker,
+                semanticType = code ? "lua" : parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null ? "characterDeclaration" : reference?.Type,
+                picker = code ? "lua" : path ? "mapPath" : position ? "mapPosition" : reference?.Picker,
                 resourceType = parameter.GetCustomAttribute<LuaResourceAttribute>()?.Type,
                 coordinateSpace = position ? "mapPixels" : null, origin = position ? "topLeft" : null,
                 placementModes = position ? new[] { "tile", "pixel", "anchor" } : null,
@@ -396,7 +404,7 @@ namespace Core.Scripting
             {
                 if (parameters.Any(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>() != null ||
                     parameter.GetCustomAttribute<LuaResourceAttribute>() != null || parameter.GetCustomAttribute<LuaPositionAttribute>() != null || parameter.GetCustomAttribute<LuaPathAttribute>() != null ||
-                    parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null))
+                    parameter.GetCustomAttribute<LuaCharacterDeclarationAttribute>() != null || parameter.GetCustomAttribute<LuaCodeAttribute>() != null))
                     throw Invalid(method, "needs a Validator to check its reference/resource arguments before playback");
                 return null; // Actions without references may have nothing to check before playback.
             }
@@ -451,6 +459,8 @@ namespace Core.Scripting
 
         private static object FromLua(DynValue value, Type type, string parameter)
         {
+            if (type == typeof(MapPosition?))
+                return value.Type == DataType.Nil ? null : FromLua(value, typeof(MapPosition), parameter);
             if (type == typeof(MapPath))
             {
                 if (value.Type != DataType.Table || value.Table.MetaTable != null || value.Table.Length == 0 ||
@@ -521,7 +531,7 @@ namespace Core.Scripting
             if (type == typeof(bool)) return "boolean";
             if (type == typeof(int)) return "integer";
             if (type == typeof(double)) return "number";
-            if (type == typeof(MapPosition)) return "position";
+            if (type == typeof(MapPosition) || type == typeof(MapPosition?)) return "position";
             if (type == typeof(MapPath)) return "path";
             return type.Name; // [LuaTable] types were validated during registration.
         }

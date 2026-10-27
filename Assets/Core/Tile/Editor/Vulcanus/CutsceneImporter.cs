@@ -62,7 +62,10 @@ namespace Core.Tile.Editor.Vulcanus
                     throw new FormatException($"{path}, onComplete.actions: {error.DecoratedMessage}", error);
                 }
                 definition.Configure((string)source["id"], (string)source["mapId"], compiled, steps,
-                    (bool)source["allowSkip"], new CutsceneCompletion(placements, actions, completionLua, completionSteps), setup, setupSteps);
+                    (bool)source["allowSkip"], new CutsceneCompletion(placements, actions, completionLua, completionSteps), setup, setupSteps,
+                    source["transition"] is JObject transition
+                        ? new CutsceneTransition((bool)transition["enabled"])
+                        : new CutsceneTransition());
                 return definition;
             }
             catch { Object.DestroyImmediate(definition); throw; }

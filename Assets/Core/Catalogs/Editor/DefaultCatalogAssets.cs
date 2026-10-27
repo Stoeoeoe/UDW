@@ -7,6 +7,7 @@ using System.Linq;
 using Core.Divinity;
 using Core.Inventory;
 using Core.Scripting;
+using Core.TimeAndWeather;
 using Interaction.Dialog;
 using Plants;
 using UnityEditor;
@@ -30,6 +31,8 @@ namespace Core.Catalogs.Editor
             Create<DeityCatalog>(folder, DeityCatalog.ResourceName, created);
             Create<PlantCatalog>(folder, PlantCatalog.ResourceName, created);
             Create<TypewriterSoundCatalog>(folder, TypewriterSoundCatalog.ResourceName, created);
+            Create<SoundCatalog>(folder, SoundCatalog.ResourceName, created);
+            Create<WeatherCatalog>(folder, WeatherCatalog.ResourceName, created);
             return created.AsReadOnly();
         }
 

@@ -73,6 +73,68 @@ namespace Core.Scripting.Editor
         }
 
         [Test]
+        public void HoldLastFrameKeepsTheFinalPoseUntilMovementResumes()
+        {
+            _actor.Animator.OnLocationEnter(null);
+            using var action = new PlayAnimationAction(_actor, _animation, true);
+            var state = CurrentState();
+            state.Time = state.Length + 0.1f;
+            action.Dispose();
+            Assert.That(action.IsCompleted, Is.True);
+            Assert.That(CurrentState(), Is.SameAs(state));
+            Assert.That(state.Time, Is.EqualTo(state.Length).Within(0.0001));
+            Assert.That(state.IsPlaying, Is.False);
+            _actor.Orientation.ForceDirection(Vector2.left);
+            _actor.SetMovementState(MovementState.Idle);
+            Assert.That(CurrentState(), Is.SameAs(state));
+            _actor.SetMovementState(MovementState.Walking);
+            Assert.That(CurrentState(), Is.Null);
+        }
+
+        [Test]
+        public void ANewAnimationReleasesTheHeldPoseAndAStaleHandleCannotStopIt()
+        {
+            using var first = new PlayAnimationAction(_actor, _animation, true);
+            var state = CurrentState();
+            state.Time = state.Length;
+            first.Dispose();
+            using var next = _actor.Animator.PlayOneShot(_animation);
+            first.Dispose();
+            Assert.That(next.IsInterrupted, Is.False);
+            Assert.That(CurrentState().IsPlaying, Is.True);
+            Assert.That(CurrentState().Time, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CancellingAnUnfinishedHeldAnimationReleasesItsPose()
+        {
+            var api = new PlaybackApi(_actor, _animation, true);
+            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Test.Play(); Test.Finish()", "cancel-held-animation");
+            session.Tick(0);
+            session.Cancel();
+            Assert.That(CurrentState(), Is.Null);
+            Assert.That(api.Finished, Is.False);
+        }
+
+        [Test]
+        public void HoldOptionDefaultsOffAndCompilesAsABoolean()
+        {
+            var source = Newtonsoft.Json.Linq.JArray.Parse("[{ 'id':'pose', 'action':'characters.playAnimation', 'arguments': { 'character':'player', 'animation':'base:pass-out' } }]");
+            var legacy = CutsceneSequenceCompiler.Compile(source, "animation.json", out var steps);
+            Assert.That(legacy, Does.Contain("\"base:pass-out\", false)"));
+            Assert.That(steps.Single().Arguments.Single(argument => argument.Name == "holdLastFrame").Value, Is.EqualTo("false"));
+            source[0]["arguments"]["holdLastFrame"] = true;
+            Assert.That(CutsceneSequenceCompiler.Compile(source, "animation.json"), Does.Contain("\"base:pass-out\", true)"));
+            source[0]["arguments"]["holdLastFrame"] = "true";
+            Assert.That(() => CutsceneSequenceCompiler.Compile(source, "animation.json"), Throws.TypeOf<FormatException>());
+            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Characters").methods.Single(method => method.name == "PlayAnimation");
+            var parameter = method.parameters.Single(parameter => parameter.name == "holdLastFrame");
+            Assert.That(parameter.type, Is.EqualTo("boolean"));
+            Assert.That(parameter.optional, Is.True);
+            Assert.That(parameter.defaultValue, Is.EqualTo(false));
+        }
+
+        [Test]
         public void CancellingAnAwaitStopsPlaybackWithoutResumingLua()
         {
             var api = new PlaybackApi(_actor, _animation);
@@ -167,13 +229,13 @@ namespace Core.Scripting.Editor
             catalog.Synchronize(new CharacterAnimationDefinition[] { _animation, loop, set, other, _actor.PassOutAnimation });
             var libraries = new[] { _actor.Animator.AnimationLibrary };
             var first = VulcanusLuaEngine.DescribeBindings();
-            LuaBindingManifestExporter.PopulateResources(first, catalog, libraries);
+            LuaBindingManifestExporter.PopulateResources(first, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName));
             Assert.That(first.resources["animation"].Select(choice => choice.id),
                 Is.EqualTo(new[] { "base:pass-out", "test:another", "test:gesture" }));
             Assert.That(first.resources["animation"].Single(choice => choice.id == "test:gesture").description, Is.EqualTo("test:gesture"));
             catalog.SetEnabled(other, false);
             var next = VulcanusLuaEngine.DescribeBindings();
-            LuaBindingManifestExporter.PopulateResources(next, catalog, libraries);
+            LuaBindingManifestExporter.PopulateResources(next, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName));
             Assert.That(next.resources["animation"].Select(choice => choice.id), Is.EqualTo(new[] { "base:pass-out", "test:gesture" }));
         }
 
@@ -215,10 +277,11 @@ namespace Core.Scripting.Editor
         {
             private readonly GameCharacter _actor;
             private readonly CharacterAnimation _animation;
+            private readonly bool _holdLastFrame;
             public bool Finished;
-            public PlaybackApi(GameCharacter character, CharacterAnimation animation) { _actor = character; _animation = animation; }
+            public PlaybackApi(GameCharacter character, CharacterAnimation animation, bool holdLastFrame = false) { _actor = character; _animation = animation; _holdLastFrame = holdLastFrame; }
             [LuaAction("test.play", "Play", "Test", "Play the fixture animation.", "cutscene", Phases = new[] { "sequence" })]
-            public ILuaAction Play() => new PlayAnimationAction(_actor, _animation);
+            public ILuaAction Play() => new PlayAnimationAction(_actor, _animation, _holdLastFrame);
             [LuaAction("test.finish", "Finish", "Test", "Observe completion.", "cutscene", Phases = new[] { "sequence" })]
             public void Finish() => Finished = true;
         }

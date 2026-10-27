@@ -16,7 +16,7 @@ namespace Core.Scripting
         public bool IsRunning { get; internal set; } = true;
         public bool Skipped { get; internal set; }
         // Imported Lua enters one action per authored step, including actions that yield.
-        internal string CurrentStepId => Session.ActionsStarted == 0 ? null : Definition.Steps[Session.ActionsStarted - 1].Id;
+        internal string CurrentStepId => Session.CurrentStepId ?? (Session.ActionsStarted == 0 ? null : Definition.Steps[Session.ActionsStarted - 1].Id);
         internal LuaExecutionSession Session { get; }
         internal LuaBindingRegistry Bindings { get; }
         internal List<CutscenePlacement> Placements { get; }
@@ -47,6 +47,7 @@ namespace Core.Scripting
         private readonly Transform _root;
         private readonly Vector3 _originalPosition, _endpoint;
         private readonly Vector2 _originalFacing, _endpointFacing;
+        private readonly UrCharacterAnimator.OneShotPlayback _originalHeldPlayback;
 
         private CutscenePlacement(GameCharacter character, Vector3 endpoint, Vector2 facing)
         {
@@ -58,6 +59,7 @@ namespace Core.Scripting
             _root = _spawn ? _spawn.transform : character.transform; // The player has no spawn record.
             _originalPosition = character.transform.position;
             _originalFacing = character.Orientation.FacingDirection;
+            _originalHeldPlayback = character.Animator.HeldPlayback;
             _endpoint = endpoint;
             // Zero means keep the live facing at completion; cancellation uses the pre-run snapshot.
             _endpointFacing = facing;
@@ -67,6 +69,7 @@ namespace Core.Scripting
         {
             var actions = bindings.GetActions().ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
             var ids = definition.OnStart.Concat(definition.Steps).Concat(definition.OnComplete.Steps)
+                .Where(step => !step.IsCondition)
                 .SelectMany(step => actions[step.ActionId].Parameters
                     .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "characterRef")
                     .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name).Value))
@@ -103,6 +106,9 @@ namespace Core.Scripting
         {
             // Completion has checked all characters before moving any; cancellation can outlive a destroyed character.
             if (!completed && (!Character || !_root || !_body)) return;
+            if (!completed && Character.Animator.HeldPlayback != null &&
+                !ReferenceEquals(Character.Animator.HeldPlayback, _originalHeldPlayback))
+                Character.Animator.EndInteractionAnimation();
             var position = completed ? _endpoint : _originalPosition;
             var facing = completed ? (_endpointFacing == Vector2.zero ? Character.Orientation.FacingDirection : _endpointFacing) : _originalFacing;
             Character.Controller.Stop();

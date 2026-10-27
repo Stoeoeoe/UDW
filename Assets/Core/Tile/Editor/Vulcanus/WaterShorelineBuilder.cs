@@ -23,14 +23,21 @@ namespace Core.Tile.Editor.Vulcanus
         private readonly Raster _water = new();
         private readonly Dictionary<Texture2D, Color32[]> _textures = new();
 
-        internal WaterShorelineBuilder(IEnumerable<Tilemap> sources, int ppu, RectInt mapPixels, int maximumDistance)
+        /// <param name="sources">Source layers. Tiles with waterType metadata contribute their whole sprite alpha.</param>
+        /// <param name="keyedMasks">Water mask sprites of color-keyed cells, placed with their layer's cell transform.</param>
+        internal WaterShorelineBuilder(IEnumerable<Tilemap> sources,
+            IEnumerable<(Tilemap source, Vector3Int cell, Sprite mask)> keyedMasks,
+            int ppu, RectInt mapPixels, int maximumDistance)
         {
             if (ppu <= 0 || maximumDistance < 1 || maximumDistance > 128)
-                throw new ArgumentOutOfRangeException(nameof(maximumDistance), "Water shoreline range must be 1–128 logical pixels, with positive PPU.");
+                throw new ArgumentOutOfRangeException(nameof(maximumDistance), "Water shoreline range must be 1 to 128 logical pixels, with positive PPU.");
             _ppu = ppu;
             _range = maximumDistance;
             _mapPixels = mapPixels;
+            // All water types and layers share one occupancy, so touching regions never form a false coastline.
             foreach (var source in sources) Rasterize(source, _water, true);
+            foreach (var (source, cell, mask) in keyedMasks)
+                RasterizeCell(source, cell, mask, mask.name, _water);
         }
 
         internal WaterShorelineData Build(Tilemap surface, AssetImportContext context, string assetName)
@@ -85,27 +92,31 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 if (source.GetTile(cell) is not UnityEngine.Tilemaps.Tile tile) continue;
                 if (authoredOnly && (tile is not VulcanusTile authored || authored.WaterType == "None")) continue;
-                var sprite = tile.sprite;
-                if (!sprite || !sprite.texture.isReadable || !Mathf.Approximately(sprite.pixelsPerUnit, _ppu))
-                    throw new InvalidOperationException($"Water tile '{tile.name}' requires a readable sprite at {_ppu} PPU.");
-                if (!_textures.TryGetValue(sprite.texture, out var pixels))
-                    _textures.Add(sprite.texture, pixels = sprite.texture.GetPixels32());
-                var rect = sprite.rect;
-                var anchor = source.CellToLocal(cell) + Vector3.Scale(source.tileAnchor, source.layoutGrid.cellSize);
-                var transform = source.GetTransformMatrix(cell);
-                for (var y = 0; y < (int)rect.height; y++)
-                    for (var x = 0; x < (int)rect.width; x++)
-                    {
-                        if (pixels[((int)rect.y + y) * sprite.texture.width + (int)rect.x + x].a == 0) continue;
-                        var position = anchor + transform.MultiplyPoint3x4(new Vector3(
-                            (x + 0.5f - sprite.pivot.x) / _ppu, (y + 0.5f - sprite.pivot.y) / _ppu, 0));
-                        var logical = (Vector2)position * _ppu - Vector2.one * 0.5f;
-                        var pixel = new Vector2Int(Mathf.RoundToInt(logical.x), Mathf.RoundToInt(logical.y));
-                        if ((logical - pixel).sqrMagnitude > 0.0001f)
-                            throw new InvalidOperationException($"Water tile '{tile.name}' transform must preserve the logical pixel grid.");
-                        target.Add(pixel);
-                    }
+                RasterizeCell(source, cell, tile.sprite, tile.name, target);
             }
+        }
+
+        private void RasterizeCell(Tilemap source, Vector3Int cell, Sprite sprite, string tileName, Raster target)
+        {
+            if (!sprite || !sprite.texture.isReadable || !Mathf.Approximately(sprite.pixelsPerUnit, _ppu))
+                throw new InvalidOperationException($"Water tile '{tileName}' requires a readable sprite at {_ppu} PPU.");
+            if (!_textures.TryGetValue(sprite.texture, out var pixels))
+                _textures.Add(sprite.texture, pixels = sprite.texture.GetPixels32());
+            var rect = sprite.rect;
+            var anchor = source.CellToLocal(cell) + Vector3.Scale(source.tileAnchor, source.layoutGrid.cellSize);
+            var transform = source.GetTransformMatrix(cell);
+            for (var y = 0; y < (int)rect.height; y++)
+                for (var x = 0; x < (int)rect.width; x++)
+                {
+                    if (pixels[((int)rect.y + y) * sprite.texture.width + (int)rect.x + x].a == 0) continue;
+                    var position = anchor + transform.MultiplyPoint3x4(new Vector3(
+                        (x + 0.5f - sprite.pivot.x) / _ppu, (y + 0.5f - sprite.pivot.y) / _ppu, 0));
+                    var logical = (Vector2)position * _ppu - Vector2.one * 0.5f;
+                    var pixel = new Vector2Int(Mathf.RoundToInt(logical.x), Mathf.RoundToInt(logical.y));
+                    if ((logical - pixel).sqrMagnitude > 0.0001f)
+                        throw new InvalidOperationException($"Water tile '{tileName}' transform must preserve the logical pixel grid.");
+                    target.Add(pixel);
+                }
         }
 
         private sealed class Raster

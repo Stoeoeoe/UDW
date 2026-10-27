@@ -55,3 +55,4 @@ MonoBehaviour:
     m_NumAlphaKeys: 2
   weatherRendererFeature: {fileID: 0}
   weatherMaterial: {fileID: 2100000, guid: 8029adfc32d30d749b66db6f1caa1e4c, type: 2}
+  waterRainIntensity: 0

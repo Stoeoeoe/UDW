@@ -2,6 +2,59 @@
   "schemaVersion": 2,
   "modules": [
     {
+      "path": "Audio",
+      "methods": [
+        {
+          "name": "PlaySound",
+          "parameters": [
+            {
+              "name": "sound",
+              "type": "string",
+              "resourceType": "sound"
+            },
+            {
+              "name": "position",
+              "type": "position",
+              "picker": "mapPosition",
+              "nullable": true,
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "audio.playSound",
+            "displayName": "Play sound",
+            "category": "Audio",
+            "description": "Play a sound globally or at a map position and continue immediately.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "Camera",
       "methods": [
         {
@@ -310,6 +363,12 @@
               "name": "animation",
               "type": "string",
               "resourceType": "animation"
+            },
+            {
+              "name": "holdLastFrame",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": false
             }
           ],
           "returnType": "nil",
@@ -319,7 +378,7 @@
             "id": "characters.playAnimation",
             "displayName": "Play animation",
             "category": "Animation",
-            "description": "Play a finite animation on a character and wait for completion.",
+            "description": "Play a finite animation and wait for completion. Hold last frame keeps the final pose until another animation starts or movement resumes.",
             "contexts": [
               "cutscene"
             ],
@@ -451,6 +510,38 @@
     {
       "path": "Cutscene",
       "methods": [
+        {
+          "name": "RunLua",
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "semanticType": "lua",
+              "picker": "lua"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "cutscene.runLua",
+            "displayName": "Run Lua",
+            "category": "Scripting",
+            "description": "Run a Lua script immediately using the scripting API. Timed actions remain separate steps.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": []
+            }
+          }
+        },
         {
           "name": "Wait",
           "parameters": [
@@ -692,6 +783,73 @@
           "writesState": false
         }
       ]
+    },
+    {
+      "path": "Wallet",
+      "methods": [
+        {
+          "name": "AddMoney",
+          "parameters": [
+            {
+              "name": "money",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "RemoveMoney",
+          "parameters": [
+            {
+              "name": "money",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "Weather",
+      "methods": [
+        {
+          "name": "SetWeather",
+          "parameters": [
+            {
+              "name": "weather",
+              "type": "string",
+              "resourceType": "weather"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "weather.setWeather",
+            "displayName": "Set weather",
+            "category": "Weather",
+            "description": "Change weather until the next seasonal roll, without advancing the calendar.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
     }
   ],
   "tables": [
@@ -710,6 +868,26 @@
     }
   ],
   "resources": {
+    "weather": [
+      {
+        "id": "LightRainSpring",
+        "description": "LightRainSpring"
+      },
+      {
+        "id": "Sunny",
+        "description": "Sunny"
+      }
+    ],
+    "sound": [
+      {
+        "id": "base:prototype-complete",
+        "description": "PrototypeComplete"
+      },
+      {
+        "id": "base:prototype-impact",
+        "description": "PrototypeImpact"
+      }
+    ],
     "animation": [
       {
         "id": "base:pass-out",

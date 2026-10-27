@@ -35,6 +35,54 @@ namespace Core.Tile.Editor.Vulcanus
             CatalogDiscovery.RefreshAll();
         }
 
+        [Test]
+        public void ImportsOptionalTransitionSelectionAndRejectsPerSceneTimings()
+        {
+            var source = Source("test:transition");
+            var defaultDefinition = Parse(source);
+            try
+            {
+                Assert.That(defaultDefinition.Transition.Enabled, Is.True);
+            }
+            finally { Object.DestroyImmediate(defaultDefinition); }
+            source["transition"] = new JObject { ["enabled"] = false };
+            var authored = Parse(source);
+            try
+            {
+                Assert.That(authored.Transition.Enabled, Is.False);
+            }
+            finally { Object.DestroyImmediate(authored); }
+            source["transition"]["fadeSeconds"] = -1;
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+        }
+
+        [Test]
+        public void SchemaDistinguishesOrdinaryActionsAndConditionalsWithUnityValidator()
+        {
+            var source = Source("test:schema-discriminator");
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.Nothing);
+            var ordinary = source["sequence"][0].DeepClone();
+            var conditional = new JObject
+            {
+                ["id"] = "choose", ["action"] = "control.if",
+                ["arguments"] = new JObject { ["condition"] = "true" },
+                ["then"] = new JArray(ordinary.DeepClone()), ["else"] = new JArray()
+            };
+            source["sequence"] = new JArray(conditional);
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.Nothing);
+            conditional["action"] = "dialogue.play";
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+            conditional["action"] = "control.if";
+            conditional.Remove("then");
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+            source["sequence"] = new JArray(ordinary);
+            source["onStart"] = new JArray(new JObject
+            {
+                ["id"] = "invalid-setup", ["action"] = "control.if", ["arguments"] = new JObject()
+            });
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+        }
+
         [TestCase("West", true)]
         [TestCase("preserve", true)]
         [TestCase("West", false)]
@@ -117,6 +165,28 @@ namespace Core.Tile.Editor.Vulcanus
             source["sequence"][0]["arguments"]["seconds"] = -1;
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>()
                 .With.Message.Contains("(pause)").And.Message.Contains("nonnegative"));
+        }
+
+        [Test]
+        public void ImportsMultilineLuaAsAQuotedArgumentAndChecksSyntaxWithoutExecuting()
+        {
+            var source = Source("test:script");
+            const string code = "local greeting = \"hello\"\nerror('must not execute at import')";
+            source["sequence"] = new JArray(new JObject
+            {
+                ["id"] = "script", ["action"] = "cutscene.runLua",
+                ["arguments"] = new JObject { ["code"] = code }
+            });
+            var definition = Parse(source);
+            try
+            {
+                Assert.That(definition.Steps[0].Arguments.Single().Value, Is.EqualTo(code));
+                Assert.That(definition.Lua, Does.StartWith("Cutscene.RunLua(\"local greeting = "));
+                Assert.That(definition.Lua, Does.Contain("\\nerror("));
+            }
+            finally { Object.DestroyImmediate(definition); }
+            source["sequence"][0]["arguments"]["code"] = "if true then";
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("script"));
         }
 
         [TestCase("formatVersion", "99")]

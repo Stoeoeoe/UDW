@@ -1,6 +1,10 @@
 {
   "labels": {
-    "base:cutscene-prototype": "Prototype"
+    "base:cutscene-prototype": "Prototype",
+    "base:cutscene-prototype/prototype-completion-sound": "Completion cue (global)",
+    "base:cutscene-prototype/prototype-impact-hold": "Let the shake finish",
+    "base:cutscene-prototype/prototype-impact-shake": "Landing screen shake",
+    "base:cutscene-prototype/prototype-impact-sound": "Landing impact (positioned)"
   },
   "folders": {}
 }

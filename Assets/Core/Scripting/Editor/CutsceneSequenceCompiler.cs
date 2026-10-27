@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using MoonSharp.Interpreter;
 
 namespace Core.Scripting.Editor
 {
@@ -13,14 +14,15 @@ namespace Core.Scripting.Editor
         public static string Compile(JArray sequence, string source) => Compile(sequence, source, out _);
 
         public static string Compile(JArray sequence, string source, out CutsceneStep[] steps,
-            string phase = "sequence", ISet<string> usedIds = null)
+            string phase = "sequence", ISet<string> usedIds = null, bool path = false, bool trackSteps = false)
         {
             if (sequence == null) throw new ArgumentNullException(nameof(sequence));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
             var section = phase switch { "setup" => "onStart", "sequence" => "sequence", "completion" => "onComplete.steps",
                 _ => throw new ArgumentException("Unknown cutscene phase.", nameof(phase)) };
-            if (phase == "sequence" && sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
-            steps = new CutsceneStep[sequence.Count];
+            if (phase == "sequence" && !path && sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
+            var imported = new List<CutsceneStep>();
+            trackSteps |= sequence.OfType<JObject>().Any(step => (string)step["action"] == "control.if");
 
             var bindings = VulcanusLuaEngine.InspectBindings();
             var actions = bindings.Describe().modules
@@ -37,8 +39,29 @@ namespace Core.Scripting.Editor
                 var id = RequiredString(step["id"], location, "id");
                 location += $" ({id})";
                 if (!usedIds.Add(id)) throw Invalid(location, "Duplicate step ID.");
-                RejectUnknownFields(step, new[] { "id", "action", "arguments" }, location);
                 var actionId = RequiredString(step["action"], location, "action");
+                if (trackSteps) lua.Append("__cutsceneStep(").Append(LuaString(id)).Append(");\n");
+                if (actionId == "control.if")
+                {
+                    if (phase != "sequence" || path) throw Invalid(location, "Conditional branches are allowed only at the top level of the main sequence.");
+                    RejectUnknownFields(step, new[] { "id", "action", "arguments", "then", "else" }, location);
+                    if (step["arguments"] is not JObject conditionArguments) throw Invalid(location, "Expected named condition argument.");
+                    RejectUnknownFields(conditionArguments, new[] { "condition" }, location);
+                    var condition = RequiredString(conditionArguments["condition"], location, "condition");
+                    try { new Script(CoreModules.Preset_HardSandbox).LoadString("return (" + condition + "\n)", null, location); }
+                    catch (SyntaxErrorException error) { throw Invalid(location, error.DecoratedMessage); }
+                    if (step["then"] is not JArray ifPath || step["else"] is not JArray elsePath)
+                        throw Invalid(location, "Expected both If and Else action arrays.");
+                    imported.Add(new CutsceneStep(id, actionId, new[] { new CutsceneArgument("condition", condition) }));
+                    var ifLua = Compile(ifPath, location + ".then", out var ifSteps, phase, usedIds, true, true);
+                    var elseLua = Compile(elsePath, location + ".else", out var elseSteps, phase, usedIds, true, true);
+                    imported.AddRange(ifSteps);
+                    imported.AddRange(elseSteps);
+                    lua.Append("if __cutsceneCondition(").Append(LuaString(condition)).Append(") then\n")
+                        .Append(ifLua).Append("else\n").Append(elseLua).Append("end\n");
+                    continue;
+                }
+                RejectUnknownFields(step, new[] { "id", "action", "arguments" }, location);
                 if (!actions.TryGetValue(actionId, out var action))
                     throw Invalid(location, $"Unsupported cutscene action '{actionId}'.");
                 if (!action.Method.action.phases.Contains(phase))
@@ -72,14 +95,21 @@ namespace Core.Scripting.Editor
                     {
                         if (arguments[parameter.name] is not JArray points || points.Count == 0)
                             throw Invalid(location, $"'{parameter.name}' requires a nonempty ordered list of positions.");
-                        var path = new MapPath(points.Select((point, index) => RequiredPosition(point, location, $"{parameter.name}[{index}]")).ToArray());
-                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, path);
+                        var mapPath = new MapPath(points.Select((point, index) => RequiredPosition(point, location, $"{parameter.name}[{index}]")).ToArray());
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, mapPath);
                         values[parameterIndex] = path;
-                        literals[parameterIndex] = "{ " + string.Join(", ", path.Points.Select(PositionLiteral)) + " }";
+                        literals[parameterIndex] = "{ " + string.Join(", ", mapPath.Points.Select(PositionLiteral)) + " }";
                         continue;
                     }
                     if (parameter.type == "position")
                     {
+                        if (parameter.nullable == true && arguments[parameter.name]?.Type == JTokenType.Null)
+                        {
+                            importedArguments[parameterIndex] = new CutsceneArgument(parameter.name);
+                            values[parameterIndex] = null;
+                            literals[parameterIndex] = "nil";
+                            continue;
+                        }
                         var position = RequiredPosition(arguments[parameter.name], location, parameter.name);
                         importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, position);
                         values[parameterIndex] = position;
@@ -111,10 +141,11 @@ namespace Core.Scripting.Editor
                 // Pure value checks run at import; scene reference checks run when binding the map.
                 try { bindings.ValidateAuthoredActionArguments(actionId, values); }
                 catch (Exception error) { throw new FormatException($"{location}: {error.Message}", error); }
-                steps[index] = new CutsceneStep(id, actionId, importedArguments);
+                imported.Add(new CutsceneStep(id, actionId, importedArguments));
                 lua.Append(action.Module).Append('.').Append(action.Method.name).Append('(')
                     .Append(string.Join(", ", literals)).Append(");\n");
             }
+            steps = imported.ToArray();
             return lua.ToString();
         }
 

@@ -182,7 +182,7 @@ namespace Core.Scripting.Editor
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, importedSteps, skip,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.SetFlag('{completionFlag}')", "", Array.Empty<CutsceneStep>()),
-                "", Array.Empty<CutsceneStep>());
+                "", Array.Empty<CutsceneStep>(), new CutsceneTransition(enabled: false));
             return definition;
         }
 
@@ -273,6 +273,53 @@ namespace Core.Scripting.Editor
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator TransitionsCoverSetupAndCompletionAndHoldInputThroughExit()
+        {
+            var service = CutsceneRunner.Instance;
+            var player = MainCharacter.CurrentMainCharacter;
+            foreach (var terminal in new[] { "complete", "skip", "cancel" })
+            {
+                var id = "fixture:transition-" + terminal;
+                var definition = CreatePhaseDefinition(id, terminal == "complete" ? 0.01 : 60);
+                definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
+                    definition.OnComplete, definition.OnStartLua, definition.OnStart, new CutsceneTransition());
+                try
+                {
+                    var originalFacing = player.Orientation.FacingDirection;
+                    Assert.That(service.TryStart(definition, out var run), Is.True);
+                    Assert.That(player.IsControlBlocked, Is.True);
+                    Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.False);
+                    Assert.That(player.Orientation.FacingDirection, Is.EqualTo(originalFacing), "Setup must wait for the entrance to reach black.");
+                    Assert.That(service.CurrentStepId, Is.Null, "The sequence must wait for the entrance cover.");
+                    if (terminal == "cancel")
+                    {
+                        run.Cancel();
+                        Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.False);
+                    }
+                    else
+                    {
+                        if (terminal == "skip") Assert.That(run.Skip(), Is.True);
+                        var sawCompletedWhileCovered = false;
+                        var deadline = Time.realtimeSinceStartup + 10f;
+                        while (run.IsRunning && Time.realtimeSinceStartup < deadline)
+                        {
+                            Assert.That(player.IsControlBlocked, Is.True);
+                            Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.False);
+                            if (GameState.Story.CompletedCutscenes.Contains(id)) sawCompletedWhileCovered = true;
+                            yield return null;
+                        }
+                        Assert.That(sawCompletedWhileCovered, Is.True, "Completion applies before the exit reveal releases input.");
+                        Assert.That(GameState.Story.HasFlag(id), Is.True);
+                    }
+                    Assert.That(run.IsRunning, Is.False);
+                    Assert.That(player.IsControlBlocked, Is.False);
+                    Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.True);
+                }
+                finally { service.Cancel(); Object.Destroy(definition); }
+            }
+        }
+
         private static CutsceneDefinition CreatePhaseDefinition(string id, double wait, string completionActor = "player")
         {
             JObject Turn(string stepId, string character, string direction) => new()
@@ -290,7 +337,8 @@ namespace Core.Scripting.Editor
                 out var completionSteps, "completion", ids);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             definition.Configure(id, MapManager.Instance.CurrentMap.MapId, sequence, steps, true,
-                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.SetFlag('{id}')", completion, completionSteps), setup, setupSteps);
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.SetFlag('{id}')", completion, completionSteps), setup, setupSteps,
+                new CutsceneTransition(enabled: false));
             return definition;
         }
 
@@ -320,7 +368,8 @@ namespace Core.Scripting.Editor
                 var completion = CutsceneSequenceCompiler.Compile(new JArray(Place("finish", 171)), id, out var completionSteps, "completion", ids);
                 var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
                 definition.Configure(id, map.MapId, sequence, steps, true,
-                    new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", completion, completionSteps), setup, setupSteps);
+                    new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", completion, completionSteps), setup, setupSteps,
+                    new CutsceneTransition(enabled: false));
                 try
                 {
                     var before = spawn.transform.position;
@@ -449,6 +498,63 @@ namespace Core.Scripting.Editor
             Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.True);
             Assert.That(character.IsControlBlocked, Is.False);
             AssertClosed();
+        }
+
+        [UnityTest]
+        public IEnumerator RestoringThePlayerInsideTheTriggerDoesNotRestartACancelledCutscene()
+        {
+            var service = CutsceneRunner.Instance;
+            var player = MainCharacter.CurrentMainCharacter;
+            var body = player.GetComponent<Rigidbody2D>();
+            var original = body.position;
+            var definition = CreatePhaseDefinition("fixture:visit", 60);
+            var catalog = ScriptableObject.CreateInstance<CutsceneCatalog>();
+            catalog.Synchronize(new[] { definition });
+            var previousCatalog = typeof(CutsceneRunner).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(service);
+            Set(service, "_catalog", catalog);
+            var owner = new GameObject("Cutscene visit trigger");
+            owner.SetActive(false);
+            owner.transform.position = player.transform.position;
+            var area = owner.AddComponent<BoxCollider2D>();
+            area.isTrigger = true;
+            area.size = Vector2.one * 2f;
+            owner.AddComponent<CutsceneTrigger>().Configure(definition.CutsceneId);
+            var starts = 0;
+            Action<CutsceneRun> onStart = _ => starts++;
+            service.Started += onStart;
+            try
+            {
+                owner.SetActive(true);
+                yield return new WaitForFixedUpdate();
+                Assert.That(starts, Is.EqualTo(1));
+                body.position = original + Vector2.right * 4f;
+                Physics2D.SyncTransforms();
+                yield return new WaitForFixedUpdate();
+                yield return null;
+                service.Cancel(); // The setup's player binding restores the captured position.
+                Assert.That(body.position, Is.EqualTo(original));
+                for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
+                Assert.That(starts, Is.EqualTo(1), "Restoration must not count as another player visit.");
+                Assert.That(service.IsRunning, Is.False);
+                Assert.That(GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
+
+                body.position = original + Vector2.right * 4f;
+                Physics2D.SyncTransforms();
+                yield return new WaitForFixedUpdate();
+                body.position = original;
+                Physics2D.SyncTransforms();
+                for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
+                Assert.That(starts, Is.EqualTo(2), "A later genuine visit can retry the cancelled scene.");
+            }
+            finally
+            {
+                service.Started -= onStart;
+                service.Cancel();
+                Object.Destroy(owner);
+                Set(service, "_catalog", previousCatalog);
+                Object.Destroy(catalog);
+                Object.Destroy(definition);
+            }
         }
 
         [UnityTest]
@@ -660,7 +766,8 @@ namespace Core.Scripting.Editor
             }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:binding", out var importedSteps);
             definition.Configure("fixture:binding", map, compiled, importedSteps, false,
-                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>(),
+                new CutsceneTransition(enabled: false));
         }
 
         private void AssertClosed()

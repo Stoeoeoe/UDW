@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schemas/entity-type.schema.json",
+  "$schema": "../schemas/entity-type.schema.json",
   "id": "chest",
   "displayName": "Player Chest",
   "category": "object",

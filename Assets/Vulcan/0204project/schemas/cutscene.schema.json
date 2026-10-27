@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Linear cutscene source",
+  "title": "Cutscene source",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -35,111 +35,32 @@
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "action",
-          "arguments"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "\\S"
+        "oneOf": [
+          {
+            "$ref": "#/definitions/actionStep"
           },
-          "action": {
-            "type": "string",
-            "pattern": "\\S"
-          },
-          "arguments": {
-            "type": "object",
-            "additionalProperties": {
-              "oneOf": [
-                {
-                  "type": "string",
-                  "pattern": "\\S"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "x",
-                    "y"
-                  ],
-                  "properties": {
-                    "x": {
-                      "type": "integer",
-                      "minimum": 0
-                    },
-                    "y": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "anchor": {
-                      "type": "string",
-                      "pattern": "\\S"
-                    }
-                  },
-                  "required": [
-                    "anchor"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "array",
-                  "minItems": 1,
-                  "items": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": [
-                          "x",
-                          "y"
-                        ],
-                        "properties": {
-                          "x": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "y": {
-                            "type": "integer",
-                            "minimum": 0
-                          }
-                        }
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "anchor": {
-                            "type": "string",
-                            "pattern": "\\S"
-                          }
-                        },
-                        "required": [
-                          "anchor"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
+          {
+            "$ref": "#/definitions/conditionalStep"
           }
-        }
+        ]
       }
     },
     "allowSkip": {
       "type": "boolean"
+    },
+    "transition": {
+      "type": "object",
+      "description": "Enables the shared entrance and exit transition. Timings are configured globally in Unity's CutscenePresentation settings asset.",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        }
+      }
     },
     "onComplete": {
       "type": "object",
@@ -176,7 +97,13 @@
               },
               "facing": {
                 "type": "string",
-                "enum": ["preserve", "North", "East", "South", "West"]
+                "enum": [
+                  "preserve",
+                  "North",
+                  "East",
+                  "South",
+                  "West"
+                ]
               },
               "anchor": {
                 "type": "string",
@@ -206,33 +133,94 @@
         "steps": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "id",
-              "action",
-              "arguments"
-            ],
-            "properties": {
-              "id": {
+            "$ref": "#/definitions/actionStep"
+          }
+        }
+      }
+    },
+    "onStart": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/actionStep"
+      }
+    }
+  },
+  "definitions": {
+    "actionStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "action",
+        "arguments"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "action": {
+          "type": "string",
+          "pattern": "\\S",
+          "not": {
+            "enum": [
+              "control.if"
+            ]
+          }
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
                 "type": "string",
                 "pattern": "\\S"
               },
-              "action": {
-                "type": "string",
-                "pattern": "\\S"
+              {
+                "type": "number"
               },
-              "arguments": {
+              {
                 "type": "object",
-                "additionalProperties": {
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "anchor": {
+                    "type": "string",
+                    "pattern": "\\S"
+                  }
+                },
+                "required": [
+                  "anchor"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
                   "oneOf": [
-                    {
-                      "type": "string",
-                      "pattern": "\\S"
-                    },
-                    {
-                      "type": "number"
-                    },
                     {
                       "type": "object",
                       "additionalProperties": false,
@@ -263,156 +251,58 @@
                         "anchor"
                       ],
                       "additionalProperties": false
-                    },
-                    {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "oneOf": [
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "required": [
-                              "x",
-                              "y"
-                            ],
-                            "properties": {
-                              "x": {
-                                "type": "integer",
-                                "minimum": 0
-                              },
-                              "y": {
-                                "type": "integer",
-                                "minimum": 0
-                              }
-                            }
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "anchor": {
-                                "type": "string",
-                                "pattern": "\\S"
-                              }
-                            },
-                            "required": [
-                              "anchor"
-                            ],
-                            "additionalProperties": false
-                          }
-                        ]
-                      }
                     }
                   ]
                 }
               }
-            }
+            ]
           }
         }
       }
     },
-    "onStart": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "action",
-          "arguments"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "\\S"
-          },
-          "action": {
-            "type": "string",
-            "pattern": "\\S"
-          },
-          "arguments": {
-            "type": "object",
-            "additionalProperties": {
-              "oneOf": [
-                {
-                  "type": "string",
-                  "pattern": "\\S"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "x",
-                    "y"
-                  ],
-                  "properties": {
-                    "x": {
-                      "type": "integer",
-                      "minimum": 0
-                    },
-                    "y": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "anchor": {
-                      "type": "string",
-                      "pattern": "\\S"
-                    }
-                  },
-                  "required": [
-                    "anchor"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "array",
-                  "minItems": 1,
-                  "items": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": [
-                          "x",
-                          "y"
-                        ],
-                        "properties": {
-                          "x": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
-                          "y": {
-                            "type": "integer",
-                            "minimum": 0
-                          }
-                        }
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "anchor": {
-                            "type": "string",
-                            "pattern": "\\S"
-                          }
-                        },
-                        "required": [
-                          "anchor"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ]
-                  }
-                }
-              ]
+    "conditionalStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "action",
+        "arguments",
+        "then",
+        "else"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "action": {
+          "enum": [
+            "control.if"
+          ]
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "condition"
+          ],
+          "properties": {
+            "condition": {
+              "type": "string",
+              "pattern": "\\S"
             }
+          }
+        },
+        "then": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/actionStep"
+          }
+        },
+        "else": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/actionStep"
           }
         }
       }

@@ -12,10 +12,13 @@ namespace Core.Tile.Water
         [SerializeField] private WaterProfile profile;
         [SerializeField, Min(1)] private int pixelsPerUnit;
         [SerializeField] private WaterShorelineData shoreline;
+        private Tilemap surface;
+        private Matrix4x4 shorelineWorldToLocal;
 
         public WaterProfile Profile => profile;
         public int PixelsPerUnit => pixelsPerUnit;
         public WaterShorelineData Shoreline => shoreline;
+        internal Tilemap Surface => surface;
 
         public void Configure(WaterProfile waterProfile, int ppu, WaterShorelineData shorelineData)
         {
@@ -36,6 +39,8 @@ namespace Core.Tile.Water
             if (profile.foamWidth > shoreline.MaximumDistance || profile.shallowWaterWidth > shoreline.MaximumDistance ||
                 profile.shoreWaveWidth > shoreline.MaximumDistance)
                 throw new InvalidOperationException($"Water body '{name}' shoreline widths exceed its baked {shoreline.MaximumDistance}-pixel range. Increase the map importer's shoreline distance and reimport.");
+            if (profile.depthEnabled && profile.depthStartPixels + profile.depthBlendPixels > shoreline.MaximumDistance)
+                throw new InvalidOperationException($"Water body '{name}' depth start plus blend exceeds its baked {shoreline.MaximumDistance}-pixel range. Increase the map importer's shoreline distance and reimport.");
         }
 
         public void ApplyProfile()
@@ -47,11 +52,20 @@ namespace Core.Tile.Water
             renderer.GetPropertyBlock(properties);
             profile.Apply(properties, pixelsPerUnit);
             shoreline.Apply(properties);
+            shorelineWorldToLocal = transform.worldToLocalMatrix;
+            properties.SetMatrix("_WaterWorldToLocal", shorelineWorldToLocal);
             renderer.SetPropertyBlock(properties);
+        }
+
+        // Map roots can be repositioned in the scene; the baked distances stay in map-local pixels.
+        private void LateUpdate()
+        {
+            if (transform.worldToLocalMatrix != shorelineWorldToLocal) ApplyProfile();
         }
 
         private void OnEnable()
         {
+            surface = GetComponent<Tilemap>();
             ApplyProfile();
             if (gameObject.scene.IsValid()) ActiveBodies.Add(this);
         }

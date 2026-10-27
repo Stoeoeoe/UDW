@@ -1,5 +1,43 @@
 # Linear cutscene steps
 
+## Holding a finished animation
+
+`Characters.PlayAnimation(character, animation, holdLastFrame = false)` optionally
+keeps the final frame after its awaited playback finishes. The sequence continues
+while the animator owns the held pose. Idle/facing updates and completion placement
+do not release it. Another animation, walking/running, a tool action, location leave,
+or animator disable releases it. Cancelling unfinished playback does not hold it;
+cutscene rollback clears a held pose introduced by that run.
+The existing `EndInteractionAnimation()` API also releases the pose explicitly.
+This is presentation only; it does not change character health or death state.
+
+The manifest parameter is `type: "boolean", optional: true, defaultValue: false`.
+Source stores `holdLastFrame: true` or `false`; omission retains previous behavior.
+The compiler emits the default for older steps, and Lua binding accepts an omitted
+optional boolean. Strings/numbers/null are rejected as boolean arguments. The
+existing awaitable execution and unknown spatial preview metadata are unchanged.
+
+## Entrance and exit presentation
+
+Source v2 optionally includes `transition` alongside `allowSkip`:
+`{ "enabled": true }`. Omission enables the transition. Vulcanus exposes only
+the per-scene toggle. Global timing lives in the Unity asset
+`Assets/Resources/CutscenePresentation.asset`: Fade Seconds `0.3`, Hold Seconds
+`1.7`, Reveal Seconds `0.12`. These Inspector settings apply to both intro and
+outro for every cutscene; they are not exposed to Lua. Times must be finite and
+nonnegative. Disabling presentation preserves immediate cleanup.
+
+The shared ScreenFader fades to black and reveals the scene by retracting two
+black rectangles toward the top and bottom. Animation uses unscaled time. Control
+is acquired before the entrance. The entrance fades to black and holds; setup runs
+and Started is raised under that cover, then the sequence begins alongside the
+reveal. On normal completion or skip, script progression stops, the exit
+fades to black and holds, transient actions stop and completion placements/actions apply once under black, and the
+final state is revealed before control and Finished notifications are released.
+Cancellation/failure clears presentation and retains the existing rollback policy.
+Completion that already committed under black is retained if presentation is then
+interrupted. Very short scenes finish the entrance before beginning the exit.
+
 The initial sequence contract is an ordered list of action steps. Unity compiles
 the list to Lua; the Lua session executes it. There is no second command runner.
 Sources ending in `.runtime.cutscene.json` import into `CutsceneDefinition`
@@ -313,6 +351,14 @@ For a spawn ghost, obtain the character visual through the effect's
 their feet with the selected point. No API-name-specific picker logic is needed.
 
 ## Before start, completion steps and action phases
+
+`Weather.SetWeather("LightRainSpring")` is the immediate `weather.setWeather`
+action, available in setup, sequence and completion. Its `weather` argument uses
+`resourceType: "weather"`; `bindings.json` exports enabled WeatherCatalog IDs
+and labels in `resources.weather`. Use it in `onStart` to establish a scene's
+weather. Binding rejects unknown or disabled IDs before any steps execute.
+The change lasts until the next normal seasonal weather roll; it does not
+advance the calendar or add a saved weather override.
 
 Unity accepts structured `onStart` and `onComplete.steps` blocks. The binding
 manifest exports `action.phases`; registration, compilation and phase-specific
@@ -672,3 +718,19 @@ skipping places the host at the meeting anchor and adds
 `base:cutscene-prototype` to the completed set. This is an explicitly named prototype, not story
 canon. A second cutscene using supported assets needs a new source, not manager
 registration or new C#.
+
+## Lua script blocks
+
+`Cutscene.RunLua(code)` exports `cutscene.runLua` as an immediate action allowed
+only in `sequence`. Its string parameter is marked `[LuaCode]`, which exports
+`semanticType: "lua", picker: "lua"` for the shared Vulcanus Lua editor. Import
+compiles the chunk to check syntax without executing it; the sequence compiler
+quotes the entire code argument, including newlines, instead of injecting Lua.
+
+At runtime the action uses `VulcanusLuaEngine.Execute`: the same synchronous,
+writable scripting sandbox and instruction budget used by dialogue scripts.
+Each block has a fresh local scope. Timed actions stay separate typed steps;
+session action APIs are not available inside the block. Errors fail playback.
+Skipping bypasses remaining sequence blocks and applies completion normally.
+Preview declares `spatialState: "unknown", effects: []`; arbitrary code is never
+executed in Vulcanus to guess changes in scene state.

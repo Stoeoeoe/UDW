@@ -46,6 +46,7 @@ namespace Core.Scripting
         public string semanticType;
         public string picker;
         public string resourceType;
+        public bool? nullable;
         public bool? optional;
         public object defaultValue;
         public string coordinateSpace;

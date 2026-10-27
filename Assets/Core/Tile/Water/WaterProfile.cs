@@ -14,6 +14,8 @@ namespace Core.Tile.Water
         public Color baseColor = new Color32(43, 111, 150, 255);
         public Color waveColor = new Color32(65, 143, 173, 255);
         public Color highlightColor = new Color32(116, 185, 194, 255);
+        [Min(1), Tooltip("Whole-pixel animation steps per second.")]
+        public float animationFps = 8;
         [Min(0)] public float waveSpeed = 0.3f;
         [Min(0.001f)] public float waveScale = 1.5f;
         [Range(0, 1)] public float causticIntensity = 0.35f;
@@ -32,6 +34,13 @@ namespace Core.Tile.Water
         [Min(0)] public float shoreWaveSpeed = 1.5f;
         public bool shallowWaterEnabled;
         [Min(0)] public float shallowWaterWidth = 3;
+
+        [Header("Depth (logical pixels from shore)")]
+        public bool depthEnabled;
+        [Min(0), Tooltip("Distance from shore where deep water starts.")]
+        public float depthStartPixels = 6;
+        [Min(0), Tooltip("Width of the dithered transition. Zero gives a hard edge.")]
+        public float depthBlendPixels = 4;
 
         [Header("Current")]
         public bool flowEnabled;
@@ -59,11 +68,20 @@ namespace Core.Tile.Water
         public float objectReflectionRipplePixels = 1;
         [Min(0)] public float objectReflectionRippleSpeed = 0.5f;
 
+        [Header("Interaction")]
+        [Tooltip("Expanding rings from WaterInteraction.SpawnRipple and WaterContact wakes.")]
+        public bool interactionRipplesEnabled;
+        [Tooltip("Raindrop splashes driven by WaterInteraction.Rain.")]
+        public bool rainSplashesEnabled;
+        [Tooltip("Foam rings around WaterContact objects standing in this water.")]
+        public bool contactFoamEnabled;
+
         public void Validate()
         {
             if (!material || !material.shader || material.shader.name != ShaderName)
                 throw new InvalidOperationException($"Water profile '{name}' requires a material using '{ShaderName}'.");
-            if (!float.IsFinite(waveSpeed) || waveSpeed < 0 ||
+            if (!float.IsFinite(animationFps) || animationFps <= 0 ||
+                !float.IsFinite(waveSpeed) || waveSpeed < 0 ||
                 !float.IsFinite(waveScale) || waveScale <= 0 ||
                 !float.IsFinite(causticIntensity) || causticIntensity < 0 || causticIntensity > 1 ||
                 !float.IsFinite(causticScale) || causticScale <= 0 ||
@@ -74,9 +92,10 @@ namespace Core.Tile.Water
             ValidateColor(waveColor);
             ValidateColor(highlightColor);
             foreach (var value in new[] { foamWidth, foamSpeed, shoreWaveFrequency, shoreWaveWidth, shoreWaveSpeed,
-                         shallowWaterWidth, flowSpeed, surfaceHighlightSpeed, objectReflectionRipplePixels, objectReflectionRippleSpeed })
+                         shallowWaterWidth, depthStartPixels, depthBlendPixels, flowSpeed, surfaceHighlightSpeed,
+                         objectReflectionRipplePixels, objectReflectionRippleSpeed })
                 if (!float.IsFinite(value) || value < 0)
-                    throw new InvalidOperationException($"Water profile '{name}' has invalid shoreline, current, surface highlight or object reflection settings.");
+                    throw new InvalidOperationException($"Water profile '{name}' has invalid shoreline, depth, current, surface highlight or object reflection settings.");
             foreach (var value in new[] { foamIntensity, flowStrength, surfaceHighlightIntensity, surfaceHighlightDensity, objectReflectionOpacity })
                 if (!float.IsFinite(value) || value < 0 || value > 1)
                     throw new InvalidOperationException($"Water profile '{name}' coverage and strength must be in [0,1].");
@@ -107,6 +126,7 @@ namespace Core.Tile.Water
             properties.SetColor("_BaseColor", baseColor);
             properties.SetColor("_WaveColor", waveColor);
             properties.SetColor("_HighlightColor", highlightColor);
+            properties.SetFloat("_AnimationFps", animationFps);
             properties.SetFloat("_WaveSpeed", waveSpeed);
             properties.SetFloat("_WaveScale", waveScale);
             properties.SetFloat("_CausticIntensity", causticIntensity);
@@ -117,6 +137,7 @@ namespace Core.Tile.Water
                 shoreWavesEnabled ? 1 : 0, shallowWaterEnabled ? 1 : 0));
             properties.SetVector("_Foam", new Vector4(foamWidth, foamIntensity, foamSpeed, 0));
             properties.SetVector("_ShoreWaves", new Vector4(shoreWaveFrequency, shoreWaveWidth, shoreWaveSpeed, shallowWaterWidth));
+            properties.SetVector("_Depth", new Vector4(depthEnabled ? 1 : 0, depthStartPixels, depthBlendPixels, 0));
             properties.SetVector("_Current", new Vector4(flowEnabled ? 1 : 0, flowSpeed, flowStrength, 0));
             properties.SetFloat("_FlowMapEnabled", flowMap ? 1 : 0);
             if (flowMap) properties.SetTexture("_FlowMap", flowMap);
@@ -126,7 +147,8 @@ namespace Core.Tile.Water
             properties.SetVector("_SurfaceHighlightShape", new Vector4(surfaceHighlightScale, surfaceHighlightStretch.x, surfaceHighlightStretch.y, 0));
             properties.SetVector("_ObjectReflections", new Vector4(objectReflectionsEnabled ? 1 : 0,
                 objectReflectionOpacity, objectReflectionRipplePixels, objectReflectionRippleSpeed));
+            properties.SetVector("_Interaction", new Vector4(interactionRipplesEnabled ? 1 : 0,
+                rainSplashesEnabled ? 1 : 0, contactFoamEnabled ? 1 : 0, 0));
         }
     }
 }
-

@@ -14,16 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.WeatherEffect
   id: LightRainSpring
   label: LightRainSpring
-  weatherEffectPrefab: {fileID: 7119817416147163843, guid: a5e0494b7bbedc54fa7b509b32d70ecb,
-    type: 3}
+  weatherEffectPrefab: {fileID: 7119817416147163843, guid: a5e0494b7bbedc54fa7b509b32d70ecb, type: 3}
   locationFilter:
     locationType: 1
     filterMode: 1
     locationIds: []
   playMusic: 0
   weatherMusic: {fileID: 0}
-  postProcessingProfile: {fileID: 11400000, guid: c5c705654f7fe7446ba935d22334c855,
-    type: 2}
+  postProcessingProfile: {fileID: 11400000, guid: c5c705654f7fe7446ba935d22334c855, type: 2}
   overrideDaylightColor: 0
   daylightColorGradient:
     serializedVersion: 2
@@ -55,6 +53,6 @@ MonoBehaviour:
     m_ColorSpace: 0
     m_NumColorKeys: 2
     m_NumAlphaKeys: 2
-  weatherRendererFeature: {fileID: -4292770418832460746, guid: 424799608f7334c24bf367e4bbfa7f9a,
-    type: 2}
+  weatherRendererFeature: {fileID: -4292770418832460746, guid: 424799608f7334c24bf367e4bbfa7f9a, type: 2}
   weatherMaterial: {fileID: 2100000, guid: be9523b6ba1b394489f1b9d3dcf1a0d5, type: 2}
+  waterRainIntensity: 0.35

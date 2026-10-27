@@ -130,6 +130,9 @@ namespace UI.Shared
             yield return _transitionTween.WaitForCompletion(true);
         }
 
+        internal Tween CoverCutscene(float duration, float holdSeconds) => _transitionTween = screenFader.CoverCutscene(duration, holdSeconds);
+        internal Tween RevealCutscene(float duration) => _transitionTween = screenFader.RevealCutscene(duration);
+
         /// <summary>Reveals the scene, optionally playing a cue and holding the cover first.</summary>
         public IEnumerator RevealScene(Transform focus, float holdDuration = 0f, AudioClip cue = null)
         {

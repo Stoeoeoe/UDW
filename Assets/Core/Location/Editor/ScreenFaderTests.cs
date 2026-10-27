@@ -49,6 +49,33 @@ namespace Core.Location.Editor
         }
 
         [Test]
+        public void CutsceneFadeAndCenterRevealRestoreTheSharedFader()
+        {
+            CreateFader(ScreenFader.Effect.Iris, ScreenFader.MosaicOrder.Random);
+            _fader.ShowSceneImmediately();
+            var cover = _fader.CoverCutscene(1f);
+            cover.Goto(0.5f);
+            Assert.That(_group.alpha, Is.EqualTo(0.5f).Within(0.01f));
+            cover.Complete();
+            Assert.That(CountBlackPixels(), Is.EqualTo(128 * 64));
+            var reveal = _fader.RevealCutscene(1f);
+            reveal.Goto(0.2f);
+            var frame = RenderPixels();
+            Assert.That(frame[32 * 128 + 64].r, Is.GreaterThan(240), "The center opens first.");
+            Assert.That(frame[64].r, Is.LessThan(16), "The bottom remains covered.");
+            Assert.That(frame[63 * 128 + 64].r, Is.LessThan(16), "The top remains covered.");
+            reveal.Complete();
+            Assert.That(CountBlackPixels(), Is.Zero);
+            Assert.That(_group.blocksRaycasts, Is.False);
+            Assert.That(_image.enabled, Is.True);
+            Assert.That(_image.material.HasProperty("_Progress"), Is.True);
+            _fader.CoverCutscene(1f).Goto(0.5f);
+            _fader.ShowSceneImmediately();
+            Assert.That(CountBlackPixels(), Is.Zero);
+            Assert.That(_group.blocksRaycasts, Is.False);
+        }
+
+        [Test]
         public void MosaicOwnsItsMaterialAndLeavesTheAuthoredAssetUnchanged()
         {
             CreateFader(ScreenFader.Effect.Mosaic, ScreenFader.MosaicOrder.Random);

@@ -10,13 +10,27 @@ namespace Core.Scripting.Editor
 {
     public sealed class LuaActionPreviewTests
     {
+        [Test]
+        public void LuaBlockExportsItsCodeEditorHintAndUnknownPreview()
+        {
+            var method = LuaBindingRegistry.DescribeTypes(typeof(CutsceneLuaApi)).modules.Single().methods
+                .Single(method => method.name == "RunLua");
+            Assert.That(method.action.id, Is.EqualTo("cutscene.runLua"));
+            Assert.That(method.action.phases, Is.EqualTo(new[] { "sequence" }));
+            Assert.That(method.action.execution, Is.EqualTo("immediate"));
+            Assert.That(method.parameters.Single().semanticType, Is.EqualTo("lua"));
+            Assert.That(method.parameters.Single().picker, Is.EqualTo("lua"));
+            Assert.That(method.action.preview.spatialState, Is.EqualTo("unknown"));
+            Assert.That(method.action.preview.effects, Is.Empty);
+        }
+
         private static string Json(object value) => JsonConvert.SerializeObject(value,
             new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
         [Test]
         public void CurrentActionsMatchTheVersionedHandoffFixtureWithoutLiveApis()
         {
-            var manifest = LuaBindingRegistry.DescribeTypes(typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi));
+            var manifest = LuaBindingRegistry.DescribeTypes(typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi), typeof(AudioLuaApi), typeof(CameraLuaApi));
             var path = Path.Combine(Path.GetDirectoryName(UnityEngine.Application.dataPath), "Docs/Examples/LuaActionPreview.v1.json");
             var expected = (JObject)JObject.Parse(File.ReadAllText(path))["actions"];
             expected.Merge(JObject.Parse(File.ReadAllText(path.Replace(".v1.json", ".v2.json")))["actions"]);

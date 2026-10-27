@@ -13,25 +13,24 @@ MonoBehaviour:
   m_Name: SpringSeasonData
   m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.SeasonData
   label: Spring
-  index: 1
   season: 0
   daylightColorGradient:
     serializedVersion: 2
-    key0: {r: 0.052910283, g: 0.07209935, b: 0.2735849, a: 1}
-    key1: {r: 0.0754717, g: 0.114848204, b: 0.3018868, a: 1}
-    key2: {r: 0.6415094, g: 0.60822356, b: 0.60822356, a: 1}
-    key3: {r: 1, g: 1, b: 1, a: 0}
-    key4: {r: 1, g: 0.94550854, b: 0.8537736, a: 0}
-    key5: {r: 1, g: 0.8920991, b: 0.7122642, a: 0}
-    key6: {r: 0.9245283, g: 0.7078326, b: 0.3532396, a: 0}
+    key0: {r: 0.6415094, g: 0.60822356, b: 0.60822356, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 1, g: 0.94550854, b: 0.8537736, a: 1}
+    key3: {r: 1, g: 0.8920991, b: 0.7122642, a: 0}
+    key4: {r: 0.9245283, g: 0.7078326, b: 0.3532396, a: 0}
+    key5: {r: 0.12802598, g: 0.13611297, b: 0.1981132, a: 0}
+    key6: {r: 0.12802598, g: 0.13611297, b: 0.1981132, a: 0}
     key7: {r: 0.12802598, g: 0.13611297, b: 0.1981132, a: 0}
-    ctime0: 0
-    ctime1: 5975
-    ctime2: 11565
-    ctime3: 17540
-    ctime4: 31997
-    ctime5: 41827
-    ctime6: 56476
+    ctime0: 11565
+    ctime1: 17540
+    ctime2: 31997
+    ctime3: 41827
+    ctime4: 56476
+    ctime5: 65535
+    ctime6: 65535
     ctime7: 65535
     atime0: 0
     atime1: 65535
@@ -43,11 +42,11 @@ MonoBehaviour:
     atime7: 0
     m_Mode: 0
     m_ColorSpace: 0
-    m_NumColorKeys: 8
+    m_NumColorKeys: 6
     m_NumAlphaKeys: 2
   weatherData:
     items:
     - item: {fileID: 11400000, guid: fa88b243cea3c47409bae67f1494024e, type: 2}
-      weight: 0.01
-    - item: {fileID: 11400000, guid: 3948c96c0d03660448f599782cf068d0, type: 2}
       weight: 1
+    - item: {fileID: 11400000, guid: 3948c96c0d03660448f599782cf068d0, type: 2}
+      weight: 0

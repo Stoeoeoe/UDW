@@ -15,6 +15,7 @@ namespace Core.Scripting
         [SerializeField, ReadOnly, TextArea] private string lua;
         [SerializeField, ReadOnly] private CutsceneStep[] steps = Array.Empty<CutsceneStep>();
         [SerializeField, ReadOnly] private bool allowSkip;
+        [SerializeField, ReadOnly] private CutsceneTransition transition = new();
         [SerializeField, ReadOnly] private CutsceneCompletion onComplete;
         [SerializeField, ReadOnly, TextArea] private string onStartLua = "";
         [SerializeField, ReadOnly] private CutsceneStep[] onStart = Array.Empty<CutsceneStep>();
@@ -25,6 +26,7 @@ namespace Core.Scripting
         public string MapId => mapId;
         public string Lua => lua;
         public bool AllowSkip => allowSkip;
+        public CutsceneTransition Transition => transition;
         public CutsceneCompletion OnComplete => onComplete;
         public IReadOnlyList<CutsceneStep> Steps => _steps ??= Array.AsReadOnly(steps);
         public string OnStartLua => onStartLua;
@@ -32,7 +34,8 @@ namespace Core.Scripting
 
 #if UNITY_EDITOR
         public void Configure(string id, string map, string script, IEnumerable<CutsceneStep> importedSteps,
-            bool skipAllowed, CutsceneCompletion completionPlan, string setupScript, IEnumerable<CutsceneStep> setupSteps)
+            bool skipAllowed, CutsceneCompletion completionPlan, string setupScript, IEnumerable<CutsceneStep> setupSteps,
+            CutsceneTransition presentation = null)
         {
             cutsceneId = id;
             mapId = map;
@@ -40,6 +43,7 @@ namespace Core.Scripting
             steps = importedSteps.ToArray();
             _steps = null;
             allowSkip = skipAllowed;
+            transition = presentation ?? new CutsceneTransition();
             onComplete = completionPlan;
             onStartLua = setupScript;
             onStart = setupSteps.ToArray();
@@ -51,6 +55,8 @@ namespace Core.Scripting
         public override IReadOnlyList<ConfigurationError> ValidateConfiguration()
         {
             var errors = new List<ConfigurationError>();
+            if (transition == null)
+                errors.Add(new ConfigurationError(this, "transition", "Requires an explicit transition selection."));
             if (onComplete == null) errors.Add(new ConfigurationError(this, "onComplete", "Requires an explicit completion block."));
             else onComplete.Validate(this, errors);
             if (!DefinitionIdRules.IsNamespaced(cutsceneId))

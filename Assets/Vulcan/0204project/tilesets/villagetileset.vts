@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schemas/tileset.schema.json",
+  "$schema": "../schemas/tileset.schema.json",
   "version": 1,
   "id": "base:villagetileset",
   "name": "VillageTileset Test",
@@ -353,12 +353,6 @@
           "key": "waterType",
           "value": "Lake_1"
         }
-      ],
-      "terrainCorners": [
-        "lakewater",
-        "lakewater",
-        "lakewater",
-        "lakewater"
       ]
     },
     "100": {
@@ -369,18 +363,12 @@
       "properties": [
         {
           "key": "isFreshwater",
-          "value": true
+          "value": false
         },
         {
           "key": "waterType",
-          "value": "Lake_1"
+          "value": "None"
         }
-      ],
-      "terrainCorners": [
-        "lakewater",
-        "lakewater",
-        "lakewater",
-        "lakewater"
       ]
     },
     "101": {
@@ -770,19 +758,79 @@
       "id": "tile_5_5"
     },
     "166": {
-      "id": "tile_6_5"
+      "id": "tile_6_5",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "grass",
+        "lakewater"
+      ]
     },
     "167": {
-      "id": "tile_7_5"
+      "id": "tile_7_5",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "168": {
-      "id": "tile_8_5"
+      "id": "tile_8_5",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "grass",
+        "lakewater",
+        "grass"
+      ]
     },
     "169": {
-      "id": "tile_9_5"
+      "id": "tile_9_5",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "lakewater",
+        "grass"
+      ]
     },
     "170": {
-      "id": "tile_10_5"
+      "id": "tile_10_5",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "grass",
+        "lakewater"
+      ]
     },
     "171": {
       "id": "tile_11_5"
@@ -920,19 +968,79 @@
       "id": "tile_5_6"
     },
     "198": {
-      "id": "tile_6_6"
+      "id": "tile_6_6",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "lakewater",
+        "grass",
+        "lakewater"
+      ]
     },
     "199": {
-      "id": "tile_7_6"
+      "id": "tile_7_6",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "200": {
-      "id": "tile_8_6"
+      "id": "tile_8_6",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "grass",
+        "lakewater",
+        "grass"
+      ]
     },
     "201": {
-      "id": "tile_9_6"
+      "id": "tile_9_6",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "grass",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "202": {
-      "id": "tile_10_6"
+      "id": "tile_10_6",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "lakewater",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "203": {
       "id": "tile_11_6"
@@ -1087,19 +1195,79 @@
       "id": "tile_5_7"
     },
     "230": {
-      "id": "tile_6_7"
+      "id": "tile_6_7",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "lakewater",
+        "grass",
+        "grass"
+      ]
     },
     "231": {
-      "id": "tile_7_7"
+      "id": "tile_7_7",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "grass",
+        "grass"
+      ]
     },
     "232": {
-      "id": "tile_8_7"
+      "id": "tile_8_7",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "grass",
+        "grass",
+        "grass"
+      ]
     },
     "233": {
-      "id": "tile_9_7"
+      "id": "tile_9_7",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "lakewater",
+        "grass",
+        "grass",
+        "lakewater"
+      ]
     },
     "234": {
-      "id": "tile_10_7"
+      "id": "tile_10_7",
+      "properties": [
+        {
+          "key": "isFreshwater",
+          "value": true
+        }
+      ],
+      "terrainCorners": [
+        "grass",
+        "lakewater",
+        "lakewater",
+        "grass"
+      ]
     },
     "235": {
       "id": "tile_11_7"
@@ -1183,19 +1351,49 @@
       "id": "tile_5_8"
     },
     "262": {
-      "id": "tile_6_8"
+      "id": "tile_6_8",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "lakewater"
+      ]
     },
     "263": {
-      "id": "tile_7_8"
+      "id": "tile_7_8",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "264": {
-      "id": "tile_8_8"
+      "id": "tile_8_8",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "lakewater",
+        "dirt"
+      ]
     },
     "265": {
-      "id": "tile_9_8"
+      "id": "tile_9_8",
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "lakewater",
+        "dirt"
+      ]
     },
     "266": {
-      "id": "tile_10_8"
+      "id": "tile_10_8",
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "dirt",
+        "lakewater"
+      ]
     },
     "267": {
       "id": "tile_11_8"
@@ -1328,19 +1526,49 @@
       "id": "tile_5_9"
     },
     "294": {
-      "id": "tile_6_9"
+      "id": "tile_6_9",
+      "terrainCorners": [
+        "dirt",
+        "lakewater",
+        "dirt",
+        "lakewater"
+      ]
     },
     "295": {
-      "id": "tile_7_9"
+      "id": "tile_7_9",
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "296": {
-      "id": "tile_8_9"
+      "id": "tile_8_9",
+      "terrainCorners": [
+        "lakewater",
+        "dirt",
+        "lakewater",
+        "dirt"
+      ]
     },
     "297": {
-      "id": "tile_9_9"
+      "id": "tile_9_9",
+      "terrainCorners": [
+        "lakewater",
+        "dirt",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "298": {
-      "id": "tile_10_9"
+      "id": "tile_10_9",
+      "terrainCorners": [
+        "dirt",
+        "lakewater",
+        "lakewater",
+        "lakewater"
+      ]
     },
     "299": {
       "id": "tile_11_9"
@@ -1472,19 +1700,49 @@
       "id": "tile_5_10"
     },
     "326": {
-      "id": "tile_6_10"
+      "id": "tile_6_10",
+      "terrainCorners": [
+        "dirt",
+        "lakewater",
+        "dirt",
+        "dirt"
+      ]
     },
     "327": {
-      "id": "tile_7_10"
+      "id": "tile_7_10",
+      "terrainCorners": [
+        "lakewater",
+        "lakewater",
+        "dirt",
+        "dirt"
+      ]
     },
     "328": {
-      "id": "tile_8_10"
+      "id": "tile_8_10",
+      "terrainCorners": [
+        "lakewater",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "329": {
-      "id": "tile_9_10"
+      "id": "tile_9_10",
+      "terrainCorners": [
+        "lakewater",
+        "dirt",
+        "dirt",
+        "lakewater"
+      ]
     },
     "330": {
-      "id": "tile_10_10"
+      "id": "tile_10_10",
+      "terrainCorners": [
+        "dirt",
+        "lakewater",
+        "lakewater",
+        "dirt"
+      ]
     },
     "331": {
       "id": "tile_11_10"

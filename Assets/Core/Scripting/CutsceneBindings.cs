@@ -23,6 +23,8 @@ namespace Core.Scripting
                 return characters;
             }),
             VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
+            VulcanusLuaEngine.Module(AudioLuaApi.BindCurrentMap),
+            VulcanusLuaEngine.Module(WeatherLuaApi.BindCurrentWeather),
             VulcanusLuaEngine.Module(CameraLuaApi.BindCurrentCamera)
         };
 
@@ -78,6 +80,7 @@ namespace Core.Scripting
             var instances = new Dictionary<Type, object>();
             foreach (var (phase, step) in steps)
             {
+                if (step.IsCondition) continue; // The compiler owns this control-flow node, not an API module.
                 try
                 {
                     var method = actions[step.ActionId];
@@ -93,6 +96,7 @@ namespace Core.Scripting
                         if (parameter.ParameterType == typeof(double)) return double.Parse(argument.Value, CultureInfo.InvariantCulture);
                         if (parameter.ParameterType == typeof(bool)) return bool.Parse(argument.Value);
                         if (parameter.ParameterType == typeof(MapPosition)) return argument.Position;
+                        if (parameter.ParameterType == typeof(MapPosition?)) return argument.IsNull ? null : (object)argument.Position;
                         if (parameter.ParameterType == typeof(MapPath)) return argument.Path;
                         throw new InvalidOperationException($"Unsupported sequence parameter type '{parameter.ParameterType}'.");
                     }).ToArray();

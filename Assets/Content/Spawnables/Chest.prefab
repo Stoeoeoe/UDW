@@ -50,9 +50,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Inventory.PersistentContainer
   prefabId: base:chest
-  owner: {fileID: 8476815486123167853, guid: fa8bc519b3424904a8f14c3fbef5cb68, type: 3}
+  owner: {fileID: 8476815486123167853, guid: 73a64505967481043b17f85d6e23828f, type: 3}
   capacity: 20
   displayName: Chest
+  startingContents: []
 --- !u!61 &1052281235581707243
 BoxCollider2D:
   m_ObjectHideFlags: 0

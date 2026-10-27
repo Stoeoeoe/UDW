@@ -1,4 +1,5 @@
 using System.Collections;
+using Core.Tile.Water;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using UnityEngine;
@@ -37,6 +38,7 @@ namespace Core.TimeAndWeather
         public void SetWeather(WeatherData weather)
         {
             if (!weather) throw new System.ArgumentNullException(nameof(weather));
+            weather.RequireValidConfiguration();
             if (!_effectsRoot || !isActiveAndEnabled)
                 throw new System.InvalidOperationException("The weather manager is not initialized and active.");
             StartCoroutine(ApplyWeather(weather));
@@ -46,6 +48,7 @@ namespace Core.TimeAndWeather
         {
             var version = ++_weatherUpdateVersion;
             CurrentWeather = weather;
+            WaterInteraction.Rain = weather.waterRainIntensity;
             postProcessingVolume.profile = weather.postProcessingProfile ? weather.postProcessingProfile : defaultVolumeProfile;
             _effectsRoot.MMDestroyAllChildren();
 

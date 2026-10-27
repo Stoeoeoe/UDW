@@ -9,8 +9,8 @@ namespace Core.Scripting
     {
         private readonly UrCharacterAnimator.OneShotPlayback _playback;
 
-        public PlayAnimationAction(GameCharacter character, CharacterAnimation animation) =>
-            _playback = character.Animator.PlayOneShot(animation);
+        public PlayAnimationAction(GameCharacter character, CharacterAnimation animation, bool holdLastFrame = false) =>
+            _playback = character.Animator.PlayOneShot(animation, holdLastFrame);
 
         public bool IsCompleted => _playback.IsCompleted;
         public void Tick(float deltaTime)

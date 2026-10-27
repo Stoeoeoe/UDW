@@ -8,6 +8,59 @@ namespace Core.Scripting.Editor
     public sealed class LuaExecutionSessionTests
     {
         [Test]
+        public void OptionalBooleanArgumentsUseDefaultsWithoutCoercingOtherValues()
+        {
+            var api = new BooleanApi();
+            using (var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Flags.Set()", "default flag")) run.Tick(0);
+            Assert.That(api.Value, Is.False);
+            using (var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Flags.Set(true)", "enabled flag")) run.Tick(0);
+            Assert.That(api.Value, Is.True);
+            using var invalid = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Flags.Set('true')", "invalid flag");
+            Assert.That(() => invalid.Tick(0), Throws.Exception);
+        }
+
+        [LuaModule("Flags")]
+        private sealed class BooleanApi
+        {
+            public bool Value = true;
+            [LuaAction("test.flag", "Flag", "Test", "Set a test flag.", "cutscene", Phases = new[] { "sequence" })]
+            public void Set(bool enabled = false) => Value = enabled;
+        }
+
+        [Test]
+        public void LuaBlocksExecuteOnceAndThenContinueTheSequence()
+        {
+            var api = new TestApi();
+            var bindings = new LuaBindingRegistry(new CutsceneLuaApi(), api);
+            using var run = VulcanusLuaEngine.StartSession(bindings,
+                "Cutscene.RunLua('local total = 0; for i = 1, 3 do total = total + i end; assert(total == 6); assert(os == nil and io == nil)'); Test.Finish()",
+                "Lua block test");
+            run.Tick(0.01f);
+            Assert.That(api.Finished, Is.True);
+            Assert.That(run.IsRunning, Is.False);
+        }
+
+        [Test]
+        public void LuaBlockValidationCompilesWithoutExecutingAndRejectsInvalidCode()
+        {
+            Assert.That(() => CutsceneLuaApi.ValidateLua("error('validation must not execute')"), Throws.Nothing);
+            Assert.That(() => CutsceneLuaApi.ValidateLua("if true then"), Throws.Exception);
+            Assert.That(() => CutsceneLuaApi.ValidateLua(" "), Throws.ArgumentException);
+        }
+
+        [Test]
+        public void LuaBlockRuntimeFailureStopsTheSequenceAndEndlessCodeHasAnInstructionBudget()
+        {
+            var api = new TestApi();
+            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi(), api),
+                "Cutscene.RunLua(\"error('block failed')\"); Test.Finish()", "Lua block failure");
+            Assert.That(() => run.Tick(0), Throws.Exception.With.Message.Contains("block failed"));
+            Assert.That(api.Finished, Is.False);
+            Assert.That(() => new CutsceneLuaApi().RunLua("while true do end"),
+                Throws.InvalidOperationException.With.Message.Contains("instruction budget"));
+        }
+
+        [Test]
         public void AwaitsHostCompletionAndResumesInOrder()
         {
             var api = new TestApi();
