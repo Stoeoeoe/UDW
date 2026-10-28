@@ -61,6 +61,57 @@ namespace Core.Scripting.Editor
         [TearDown]
         public void TearDown() => _fixture.Dispose();
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void CutsceneWalkSpeedUsesTheAuthoredAccelerationOption(bool immediate)
+        {
+            var body = _actor.GetComponent<Rigidbody2D>();
+            var destination = body.position + Vector2.right;
+            using var move = new MoveToAction(_actor, destination, immediate);
+            move.Tick(0);
+            GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+            if (immediate)
+                Assert.That(body.linearVelocity.x, Is.EqualTo(_actor.Attributes.WalkSpeed).Within(0.001f));
+            else
+                Assert.That(body.linearVelocity.x, Is.InRange(0.001f, _actor.Attributes.WalkSpeed - 0.001f));
+
+            body.position = destination - Vector2.right * 0.2f;
+            move.Tick(0);
+            GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+            Assert.That(body.linearVelocity.x, Is.EqualTo(immediate ? _actor.Attributes.WalkSpeed : 1.6f).Within(0.001f));
+        }
+
+        [Test]
+        public void DefaultCutscenePathStartsEachSegmentAtFullSpeedAndStopsWithoutOvershooting()
+        {
+            var body = _actor.GetComponent<Rigidbody2D>();
+            var first = body.position + Vector2.right;
+            var second = first + Vector2.up;
+            using var path = new WalkPathAction(_actor, new[] { first, second });
+            path.Tick(0);
+            GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+            Assert.That(body.linearVelocity, Is.EqualTo(Vector2.right * _actor.Attributes.WalkSpeed));
+            body.position = first;
+            path.Tick(0);
+            GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+            Assert.That(body.linearVelocity, Is.EqualTo(Vector2.up * _actor.Attributes.WalkSpeed));
+
+            // Less than one full-speed step remains, but more than the arrival tolerance.
+            var remaining = 0.05f;
+            body.position = second - Vector2.up * remaining;
+            path.Tick(0);
+            GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+            Assert.That(body.linearVelocity.y * Time.fixedDeltaTime, Is.EqualTo(remaining).Within(0.001f));
+            body.position = second;
+            path.Tick(0);
+            Assert.That(path.IsCompleted, Is.True);
+            Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
+            Assert.That(_actor.Controller.IsMovementOwned, Is.False);
+            _actor.Controller.SetMovementInput(Vector2.right, _actor.Attributes.WalkSpeed);
+            GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+            Assert.That(body.linearVelocity.x, Is.LessThan(_actor.Attributes.WalkSpeed), "Normal movement regains acceleration after the cutscene.");
+        }
+
         [TestCase(1f, 1f, 1, 0)]
         [TestCase(-1f, 1f, -1, 0)]
         [TestCase(1f, -1f, 1, 0)]

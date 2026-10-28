@@ -8,8 +8,8 @@ namespace Character
     /// <summary>Shared entry point for character movement. Currently supports straight-line routes only.</summary>
     public static class CharacterNavigation
     {
-        public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination) =>
-            new(actor, destination);
+        public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination, bool immediateAcceleration = false) =>
+            new(actor, destination, immediateAcceleration);
     }
 
     /// <summary>Walks to a position and owns movement until arrival or cancellation.</summary>
@@ -23,12 +23,13 @@ namespace Character
         private readonly Vector2 _destination;
         private readonly Vector2 _facing;
         private readonly float _speed;
+        private readonly bool _immediateAcceleration;
         private bool _disposed;
 
         public NavigationMoveStatus Status { get; private set; } = NavigationMoveStatus.Moving;
         public string Error { get; private set; }
 
-        internal NavigationMove(GameCharacter actor, Vector2 destination)
+        internal NavigationMove(GameCharacter actor, Vector2 destination, bool immediateAcceleration)
         {
             if (!actor) throw new ArgumentNullException(nameof(actor));
             if (!actor.isActiveAndEnabled || !actor.IsRuntimeInitialized)
@@ -47,6 +48,7 @@ namespace Character
             if (!float.IsFinite(_speed) || _speed <= 0)
                 throw new InvalidOperationException("MoveTo requires a positive walk speed.");
             _destination = destination;
+            _immediateAcceleration = immediateAcceleration;
             // A straight segment keeps one animation facing even when physics nudges the
             // remaining direction across a diagonal boundary. Exact diagonals face horizontally,
             // matching the animation library's 45-degree sectors.
@@ -119,9 +121,11 @@ namespace Character
                 return;
             }
 
-            // Ease off near the target so the actor can stop inside the arrival distance.
-            var speed = Mathf.Min(_speed, remaining.magnitude * 8f);
-            _controller.SetOwnedMovementInput(this, remaining.normalized, speed);
+            // Immediate walks keep their speed until the final physics step. Limit that
+            // step to the remaining distance so short segments cannot overshoot and oscillate.
+            var speed = Mathf.Min(_speed, _immediateAcceleration
+                ? remaining.magnitude / Time.fixedDeltaTime : remaining.magnitude * 8f);
+            _controller.SetOwnedMovementInput(this, remaining.normalized, speed, _immediateAcceleration);
             _actor.Orientation.UpdateFromInput(_facing);
             _actor.SetMovementState(MovementState.Walking);
         }

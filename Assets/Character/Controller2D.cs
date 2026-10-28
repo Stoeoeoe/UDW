@@ -23,6 +23,7 @@ namespace Character
         Vector2 _movementInput;
         float _maxSpeed;
         object _movementOwner;
+        bool _immediateAcceleration;
 
         public bool IsMovementOwned => _movementOwner != null;
 
@@ -46,11 +47,12 @@ namespace Character
             _movementOwner = owner;
         }
 
-        public void SetOwnedMovementInput(object owner, Vector2 input, float maxSpeed)
+        public void SetOwnedMovementInput(object owner, Vector2 input, float maxSpeed, bool immediateAcceleration = false)
         {
             RequireMovementOwner(owner);
             _movementInput = input;
             _maxSpeed = maxSpeed;
+            _immediateAcceleration = immediateAcceleration;
         }
 
         /// <summary>Stops the actor and gives ordinary movement control back.</summary>
@@ -59,6 +61,7 @@ namespace Character
             RequireMovementOwner(owner);
             Stop();
             _movementOwner = null;
+            _immediateAcceleration = false;
         }
 
         private void RequireMovementOwner(object owner)
@@ -72,7 +75,8 @@ namespace Character
         {
             Vector2 target = _movementInput.normalized * _maxSpeed;
             float rate = _movementInput.sqrMagnitude > 0.01f ? _acceleration : _deceleration;
-            _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, target, rate * Time.fixedDeltaTime);
+            _rb.linearVelocity = _immediateAcceleration
+                ? target : Vector2.MoveTowards(_rb.linearVelocity, target, rate * Time.fixedDeltaTime);
 
             if (_rb.linearVelocity.sqrMagnitude > 0.01f)
                 CurrentDirection = _rb.linearVelocity.normalized;

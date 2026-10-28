@@ -9,12 +9,13 @@ namespace Core.Scripting
     {
         private readonly GameCharacter character;
         private readonly Vector2[] points;
+        private readonly bool immediateAcceleration;
         private MoveToAction move;
         private int index;
         private bool disposed;
         public bool IsCompleted => index == points.Length;
 
-        public WalkPathAction(GameCharacter character, Vector2[] points)
+        public WalkPathAction(GameCharacter character, Vector2[] points, bool immediateAcceleration = true)
         {
             if (!character) throw new ArgumentNullException(nameof(character));
             if (points == null || points.Length == 0)
@@ -24,7 +25,8 @@ namespace Core.Scripting
                     throw new ArgumentException("Walking path positions must be finite.", nameof(points));
             this.character = character;
             this.points = (Vector2[])points.Clone();
-            move = new MoveToAction(character, points[0]);
+            this.immediateAcceleration = immediateAcceleration;
+            move = new MoveToAction(character, points[0], immediateAcceleration);
         }
 
         public void Tick(float deltaTime)
@@ -42,7 +44,7 @@ namespace Core.Scripting
                 move.Dispose();
                 move = null;
                 index++;
-                if (!IsCompleted) move = new MoveToAction(character, points[index]);
+                if (!IsCompleted) move = new MoveToAction(character, points[index], immediateAcceleration);
             }
         }
 

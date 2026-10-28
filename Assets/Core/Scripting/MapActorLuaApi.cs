@@ -128,7 +128,7 @@ namespace Core.Scripting
 
         /// <summary>Checks both IDs before a cutscene starts. Does not move anything.</summary>
         [UnityEngine.Scripting.Preserve]
-        public void ValidateMoveTo(string character, string destination)
+        public void ValidateMoveTo(string character, string destination, bool immediateAcceleration = true)
         {
             RequireCurrentMap();
             RequireKnownActor(character);
@@ -136,18 +136,18 @@ namespace Core.Scripting
         }
 
         /// <summary>Finds the character and anchor, then starts walking to the anchor's world position.</summary>
-        [LuaAction("characters.moveTo", "Move to anchor", "Movement", "Walk an existing character to a map anchor.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo), Phases = new[] { "sequence" })]
+        [LuaAction("characters.moveTo", "Move to anchor", "Movement", "Walk an existing character to a map anchor. Immediate acceleration keeps full walking speed until arrival; disable it for eased starts and stops.", "cutscene", "npcRoutine", Validator = nameof(ValidateMoveTo), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Described)]
         [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterToAnchor, CharacterParameter = "character", AnchorParameter = "destination", Facing = "unknown")]
         public ILuaAction MoveTo([LuaReference("characterRef", "mapCharacter")] string character,
-            [LuaReference("anchorRef", "mapAnchor")] string destination)
+            [LuaReference("anchorRef", "mapAnchor")] string destination, bool immediateAcceleration = true)
         {
             RequireCurrentMap();
-            return new MoveToAction(ResolveActor(character), ResolveAnchor(destination).transform.position);
+            return new MoveToAction(ResolveActor(character), ResolveAnchor(destination).transform.position, immediateAcceleration);
         }
 
         [UnityEngine.Scripting.Preserve]
-        public void ValidateWalkPath(string character, MapPath path)
+        public void ValidateWalkPath(string character, MapPath path, bool immediateAcceleration = true)
         {
             RequireCurrentMap();
             RequireKnownActor(character);
@@ -155,18 +155,19 @@ namespace Core.Scripting
             path.ToWorld(_map); // Resolve every point before starting any movement.
         }
 
-        [LuaAction("characters.walkPath", "Walk path", "Movement", "Walk through an ordered list of map positions and anchors.",
+        [LuaAction("characters.walkPath", "Walk path", "Movement", "Walk through an ordered list of map positions and anchors. Immediate acceleration keeps full walking speed through each segment; disable it for eased starts and stops.",
             "cutscene", "npcRoutine", Validator = nameof(ValidateWalkPath), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Described, Version = 2)]
         [LuaPreviewEffect(0, LuaPreviewEffectKind.MoveCharacterAlongPath, CharacterParameter = "character", PathParameter = "path", Facing = "unknown")]
-        public ILuaAction WalkPath([LuaReference("characterRef", "mapCharacter")] string character, [LuaPath] MapPath path)
+        public ILuaAction WalkPath([LuaReference("characterRef", "mapCharacter")] string character, [LuaPath] MapPath path,
+            bool immediateAcceleration = true)
         {
             RequireCurrentMap();
             var walker = ResolveActor(character);
             var points = path.ToWorld(_map);
             var feetOffset = (Vector2)(walker.Graphics.position - walker.transform.position);
             for (var i = 0; i < points.Length; i++) points[i] -= feetOffset;
-            return new WalkPathAction(walker, points);
+            return new WalkPathAction(walker, points, immediateAcceleration);
         }
 
         /// <summary>Checks both character IDs before a cutscene starts. Does not turn either character.</summary>
