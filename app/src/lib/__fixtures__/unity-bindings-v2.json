@@ -263,6 +263,12 @@
               "type": "string",
               "semanticType": "anchorRef",
               "picker": "mapAnchor"
+            },
+            {
+              "name": "immediateAcceleration",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": true
             }
           ],
           "returnType": "nil",
@@ -473,6 +479,12 @@
               ],
               "tileAnchor": "center",
               "characterPivot": "feet"
+            },
+            {
+              "name": "immediateAcceleration",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": true
             }
           ],
           "returnType": "nil",

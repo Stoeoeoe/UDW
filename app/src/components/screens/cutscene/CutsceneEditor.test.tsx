@@ -291,6 +291,31 @@ describe('cutscene authoring', () => {
     );
   });
 
+  it.each(['Move to anchor', 'Walk path'])(
+    'defaults %s to immediate acceleration and allows undoing the checkbox change',
+    async (actionName) => {
+      act(() =>
+        useScriptingManifestStore.getState().acceptUpdate({
+          path: 'C:/Unity/bindings.json',
+          revision: 2,
+          content: unityBindings,
+          error: null,
+        }),
+      );
+      mount();
+      fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+      fireEvent.click(await screen.findByRole('button', { name: actionName, exact: true }));
+      const checkbox = screen.getByRole('checkbox', { name: 'Immediate acceleration' });
+      expect(checkbox).toBeChecked();
+      fireEvent.click(checkbox);
+      expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.immediateAcceleration).toBe(false);
+      act(() => useEditorStore.getState().undoCutscene(prototype.id));
+      expect(screen.getByRole('checkbox', { name: 'Immediate acceleration' })).toBeChecked();
+      act(() => useEditorStore.getState().redoCutscene(prototype.id));
+      expect(screen.getByRole('checkbox', { name: 'Immediate acceleration' })).not.toBeChecked();
+    },
+  );
+
   it('edits and saves Hold last frame as a boolean with undo and redo', async () => {
     useScriptingManifestStore.getState().acceptUpdate({
       path: 'C:/Unity/bindings.json',
@@ -1019,6 +1044,7 @@ describe('cutscene authoring', () => {
             arguments: {
               character: 'cutscene-prototype-host-01',
               path: [{ anchor: 'prototype-meeting' }, { x: 168, y: 104 }],
+              immediateAcceleration: true,
             },
           }),
         ]),
