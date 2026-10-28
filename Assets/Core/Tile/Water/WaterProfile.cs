@@ -39,8 +39,32 @@ namespace Core.Tile.Water
         public bool depthEnabled;
         [Min(0), Tooltip("Distance from shore where deep water starts.")]
         public float depthStartPixels = 6;
-        [Min(0), Tooltip("Width of the dithered transition. Zero gives a hard edge.")]
+        [Min(0), Tooltip("Width of the transition from Base to Deep. Zero gives a hard edge.")]
         public float depthBlendPixels = 4;
+        [Range(0, 3), Tooltip("In-between shades from Base to Deep. Zero uses ordered dithering.")]
+        public int depthSteps = 2;
+        [Min(0), Tooltip("How far band edges wander, in logical pixels.")]
+        public float depthWobblePixels = 2;
+        [Min(1), Tooltip("Size of the wobble pattern in logical pixels. Larger gives broader, calmer contours.")]
+        public float depthWobbleScale = 12;
+        [Min(0), Tooltip("How far band edges slowly move back and forth, in logical pixels. Zero keeps them static.")]
+        public float depthMotionPixels = 0.75f;
+        [Min(0.5f), Tooltip("Seconds for one back-and-forth of the band edges.")]
+        public float depthMotionPeriod = 5;
+
+        [Header("Still water (lakes, ponds)")]
+        [Tooltip("No net drift: patterns slosh in place, wavelets relocate and wind patches wander. Off for rivers.")]
+        public bool stillWater;
+        [Min(0), Tooltip("How far patterns slosh back and forth, in logical pixels.")]
+        public float sloshPixels = 1.5f;
+        [Min(0.5f), Tooltip("Seconds for one slosh back and forth.")]
+        public float sloshPeriod = 6;
+        [Range(0, 1), Tooltip("How much busier wavelets get inside wind patches. Zero disables patches.")]
+        public float windPatchStrength = 0.6f;
+        [Min(4), Tooltip("Size of wind patches in logical pixels.")]
+        public float windPatchScale = 48;
+        [Min(0), Tooltip("Logical pixels per second the patches drift, along flowDirection.")]
+        public float windPatchSpeed = 4;
 
         [Header("Current")]
         public bool flowEnabled;
@@ -92,10 +116,16 @@ namespace Core.Tile.Water
             ValidateColor(waveColor);
             ValidateColor(highlightColor);
             foreach (var value in new[] { foamWidth, foamSpeed, shoreWaveFrequency, shoreWaveWidth, shoreWaveSpeed,
-                         shallowWaterWidth, depthStartPixels, depthBlendPixels, flowSpeed, surfaceHighlightSpeed,
+                         shallowWaterWidth, depthStartPixels, depthBlendPixels, depthWobblePixels, depthMotionPixels, sloshPixels, windPatchSpeed, flowSpeed, surfaceHighlightSpeed,
                          objectReflectionRipplePixels, objectReflectionRippleSpeed })
                 if (!float.IsFinite(value) || value < 0)
                     throw new InvalidOperationException($"Water profile '{name}' has invalid shoreline, depth, current, surface highlight or object reflection settings.");
+            if (!float.IsFinite(sloshPeriod) || sloshPeriod < 0.5f || !float.IsFinite(windPatchScale) || windPatchScale < 4 ||
+                !float.IsFinite(windPatchStrength) || windPatchStrength < 0 || windPatchStrength > 1)
+                throw new InvalidOperationException($"Water profile '{name}' has invalid still water settings.");
+            if (depthSteps < 0 || depthSteps > 3 || !float.IsFinite(depthWobbleScale) || depthWobbleScale < 1 ||
+                !float.IsFinite(depthMotionPeriod) || depthMotionPeriod < 0.5f)
+                throw new InvalidOperationException($"Water profile '{name}' has invalid depth band settings.");
             foreach (var value in new[] { foamIntensity, flowStrength, surfaceHighlightIntensity, surfaceHighlightDensity, objectReflectionOpacity })
                 if (!float.IsFinite(value) || value < 0 || value > 1)
                     throw new InvalidOperationException($"Water profile '{name}' coverage and strength must be in [0,1].");
@@ -138,6 +168,11 @@ namespace Core.Tile.Water
             properties.SetVector("_Foam", new Vector4(foamWidth, foamIntensity, foamSpeed, 0));
             properties.SetVector("_ShoreWaves", new Vector4(shoreWaveFrequency, shoreWaveWidth, shoreWaveSpeed, shallowWaterWidth));
             properties.SetVector("_Depth", new Vector4(depthEnabled ? 1 : 0, depthStartPixels, depthBlendPixels, 0));
+            properties.SetVector("_DepthShape", new Vector4(depthSteps, depthWobblePixels, depthWobbleScale, 0));
+            properties.SetVector("_DepthMotion", new Vector4(depthMotionPixels, depthMotionPeriod, 0, 0));
+            var wind = flowDirection.sqrMagnitude > 0 ? flowDirection.normalized : Vector2.right;
+            properties.SetVector("_StillWater", new Vector4(stillWater ? 1 : 0, sloshPixels, sloshPeriod, windPatchStrength));
+            properties.SetVector("_WindPatches", new Vector4(windPatchScale, windPatchSpeed, wind.x, wind.y));
             properties.SetVector("_Current", new Vector4(flowEnabled ? 1 : 0, flowSpeed, flowStrength, 0));
             properties.SetFloat("_FlowMapEnabled", flowMap ? 1 : 0);
             if (flowMap) properties.SetTexture("_FlowMap", flowMap);

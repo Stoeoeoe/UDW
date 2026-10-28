@@ -19,18 +19,57 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties:
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _FlowMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ShorelineDistances:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ShorelinePages:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _AnimationFps: 8
+    - _CausticIntensity: 0.1
+    - _CausticScale: 2
+    - _FlowMapEnabled: 0
+    - _PixelsPerUnit: 16
+    - _WaveScale: 1.5
+    - _WaveSpeed: 0.16
     m_Colors:
+    - _BaseColor: {r: 0.17299995, g: 0.30199993, b: 0.34899998, a: 1}
+    - _Current: {r: 0, g: 0.3, b: 1, a: 0}
+    - _DeepColor: {r: 0.14899996, g: 0.26699996, b: 0.32199997, a: 1}
     - _Depth: {r: 0, g: 6, b: 4, a: 0}
+    - _DepthShape: {r: 2, g: 2, b: 12, a: 0}
+    - _FlowDirection: {r: 1, g: 0.25, b: 0, a: 0}
+    - _FlowMapWorldRect: {r: 0, g: 0, b: 16, a: 16}
+    - _Foam: {r: 1.5, g: 0.3, b: 0.4, a: 0}
+    - _HighlightColor: {r: 0.28199998, g: 0.42399997, b: 0.45499992, a: 1}
     - _Interaction: {r: 0, g: 0, b: 0, a: 0}
+    - _ObjectReflections: {r: 0, g: 0.35, b: 1, a: 0.5}
+    - _ShoreWaves: {r: 0.0833333, g: 1, b: 1.5, a: 3}
+    - _ShorelineEffects: {r: 0, g: 1, b: 1, a: 0}
+    - _ShorelineLayout: {r: 0, g: 0, b: 1, a: 1}
+    - _ShorelineRange: {r: 128, g: 32, b: 0, a: 0}
+    - _SurfaceHighlightShape: {r: 1, g: 4, b: 1, a: 0}
+    - _SurfaceHighlights: {r: 0, g: 0.25, b: 0.2, a: 0.15}
+    - _WaveColor: {r: 0.21199995, g: 0.35299996, b: 0.39999998, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

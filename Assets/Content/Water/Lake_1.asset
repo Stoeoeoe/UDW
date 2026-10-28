@@ -34,9 +34,18 @@ MonoBehaviour:
   shoreWaveSpeed: 1.5
   shallowWaterEnabled: 0
   shallowWaterWidth: 3
-  depthEnabled: 0
-  depthStartPixels: 6
-  depthBlendPixels: 4
+  depthEnabled: 1
+  depthStartPixels: 1.28
+  depthBlendPixels: 14.85
+  depthSteps: 2
+  depthWobblePixels: 3
+  depthWobbleScale: 12
+  stillWater: 1
+  sloshPixels: 1.5
+  sloshPeriod: 6
+  windPatchStrength: 0.6
+  windPatchScale: 48
+  windPatchSpeed: 4
   flowEnabled: 0
   flowSpeed: 0.9
   flowStrength: 1
