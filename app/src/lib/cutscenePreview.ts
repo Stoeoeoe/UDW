@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { ScriptingResources } from './scriptingManifest';
 import { resolveMapPosition, positionPickerMetadata, pathPickerMetadata } from './mapPosition';
 import type { Cutscene, CutsceneAction } from '../types/cutscene';
-import { isConditionalStep } from '../types/cutscene';
+import { isConditionalStep, isParallelStep } from '../types/cutscene';
 import { previewSequence, type BranchPath } from './cutsceneBranches';
 import type { EntityType, Map as GameMap } from '../types/schema';
 import { mapCharacterInstances, actionsForCutscenePhase, completionPosition } from './cutscenes';
@@ -294,7 +294,13 @@ export function previewCutscene(
   const setup = scene.onStart ?? [];
   const setupIndex = selection.kind === 'step' ? setup.findIndex((s) => s.id === selection.id) : -1;
   const sequenceIndex =
-    selection.kind === 'step' ? sequence.findIndex((s) => s.id === selection.id) : -1;
+    selection.kind === 'step'
+      ? sequence.findIndex(
+          (s) =>
+            s.id === selection.id ||
+            s.tracks?.some((track) => track.some((child) => child.id === selection.id)),
+        )
+      : -1;
   if (selection.kind === 'step' && setupIndex < 0 && sequenceIndex < 0 && completionIndex < 0) {
     notice('Selected step is unavailable.');
     return finish();
@@ -313,181 +319,272 @@ export function previewCutscene(
               .slice(0, sequenceIndex + 1)
               .map((step, index) => ({ step, index, phase: 'sequence' as const }))),
       ];
-  for (const { step, index, phase } of steps) {
-    if (isConditionalStep(step)) {
-      notice(
-        'Conditional preview uses the selected If/Else path; live game conditions are not evaluated.',
-        step.id,
-      );
-      continue;
-    }
-    const reference = (name: string): string =>
-      typeof step.arguments[name] === 'string' ? (step.arguments[name] as string) : '';
-    const action = actions.find((a) => a.id === step.action && a.contexts.includes('cutscene'));
-    const preview = actionsForCutscenePhase(action ? [action] : [], phase).length
-      ? readActionPreview(action)
-      : null;
-    if (!preview) {
-      invalidate();
-      notice('Preview unavailable: this action has no supported preview declaration.', step.id);
-      continue;
-    }
-    for (const effect of preview.effects) {
-      if (effect.kind === 'showDialogue') {
-        const id = reference(effect.dialogueParameter);
-        if (dialogueIds.includes(id)) result.cues.push({ stepId: step.id, dialogueId: id });
-        else notice(`Dialogue preview unavailable: ${id || 'no dialogue selected'}.`, step.id);
+  const apply = (
+    entries: {
+      step: Cutscene['sequence'][number];
+      index: number;
+      phase: 'setup' | 'sequence' | 'completion';
+    }[],
+  ) => {
+    for (const { step, index, phase } of entries) {
+      if (isParallelStep(step)) {
+        const tracks = step.tracks!;
+        const before = structuredClone(characters);
+        const joined = structuredClone(characters);
+        const selectedTrack =
+          selection.kind === 'step'
+            ? tracks.findIndex((track) => track.some((child) => child.id === selection.id))
+            : -1;
+        const affected = tracks.map(
+          (track) =>
+            new Set(
+              track.flatMap((child) => {
+                const declaration = readActionPreview(
+                  actions.find((action) => action.id === child.action),
+                );
+                return (declaration?.effects ?? []).flatMap((effect) =>
+                  'characterParameter' in effect
+                    ? [String(child.arguments[effect.characterParameter])]
+                    : [],
+                );
+              }),
+            ),
+        );
+        let unknown = false;
+        tracks.forEach((track, trackIndex) => {
+          characters.clear();
+          for (const [id, character] of structuredClone(before)) characters.set(id, character);
+          // Another track may move a facing target before this action runs.
+          affected.forEach((ids, other) => {
+            if (other === trackIndex) return;
+            for (const id of ids) {
+              const character = characters.get(id);
+              if (character) {
+                character.position = null;
+                character.facing = null;
+              }
+            }
+          });
+          const selectedIndex =
+            selection.kind === 'step' ? track.findIndex((child) => child.id === selection.id) : -1;
+          apply(
+            track
+              .slice(0, selectedIndex >= 0 ? selectedIndex + 1 : undefined)
+              .map((child) => ({ step: child, index, phase })),
+          );
+          for (const id of affected[trackIndex]) {
+            const character = characters.get(id);
+            if (character) joined.set(id, character);
+          }
+          unknown ||= track.some(
+            (child) =>
+              readActionPreview(actions.find((action) => action.id === child.action))
+                ?.spatialState !== 'described',
+          );
+        });
+        characters.clear();
+        for (const [id, character] of joined) characters.set(id, character);
+        if (unknown) invalidate();
+        // Within a block there is no known shared timestamp. Endpoints become state only after the join.
+        if (selection.kind === 'step' && (selection.id === step.id || selectedTrack >= 0)) {
+          affected.forEach((ids, trackIndex) => {
+            if (trackIndex === selectedTrack) return;
+            for (const id of ids) {
+              const character = characters.get(id);
+              if (character) {
+                character.position = null;
+                character.facing = null;
+              }
+            }
+          });
+        }
+        notice(
+          'Parallel tracks: arrows show independent routes, not synchronized positions. All tracks finish at the join.',
+          step.id,
+        );
         continue;
       }
-      if (effect.kind === 'spawnCharacter') {
-        spawn(step, effect);
+      if (isConditionalStep(step)) {
+        notice(
+          'Conditional preview uses the selected If/Else path; live game conditions are not evaluated.',
+          step.id,
+        );
         continue;
       }
-      const characterId = reference(effect.characterParameter),
-        character = characters.get(characterId);
-      if (!character) {
+      const reference = (name: string): string =>
+        typeof step.arguments[name] === 'string' ? (step.arguments[name] as string) : '';
+      const action = actions.find((a) => a.id === step.action && a.contexts.includes('cutscene'));
+      const preview = actionsForCutscenePhase(action ? [action] : [], phase).length
+        ? readActionPreview(action)
+        : null;
+      if (!preview) {
         invalidate();
-        notice(`Preview unavailable: missing character ${characterId || '(not set)'}.`, step.id);
+        notice('Preview unavailable: this action has no supported preview declaration.', step.id);
         continue;
       }
-      if (effect.kind === 'moveCharacterAlongPath') {
-        const path = step.arguments[effect.pathParameter];
-        if (!Array.isArray(path) || !path.length) {
-          character.position = null;
-          character.facing = null;
-          notice('Path preview unavailable: add valid waypoints.', step.id);
+      for (const effect of preview.effects) {
+        if (effect.kind === 'showDialogue') {
+          const id = reference(effect.dialogueParameter);
+          if (dialogueIds.includes(id)) result.cues.push({ stepId: step.id, dialogueId: id });
+          else notice(`Dialogue preview unavailable: ${id || 'no dialogue selected'}.`, step.id);
           continue;
         }
-        let from = character.position;
-        for (const [waypoint, point] of path.entries()) {
-          const to = resolveMapPosition(
-            point,
+        if (effect.kind === 'spawnCharacter') {
+          spawn(step, effect);
+          continue;
+        }
+        const characterId = reference(effect.characterParameter),
+          character = characters.get(characterId);
+        if (!character) {
+          invalidate();
+          notice(`Preview unavailable: missing character ${characterId || '(not set)'}.`, step.id);
+          continue;
+        }
+        if (effect.kind === 'moveCharacterAlongPath') {
+          const path = step.arguments[effect.pathParameter];
+          if (!Array.isArray(path) || !path.length) {
+            character.position = null;
+            character.facing = null;
+            notice('Path preview unavailable: add valid waypoints.', step.id);
+            continue;
+          }
+          let from = character.position;
+          for (const [waypoint, point] of path.entries()) {
+            const to = resolveMapPosition(
+              point,
+              [...anchors.values()],
+              map.width,
+              map.height,
+              tileSize,
+            );
+            if (!to) {
+              from = null;
+              notice(`Waypoint ${waypoint + 1}: position is invalid or unresolved.`, step.id);
+              continue;
+            }
+            if (from && phase === 'sequence')
+              result.segments.push({
+                stepId: step.id,
+                number: index + 1,
+                characterId,
+                kind: 'move',
+                from: [...from],
+                to: [...to],
+                waypoint: waypoint + 1,
+              });
+            else if (!from && phase === 'sequence')
+              notice(
+                `Waypoint ${waypoint + 1}: previous position unknown; showing the waypoint only.`,
+                step.id,
+              );
+            result.placements.push({
+              stepId: step.id,
+              characterId,
+              position: [...to],
+              waypoint: waypoint + 1,
+            });
+            from = [...to];
+          }
+          character.position = from;
+          character.facing = null;
+          continue;
+        }
+        if (effect.kind === 'setCharacterPosition') {
+          const position = resolveMapPosition(
+            step.arguments[effect.positionParameter],
             [...anchors.values()],
             map.width,
             map.height,
             tileSize,
           );
-          if (!to) {
-            from = null;
-            notice(`Waypoint ${waypoint + 1}: position is invalid or unresolved.`, step.id);
+          if (!position) {
+            character.position = null;
+            notice('Placement preview unavailable: invalid or unresolved map position.', step.id);
             continue;
           }
-          if (from && phase === 'sequence')
+          character.position = [...position];
+          result.placements.push({
+            stepId: step.id,
+            characterId,
+            position: [...character.position],
+          });
+          continue;
+        }
+        if (effect.kind === 'faceCharacterDirection') {
+          character.facing = cardinalDirections[reference(effect.directionParameter)] ?? null;
+          if (!character.facing)
+            notice('Facing preview unavailable: unresolved direction.', step.id);
+          continue;
+        }
+        if (effect.kind === 'moveCharacterToAnchor') {
+          const anchorId = reference(effect.anchorParameter),
+            anchor = anchors.get(anchorId);
+          if (!anchor) {
+            character.position = null;
+            character.facing = null;
+            notice(`Preview unavailable: missing anchor ${anchorId || '(not set)'}.`, step.id);
+            continue;
+          }
+          if (character.position && phase === 'sequence')
             result.segments.push({
               stepId: step.id,
               number: index + 1,
               characterId,
               kind: 'move',
-              from: [...from],
-              to: [...to],
-              waypoint: waypoint + 1,
+              from: [...character.position],
+              to: [...anchor.position],
             });
-          else if (!from && phase === 'sequence')
+          else if (!character.position && phase === 'sequence')
             notice(
-              `Waypoint ${waypoint + 1}: previous position unknown; showing the waypoint only.`,
+              `${character.label}: starting position unknown; showing the destination only.`,
               step.id,
             );
-          result.placements.push({
-            stepId: step.id,
-            characterId,
-            position: [...to],
-            waypoint: waypoint + 1,
-          });
-          from = [...to];
-        }
-        character.position = from;
-        character.facing = null;
-        continue;
-      }
-      if (effect.kind === 'setCharacterPosition') {
-        const position = resolveMapPosition(
-          step.arguments[effect.positionParameter],
-          [...anchors.values()],
-          map.width,
-          map.height,
-          tileSize,
-        );
-        if (!position) {
-          character.position = null;
-          notice('Placement preview unavailable: invalid or unresolved map position.', step.id);
-          continue;
-        }
-        character.position = [...position];
-        result.placements.push({ stepId: step.id, characterId, position: [...character.position] });
-        continue;
-      }
-      if (effect.kind === 'faceCharacterDirection') {
-        character.facing = cardinalDirections[reference(effect.directionParameter)] ?? null;
-        if (!character.facing) notice('Facing preview unavailable: unresolved direction.', step.id);
-        continue;
-      }
-      if (effect.kind === 'moveCharacterToAnchor') {
-        const anchorId = reference(effect.anchorParameter),
-          anchor = anchors.get(anchorId);
-        if (!anchor) {
-          character.position = null;
+          character.position = [...anchor.position];
           character.facing = null;
-          notice(`Preview unavailable: missing anchor ${anchorId || '(not set)'}.`, step.id);
-          continue;
-        }
-        if (character.position && phase === 'sequence')
+        } else {
+          const targetId = reference(effect.targetCharacterParameter),
+            target = characters.get(targetId);
+          result.facings.push({ stepId: step.id, characterId, targetId });
+          character.facing = null;
+          if (!character.position || !target?.position) {
+            notice(
+              targetId === 'player' && !target?.position
+                ? 'Player position is determined at runtime. The player marker and facing direction cannot be shown yet.'
+                : `${character.label}: facing unknown because ${!character.position ? 'its' : target?.label || targetId || 'the target’s'} position is unknown.`,
+              step.id,
+            );
+            continue;
+          }
+          const dx = target.position[0] - character.position[0],
+            dy = target.position[1] - character.position[1],
+            length = Math.hypot(dx, dy);
+          if (!length) {
+            notice(
+              `${character.label}: facing unknown because both characters share a position.`,
+              step.id,
+            );
+            continue;
+          }
+          character.facing = [dx / length, dy / length];
           result.segments.push({
             stepId: step.id,
             number: index + 1,
             characterId,
-            kind: 'move',
+            kind: 'face',
             from: [...character.position],
-            to: [...anchor.position],
+            to: [...target.position],
           });
-        else if (!character.position && phase === 'sequence')
-          notice(
-            `${character.label}: starting position unknown; showing the destination only.`,
-            step.id,
-          );
-        character.position = [...anchor.position];
-        character.facing = null;
-      } else {
-        const targetId = reference(effect.targetCharacterParameter),
-          target = characters.get(targetId);
-        result.facings.push({ stepId: step.id, characterId, targetId });
-        character.facing = null;
-        if (!character.position || !target?.position) {
-          notice(
-            targetId === 'player' && !target?.position
-              ? 'Player position is determined at runtime. The player marker and facing direction cannot be shown yet.'
-              : `${character.label}: facing unknown because ${!character.position ? 'its' : target?.label || targetId || 'the target’s'} position is unknown.`,
-            step.id,
-          );
-          continue;
         }
-        const dx = target.position[0] - character.position[0],
-          dy = target.position[1] - character.position[1],
-          length = Math.hypot(dx, dy);
-        if (!length) {
-          notice(
-            `${character.label}: facing unknown because both characters share a position.`,
-            step.id,
-          );
-          continue;
-        }
-        character.facing = [dx / length, dy / length];
-        result.segments.push({
-          stepId: step.id,
-          number: index + 1,
-          characterId,
-          kind: 'face',
-          from: [...character.position],
-          to: [...target.position],
-        });
+      }
+      if (preview.spatialState === 'unknown') {
+        invalidate();
+        notice(
+          'Spatial state is unknown after this step; earlier arrows show history only.',
+          step.id,
+        );
       }
     }
-    if (preview.spatialState === 'unknown') {
-      invalidate();
-      notice(
-        'Spatial state is unknown after this step; earlier arrows show history only.',
-        step.id,
-      );
-    }
-  }
+  };
+  apply(steps);
   return finish();
 }

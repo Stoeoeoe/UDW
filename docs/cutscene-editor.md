@@ -1,5 +1,31 @@
 # Cutscene authoring
 
+## Parallel tracks
+
+Use **Add step > Parallel block** in Sequence to start several tracks together.
+Each track runs its actions in order; **Join** waits for every track before the
+next outer step. A track can contain movement, waits, animation or dialogue, so
+other actions can happen while characters are walking. Add/remove tracks and
+duplicate/delete blocks through their controls; normal Undo/Redo applies.
+
+Each block requires at least two nonempty tracks of ordinary sequence actions.
+Conditional and parallel blocks are top-level only. Tracks cannot control the same
+character, open dialogue from more than one track, or write the same story key.
+These checks cover the whole block even if a track first waits. Put shared actions
+after the join. Run Lua stays outside parallel blocks because its writes cannot
+be checked. Every child reference is validated before export and Unity playback.
+
+Preview draws independent routes from the state before the block. Selecting a
+child shows that track's schematic result and leaves other tracks' positions
+unknown; selecting a later step combines the endpoints after the join. Timing
+and collisions are verified in Unity. Cancelling, skipping or failing a cutscene
+cleans up all active tracks through Unity's existing runner.
+
+Runtime source uses `action: "control.parallel"`, empty `arguments`, and
+`tracks: [[step, ...], [step, ...]]` in formatVersion 2. Step IDs remain unique
+across every phase and track. No new binding-manifest action is needed: parallel
+blocks are control flow, like conditional branches.
+
 The cutscene workspace has **Before start**, **Sequence** and **On completion**
 tabs, with a shared Inspector and persistent resizable map preview. Select a
 step to edit its parameters, or Scene settings to edit name, map and skip

@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { matchesStoryType, storyDataSchema, STORY_VALUE_TYPE } from './storyValues';
 import { validateLuaChunk } from './luaRunner';
-import { CUTSCENE_CONDITION_ACTION, CUTSCENE_PARALLEL_ACTION, isConditionalStep, isParallelStep } from '../types/cutscene';
+import {
+  CUTSCENE_CONDITION_ACTION,
+  CUTSCENE_PARALLEL_ACTION,
+  isConditionalStep,
+  isParallelStep,
+} from '../types/cutscene';
 import { allCutsceneSteps } from './cutsceneBranches';
 import {
   mapPositionSchema,
@@ -85,13 +90,16 @@ const conditionalSchema = z
     else: z.array(stepSchema),
   })
   .strict();
-const parallelSchema = z.object({
-  id: nonblank,
-  action: z.literal(CUTSCENE_PARALLEL_ACTION),
-  arguments: z.object({}).strict(),
-  tracks: z.array(z.array(stepSchema).min(1, 'Add at least one action to each track'))
-    .min(2, 'Parallel blocks require at least two tracks'),
-}).strict();
+const parallelSchema = z
+  .object({
+    id: nonblank,
+    action: z.literal(CUTSCENE_PARALLEL_ACTION),
+    arguments: z.object({}).strict(),
+    tracks: z
+      .array(z.array(stepSchema).min(1, 'Add at least one action to each track'))
+      .min(2, 'Parallel blocks require at least two tracks'),
+  })
+  .strict();
 export function actionsForCutscenePhase(
   actions: CutsceneAction[],
   phase: 'setup' | 'sequence' | 'completion',
@@ -230,44 +238,74 @@ export function validateCutscene(
 ): CutsceneDiagnostic[] {
   const shape = cutsceneSchema.safeParse(raw);
   if (!shape.success)
-    return shape.error.issues.map((issue) => {
-      const completion = issue.path[0] === 'onComplete' && issue.path[1] === 'steps';
-      const index = completion ? issue.path[2] : issue.path[1];
-      const phase = completion
-        ? ('completion' as const)
-        : issue.path[0] === 'onStart'
-          ? ('setup' as const)
-          : ('sequence' as const);
-      const candidate = raw as Partial<Cutscene>;
-      const list = completion
-        ? candidate?.onComplete?.steps
-        : phase === 'setup'
-          ? candidate?.onStart
-          : candidate?.sequence;
-      const step = typeof index === 'number' ? list?.[index] : undefined;
-      const argumentIndex = issue.path.indexOf('arguments');
-      const argumentName = argumentIndex >= 0 ? issue.path[argumentIndex + 1] : undefined;
-      const parameter = actions
-        .find((a) => a.id === step?.action)
-        ?.parameters.find((p) => p.name === argumentName);
-      const value = typeof argumentName === 'string' ? step?.arguments[argumentName] : undefined;
-      const invalidWaypoint = Array.isArray(value)
-        ? value.findIndex((p) => !mapPositionSchema.safeParse(p).success)
-        : -1;
-      return {
-        path: issue.path.join('.'),
-        message:
-          issue.path[0] === 'onComplete' && issue.path[1] === 'characterPlacements'
-            ? 'Final position requires a character and either an anchor or integer pixel coordinates'
-            : parameter?.type === 'path'
-              ? invalidWaypoint >= 0
-                ? `Waypoint ${invalidWaypoint + 1}: choose integer map pixels or a map anchor`
-                : 'Add at least one valid waypoint'
-              : issue.message,
-        stepId: step?.id,
-        ...(step ? { phase } : {}),
-      };
-    });
+    return shape.error.issues
+      .flatMap((issue) => {
+        // Union failures otherwise hide useful track errors behind "Invalid input".
+        if (issue.code === 'invalid_union') {
+          const candidate = raw as Partial<Cutscene>;
+          const block =
+            issue.path[0] === 'sequence' && typeof issue.path[1] === 'number'
+              ? candidate?.sequence?.[issue.path[1]]
+              : undefined;
+          if (block && isParallelStep(block))
+            return (
+              parallelSchema.safeParse(block).error?.issues.map((child) => ({
+                ...child,
+                path: [...issue.path, ...child.path],
+              })) ?? [issue]
+            );
+        }
+        return [issue];
+      })
+      .map((issue) => {
+        const completion = issue.path[0] === 'onComplete' && issue.path[1] === 'steps';
+        const index = completion ? issue.path[2] : issue.path[1];
+        const phase = completion
+          ? ('completion' as const)
+          : issue.path[0] === 'onStart'
+            ? ('setup' as const)
+            : ('sequence' as const);
+        const candidate = raw as Partial<Cutscene>;
+        const list = completion
+          ? candidate?.onComplete?.steps
+          : phase === 'setup'
+            ? candidate?.onStart
+            : candidate?.sequence;
+        let step = typeof index === 'number' ? list?.[index] : undefined;
+        const trackIndex = issue.path.indexOf('tracks');
+        if (
+          step &&
+          trackIndex >= 0 &&
+          typeof issue.path[trackIndex + 1] === 'number' &&
+          typeof issue.path[trackIndex + 2] === 'number'
+        )
+          step =
+            step.tracks?.[issue.path[trackIndex + 1] as number]?.[
+              issue.path[trackIndex + 2] as number
+            ] ?? step;
+        const argumentIndex = issue.path.indexOf('arguments');
+        const argumentName = argumentIndex >= 0 ? issue.path[argumentIndex + 1] : undefined;
+        const parameter = actions
+          .find((a) => a.id === step?.action)
+          ?.parameters.find((p) => p.name === argumentName);
+        const value = typeof argumentName === 'string' ? step?.arguments[argumentName] : undefined;
+        const invalidWaypoint = Array.isArray(value)
+          ? value.findIndex((p) => !mapPositionSchema.safeParse(p).success)
+          : -1;
+        return {
+          path: issue.path.join('.'),
+          message:
+            issue.path[0] === 'onComplete' && issue.path[1] === 'characterPlacements'
+              ? 'Final position requires a character and either an anchor or integer pixel coordinates'
+              : parameter?.type === 'path'
+                ? invalidWaypoint >= 0
+                  ? `Waypoint ${invalidWaypoint + 1}: choose integer map pixels or a map anchor`
+                  : 'Add at least one valid waypoint'
+                : issue.message,
+          stepId: step?.id,
+          ...(step ? { phase } : {}),
+        };
+      });
   const scene: Cutscene = shape.data;
   const diagnostics: CutsceneDiagnostic[] = [];
   const report = (path: string, message: string, stepId?: string) =>
@@ -310,10 +348,14 @@ export function validateCutscene(
         section: 'sequence' as const,
         nestedPath: `.else.${childIndex}`,
       })),
-      ...(step.tracks ?? []).flatMap((track, trackIndex) => track.map((child, childIndex) => ({
-        step: child, index, section: 'sequence' as const,
-        nestedPath: `.tracks.${trackIndex}.${childIndex}`,
-      }))),
+      ...(step.tracks ?? []).flatMap((track, trackIndex) =>
+        track.map((child, childIndex) => ({
+          step: child,
+          index,
+          section: 'sequence' as const,
+          nestedPath: `.tracks.${trackIndex}.${childIndex}`,
+        })),
+      ),
     ]),
     ...scene.onComplete.steps.map((step, index) => ({
       step,
@@ -331,10 +373,17 @@ export function validateCutscene(
       step.tracks!.forEach((track, trackIndex) => {
         for (const child of track) {
           if (child.action === 'cutscene.runLua')
-            report(`${path}.tracks.${trackIndex}`, 'Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts', child.id);
+            report(
+              `${path}.tracks.${trackIndex}`,
+              'Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts',
+              child.id,
+            );
           const action = actions.find((candidate) => candidate.id === child.action);
           const resources = (action?.parameters ?? [])
-            .filter((parameter) => parameter.semanticType === 'characterRef' && parameter.name === 'character')
+            .filter(
+              (parameter) =>
+                parameter.semanticType === 'characterRef' && parameter.name === 'character',
+            )
             .map((parameter) => `character:${child.arguments[parameter.name]}`);
           if (child.action === 'dialogue.play') resources.push('dialogue');
           if (child.action.startsWith('story.') && typeof child.arguments.key === 'string')
@@ -342,7 +391,11 @@ export function validateCutscene(
           for (const resource of resources) {
             const owner = claims.get(resource);
             if (owner !== undefined && owner !== trackIndex)
-              report(`${path}.tracks.${trackIndex}`, `Track ${trackIndex + 1} conflicts with track ${owner + 1} on '${resource}'`, child.id);
+              report(
+                `${path}.tracks.${trackIndex}`,
+                `Track ${trackIndex + 1} conflicts with track ${owner + 1} on '${resource}'`,
+                child.id,
+              );
             claims.set(resource, trackIndex);
           }
         }
@@ -375,10 +428,7 @@ export function validateCutscene(
     }
     const storyKey = step.arguments.key;
     const declaration = refs.storyValues?.find((entry) => entry.key === storyKey);
-    if (
-      declaration &&
-      step.action === 'story.set'
-    ) {
+    if (declaration && step.action === 'story.set') {
       const value = step.arguments.value;
       if (!matchesStoryType(value, declaration.type))
         report(
@@ -575,24 +625,29 @@ export function exportCutscene(
     );
   const serializeStep = (step: CutsceneStep): CutsceneStep =>
     isParallelStep(step)
-      ? { id: step.id, action: CUTSCENE_PARALLEL_ACTION, arguments: {}, tracks: step.tracks!.map((track) => track.map(serializeStep)) }
-      : isConditionalStep(step)
       ? {
           id: step.id,
-          action: CUTSCENE_CONDITION_ACTION,
-          arguments: { condition: step.arguments.condition },
-          then: step.then!.map(serializeStep),
-          else: step.else!.map(serializeStep),
+          action: CUTSCENE_PARALLEL_ACTION,
+          arguments: {},
+          tracks: step.tracks!.map((track) => track.map(serializeStep)),
         }
-      : {
-          id: step.id,
-          action: step.action,
-          arguments: Object.fromEntries(
-            actions
-              .find((a) => a.id === step.action)!
-              .parameters.map((p) => [p.name, step.arguments[p.name]]),
-          ),
-        };
+      : isConditionalStep(step)
+        ? {
+            id: step.id,
+            action: CUTSCENE_CONDITION_ACTION,
+            arguments: { condition: step.arguments.condition },
+            then: step.then!.map(serializeStep),
+            else: step.else!.map(serializeStep),
+          }
+        : {
+            id: step.id,
+            action: step.action,
+            arguments: Object.fromEntries(
+              actions
+                .find((a) => a.id === step.action)!
+                .parameters.map((p) => [p.name, step.arguments[p.name]]),
+            ),
+          };
   return {
     $schema: '../schemas/cutscene.schema.json',
     formatVersion: 2,

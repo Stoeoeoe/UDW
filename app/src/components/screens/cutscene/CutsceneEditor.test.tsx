@@ -45,6 +45,35 @@ vi.mock('../../../lib/fileSystem', () => ({
 }));
 
 describe('cutscene authoring', () => {
+  it('authors parallel tracks, duplicates child identities and preserves global undo', async () => {
+    useWorkspaceStore
+      .getState()
+      .openDocument(
+        createEditorResourceDocument({ type: 'cutscene', id: prototype.id, name: 'Intro' }),
+        { pin: true },
+      );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Parallel block', exact: true }));
+    expect(screen.getByText(/Join — wait for every track/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add track 1 step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Move to anchor', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add track 2 step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Play dialogue', exact: true }));
+    const block = useEditorStore.getState().cutscenes[0].sequence[3];
+    expect(block.tracks!.map((track) => track.length)).toEqual([1, 1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate block', exact: true }));
+    const copy = useEditorStore.getState().cutscenes[0].sequence[4];
+    expect(copy.id).not.toBe(block.id);
+    expect(copy.tracks![0][0].id).not.toBe(block.tracks![0][0].id);
+    expect(copy.tracks![1][0].id).not.toBe(block.tracks![1][0].id);
+    act(() => runEditorHistoryCommand('undo'));
+    expect(useEditorStore.getState().cutscenes[0].sequence).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Add track', exact: true }));
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].tracks).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove track 3', exact: true }));
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].tracks).toHaveLength(2);
+  }, 15000);
   it('authors a metadata-driven Lua block with continuous syntax diagnostics and global history', async () => {
     useWorkspaceStore
       .getState()
@@ -213,14 +242,12 @@ describe('cutscene authoring', () => {
         { path: 'GameState.Story', methods: [storyAction] },
       ],
     };
-    useScriptingManifestStore
-      .getState()
-      .acceptUpdate({
-        path: 'C:/Unity/bindings.json',
-        revision: 2,
-        content: bindings,
-        error: null,
-      });
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: bindings,
+      error: null,
+    });
     vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
       parseScriptingManifest(bindings),
     );
@@ -404,7 +431,9 @@ describe('cutscene authoring', () => {
       const checkbox = screen.getByRole('checkbox', { name: 'Immediate acceleration' });
       expect(checkbox).toBeChecked();
       fireEvent.click(checkbox);
-      expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.immediateAcceleration).toBe(false);
+      expect(
+        useEditorStore.getState().cutscenes[0].sequence[3].arguments.immediateAcceleration,
+      ).toBe(false);
       act(() => useEditorStore.getState().undoCutscene(prototype.id));
       expect(screen.getByRole('checkbox', { name: 'Immediate acceleration' })).toBeChecked();
       act(() => useEditorStore.getState().redoCutscene(prototype.id));

@@ -79,12 +79,13 @@ import { SplitEditorCanvas } from '../../common/SplitEditorCanvas';
 import { NumericCutsceneArgument } from './NumericCutsceneArgument';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { ConditionEditor } from '../scripting/ConditionEditor';
-import { isConditionalStep } from '../../../types/cutscene';
+import { isConditionalStep, isParallelStep } from '../../../types/cutscene';
 import {
   allCutsceneSteps,
   allSequenceSteps,
   cutsceneStepList,
   createCutsceneCondition,
+  createCutsceneParallel,
   duplicateCutsceneStep,
   type BranchPath,
 } from '../../../lib/cutsceneBranches';
@@ -352,14 +353,18 @@ export const CutsceneDetail: React.FC<{
         ))}
       </VStack>
     ) : null;
-  type PathLocation = { branchId: string; path: BranchPath };
+  type PathLocation =
+    | { branchId: string; path: BranchPath }
+    | { parallelId: string; track: number };
   const collection = (
     draft: Cutscene,
     section: 'onStart' | 'sequence' | 'completion',
     location?: PathLocation,
   ) =>
     location
-      ? draft.sequence.find((step) => step.id === location.branchId)![location.path]!
+      ? 'parallelId' in location
+        ? draft.sequence.find((step) => step.id === location.parallelId)!.tracks![location.track]
+        : draft.sequence.find((step) => step.id === location.branchId)![location.path]!
       : section === 'onStart'
         ? (draft.onStart ??= [])
         : section === 'completion'
@@ -385,8 +390,16 @@ export const CutsceneDetail: React.FC<{
     location?: PathLocation,
   ) => {
     const action = eligible(section).find((a) => a.id === actionId);
-    if (!action && (actionId !== 'control.if' || section !== 'sequence' || location)) return;
-    const step = action ? createCutsceneStep(action) : createCutsceneCondition();
+    if (
+      !action &&
+      (!['control.if', 'control.parallel'].includes(actionId) || section !== 'sequence' || location)
+    )
+      return;
+    const step = action
+      ? createCutsceneStep(action)
+      : actionId === 'control.parallel'
+        ? createCutsceneParallel()
+        : createCutsceneCondition();
     update((draft) => {
       collection(draft, section, location).splice(index, 0, step);
     });
@@ -398,8 +411,11 @@ export const CutsceneDetail: React.FC<{
     const id = copy.id;
     edit((draft, draftLabels) => {
       cutsceneStepList(draft.find((s) => s.id === scene.id)!, step.id)!.splice(index + 1, 0, copy);
-      if (labels[`${scene.id}/${step.id}`])
-        draftLabels[`${scene.id}/${id}`] = labels[`${scene.id}/${step.id}`];
+      const originals = allSequenceSteps([step]);
+      allSequenceSteps([copy]).forEach((child, childIndex) => {
+        const label = labels[`${scene.id}/${originals[childIndex].id}`];
+        if (label) draftLabels[`${scene.id}/${child.id}`] = label;
+      });
     });
     setSelection({ kind: 'step', id });
     setActivePhase(sectionOf(step.id));
@@ -438,9 +454,16 @@ export const CutsceneDetail: React.FC<{
     <SequenceTypeMenu
       trigger={trigger}
       options={[
-        ...eligible(section).map((a) => ({ id: a.id, label: a.displayName })),
+        ...eligible(section)
+          .filter(
+            (action) => !location || !('parallelId' in location) || action.id !== 'cutscene.runLua',
+          )
+          .map((a) => ({ id: a.id, label: a.displayName })),
         ...(section === 'sequence' && !location
-          ? [{ id: 'control.if', label: 'Conditional branch' }]
+          ? [
+              { id: 'control.if', label: 'Conditional branch' },
+              { id: 'control.parallel', label: 'Parallel block' },
+            ]
           : []),
       ]}
       onSelect={(id) => add(id, index, section, location)}
@@ -1206,6 +1229,106 @@ export const CutsceneDetail: React.FC<{
         <SortableContext items={list.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <Box>
             {list.map((step, index) => {
+              if (isParallelStep(step))
+                return (
+                  <SortableSequenceItem key={step.id} id={step.id}>
+                    <SequenceCard
+                      selected={selectedStep?.id === step.id}
+                      borderLeftColor="blue.300"
+                      p={2}
+                      onClick={() => setSelection({ kind: 'step', id: step.id })}
+                    >
+                      <HStack pr={4} justify="space-between" flexWrap="wrap">
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => setSelection({ kind: 'step', id: step.id })}
+                        >
+                          Step {index + 1} · Parallel block
+                        </Button>
+                        <HStack onClick={(event) => event.stopPropagation()}>
+                          <Button size="xs" variant="ghost" onClick={() => duplicate(step, index)}>
+                            Duplicate block
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            color="editorDangerText"
+                            onClick={() => remove(step)}
+                          >
+                            Delete block
+                          </Button>
+                        </HStack>
+                      </HStack>
+                      <Box
+                        display="flex"
+                        flexWrap="wrap"
+                        gap={3}
+                        mt={2}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {step.tracks!.map((track, trackIndex) => (
+                          <Box
+                            key={trackIndex}
+                            flex="1 1 240px"
+                            minW={0}
+                            borderLeft="2px solid"
+                            borderColor="editorSequenceBorder"
+                            pl={3}
+                          >
+                            <HStack justify="space-between">
+                              <Text textStyle="sectionLabel">Track {trackIndex + 1}</Text>
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                isDisabled={step.tracks!.length <= 2}
+                                aria-label={`Remove track ${trackIndex + 1}`}
+                                onClick={() =>
+                                  edit((draft, draftLabels) => {
+                                    const block = draft
+                                      .find((s) => s.id === scene.id)!
+                                      .sequence.find((s) => s.id === step.id)!;
+                                    const [removed] = block.tracks!.splice(trackIndex, 1);
+                                    for (const child of allSequenceSteps(removed))
+                                      delete draftLabels[`${scene.id}/${child.id}`];
+                                  })
+                                }
+                              >
+                                Remove
+                              </Button>
+                            </HStack>
+                            {renderSteps('sequence', { parallelId: step.id, track: trackIndex })}
+                            {palette(
+                              <Button size="xs" variant="outline" mt={2}>
+                                Add track {trackIndex + 1} step
+                              </Button>,
+                              track.length,
+                              'sequence',
+                              { parallelId: step.id, track: trackIndex },
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        mt={3}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          update((draft) =>
+                            draft.sequence.find((s) => s.id === step.id)!.tracks!.push([]),
+                          );
+                        }}
+                      >
+                        Add track
+                      </Button>
+                      <Text textStyle="helperText" mt={3}>
+                        Join — wait for every track, then continue with the next sequence step.
+                      </Text>
+                      {showIssues(diagnostics.filter((issue) => issue.stepId === step.id))}
+                    </SequenceCard>
+                  </SortableSequenceItem>
+                );
               if (isConditionalStep(step))
                 return (
                   <SortableSequenceItem key={step.id} id={step.id}>
@@ -1452,9 +1575,11 @@ export const CutsceneDetail: React.FC<{
                 ? 'On completion'
                 : panel === 'setup'
                   ? 'Before start'
-                  : isConditionalStep(selectedStep!)
-                    ? 'Conditional branch'
-                    : actionFor(selectedStep!)?.displayName || selectedStep!.action
+                  : isParallelStep(selectedStep!)
+                    ? 'Parallel block'
+                    : isConditionalStep(selectedStep!)
+                      ? 'Conditional branch'
+                      : actionFor(selectedStep!)?.displayName || selectedStep!.action
           }
           subtitle={
             panel === 'step'
@@ -1473,6 +1598,13 @@ export const CutsceneDetail: React.FC<{
             <Text textStyle="helperText">
               Runs once before the sequence. Only immediate actions explicitly allowed in setup are
               available. Select a setup step to edit its parameters.
+            </Text>
+          ) : selectedStep && isParallelStep(selectedStep) ? (
+            <Text textStyle="helperText">
+              Tracks start together. Each track runs its actions in order. The block joins when
+              every track finishes. Use separate characters in each track; put shared character
+              actions and Run Lua outside the block. Preview shows track destinations schematically;
+              timing is verified in Unity.
             </Text>
           ) : selectedStep && isConditionalStep(selectedStep) ? (
             <VStack align="stretch" spacing={4}>

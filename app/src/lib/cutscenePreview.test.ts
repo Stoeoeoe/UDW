@@ -47,6 +47,37 @@ const character = (result: ReturnType<typeof run>, id = 'host') =>
   result.characters.find((a) => a.id === id)!;
 
 describe('manifest-driven cutscene preview', () => {
+  it('previews independent parallel routes without inventing synchronized positions and merges at the join', () => {
+    const block: CutsceneStep = {
+      id: 'parallel',
+      action: 'control.parallel',
+      arguments: {},
+      tracks: [
+        [step('host-move', 'characters.moveTo', { character: 'host', destination: 'meeting' })],
+        [step('guest-move', 'characters.moveTo', { character: 'guest', destination: 'gate' })],
+      ],
+    };
+    const source = scene([
+      block,
+      step('after', 'characters.face', { character: 'host', target: 'guest' }),
+    ]);
+    const initial = JSON.stringify(source);
+    const parallel = run(source, 'parallel');
+    expect(parallel.segments.map((segment) => segment.from)).toEqual([
+      [16, 32],
+      [80, 32],
+    ]);
+    expect(character(parallel).position).toBeNull();
+    expect(character(parallel, 'guest').position).toBeNull();
+    const child = run(source, 'host-move');
+    expect(character(child).position).toEqual([64, 32]);
+    expect(character(child, 'guest').position).toBeNull();
+    const joined = run(source, 'after');
+    expect(character(joined).position).toEqual([64, 32]);
+    expect(character(joined, 'guest').position).toEqual([96, 64]);
+    expect(character(joined).facing).not.toBeNull();
+    expect(JSON.stringify(source)).toBe(initial);
+  });
   it('folds only through the selected step, preserving authored inputs and previous snapshots', () => {
     const source = scene(sequence),
       world = map();

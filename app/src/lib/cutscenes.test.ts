@@ -51,6 +51,58 @@ const refs = () => ({
 const scene = (): Cutscene => parseCutscene(prototype);
 
 describe('Unity cutscene contract', () => {
+  it('round-trips parallel tracks, validates their references and rejects shared owners', () => {
+    const source = scene();
+    const original = structuredClone(source.sequence);
+    source.sequence = [
+      {
+        id: 'parallel',
+        action: 'control.parallel',
+        arguments: {},
+        tracks: [[original[0]], [original[2]]],
+      },
+      original[1],
+    ];
+    expect(validateCutscene(source, actions, refs())).toEqual([]);
+    expect(parseCutscene(exportCutscene(source, actions, refs()))).toEqual(source);
+    const block = source.sequence[0];
+    block.tracks![1][0].arguments.dialogue = 'absent';
+    expect(validateCutscene(source, actions, refs())).toContainEqual(
+      expect.objectContaining({
+        stepId: original[2].id,
+        message: expect.stringContaining('Missing dialogue'),
+      }),
+    );
+    block.tracks![1] = [{ ...structuredClone(original[0]), id: 'same-character' }];
+    expect(validateCutscene(source, actions, refs())).toContainEqual(
+      expect.objectContaining({
+        stepId: 'same-character',
+        message: expect.stringContaining('conflicts with track 1'),
+      }),
+    );
+    block.tracks![1] = [structuredClone(original[0])];
+    expect(() => parseCutscene(source)).toThrow('duplicate step ID');
+  });
+
+  it('rejects empty, single-track, nested and non-sequence parallel blocks', () => {
+    const source = scene();
+    const block = {
+      id: 'parallel',
+      action: 'control.parallel',
+      arguments: {},
+      tracks: [[source.sequence[0]], [source.sequence[2]]],
+    };
+    source.sequence = [structuredClone(block)];
+    for (const tracks of [[], [block.tracks[0]], [block.tracks[0], []]])
+      expect(() => parseCutscene({ ...source, sequence: [{ ...block, tracks }] })).toThrow();
+    expect(() =>
+      parseCutscene({ ...source, sequence: [{ ...block, tracks: [[block], block.tracks[1]] }] }),
+    ).toThrow();
+    expect(() => parseCutscene({ ...source, onStart: [block] })).toThrow();
+    expect(() =>
+      parseCutscene({ ...source, onComplete: { ...source.onComplete, steps: [block] } }),
+    ).toThrow();
+  });
   it('blocks declared story type mismatches before saving while allowing undeclared keys', () => {
     const palette = readCutsceneActions({
       schemaVersion: 2,
