@@ -242,7 +242,13 @@ namespace Core.Game.Editor
                 .Invoke(data.player.Skills, new object[] { new[] { new KeyValuePair<string, int>("hammer-mastery", 3) } });
             typeof(DivineFavourState).GetMethod("SetFavour", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(data.player.Favour, new object[] { "mars", 12 });
-            data.story.SetFlag("met-blacksmith");
+            data.story.Set("met-blacksmith", true);
+            data.story.Set("story:false", false);
+            data.story.Set("story:string", "Ada");
+            data.story.Set("story:empty", "");
+            data.story.Set("story:long", long.MaxValue);
+            data.story.Set("story:double", 12.5d);
+            data.story.Set("story:object", new Dictionary<string, object> { ["quest"] = new Dictionary<string, object> { ["stage"] = 2L, ["name"] = "intro" } });
             data.story.CompletedCutscenes.Add("test:confession");
             data.world.Set("base:grocer", new ShopState
             {
@@ -312,7 +318,13 @@ namespace Core.Game.Editor
                 Assert.That(loaded.player.Inventory.Slots[2].ItemId, Is.EqualTo("missing-mod:item"));
                 Assert.That(loaded.player.Inventory.Slots[2].Quantity, Is.EqualTo(7));
                 Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(1234));
-                Assert.That(loaded.story.HasFlag("met-blacksmith"), Is.True);
+                Assert.That(loaded.story.Has("met-blacksmith"), Is.True);
+                Assert.That(loaded.story.Get<bool>("story:false"), Is.False);
+                Assert.That(loaded.story.Get<string>("story:string"), Is.EqualTo("Ada"));
+                Assert.That(loaded.story.Get<string>("story:empty"), Is.Empty);
+                Assert.That(loaded.story.Get<long>("story:long"), Is.EqualTo(long.MaxValue));
+                Assert.That(loaded.story.Get<double>("story:double"), Is.EqualTo(12.5d));
+                Assert.That(((Dictionary<string, object>)loaded.story.Get<Dictionary<string, object>>("story:object")["quest"])["stage"], Is.EqualTo(2L));
                 Assert.That(loaded.story.CompletedCutscenes.Contains("test:confession"), Is.True);
                 Assert.That(loaded.world.TryGet("base:grocer", out ShopState shop), Is.True);
                 Assert.That(shop.offerings["lentils"].quantity, Is.EqualTo(7));

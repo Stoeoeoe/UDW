@@ -8,8 +8,8 @@ namespace Core.Scripting
     /// Preserves the method in stripped player builds. The registry validates the
     /// stable action ID, display metadata and allowed contexts before binding.
     /// Sessions expose only actions allowed in their context; ordinary LuaCall methods
-    /// are not automatically available. Actions are excluded from synchronous execution
-    /// and condition evaluation, including actions that complete immediately.
+    /// are not automatically available. An immediate action may also declare LuaCall
+    /// to remain available to synchronous scripts. Writable calls stay out of conditions.
     /// A method returning <see cref="ILuaAction"/> suspends Lua until the host operation
     /// completes; cancellation stops playback and errors propagate as exceptions.
     /// The operation stays in C# and its Lua return type is nil. Other supported return

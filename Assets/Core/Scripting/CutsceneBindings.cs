@@ -80,7 +80,7 @@ namespace Core.Scripting
             var instances = new Dictionary<Type, object>();
             foreach (var (phase, step) in steps)
             {
-                if (step.IsCondition) continue; // The compiler owns this control-flow node, not an API module.
+                if (step.IsControl) continue; // The compiler owns control-flow nodes, not an API module.
                 try
                 {
                     var method = actions[step.ActionId];
@@ -95,6 +95,7 @@ namespace Core.Scripting
                         if (parameter.ParameterType == typeof(string)) return (object)argument.Value;
                         if (parameter.ParameterType == typeof(double)) return double.Parse(argument.Value, CultureInfo.InvariantCulture);
                         if (parameter.ParameterType == typeof(bool)) return bool.Parse(argument.Value);
+                        if (parameter.ParameterType == typeof(Core.Game.StoryValue)) return StoryValueJson.Parse(argument.Value);
                         if (parameter.ParameterType == typeof(MapPosition)) return argument.Position;
                         if (parameter.ParameterType == typeof(MapPosition?)) return argument.IsNull ? null : (object)argument.Position;
                         if (parameter.ParameterType == typeof(MapPath)) return argument.Path;

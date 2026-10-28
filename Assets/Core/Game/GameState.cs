@@ -53,14 +53,64 @@ namespace Core.Game
     public sealed class StoryState
     {
         public HashSet<string> CompletedCutscenes = new(StringComparer.Ordinal);
-        [OdinSerialize] private HashSet<string> _flags = new HashSet<string>(StringComparer.Ordinal);
+        [OdinSerialize] private Dictionary<string, StoryValue> _values = new(StringComparer.Ordinal);
 
-        public bool HasFlag(string flag) => _flags.Contains(flag);
+        public bool Has(string key)
+        {
+            StoryValue.RequireKey(key);
+            return _values.ContainsKey(key);
+        }
 
-        public bool SetFlag(string flag) => _flags.Add(flag);
+        public T Get<T>(string key) => GetValue(key).Get<T>();
 
-        public bool ClearFlag(string flag) => _flags.Remove(flag);
+        public bool TryGet<T>(string key, out T value)
+        {
+            StoryValue.RequireKey(key);
+            if (!_values.TryGetValue(key, out var stored)) { value = default; return false; }
+            value = stored.Get<T>();
+            return true;
+        }
 
-        internal IEnumerable<string> GetFlags() => _flags;
+        public void Set<T>(string key, T value) => SetValue(key, new StoryValue(value));
+
+        public bool Remove(string key)
+        {
+            StoryValue.RequireKey(key);
+            return _values.Remove(key);
+        }
+
+        internal StoryValue GetValue(string key)
+        {
+            StoryValue.RequireKey(key);
+            if (!_values.TryGetValue(key, out var value)) throw new KeyNotFoundException($"Story value '{key}' is not set.");
+            return value;
+        }
+
+        internal void SetValue(string key, StoryValue value)
+        {
+            StoryValue.RequireKey(key);
+            if (value == null) throw new ArgumentNullException(nameof(value));
+            if (_values.TryGetValue(key, out var existing) && !StoryValue.SameType(existing, value))
+                throw new InvalidOperationException($"Story value '{key}' already has type {existing.ValueType.Name}.");
+            _values[key] = value;
+        }
+
+        internal void Validate()
+        {
+            if (_values == null || CompletedCutscenes == null) throw new FormatException("The save is missing story state.");
+            foreach (var pair in _values)
+            {
+                if (pair.Value == null) throw new FormatException($"Story value '{pair.Key}' is null.");
+                try
+                {
+                    StoryValue.RequireKey(pair.Key);
+                    pair.Value.Validate();
+                }
+                catch (ArgumentException exception)
+                {
+                    throw new FormatException($"Invalid saved story value '{pair.Key}'.", exception);
+                }
+            }
+        }
     }
 }

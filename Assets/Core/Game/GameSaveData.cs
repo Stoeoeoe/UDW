@@ -24,7 +24,7 @@ namespace Core.Game
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
             if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory?.ToolCharges == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
-                story?.GetFlags() == null || time == null || world?.GetLocations() == null)
+                story == null || time == null || world?.GetLocations() == null)
                 throw new FormatException("The save is missing a required state section.");
 
             foreach (var charge in player.Inventory.ToolCharges)
@@ -75,10 +75,7 @@ namespace Core.Game
                 if (string.IsNullOrWhiteSpace(skill.Key) || skill.Value < 0)
                     throw new FormatException("The save contains an invalid skill level.");
 
-            var storyFlags = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var flag in story.GetFlags())
-                if (string.IsNullOrWhiteSpace(flag) || !storyFlags.Add(flag))
-                    throw new FormatException("The save contains an invalid or duplicate story flag.");
+            story.Validate();
 
             foreach (var location in world.GetLocations())
             {

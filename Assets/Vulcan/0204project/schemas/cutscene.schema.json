@@ -146,6 +146,28 @@
     }
   },
   "definitions": {
+    "storyValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/storyValue"
+          }
+        }
+      ]
+    },
     "actionStep": {
       "type": "object",
       "additionalProperties": false,
@@ -171,7 +193,10 @@
         "arguments": {
           "type": "object",
           "additionalProperties": {
-            "oneOf": [
+            "anyOf": [
+              {
+                "$ref": "#/definitions/storyValue"
+              },
               {
                 "type": "null"
               },

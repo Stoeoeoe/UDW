@@ -1,19 +1,40 @@
 using Core.Game;
+using UnityEngine.Scripting;
 
 namespace Core.Scripting
 {
     // Resolve global state on each call: loading a save replaces the live state objects.
     [LuaModule("GameState.Story")]
-    internal sealed class StoryLuaApi
+    public sealed class StoryLuaApi
     {
         [LuaCall]
-        public bool HasFlag(string flag) => GameState.Story.HasFlag(flag);
+        public bool Has(string key) => GameState.Story.Has(key);
+
+        [LuaCall]
+        public StoryValue Get(string key) => GameState.Story.GetValue(key);
 
         [LuaCall(writesState: true)]
-        public bool SetFlag(string flag) => GameState.Story.SetFlag(flag);
+        [LuaAction("story.set", "Set Story Value", "Data", "Set a saved global story value.", "cutscene", "npcRoutine",
+            Validator = nameof(ValidateSet), Phases = new[] { "setup", "sequence", "completion" })]
+        [LuaPreview(LuaPreviewSpatialState.Described)]
+        public void Set(string key, StoryValue value) => GameState.Story.SetValue(key, value);
 
         [LuaCall(writesState: true)]
-        public bool ClearFlag(string flag) => GameState.Story.ClearFlag(flag);
+        [LuaAction("story.remove", "Remove Story Value", "Data", "Remove a saved global story value.", "cutscene", "npcRoutine",
+            Validator = nameof(ValidateKey), Phases = new[] { "setup", "sequence", "completion" })]
+        [LuaPreview(LuaPreviewSpatialState.Described)]
+        public bool Remove(string key) => GameState.Story.Remove(key);
+
+        [Preserve]
+        public static void ValidateKey(string key) => StoryValue.RequireKey(key);
+
+        [Preserve]
+        public static void ValidateSet(string key, StoryValue value)
+        {
+            StoryValue.RequireKey(key);
+            if (value == null) throw new System.ArgumentNullException(nameof(value));
+            value.Validate();
+        }
     }
 
     [LuaModule("GameState.Player.Skills")]

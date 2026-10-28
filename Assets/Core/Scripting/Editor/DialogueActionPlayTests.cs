@@ -47,7 +47,7 @@ namespace Core.Scripting.Editor
             _talk = CreateDialogue("fixture:talk",
                 new VulcanusDialogueLineNode("entry", "", "", "Hello", "", "choice"),
                 new VulcanusDialogueChoiceNode("choice", new[] { new VulcanusDialogueChoiceOption("bye", "Goodbye", "", "", "answer") }),
-                new VulcanusDialogueActionNode("answer", "GameState.Story.SetFlag('fixture:dialogue-choice')", "end"),
+                new VulcanusDialogueActionNode("answer", "GameState.Story.Set('fixture:dialogue-choice', true)", "end"),
                 new VulcanusDialogueEndNode("end"));
             _end = CreateDialogue("fixture:end", new VulcanusDialogueEndNode("entry"));
             _error = CreateDialogue("fixture:error", new VulcanusDialogueActionNode("entry", "error('Broken fixture script')", ""));
@@ -110,7 +110,7 @@ namespace Core.Scripting.Editor
                 while (service.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(run.IsRunning, Is.False);
                 Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:terminal"), Is.True);
-                Assert.That(GameState.Story.HasFlag("fixture_intro_done"), Is.True);
+                Assert.That(GameState.Story.Has("fixture_intro_done"), Is.True);
                 Assert.That(service.TryStart(definition, out _), Is.False, "Completion is tracked by the cutscene ID.");
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
                 Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.True);
@@ -142,7 +142,7 @@ namespace Core.Scripting.Editor
                 old.Cancel(); old.Dispose();
                 Assert.That(old.IsRunning, Is.False);
                 Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:cancel"), Is.False);
-                Assert.That(GameState.Story.HasFlag("fixture_cancelled"), Is.False);
+                Assert.That(GameState.Story.Has("fixture_cancelled"), Is.False);
                 AssertClosed();
                 Assert.That(service.TryStart(skipped, out var run), Is.True);
                 old.Cancel();
@@ -154,7 +154,7 @@ namespace Core.Scripting.Editor
                     finished++;
                     Assert.That(service.IsRunning, Is.False);
                     Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:skip"), Is.True);
-                    Assert.That(GameState.Story.HasFlag("fixture_skipped"), Is.True);
+                    Assert.That(GameState.Story.Has("fixture_skipped"), Is.True);
                     Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
                     terminal.Cancel();
                 };
@@ -181,7 +181,7 @@ namespace Core.Scripting.Editor
             var compiled = CutsceneSequenceCompiler.Compile(sequence, id, out var importedSteps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, importedSteps, skip,
-                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.SetFlag('{completionFlag}')", "", Array.Empty<CutsceneStep>()),
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.Set('{completionFlag}', true)", "", Array.Empty<CutsceneStep>()),
                 "", Array.Empty<CutsceneStep>(), new CutsceneTransition(enabled: false));
             return definition;
         }
@@ -219,7 +219,7 @@ namespace Core.Scripting.Editor
                             Assert.That(run.IsRunning, Is.False);
                         }
                         Assert.That(character.Orientation.FacingDirection, Is.EqualTo(terminal == "cancel" ? Vector2.up : Vector2.left));
-                        Assert.That(GameState.Story.HasFlag(id), Is.EqualTo(terminal != "cancel"));
+                        Assert.That(GameState.Story.Has(id), Is.EqualTo(terminal != "cancel"));
                         Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.EqualTo(terminal != "cancel"));
                         Assert.That(character.IsControlBlocked, Is.False);
                         Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
@@ -310,7 +310,7 @@ namespace Core.Scripting.Editor
                             yield return null;
                         }
                         Assert.That(sawCompletedWhileCovered, Is.True, "Completion applies before the exit reveal releases input.");
-                        Assert.That(GameState.Story.HasFlag(id), Is.True);
+                        Assert.That(GameState.Story.Has(id), Is.True);
                     }
                     Assert.That(run.IsRunning, Is.False);
                     Assert.That(player.IsControlBlocked, Is.False);
@@ -337,7 +337,7 @@ namespace Core.Scripting.Editor
                 out var completionSteps, "completion", ids);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             definition.Configure(id, MapManager.Instance.CurrentMap.MapId, sequence, steps, true,
-                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.SetFlag('{id}')", completion, completionSteps), setup, setupSteps,
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.Set('{id}', true)", completion, completionSteps), setup, setupSteps,
                 new CutsceneTransition(enabled: false));
             return definition;
         }
@@ -400,7 +400,7 @@ namespace Core.Scripting.Editor
             var dialogue = CreateDialogue("fixture:decision-dialogue",
                 new VulcanusDialogueLineNode("entry", "", "", "May I enter?", "", "choice"),
                 new VulcanusDialogueChoiceNode("choice", new[] { new VulcanusDialogueChoiceOption("yes", "Show invitation", "", "", "answer") }),
-                new VulcanusDialogueActionNode("answer", "GameState.Story.SetFlag('fixture:dialogue-choice')", "response"),
+                new VulcanusDialogueActionNode("answer", "GameState.Story.Set('fixture:dialogue-choice', true)", "response"),
                 new VulcanusDialogueLineNode("response", "", "", "You may enter.", "", "end"),
                 new VulcanusDialogueEndNode("end"));
             _database.Configure(_database.Project, _database.Dialogues.Append(dialogue).ToArray());
@@ -417,13 +417,13 @@ namespace Core.Scripting.Editor
                     key.target = _document.rootVisualElement.Q("dialogue-overlay");
                     ((VisualElement)key.target).SendEvent(key);
                 }
-                for (var frame = 0; frame < 20 && !GameState.Story.HasFlag("fixture:dialogue-choice"); frame++)
+                for (var frame = 0; frame < 20 && !GameState.Story.Has("fixture:dialogue-choice"); frame++)
                     yield return null;
-                Assert.That(GameState.Story.HasFlag("fixture:dialogue-choice"), Is.True);
-                Assert.That(GameState.Story.HasFlag("fixture:completion"), Is.False);
+                Assert.That(GameState.Story.Has("fixture:dialogue-choice"), Is.True);
+                Assert.That(GameState.Story.Has("fixture:completion"), Is.False);
                 run.Cancel();
-                Assert.That(GameState.Story.HasFlag("fixture:dialogue-choice"), Is.True);
-                Assert.That(GameState.Story.HasFlag("fixture:completion"), Is.False);
+                Assert.That(GameState.Story.Has("fixture:dialogue-choice"), Is.True);
+                Assert.That(GameState.Story.Has("fixture:completion"), Is.False);
                 Assert.That(GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
             }
             finally { service.Cancel(); Object.Destroy(definition); Object.Destroy(dialogue); }

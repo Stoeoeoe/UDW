@@ -35,6 +35,7 @@ namespace Core.Scripting
         public string returnType;
         public bool returnNullable;
         public bool writesState;
+        public bool? callable;
         public LuaActionDescription action;
     }
 

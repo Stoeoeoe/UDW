@@ -23,20 +23,24 @@ namespace Core.Dialogue.Vulcanus.Editor
         public void TearDown() => _fixture.Dispose();
 
         [Test]
-        public void StoryFlagsAreSharedBetweenActionsAndConditions()
+        public void StoryBooleansAreSharedBetweenActionsAndConditions()
         {
             var story = GameState.Story;
             var engine = new VulcanusLuaDialogueScriptEngine(new VulcanusLuaEngine());
 
-            const string condition = "GameState.Story.HasFlag('met_blacksmith')";
+            const string condition = "GameState.Story.Has('met_blacksmith') and GameState.Story.Get('met_blacksmith')";
             Assert.That(engine.EvaluateCondition(condition, null, out var initiallyVisible), Is.True);
             Assert.That(initiallyVisible, Is.False);
-            Assert.That(engine.ExecuteAction("GameState.Story.SetFlag('met_blacksmith')", null), Is.True);
-            Assert.That(story.HasFlag("met_blacksmith"), Is.True);
+            Assert.That(engine.ExecuteAction("GameState.Story.Set('met_blacksmith', true)", null), Is.True);
+            Assert.That(story.Has("met_blacksmith"), Is.True);
             Assert.That(engine.EvaluateCondition(condition, null, out var visible), Is.True);
             Assert.That(visible, Is.True);
-            Assert.That(engine.ExecuteAction("GameState.Story.ClearFlag('met_blacksmith')", null), Is.True);
-            Assert.That(story.HasFlag("met_blacksmith"), Is.False);
+            Assert.That(engine.ExecuteAction("GameState.Story.Set('met_blacksmith', false)", null), Is.True);
+            Assert.That(story.Has("met_blacksmith"), Is.True);
+            Assert.That(engine.EvaluateCondition(condition, null, out var visibleWhenFalse), Is.True);
+            Assert.That(visibleWhenFalse, Is.False);
+            Assert.That(engine.ExecuteAction("GameState.Story.Remove('met_blacksmith')", null), Is.True);
+            Assert.That(story.Has("met_blacksmith"), Is.False);
             Assert.That(engine.EvaluateCondition(condition, null, out var visibleAfterClear), Is.True);
             Assert.That(visibleAfterClear, Is.False);
         }
@@ -46,9 +50,31 @@ namespace Core.Dialogue.Vulcanus.Editor
         {
             var lua = new VulcanusLuaEngine();
 
-            Assert.That(lua.EvaluateCondition("GameState.Story.HasFlag('cutscene_seen')"), Is.False);
-            lua.Execute("GameState.Story.SetFlag('cutscene_seen')");
-            Assert.That(lua.EvaluateCondition("GameState.Story.HasFlag('cutscene_seen')"), Is.True);
+            Assert.That(lua.EvaluateCondition("GameState.Story.Has('cutscene_seen')"), Is.False);
+            lua.Execute("GameState.Story.Set('cutscene_seen', true)");
+            Assert.That(lua.EvaluateCondition("GameState.Story.Has('cutscene_seen')"), Is.True);
+        }
+
+        [Test]
+        public void StoryValuesAreSharedAndLuaTablesAreSnapshots()
+        {
+            var lua = new VulcanusLuaEngine();
+            lua.Execute("GameState.Story.Set('quest', { stage = 2, details = { accepted = true, name = '' } }); GameState.Story.Set('ready', false)");
+            lua.Execute("GameState.Story.Set('name', 'Ada'); GameState.Story.Set('empty', '')");
+            Assert.That(GameState.Story.Get<string>("name"), Is.EqualTo("Ada"));
+            Assert.That(lua.EvaluateCondition("GameState.Story.Get('name') == 'Ada' and GameState.Story.Get('empty') == ''"), Is.True);
+            Assert.That(lua.EvaluateCondition("GameState.Story.Has('ready') and GameState.Story.Get('ready') == false and GameState.Story.Get('quest').details.accepted"), Is.True);
+            lua.Execute("local q = GameState.Story.Get('quest'); q.stage = 4");
+            Assert.That(lua.EvaluateCondition("GameState.Story.Get('quest').stage == 2"), Is.True);
+            lua.Execute("local q = GameState.Story.Get('quest'); q.stage = 4; GameState.Story.Set('quest', q)");
+            Assert.That(lua.EvaluateCondition("GameState.Story.Get('quest').stage == 4 and GameState.Story.Set == nil and GameState.Story.Remove == nil"), Is.True);
+            Assert.That(() => lua.Execute("GameState.Story.Set('ready', 1)"), Throws.Exception);
+            Assert.That(() => lua.Execute("GameState.Story.Get('missing')"), Throws.Exception);
+            Assert.That(() => lua.Execute("GameState.Story.Set('bad', nil)"), Throws.Exception);
+            Assert.That(() => lua.Execute("GameState.Story.Set('bad', { 1, 2 })"), Throws.Exception);
+            Assert.That(() => lua.Execute("local q = {}; q.self = q; GameState.Story.Set('bad', q)"), Throws.Exception);
+            GameState.Story.Set("large", long.MaxValue);
+            Assert.That(() => lua.Execute("GameState.Story.Get('large')"), Throws.Exception);
         }
 
         [Test]
@@ -56,8 +82,8 @@ namespace Core.Dialogue.Vulcanus.Editor
         {
             var lua = new VulcanusLuaEngine();
 
-            Assert.That(() => lua.EvaluateCondition("GameState.Story.HasFlag(42)"), Throws.Exception);
-            Assert.That(() => lua.EvaluateCondition("GameState.Story.HasFlag('a', 'b')"), Throws.Exception);
+            Assert.That(() => lua.EvaluateCondition("GameState.Story.Has(42)"), Throws.Exception);
+            Assert.That(() => lua.EvaluateCondition("GameState.Story.Has('a', 'b')"), Throws.Exception);
         }
 
         [Test]
@@ -133,7 +159,7 @@ namespace Core.Dialogue.Vulcanus.Editor
 
             Assert.That(engine.EvaluateCondition("os == nil and io == nil and dofile == nil", null, out var isolated), Is.True);
             Assert.That(isolated, Is.True);
-            Assert.That(engine.EvaluateCondition("GameState.Story.SetFlag == nil and GameState.Player.Skills.TryLevelUp == nil", null, out var readOnly), Is.True);
+            Assert.That(engine.EvaluateCondition("GameState.Story.Set == nil and GameState.Player.Skills.TryLevelUp == nil", null, out var readOnly), Is.True);
             Assert.That(readOnly, Is.True);
         }
 

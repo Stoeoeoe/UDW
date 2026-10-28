@@ -145,7 +145,7 @@ namespace Core.Tile.Editor.Vulcanus
             }
             finally { Object.DestroyImmediate(definition); }
             source["sequence"][0]["arguments"]["path"] = new JArray();
-            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("nonempty ordered list"));
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("TooFewItems"));
             source["sequence"][0]["arguments"]["path"] = JArray.Parse("[{'x':168}]");
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("path[0]"));
         }
@@ -182,7 +182,7 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 Assert.That(definition.Steps[0].Arguments.Single().Value, Is.EqualTo(code));
                 Assert.That(definition.Lua, Does.StartWith("Cutscene.RunLua(\"local greeting = "));
-                Assert.That(definition.Lua, Does.Contain("\\nerror("));
+                Assert.That(definition.Lua, Does.Contain("\\010error("));
             }
             finally { Object.DestroyImmediate(definition); }
             source["sequence"][0]["arguments"]["code"] = "if true then";
@@ -275,19 +275,13 @@ namespace Core.Tile.Editor.Vulcanus
 
         [TestCase("")]
         [TestCase(" \n\t")]
-        public void EmptyCompletionLuaImportsAsANoOp(string actions)
+        public void LegacyCompletionLuaIsRejectedEvenWhenEmpty(string actions)
         {
             var source = Source("test:empty-actions");
             source["onStart"] = new JArray();
             source["onComplete"]["steps"] = new JArray();
             source["onComplete"]["actions"] = actions;
-            var definition = Parse(source);
-            try
-            {
-                Assert.That(definition.OnComplete.Actions, Is.EqualTo(actions));
-                Assert.That(definition.ValidateConfiguration(), Is.Empty);
-            }
-            finally { Object.DestroyImmediate(definition); }
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("onComplete.actions"));
         }
 
         [Test]
@@ -353,16 +347,17 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
-        public void OnCompletePreservesActionsPlacementsAndSkipPermission()
+        public void OnCompletePreservesStoryStepsPlacementsAndSkipPermission()
         {
             var source = Source("test:outcomes");
             source["allowSkip"] = true;
-            source["onComplete"] = JObject.Parse("{ 'actions':\"GameState.Story.SetFlag('introduced')\", 'characterPlacements':[{'character':'host-01','anchor':'meeting'}] }");
+            source["onComplete"] = JObject.Parse("{ 'steps':[{'id':'introduced','action':'story.set','arguments':{'key':'introduced','value':true}}], 'characterPlacements':[{'character':'host-01','anchor':'meeting'}] }");
             var definition = Parse(source);
             try
             {
                 Assert.That(definition.AllowSkip, Is.True);
-                Assert.That(definition.OnComplete.Actions, Is.EqualTo("GameState.Story.SetFlag('introduced')"));
+                Assert.That(definition.OnComplete.Steps.Single().ActionId, Is.EqualTo("story.set"));
+                Assert.That(definition.OnComplete.Lua, Does.Contain("GameState.Story.Set(\"introduced\", true)"));
                 Assert.That(definition.OnComplete.CharacterPlacements[0].Character, Is.EqualTo("host-01"));
                 Assert.That(definition.OnComplete.CharacterPlacements[0].Anchor, Is.EqualTo("meeting"));
             }
@@ -389,6 +384,28 @@ namespace Core.Tile.Editor.Vulcanus
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
             source["onComplete"]["characterPlacements"] = JArray.Parse("[{'character':'player','position':{'x':168}}]");
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>());
+        }
+
+        [TestCase("true")]
+        [TestCase("false")]
+        [TestCase("'Ada'")]
+        [TestCase("''")]
+        [TestCase("{'stage':2,'details':{'accepted':true}}")]
+        public void StoryValuesImportThroughThePublishedSchema(string json)
+        {
+            var source = Source("test:story-value");
+            source["sequence"] = new JArray(new JObject
+            {
+                ["id"] = "value", ["action"] = "story.set",
+                ["arguments"] = new JObject { ["key"] = "story-key", ["value"] = JToken.Parse(json) }
+            });
+            var definition = Parse(source);
+            try
+            {
+                Assert.That(definition.Steps.Single().ActionId, Is.EqualTo("story.set"));
+                Assert.That(JToken.DeepEquals(JToken.Parse(definition.Steps.Single().Arguments.Single(argument => argument.Name == "value").Value), JToken.Parse(json)), Is.True);
+            }
+            finally { Object.DestroyImmediate(definition); }
         }
 
         [Test]

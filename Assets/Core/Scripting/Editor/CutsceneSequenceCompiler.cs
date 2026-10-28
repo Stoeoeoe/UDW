@@ -22,7 +22,7 @@ namespace Core.Scripting.Editor
                 _ => throw new ArgumentException("Unknown cutscene phase.", nameof(phase)) };
             if (phase == "sequence" && !path && sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
             var imported = new List<CutsceneStep>();
-            trackSteps |= sequence.OfType<JObject>().Any(step => (string)step["action"] == "control.if");
+            trackSteps |= sequence.OfType<JObject>().Any(step => (string)step["action"] is "control.if" or "control.parallel");
 
             var bindings = VulcanusLuaEngine.InspectBindings();
             var actions = bindings.Describe().modules
@@ -41,6 +41,47 @@ namespace Core.Scripting.Editor
                 if (!usedIds.Add(id)) throw Invalid(location, "Duplicate step ID.");
                 var actionId = RequiredString(step["action"], location, "action");
                 if (trackSteps) lua.Append("__cutsceneStep(").Append(LuaString(id)).Append(");\n");
+                if (actionId == "control.parallel")
+                {
+                    if (phase != "sequence" || path) throw Invalid(location, "Parallel blocks are allowed only at the top level of the main sequence.");
+                    RejectUnknownFields(step, new[] { "id", "action", "arguments", "tracks" }, location);
+                    if (step["arguments"] is not JObject parallelArguments) throw Invalid(location, "Expected empty parallel arguments.");
+                    RejectUnknownFields(parallelArguments, Array.Empty<string>(), location);
+                    if (step["tracks"] is not JArray tracks || tracks.Count < 2)
+                        throw Invalid(location, "Parallel blocks require at least two nonempty tracks.");
+                    imported.Add(new CutsceneStep(id, actionId, Array.Empty<CutsceneArgument>()));
+                    var claims = new Dictionary<string, int>(StringComparer.Ordinal);
+                    lua.Append("__cutsceneParallel({\n");
+                    for (var trackIndex = 0; trackIndex < tracks.Count; trackIndex++)
+                    {
+                        var trackLocation = $"{location}, track {trackIndex + 1}";
+                        if (tracks[trackIndex] is not JArray track || track.Count == 0)
+                            throw Invalid(trackLocation, "Expected a nonempty action array.");
+                        var trackLua = Compile(track, trackLocation, out var trackSteps, phase, usedIds, true, true);
+                        foreach (var child in trackSteps)
+                        {
+                            if (child.ActionId == "cutscene.runLua")
+                                throw Invalid(trackLocation, $"Step '{child.Id}': Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts.");
+                            var resources = actions[child.ActionId].Method.parameters
+                                .Where(parameter => parameter.semanticType == "characterRef" && parameter.name == "character")
+                                .Select(parameter => "character:" + child.Arguments.Single(argument => argument.Name == parameter.name).Value)
+                                .Concat(child.ActionId == "dialogue.play" ? new[] { "dialogue" } : Array.Empty<string>())
+                                .Concat(child.ActionId.StartsWith("story.", StringComparison.Ordinal)
+                                    ? child.Arguments.Where(argument => argument.Name == "key").Select(argument => "story:" + argument.Value)
+                                    : Array.Empty<string>());
+                            foreach (var resource in resources)
+                            {
+                                if (claims.TryGetValue(resource, out var owner) && owner != trackIndex)
+                                    throw Invalid(trackLocation, $"Step '{child.Id}' conflicts with track {owner + 1} on '{resource}'.");
+                                claims[resource] = trackIndex;
+                            }
+                        }
+                        imported.AddRange(trackSteps);
+                        lua.Append("function()\n").Append(trackLua).Append("end,\n");
+                    }
+                    lua.Append("});\n");
+                    continue;
+                }
                 if (actionId == "control.if")
                 {
                     if (phase != "sequence" || path) throw Invalid(location, "Conditional branches are allowed only at the top level of the main sequence.");
@@ -80,6 +121,16 @@ namespace Core.Scripting.Editor
                     var authoredValue = arguments[parameter.name];
                     if (authoredValue == null && parameter.optional == true)
                         authoredValue = JToken.FromObject(parameter.defaultValue);
+                    if (parameter.type == "boolean|string|number|table")
+                    {
+                        if (authoredValue == null) throw Invalid(location, $"'{parameter.name}' requires a story value.");
+                        var json = authoredValue.ToString(Newtonsoft.Json.Formatting.None);
+                        try { values[parameterIndex] = StoryValueJson.Parse(json); }
+                        catch (Exception error) { throw new FormatException($"{location}: {parameter.name}: {error.Message}", error); }
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, json);
+                        literals[parameterIndex] = StoryLiteral(((Core.Game.StoryValue)values[parameterIndex]).GetSnapshot());
+                        continue;
+                    }
                     if (parameter.type == "boolean")
                     {
                         var token = authoredValue;
@@ -151,6 +202,16 @@ namespace Core.Scripting.Editor
 
         private static string PositionLiteral(MapPosition position) => position.IsAnchor ? $"{{ anchor = {LuaString(position.Anchor)} }}" :
             $"{{ x = {position.X.ToString("R", CultureInfo.InvariantCulture)}, y = {position.Y.ToString("R", CultureInfo.InvariantCulture)} }}";
+
+        private static string StoryLiteral(object value) => value switch
+        {
+            string text => LuaString(text),
+            bool boolean => boolean ? "true" : "false",
+            double number => number.ToString("R", CultureInfo.InvariantCulture),
+            System.Collections.Generic.Dictionary<string, object> dictionary => "{ " + string.Join(", ", dictionary.Select(pair =>
+                $"[{LuaString(pair.Key)}] = {StoryLiteral(pair.Value)}")) + " }",
+            _ => throw new FormatException("Invalid story action value.")
+        };
 
         private static string RequiredString(JToken value, string location, string name)
         {

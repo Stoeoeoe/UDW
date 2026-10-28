@@ -21,6 +21,7 @@ namespace Core.Scripting.Editor
         }
 
         [TestCase(typeof(MissingPhases), "explicit action phases")]
+        [TestCase(typeof(DualAwaitable), "awaitable actions cannot also be synchronous calls")]
         [TestCase(typeof(UnknownPhase), "unsupported or duplicate action phases")]
         [TestCase(typeof(DuplicatePhase), "unsupported or duplicate action phases")]
         [TestCase(typeof(AwaitableSetup), "awaitable actions cannot allow setup or completion")]
@@ -36,6 +37,14 @@ namespace Core.Scripting.Editor
         {
             [LuaAction("test.missing", "Missing", "Test", "No phases declared.", "cutscene")]
             public void Run() { }
+        }
+
+        [LuaModule("DualAwaitable")]
+        public sealed class DualAwaitable
+        {
+            [LuaCall(writesState: true)]
+            [LuaAction("test.dualAwaitable", "Invalid", "Test", "Cannot run an awaitable synchronously.", "cutscene", Phases = new[] { "sequence" })]
+            public ILuaAction Run() => null;
         }
 
         [LuaModule("Unknown")]

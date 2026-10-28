@@ -673,22 +673,22 @@
       "path": "GameState.Story",
       "methods": [
         {
-          "name": "ClearFlag",
+          "name": "Get",
           "parameters": [
             {
-              "name": "flag",
+              "name": "key",
               "type": "string"
             }
           ],
-          "returnType": "boolean",
+          "returnType": "boolean|string|number|table",
           "returnNullable": false,
-          "writesState": true
+          "writesState": false
         },
         {
-          "name": "HasFlag",
+          "name": "Has",
           "parameters": [
             {
-              "name": "flag",
+              "name": "key",
               "type": "string"
             }
           ],
@@ -697,16 +697,76 @@
           "writesState": false
         },
         {
-          "name": "SetFlag",
+          "name": "Remove",
           "parameters": [
             {
-              "name": "flag",
+              "name": "key",
               "type": "string"
             }
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": true
+          "writesState": true,
+          "callable": true,
+          "action": {
+            "id": "story.remove",
+            "displayName": "Remove Story Value",
+            "category": "Data",
+            "description": "Remove a saved global story value.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "Set",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "boolean|string|number|table"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "callable": true,
+          "action": {
+            "id": "story.set",
+            "displayName": "Set Story Value",
+            "category": "Data",
+            "description": "Set a saved global story value.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
         }
       ]
     },

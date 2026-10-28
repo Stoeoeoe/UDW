@@ -63,7 +63,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void ConditionsCannotCallWritableBindingsAndFailuresKeepTheBranchIdentity()
         {
-            var compiled = CutsceneSequenceCompiler.Compile(new JArray(Branch("GameState.Story.SetFlag('bad')", new JArray(), new JArray())), "fixture:readonly");
+            var compiled = CutsceneSequenceCompiler.Compile(new JArray(Branch("GameState.Story.Set('bad', true)", new JArray(), new JArray())), "fixture:readonly");
             using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CaptureDialogue()), compiled, "fixture:readonly");
             Assert.That(() => run.Tick(0), Throws.Exception);
             Assert.That(run.CurrentStepId, Is.EqualTo("branch"));
@@ -156,7 +156,7 @@ namespace Core.Scripting.Editor
         }
 
         [TestCase("{ 'id':'talk', 'action':'unknown', 'arguments':{} }", "Unsupported cutscene action")]
-        [TestCase("{ 'id':'talk', 'action':'GameState.Story.SetFlag', 'arguments':{} }", "Unsupported cutscene action")]
+        [TestCase("{ 'id':'talk', 'action':'GameState.Story.Set', 'arguments':{} }", "Unsupported cutscene action")]
         [TestCase("{ 'id':'talk', 'action':'dialogue.play', 'arguments':{} }", "'dialogue' requires")]
         [TestCase("{ 'id':'talk', 'action':'dialogue.play', 'arguments':{'dialogue':42} }", "'dialogue' requires")]
         [TestCase("{ 'id':'talk', 'action':'dialogue.play', 'arguments':{'dialogue':''} }", "'dialogue' requires")]

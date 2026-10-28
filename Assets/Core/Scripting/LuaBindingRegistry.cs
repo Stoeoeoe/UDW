@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using Core.Game;
 using MoonSharp.Interpreter;
 using UnityEngine.Scripting;
 
@@ -77,7 +78,7 @@ namespace Core.Scripting
                 var parameters = method.GetParameters();
                 foreach (var parameter in parameters)
                 {
-                    if ((parameter.IsOptional && (!IsPrimitive(parameter.ParameterType) || parameter.DefaultValue == null)) || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPosition?) && parameter.ParameterType != typeof(MapPath)))
+                    if ((parameter.IsOptional && (!IsPrimitive(parameter.ParameterType) || parameter.DefaultValue == null)) || (!IsPrimitive(parameter.ParameterType) && parameter.ParameterType != typeof(StoryValue) && parameter.ParameterType != typeof(MapPosition) && parameter.ParameterType != typeof(MapPosition?) && parameter.ParameterType != typeof(MapPath)))
                         throw Invalid(method, $"has unsupported parameter '{parameter.Name}'");
                     var position = parameter.GetCustomAttribute<LuaPositionAttribute>();
                     var path = parameter.GetCustomAttribute<LuaPathAttribute>();
@@ -93,10 +94,12 @@ namespace Core.Scripting
                 if (action != null) ValidateAction(method, action, parameters, actionIds);
                 if (method.ReturnType == typeof(ILuaAction) && action == null)
                     throw Invalid(method, "must opt in to [LuaAction] to return an awaitable");
-                if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ILuaAction) && !IsPrimitive(method.ReturnType))
+                if (method.ReturnType == typeof(ILuaAction) && call != null)
+                    throw Invalid(method, "awaitable actions cannot also be synchronous calls");
+                if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ILuaAction) && method.ReturnType != typeof(StoryValue) && !IsPrimitive(method.ReturnType))
                     ValidateDto(method.ReturnType);
                 methods.Add(new Method(api, method, parameters, action != null || call.WritesState, action,
-                    FindValidator(method, action, parameters), ReadPreview(method, parameters, preview, effects)));
+                    FindValidator(method, action, parameters), ReadPreview(method, parameters, preview, effects), call != null));
             }
             return methods;
         }
@@ -291,8 +294,9 @@ namespace Core.Scripting
                 name = method.Info.Name,
                 parameters = method.Parameters.Select(DescribeParameter).ToArray(),
                 returnType = LuaTypeName(method.Info.ReturnType),
-                returnNullable = !method.Info.ReturnType.IsValueType && method.Info.ReturnType != typeof(ILuaAction),
+                returnNullable = !method.Info.ReturnType.IsValueType && method.Info.ReturnType != typeof(ILuaAction) && method.Info.ReturnType != typeof(StoryValue),
                 writesState = method.WritesState,
+                callable = method.Action != null && method.Callable ? true : null,
                 action = action == null ? null : new LuaActionDescription
                 {
                     id = action.Id, displayName = action.DisplayName,
@@ -336,7 +340,7 @@ namespace Core.Scripting
                 var table = EnsurePath(script, module.Path);
                 foreach (var method in module.Methods)
                 {
-                    if (method.Action != null || (method.WritesState && !allowWrites)) continue;
+                    if (!method.Callable || (method.WritesState && !allowWrites)) continue;
                     if (table.Get(method.Info.Name).Type != DataType.Nil)
                         throw new InvalidOperationException($"Duplicate Lua API member '{method.Info.Name}'.");
                     table.Set(method.Info.Name, DynValue.NewCallback((_, args) => Invoke(script, method, args)));
@@ -445,6 +449,7 @@ namespace Core.Scripting
         private DynValue ToLua(Script script, object value, Type type)
         {
             if (value == null) return DynValue.Nil;
+            if (type == typeof(StoryValue)) return StoryValueLuaConverter.Write(script, (StoryValue)value);
             if (type == typeof(string)) return DynValue.NewString((string)value);
             if (type == typeof(bool)) return DynValue.NewBoolean((bool)value);
             if (type == typeof(int)) return DynValue.NewNumber((int)value);
@@ -459,6 +464,7 @@ namespace Core.Scripting
 
         private static object FromLua(DynValue value, Type type, string parameter)
         {
+            if (type == typeof(StoryValue)) return StoryValueLuaConverter.Read(value);
             if (type == typeof(MapPosition?))
                 return value.Type == DataType.Nil ? null : FromLua(value, typeof(MapPosition), parameter);
             if (type == typeof(MapPath))
@@ -526,6 +532,7 @@ namespace Core.Scripting
 
         private static string LuaTypeName(Type type)
         {
+            if (type == typeof(StoryValue)) return "boolean|string|number|table";
             if (type == typeof(void) || type == typeof(ILuaAction)) return "nil";
             if (type == typeof(string)) return "string";
             if (type == typeof(bool)) return "boolean";
@@ -542,6 +549,6 @@ namespace Core.Scripting
         private sealed record Module(string[] Path, List<Method> Methods);
 
         internal sealed record Method(object Api, MethodInfo Info, ParameterInfo[] Parameters,
-            bool WritesState, LuaActionAttribute Action, MethodInfo Validator, LuaActionPreviewDescription Preview);
+            bool WritesState, LuaActionAttribute Action, MethodInfo Validator, LuaActionPreviewDescription Preview, bool Callable);
     }
 }
