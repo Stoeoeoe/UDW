@@ -4,10 +4,12 @@
 
 `Characters.PlayAnimation(character, animation, holdLastFrame = false)` optionally
 keeps the final frame after its awaited playback finishes. The sequence continues
-while the animator owns the held pose. Idle/facing updates and completion placement
+while the animator owns the held pose. Idle/facing updates during playback
 do not release it. Another animation, walking/running, a tool action, location leave,
 or animator disable releases it. Cancelling unfinished playback does not hold it;
-cutscene rollback clears a held pose introduced by that run.
+completion, skipping, and rollback clear a held pose introduced by that run and
+return the character to idle. A pre-existing held pose is left alone if the sequence
+did not replace it.
 The existing `EndInteractionAnimation()` API also releases the pose explicitly.
 This is presentation only; it does not change character health or death state.
 

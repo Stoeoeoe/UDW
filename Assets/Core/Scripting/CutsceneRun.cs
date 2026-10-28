@@ -106,7 +106,9 @@ namespace Core.Scripting
         {
             // Completion has checked all characters before moving any; cancellation can outlive a destroyed character.
             if (!completed && (!Character || !_root || !_body)) return;
-            if (!completed && Character.Animator.HeldPlayback != null &&
+            // Hold-last-frame belongs to playback inside the sequence, not the post-cutscene pose.
+            // A pose that was already held before this run remains owned by its original caller.
+            if (Character.Animator.HeldPlayback != null &&
                 !ReferenceEquals(Character.Animator.HeldPlayback, _originalHeldPlayback))
                 Character.Animator.EndInteractionAnimation();
             var position = completed ? _endpoint : _originalPosition;

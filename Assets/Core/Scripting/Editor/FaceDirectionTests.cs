@@ -230,26 +230,41 @@ namespace Core.Scripting.Editor
             Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(new Vector2(x, y)));
         }
 
-        [Test]
-        public void CancellingAfterACompletedAnimationClearsItsNewHeldPose()
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void EndingACutsceneReleasesOnlyItsOwnHeldPose(bool completed, bool preexisting)
         {
             _actor.Graphics.gameObject.SetActive(true);
             GameTestFixture.Invoke(_actor.Animator, "Awake");
             GameTestFixture.Invoke(_actor.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true), "Awake");
+            _actor.Animator.OnLocationEnter(null);
             var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "hold-rollback.json", out var steps);
             var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
             definition.Configure("test:hold-rollback", "test:characters", lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
             var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
-            var placement = type.GetMethod("PrepareActor", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { definition, _api, "player" });
+            object PreparePlacement() => type.GetMethod("PrepareActor", BindingFlags.Static | BindingFlags.NonPublic)
+                .Invoke(null, new object[] { definition, _api, "player" });
+            var placement = preexisting ? null : PreparePlacement();
             using var action = new PlayAnimationAction(_actor, _actor.PassOutAnimation, true);
             var field = typeof(UrCharacterAnimator).GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic);
             var state = (Animancer.AnimancerState)field.GetValue(_actor.Animator);
             state.Time = state.Length;
             action.Dispose();
             Assert.That(field.GetValue(_actor.Animator), Is.SameAs(state));
-            type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { false });
+            if (preexisting) placement = PreparePlacement();
+            type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { completed });
+            if (preexisting)
+            {
+                Assert.That(field.GetValue(_actor.Animator), Is.SameAs(state));
+                return;
+            }
             Assert.That(field.GetValue(_actor.Animator), Is.Null);
+            var animancer = _actor.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true);
+            Assert.That(animancer.States.Current.Clip, Is.SameAs(
+                _actor.Animator.AnimationLibrary.GetDirectional("Idle", _actor.Orientation.FacingDirection)));
         }
 
         [TestCase("North", 0, 1)]
