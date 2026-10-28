@@ -61,6 +61,53 @@ namespace Core.Scripting.Editor
         [TearDown]
         public void TearDown() => _fixture.Dispose();
 
+        [TestCase(1f, 1f, 1, 0)]
+        [TestCase(-1f, 1f, -1, 0)]
+        [TestCase(1f, -1f, 1, 0)]
+        [TestCase(-1f, -1f, -1, 0)]
+        [TestCase(0.99f, 1f, 0, 1)]
+        [TestCase(-0.99f, -1f, 0, -1)]
+        [TestCase(1f, 0.99f, 1, 0)]
+        [TestCase(-1f, -0.99f, -1, 0)]
+        public void WalkingKeepsSegmentFacingAcrossDiagonalCorrections(float x, float y, int facingX, int facingY)
+        {
+            var body = _actor.GetComponent<Rigidbody2D>();
+            var start = body.position;
+            var destination = start + new Vector2(x, y);
+            var expected = new Vector2(facingX, facingY);
+            var changes = 0;
+            _actor.Orientation.ForceDirection(-expected);
+            _actor.Orientation.OnFacingDirectionChanged += _ => changes++;
+            using (var move = new MoveToAction(_actor, destination))
+            {
+                move.Tick(0);
+                Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(expected));
+                for (var i = 0; i < 6; i++)
+                {
+                    // Cross the 45-degree boundary on successive frames, as small physics
+                    // corrections do during a diagonal approach. Movement must still steer.
+                    var remaining = new Vector2(Mathf.Sign(x) * (i % 2 == 0 ? 0.2f : 0.21f),
+                        Mathf.Sign(y) * (i % 2 == 0 ? 0.21f : 0.2f));
+                    body.position = destination - remaining;
+                    move.Tick(0);
+                    Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(expected));
+                    GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+                    Assert.That(Vector2.Distance(_actor.Controller.CurrentVelocity.normalized, remaining.normalized),
+                        Is.LessThan(0.001f));
+                }
+                body.position = destination;
+                move.Tick(0);
+                Assert.That(move.IsCompleted, Is.True);
+                Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(expected));
+                Assert.That(changes, Is.EqualTo(1));
+            }
+
+            // A subsequent path segment makes its own facing decision.
+            using var next = new MoveToAction(_actor, destination - expected);
+            next.Tick(0);
+            Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(-expected));
+        }
+
         [TestCase(168, 104, true)]
         [TestCase(171, 106, true)]
         [TestCase(171, 106, false)]

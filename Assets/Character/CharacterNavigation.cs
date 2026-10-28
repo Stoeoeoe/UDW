@@ -21,6 +21,7 @@ namespace Character
         private readonly Controller2D _controller;
         private readonly Rigidbody2D _body;
         private readonly Vector2 _destination;
+        private readonly Vector2 _facing;
         private readonly float _speed;
         private bool _disposed;
 
@@ -46,6 +47,13 @@ namespace Character
             if (!float.IsFinite(_speed) || _speed <= 0)
                 throw new InvalidOperationException("MoveTo requires a positive walk speed.");
             _destination = destination;
+            // A straight segment keeps one animation facing even when physics nudges the
+            // remaining direction across a diagonal boundary. Exact diagonals face horizontally,
+            // matching the animation library's 45-degree sectors.
+            var direction = destination - _body.position;
+            _facing = Mathf.Abs(direction.x) >= Mathf.Abs(direction.y)
+                ? (direction.x >= 0 ? Vector2.right : Vector2.left)
+                : (direction.y >= 0 ? Vector2.up : Vector2.down);
 
             // Check the actual character footprint before starting. This version cannot take a detour.
             if (!HasClearDirectRoute(out var obstruction))
@@ -114,7 +122,7 @@ namespace Character
             // Ease off near the target so the actor can stop inside the arrival distance.
             var speed = Mathf.Min(_speed, remaining.magnitude * 8f);
             _controller.SetOwnedMovementInput(this, remaining.normalized, speed);
-            _actor.Orientation.UpdateFromInput(remaining.normalized);
+            _actor.Orientation.UpdateFromInput(_facing);
             _actor.SetMovementState(MovementState.Walking);
         }
 
