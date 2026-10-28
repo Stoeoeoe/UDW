@@ -6,6 +6,7 @@ import {
   FiBox,
   FiFilm,
   FiCode,
+  FiDatabase,
   FiChevronDown,
   FiChevronRight,
   FiFolder,
@@ -71,6 +72,8 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiMessageSquare;
     case 'scripting':
       return FiCode;
+    case 'data':
+      return FiDatabase;
     case 'settings':
       return FiSettings;
     case 'configuration':
@@ -106,7 +109,7 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
         (node) =>
           !(
             node.kind === 'leaf' &&
-            (node.document?.kind === 'scripting' ||
+            (node.document?.kind === 'scripting' || node.document?.kind === 'data' ||
               node.document?.kind === 'settings' ||
               node.document?.kind === 'configuration')
           ),
@@ -119,7 +122,7 @@ export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
       nodes.filter(
         (node) =>
           node.kind === 'leaf' &&
-          (node.document?.kind === 'scripting' ||
+          (node.document?.kind === 'scripting' || node.document?.kind === 'data' ||
             node.document?.kind === 'settings' ||
             node.document?.kind === 'configuration'),
       ),
@@ -284,7 +287,7 @@ const WorkspaceExplorerNode: React.FC<{
   const isUtilityLeaf =
     depth === 0 &&
     node.kind === 'leaf' &&
-    (node.document?.kind === 'scripting' ||
+    (node.document?.kind === 'scripting' || node.document?.kind === 'data' ||
       node.document?.kind === 'settings' ||
       node.document?.kind === 'configuration');
   const inheritedAccent = accent ?? getNodeAccentFromNode(node);
@@ -532,6 +535,7 @@ function getFallbackTabId(document: WorkspaceDocument): string | null {
     case 'dialogues':
     case 'cutscenes':
     case 'scripting':
+    case 'data':
       return document.kind;
     default:
       return null;

@@ -673,22 +673,10 @@
       "path": "GameState.Story",
       "methods": [
         {
-          "name": "ClearFlag",
+          "name": "Has",
           "parameters": [
             {
-              "name": "flag",
-              "type": "string"
-            }
-          ],
-          "returnType": "boolean",
-          "returnNullable": false,
-          "writesState": true
-        },
-        {
-          "name": "HasFlag",
-          "parameters": [
-            {
-              "name": "flag",
+              "name": "key",
               "type": "string"
             }
           ],
@@ -697,10 +685,38 @@
           "writesState": false
         },
         {
-          "name": "SetFlag",
+          "name": "Get",
           "parameters": [
             {
-              "name": "flag",
+              "name": "key",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean|string|number|table",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Set",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "boolean|string|number|table"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "Remove",
+          "parameters": [
+            {
+              "name": "key",
               "type": "string"
             }
           ],

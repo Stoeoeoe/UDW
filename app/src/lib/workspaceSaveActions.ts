@@ -49,6 +49,7 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'settings' ||
     tab.document.kind === 'entities' ||
     tab.document.kind === 'scripting' ||
+    tab.document.kind === 'data' ||
     tab.document.kind === 'cutscene' ||
     tab.document.kind === 'cutscenes' ||
     tab.document.kind === 'dialogues'
@@ -106,7 +107,7 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
     return;
   }
 
-  if ((document.kind === 'entities' || document.kind === 'scripting') && editor.project) {
+  if ((document.kind === 'entities' || document.kind === 'scripting' || document.kind === 'data') && editor.project) {
     await saveProjectImmediate(editor.project, 'configuration');
   }
 }
@@ -222,7 +223,8 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   if (
     document.kind === 'configuration' ||
     document.kind === 'entities' ||
-    document.kind === 'scripting'
+    document.kind === 'scripting' ||
+    document.kind === 'data'
   ) {
     const editor = useEditorStore.getState();
     if (!editor.project) return;

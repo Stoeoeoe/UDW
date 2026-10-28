@@ -1,4 +1,5 @@
 import type { ScriptingManifest, ScriptingResources } from './scriptingManifest';
+import type { StoryValueDefinition } from '../types/schema';
 
 type BindingMethod = ScriptingManifest['modules'][number]['methods'][number];
 export interface LuaBindingScope {
@@ -24,7 +25,7 @@ export function bindingUnavailableReason(
   method: BindingMethod,
   scope: LuaBindingScope,
 ): string | undefined {
-  if (method.action) {
+  if (method.action && !(scope.mode !== 'actions' && method.callable === true)) {
     if (scope.mode !== 'actions')
       return scope.mode === 'condition'
         ? 'Actions are unavailable in conditions.'
@@ -151,6 +152,7 @@ export function luaCallContext(text: string) {
 }
 
 export interface LuaArgumentReferences {
+  storyValues?: readonly StoryValueDefinition[];
   anchors?: readonly { id: string; name: string }[];
   dialogues?: readonly { id: string; name: string }[];
 }
@@ -186,11 +188,17 @@ export function bindingCompletions(
           ? references.dialogues
           : undefined;
     const entries =
-      parameter?.semanticType === 'characterRef'
-        ? characters.map((c) => ({ id: c.id, description: c.name }))
-        : (contextual?.map((entry) => ({ id: entry.id, description: entry.name })) ??
-          resources[parameter?.resourceType ?? ''] ??
-          []);
+      call.argument === 0 &&
+      /^GameState\.Story\.(Get|Set|Has|Remove)$/.test(call.name)
+        ? (references.storyValues ?? []).map((v) => ({
+            id: v.key,
+            description: `${v.type}: ${v.description ?? ''}`,
+          }))
+        : parameter?.semanticType === 'characterRef'
+          ? characters.map((c) => ({ id: c.id, description: c.name }))
+          : (contextual?.map((entry) => ({ id: entry.id, description: entry.name })) ??
+            resources[parameter?.resourceType ?? ''] ??
+            []);
     const from = scanned.string?.from ?? text.length - argumentText.length;
     const prefix = text.slice(from).toLowerCase();
     if (entries.length || scanned.string)

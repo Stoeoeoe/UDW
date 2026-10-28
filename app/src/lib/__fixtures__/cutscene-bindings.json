@@ -28,8 +28,15 @@
             "displayName": "Face character",
             "category": "Movement",
             "description": "Turn an existing character toward another character.",
-            "contexts": ["cutscene", "npcRoutine"],
-            "phases": ["completion", "sequence", "setup"],
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
             "execution": "immediate",
             "preview": {
               "version": 1,
@@ -68,8 +75,13 @@
             "displayName": "Move to anchor",
             "category": "Movement",
             "description": "Walk an existing character to a map anchor.",
-            "contexts": ["cutscene", "npcRoutine"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -108,8 +120,12 @@
             "displayName": "Play animation",
             "category": "Animation",
             "description": "Play a finite animation on an character and wait for completion.",
-            "contexts": ["cutscene"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -139,8 +155,12 @@
             "displayName": "Wait",
             "category": "Timing",
             "description": "Wait for gameplay seconds.",
-            "contexts": ["cutscene"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -172,8 +192,12 @@
             "displayName": "Play dialogue",
             "category": "Dialogue",
             "description": "Wait for a conversation to finish through its flow.",
-            "contexts": ["cutscene"],
-            "phases": ["sequence"],
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
             "execution": "awaitable",
             "preview": {
               "version": 1,
@@ -234,22 +258,10 @@
       "path": "GameState.Story",
       "methods": [
         {
-          "name": "ClearFlag",
+          "name": "Has",
           "parameters": [
             {
-              "name": "flag",
-              "type": "string"
-            }
-          ],
-          "returnType": "boolean",
-          "returnNullable": false,
-          "writesState": true
-        },
-        {
-          "name": "HasFlag",
-          "parameters": [
-            {
-              "name": "flag",
+              "name": "key",
               "type": "string"
             }
           ],
@@ -258,10 +270,38 @@
           "writesState": false
         },
         {
-          "name": "SetFlag",
+          "name": "Get",
           "parameters": [
             {
-              "name": "flag",
+              "name": "key",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean|string|number|table",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Set",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "boolean|string|number|table"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "Remove",
+          "parameters": [
+            {
+              "name": "key",
               "type": "string"
             }
           ],

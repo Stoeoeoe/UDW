@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { matchesStoryType, storyDataSchema, STORY_VALUE_TYPE } from './storyValues';
 import { validateLuaChunk } from './luaRunner';
-import { CUTSCENE_CONDITION_ACTION, isConditionalStep } from '../types/cutscene';
+import { CUTSCENE_CONDITION_ACTION, CUTSCENE_PARALLEL_ACTION, isConditionalStep, isParallelStep } from '../types/cutscene';
 import { allCutsceneSteps } from './cutsceneBranches';
 import {
   mapPositionSchema,
@@ -58,17 +59,18 @@ const stepSchema = z
   .object({
     id: nonblank,
     action: nonblank.refine(
-      (action) => action !== CUTSCENE_CONDITION_ACTION,
-      'Conditional branches require If and Else paths',
+      (action) => action !== CUTSCENE_CONDITION_ACTION && action !== CUTSCENE_PARALLEL_ACTION,
+      'Control blocks require their child action lists',
     ),
     arguments: z.record(
       z.string(),
       z.union([
-        nonblank,
+        z.string(), // Story values allow empty strings; required IDs are checked against the action signature.
         z.number().finite(),
         z.boolean(),
         mapPositionSchema,
         mapPathSchema,
+        storyDataSchema,
         z.null(),
       ]),
     ),
@@ -83,6 +85,13 @@ const conditionalSchema = z
     else: z.array(stepSchema),
   })
   .strict();
+const parallelSchema = z.object({
+  id: nonblank,
+  action: z.literal(CUTSCENE_PARALLEL_ACTION),
+  arguments: z.object({}).strict(),
+  tracks: z.array(z.array(stepSchema).min(1, 'Add at least one action to each track'))
+    .min(2, 'Parallel blocks require at least two tracks'),
+}).strict();
 export function actionsForCutscenePhase(
   actions: CutsceneAction[],
   phase: 'setup' | 'sequence' | 'completion',
@@ -128,7 +137,7 @@ export const cutsceneSchema = z
         characterPlacements: z.array(completionPlacementSchema),
       })
       .strict(),
-    sequence: z.array(z.union([stepSchema, conditionalSchema])).min(1),
+    sequence: z.array(z.union([stepSchema, conditionalSchema, parallelSchema])).min(1),
   })
   .strict();
 
@@ -187,6 +196,7 @@ export function mapCharacterInstances(map: GameMap, entityTypes: EntityType[]): 
 }
 
 export interface CutsceneReferences {
+  storyValues?: readonly import('../types/schema').StoryValueDefinition[];
   resources?: ScriptingResources;
   tileSize?: number;
   maps: GameMap[];
@@ -300,6 +310,10 @@ export function validateCutscene(
         section: 'sequence' as const,
         nestedPath: `.else.${childIndex}`,
       })),
+      ...(step.tracks ?? []).flatMap((track, trackIndex) => track.map((child, childIndex) => ({
+        step: child, index, section: 'sequence' as const,
+        nestedPath: `.tracks.${trackIndex}.${childIndex}`,
+      }))),
     ]),
     ...scene.onComplete.steps.map((step, index) => ({
       step,
@@ -312,6 +326,29 @@ export function validateCutscene(
     const path = `${section}.${index}${'nestedPath' in entry ? entry.nestedPath : ''}`;
     if (seen.has(step.id)) report(`${path}.id`, 'Duplicate step ID', step.id);
     seen.add(step.id);
+    if (isParallelStep(step)) {
+      const claims = new Map<string, number>();
+      step.tracks!.forEach((track, trackIndex) => {
+        for (const child of track) {
+          if (child.action === 'cutscene.runLua')
+            report(`${path}.tracks.${trackIndex}`, 'Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts', child.id);
+          const action = actions.find((candidate) => candidate.id === child.action);
+          const resources = (action?.parameters ?? [])
+            .filter((parameter) => parameter.semanticType === 'characterRef' && parameter.name === 'character')
+            .map((parameter) => `character:${child.arguments[parameter.name]}`);
+          if (child.action === 'dialogue.play') resources.push('dialogue');
+          if (child.action.startsWith('story.') && typeof child.arguments.key === 'string')
+            resources.push(`story:${child.arguments.key}`);
+          for (const resource of resources) {
+            const owner = claims.get(resource);
+            if (owner !== undefined && owner !== trackIndex)
+              report(`${path}.tracks.${trackIndex}`, `Track ${trackIndex + 1} conflicts with track ${owner + 1} on '${resource}'`, child.id);
+            claims.set(resource, trackIndex);
+          }
+        }
+      });
+      return;
+    }
     if (isConditionalStep(step)) {
       const condition = step.arguments.condition;
       const syntax = validateLuaChunk(`return (${condition})`);
@@ -336,6 +373,20 @@ export function validateCutscene(
       if (!action.parameters.some((p) => p.name === name))
         report(`${path}.arguments.${name}`, 'Unknown argument', step.id);
     }
+    const storyKey = step.arguments.key;
+    const declaration = refs.storyValues?.find((entry) => entry.key === storyKey);
+    if (
+      declaration &&
+      step.action === 'story.set'
+    ) {
+      const value = step.arguments.value;
+      if (!matchesStoryType(value, declaration.type))
+        report(
+          `${path}.arguments.value`,
+          `Story value '${declaration.key}' requires ${declaration.type} as declared in Data`,
+          step.id,
+        );
+    }
     for (const parameter of action.parameters) {
       const authoredValue = step.arguments[parameter.name];
       const value =
@@ -343,6 +394,15 @@ export function validateCutscene(
           ? parameter.defaultValue
           : authoredValue;
       const argumentPath = `${path}.arguments.${parameter.name}`;
+      if (parameter.type === STORY_VALUE_TYPE) {
+        if (!storyDataSchema.safeParse(value).success)
+          report(
+            argumentPath,
+            'Expected a boolean, string, finite number or string-keyed story object',
+            step.id,
+          );
+        continue;
+      }
       if (parameter.type === 'boolean') {
         if (typeof value !== 'boolean')
           report(argumentPath, 'Expected a boolean argument', step.id);
@@ -458,7 +518,7 @@ export function validateCutscene(
         continue;
       }
       if (!value.trim()) {
-        report(argumentPath, 'Required argument', step.id);
+        report(argumentPath, 'Must not be blank', step.id);
         continue;
       }
       if (values && !values.has(value))
@@ -514,7 +574,9 @@ export function exportCutscene(
       `Cutscene ${scene.id}: ${diagnostics.map((d) => `${d.phase ? `${d.phase} ` : ''}${d.stepId ?? d.path}: ${d.message}`).join('; ')}`,
     );
   const serializeStep = (step: CutsceneStep): CutsceneStep =>
-    isConditionalStep(step)
+    isParallelStep(step)
+      ? { id: step.id, action: CUTSCENE_PARALLEL_ACTION, arguments: {}, tracks: step.tracks!.map((track) => track.map(serializeStep)) }
+      : isConditionalStep(step)
       ? {
           id: step.id,
           action: CUTSCENE_CONDITION_ACTION,

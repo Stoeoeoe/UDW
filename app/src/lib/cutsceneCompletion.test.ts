@@ -173,7 +173,7 @@ describe('typed completion v2 contract', () => {
   it('refuses to silently discard or translate authored v1 Lua', () => {
     const raw = {
       ...legacy,
-      onComplete: { ...legacy.onComplete, actions: 'GameState.Story.SetFlag("important")' },
+      onComplete: { ...legacy.onComplete, actions: 'GameState.Story.Set("important", true)' },
     };
     const before = JSON.stringify(raw);
     expect(() => parseCutscene(raw)).toThrow('requires manual conversion');

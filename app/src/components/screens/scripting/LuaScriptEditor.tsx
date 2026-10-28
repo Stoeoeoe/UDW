@@ -20,6 +20,7 @@ import {
 import { getLspClient, LspDiagnostic, LspCompletionItem } from '../../../lib/lspClient';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { storyValueDiagnostics } from '../../../lib/storyValues';
 import {
   bindingSymbols,
   bindingCompletions,
@@ -517,6 +518,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   const uri = `inmemory://lua-editor-${instanceId}/${encodeURIComponent(documentId ?? 'script')}.lua`;
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const characters = useEditorStore((s) => s.characters);
+  const storyValues = useEditorStore((s) => s.project?.storyValues);
   const symbols = useMemo(() => bindingSymbols(manifest, scope), [manifest, scope]);
   const unavailable = useMemo(() => unavailableBindings(manifest, scope), [manifest, scope]);
 
@@ -528,7 +530,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     monaco.editor.setModelMarkers(
       model,
       'lua-bindings',
-      bindingDiagnostics(value, manifest, scope).map((issue) => {
+      [...bindingDiagnostics(value, manifest, scope), ...storyValueDiagnostics(value, storyValues ?? [])].map((issue) => {
         const start = model.getPositionAt(issue.from);
         const end = model.getPositionAt(issue.to);
         return {
@@ -545,7 +547,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     return () => {
       if (!model.isDisposed()) monaco.editor.setModelMarkers(model, 'lua-bindings', []);
     };
-  }, [mounted, value, manifest, scope, uri]);
+  }, [mounted, value, manifest, scope, uri, storyValues]);
 
   // Build static game completions
   const gameCompletionItems = useMemo(() => {
@@ -657,7 +659,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             symbols,
             withProjectCharacters(manifest?.resources, characters),
             characterReferences,
-            argumentReferences,
+            { ...argumentReferences, storyValues },
           );
           const path = textBefore.slice(matches.from);
           const start = model.getPositionAt(matches.from);
@@ -881,6 +883,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     argumentReferences,
     scope,
     unavailable,
+    storyValues,
   ]);
 
   const handleBeforeMount: BeforeMount = (monaco) => {

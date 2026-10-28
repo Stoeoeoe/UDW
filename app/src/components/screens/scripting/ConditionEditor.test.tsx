@@ -40,8 +40,8 @@ describe('condition Lua language support', () => {
           {
             path: 'Story',
             methods: [
-              { name: 'HasFlag', parameters: [], returnType: 'boolean' },
-              { name: 'SetFlag', parameters: [], writesState: true },
+              { name: 'Has', parameters: [], returnType: 'boolean' },
+              { name: 'Set', parameters: [], writesState: true },
             ],
           },
         ],
@@ -49,7 +49,7 @@ describe('condition Lua language support', () => {
     });
     render(
       <ChakraProvider>
-        <ConditionEditor value="Story.SetFlag()" onChange={() => {}} variables={[]} />
+        <ConditionEditor value="Story.Set(, true)" onChange={() => {}} variables={[]} />
       </ChakraProvider>,
     );
     await waitFor(() => expect(mock.source).not.toBeNull());
@@ -58,7 +58,7 @@ describe('condition Lua language support', () => {
       mock
         .source(new CompletionContext(state, state.doc.length, true))
         .options.map((s: any) => s.label),
-    ).toEqual(['Story.HasFlag']);
+    ).toEqual(['Story.Has']);
     expect(
       screen.getByText(/State-changing calls are unavailable in conditions/),
     ).toBeInTheDocument();

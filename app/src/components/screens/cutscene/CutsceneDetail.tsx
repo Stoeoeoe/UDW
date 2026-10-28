@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { defaultStoryValue, matchesStoryType, STORY_VALUE_TYPE } from '../../../lib/storyValues';
+import { saveStoryValueDeclarations } from '../../../store/storyValues';
+import { StoryValueField } from '../data/StoryValueField';
 import {
   Badge,
   Box,
@@ -114,6 +117,7 @@ export const CutsceneDetail: React.FC<{
   const resources = withProjectCharacters(manifestResources, characterDefinitions);
   const edit = useEditorStore((s) => s.editCutscenes);
   const gameVariables = useEditorStore((s) => s.gameVariables);
+  const storyDefinitions = useEditorStore((s) => s.project?.storyValues);
   const scriptTables = useEditorStore((s) => s.scriptTables);
   const scriptFunctions = useEditorStore((s) => s.scriptFunctions);
   const scriptNamespaces = useEditorStore((s) => s.scriptNamespaces);
@@ -281,20 +285,22 @@ export const CutsceneDetail: React.FC<{
     value: CutsceneStep['arguments'][string],
     parameter: CutsceneAction['parameters'][number],
   ) =>
-    parameter.type === 'boolean'
-      ? `${parameterLabel(parameter)}: ${(typeof value === 'boolean' ? value : parameter.defaultValue) ? 'On' : 'Off'}`
-      : value === null && parameter.type === 'position' && parameter.nullable === true
-        ? 'Global'
-        : Array.isArray(value)
-          ? `${value.length} waypoint${value.length === 1 ? '' : 's'}`
-          : isAnchorPosition(value)
-            ? anchorOptions.find((a) => a.id === value.anchor)?.label ||
-              `Missing anchor: ${value.anchor}`
-            : isMapPosition(value)
-              ? `(${value.x}, ${value.y})`
-              : typeof value === 'number'
-                ? String(value)
-                : optionsFor(parameter)?.find((o) => o.id === value)?.label || value || 'Not set';
+    parameter.type === STORY_VALUE_TYPE
+      ? JSON.stringify(value)
+      : parameter.type === 'boolean'
+        ? `${parameterLabel(parameter)}: ${(typeof value === 'boolean' ? value : parameter.defaultValue) ? 'On' : 'Off'}`
+        : value === null && parameter.type === 'position' && parameter.nullable === true
+          ? 'Global'
+          : Array.isArray(value)
+            ? `${value.length} waypoint${value.length === 1 ? '' : 's'}`
+            : isAnchorPosition(value)
+              ? anchorOptions.find((a) => a.id === value.anchor)?.label ||
+                `Missing anchor: ${value.anchor}`
+              : isMapPosition(value)
+                ? `(${value.x}, ${value.y})`
+                : typeof value === 'number'
+                  ? String(value)
+                  : optionsFor(parameter)?.find((o) => o.id === value)?.label || value || 'Not set';
   const summary = (step: CutsceneStep) => {
     if (isConditionalStep(step)) return String(step.arguments.condition || 'Enter a Lua condition');
     const action = actionFor(step);
@@ -316,6 +322,7 @@ export const CutsceneDetail: React.FC<{
     entityTypes: types,
     dialogueIds: [...dialogues.keys()],
     resources,
+    storyValues: storyDefinitions,
     tileSize,
   });
   const rootIssues = diagnostics.filter((d) => !d.stepId && !d.path.startsWith('onComplete'));
@@ -791,6 +798,13 @@ export const CutsceneDetail: React.FC<{
   );
   const stepFields = selectedStep && (
     <>
+      <datalist id="cutscene-story-keys">
+        {(storyDefinitions ?? []).map((entry) => (
+          <option key={entry.key} value={entry.key}>
+            {entry.description ?? entry.type}
+          </option>
+        ))}
+      </datalist>
       <Badge alignSelf="start" colorScheme="blue">
         {actionFor(selectedStep)?.displayName ?? selectedStep.action}
       </Badge>
@@ -829,6 +843,7 @@ export const CutsceneDetail: React.FC<{
             !parameter.picker &&
             !parameter.resourceType;
           const authoredValue = selectedStep.arguments[parameter.name];
+          const storyKey = selectedStep.action.startsWith('story.') && parameter.name === 'key';
           const currentValue =
             authoredValue === undefined && parameter.optional === true
               ? parameter.defaultValue
@@ -836,6 +851,13 @@ export const CutsceneDetail: React.FC<{
           const resourceList = parameter.resourceType
             ? resources[parameter.resourceType]
             : undefined;
+          const storyIssue =
+            storyKey &&
+            typeof currentValue === 'string' &&
+            currentValue &&
+            !storyDefinitions?.some((entry) => entry.key === currentValue)
+              ? `Warning: Story key '${currentValue}' is not declared in Data. Undeclared keys are allowed.`
+              : undefined;
           const resourceIssue = parameter.resourceType
             ? !resourceList
               ? `Missing resource list "${parameter.resourceType}" in Lua manifest`
@@ -846,6 +868,7 @@ export const CutsceneDetail: React.FC<{
                 : undefined
             : undefined;
           const supported =
+            parameter.type === STORY_VALUE_TYPE ||
             boolean ||
             luaCode ||
             parameter.semanticType === 'characterDeclaration' ||
@@ -861,6 +884,7 @@ export const CutsceneDetail: React.FC<{
               isInvalid={Boolean(resourceIssue)}
               helperText={
                 resourceIssue ??
+                storyIssue ??
                 (supported
                   ? parameter.semanticType === 'characterDeclaration'
                     ? 'A unique name for this copy of the character, such as guest. Later steps use this name.'
@@ -870,7 +894,48 @@ export const CutsceneDetail: React.FC<{
                   : `Unsupported manifest parameter: ${parameter.type} ${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`)
               }
             >
-              {luaCode ? (
+              {parameter.type === STORY_VALUE_TYPE ? (
+                <StoryValueField
+                  key={
+                    selectedStep.id +
+                    '/' +
+                    parameter.name +
+                    '/' +
+                    String(selectedStep.arguments.key)
+                  }
+                  value={currentValue}
+                  declaredType={
+                    storyDefinitions?.find((entry) => entry.key === selectedStep.arguments.key)
+                      ?.type
+                  }
+                  declarationKey={
+                    typeof selectedStep.arguments.key === 'string'
+                      ? selectedStep.arguments.key
+                      : undefined
+                  }
+                  onDeclare={
+                    typeof selectedStep.arguments.key === 'string' &&
+                    selectedStep.arguments.key.trim()
+                      ? (type) => {
+                          const current = useEditorStore.getState().project;
+                          if (!current)
+                            throw new Error('Story declarations require an open project.');
+                          saveStoryValueDeclarations([
+                            ...(current.storyValues ?? []),
+                            { key: String(selectedStep.arguments.key), type },
+                          ]);
+                        }
+                      : undefined
+                  }
+                  onChange={(value) =>
+                    update((draft) => {
+                      allCutsceneSteps(draft).find(
+                        (step) => step.id === selectedStep.id,
+                      )!.arguments[parameter.name] = value;
+                    })
+                  }
+                />
+              ) : luaCode ? (
                 <Box
                   border="1px"
                   borderColor="editorInlineBorder"
@@ -1062,6 +1127,7 @@ export const CutsceneDetail: React.FC<{
               ) : (
                 <Input
                   isDisabled={!supported}
+                  list={storyKey ? 'cutscene-story-keys' : undefined}
                   value={
                     typeof currentValue === 'object'
                       ? ''
@@ -1072,6 +1138,17 @@ export const CutsceneDetail: React.FC<{
                       allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
                         parameter.name
                       ] = e.target.value;
+                      if (storyKey && selectedStep.action === 'story.set') {
+                        const step = allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!;
+                        const declaration = storyDefinitions?.find(
+                          (entry) => entry.key === e.target.value,
+                        );
+                        if (
+                          declaration &&
+                          !matchesStoryType(step.arguments.value, declaration.type)
+                        )
+                          step.arguments.value = defaultStoryValue(declaration.type);
+                      }
                     })
                   }
                 />
@@ -1135,6 +1212,7 @@ export const CutsceneDetail: React.FC<{
                     <SequenceCard
                       selected={selectedStep?.id === step.id}
                       borderLeftColor="blue.300"
+                      p={2}
                       onClick={() => setSelection({ kind: 'step', id: step.id })}
                     >
                       <HStack pr={4} justify="space-between" flexWrap="wrap">
@@ -1169,7 +1247,13 @@ export const CutsceneDetail: React.FC<{
                           </Button>
                         </HStack>
                       </HStack>
-                      <Text fontFamily="mono" fontSize="xs" my={2} overflowWrap="anywhere">
+                      <Text
+                        fontFamily="mono"
+                        fontSize="xs"
+                        my={1}
+                        noOfLines={2}
+                        title={summary(step)}
+                      >
                         {summary(step)}
                       </Text>
                       {(['then', 'else'] as const).map((path) => (
@@ -1210,13 +1294,21 @@ export const CutsceneDetail: React.FC<{
                   ? 'orange.300'
                   : 'blue.300';
               return (
-                <SortableSequenceItem key={step.id} id={step.id} handleTop="26px">
-                  <Box textAlign="center">
+                <SortableSequenceItem key={step.id} id={step.id} handleTop="20px">
+                  <Box textAlign="center" role="group" h="10px">
                     {palette(
                       <Button
                         size="xs"
                         variant="ghost"
-                        h="18px"
+                        h="10px"
+                        minH="10px"
+                        w="full"
+                        fontSize="9px"
+                        lineHeight={1}
+                        opacity={0}
+                        _groupHover={{ opacity: 1 }}
+                        _focusVisible={{ opacity: 1, boxShadow: 'outline' }}
+                        _expanded={{ opacity: 1 }}
                         color="editorMutedText"
                         isDisabled={!eligible(section).length}
                       >
@@ -1230,16 +1322,45 @@ export const CutsceneDetail: React.FC<{
                   <SequenceCard
                     selected={selectedStep?.id === step.id}
                     borderLeftColor={color}
-                    p={2}
+                    px={2}
+                    py={1}
                     mb={0}
                     onClick={() => setSelection({ kind: 'step', id: step.id })}
                   >
-                    <HStack pr={3} spacing={2}>
-                      <Text textStyle="helperText">{index + 1}</Text>
-                      <Text color={color} fontSize="xs" textTransform="uppercase" fontWeight="bold">
+                    <HStack pr={3} spacing={2} minH="24px" minW={0}>
+                      <Text textStyle="helperText" minW="12px" flexShrink={0}>
+                        {index + 1}
+                      </Text>
+                      <Text
+                        color={color}
+                        fontSize="11px"
+                        textTransform="uppercase"
+                        fontWeight="bold"
+                        maxW="42%"
+                        noOfLines={1}
+                        flexShrink={0}
+                        title={action?.displayName ?? step.action}
+                      >
                         {action?.displayName ?? step.action}
                       </Text>
-                      <Box ml="auto" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="unstyled"
+                        display="block"
+                        h="auto"
+                        minW={0}
+                        flex={1}
+                        whiteSpace="nowrap"
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        textAlign="start"
+                        fontWeight="normal"
+                        fontSize="xs"
+                        title={labels[`${scene.id}/${step.id}`] || summary(step)}
+                        onClick={() => setSelection({ kind: 'step', id: step.id })}
+                      >
+                        {labels[`${scene.id}/${step.id}`] || summary(step)}
+                      </Button>
+                      <Box flexShrink={0} onClick={(e) => e.stopPropagation()}>
                         <Menu>
                           {({ isOpen }) => (
                             <>
@@ -1248,6 +1369,12 @@ export const CutsceneDetail: React.FC<{
                                 aria-label={`${section === 'onStart' ? 'Setup step' : section === 'completion' ? 'Completion step' : 'Step'} ${index + 1} actions`}
                                 icon={<ChevronDownIcon />}
                                 size="xs"
+                                h="20px"
+                                minW="20px"
+                                opacity={selectedStep?.id === step.id ? 1 : 0}
+                                _groupHover={{ opacity: 1 }}
+                                _focusVisible={{ opacity: 1, boxShadow: 'outline' }}
+                                _expanded={{ opacity: 1 }}
                                 variant="ghost"
                               />
                               {isOpen && (
@@ -1295,20 +1422,8 @@ export const CutsceneDetail: React.FC<{
                         </Menu>
                       </Box>
                     </HStack>
-                    <Button
-                      variant="unstyled"
-                      display="block"
-                      h="auto"
-                      whiteSpace="normal"
-                      textAlign="start"
-                      fontWeight="normal"
-                      fontSize="sm"
-                      onClick={() => setSelection({ kind: 'step', id: step.id })}
-                    >
-                      {labels[`${scene.id}/${step.id}`] || summary(step)}
-                    </Button>
                     {issues.length > 0 && (
-                      <Text color="editorDangerText" fontSize="xs" mt={2}>
+                      <Text color="editorDangerText" fontSize="xs" mt={1}>
                         {issueMessage(issues[0])}
                         {issues.length > 1 ? ` (+${issues.length - 1})` : ''}
                       </Text>

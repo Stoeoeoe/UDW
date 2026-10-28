@@ -33,6 +33,7 @@ import { StreamLanguage } from '@codemirror/language';
 import { lua } from '@codemirror/legacy-modes/mode/lua';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { storyValueDiagnostics } from '../../../lib/storyValues';
 import {
   bindingSymbols,
   bindingCompletions,
@@ -622,6 +623,8 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const [showAdvancedStdlib, setShowAdvancedStdlib] = useState(false);
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const characters = useEditorStore((s) => s.characters);
+  const storyValues = useEditorStore((s) => s.project?.storyValues);
+  const storyWarning = useMemo(() => storyValueDiagnostics(value, storyValues ?? [])[0]?.message, [value, storyValues]);
   const symbols = useMemo(() => bindingSymbols(manifest, CONDITION_SCOPE), [manifest]);
   const unavailable = useMemo(() => unavailableBindings(manifest, CONDITION_SCOPE), [manifest]);
   const contextIssues = useMemo(
@@ -799,6 +802,8 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         text,
         symbols,
         withProjectCharacters(manifest?.resources, characters),
+        [],
+        { storyValues },
       );
       const q = text.slice(matches.from);
       if (!q && !context.explicit && !matches.string && !matches.argument) return null;
@@ -919,7 +924,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         }),
       ),
     ];
-  }, [allCompletions, symbols, manifest, characters, unavailable]);
+  }, [allCompletions, symbols, manifest, characters, unavailable, storyValues]);
 
   return (
     <Box>
@@ -972,12 +977,12 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         h="14px"
         mt="2px"
         fontSize="9px"
-        color="red.400"
+        color={isValid ? 'orange.300' : 'red.400'}
         fontFamily="mono"
         noOfLines={1}
-        visibility={!isValid && value.trim() !== '' ? 'visible' : 'hidden'}
+        visibility={(!isValid || !!storyWarning) && value.trim() !== '' ? 'visible' : 'hidden'}
       >
-        {contextError ?? result.error ?? ' '}
+        {contextError ?? result.error ?? storyWarning ?? ' '}
       </Text>
 
       {/* Footer */}

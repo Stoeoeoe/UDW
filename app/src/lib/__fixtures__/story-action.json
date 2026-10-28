@@ -1,0 +1,20 @@
+{
+  "name": "Set",
+  "parameters": [
+    { "name": "key", "type": "string" },
+    { "name": "value", "type": "boolean|string|number|table" }
+  ],
+  "returnType": "nil",
+  "returnNullable": false,
+  "writesState": true,
+  "callable": true,
+  "action": {
+    "id": "story.set",
+    "displayName": "Set Story Value",
+    "category": "Data",
+    "description": "Set a saved global story value.",
+    "contexts": ["cutscene", "npcRoutine"],
+    "phases": ["completion", "sequence", "setup"],
+    "execution": "immediate"
+  }
+}

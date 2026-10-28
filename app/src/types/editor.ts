@@ -206,6 +206,7 @@ export type EditorMode =
   | 'items'
   | 'dialogues'
   | 'scripting'
+  | 'data'
   | 'settings'
   | 'config'
   | 'terrain'

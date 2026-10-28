@@ -12,6 +12,7 @@ import {
   SettingsEditor,
 } from '../screens';
 import { ConfigurationEditor } from '../screens/settings/ConfigurationEditor';
+import { DataEditor } from '../screens/data/DataEditor';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useWorkspaceStore } from '../../store/useWorkspaceStore';
 import { WorkspaceTab } from '../../types/workspace';
@@ -50,6 +51,8 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <DialogueEditor />;
     case 'scripting':
       return <VariableEditor />;
+    case 'data':
+      return <DataEditor />;
     case 'character':
       return <CharacterResourceDocument characterId={tab.document.characterId} />;
     case 'entity':

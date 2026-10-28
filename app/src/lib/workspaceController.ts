@@ -201,4 +201,7 @@ export function applyTabSession(tab: WorkspaceTab | null): void {
   if (tab.document.kind === 'scripting') {
     editor.setMode('scripting');
   }
+  if (tab.document.kind === 'data') {
+    editor.setMode('data');
+  }
 }

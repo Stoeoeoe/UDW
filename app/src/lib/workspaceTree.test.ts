@@ -169,6 +169,7 @@ describe('buildWorkspaceTree', () => {
       'group:items',
       'group:dialogues',
       'group:cutscenes',
+      'data',
       'scripting',
       'settings',
       'config',

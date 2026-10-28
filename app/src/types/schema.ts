@@ -60,6 +60,8 @@ export interface Project {
   locationMetadataDefinitions?: PropertyDefinition[];
   // Named variables exposed to the Lua sandbox at runtime
   gameVariables?: GameVariable[];
+  // Optional authoring declarations for persisted GameState.Story values.
+  storyValues?: StoryValueDefinition[];
   // Scripting primitives
   scriptTables?: ScriptTable[];
   scriptFunctions?: ScriptFunction[];
@@ -392,6 +394,12 @@ export interface WorldMapMetadata {
 
 // Game Variable Definitions — named runtime values exposed to the Lua sandbox
 export type GameVariableType = 'boolean' | 'number' | 'string' | 'enum' | 'table';
+
+export interface StoryValueDefinition {
+  key: string;
+  type: 'boolean' | 'long' | 'double' | 'string' | 'object';
+  description?: string;
+}
 
 /** A primitive field inside a table. No nesting beyond this. */
 export interface TableField {

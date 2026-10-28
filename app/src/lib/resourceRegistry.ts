@@ -1,3 +1,4 @@
+import { validateStoryValueDeclarations } from './storyValues';
 import type {
   Character,
   DialogueDocument,
@@ -276,6 +277,7 @@ const normalizeFunction = (fn: ScriptFunction): ScriptFunction => ({
   returnTableId: localReference(fn.returnTableId),
 });
 export function normalizeProject(project: Project): Project {
+  if (project.storyValues !== undefined) validateStoryValueDeclarations(project.storyValues);
   const idPrefix = normalizeIdPrefix(project.idPrefix ?? DEFAULT_ID_PREFIX);
   const normalizeScriptScope = <
     T extends { id: string; fields: GameVariable[]; functions: ScriptFunction[] },

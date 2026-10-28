@@ -101,6 +101,13 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
       'cutscene',
     ),
     {
+      id: 'data',
+      kind: 'leaf',
+      label: 'Data',
+      icon: 'data',
+      document: createWorkspaceScreenDocument('data'),
+    },
+    {
       id: 'scripting',
       kind: 'leaf',
       label: 'Scripting',

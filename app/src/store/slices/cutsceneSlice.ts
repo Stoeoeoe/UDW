@@ -299,6 +299,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
                 entityTypes: state.entityTypes,
                 dialogueIds: [...state.dialogues.keys()],
                 resources: withProjectCharacters(manifest.resources, state.characters),
+                storyValues: state.project?.storyValues,
                 tileSize: state.project?.tileSize ?? 16,
               },
             );

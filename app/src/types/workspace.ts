@@ -16,9 +16,11 @@ export type WorkspaceScreenKind =
   | 'characters'
   | 'items'
   | 'dialogues'
-  | 'scripting';
+  | 'scripting'
+  | 'data';
 
 export type WorkspaceDocument =
+  | { kind: 'data'; label: string; saveUnitId: 'configuration' }
   | { kind: 'cutscene'; cutsceneId: string; label: string; saveUnitId: string }
   | { kind: 'cutscenes'; label: string; saveUnitId: 'cutscenes' }
   | {

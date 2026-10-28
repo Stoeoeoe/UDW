@@ -64,6 +64,7 @@ export function getWorkspaceTabId(document: WorkspaceDocument): string {
     case 'cutscenes':
     case 'dialogues':
     case 'scripting':
+    case 'data':
       return document.kind;
     default:
       return 'tab';

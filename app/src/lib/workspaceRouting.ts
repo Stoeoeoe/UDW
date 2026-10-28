@@ -33,6 +33,8 @@ export function createLocationDocument(
 
 export function createWorkspaceScreenDocument(kind: WorkspaceScreenKind): WorkspaceDocument {
   switch (kind) {
+    case 'data':
+      return { kind, label: 'Data', saveUnitId: 'configuration' };
     case 'cutscenes':
       return { kind, label: 'Cutscenes', saveUnitId: 'cutscenes' };
     case 'entities':
@@ -117,6 +119,7 @@ export function documentToHash(document: WorkspaceDocument): string {
     case 'dialogues':
     case 'cutscenes':
     case 'scripting':
+    case 'data':
       params.set('doc', document.kind);
       break;
   }
@@ -258,7 +261,8 @@ export function documentFromHash(
     doc === 'characters' ||
     doc === 'items' ||
     doc === 'dialogues' ||
-    doc === 'scripting'
+    doc === 'scripting' ||
+    doc === 'data'
   ) {
     return createWorkspaceScreenDocument(doc);
   }

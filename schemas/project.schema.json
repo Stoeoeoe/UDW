@@ -102,6 +102,20 @@
         "$ref": "#/$defs/PropertyDefinition"
       }
     },
+    "storyValues": {
+      "type": "array",
+      "description": "Optional story-value declarations used for editor warnings and key completion. Declarations do not initialize runtime values.",
+      "items": {
+        "type": "object",
+        "required": ["key", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string", "minLength": 1, "pattern": "\\S" },
+          "type": { "enum": ["boolean", "long", "double", "string", "object"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
     "gameVariables": {
       "type": "array",
       "description": "Named variables exposed to the Lua sandbox at runtime.",

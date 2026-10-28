@@ -5,6 +5,7 @@ import {
   FiBox,
   FiFilm,
   FiCode,
+  FiDatabase,
   FiGrid,
   FiMap,
   FiMessageSquare,
@@ -49,6 +50,8 @@ function getDocumentIcon(tab: WorkspaceTab) {
       return FiMessageSquare;
     case 'scripting':
       return FiCode;
+    case 'data':
+      return FiDatabase;
     default:
       return FiMap;
   }

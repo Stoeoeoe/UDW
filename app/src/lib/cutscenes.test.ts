@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import manifest from './__fixtures__/cutscene-bindings.json';
 import prototype from './__fixtures__/prototype.v2.runtime.cutscene.json';
+import storyAction from './__fixtures__/story-action.json';
 import {
   createCutsceneStep,
   exportCutscene,
@@ -50,6 +51,51 @@ const refs = () => ({
 const scene = (): Cutscene => parseCutscene(prototype);
 
 describe('Unity cutscene contract', () => {
+  it('blocks declared story type mismatches before saving while allowing undeclared keys', () => {
+    const palette = readCutsceneActions({
+      schemaVersion: 2,
+      modules: [{ path: 'GameState.Story', methods: [storyAction] }],
+    });
+    const draft = scene();
+    draft.onStart = [];
+    draft.onComplete.steps = [];
+    draft.sequence = [{ id: 'set', action: 'story.set', arguments: { key: 'count', value: 1.5 } }];
+    expect(validateCutscene(draft, palette, refs())).toEqual([]);
+    const declared = { ...refs(), storyValues: [{ key: 'count', type: 'long' as const }] };
+    expect(() => exportCutscene(draft, palette, declared)).toThrow(
+      'requires long as declared in Data',
+    );
+    draft.sequence[0].arguments.value = 'text';
+    expect(() => exportCutscene(draft, palette, declared)).toThrow(
+      'requires long as declared in Data',
+    );
+    draft.sequence[0].arguments.value = 4;
+    expect(validateCutscene(draft, palette, declared)).toEqual([]);
+  });
+  it('exports story actions with all plain value kinds, including empty strings and nested objects', () => {
+    const palette = readCutsceneActions({
+      schemaVersion: 2,
+      modules: [{ path: 'GameState.Story', methods: [storyAction] }],
+    });
+    const draft = scene();
+    draft.onStart = [];
+    draft.onComplete.steps = [];
+    draft.sequence = [false, 'Ada', '', 3, 12.5, { stage: 2, details: { accepted: true } }].map(
+      (value, index) => ({
+        id: `value-${index}`,
+        action: 'story.set',
+        arguments: { key: `key-${index}`, value },
+      }),
+    );
+    expect(validateCutscene(draft, palette, refs())).toEqual([]);
+    expect(parseCutscene(exportCutscene(draft, palette, refs())).sequence).toEqual(draft.sequence);
+    draft.sequence[0].arguments.value = null;
+    expect(
+      validateCutscene(draft, palette, refs()).some((issue) =>
+        issue.message.includes('story object'),
+      ),
+    ).toBe(true);
+  });
   it('reads the current Unity export, excluding ordinary synchronous calls and other contexts', () => {
     expect(actions.map((a) => a.id).sort()).toEqual([
       'characters.face',
@@ -115,12 +161,6 @@ describe('Unity cutscene contract', () => {
       },
     ],
     [
-      'blank argument',
-      (s: Record<string, any>) => {
-        s.sequence[0].arguments.character = ' ';
-      },
-    ],
-    [
       'duplicate step ID',
       (s: Record<string, any>) => {
         s.sequence[1].id = s.sequence[0].id;
@@ -139,6 +179,17 @@ describe('Unity cutscene contract', () => {
       expect.objectContaining({ stepId: 'talk', message: 'Missing dialogueRef: missing' }),
     );
     expect(() => exportCutscene(broken, actions, refs())).toThrow('talk');
+  });
+
+  it('rejects blank required string arguments through the action signature before export', () => {
+    const broken = scene();
+    broken.sequence[0].arguments.character = ' ';
+    expect(
+      validateCutscene(broken, actions, refs()).some(
+        (issue) => issue.message === 'Must not be blank',
+      ),
+    ).toBe(true);
+    expect(() => exportCutscene(broken, actions, refs())).toThrow('Must not be blank');
   });
 
   it('rejects unsupported actions, arguments, semantic pairs and parameter types', () => {

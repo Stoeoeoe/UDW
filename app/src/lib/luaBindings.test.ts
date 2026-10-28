@@ -10,6 +10,7 @@ import {
 } from './luaBindings';
 import { parseScriptingManifest } from './scriptingManifest';
 import unityBindings from './__fixtures__/unity-bindings-v2.json';
+import storyAction from './__fixtures__/story-action.json';
 
 const manifest = parseScriptingManifest({
   schemaVersion: 2,
@@ -35,6 +36,20 @@ const manifest = parseScriptingManifest({
 const symbols = bindingSymbols(manifest);
 
 describe('Lua bindings intelligence', () => {
+  it('keeps explicitly dual-registered story actions callable in scripts but excludes writes from conditions', () => {
+    const dual = parseScriptingManifest({
+      schemaVersion: 2,
+      modules: [{ path: 'GameState.Story', methods: [storyAction] }],
+    });
+    expect(bindingSymbols(dual, SCRIPT_SCOPE).map((s) => s.label)).toContain('GameState.Story.Set');
+    expect(bindingSymbols(dual, CONDITION_SCOPE).map((s) => s.label)).not.toContain(
+      'GameState.Story.Set',
+    );
+    for (const phase of ['setup', 'sequence', 'completion'] as const)
+      expect(
+        bindingSymbols(dual, { mode: 'actions', context: 'cutscene', phase }).map((s) => s.label),
+      ).toContain('GameState.Story.Set');
+  });
   it('includes ordinary methods, exact exported paths, signatures and documentation', () => {
     expect(symbols.map((s) => s.label)).toEqual([
       'Game',
@@ -177,17 +192,17 @@ describe('Lua bindings intelligence', () => {
         {
           path: 'Story',
           methods: [
-            { name: 'HasFlag', parameters: [], writesState: false },
-            { name: 'SetFlag', parameters: [], writesState: true },
+            { name: 'Has', parameters: [], writesState: false },
+            { name: 'Set', parameters: [], writesState: true },
           ],
         },
       ],
     });
     expect(bindingSymbols(writes, CONDITION_SCOPE).map((s) => s.label)).toEqual([
       'Story',
-      'Story.HasFlag',
+      'Story.Has',
     ]);
-    expect(bindingSymbols(writes, SCRIPT_SCOPE).map((s) => s.label)).toContain('Story.SetFlag');
+    expect(bindingSymbols(writes, SCRIPT_SCOPE).map((s) => s.label)).toContain('Story.Set');
   });
 
   it('limits action sessions to the current context and phase', () => {
@@ -198,7 +213,7 @@ describe('Lua bindings intelligence', () => {
     expect(names('cutscene', 'completion')).not.toContain('Cutscene.Wait');
     expect(names('cutscene', 'completion')).toContain('Characters.Face');
     expect(names('npcRoutine', 'sequence')).not.toContain('Cutscene.Wait');
-    expect(names('cutscene', 'sequence')).not.toContain('GameState.Story.SetFlag');
+    expect(names('cutscene', 'sequence')).not.toContain('GameState.Story.Set');
   });
 
   it('diagnoses direct unavailable calls without flagging strings, comments, locals or parameters', () => {

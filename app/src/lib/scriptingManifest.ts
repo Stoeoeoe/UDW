@@ -71,6 +71,7 @@ const manifestSchema = z
                 returnType: z.string().optional(),
                 returnNullable: z.boolean().optional(),
                 writesState: z.boolean().optional(),
+                callable: z.boolean().optional(),
                 action: actionSchema.optional(),
               })
               .passthrough(),

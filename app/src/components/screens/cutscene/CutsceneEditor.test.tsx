@@ -14,6 +14,7 @@ import { useScriptingManifestStore } from '../../../store/useScriptingManifestSt
 import manifest from '../../../lib/__fixtures__/cutscene-bindings.json';
 import unityBindings from '../../../lib/__fixtures__/unity-bindings-v2.json';
 import positionMethod from '../../../lib/__fixtures__/position-action.json';
+import storyAction from '../../../lib/__fixtures__/story-action.json';
 import prototype from '../../../lib/__fixtures__/prototype.v2.runtime.cutscene.json';
 import { theme } from '../../../theme';
 import { saveWorkspaceTab } from '../../../lib/workspaceSaveActions';
@@ -152,6 +153,101 @@ describe('cutscene authoring', () => {
         <CutsceneEditor cutsceneId={id} />
       </ChakraProvider>,
     );
+
+  it('authors story actions from the palette with string and nested object values', async () => {
+    const bindings = {
+      ...manifest,
+      modules: [
+        ...manifest.modules.filter((module) => module.path !== 'GameState.Story'),
+        { path: 'GameState.Story', methods: [storyAction] },
+      ],
+    };
+    useScriptingManifestStore.getState().acceptUpdate({
+      path: 'C:/Unity/bindings.json',
+      revision: 2,
+      content: bindings,
+      error: null,
+    });
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(bindings),
+    );
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Set Story Value', exact: true }));
+    fireEvent.change(screen.getByLabelText('key'), { target: { value: 'quest' } });
+    expect(screen.getByText(/Story key 'quest' is not declared in Data/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Story value'), { target: { value: 'Ada' } });
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.value).toBe('Ada');
+    fireEvent.change(screen.getByLabelText('Story value'), { target: { value: '' } });
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.value).toBe('');
+    fireEvent.change(screen.getByLabelText('Story value type'), { target: { value: 'object' } });
+    fireEvent.change(screen.getByLabelText('Story object value'), {
+      target: { value: '{"stage":2,"details":{"accepted":true}}' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add "quest" to Data' }));
+    expect(useEditorStore.getState().project?.storyValues).toEqual([
+      { key: 'quest', type: 'object' },
+    ]);
+    expect(screen.queryByLabelText('Story value type')).not.toBeInTheDocument();
+    expect(screen.getByText('Type: object')).toBeInTheDocument();
+    await act(async () => useEditorStore.getState().saveCutscene(prototype.id));
+    expect(fileSystem.saveJson).toHaveBeenCalledWith(
+      'cutscenes',
+      `${prototype.id}.runtime.cutscene.json`,
+      expect.objectContaining({
+        sequence: expect.arrayContaining([
+          expect.objectContaining({
+            action: 'story.set',
+            arguments: { key: 'quest', value: { stage: 2, details: { accepted: true } } },
+          }),
+        ]),
+      }),
+    );
+  });
+
+  it('locks story action editors to Data declarations and switches inputs when selecting another key', async () => {
+    const bindings = {
+      ...manifest,
+      modules: [
+        ...manifest.modules.filter((module) => module.path !== 'GameState.Story'),
+        { path: 'GameState.Story', methods: [storyAction] },
+      ],
+    };
+    useScriptingManifestStore
+      .getState()
+      .acceptUpdate({
+        path: 'C:/Unity/bindings.json',
+        revision: 2,
+        content: bindings,
+        error: null,
+      });
+    vi.mocked(useScriptingManifestStore.getState().refresh).mockResolvedValue(
+      parseScriptingManifest(bindings),
+    );
+    useEditorStore.setState((state) => {
+      state.project!.storyValues = [
+        { key: 'name', type: 'string' },
+        { key: 'ready', type: 'boolean' },
+        { key: 'count', type: 'long' },
+      ];
+    });
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Set Story Value', exact: true }));
+    fireEvent.change(screen.getByLabelText('key'), { target: { value: 'name' } });
+    expect(screen.queryByLabelText('Story value type')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Story value'), { target: { value: 'Ada' } });
+    fireEvent.change(screen.getByLabelText('key'), { target: { value: 'ready' } });
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.value).toBe(false);
+    fireEvent.click(screen.getByLabelText('Story boolean value'));
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.value).toBe(true);
+    fireEvent.change(screen.getByLabelText('key'), { target: { value: 'count' } });
+    expect(screen.getByText('Type: long')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Story value'), { target: { value: '1.5' } });
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.value).toBe(0);
+    fireEvent.change(screen.getByLabelText('Story value'), { target: { value: '4' } });
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].arguments.value).toBe(4);
+  });
 
   it('authors global and positioned sounds using exported resources and the shared map picker', async () => {
     const bindings = {

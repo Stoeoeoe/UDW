@@ -127,6 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange }) =>
         active={activeMode === 'scripting'}
         onClick={onModeChange}
       />
+      <NavIcon icon={FcDatabase} label="Data" mode="data" active={activeMode === 'data'} onClick={onModeChange} />
       <NavIcon
         icon={FcDatabase}
         label="Config"
