@@ -20,6 +20,31 @@ namespace Core.Tile.Editor.Vulcanus
         private const string SchemaPath = "Assets/Vulcan/0204project/schemas/cutscene.schema.json";
         private string _folder;
 
+        [Test]
+        public void ParallelSchemaRequiresTwoNonemptyLeafTracksAndSequencePhase()
+        {
+            var source = Source("test:parallel-schema");
+            var ordinary = source["sequence"][0].DeepClone();
+            var other = ordinary.DeepClone();
+            other["id"] = "other";
+            var parallel = new JObject
+            {
+                ["id"] = "parallel", ["action"] = "control.parallel", ["arguments"] = new JObject(),
+                ["tracks"] = new JArray(new JArray(ordinary), new JArray(other))
+            };
+            source["sequence"] = new JArray(parallel);
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.Nothing);
+            parallel["tracks"][1] = new JArray();
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+            parallel["tracks"] = new JArray(new JArray(ordinary.DeepClone()));
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+            parallel["tracks"] = new JArray(new JArray(ordinary.DeepClone()), new JArray(parallel.DeepClone()));
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+            source["sequence"] = new JArray(ordinary.DeepClone());
+            source["onStart"] = new JArray(parallel);
+            Assert.That(() => VulcanusSchema.Deserialize<JObject>(source.ToString(), SchemaPath, "fixture"), Throws.TypeOf<FormatException>());
+        }
+
         [SetUp]
         public void SetUp()
         {

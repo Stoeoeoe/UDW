@@ -41,6 +41,9 @@
           },
           {
             "$ref": "#/definitions/conditionalStep"
+          },
+          {
+            "$ref": "#/definitions/parallelStep"
           }
         ]
       }
@@ -186,7 +189,8 @@
           "pattern": "\\S",
           "not": {
             "enum": [
-              "control.if"
+              "control.if",
+              "control.parallel"
             ]
           }
         },
@@ -281,6 +285,25 @@
                 }
               }
             ]
+          }
+        }
+      }
+    },
+    "parallelStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "action", "arguments", "tracks"],
+      "properties": {
+        "id": { "type": "string", "pattern": "\\S" },
+        "action": { "enum": ["control.parallel"] },
+        "arguments": { "type": "object", "additionalProperties": false, "properties": {} },
+        "tracks": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/definitions/actionStep" }
           }
         }
       }

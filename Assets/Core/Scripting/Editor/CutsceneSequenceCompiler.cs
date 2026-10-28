@@ -57,8 +57,8 @@ namespace Core.Scripting.Editor
                         var trackLocation = $"{location}, track {trackIndex + 1}";
                         if (tracks[trackIndex] is not JArray track || track.Count == 0)
                             throw Invalid(trackLocation, "Expected a nonempty action array.");
-                        var trackLua = Compile(track, trackLocation, out var trackSteps, phase, usedIds, true, true);
-                        foreach (var child in trackSteps)
+                        var trackLua = Compile(track, trackLocation, out var children, phase, usedIds, true, true);
+                        foreach (var child in children)
                         {
                             if (child.ActionId == "cutscene.runLua")
                                 throw Invalid(trackLocation, $"Step '{child.Id}': Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts.");
@@ -76,7 +76,7 @@ namespace Core.Scripting.Editor
                                 claims[resource] = trackIndex;
                             }
                         }
-                        imported.AddRange(trackSteps);
+                        imported.AddRange(children);
                         lua.Append("function()\n").Append(trackLua).Append("end,\n");
                     }
                     lua.Append("});\n");

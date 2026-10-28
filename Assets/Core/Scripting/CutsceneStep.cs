@@ -17,6 +17,7 @@ namespace Core.Scripting
         public string Id => id;
         public string ActionId => actionId;
         public bool IsCondition => actionId == "control.if";
+        public bool IsControl => IsCondition || actionId == "control.parallel";
         public IReadOnlyList<CutsceneArgument> Arguments => _arguments ??= Array.AsReadOnly(arguments);
 
         public void OnBeforeSerialize() { }

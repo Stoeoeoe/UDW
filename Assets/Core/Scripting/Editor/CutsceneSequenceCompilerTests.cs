@@ -9,6 +9,120 @@ namespace Core.Scripting.Editor
 {
     public sealed class CutsceneSequenceCompilerTests
     {
+        [Test]
+        public void ParallelTracksStartTogetherRunSequentiallyAndJoinTheSlowestTrack()
+        {
+            var source = new JArray(Parallel(
+                new JArray(ProbeStep("left-one", 0.25), ProbeStep("left-two", 0.75)), new JArray(ProbeStep("right", 2))), ProbeStep("after", 3));
+            var lua = CutsceneSequenceCompiler.Compile(source, "parallel-fixture", out var steps);
+            var api = new ParallelProbeApi();
+            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(ParallelProbeApi), () => api));
+            using var run = VulcanusLuaEngine.StartSession(bindings, lua, "parallel-fixture");
+            run.Tick(99); // Time from before actions started must not advance them.
+            Assert.That(api.Started, Is.EqualTo(new[] { "left-one", "right" }));
+            Assert.That(run.CurrentStepId, Is.EqualTo("parallel"));
+            run.Tick(0.25f);
+            Assert.That(api.Started, Is.EqualTo(new[] { "left-one", "right", "left-two" }));
+            Assert.That(api.Actions[0].Disposals, Is.EqualTo(1));
+            run.Tick(0.75f);
+            Assert.That(api.Started, Does.Not.Contain("after"));
+            run.Tick(1);
+            Assert.That(api.Started.Last(), Is.EqualTo("after"));
+            Assert.That(api.Actions.Take(3).All(action => action.Disposals == 1), Is.True);
+            run.Tick(3);
+            Assert.That(run.IsRunning, Is.False);
+            Assert.That(api.Actions.All(action => action.Disposals == 1), Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ParallelCancellationAndFailureDisposeEveryActiveSiblingOnce(bool fail)
+        {
+            var lua = CutsceneSequenceCompiler.Compile(new JArray(Parallel(
+                new JArray(ProbeStep("right", 2)), new JArray(ProbeStep(fail ? "fail" : "left-two", fail ? 0.5 : 0.75))), ProbeStep("after", 3)), "parallel-cleanup");
+            var api = new ParallelProbeApi();
+            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "parallel-cleanup");
+            run.Tick(0);
+            if (fail)
+                Assert.That(() => run.Tick(0.1f), Throws.InvalidOperationException.With.Message
+                    .Contains("parallel 'parallel', track 2").And.Message.Contains("step 'fail'"));
+            else run.Cancel();
+            run.Dispose();
+            run.Tick(10);
+            Assert.That(api.Actions.Count, Is.EqualTo(2));
+            Assert.That(api.Actions.All(action => action.Disposals == 1), Is.True);
+            Assert.That(run.IsRunning, Is.False);
+        }
+
+        [Test]
+        public void ParallelCompilerRejectsMalformedTracksPhasesDuplicatesAndConflictingOwners()
+        {
+            var valid = Parallel(new JArray(Talk("one")), new JArray(Step("wait", "cutscene.wait", new JObject { ["seconds"] = 1 })));
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(valid), "fixture"), Throws.Nothing);
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(valid), "fixture", out _, "setup"), Throws.TypeOf<FormatException>());
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(Parallel(new JArray(), new JArray(Talk("two")))), "fixture"), Throws.TypeOf<FormatException>());
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(Parallel(new JArray(Talk("same")), new JArray(Talk("same")))), "fixture"), Throws.TypeOf<FormatException>().With.Message.Contains("Duplicate step ID"));
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(Parallel(new JArray(Talk("one")), new JArray(Talk("two")))), "fixture"), Throws.TypeOf<FormatException>().With.Message.Contains("dialogue"));
+            var move = Step("move", "characters.moveTo", new JObject { ["character"] = "player", ["destination"] = "gate" });
+            var face = Step("face", "characters.face", new JObject { ["character"] = "player", ["target"] = "host" });
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(Parallel(new JArray(move), new JArray(face))), "fixture"), Throws.TypeOf<FormatException>().With.Message.Contains("character:player"));
+            var nested = (JObject)valid.DeepClone();
+            nested["id"] = "nested";
+            Assert.That(() => CutsceneSequenceCompiler.Compile(new JArray(Parallel(new JArray(nested), new JArray(Talk("other")))), "fixture"), Throws.TypeOf<FormatException>().With.Message.Contains("top level"));
+        }
+
+        [Test]
+        public void ParallelStartFailureDisposesAnAlreadyStartedSibling()
+        {
+            var lua = CutsceneSequenceCompiler.Compile(new JArray(Parallel(
+                new JArray(ProbeStep("started", 2)), new JArray(ProbeStep("start-failure", 4)))), "parallel-start-failure");
+            var api = new ParallelProbeApi();
+            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "parallel-start-failure");
+            Assert.That(() => run.Tick(0), Throws.InvalidOperationException.With.Message.Contains("track 2").And.Message.Contains("start-failure"));
+            Assert.That(api.Actions.Single().Disposals, Is.EqualTo(1));
+            Assert.That(run.IsRunning, Is.False);
+        }
+
+        private static JObject Talk(string id) => Step(id, "dialogue.play", new JObject { ["dialogue"] = id });
+        private static JObject ProbeStep(string id, double seconds) => Step(id, "cutscene.wait", new JObject { ["seconds"] = seconds });
+        private static JObject Parallel(params JArray[] tracks) => new()
+        {
+            ["id"] = "parallel", ["action"] = "control.parallel", ["arguments"] = new JObject(),
+            ["tracks"] = new JArray(tracks.Select(track => (JToken)track))
+        };
+
+        [LuaModule("Cutscene")]
+        private sealed class ParallelProbeApi
+        {
+            public readonly List<string> Started = new();
+            public readonly List<ProbeAction> Actions = new();
+            [LuaAction("cutscene.wait", "Probe", "Test", "Observe parallel actions.", "cutscene", Phases = new[] { "sequence" })]
+            public ILuaAction Wait(double seconds)
+            {
+                if (seconds == 4) throw new InvalidOperationException("Action failed to start");
+                Started.Add(seconds == 2 ? "right" : seconds == 0.25 ? "left-one" : seconds == 0.75 ? "left-two" : seconds == 3 ? "after" : "fail");
+                var action = new ProbeAction((float)seconds, seconds == 0.5);
+                Actions.Add(action);
+                return action;
+            }
+        }
+
+        private sealed class ProbeAction : ILuaAction
+        {
+            private float _remaining;
+            private readonly bool _fail;
+            public int Disposals;
+            public bool IsCompleted => _remaining <= 0;
+            public ProbeAction(float remaining, bool fail) { _remaining = remaining; _fail = fail; }
+            public void Tick(float deltaTime)
+            {
+                Assert.That(Disposals, Is.Zero);
+                if (_fail) throw new InvalidOperationException("Probe failure");
+                _remaining -= deltaTime;
+            }
+            public void Dispose() => Disposals++;
+        }
+
         [TestCase("characters.moveTo", "{'character':'player','destination':'meeting'}")]
         [TestCase("characters.walkPath", "{'character':'player','path':[{'x':168,'y':104}]}")]
         public void WalkingDefaultsToImmediateAccelerationAndPreservesExplicitOptOut(string action, string json)

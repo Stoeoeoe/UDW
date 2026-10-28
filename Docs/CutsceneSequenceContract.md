@@ -1,4 +1,48 @@
-# Linear cutscene steps
+# Cutscene steps
+
+## Parallel tracks and join
+
+Source v2 supports a top-level sequence block:
+
+```json
+{
+  "id": "arrive-together",
+  "action": "control.parallel",
+  "arguments": {},
+  "tracks": [
+    [{ "id": "alice-walk", "action": "characters.moveTo", "arguments": { "character": "alice", "destination": "gate" } }],
+    [{ "id": "bob-walk", "action": "characters.moveTo", "arguments": { "character": "bob", "destination": "bench" } }]
+  ]
+}
+```
+
+At least two nonempty tracks are required. Tracks contain ordinary sequence actions,
+with globally unique step IDs. They start in authored track order in the same frame,
+run their own actions sequentially, and join when every track succeeds. The next
+outer sequence step runs after that join. Waits, movement, animation and dialogue
+retain their existing action semantics. Setup and completion remain immediate.
+Conditional and parallel blocks cannot be nested inside tracks or conditional paths.
+
+Tracks must use separate character writers, a single dialogue-owning track, and
+separate story keys. This is conservative for the entire block, including delayed
+actions: a wait is not proof that another track has finished. Character targets
+read by facing actions do not claim that target. Run Lua belongs outside parallel
+blocks because its writes cannot be inspected. Import and Vulcanus save validation
+reject these conflicts and validate every child before playback changes the world.
+
+Unity compiles tracks into functions in the same bound Lua environment. Each has
+its own coroutine, pending action and instruction budget. No worker threads or
+independent cutscene runners are created. Failure stops every sibling; cancellation
+and skip dispose every unfinished action through the existing runner cleanup.
+Diagnostics retain the parallel block ID, track number and failing child step ID.
+Completed actions release their resources as soon as their own track advances.
+
+Vulcanus displays track lists and a join marker. Adding/removing tracks, editing,
+duplicating/reordering children, and deleting blocks use normal document history.
+Preview arrows show independent routes from the pre-block state. While inspecting
+a child, other tracks' positions are unknown; after the join, described track
+endpoints are combined. Cross-track facing targets remain unknown during the block.
+The preview does not simulate concurrent timing, physics or collisions.
 
 ## Holding a finished animation
 

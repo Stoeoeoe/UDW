@@ -69,7 +69,7 @@ namespace Core.Scripting
         {
             var actions = bindings.GetActions().ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
             var ids = definition.OnStart.Concat(definition.Steps).Concat(definition.OnComplete.Steps)
-                .Where(step => !step.IsCondition)
+                .Where(step => !step.IsControl)
                 .SelectMany(step => actions[step.ActionId].Parameters
                     .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "characterRef")
                     .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name).Value))
