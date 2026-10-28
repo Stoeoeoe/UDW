@@ -27,7 +27,7 @@ namespace Core.Camera.Editor
             _pixels.assetsPPU = 16;
             _pixels.refResolutionX = 640;
             _pixels.refResolutionY = 360;
-            _pixels.cropFrame = PixelPerfectCamera.CropFrame.Windowbox;
+            _pixels.cropFrame = PixelPerfectCamera.CropFrame.None;
             _pixels.gridSnapping = PixelPerfectCamera.GridSnapping.PixelSnapping;
             _root.AddComponent<CinemachineBrain>();
             var child = new GameObject("Follow camera");
@@ -73,6 +73,29 @@ namespace Core.Camera.Editor
             _confiner.InvokePostPipelineStageCallback(_camera, CinemachineCore.Stage.Body, ref state, -1);
             _framing.InvokePostPipelineStageCallback(_camera, CinemachineCore.Stage.Aim, ref state, -1);
             return state;
+        }
+
+        [Test]
+        public void SystemCameraUsesTheFullViewportForFreeAspect()
+        {
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
+            var pixels = prefab.GetComponentInChildren<PixelPerfectCamera>(true);
+            Assert.That(pixels.cropFrame, Is.EqualTo(PixelPerfectCamera.CropFrame.None));
+            Assert.That(pixels.GetComponent<UnityEngine.Camera>().rect, Is.EqualTo(new Rect(0, 0, 1, 1)));
+            var stack = pixels.GetComponent<UniversalAdditionalCameraData>().cameraStack;
+            Assert.That(stack, Has.Count.EqualTo(1));
+            Assert.That(stack[0].rect, Is.EqualTo(new Rect(0, 0, 1, 1)));
+        }
+
+        [TestCase(1171, 725)]
+        [TestCase(1920, 1080)]
+        [TestCase(2560, 1080)]
+        [TestCase(800, 1000)]
+        public void FreeAspectPreservesMapEdgesAtDifferentViewportSizes(int width, int height)
+        {
+            BindMap(100, 100);
+            var state = Frame(width, height, new Vector3(0, 100, -10));
+            AssertTopLeft(state);
         }
 
         [Test]
