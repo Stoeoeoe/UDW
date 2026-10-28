@@ -9,6 +9,8 @@ Shader "Game/UberWeatherShader"
         _InternalResX ("Internal Resolution X", Float) = 360
         _InternalResY ("Internal Resolution Y", Float) = 240
         _PixelsPerUnit ("Pixels Per Unit", Float) = 16
+        [Toggle] _WeatherAutoResolution ("Art Pixel Grid From Camera Size And PPU", Float) = 1
+        [Toggle] _WeatherWorldAnchored ("Anchor Rain And Snow To World", Float) = 1
         
         [Header(Rain Settings)]
         [Toggle] _RainEnabled ("Rain Enabled", Float) = 0
@@ -25,25 +27,23 @@ Shader "Game/UberWeatherShader"
         [Toggle] _RainSplashes ("Ground Splashes", Float) = 1
         _RainFarLayer ("Background Layer Density", Range(0, 1)) = 0.5
         _RainOvercast ("Overcast Darkening", Range(0, 0.5)) = 0.12
-        [Toggle] _RainWorldAnchored ("Anchor Rain To World", Float) = 1
-        [Toggle] _RainAutoResolution ("Rain Grid From Camera Size And PPU", Float) = 1
         
         [Header(Snow Settings)]
         [Toggle] _SnowEnabled ("Snow Enabled", Float) = 0
-        _SnowHeavyDensity ("Heavy Snow Density", Range(0, 500)) = 50
-        _SnowHeavySize ("Heavy Snow Size", Range(0.001, 0.02)) = 0.008
-        _SnowHeavySpeed ("Heavy Snow Speed", Range(0, 3)) = 0.8
-        _SnowHeavyColor ("Heavy Snow Color", Color) = (1, 1, 1, 0.9)
-        
-        _SnowLightDensity ("Light Snow Density", Range(0, 1000)) = 200
-        _SnowLightSize ("Light Snow Size", Range(0.0001, 0.01)) = 0.003
-        _SnowLightSpeed ("Light Snow Speed", Range(0, 3)) = 0.5
-        _SnowLightColor ("Light Snow Color", Color) = (1, 1, 1, 0.6)
-        
-        _SnowWindDirection ("Snow Wind Direction", Range(-0.5, 0.5)) = 0.1
-        _SnowWindVariation ("Snow Wind Variation", Range(0, 1)) = 0.2
-        _SnowSwayAmount ("Snow Sway Amount", Range(0, 1)) = 0.3
-        _SnowSwaySpeed ("Snow Sway Speed", Range(0, 5)) = 1.5
+        _SnowDensity ("Snow Density", Range(0, 1)) = 0.15
+        _SnowSpeed ("Fall Speed (art pixels per second)", Range(2, 80)) = 14
+        _SnowWind ("Wind (sideways per unit down)", Range(-1, 1)) = 0.1
+        _SnowGust ("Gust Amplitude (art pixels)", Range(0, 40)) = 0
+        _SnowSway ("Sway (art pixels)", Range(0, 3)) = 1.5
+        _SnowSwaySpeed ("Sway Speed", Range(0, 5)) = 1
+        [Toggle] _SnowNearLarge ("Large Near Flakes", Float) = 0
+        _SnowMidLayer ("Middle Layer Density", Range(0, 1)) = 0.6
+        _SnowFarLayer ("Background Layer Density", Range(0, 1)) = 0.5
+        _SnowLifetime ("Flake Lifetime (seconds)", Range(0.5, 10)) = 5
+        _SnowColor ("Snow Color (alpha = opacity)", Color) = (0.95, 0.97, 1, 0.85)
+        _SnowSceneLit ("Snow Follows Scene Brightness", Range(0, 1)) = 0.5
+        _SnowHaze ("Snow Haze", Range(0, 0.4)) = 0.02
+        [Toggle] _SnowSnap ("Snap Flakes To Art Pixels", Float) = 0
         
         [Header(Dust Storm Settings)]
         [Toggle] _DustEnabled ("Dust Storm Enabled", Float) = 0
@@ -120,6 +120,8 @@ Shader "Game/UberWeatherShader"
                 float _InternalResX;
                 float _InternalResY;
                 float _PixelsPerUnit;
+                float _WeatherAutoResolution;
+                float _WeatherWorldAnchored;
                 
                 // Rain
                 float _RainEnabled;
@@ -136,23 +138,23 @@ Shader "Game/UberWeatherShader"
                 float _RainSplashes;
                 float _RainFarLayer;
                 float _RainOvercast;
-                float _RainWorldAnchored;
-                float _RainAutoResolution;
                 
                 // Snow
                 float _SnowEnabled;
-                float _SnowHeavyDensity;
-                float _SnowHeavySize;
-                float _SnowHeavySpeed;
-                float4 _SnowHeavyColor;
-                float _SnowLightDensity;
-                float _SnowLightSize;
-                float _SnowLightSpeed;
-                float4 _SnowLightColor;
-                float _SnowWindDirection;
-                float _SnowWindVariation;
-                float _SnowSwayAmount;
+                float _SnowDensity;
+                float _SnowSpeed;
+                float _SnowWind;
+                float _SnowGust;
+                float _SnowSway;
                 float _SnowSwaySpeed;
+                float _SnowNearLarge;
+                float _SnowMidLayer;
+                float _SnowFarLayer;
+                float _SnowLifetime;
+                float4 _SnowColor;
+                float _SnowSceneLit;
+                float _SnowHaze;
+                float _SnowSnap;
                 
                 // Dust
                 float _DustEnabled;
@@ -246,7 +248,7 @@ Shader "Game/UberWeatherShader"
             // square and match the camera's real aspect ratio.
             float2 RainResolution()
             {
-                return _RainAutoResolution > 0.5 && unity_OrthoParams.w > 0.5
+                return _WeatherAutoResolution > 0.5 && unity_OrthoParams.w > 0.5
                     ? round(unity_OrthoParams.xy * 2 * _PixelsPerUnit)
                     : float2(_InternalResX, _InternalResY);
             }
@@ -255,7 +257,7 @@ Shader "Game/UberWeatherShader"
             float2 RainPosition(float2 uv, float2 resolution)
             {
                 float2 position = uv * resolution;
-                if (_RainWorldAnchored > 0.5)
+                if (_WeatherWorldAnchored > 0.5)
                     position += _WorldSpaceCameraPos.xy * _PixelsPerUnit - resolution * 0.5;
                 return position;
             }
@@ -336,48 +338,66 @@ Shader "Game/UberWeatherShader"
                 return lerp(color, rain, opacity);
             }
 
-            // Snow particle rendering
-            float SnowParticles(float2 uv, float time, float density, float size, float speed, out float layerDepth)
+            // ---- Snow -----------------------------------------------------------------------
+            // Flakes are art-pixel blocks (a dot, or a plus for large near flakes) that drift
+            // smoothly, so they match the art's pixel size without stepping. Three layers give depth.
+            // Each flake lives for a while, then fades out in two steps while a new one appears.
+
+            // Returns relative opacity in [0,1] for one layer of flakes.
+            float SnowLayer(float2 q, float time, uint salt, float density, float cellSize, float speed,
+                float sway, bool large, bool snap)
             {
-                float result = 0.0;
-                layerDepth = 0.0;
-                float2 cellSize = 1.0 / density;
-                float2 cellId = floor(uv / cellSize);
-                float2 cellUv = frac(uv / cellSize);
-                
-                for (int y = -1; y <= 1; y++)
+                if (density <= 0) return 0;
+                sway = min(sway, cellSize * 0.5 - 4);
+                // Wind plus slow gusts. The gust term is an integrated sine, so flakes never jump.
+                float drift = _SnowWind * speed * time + _SnowGust * (1 - cos(time * 0.6));
+                float2 moving = float2(q.x - drift, q.y);
+                float column = floor(moving.x / cellSize);
+                // Each column falls at its own speed, so flakes do not move as one rigid sheet.
+                moving.y += speed * lerp(0.75, 1.25, RainRand(int2(column, 0), salt)) * time;
+                float row = floor(moving.y / cellSize);
+                int2 cell = int2(column, row);
+                float2 local = moving - float2(column, row) * cellSize;
+
+                float phase = time / max(_SnowLifetime, 0.5) + RainRand(cell, salt + 1u);
+                float cycle = floor(phase);
+                float age = phase - cycle;
+                int2 seed = cell + int2(cycle, cycle) * int2(7, 13);
+                if (RainRand(seed, salt + 2u) >= density) return 0;
+
+                float margin = sway + 2; // Keeps the flake and its sway inside the cell.
+                float2 flake = margin + float2(RainRand(seed, salt + 3u), RainRand(seed, salt + 4u)) * (cellSize - 2 * margin);
+                flake.x += sin(time * _SnowSwaySpeed + RainRand(seed, salt + 5u) * 6.2832) * sway;
+                float2 d = local - flake;
+                if (snap)
                 {
-                    for (int x = -1; x <= 1; x++)
-                    {
-                        float2 offset = float2(x, y);
-                        float2 neighborId = cellId + offset;
-                        float2 neighborUv = cellUv - offset;
-                        
-                        float2 random = Hash22(neighborId);
-                        float timeOffset = Hash(neighborId + 300.0) * 20.0;
-                        float particleTime = time * speed + timeOffset;
-                        
-                        float windOffset = Hash(neighborId + 400.0) * _SnowWindVariation;
-                        float windDir = _SnowWindDirection + windOffset;
-                        
-                        float swayPhase = particleTime * _SnowSwaySpeed + random.x * 6.28;
-                        float sway = sin(swayPhase) * _SnowSwayAmount * 0.1;
-                        
-                        float yPos = frac(particleTime);
-                        float xPos = random.x + yPos * windDir + sway;
-                        
-                        float2 particlePos = float2(frac(xPos), yPos);
-                        float2 diff = neighborUv - particlePos;
-                        
-                        float dist = length(diff);
-                        float particleMask = smoothstep(size, size * 0.3, dist);
-                        
-                        result += particleMask;
-                        layerDepth += particleMask * (1.0 - yPos);
-                    }
+                    // Snap the flake's screen position, not the moving cell space.
+                    float2 flakeQ = q - local + flake;
+                    d = floor(q) - floor(flakeQ);
                 }
-                
-                return saturate(result);
+                float2 a = abs(d);
+                float coverage = all(a < 0.5) ? 1 :
+                    large && ((a.x < 1.5 && a.y < 0.5) || (a.x < 0.5 && a.y < 1.5)) ? 0.6 : 0;
+                if (coverage <= 0) return 0;
+                return coverage * (age < 0.08 || age > 0.92 ? 0.5 : 1); // Two-step fade instead of popping.
+            }
+
+            float3 ApplySnow(float3 color, float2 uv)
+            {
+                float2 resolution = RainResolution();
+                float2 q = RainPosition(uv, resolution);
+                float time = _Time.y;
+                bool snap = _SnowSnap > 0.5;
+                // Snow takes the scene's lighting, so it reads blue-grey at night instead of glowing.
+                float brightness = saturate(dot(color, float3(0.299, 0.587, 0.114)) * 2.5);
+                float3 snow = _SnowColor.rgb * lerp(1, brightness, _SnowSceneLit);
+                color = lerp(color, snow, _SnowHaze); // Heavy snow softens the whole scene.
+
+                float near = SnowLayer(q, time, 301u, _SnowDensity, 24, _SnowSpeed, _SnowSway, _SnowNearLarge > 0.5, snap);
+                float mid = SnowLayer(q, time, 401u, _SnowDensity * _SnowMidLayer, 16, _SnowSpeed * 0.7, _SnowSway * 0.7, false, snap);
+                float far = SnowLayer(q, time, 503u, _SnowDensity * _SnowFarLayer, 12, _SnowSpeed * 0.45, _SnowSway * 0.5, false, snap);
+                float opacity = max(near, max(mid * 0.7, far * 0.4)) * _SnowColor.a;
+                return opacity > 0 ? lerp(color, snow, opacity) : color;
             }
 
             // Dust storm rendering
@@ -442,25 +462,13 @@ Shader "Game/UberWeatherShader"
                 float3 sceneColor = col.rgb;
                 float time = _Time.y;
                 
-                // Rain blends against the scene pixel directly, so it is applied before the other layers.
+                // Rain and snow blend against the scene pixel directly, so they are applied before the other layers.
                 if (_RainEnabled > 0.5)
                     col.rgb = ApplyRain(col.rgb, input.texcoord);
+                if (_SnowEnabled > 0.5)
+                    col.rgb = ApplySnow(col.rgb, input.texcoord);
                 
                 float4 weatherColor = float4(0, 0, 0, 0);
-                
-                // Snow rendering
-                if (_SnowEnabled > 0.5)
-                {
-                    float heavyDepth, lightDepth;
-                    float heavy = SnowParticles(uv, time, _SnowHeavyDensity, _SnowHeavySize, _SnowHeavySpeed, heavyDepth);
-                    float light = SnowParticles(uv, time * 1.2, _SnowLightDensity, _SnowLightSize, _SnowLightSpeed, lightDepth);
-                    
-                    weatherColor.rgb += _SnowHeavyColor.rgb * heavy * _SnowHeavyColor.a;
-                    weatherColor.a += heavy * _SnowHeavyColor.a;
-                    
-                    weatherColor.rgb += _SnowLightColor.rgb * light * _SnowLightColor.a;
-                    weatherColor.a += light * _SnowLightColor.a;
-                }
                 
                 // Dust storm rendering
                 if (_DustEnabled > 0.5)

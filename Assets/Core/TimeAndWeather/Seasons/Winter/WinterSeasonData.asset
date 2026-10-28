@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: WinterSeasonData
   m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.SeasonData
   label: Winter
-  index: 3
   season: 3
   daylightColorGradient:
     serializedVersion: 2
@@ -49,3 +48,5 @@ MonoBehaviour:
     items:
     - item: {fileID: 11400000, guid: 3948c96c0d03660448f599782cf068d0, type: 2}
       weight: 1
+    - item: {fileID: 11400000, guid: f264f00764ae8c54195003955b755352, type: 2}
+      weight: 10

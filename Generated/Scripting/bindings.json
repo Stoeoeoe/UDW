@@ -942,8 +942,16 @@
   "resources": {
     "weather": [
       {
+        "id": "HeavySnow",
+        "description": "Heavy Snow"
+      },
+      {
         "id": "LightRainSpring",
         "description": "LightRainSpring"
+      },
+      {
+        "id": "LightSnow",
+        "description": "Light Snow"
       },
       {
         "id": "Sunny",
