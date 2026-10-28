@@ -13,14 +13,19 @@ namespace Core.Dialogue.Vulcanus
     {
         public static VulcanusDialogueRunner Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSession() => Instance = null;
+
         [SerializeField] private VulcanusDialogueDatabase database;
         [SerializeField] private int maxStepsPerRun = 256;
         [SerializeField] private UnityEngine.Object contextResolver;
         [SerializeField] private UnityEngine.Object presenter;
 
-        private Coroutine _activeDialogueRoutine;
-        private VulcanusDialogueExecutionContext _activeContext;
-        private Action _onCompleted;
+        [NonSerialized] private Coroutine _activeDialogueRoutine;
+        // Inline serialization recreates a null Serializable context as an empty object when
+        // entering Play Mode without scene reload. Only RunDialogue may create this live state.
+        [NonSerialized] private VulcanusDialogueExecutionContext _activeContext;
+        [NonSerialized] private Action _onCompleted;
         private readonly VulcanusLuaDialogueScriptEngine _scriptEngine = new(new VulcanusLuaEngine());
 
         private IDialogueContextResolver _contextResolver;

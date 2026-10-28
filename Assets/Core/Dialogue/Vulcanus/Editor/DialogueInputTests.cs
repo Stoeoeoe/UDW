@@ -199,6 +199,25 @@ namespace Core.Dialogue.Vulcanus.Editor
         }
 
         [Test]
+        public void RuntimeDialogueStateIsExcludedFromUnityReloadSerialization()
+        {
+            foreach (var name in new[] { "_activeContext", "_activeDialogueRoutine", "_onCompleted" })
+                Assert.That(typeof(VulcanusDialogueRunner).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
+                    .IsDefined(typeof(NonSerializedAttribute), false), Is.True, name);
+        }
+
+        [Test]
+        public void DisablingAnActiveRunnerClearsItsContextAndAllowsAnotherDialogue()
+        {
+            Start();
+            GameTestFixture.Invoke(_runner, "OnDisable");
+            AssertClosed();
+            Assert.That(Read<Coroutine>(_runner, "_activeDialogueRoutine"), Is.Null);
+            Start();
+            AssertDialogueWaiting(false);
+        }
+
+        [Test]
         public void ScreenTeardownStopsTheRunnerAndReleasesPauses()
         {
             Start();
