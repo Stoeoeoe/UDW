@@ -25,7 +25,7 @@ Source v2 optionally includes `transition` alongside `allowSkip`:
 `{ "enabled": true }`. Omission enables the transition. Vulcanus exposes only
 the per-scene toggle. Global timing lives in the Unity asset
 `Assets/Resources/CutscenePresentation.asset`: Fade Seconds `0.3`, Hold Seconds
-`1.7`, Reveal Seconds `0.12`. These Inspector settings apply to both intro and
+`1.7`, Reveal Seconds `0.3`. These Inspector settings apply to both intro and
 outro for every cutscene; they are not exposed to Lua. Times must be finite and
 nonnegative. Disabling presentation preserves immediate cleanup.
 
@@ -33,7 +33,9 @@ The shared ScreenFader fades to black and reveals the scene by retracting two
 black rectangles toward the top and bottom. Animation uses unscaled time.
 Fullscreen weather visibility follows the same cover and reveal progress:
 weather is hidden during the black hold and restored as the scene opens. Resetting
-an interrupted transition restores normal weather visibility immediately. Control
+an interrupted transition restores normal weather visibility immediately. The
+reveal waits one frame under black after setup so weather/material startup work
+does not consume its animation duration. Control
 is acquired before the entrance. The entrance fades to black and holds; setup runs
 and Started is raised under that cover, then the sequence begins alongside the
 reveal. On normal completion or skip, script progression stops, the exit

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using DG.Tweening;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ namespace Core.Location
         private Material _runtimeMaterial, _originalMaterial;
         private Color _originalColor;
         private Tween _fade;
+        private int _revealGeneration;
         private RectTransform _upperPanel, _lowerPanel;
         private float _progress;
         private Transform _focus;
@@ -73,6 +75,7 @@ namespace Core.Location
 
         private Tween FadeTo(float target, Transform focus)
         {
+            _revealGeneration++;
             Shader.SetGlobalFloat(WeatherCover, 0f);
             RestoreNormalPresentation();
             if (_effect == Effect.Iris)
@@ -126,6 +129,7 @@ namespace Core.Location
         /// <summary>Reveals the scene and releases pointer blocking after a transition finishes or is cancelled.</summary>
         public void ShowSceneImmediately()
         {
+            _revealGeneration++;
             _fade?.Kill();
             Shader.SetGlobalFloat(WeatherCover, 0f);
             RestoreNormalPresentation();
@@ -135,6 +139,7 @@ namespace Core.Location
 
         public Tween CoverCutscene(float duration, float holdSeconds = 0)
         {
+            _revealGeneration++;
             _fade?.Kill();
             RestoreNormalPresentation();
             _image.material = null;
@@ -155,6 +160,7 @@ namespace Core.Location
 
         public Tween RevealCutscene(float duration)
         {
+            var generation = ++_revealGeneration;
             _fade?.Kill();
             if (!_upperPanel)
             {
@@ -176,14 +182,24 @@ namespace Core.Location
                     SetCenterOpening(value);
                     Shader.SetGlobalFloat(WeatherCover, 1f - value);
                 }, 1f, duration)
-                .SetEase(Ease.OutCubic).SetUpdate(true).SetRecyclable(false)
+                .SetEase(Ease.InOutSine).SetUpdate(true).SetRecyclable(false)
                 .OnComplete(() =>
                 {
                     RestoreNormalPresentation();
                     SetProgress(0f);
                     _canvasGroup.blocksRaycasts = false;
-                }).OnKill(() => _fade = null);
+                }).OnKill(() => _fade = null).Pause();
+            StartCoroutine(StartRevealAfterSetupFrame(_fade, generation));
             return _fade;
+        }
+
+        private IEnumerator StartRevealAfterSetupFrame(Tween reveal, int generation)
+        {
+            // Setup can swap weather materials and stall a frame. Let that frame render
+            // under black before starting the reveal clock, rather than consuming its duration.
+            yield return null;
+            if (generation != _revealGeneration || !reveal.IsActive()) yield break;
+            reveal.Play();
         }
 
         private RectTransform CreatePanel(string panelName)
@@ -218,6 +234,7 @@ namespace Core.Location
 
         private void OnDestroy()
         {
+            _revealGeneration++;
             _fade?.Kill();
             Shader.SetGlobalFloat(WeatherCover, 0f);
             if (!_runtimeMaterial) return;

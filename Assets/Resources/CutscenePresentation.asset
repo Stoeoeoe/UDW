@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.CutscenePresentationSettings
   fadeSeconds: 0.3
   holdSeconds: 1.7
-  revealSeconds: 0.12
+  revealSeconds: 0.3

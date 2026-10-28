@@ -10,7 +10,7 @@ namespace Core.Scripting
         public const string ResourceName = "CutscenePresentation";
         [SerializeField, Min(0)] private float fadeSeconds = 0.3f;
         [SerializeField, Min(0)] private float holdSeconds = 1.7f;
-        [SerializeField, Min(0)] private float revealSeconds = 0.12f;
+        [SerializeField, Min(0)] private float revealSeconds = 0.3f;
         public float FadeSeconds => fadeSeconds;
         public float HoldSeconds => holdSeconds;
         public float RevealSeconds => revealSeconds;

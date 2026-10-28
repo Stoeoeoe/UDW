@@ -62,8 +62,8 @@ namespace Core.Location.Editor
             Assert.That(CountBlackPixels(), Is.EqualTo(128 * 64));
             var reveal = _fader.RevealCutscene(1f);
             reveal.Goto(0.2f);
-            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.EqualTo(0.512f).Within(0.01f),
-                "Weather follows the same OutCubic progress as the center opening.");
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.EqualTo(0.9045f).Within(0.01f),
+                "Weather follows the same InOutSine progress as the center opening.");
             var frame = RenderPixels();
             Assert.That(frame[32 * 128 + 64].r, Is.GreaterThan(240), "The center opens first.");
             Assert.That(frame[64].r, Is.LessThan(16), "The bottom remains covered.");
@@ -79,6 +79,50 @@ namespace Core.Location.Editor
             Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.Zero);
             Assert.That(CountBlackPixels(), Is.Zero);
             Assert.That(_group.blocksRaycasts, Is.False);
+        }
+
+        [Test]
+        public void CutsceneRevealOpensGraduallyAtTheAuthoredDuration()
+        {
+            CreateFader(ScreenFader.Effect.Iris, ScreenFader.MosaicOrder.Random);
+            var settings = AssetDatabase.LoadAssetAtPath<Core.Scripting.CutscenePresentationSettings>(
+                "Assets/Resources/CutscenePresentation.asset");
+            _fader.CoverCutscene(0f).Complete();
+            var reveal = _fader.RevealCutscene(settings.RevealSeconds);
+            reveal.Goto(settings.RevealSeconds * 0.25f);
+            Assert.That(reveal.IsComplete(), Is.False);
+            Assert.That(CountBlackPixels(), Is.InRange(128 * 48, 128 * 60),
+                "The first quarter must still show mostly black instead of immediately exposing the scene.");
+            reveal.Goto(settings.RevealSeconds * 0.5f);
+            Assert.That(CountBlackPixels(), Is.EqualTo(128 * 32));
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.EqualTo(0.5f).Within(0.01f));
+            reveal.Complete();
+            Assert.That(CountBlackPixels(), Is.Zero);
+        }
+
+        [Test]
+        public void CutsceneRevealWaitsForTheSetupFrameAndDoesNotResumeAfterCancellation()
+        {
+            CreateFader(ScreenFader.Effect.Iris, ScreenFader.MosaicOrder.Random);
+            var reveal = _fader.RevealCutscene(0.3f);
+            Assert.That(reveal.IsPlaying(), Is.False, "The setup frame must remain covered.");
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var generation = typeof(ScreenFader).GetField("_revealGeneration", flags).GetValue(_fader);
+            var deferred = (System.Collections.IEnumerator)typeof(ScreenFader)
+                .GetMethod("StartRevealAfterSetupFrame", flags).Invoke(_fader, new[] { (object)reveal, generation });
+            Assert.That(deferred.MoveNext(), Is.True);
+            Assert.That(reveal.Elapsed(), Is.Zero);
+            Assert.That(deferred.MoveNext(), Is.False);
+            Assert.That(reveal.IsPlaying(), Is.True);
+
+            var cancelled = _fader.RevealCutscene(0.3f);
+            generation = typeof(ScreenFader).GetField("_revealGeneration", flags).GetValue(_fader);
+            deferred = (System.Collections.IEnumerator)typeof(ScreenFader)
+                .GetMethod("StartRevealAfterSetupFrame", flags).Invoke(_fader, new[] { (object)cancelled, generation });
+            deferred.MoveNext();
+            _fader.ShowSceneImmediately();
+            Assert.That(deferred.MoveNext(), Is.False);
+            Assert.That(CountBlackPixels(), Is.Zero);
         }
 
         [Test]
