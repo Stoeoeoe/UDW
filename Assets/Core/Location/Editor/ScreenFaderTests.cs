@@ -56,23 +56,70 @@ namespace Core.Location.Editor
             var cover = _fader.CoverCutscene(1f);
             cover.Goto(0.5f);
             Assert.That(_group.alpha, Is.EqualTo(0.5f).Within(0.01f));
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.EqualTo(0.5f).Within(0.01f));
             cover.Complete();
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.EqualTo(1f));
             Assert.That(CountBlackPixels(), Is.EqualTo(128 * 64));
             var reveal = _fader.RevealCutscene(1f);
             reveal.Goto(0.2f);
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.EqualTo(0.512f).Within(0.01f),
+                "Weather follows the same OutCubic progress as the center opening.");
             var frame = RenderPixels();
             Assert.That(frame[32 * 128 + 64].r, Is.GreaterThan(240), "The center opens first.");
             Assert.That(frame[64].r, Is.LessThan(16), "The bottom remains covered.");
             Assert.That(frame[63 * 128 + 64].r, Is.LessThan(16), "The top remains covered.");
             reveal.Complete();
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.Zero);
             Assert.That(CountBlackPixels(), Is.Zero);
             Assert.That(_group.blocksRaycasts, Is.False);
             Assert.That(_image.enabled, Is.True);
             Assert.That(_image.material.HasProperty("_Progress"), Is.True);
             _fader.CoverCutscene(1f).Goto(0.5f);
             _fader.ShowSceneImmediately();
+            Assert.That(Shader.GetGlobalFloat("_CutsceneWeatherCover"), Is.Zero);
             Assert.That(CountBlackPixels(), Is.Zero);
             Assert.That(_group.blocksRaycasts, Is.False);
+        }
+
+        [Test]
+        public void WeatherShaderBlendsBackToTheSceneUnderTheCutsceneCover()
+        {
+            var material = new Material(Shader.Find("Game/UberWeatherShader"));
+            var target = new RenderTexture(8, 8, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            var pixels = new Texture2D(8, 8, TextureFormat.RGBAFloat, false, true);
+            var previous = RenderTexture.active;
+            try
+            {
+                material.SetTexture("_BlitTexture", Texture2D.blackTexture);
+                material.SetFloat("_CloudEnabled", 1f);
+                material.SetTexture("_CloudTex", Texture2D.whiteTexture);
+                material.SetFloat("_CloudOpacity", 0.5f);
+                material.SetFloat("_CloudDistortStrength", 0f);
+                material.SetColor("_CloudColor", Color.white);
+                target.Create();
+                foreach (var cover in new[] { 0f, 0.5f, 1f })
+                {
+                    Shader.SetGlobalFloat("_CutsceneWeatherCover", cover);
+                    using var commands = new UnityEngine.Rendering.CommandBuffer();
+                    commands.SetRenderTarget(target);
+                    commands.ClearRenderTarget(false, true, Color.black);
+                    commands.DrawProcedural(Matrix4x4.identity, material, 0, MeshTopology.Triangles, 3);
+                    Graphics.ExecuteCommandBuffer(commands);
+                    RenderTexture.active = target;
+                    pixels.ReadPixels(new Rect(0, 0, 8, 8), 0, 0);
+                    pixels.Apply();
+                    Assert.That(pixels.GetPixel(4, 4).r, Is.EqualTo(0.25f * (1f - cover)).Within(0.01f));
+                }
+            }
+            finally
+            {
+                Shader.SetGlobalFloat("_CutsceneWeatherCover", 0f);
+                RenderTexture.active = previous;
+                target.Release();
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(pixels);
+                Object.DestroyImmediate(material);
+            }
         }
 
         [Test]

@@ -106,6 +106,9 @@ Shader "Game/UberWeatherShader"
 
             TEXTURE2D_X(_BlitTexture);
             SAMPLER(sampler_BlitTexture);
+            // Global presentation value: weather changes under a cutscene cover stay hidden.
+            // Zero is normal weather, so scenes without a cutscene need no initialization.
+            float _CutsceneWeatherCover;
             
             TEXTURE2D(_NoiseTex);
             SAMPLER(sampler_NoiseTex);
@@ -436,6 +439,7 @@ Shader "Game/UberWeatherShader"
                 
                 float2 uv = PixelSnap(input.texcoord);
                 float4 col = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, input.texcoord);
+                float3 sceneColor = col.rgb;
                 float time = _Time.y;
                 
                 // Rain blends against the scene pixel directly, so it is applied before the other layers.
@@ -477,6 +481,7 @@ Shader "Game/UberWeatherShader"
                 // Blend weather effects
                 weatherColor.a = saturate(weatherColor.a);
                 col.rgb = lerp(col.rgb, weatherColor.rgb, weatherColor.a);
+                col.rgb = lerp(col.rgb, sceneColor, _CutsceneWeatherCover);
                 
                 return col;
             }

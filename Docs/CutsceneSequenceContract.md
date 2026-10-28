@@ -30,7 +30,10 @@ outro for every cutscene; they are not exposed to Lua. Times must be finite and
 nonnegative. Disabling presentation preserves immediate cleanup.
 
 The shared ScreenFader fades to black and reveals the scene by retracting two
-black rectangles toward the top and bottom. Animation uses unscaled time. Control
+black rectangles toward the top and bottom. Animation uses unscaled time.
+Fullscreen weather visibility follows the same cover and reveal progress:
+weather is hidden during the black hold and restored as the scene opens. Resetting
+an interrupted transition restores normal weather visibility immediately. Control
 is acquired before the entrance. The entrance fades to black and holds; setup runs
 and Started is raised under that cover, then the sequence begins alongside the
 reveal. On normal completion or skip, script progression stops, the exit

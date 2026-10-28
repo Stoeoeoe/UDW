@@ -37,6 +37,7 @@ namespace Core.Location
         private static readonly int Center = Shader.PropertyToID("_Center");
         private static readonly int Mask = Shader.PropertyToID("_MaskTex");
         private static readonly int UseMask = Shader.PropertyToID("_UseMask");
+        private static readonly int WeatherCover = Shader.PropertyToID("_CutsceneWeatherCover");
 
         private void Awake()
         {
@@ -44,6 +45,7 @@ namespace Core.Location
             _image = GetComponent<UnityEngine.UI.Image>();
             _originalMaterial = _image.material;
             _originalColor = _image.color;
+            Shader.SetGlobalFloat(WeatherCover, 0f);
             if (_effect != Effect.Opacity)
             {
                 if (!_wipeMaterial || !_wipeMaterial.HasProperty(Progress) || !_wipeMaterial.HasProperty(Style))
@@ -71,6 +73,7 @@ namespace Core.Location
 
         private Tween FadeTo(float target, Transform focus)
         {
+            Shader.SetGlobalFloat(WeatherCover, 0f);
             RestoreNormalPresentation();
             if (_effect == Effect.Iris)
             {
@@ -124,6 +127,7 @@ namespace Core.Location
         public void ShowSceneImmediately()
         {
             _fade?.Kill();
+            Shader.SetGlobalFloat(WeatherCover, 0f);
             RestoreNormalPresentation();
             SetProgress(0f);
             _canvasGroup.blocksRaycasts = false;
@@ -135,12 +139,18 @@ namespace Core.Location
             RestoreNormalPresentation();
             _image.material = null;
             _image.color = Color.black;
-            _canvasGroup.alpha = 0f;
+            SetCutsceneCover(0f);
             _canvasGroup.blocksRaycasts = true;
-            _fade = DOTween.Sequence().Append(_canvasGroup.DOFade(1f, duration).SetEase(Ease.Linear))
+            _fade = DOTween.Sequence().Append(DOTween.To(() => _canvasGroup.alpha, SetCutsceneCover, 1f, duration).SetEase(Ease.Linear))
                 .AppendInterval(holdSeconds).SetUpdate(true)
                 .SetRecyclable(false).OnKill(() => _fade = null);
             return _fade;
+        }
+
+        private void SetCutsceneCover(float coverage)
+        {
+            _canvasGroup.alpha = coverage;
+            Shader.SetGlobalFloat(WeatherCover, coverage);
         }
 
         public Tween RevealCutscene(float duration)
@@ -159,7 +169,13 @@ namespace Core.Location
             _canvasGroup.blocksRaycasts = true;
             SetCenterOpening(0f);
             var opening = 0f;
-            _fade = DOTween.To(() => opening, value => { opening = value; SetCenterOpening(value); }, 1f, duration)
+            Shader.SetGlobalFloat(WeatherCover, 1f);
+            _fade = DOTween.To(() => opening, value =>
+                {
+                    opening = value;
+                    SetCenterOpening(value);
+                    Shader.SetGlobalFloat(WeatherCover, 1f - value);
+                }, 1f, duration)
                 .SetEase(Ease.OutCubic).SetUpdate(true).SetRecyclable(false)
                 .OnComplete(() =>
                 {
@@ -203,6 +219,7 @@ namespace Core.Location
         private void OnDestroy()
         {
             _fade?.Kill();
+            Shader.SetGlobalFloat(WeatherCover, 0f);
             if (!_runtimeMaterial) return;
             _image.material = _originalMaterial;
             if (Application.isPlaying) Destroy(_runtimeMaterial);
