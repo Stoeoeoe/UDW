@@ -90,7 +90,7 @@ namespace Core.Scripting
             _player.OnConditionStateChanged += OnPlayerConditionChanged;
             _player.SetControlBlocked(run, true);
             foreach (var placement in placements) placement.Character.SetControlBlocked(run, true);
-            _gui.SetCutsceneActive(true);
+            _gui.SetCutsceneActive(true, _presentation.FadeSeconds);
             try
             {
                 if (definition.Transition.Enabled)
@@ -263,7 +263,7 @@ namespace Core.Scripting
                     _player.SetControlBlocked(run, false);
                 }
                 _player = null;
-                _gui.SetCutsceneActive(false);
+                _gui.SetCutsceneActive(false, _presentation.RevealSeconds);
                 ActiveRun = null;
             }
             // Completion actions, placements and ownership are settled before listeners can start another scene or save.

@@ -16,6 +16,7 @@ namespace UI.Shared
 {
     /// <summary>Manages modal screen order, pause requests, input routing, shared UI sounds, and screen transitions.</summary>
     [DefaultExecutionOrder(200)]
+    [RequireComponent(typeof(UIDocument))]
     public sealed class UrGUIManager : Singleton<UrGUIManager>, ILocationLifecycle, IEventListener<MainCharacterChangedEvent>,
         IEventListener<DayTransitionStarted>
     {
@@ -44,7 +45,10 @@ namespace UI.Shared
         [SerializeField] private UISoundProfile soundProfile;
         [Header("Screen transitions")]
         [SerializeField] private ScreenFader screenFader;
+        [SerializeField] private CanvasGroup toolHud;
         private Tween _transitionTween;
+        private VisualElement _hudRoot;
+        private Tween _hudTween;
 
         /// <summary>Raised when disabling the GUI interrupts presentation; sequence owners cancel their own work.</summary>
         public event Action TransitionInterrupted;
@@ -59,11 +63,24 @@ namespace UI.Shared
         public static bool IsGameClockPaused => Instance != null && (Instance._clockPauses > 0 || Instance._cutsceneActive);
         public static bool IsWorldInteractionBlocked => HasOpenScreens || (Instance != null && Instance._cutsceneActive);
 
-        internal void SetCutsceneActive(bool active)
+        internal void SetCutsceneActive(bool active, float hudFadeSeconds)
         {
             _cutsceneActive = active;
+            _hudTween?.Kill();
+            _hudTween = null;
+            toolHud.interactable = toolHud.blocksRaycasts = !active;
+            if (hudFadeSeconds == 0) SetHudOpacity(active ? 0 : 1);
+            else _hudTween = DOTween.To(() => _hudRoot.style.opacity.value,
+                SetHudOpacity, active ? 0f : 1f, hudFadeSeconds)
+                .SetEase(Ease.Linear).SetUpdate(true);
             Input.InputManager.Instance.SetCutsceneActive(active);
             PlayerInteractionContext.Instance.Refresh();
+        }
+
+        private void SetHudOpacity(float opacity)
+        {
+            _hudRoot.style.opacity = opacity;
+            toolHud.alpha = opacity;
         }
 
         /// <summary>Whether an open screen currently pauses <paramref name="character"/>.</summary>
@@ -103,6 +120,10 @@ namespace UI.Shared
         private void Start()
         {
             if (!screenFader) throw new InvalidOperationException("UrGUIManager requires the shared screen fader.");
+            if (!toolHud) throw new InvalidOperationException("UrGUIManager requires the hotbar CanvasGroup.");
+            _hudRoot = GetComponent<UIDocument>().rootVisualElement.Q("gameHud")
+                ?? throw new InvalidOperationException("UrGUIManager requires the gameHud root in its UI document.");
+            SetHudOpacity(1);
             LevelManager.Instance?.RegisterLifecycle(this);
         }
 
@@ -113,6 +134,15 @@ namespace UI.Shared
                 ResetTransition();
             }
             TransitionInterrupted?.Invoke();
+            // Cancellation can start the HUD reveal; disabling the UI must settle it immediately.
+            _hudTween?.Kill();
+            _hudTween = null;
+            if (_hudRoot != null) _hudRoot.style.opacity = 1; // Start may not have bound the document yet.
+            if (toolHud)
+            {
+                toolHud.alpha = 1;
+                toolHud.interactable = toolHud.blocksRaycasts = true;
+            }
             this.Unsubscribe<MainCharacterChangedEvent>();
             this.Unsubscribe<DayTransitionStarted>();
             BindMainCharacter(null);

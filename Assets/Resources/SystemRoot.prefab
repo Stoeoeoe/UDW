@@ -2244,6 +2244,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI.Shared.UrGUIManager
   soundProfile: {fileID: 11400000, guid: 812a529a441725f48a097bbdb6a486b5, type: 2}
   screenFader: {fileID: 2128117698243013595}
+  toolHud: {fileID: 4483257637322867157}
 --- !u!114 &7410992665882482011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5208,6 +5209,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6678626574949450734}
   - component: {fileID: 767203499729818063}
+  - component: {fileID: 4483257637322867157}
   m_Layer: 5
   m_Name: ToolHotbar
   m_TagString: Untagged
@@ -5400,6 +5402,18 @@ MonoBehaviour:
       m_Priority: 0
     m_Reference: {fileID: 8120979195390053775, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   CurrentSelectedIndex: 0
+--- !u!225 &4483257637322867157
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141353305816355557}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &2171465066524942084
 GameObject:
   m_ObjectHideFlags: 0

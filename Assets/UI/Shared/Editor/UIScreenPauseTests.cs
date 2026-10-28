@@ -386,6 +386,12 @@ namespace UI.Shared.Editor
             Invoke(fader, "Awake");
             typeof(UrGUIManager).GetField("screenFader", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_manager, fader);
+            _manager.GetComponent<UnityEngine.UIElements.UIDocument>().rootVisualElement.Add(
+                new UnityEngine.UIElements.VisualElement { name = "gameHud" });
+            var hotbar = new GameObject("Required hotbar", typeof(CanvasGroup));
+            hotbar.transform.SetParent(_root.transform);
+            typeof(UrGUIManager).GetField("toolHud", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(_manager, hotbar.GetComponent<CanvasGroup>());
             Assert.That(LevelManager.Instance, Is.Null);
             Invoke(_manager, "OnEnable");
             using var services = new Core.Common.Editor.GameTestFixture("Late location manager");

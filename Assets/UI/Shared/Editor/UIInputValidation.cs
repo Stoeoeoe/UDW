@@ -34,6 +34,7 @@ namespace UI.Shared.Editor
             var module = root ? root.GetComponentInChildren<InputSystemUIInputModule>(true) : null;
             if (!module) throw new BuildFailedException("SystemRoot is missing its UI input module.");
             var errors = Check(module);
+            errors.AddRange(CutsceneHudSetup.Validate(root));
             if (errors.Count > 0) throw new BuildFailedException(string.Join("\n", errors));
         }
         [MenuItem("Tools/UI/Validate Input Wiring")]
