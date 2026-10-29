@@ -57,14 +57,22 @@ namespace Core.Scripting
         {
             if (string.IsNullOrWhiteSpace(expression)) return true;
 
+            return EvaluateValue(expression).CastToBool();
+        }
+
+        /// <summary>Evaluates a graph's pure expression against the read-only API and current locals.</summary>
+        public DynValue EvaluateValue(string expression)
+        {
+            if (string.IsNullOrWhiteSpace(expression)) throw new ArgumentException("Enter a pure expression.", nameof(expression));
+
             if (!_conditions.TryGetValue(expression, out var function))
             {
                 _conditionScript ??= CreateScript(false);
-                function = _conditionScript.LoadString("return " + expression);
+                function = _conditionScript.LoadString("return (" + expression + "\n)");
                 _conditions[expression] = function;
             }
 
-            return Run(_conditionScript, function).CastToBool();
+            return Run(_conditionScript, function);
         }
 
         /// <summary>Executes a writable chunk in a fresh, non-persistent Lua environment.</summary>
@@ -73,6 +81,23 @@ namespace Core.Scripting
             if (string.IsNullOrWhiteSpace(luaChunk)) return;
             var script = CreateScript(true);
             Run(script, script.LoadString(luaChunk));
+        }
+
+        internal DynValue ExecuteValues(string luaChunk)
+        {
+            if (string.IsNullOrWhiteSpace(luaChunk)) throw new ArgumentException("Enter a Lua script.", nameof(luaChunk));
+            var script = CreateScript(true);
+            return Run(script, script.LoadString(luaChunk));
+        }
+
+        internal DynValue CallReadOnly(string path, DynValue[] arguments)
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(path, @"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$"))
+                throw new ArgumentException("A declared Lua function path is required.", nameof(path));
+            _conditionScript ??= CreateScript(false);
+            var code = "return " + path + "(...)";
+            if (!_conditions.TryGetValue(code, out var function)) _conditions[code] = function = _conditionScript.LoadString(code);
+            return Run(_conditionScript, function, arguments.Select(v => LuaValues.Copy(v, _conditionScript)).ToArray());
         }
 
         private Script CreateScript(bool allowWrites)
@@ -84,13 +109,13 @@ namespace Core.Scripting
             return script;
         }
 
-        private static DynValue Run(Script script, DynValue function)
+        private static DynValue Run(Script script, DynValue function, params DynValue[] arguments)
         {
             var routine = script.CreateCoroutine(function).Coroutine;
             routine.AutoYieldCounter = InstructionsPerSlice;
             for (var slice = 0; slice < MaxSlices; slice++)
             {
-                var result = routine.Resume();
+                var result = slice == 0 ? routine.Resume(arguments) : routine.Resume();
                 if (result.Type != DataType.YieldRequest) return result;
             }
 

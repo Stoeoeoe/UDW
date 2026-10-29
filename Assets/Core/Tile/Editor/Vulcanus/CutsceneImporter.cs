@@ -41,10 +41,18 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
             var variables = CutsceneSequenceCompiler.ReadVariables((JArray)source["variables"] ?? new JArray(), path);
-            var setup = CutsceneSequenceCompiler.Compile((JArray)source["onStart"] ?? new JArray(), path, out var setupSteps, "setup", ids, variables: variables);
-            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path, out var steps, "sequence", ids, variables: variables);
-            var completionLua = CutsceneSequenceCompiler.Compile((JArray)source["onComplete"]["steps"] ?? new JArray(),
-                path, out var completionSteps, "completion", ids, variables: variables);
+            string CompilePhase(string key, string phase, JArray list, out CutsceneStep[] phaseSteps)
+            {
+                if (source["graphs"]?[key] is JObject graph)
+                {
+                    if (list.Count != 0) throw new FormatException($"{path}: a graph and list cannot both own {key}.");
+                    return CutsceneGraphCompiler.Compile(graph, path, phase, ids, variables, out phaseSteps);
+                }
+                return CutsceneSequenceCompiler.Compile(list, path, out phaseSteps, phase, ids, variables: variables);
+            }
+            var setup = CompilePhase("onStart", "setup", (JArray)source["onStart"] ?? new JArray(), out var setupSteps);
+            var compiled = CompilePhase("sequence", "sequence", (JArray)source["sequence"], out var steps);
+            var completionLua = CompilePhase("completion", "completion", (JArray)source["onComplete"]["steps"] ?? new JArray(), out var completionSteps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             try
             {

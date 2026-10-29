@@ -15,7 +15,7 @@ namespace Core.Scripting.Editor
 
         public static string Compile(JArray sequence, string source, out CutsceneStep[] steps,
             string phase = "sequence", ISet<string> usedIds = null, bool path = false, bool trackSteps = false,
-            IReadOnlyList<CutsceneVariableDefinition> variables = null)
+            IReadOnlyList<CutsceneVariableDefinition> variables = null, Func<string, string> transformCall = null)
         {
             if (sequence == null) throw new ArgumentNullException(nameof(sequence));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
@@ -243,6 +243,7 @@ namespace Core.Scripting.Editor
                 }
                 if (links.Count > 0) lua.Append("__cutsceneDynamic();\n");
                 var call = action.Module + "." + action.Method.name + "(" + string.Join(", ", literals) + ")";
+                if (transformCall != null) call = transformCall(call);
                 if (step["resultVariables"] is JArray destinations)
                 {
                     var outputs = action.Method.outputs ?? Array.Empty<LuaOutputDescription>();
@@ -301,7 +302,7 @@ namespace Core.Scripting.Editor
         private static string PositionLiteral(MapPosition position) => position.IsAnchor ? $"{{ anchor = {LuaString(position.Anchor)} }}" :
             $"{{ x = {position.X.ToString("R", CultureInfo.InvariantCulture)}, y = {position.Y.ToString("R", CultureInfo.InvariantCulture)} }}";
 
-        private static string JsonLiteral(JToken token) => token switch
+        internal static string JsonLiteral(JToken token) => token switch
         {
             JObject obj => "{" + string.Join(",", obj.Properties().Select(property => "[" + LuaString(property.Name) + "]=" + JsonLiteral(property.Value))) + "}",
             JArray array => "{" + string.Join(",", array.Select(JsonLiteral)) + "}",
@@ -350,7 +351,7 @@ namespace Core.Scripting.Editor
                 if (!names.Contains(field.Name)) throw Invalid(location, $"Unknown field '{field.Name}'.");
         }
 
-        private static string LuaString(string value)
+        internal static string LuaString(string value)
         {
             var result = new StringBuilder("\"");
             foreach (var character in value)

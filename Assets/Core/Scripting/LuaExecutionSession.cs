@@ -48,6 +48,32 @@ namespace Core.Scripting
             VulcanusLuaEngine conditions = null;
             script.Globals.Set("__cutsceneCondition", DynValue.NewCallback((_, args) =>
                 DynValue.NewBoolean((conditions ??= new VulcanusLuaEngine(variables)).EvaluateCondition(args[0].String))));
+            script.Globals.Set("__cutsceneValue", DynValue.NewCallback((_, args) =>
+            {
+                var value = (conditions ??= new VulcanusLuaEngine(variables)).EvaluateValue(args[0].String);
+                LuaValues.RequireType(value, args[1].String, args[2].CastToBool());
+                return LuaValues.Copy(value, script);
+            }));
+            script.Globals.Set("__cutsceneLua", DynValue.NewCallback((_, args) =>
+            {
+                var value = new VulcanusLuaEngine(variables).ExecuteValues(args[0].String);
+                var count = value.Type == DataType.Void ? 0 : value.Type == DataType.Tuple ? value.Tuple.Length : 1;
+                if (count != (int)args[1].Number) throw new InvalidOperationException("Lua node returned a different number of values than its declared outputs.");
+                return value.Type == DataType.Tuple
+                    ? DynValue.NewTuple(value.Tuple.Select(v => LuaValues.Copy(v, script)).ToArray())
+                    : LuaValues.Copy(value, script);
+            }));
+            script.Globals.Set("__cutscenePure", DynValue.NewCallback((_, args) =>
+            {
+                var arguments = Enumerable.Range(1, (int)args[2].Number).Select(i => args[1].Table.Get(i)).ToArray();
+                var value = (conditions ??= new VulcanusLuaEngine(variables)).CallReadOnly(args[0].String, arguments);
+                return value.Type == DataType.Tuple ? DynValue.NewTuple(value.Tuple.Select(v => LuaValues.Copy(v, script)).ToArray()) : LuaValues.Copy(value, script);
+            }));
+            script.Globals.Set("__cutsceneCheck", DynValue.NewCallback((_, args) =>
+            {
+                LuaValues.RequireType(args[0], args[1].String, args[2].CastToBool());
+                return args[0];
+            }));
             script.Globals.Set("__cutsceneStep", DynValue.NewCallback((_, args) =>
             {
                 _executing.CurrentStepId = args[0].String;

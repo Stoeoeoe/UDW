@@ -21,6 +21,27 @@ namespace Core.Tile.Editor.Vulcanus
         private string _folder;
 
         [Test]
+        public void GraphSourceImportsThroughTheSharedSchemaAndRejectsADuplicateList()
+        {
+            var source = Source("test:graph-source");
+            source["sequence"] = new JArray();
+            source["graphs"] = JObject.Parse(@"{ sequence: {
+                nodes: [
+                    { id:'entry', kind:'entry', position:{x:0,y:0} },
+                    { id:'wait', kind:'action', position:{x:300,y:0}, step:{id:'wait',action:'cutscene.wait',arguments:{seconds:0.25}} },
+                    { id:'exit', kind:'exit', position:{x:600,y:0} }
+                ], edges: [
+                    {id:'begin',source:'entry',sourcePin:'next',target:'wait',targetPin:'in',kind:'execution'},
+                    {id:'end',source:'wait',sourcePin:'next',target:'exit',targetPin:'in',kind:'execution'}
+                ] } }");
+            var definition = Parse(source);
+            try { Assert.That(definition.Steps.Single().Id, Is.EqualTo("wait")); Assert.That(definition.Lua, Does.Contain("Cutscene.Wait(0.25)")); }
+            finally { Object.DestroyImmediate(definition); }
+            source["sequence"] = new JArray(new JObject { ["id"] = "stale", ["action"] = "cutscene.wait", ["arguments"] = new JObject { ["seconds"] = 1 } });
+            Assert.That(() => Parse(source), Throws.Exception);
+        }
+
+        [Test]
         public void VariablesAndParameterLinksSurviveImportAndUnitySerialization()
         {
             var source = Source("test:variables");
