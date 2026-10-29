@@ -28,30 +28,55 @@ namespace Core.Scripting
         private const int InstructionsPerFrame = 1000;
         private const int MaxInstructionSlices = 128;
         private readonly Track _root;
+        private readonly Script _script;
         private Track _executing;
         public bool IsRunning => _root.IsRunning;
         public string Source { get; }
         public int ActionsStarted { get; private set; }
         public string CurrentStepId => _root.CurrentStepId;
 
-        internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context, string phase)
+        internal LuaExecutionSession(LuaBindingRegistry bindings, string chunk, string source, string context, string phase, CutsceneVariables variables = null)
         {
             if (string.IsNullOrWhiteSpace(chunk)) throw new ArgumentException("Lua source is required.", nameof(chunk));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
             Source = source;
+            variables ??= new CutsceneVariables(Array.Empty<CutsceneVariableDefinition>());
             var script = new Script(CoreModules.Preset_HardSandbox);
+            _script = script;
             // Conditions run in the same read-only, instruction-budgeted API used by dialogue.
             // A separate environment prevents expressions from calling actions or writable bindings.
             VulcanusLuaEngine conditions = null;
             script.Globals.Set("__cutsceneCondition", DynValue.NewCallback((_, args) =>
-                DynValue.NewBoolean((conditions ??= new VulcanusLuaEngine()).EvaluateCondition(args[0].String))));
+                DynValue.NewBoolean((conditions ??= new VulcanusLuaEngine(variables)).EvaluateCondition(args[0].String))));
             script.Globals.Set("__cutsceneStep", DynValue.NewCallback((_, args) =>
             {
                 _executing.CurrentStepId = args[0].String;
                 return DynValue.Nil;
             }));
             // Give this script only the actions allowed in its context, e.g. "cutscene".
-            bindings.BindActions(script, context, phase, Await, () => ActionsStarted++);
+            bindings.BindActions(script, context, phase, Await, () => ActionsStarted++, (method, values) =>
+            {
+                if (method.Api is CutsceneLuaApi cutscene) cutscene.Variables = variables;
+                _executing.Group?.Claim(_executing, method, values);
+                if (!_executing.DynamicNext && !bindings.ValidateAllActions) return;
+                _executing.DynamicNext = false;
+                if (method.Validator != null) LuaBindingRegistry.InvokeReflected(method.Validator, method.Api, values);
+                bindings.DynamicActionBound?.Invoke(method, values);
+            });
+            variables.Bind(script, true);
+            script.Globals.Set("__cutsceneDynamic", DynValue.NewCallback((_, _) => { _executing.DynamicNext = true; return DynValue.Nil; }));
+            script.Globals.Set("__cutsceneAssign", DynValue.NewCallback((_, args) =>
+            {
+                var names = Enumerable.Range(1, args[0].Table.Length).Select(index =>
+                {
+                    var destination = args[0].Table.Get(index);
+                    if (destination.Type == DataType.String) return destination.String;
+                    if (destination.Type == DataType.Boolean && !destination.Boolean) return null;
+                    throw new InvalidOperationException("A result destination must be a variable name or false to discard it.");
+                }).ToArray();
+                variables.Assign(names, Enumerable.Range(1, args.Count - 1).Select(index => args[index]).ToArray());
+                return DynValue.Nil;
+            }));
             if (context == "cutscene" && phase == "sequence")
                 script.Globals.Set("__cutsceneParallel", DynValue.NewCallback((_, args) =>
                 {
@@ -106,6 +131,8 @@ namespace Core.Scripting
             private int _slices;
             public ILuaAction Pending;
             public string CurrentStepId;
+            public bool DynamicNext;
+            public ParallelAction Group;
             public bool IsRunning { get; private set; } = true;
             public bool IsCompleted => !IsRunning;
 
@@ -127,27 +154,35 @@ namespace Core.Scripting
                         Pending.Tick(deltaTime);
                         if (!Pending.IsCompleted) return;
                         var completed = Pending;
+                        var outputs = completed is ILuaResultAction result
+                            ? result.Results.Values.Select(value => LuaValues.Copy(value, _owner._script)).ToArray() : Array.Empty<DynValue>();
                         Pending = null;
                         completed.Dispose();
                         _slices = 0;
+                        Resume(outputs);
+                        return;
                     }
-                    var previous = _owner._executing;
-                    _owner._executing = this;
-                    try { _routine.Resume(); }
-                    finally { _owner._executing = previous; }
-                    if (_routine.State == CoroutineState.Dead) { Dispose(); return; }
-                    if (Pending == null && _routine.State != CoroutineState.ForceSuspended)
-                        throw new InvalidOperationException("Unexpected Lua suspension.");
-                    if (Pending == null && ++_slices >= MaxInstructionSlices)
-                        throw new InvalidOperationException("Lua script exceeded its instruction budget.");
-                    // Start all children in this frame, after the parent's Resume has returned.
-                    // They receive no time from before their actions started.
-                    if (Pending is ParallelAction parallel) parallel.Tick(0);
+                    Resume(Array.Empty<DynValue>());
                 }
                 catch (Exception error)
                 {
                     throw new InvalidOperationException($"{_description}, step '{CurrentStepId}': {error.Message}", error);
                 }
+            }
+            private void Resume(DynValue[] outputs)
+            {
+                var previous = _owner._executing;
+                _owner._executing = this;
+                try { _routine.Resume(outputs); }
+                finally { _owner._executing = previous; }
+                if (_routine.State == CoroutineState.Dead) { Dispose(); return; }
+                if (Pending == null && _routine.State != CoroutineState.ForceSuspended)
+                    throw new InvalidOperationException("Unexpected Lua suspension.");
+                if (Pending == null && ++_slices >= MaxInstructionSlices)
+                    throw new InvalidOperationException("Lua script exceeded its instruction budget.");
+                // Start all children in this frame, after the parent's Resume has returned.
+                // They receive no time from before their actions started.
+                if (Pending is ParallelAction parallel) parallel.Tick(0);
             }
 
             public void Dispose()
@@ -162,7 +197,25 @@ namespace Core.Scripting
         private sealed class ParallelAction : ILuaAction
         {
             private readonly Track[] _tracks;
-            public ParallelAction(Track[] tracks) => _tracks = tracks;
+            private readonly System.Collections.Generic.Dictionary<string, Track> _claims = new(StringComparer.Ordinal);
+            public ParallelAction(Track[] tracks) { _tracks = tracks; foreach (var track in tracks) track.Group = this; }
+            public void Claim(Track track, LuaBindingRegistry.Method method, object[] values)
+            {
+                var resources = method.Parameters.Select((parameter, index) => (parameter, value: values[index]))
+                    .Where(pair => pair.parameter.Name == "character" && pair.parameter.GetCustomAttributes(typeof(LuaReferenceAttribute), false)
+                        .Cast<LuaReferenceAttribute>().Any(attribute => attribute.Type == "characterRef"))
+                    .Select(pair => "character:" + pair.value)
+                    .Concat(method.Action.Id == "dialogue.play" ? new[] { "dialogue" } : Array.Empty<string>())
+                    .Concat(method.Action.Id.StartsWith("story.", StringComparison.Ordinal)
+                        ? method.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Name == "key")
+                            .Select(pair => "story:" + values[pair.index]) : Array.Empty<string>());
+                foreach (var resource in resources)
+                {
+                    if (_claims.TryGetValue(resource, out var owner) && owner != track)
+                        throw new InvalidOperationException($"Parallel tracks conflict on '{resource}'.");
+                    _claims[resource] = track;
+                }
+            }
             public bool IsCompleted => _tracks.All(track => track.IsCompleted);
             public void Tick(float deltaTime)
             {

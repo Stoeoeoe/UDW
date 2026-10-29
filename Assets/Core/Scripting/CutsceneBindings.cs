@@ -78,7 +78,9 @@ namespace Core.Scripting
                 .Where(method => method.Action.Contexts.Contains(context))
                 .ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
             var instances = new Dictionary<Type, object>();
-            foreach (var (phase, step) in steps)
+            var authored = steps.ToArray();
+            var dynamicSpawns = authored.Any(entry => entry.Step.ActionId == "characters.spawn" && entry.Step.Arguments.Any(argument => argument.IsVariable));
+            foreach (var (phase, step) in authored)
             {
                 if (step.IsControl) continue; // The compiler owns control-flow nodes, not an API module.
                 try
@@ -86,7 +88,34 @@ namespace Core.Scripting
                     var method = actions[step.ActionId];
                     if (!method.Action.Phases.Contains(phase))
                         throw new InvalidOperationException($"Action '{step.ActionId}' is not allowed in phase '{phase}'.");
-                    // Imported arguments already match this signature. Only arrange them for reflection.
+                    var type = method.Info.DeclaringType;
+                    if (!instances.TryGetValue(type, out var api))
+                    {
+                        api = factories.Single(factory => factory.Type == type).Create();
+                        instances.Add(type, api);
+                    }
+                    // Computed inputs bind at invocation; a dynamic spawn also declares its roles then.
+                    if (step.Arguments.Any(argument => argument.IsVariable) || dynamicSpawns && type == typeof(MapActorLuaApi))
+                    {
+                        if (api is MapActorLuaApi actors && !dynamicSpawns)
+                            foreach (var parameter in method.Parameters)
+                            {
+                                var literal = step.Arguments.Single(argument => argument.Name == parameter.Name);
+                                if (literal.IsVariable) continue;
+                                var reference = parameter.GetCustomAttributes(typeof(LuaReferenceAttribute), false).Cast<LuaReferenceAttribute>().SingleOrDefault();
+                                if (reference?.Type == "characterRef") actors.RequireKnownActor(literal.Value);
+                                if (reference?.Type == "anchorRef") actors.ResolveAnchor(literal.Value);
+                                if (parameter.ParameterType == typeof(MapPosition)) actors.ResolvePosition(literal.Position);
+                                if (parameter.ParameterType == typeof(MapPath)) foreach (var point in literal.Path.Points) actors.ResolvePosition(point);
+                            }
+                        if (api is AudioLuaApi audio)
+                        {
+                            var sound = step.Arguments.Single(argument => argument.Name == "sound");
+                            if (!sound.IsVariable) audio.ValidateSound(sound.Value, null);
+                        }
+                        continue;
+                    }
+                    // Imported literal arguments already match this signature.
                     var arguments = method.Parameters.Select(parameter =>
                     {
                         if (parameter.IsOptional && !step.Arguments.Any(argument => argument.Name == parameter.Name))
@@ -101,12 +130,6 @@ namespace Core.Scripting
                         if (parameter.ParameterType == typeof(MapPath)) return argument.Path;
                         throw new InvalidOperationException($"Unsupported sequence parameter type '{parameter.ParameterType}'.");
                     }).ToArray();
-                    var type = method.Info.DeclaringType;
-                    if (!instances.TryGetValue(type, out var api))
-                    {
-                        api = factories.Single(factory => factory.Type == type).Create();
-                        instances.Add(type, api);
-                    }
                     // Only the check runs here. The action itself is called later by Lua.
                     if (method.Validator != null)
                         LuaBindingRegistry.InvokeReflected(method.Validator, api, arguments);
@@ -116,7 +139,7 @@ namespace Core.Scripting
                     throw new InvalidOperationException($"{phase}, step '{step.Id}' ({step.ActionId}): {error.Message}", error);
                 }
             }
-            return new LuaBindingRegistry(instances.Values.ToArray());
+            return new LuaBindingRegistry(instances.Values.ToArray()) { ValidateAllActions = dynamicSpawns };
         }
 
     }

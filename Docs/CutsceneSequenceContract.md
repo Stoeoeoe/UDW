@@ -1,5 +1,76 @@
 # Cutscene steps
 
+## Per-run variables and action outputs
+
+Source v2 optionally declares `variables`, for example:
+
+```json
+"variables": [
+  { "name": "delay", "type": "number", "initialValue": 0.5 },
+  { "name": "removed", "type": "boolean", "initialValue": false }
+]
+```
+
+Names are unique identifiers. Supported types are boolean, number, string,
+position, path, table and storyValue. Numbers must be finite. Position/path use
+the normal map-pixel/anchor structures. storyValue uses the existing typed story
+data contract; table additionally permits JSON arrays. `nullable: true` permits
+nil and an explicit null initial value. Every declaration requires an initial
+value, including nullable declarations. Variables are transient, initialized for
+each run, shared across its phases and tracks, and never part of the save root.
+Skipping retains the values reached so far; completion cannot assume skipped
+sequence steps ran, so initial values matter.
+
+Any action parameter can use `argumentVariables: { "seconds": "delay" }` instead
+of a literal in `arguments`. A parameter cannot have both. The declared type must
+fit its signature (a nullable source requires a nullable parameter). Resource and
+character IDs remain strings and retain their normal reference checks. The
+compiler checks declarations and static inputs. Computed inputs are validated
+and bound immediately before invoking the action, before it performs any side
+effects. Dynamic characters acquire the same staging and control ownership as
+literal characters; dynamically named setup spawns register their roles before
+dependent actions bind them. Completion endpoints must resolve after setup.
+
+`cutscene.setVariable` takes literal `arguments.name` and a typed `arguments.value`
+or an `argumentVariables.value` link. It is immediate and available in every phase.
+It has no outputs. Lua nodes and expressions use the same store:
+
+```lua
+Cutscene.Variables.delay = Cutscene.Variables.delay + 0.5
+```
+
+Conditions can read variables but cannot write them. Unknown variables and invalid
+types fail explicitly. Tables are read as detached data: edit a local copy and
+assign the whole value back. Raw writes and replacing the proxy metatable are
+unavailable in this scope so they cannot bypass validation.
+
+Manifest methods expose an ordered `outputs` array with name, type and nullable
+metadata. Existing scalar returns expose one `result`; void/ordinary awaitables
+expose none. Steps optionally supply `resultVariables: ["removed"]`, one entry per
+output; null entries discard that output. Omission discards all outputs. Targets
+must exist, have compatible types and be distinct. All assigned values are checked
+and copied before any destination changes. Cancellation never publishes pending
+outputs.
+
+For a multiple-return API, return `LuaValues` and declare its ordered contract:
+
+```csharp
+[LuaOutput("success", "boolean"), LuaOutput("amount", "number")]
+public LuaValues Compute() => new(DynValue.True, DynValue.NewNumber(7));
+```
+
+This method still needs its normal LuaAction/LuaCall metadata. Awaited results use
+`ILuaResultAction` with the same output attributes and expose `Results` once
+completed. Unity copies the results before disposing the action and resumes Lua
+with normal multiple-return semantics. Existing scalar-return APIs need no wrapper.
+
+Parallel tracks may share read-only variables. A track cannot write a variable
+read or written by another track in that block; join before using that result.
+Opaque Lua remains outside parallel blocks. Dynamic character/story references
+also retain runtime ownership checks, since different string variables may select
+the same target. The schematic preview does not execute Lua or invent computed
+variable values.
+
 ## Parallel tracks and join
 
 Source v2 supports a top-level sequence block:

@@ -7,6 +7,7 @@ namespace Core.Scripting
     [LuaModule("Cutscene")]
     public sealed class CutsceneLuaApi
     {
+        internal CutsceneVariables Variables;
         [LuaAction("cutscene.runLua", "Run Lua", "Scripting",
             "Run a Lua script immediately using the scripting API. Timed actions remain separate steps.",
             "cutscene", Validator = nameof(ValidateLua), Phases = new[] { "sequence" })]
@@ -14,7 +15,7 @@ namespace Core.Scripting
         public void RunLua([LuaCode] string code)
         {
             ValidateLua(code);
-            new VulcanusLuaEngine().Execute(code);
+            new VulcanusLuaEngine(Variables).Execute(code);
         }
 
         [Preserve]

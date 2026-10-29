@@ -36,7 +36,16 @@ namespace Core.Scripting
         public bool returnNullable;
         public bool writesState;
         public bool? callable;
+        public LuaOutputDescription[] outputs;
         public LuaActionDescription action;
+    }
+
+    [Serializable]
+    public sealed class LuaOutputDescription
+    {
+        public string name;
+        public string type;
+        public bool nullable;
     }
 
     [Serializable]

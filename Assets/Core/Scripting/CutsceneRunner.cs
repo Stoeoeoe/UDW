@@ -81,8 +81,10 @@ namespace Core.Scripting
                 out var characters);
             var placements = CutscenePlacement.Prepare(definition, bindings, characters);
             if (placements.Any(placement => placement.Character.IsControlBlocked || placement.Character.Controller.IsMovementOwned)) return false;
-            var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId);
-            run = new CutsceneRun(this, definition, session, placements, bindings, characters);
+            var variables = new CutsceneVariables(definition.Variables);
+            var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId, variables: variables);
+            run = new CutsceneRun(this, definition, session, placements, bindings, characters, variables);
+            bindings.DynamicActionBound = run.BindDynamicAction;
             ActiveRun = run;
             // Character-only modules are absent for cutscenes containing just waits/dialogue.
             characters?.BeginRun(run);
@@ -111,6 +113,7 @@ namespace Core.Scripting
         private void StartSequence(CutsceneRun run)
         {
             ExecuteImmediate(run, run.Definition.OnStartLua, run.Definition.OnStart, "setup");
+            run.BindEndpoints();
             Started?.Invoke(run);
         }
 
@@ -200,7 +203,7 @@ namespace Core.Scripting
         private static void ExecuteImmediate(CutsceneRun run, string lua, IReadOnlyList<CutsceneStep> steps, string phase)
         {
             if (steps.Count == 0) return; // An explicitly empty setup/completion block is valid.
-            using var session = VulcanusLuaEngine.StartSession(run.Bindings, lua, $"{run.Definition.CutsceneId}:{phase}", phase: phase);
+            using var session = VulcanusLuaEngine.StartSession(run.Bindings, lua, $"{run.Definition.CutsceneId}:{phase}", phase: phase, variables: run.Variables);
             try
             {
                 // Phase registration forbids awaitables; only instruction-budget slices can suspend this script.
@@ -208,7 +211,8 @@ namespace Core.Scripting
             }
             catch (Exception error)
             {
-                var step = session.ActionsStarted > 0 ? $", step '{steps[session.ActionsStarted - 1].Id}'" : "";
+                var step = session.CurrentStepId != null ? $", step '{session.CurrentStepId}'" :
+                    session.ActionsStarted > 0 ? $", step '{steps[session.ActionsStarted - 1].Id}'" : "";
                 throw new InvalidOperationException($"{run.Definition.CutsceneId}, {phase}{step}: {error.Message}", error);
             }
         }

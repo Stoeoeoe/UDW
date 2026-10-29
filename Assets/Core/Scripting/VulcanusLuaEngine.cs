@@ -16,6 +16,8 @@ namespace Core.Scripting
         private readonly LuaBindingRegistry _bindings = new(DefaultModules.Select(module => module.Create()).ToArray());
         private readonly Dictionary<string, DynValue> _conditions = new(StringComparer.Ordinal);
         private Script _conditionScript;
+        private readonly CutsceneVariables _variables;
+        public VulcanusLuaEngine(CutsceneVariables variables = null) => _variables = variables;
 
         private static readonly (Type Type, Func<object> Create)[] DefaultModules = DiscoverModules();
 
@@ -47,8 +49,8 @@ namespace Core.Scripting
             Modules(null, null).Select(module => module.Type).ToArray());
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
-            string context = "cutscene", string phase = "sequence") =>
-            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context, phase);
+            string context = "cutscene", string phase = "sequence", CutsceneVariables variables = null) =>
+            new(actions ?? throw new ArgumentNullException(nameof(actions)), chunk, source, context, phase, variables);
 
         /// <summary>Compiles each distinct expression once, but reads live state on every evaluation.</summary>
         public bool EvaluateCondition(string expression)
@@ -78,6 +80,7 @@ namespace Core.Scripting
             // HardSandbox excludes file, OS, and dynamic code-loading modules.
             var script = new Script(CoreModules.Preset_HardSandbox);
             _bindings.Bind(script, allowWrites);
+            _variables?.Bind(script, allowWrites); // Ordinary dialogue/scripts have no cutscene scope.
             return script;
         }
 

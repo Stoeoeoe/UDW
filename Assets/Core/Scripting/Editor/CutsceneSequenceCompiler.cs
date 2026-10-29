@@ -14,7 +14,8 @@ namespace Core.Scripting.Editor
         public static string Compile(JArray sequence, string source) => Compile(sequence, source, out _);
 
         public static string Compile(JArray sequence, string source, out CutsceneStep[] steps,
-            string phase = "sequence", ISet<string> usedIds = null, bool path = false, bool trackSteps = false)
+            string phase = "sequence", ISet<string> usedIds = null, bool path = false, bool trackSteps = false,
+            IReadOnlyList<CutsceneVariableDefinition> variables = null)
         {
             if (sequence == null) throw new ArgumentNullException(nameof(sequence));
             if (string.IsNullOrWhiteSpace(source)) throw new ArgumentException("Source identity is required.", nameof(source));
@@ -22,7 +23,9 @@ namespace Core.Scripting.Editor
                 _ => throw new ArgumentException("Unknown cutscene phase.", nameof(phase)) };
             if (phase == "sequence" && !path && sequence.Count == 0) throw Invalid(source, "The sequence needs at least one step.");
             var imported = new List<CutsceneStep>();
+            var locals = new CutsceneVariables(variables ?? Array.Empty<CutsceneVariableDefinition>());
             trackSteps |= sequence.OfType<JObject>().Any(step => (string)step["action"] is "control.if" or "control.parallel");
+            trackSteps |= sequence.OfType<JObject>().Any(step => (string)step["action"] == "cutscene.setVariable" || step["argumentVariables"] != null || step["resultVariables"] != null);
 
             var bindings = VulcanusLuaEngine.InspectBindings();
             var actions = bindings.Describe().modules
@@ -57,13 +60,14 @@ namespace Core.Scripting.Editor
                         var trackLocation = $"{location}, track {trackIndex + 1}";
                         if (tracks[trackIndex] is not JArray track || track.Count == 0)
                             throw Invalid(trackLocation, "Expected a nonempty action array.");
-                        var trackLua = Compile(track, trackLocation, out var children, phase, usedIds, true, true);
+                        var trackLua = Compile(track, trackLocation, out var children, phase, usedIds, true, true, variables);
                         foreach (var child in children)
                         {
                             if (child.ActionId == "cutscene.runLua")
                                 throw Invalid(trackLocation, $"Step '{child.Id}': Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts.");
-                            var resources = actions[child.ActionId].Method.parameters
+                            var resources = (child.ActionId == "cutscene.setVariable" ? Array.Empty<LuaParameterDescription>() : actions[child.ActionId].Method.parameters)
                                 .Where(parameter => parameter.semanticType == "characterRef" && parameter.name == "character")
+                                .Where(parameter => !child.Arguments.Single(argument => argument.Name == parameter.name).IsVariable)
                                 .Select(parameter => "character:" + child.Arguments.Single(argument => argument.Name == parameter.name).Value)
                                 .Concat(child.ActionId == "dialogue.play" ? new[] { "dialogue" } : Array.Empty<string>())
                                 .Concat(child.ActionId.StartsWith("story.", StringComparison.Ordinal)
@@ -79,6 +83,7 @@ namespace Core.Scripting.Editor
                         imported.AddRange(children);
                         lua.Append("function()\n").Append(trackLua).Append("end,\n");
                     }
+                    ValidateParallelVariables(tracks, location);
                     lua.Append("});\n");
                     continue;
                 }
@@ -94,16 +99,24 @@ namespace Core.Scripting.Editor
                     if (step["then"] is not JArray ifPath || step["else"] is not JArray elsePath)
                         throw Invalid(location, "Expected both If and Else action arrays.");
                     imported.Add(new CutsceneStep(id, actionId, new[] { new CutsceneArgument("condition", condition) }));
-                    var ifLua = Compile(ifPath, location + ".then", out var ifSteps, phase, usedIds, true, true);
-                    var elseLua = Compile(elsePath, location + ".else", out var elseSteps, phase, usedIds, true, true);
+                    var ifLua = Compile(ifPath, location + ".then", out var ifSteps, phase, usedIds, true, true, variables);
+                    var elseLua = Compile(elsePath, location + ".else", out var elseSteps, phase, usedIds, true, true, variables);
                     imported.AddRange(ifSteps);
                     imported.AddRange(elseSteps);
                     lua.Append("if __cutsceneCondition(").Append(LuaString(condition)).Append(") then\n")
                         .Append(ifLua).Append("else\n").Append(elseLua).Append("end\n");
                     continue;
                 }
-                RejectUnknownFields(step, new[] { "id", "action", "arguments" }, location);
-                if (!actions.TryGetValue(actionId, out var action))
+                RejectUnknownFields(step, new[] { "id", "action", "arguments", "argumentVariables", "resultVariables" }, location);
+                var setting = actionId == "cutscene.setVariable";
+                if (setting && step["resultVariables"] != null) throw Invalid(location, "Set Variable has no outputs.");
+                var target = setting ? locals.Require(RequiredString(step["arguments"]?["name"], location, "name")) : null;
+                var found = actions.TryGetValue(actionId, out var action);
+                if (setting) action = ("Cutscene", new LuaMethodDescription { name = "SetVariable", outputs = Array.Empty<LuaOutputDescription>(),
+                    action = new LuaActionDescription { phases = new[] { "setup", "sequence", "completion" } },
+                    parameters = new[] { new LuaParameterDescription { name = "name", type = "string" },
+                        new LuaParameterDescription { name = "value", type = target.Type == "storyValue" || target.Type == "table" ? "boolean|string|number|table" : target.Type, nullable = target.Nullable } } });
+                if (!found && !setting)
                     throw Invalid(location, $"Unsupported cutscene action '{actionId}'.");
                 if (!action.Method.action.phases.Contains(phase))
                     throw Invalid(location, $"Action '{actionId}' is not allowed in phase '{phase}'.");
@@ -111,6 +124,10 @@ namespace Core.Scripting.Editor
                     throw Invalid(location, "Expected named arguments.");
                 var parameters = action.Method.parameters;
                 RejectUnknownFields(arguments, parameters.Select(parameter => parameter.name), location);
+                var links = step["argumentVariables"] as JObject ?? new JObject();
+                if (step["argumentVariables"] != null && step["argumentVariables"] is not JObject) throw Invalid(location, "Expected named variable links.");
+                RejectUnknownFields(links, parameters.Select(parameter => parameter.name), location);
+                if (setting && links["name"] != null) throw Invalid(location, "Set Variable requires a literal destination name.");
 
                 var literals = new string[parameters.Length];
                 var importedArguments = new CutsceneArgument[parameters.Length];
@@ -118,9 +135,34 @@ namespace Core.Scripting.Editor
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
                 {
                     var parameter = parameters[parameterIndex];
+                    if (links[parameter.name] != null)
+                    {
+                        if (arguments[parameter.name] != null) throw Invalid(location, $"'{parameter.name}' cannot have both a literal and a variable.");
+                        var name = RequiredString(links[parameter.name], location, parameter.name);
+                        var variable = locals.Require(name);
+                        if (!LuaValues.Compatible(variable.Type, variable.Nullable, setting && parameter.name == "value" ? target.Type : parameter.type, parameter.nullable == true))
+                            throw Invalid(location, $"Variable '{name}' does not match parameter '{parameter.name}' ({parameter.type}).");
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, name, true);
+                        literals[parameterIndex] = "Cutscene.Variables[" + LuaString(name) + "]";
+                        continue;
+                    }
                     var authoredValue = arguments[parameter.name];
                     if (authoredValue == null && parameter.optional == true)
                         authoredValue = JToken.FromObject(parameter.defaultValue);
+                    if (setting && parameter.name == "value" && authoredValue?.Type == JTokenType.Null && target.Nullable)
+                    {
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name);
+                        literals[parameterIndex] = "nil";
+                        continue;
+                    }
+                    if (setting && parameter.name == "value" && target.Type == "table")
+                    {
+                        if (authoredValue == null) throw Invalid(location, "Set Variable requires a value.");
+                        LuaValues.RequireType(LuaValues.FromJson(authoredValue, new Script(CoreModules.Preset_HardSandbox)), "table");
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, authoredValue.ToString(Newtonsoft.Json.Formatting.None));
+                        literals[parameterIndex] = JsonLiteral(authoredValue);
+                        continue;
+                    }
                     if (parameter.type == "boolean|string|number|table")
                     {
                         if (authoredValue == null) throw Invalid(location, $"'{parameter.name}' requires a story value.");
@@ -148,7 +190,7 @@ namespace Core.Scripting.Editor
                             throw Invalid(location, $"'{parameter.name}' requires a nonempty ordered list of positions.");
                         var mapPath = new MapPath(points.Select((point, index) => RequiredPosition(point, location, $"{parameter.name}[{index}]")).ToArray());
                         importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, mapPath);
-                        values[parameterIndex] = path;
+                        values[parameterIndex] = mapPath;
                         literals[parameterIndex] = "{ " + string.Join(", ", mapPath.Points.Select(PositionLiteral)) + " }";
                         continue;
                     }
@@ -170,7 +212,8 @@ namespace Core.Scripting.Editor
                     string value;
                     if (parameter.type == "string")
                     {
-                        value = RequiredString(authoredValue, location, parameter.name);
+                        value = setting && parameter.name == "value" && authoredValue?.Type == JTokenType.String
+                            ? (string)authoredValue : RequiredString(authoredValue, location, parameter.name);
                         values[parameterIndex] = value;
                         literals[parameterIndex] = LuaString(value);
                     }
@@ -190,18 +233,82 @@ namespace Core.Scripting.Editor
                     importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, value);
                 }
                 // Pure value checks run at import; scene reference checks run when binding the map.
-                try { bindings.ValidateAuthoredActionArguments(actionId, values); }
+                try { if (!setting && links.Count == 0) bindings.ValidateAuthoredActionArguments(actionId, values); }
                 catch (Exception error) { throw new FormatException($"{location}: {error.Message}", error); }
                 imported.Add(new CutsceneStep(id, actionId, importedArguments));
-                lua.Append(action.Module).Append('.').Append(action.Method.name).Append('(')
-                    .Append(string.Join(", ", literals)).Append(");\n");
+                if (setting)
+                {
+                    lua.Append("Cutscene.Variables[").Append(LuaString(target.Name)).Append("] = ").Append(literals[1]).Append(";\n");
+                    continue;
+                }
+                if (links.Count > 0) lua.Append("__cutsceneDynamic();\n");
+                var call = action.Module + "." + action.Method.name + "(" + string.Join(", ", literals) + ")";
+                if (step["resultVariables"] is JArray destinations)
+                {
+                    var outputs = action.Method.outputs ?? Array.Empty<LuaOutputDescription>();
+                    if (destinations.Count != outputs.Length || outputs.Length == 0) throw Invalid(location, "Result destinations must match the action's outputs.");
+                    var seen = new HashSet<string>(StringComparer.Ordinal);
+                    for (var outputIndex = 0; outputIndex < outputs.Length; outputIndex++)
+                    {
+                        if (destinations[outputIndex].Type == JTokenType.Null) continue;
+                        var name = RequiredString(destinations[outputIndex], location, "resultVariables");
+                        var variable = locals.Require(name);
+                        if (!seen.Add(name) || !LuaValues.Compatible(outputs[outputIndex].type, outputs[outputIndex].nullable, variable.Type, variable.Nullable))
+                            throw Invalid(location, $"Invalid or incompatible result destination '{name}'.");
+                    }
+                    var names = Enumerable.Range(0, outputs.Length).Select(index => "__result" + index).ToArray();
+                    lua.Append("do local ").Append(string.Join(", ", names)).Append(" = ").Append(call).Append("; __cutsceneAssign({")
+                        .Append(string.Join(", ", destinations.Select(token => token.Type == JTokenType.Null ? "false" : LuaString((string)token))))
+                        .Append("}, ").Append(string.Join(", ", names)).Append("); end;\n");
+                }
+                else
+                {
+                    if (step["resultVariables"] != null) throw Invalid(location, "Expected an output destination array.");
+                    lua.Append(call).Append(";\n");
+                }
             }
             steps = imported.ToArray();
             return lua.ToString();
         }
 
+        internal static CutsceneVariableDefinition[] ReadVariables(JArray source, string location)
+        {
+            var definitions = source.Select(token =>
+            {
+                if (token is not JObject variable) throw Invalid(location, "Expected a variable declaration.");
+                RejectUnknownFields(variable, new[] { "name", "type", "initialValue", "nullable" }, location);
+                if (variable["initialValue"] == null) throw Invalid(location, "Variable initialValue is required.");
+                return new CutsceneVariableDefinition(RequiredString(variable["name"], location, "name"), RequiredString(variable["type"], location, "type"),
+                    variable["initialValue"].ToString(Newtonsoft.Json.Formatting.None), (bool?)variable["nullable"] ?? false);
+            }).ToArray();
+            try { _ = new CutsceneVariables(definitions); }
+            catch (Exception error) { throw Invalid(location, error.Message); }
+            return definitions;
+        }
+
+        private static void ValidateParallelVariables(JArray tracks, string location)
+        {
+            var uses = tracks.Cast<JArray>().Select(track => (Reads: track.Cast<JObject>().SelectMany(step =>
+                    (step["argumentVariables"] as JObject ?? new JObject()).Properties().Select(property => (string)property.Value)).ToHashSet(StringComparer.Ordinal),
+                Writes: track.Cast<JObject>().SelectMany(step => (step["resultVariables"] as JArray ?? new JArray()).Where(value => value.Type == JTokenType.String).Values<string>()
+                    .Concat((string)step["action"] == "cutscene.setVariable" ? new[] { (string)step["arguments"]["name"] } : Array.Empty<string>())).ToHashSet(StringComparer.Ordinal))).ToArray();
+            for (var first = 0; first < uses.Length; first++)
+                for (var second = first + 1; second < uses.Length; second++)
+                    if (uses[first].Writes.Overlaps(uses[second].Reads.Concat(uses[second].Writes)) || uses[second].Writes.Overlaps(uses[first].Reads))
+                        throw Invalid(location, $"Tracks {first + 1} and {second + 1} share a written variable; join before reading it in another track.");
+        }
+
         private static string PositionLiteral(MapPosition position) => position.IsAnchor ? $"{{ anchor = {LuaString(position.Anchor)} }}" :
             $"{{ x = {position.X.ToString("R", CultureInfo.InvariantCulture)}, y = {position.Y.ToString("R", CultureInfo.InvariantCulture)} }}";
+
+        private static string JsonLiteral(JToken token) => token switch
+        {
+            JObject obj => "{" + string.Join(",", obj.Properties().Select(property => "[" + LuaString(property.Name) + "]=" + JsonLiteral(property.Value))) + "}",
+            JArray array => "{" + string.Join(",", array.Select(JsonLiteral)) + "}",
+            _ when token.Type == JTokenType.Null => "nil",
+            _ when token.Type == JTokenType.String => LuaString((string)token),
+            _ => token.ToString(Newtonsoft.Json.Formatting.None)
+        };
 
         private static string StoryLiteral(object value) => value switch
         {

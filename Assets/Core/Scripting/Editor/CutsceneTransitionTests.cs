@@ -26,8 +26,8 @@ namespace Core.Scripting.Editor
             _fixture = new GameTestFixture("Cutscene transition timing");
             _fixture.RegisterSingleton<GameStateManager>();
             _gui = _fixture.RegisterSingleton<UrGUIManager>();
-            var panel = new GameObject("Fader", typeof(RectTransform), typeof(CanvasGroup), typeof(UnityEngine.UI.Image), typeof(ScreenFader));
-            panel.transform.SetParent(_fixture.Root.transform, false);
+            // Reveal starts a presentation coroutine, so its object must be active even in this EditMode fixture.
+            var panel = _fixture.Own(new GameObject("Fader", typeof(RectTransform), typeof(CanvasGroup), typeof(UnityEngine.UI.Image), typeof(ScreenFader)));
             _group = panel.GetComponent<CanvasGroup>();
             panel.GetComponent<UnityEngine.UI.Image>().color = Color.black;
             var fader = panel.GetComponent<ScreenFader>();
@@ -49,10 +49,11 @@ namespace Core.Scripting.Editor
                 new[] { Step("wait", "test.wait") }, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "Observer.Finish()", new[] { Step("finish", "test.finish") }),
                 "Observer.Setup()", new[] { Step("setup", "test.setup") }, new CutsceneTransition());
-            _session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId);
+            var variables = new CutsceneVariables(definition.Variables);
+            _session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId, variables: variables);
             var placements = Array.CreateInstance(typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement"), 0);
             _run = (CutsceneRun)Activator.CreateInstance(typeof(CutsceneRun), BindingFlags.Instance | BindingFlags.NonPublic,
-                null, new object[] { _runner, definition, _session, placements, bindings, null }, null);
+                null, new object[] { _runner, definition, _session, placements, bindings, null, variables }, null);
             Set(_runner, "<ActiveRun>k__BackingField", _run);
         }
 

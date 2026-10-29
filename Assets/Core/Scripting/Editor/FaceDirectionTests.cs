@@ -305,6 +305,38 @@ namespace Core.Scripting.Editor
             Assert.That(() => _api.ValidateFaceDirection("missing", "North"), Throws.InvalidOperationException.With.Message.Contains("missing"));
         }
 
+        [Test]
+        public void ComputedPlayerReferenceBindsStagingWithoutRejectingTheRunsOwnControlClaim()
+        {
+            var variables = new[] { new CutsceneVariableDefinition("actor", "string", "\"player\"") };
+            var source = JArray.Parse("[{id:'turn',action:'characters.faceDirection',arguments:{direction:'North'},argumentVariables:{character:'actor'}}]");
+            var lua = CutsceneSequenceCompiler.Compile(source, "computed-player", out var steps, variables: variables);
+            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            definition.Configure("test:computed-player", "test:characters", lua, steps, true,
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()),
+                "", Array.Empty<CutsceneStep>(), localVariables: variables);
+            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
+            var state = new CutsceneVariables(variables);
+            using var session = VulcanusLuaEngine.StartSession(bindings, lua, "computed-player", variables: state);
+            var owner = _fixture.RegisterSingleton<CutsceneRunner>();
+            var placementType = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
+            var run = (CutsceneRun)typeof(CutsceneRun).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
+                .Invoke(new object[] { owner, definition, session, Array.CreateInstance(placementType, 0), bindings, _api, state });
+            var callback = typeof(LuaBindingRegistry).GetField("DynamicActionBound", BindingFlags.Instance | BindingFlags.NonPublic);
+            callback.SetValue(bindings, Delegate.CreateDelegate(callback.FieldType, run,
+                typeof(CutsceneRun).GetMethod("BindDynamicAction", BindingFlags.Instance | BindingFlags.NonPublic)));
+            _actor.SetControlBlocked(run, true);
+            try
+            {
+                session.Tick(0);
+                Assert.That(session.IsRunning, Is.False);
+                Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
+                var placements = (System.Collections.ICollection)typeof(CutsceneRun).GetProperty("Placements", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(run);
+                Assert.That(placements.Count, Is.EqualTo(1));
+            }
+            finally { _actor.SetControlBlocked(run, false); }
+        }
+
         [TestCase(168, 104)]
         [TestCase(171, 106)]
         public void PlaceAlignsFeetInTransformedMapSpaceAndPreservesFacing(double x, double y)
@@ -496,11 +528,12 @@ namespace Core.Scripting.Editor
             var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
             definition.Configure("test:spawn", location.id, lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
-            using var sequence = VulcanusLuaEngine.StartSession(bindings, lua, "spawn.json");
+            var variables = new CutsceneVariables(definition.Variables);
+            using var sequence = VulcanusLuaEngine.StartSession(bindings, lua, "spawn.json", variables: variables);
             var owner = _fixture.RegisterSingleton<CutsceneRunner>();
             var placementType = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
             var run = (CutsceneRun)typeof(CutsceneRun).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
-                .Invoke(new object[] { owner, definition, sequence, Array.CreateInstance(placementType, 0), bindings, _api });
+                .Invoke(new object[] { owner, definition, sequence, Array.CreateInstance(placementType, 0), bindings, _api, variables });
             typeof(MapActorLuaApi).GetMethod("BeginRun", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { run });
             using (var setup = VulcanusLuaEngine.StartSession(bindings,
                 "Characters.Spawn('guest', 'base:cutscene-prototype-host', { x = 168, y = 104 })", "spawn.json:setup", phase: "setup"))

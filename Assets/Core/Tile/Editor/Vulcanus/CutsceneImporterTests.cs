@@ -21,6 +21,27 @@ namespace Core.Tile.Editor.Vulcanus
         private string _folder;
 
         [Test]
+        public void VariablesAndParameterLinksSurviveImportAndUnitySerialization()
+        {
+            var source = Source("test:variables");
+            source["variables"] = JArray.Parse("[{name:'delay',type:'number',initialValue:0.5}]");
+            source["sequence"] = JArray.Parse("[{id:'wait',action:'cutscene.wait',arguments:{},argumentVariables:{seconds:'delay'}}]");
+            var definition = Parse(source);
+            var copy = ScriptableObject.CreateInstance<CutsceneDefinition>();
+            try
+            {
+                JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(definition), copy);
+                Assert.That(copy.Variables.Single().Name, Is.EqualTo("delay"));
+                Assert.That(copy.Variables.Single().InitialJson, Is.EqualTo("0.5"));
+                var argument = copy.Steps.Single().Arguments.Single();
+                Assert.That(argument.IsVariable, Is.True);
+                Assert.That(argument.Value, Is.EqualTo("delay"));
+                Assert.That(copy.Lua, Does.Contain("Cutscene.Variables"));
+            }
+            finally { Object.DestroyImmediate(copy); Object.DestroyImmediate(definition); }
+        }
+
+        [Test]
         public void ParallelSchemaRequiresTwoNonemptyLeafTracksAndSequencePhase()
         {
             var source = Source("test:parallel-schema");
@@ -170,7 +191,7 @@ namespace Core.Tile.Editor.Vulcanus
             }
             finally { Object.DestroyImmediate(definition); }
             source["sequence"][0]["arguments"]["path"] = new JArray();
-            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("TooFewItems"));
+            Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("nonempty ordered list"));
             source["sequence"][0]["arguments"]["path"] = JArray.Parse("[{'x':168}]");
             Assert.That(() => Parse(source), Throws.TypeOf<FormatException>().With.Message.Contains("path[0]"));
         }

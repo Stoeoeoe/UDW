@@ -21,6 +21,8 @@ namespace Core.Scripting
         [SerializeField, ReadOnly] private CutsceneStep[] onStart = Array.Empty<CutsceneStep>();
         [NonSerialized] private IReadOnlyList<CutsceneStep> _steps;
         [NonSerialized] private IReadOnlyList<CutsceneStep> _onStart;
+        [SerializeField, ReadOnly] private CutsceneVariableDefinition[] variables = Array.Empty<CutsceneVariableDefinition>();
+        public IReadOnlyList<CutsceneVariableDefinition> Variables => variables;
 
         public string CutsceneId => cutsceneId;
         public string MapId => mapId;
@@ -45,7 +47,7 @@ namespace Core.Scripting
 #if UNITY_EDITOR
         public void Configure(string id, string map, string script, IEnumerable<CutsceneStep> importedSteps,
             bool skipAllowed, CutsceneCompletion completionPlan, string setupScript, IEnumerable<CutsceneStep> setupSteps,
-            CutsceneTransition presentation = null)
+            CutsceneTransition presentation = null, CutsceneVariableDefinition[] localVariables = null)
         {
             cutsceneId = id;
             mapId = map;
@@ -58,6 +60,7 @@ namespace Core.Scripting
             onStartLua = setupScript;
             onStart = setupSteps.ToArray();
             _onStart = null;
+            variables = localVariables ?? Array.Empty<CutsceneVariableDefinition>();
             RequireValidConfiguration();
         }
 #endif
@@ -79,6 +82,10 @@ namespace Core.Scripting
                 errors.Add(new ConfigurationError(this, "steps", "Requires its authored steps."));
             if (onStart == null || onStartLua == null || (onStart.Length > 0 && string.IsNullOrWhiteSpace(onStartLua)))
                 errors.Add(new ConfigurationError(this, "onStart", "Requires compiled setup steps; an empty list and script are allowed."));
+            if (variables == null) errors.Add(new ConfigurationError(this, "variables", "Requires its variable declarations; an empty list is allowed."));
+            else
+                try { _ = new CutsceneVariables(variables); }
+                catch (Exception error) { errors.Add(new ConfigurationError(this, "variables", error.Message)); }
             // Step structure and action signatures are checked by the source compiler before import.
             return errors;
         }

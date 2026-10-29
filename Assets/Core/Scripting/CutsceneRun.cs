@@ -21,10 +21,35 @@ namespace Core.Scripting
         internal LuaBindingRegistry Bindings { get; }
         internal List<CutscenePlacement> Placements { get; }
         internal MapActorLuaApi Characters { get; }
+        internal CutsceneVariables Variables { get; }
 
         internal CutsceneRun(CutsceneRunner owner, CutsceneDefinition definition,
-            LuaExecutionSession session, CutscenePlacement[] placements, LuaBindingRegistry bindings, MapActorLuaApi characters)
-        { _owner = owner; Definition = definition; Session = session; Placements = placements.ToList(); Bindings = bindings; Characters = characters; }
+            LuaExecutionSession session, CutscenePlacement[] placements, LuaBindingRegistry bindings, MapActorLuaApi characters, CutsceneVariables variables)
+        { _owner = owner; Definition = definition; Session = session; Placements = placements.ToList(); Bindings = bindings; Characters = characters; Variables = variables; }
+
+        internal void BindDynamicAction(LuaBindingRegistry.Method method, object[] values)
+        {
+            foreach (var pair in method.Parameters.Select((parameter, index) => (parameter, index))
+                .Where(pair => pair.parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "characterRef"))
+            {
+                BindActor((string)values[pair.index]);
+            }
+        }
+        internal void BindEndpoints()
+        {
+            foreach (var endpoint in Definition.OnComplete.CharacterPlacements) BindActor(endpoint.Character);
+        }
+        private void BindActor(string id)
+        {
+            var character = Characters.ResolveActor(id);
+            if (Placements.Any(placement => placement.Character == character)) return;
+            // The runner claims the player even when its first reference is computed during the sequence.
+            if (character.IsControlBlocked && id != "player" || character.Controller.IsMovementOwned)
+                throw new InvalidOperationException($"Cutscene character '{id}' is already controlled by another operation.");
+            var placement = CutscenePlacement.PrepareActor(Definition, Characters, id);
+            character.SetControlBlocked(this, true);
+            Placements.Add(placement);
+        }
 
         internal void AddSpawnedActor(MapActorLuaApi characters, string id)
         {
@@ -68,12 +93,19 @@ namespace Core.Scripting
         internal static CutscenePlacement[] Prepare(CutsceneDefinition definition, LuaBindingRegistry bindings, MapActorLuaApi characters)
         {
             var actions = bindings.GetActions().ToDictionary(method => method.Action.Id, StringComparer.Ordinal);
+            var dynamicSpawns = definition.OnStart.Any(step => step.ActionId == "characters.spawn" && step.Arguments.Any(argument => argument.IsVariable));
             var ids = definition.OnStart.Concat(definition.Steps).Concat(definition.OnComplete.Steps)
                 .Where(step => !step.IsControl)
                 .SelectMany(step => actions[step.ActionId].Parameters
                     .Where(parameter => parameter.GetCustomAttribute<LuaReferenceAttribute>()?.Type == "characterRef")
-                    .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name).Value))
+                    .Select(parameter => step.Arguments.Single(argument => argument.Name == parameter.Name))
+                    .Where(argument => !argument.IsVariable).Select(argument => argument.Value))
                 .Concat(definition.OnComplete.CharacterPlacements.Select(placement => placement.Character)).Distinct(StringComparer.Ordinal).ToArray();
+            if (dynamicSpawns)
+            {
+                foreach (var endpoint in definition.OnComplete.CharacterPlacements) characters.ResolvePosition(endpoint.Position);
+                return ids.Where(characters.IsLiveActor).Select(id => PrepareActor(definition, characters, id)).ToArray();
+            }
             foreach (var id in ids)
             {
                 characters.RequireKnownActor(id);

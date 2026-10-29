@@ -31,6 +31,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "audio.playSound",
             "displayName": "Play sound",
@@ -94,6 +95,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "camera.flash",
             "displayName": "Screen flash",
@@ -130,6 +132,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "camera.shake",
             "displayName": "Screen shake",
@@ -175,6 +178,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.face",
             "displayName": "Face character",
@@ -221,6 +225,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.faceDirection",
             "displayName": "Face direction",
@@ -274,6 +279,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.moveTo",
             "displayName": "Move to anchor",
@@ -328,6 +334,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.place",
             "displayName": "Place character",
@@ -380,6 +387,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.playAnimation",
             "displayName": "Play animation",
@@ -430,6 +438,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.spawn",
             "displayName": "Spawn character",
@@ -490,6 +499,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "characters.walkPath",
             "displayName": "Walk path",
@@ -535,6 +545,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "cutscene.runLua",
             "displayName": "Run Lua",
@@ -565,6 +576,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "cutscene.wait",
             "displayName": "Wait",
@@ -602,6 +614,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "dialogue.play",
             "displayName": "Play dialogue",
@@ -641,7 +654,14 @@
           ],
           "returnType": "integer",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "HasUnlocked",
@@ -653,7 +673,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "TryLevelUp",
@@ -665,7 +692,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": true
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         }
       ]
     },
@@ -682,7 +716,14 @@
           ],
           "returnType": "boolean|string|number|table",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "storyValue",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "Has",
@@ -694,7 +735,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "Remove",
@@ -708,6 +756,13 @@
           "returnNullable": false,
           "writesState": true,
           "callable": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ],
           "action": {
             "id": "story.remove",
             "displayName": "Remove Story Value",
@@ -746,6 +801,7 @@
           "returnNullable": false,
           "writesState": true,
           "callable": true,
+          "outputs": [],
           "action": {
             "id": "story.set",
             "displayName": "Set Story Value",
@@ -787,7 +843,14 @@
           ],
           "returnType": "FarmlandLuaView",
           "returnNullable": true,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "table",
+              "nullable": true
+            }
+          ]
         },
         {
           "name": "SetFarmland",
@@ -811,7 +874,8 @@
           ],
           "returnType": "nil",
           "returnNullable": false,
-          "writesState": true
+          "writesState": true,
+          "outputs": []
         }
       ]
     },
@@ -828,7 +892,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "HasExact",
@@ -840,7 +911,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "Matches",
@@ -852,7 +930,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": false
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         }
       ]
     },
@@ -869,7 +954,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": true
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         },
         {
           "name": "RemoveMoney",
@@ -881,7 +973,14 @@
           ],
           "returnType": "boolean",
           "returnNullable": false,
-          "writesState": true
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
         }
       ]
     },
@@ -900,6 +999,7 @@
           "returnType": "nil",
           "returnNullable": false,
           "writesState": true,
+          "outputs": [],
           "action": {
             "id": "weather.setWeather",
             "displayName": "Set weather",

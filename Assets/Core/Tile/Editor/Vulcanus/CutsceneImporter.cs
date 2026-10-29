@@ -40,10 +40,11 @@ namespace Core.Tile.Editor.Vulcanus
         private static CutsceneDefinition CreateDefinition(JObject source, string path)
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            var setup = CutsceneSequenceCompiler.Compile((JArray)source["onStart"] ?? new JArray(), path, out var setupSteps, "setup", ids);
-            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path, out var steps, "sequence", ids);
+            var variables = CutsceneSequenceCompiler.ReadVariables((JArray)source["variables"] ?? new JArray(), path);
+            var setup = CutsceneSequenceCompiler.Compile((JArray)source["onStart"] ?? new JArray(), path, out var setupSteps, "setup", ids, variables: variables);
+            var compiled = CutsceneSequenceCompiler.Compile((JArray)source["sequence"], path, out var steps, "sequence", ids, variables: variables);
             var completionLua = CutsceneSequenceCompiler.Compile((JArray)source["onComplete"]["steps"] ?? new JArray(),
-                path, out var completionSteps, "completion", ids);
+                path, out var completionSteps, "completion", ids, variables: variables);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
             try
             {
@@ -65,7 +66,7 @@ namespace Core.Tile.Editor.Vulcanus
                     (bool)source["allowSkip"], new CutsceneCompletion(placements, actions, completionLua, completionSteps), setup, setupSteps,
                     source["transition"] is JObject transition
                         ? new CutsceneTransition((bool)transition["enabled"])
-                        : new CutsceneTransition());
+                        : new CutsceneTransition(), variables);
                 return definition;
             }
             catch { Object.DestroyImmediate(definition); throw; }

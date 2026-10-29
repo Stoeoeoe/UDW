@@ -25,6 +25,7 @@ namespace Core.Scripting
 
         internal void BeginRun(CutsceneRun run) => _run = run;
         internal bool IsPlanned(string character) => _plannedActors.ContainsKey(character);
+        internal bool IsLiveActor(string character) => _actors.ContainsKey(character);
 
         internal GameCharacter RequireKnownActor(string id)
         {
@@ -44,14 +45,14 @@ namespace Core.Scripting
         public void ValidateSpawn(string character, string definition, MapPosition position)
         {
             RequireCurrentMap();
-            if (string.IsNullOrWhiteSpace(character) || _actors.ContainsKey(character) || _plannedActors.ContainsKey(character))
+            if (string.IsNullOrWhiteSpace(character) || _actors.ContainsKey(character) || _run == null && _plannedActors.ContainsKey(character))
                 throw new InvalidOperationException($"Spawn character name '{character}' must be nonempty and unique in this cutscene/map.");
             CharacterCatalog.Require(definition);
             var prefabs = ActorSpawnDefinitions.Find(WorldObjectSpawner.Instance.RegisteredPrefabs);
             if (!prefabs.TryGetValue(definition, out var prefab))
                 throw new InvalidOperationException($"Character '{definition}' has no registered spawnable NPC prefab.");
             position.ToWorld(_map);
-            _plannedActors.Add(character, prefab);
+            _plannedActors[character] = prefab;
         }
 
         [LuaAction("characters.spawn", "Spawn character", "Placement", "Spawn a persistent NPC and declare its cutscene-local character name.",

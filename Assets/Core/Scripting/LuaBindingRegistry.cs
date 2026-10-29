@@ -92,12 +92,13 @@ namespace Core.Scripting
                 }
 
                 if (action != null) ValidateAction(method, action, parameters, actionIds);
-                if (method.ReturnType == typeof(ILuaAction) && action == null)
+                if (typeof(ILuaAction).IsAssignableFrom(method.ReturnType) && action == null)
                     throw Invalid(method, "must opt in to [LuaAction] to return an awaitable");
-                if (method.ReturnType == typeof(ILuaAction) && call != null)
+                if (typeof(ILuaAction).IsAssignableFrom(method.ReturnType) && call != null)
                     throw Invalid(method, "awaitable actions cannot also be synchronous calls");
-                if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ILuaAction) && method.ReturnType != typeof(StoryValue) && !IsPrimitive(method.ReturnType))
+                if (method.ReturnType != typeof(void) && !typeof(ILuaAction).IsAssignableFrom(method.ReturnType) && method.ReturnType != typeof(LuaValues) && method.ReturnType != typeof(StoryValue) && !IsPrimitive(method.ReturnType))
                     ValidateDto(method.ReturnType);
+                DescribeOutputs(method); // Reject malformed output contracts during registration/export.
                 methods.Add(new Method(api, method, parameters, action != null || call.WritesState, action,
                     FindValidator(method, action, parameters), ReadPreview(method, parameters, preview, effects), call != null));
             }
@@ -242,7 +243,7 @@ namespace Core.Scripting
             foreach (var phase in action.Phases)
                 if (phase is not ("setup" or "sequence" or "completion") || !phases.Add(phase))
                     throw Invalid(method, "has unsupported or duplicate action phases");
-            if (method.ReturnType == typeof(ILuaAction) && phases.Any(phase => phase != "sequence"))
+            if (typeof(ILuaAction).IsAssignableFrom(method.ReturnType) && phases.Any(phase => phase != "sequence"))
                 throw Invalid(method, "awaitable actions cannot allow setup or completion phases");
             foreach (var parameter in parameters)
             {
@@ -294,6 +295,7 @@ namespace Core.Scripting
                 name = method.Info.Name,
                 parameters = method.Parameters.Select(DescribeParameter).ToArray(),
                 returnType = LuaTypeName(method.Info.ReturnType),
+                outputs = DescribeOutputs(method.Info),
                 returnNullable = !method.Info.ReturnType.IsValueType && method.Info.ReturnType != typeof(ILuaAction) && method.Info.ReturnType != typeof(StoryValue),
                 writesState = method.WritesState,
                 callable = method.Action != null && method.Callable ? true : null,
@@ -303,7 +305,7 @@ namespace Core.Scripting
                     category = action.Category, description = action.Description,
                     contexts = action.Contexts.OrderBy(context => context, StringComparer.Ordinal).ToArray(),
                     phases = action.Phases.OrderBy(phase => phase, StringComparer.Ordinal).ToArray(),
-                    execution = method.Info.ReturnType == typeof(ILuaAction) ? "awaitable" : "immediate",
+                    execution = typeof(ILuaAction).IsAssignableFrom(method.Info.ReturnType) ? "awaitable" : "immediate",
                     preview = method.Preview
                 }
             };
@@ -348,7 +350,10 @@ namespace Core.Scripting
             }
         }
 
-        internal void BindActions(Script script, string context, string phase, Func<ILuaAction, DynValue> awaitAction, Action actionStarting)
+        internal Action<Method, object[]> DynamicActionBound;
+        internal bool ValidateAllActions;
+        internal void BindActions(Script script, string context, string phase, Func<ILuaAction, DynValue> awaitAction, Action actionStarting,
+            Action<Method, object[]> beforeInvoke = null)
         {
             if (context is not ("cutscene" or "npcRoutine")) throw new ArgumentException("Unsupported Lua execution context.", nameof(context));
             if (phase is not ("setup" or "sequence" or "completion")) throw new ArgumentException("Unsupported Lua action phase.", nameof(phase));
@@ -360,12 +365,13 @@ namespace Core.Scripting
                 table.Set(method.Info.Name, DynValue.NewCallback((_, args) =>
                 {
                     actionStarting();
-                    return Invoke(script, method, args, awaitAction);
+                    return Invoke(script, method, args, awaitAction, beforeInvoke);
                 }));
             }
         }
 
-        private DynValue Invoke(Script script, Method method, CallbackArguments args, Func<ILuaAction, DynValue> awaitAction = null)
+        private DynValue Invoke(Script script, Method method, CallbackArguments args, Func<ILuaAction, DynValue> awaitAction = null,
+            Action<Method, object[]> beforeInvoke = null)
         {
             var parameters = method.Parameters;
             if (args.Count > parameters.Length || args.Count < parameters.Count(parameter => !parameter.IsOptional))
@@ -373,9 +379,51 @@ namespace Core.Scripting
 
             var values = parameters.Select((parameter, index) => index < args.Count
                 ? FromLua(args[index], parameter.ParameterType, parameter.Name) : parameter.DefaultValue).ToArray();
+            beforeInvoke?.Invoke(method, values); // Action sessions bind dynamic inputs before any side effects.
             var result = InvokeReflected(method.Info, method.Api, values);
-            return method.Info.ReturnType == typeof(ILuaAction)
-                ? awaitAction((ILuaAction)result) : ToLua(script, result, method.Info.ReturnType);
+            if (typeof(ILuaAction).IsAssignableFrom(method.Info.ReturnType))
+                return awaitAction(result is ILuaResultAction outputAction
+                    ? new CheckedResultAction(outputAction, DescribeOutputs(method.Info)) : (ILuaAction)result);
+            if (result is LuaValues outputs)
+                return DynValue.NewTuple(CheckOutputs(outputs, DescribeOutputs(method.Info)).Select(value => LuaValues.Copy(value, script)).ToArray());
+            return ToLua(script, result, method.Info.ReturnType);
+        }
+
+        private static LuaOutputDescription[] DescribeOutputs(MethodInfo method)
+        {
+            var declared = method.GetCustomAttributes<LuaOutputAttribute>().ToArray();
+            if (method.ReturnType == typeof(LuaValues) || typeof(ILuaResultAction).IsAssignableFrom(method.ReturnType))
+            {
+                if (declared.Length == 0 || declared.Any(output => string.IsNullOrWhiteSpace(output.Name) ||
+                    output.Type is not ("boolean" or "number" or "string" or "table" or "position" or "path" or "storyValue")) ||
+                    declared.Select(output => output.Name).Distinct(StringComparer.Ordinal).Count() != declared.Length)
+                    throw Invalid(method, "requires distinct named and typed [LuaOutput] declarations");
+                return declared.Select(output => new LuaOutputDescription { name = output.Name, type = output.Type, nullable = output.Nullable }).ToArray();
+            }
+            if (declared.Length > 0) throw Invalid(method, "uses [LuaOutput] without returning LuaValues or ILuaResultAction");
+            if (method.ReturnType == typeof(void) || typeof(ILuaAction).IsAssignableFrom(method.ReturnType)) return Array.Empty<LuaOutputDescription>();
+            var type = LuaTypeName(method.ReturnType);
+            return new[] { new LuaOutputDescription { name = "result", type = type == "integer" ? "number" :
+                IsPrimitive(method.ReturnType) || method.ReturnType == typeof(StoryValue) ? LuaValues.CanonicalType(type) : "table",
+                nullable = !method.ReturnType.IsValueType && method.ReturnType != typeof(StoryValue) } };
+        }
+
+        private static DynValue[] CheckOutputs(LuaValues results, LuaOutputDescription[] descriptions)
+        {
+            if (results.Values.Length != descriptions.Length) throw new InvalidOperationException("Action returned the wrong number of Lua values.");
+            for (var index = 0; index < descriptions.Length; index++)
+                LuaValues.RequireType(results.Values[index], descriptions[index].type, descriptions[index].nullable);
+            return results.Values;
+        }
+        private sealed class CheckedResultAction : ILuaResultAction
+        {
+            private readonly ILuaResultAction _action;
+            private readonly LuaOutputDescription[] _outputs;
+            public CheckedResultAction(ILuaResultAction action, LuaOutputDescription[] outputs) { _action = action; _outputs = outputs; }
+            public bool IsCompleted => _action.IsCompleted;
+            public LuaValues Results => new(CheckOutputs(_action.Results, _outputs));
+            public void Tick(float deltaTime) => _action.Tick(deltaTime);
+            public void Dispose() => _action.Dispose();
         }
 
         internal static object InvokeReflected(MethodInfo method, object api, object[] values)
@@ -462,7 +510,7 @@ namespace Core.Scripting
             return DynValue.NewTable(table);
         }
 
-        private static object FromLua(DynValue value, Type type, string parameter)
+        internal static object FromLua(DynValue value, Type type, string parameter)
         {
             if (type == typeof(StoryValue)) return StoryValueLuaConverter.Read(value);
             if (type == typeof(MapPosition?))
@@ -533,7 +581,8 @@ namespace Core.Scripting
         private static string LuaTypeName(Type type)
         {
             if (type == typeof(StoryValue)) return "boolean|string|number|table";
-            if (type == typeof(void) || type == typeof(ILuaAction)) return "nil";
+            if (type == typeof(void) || typeof(ILuaAction).IsAssignableFrom(type)) return "nil";
+            if (type == typeof(LuaValues)) return "tuple";
             if (type == typeof(string)) return "string";
             if (type == typeof(bool)) return "boolean";
             if (type == typeof(int)) return "integer";
