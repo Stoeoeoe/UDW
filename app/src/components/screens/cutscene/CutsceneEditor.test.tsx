@@ -45,6 +45,91 @@ vi.mock('../../../lib/fileSystem', () => ({
 }));
 
 describe('cutscene authoring', () => {
+  it('declares variables and links only matching parameter types with the lightning picker', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add variable', exact: true }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Variable 1 name' }), {
+      target: { value: 'speed' },
+    });
+    fireEvent.change(screen.getByLabelText('Initial value for speed'), {
+      target: { value: '0.5' },
+    });
+    expect(useEditorStore.getState().cutscenes[0].variables).toEqual([
+      { name: 'speed', type: 'number', initialValue: 0.5 },
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Wait', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Variable for seconds', exact: true }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'speed · number' }));
+    const wait = useEditorStore.getState().cutscenes[0].sequence[3];
+    expect(wait.argumentVariables).toEqual({ seconds: 'speed' });
+    expect(wait.arguments).not.toHaveProperty('seconds');
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Set Variable', exact: true }));
+    const nameSelect = screen.getByRole('combobox', { name: 'name' });
+    fireEvent.change(nameSelect, { target: { value: 'speed' } });
+    expect(useEditorStore.getState().cutscenes[0].sequence[4].arguments).toEqual({
+      name: 'speed',
+      value: 0,
+    });
+  }, 20000);
+
+  it('offers a typed destination for each output of a multiple-result action', async () => {
+    const bindings = structuredClone(unityBindings);
+    bindings.modules.push({
+      path: 'Results',
+      methods: [
+        {
+          name: 'Compute',
+          parameters: [],
+          returnType: 'tuple',
+          writesState: true,
+          outputs: [
+            { name: 'success', type: 'boolean' },
+            { name: 'amount', type: 'number' },
+          ],
+          action: {
+            id: 'test.compute',
+            displayName: 'Compute results',
+            category: 'Test',
+            description: 'Return two Lua values',
+            contexts: ['cutscene'],
+            execution: 'immediate',
+            phases: ['sequence'],
+          },
+        },
+      ],
+    } as (typeof bindings.modules)[number]);
+    act(() => {
+      useScriptingManifestStore
+        .getState()
+        .acceptUpdate({
+          path: 'C:/Unity/bindings.json',
+          revision: 2,
+          content: bindings,
+          error: null,
+        });
+      useEditorStore.getState().editCutscenes((draft) => {
+        draft[0].variables = [
+          { name: 'done', type: 'boolean', initialValue: false },
+          { name: 'count', type: 'number', initialValue: 0 },
+        ];
+      });
+    });
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Add step', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Compute results', exact: true }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Store success in' }), {
+      target: { value: 'done' },
+    });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Store amount in' }), {
+      target: { value: 'count' },
+    });
+    expect(useEditorStore.getState().cutscenes[0].sequence[3].resultVariables).toEqual([
+      'done',
+      'count',
+    ]);
+  }, 15000);
   it('authors parallel tracks, duplicates child identities and preserves global undo', async () => {
     useWorkspaceStore
       .getState()

@@ -70,6 +70,11 @@ const manifestSchema = z
                 parameters: z.array(parameterSchema),
                 returnType: z.string().optional(),
                 returnNullable: z.boolean().optional(),
+                outputs: z
+                  .array(
+                    z.object({ name: nonblank, type: nonblank, nullable: z.boolean().optional() }),
+                  )
+                  .optional(),
                 writesState: z.boolean().optional(),
                 callable: z.boolean().optional(),
                 action: actionSchema.optional(),
@@ -87,6 +92,7 @@ export type ScriptingManifest = z.infer<typeof manifestSchema>;
 export type ScriptingResources = NonNullable<ScriptingManifest['resources']>;
 export type ScriptingAction = z.infer<typeof actionSchema> & {
   parameters: z.infer<typeof parameterSchema>[];
+  outputs?: { name: string; type: string; nullable?: boolean }[];
 };
 export interface ManifestFileUpdate {
   path: string;
@@ -110,6 +116,13 @@ export function parseScriptingManifest(raw: unknown): ScriptingManifest {
     for (const method of module.methods) {
       if (new Set(method.parameters.map((p) => p.name)).size !== method.parameters.length)
         throw new Error(`Duplicate parameter in ${module.path}.${method.name}`);
+      if (method.returnType === 'tuple' && !method.outputs?.length)
+        throw new Error(`Tuple results require declared outputs in ${module.path}.${method.name}`);
+      if (
+        method.outputs &&
+        new Set(method.outputs.map((output) => output.name)).size !== method.outputs.length
+      )
+        throw new Error(`Duplicate output in ${module.path}.${method.name}`);
       if (method.action) {
         if (actionIds.has(method.action.id))
           throw new Error(`Duplicate action ID: ${method.action.id}`);
@@ -126,7 +139,17 @@ export function getManifestActions(
   return manifest.modules.flatMap((module) =>
     module.methods.flatMap((method) =>
       method.action && (!context || method.action.contexts.includes(context))
-        ? [{ ...method.action, parameters: method.parameters }]
+        ? [
+            {
+              ...method.action,
+              parameters: method.parameters,
+              outputs:
+                method.outputs ??
+                (method.returnType && method.returnType !== 'nil'
+                  ? [{ name: 'result', type: method.returnType, nullable: method.returnNullable }]
+                  : []),
+            },
+          ]
         : [],
     ),
   );

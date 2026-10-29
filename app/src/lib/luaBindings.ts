@@ -6,6 +6,7 @@ export interface LuaBindingScope {
   mode: 'condition' | 'script' | 'actions';
   context?: string;
   phase?: 'setup' | 'sequence' | 'completion';
+  cutsceneVariables?: readonly { name: string; type: string; nullable?: boolean }[];
 }
 export const SCRIPT_SCOPE: LuaBindingScope = { mode: 'script' };
 export const CONDITION_SCOPE: LuaBindingScope = { mode: 'condition' };
@@ -72,12 +73,34 @@ export function bindingSymbols(
       symbols.set(label, {
         label,
         type: 'function',
-        detail: `${label}(${method.parameters.map((p) => `${p.name}: ${p.type}`).join(', ')}): ${method.returnType ?? 'nil'}${method.returnNullable ? ' | nil' : ''}`,
+        detail: `${label}(${method.parameters.map((p) => `${p.name}: ${p.type}`).join(', ')}): ${method.outputs?.length ? method.outputs.map((output) => `${output.type}${output.nullable ? ' | nil' : ''}`).join(', ') : `${method.returnType ?? 'nil'}${method.returnNullable ? ' | nil' : ''}`}`,
         description:
           typeof method.description === 'string' ? method.description : method.action?.description,
         parameters: method.parameters,
       });
     }
+  }
+  if (scope?.cutsceneVariables) {
+    symbols.set('Cutscene', {
+      label: 'Cutscene',
+      type: 'namespace',
+      detail: 'Current cutscene run',
+    });
+    symbols.set('Cutscene.Variables', {
+      label: 'Cutscene.Variables',
+      type: 'namespace',
+      detail: 'Typed values owned by this run',
+    });
+    for (const variable of scope.cutsceneVariables)
+      symbols.set(`Cutscene.Variables.${variable.name}`, {
+        label: `Cutscene.Variables.${variable.name}`,
+        type: 'constant',
+        detail: `${variable.type}${variable.nullable ? ' | nil' : ''}`,
+        description:
+          scope.mode === 'condition'
+            ? 'Read-only in conditions.'
+            : 'Assign a value of the declared type.',
+      });
   }
   return [...symbols.values()];
 }
@@ -158,6 +181,7 @@ export interface LuaArgumentReferences {
 }
 
 function escapeLuaString(value: string, quote: string) {
+  // eslint-disable-next-line no-control-regex -- Lua literals must escape control characters.
   return value.replace(/[\\"'\x00-\x1f\x7f]/g, (char) => {
     if (char === '\\' || char === quote) return `\\${char}`;
     if (char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
@@ -188,8 +212,7 @@ export function bindingCompletions(
           ? references.dialogues
           : undefined;
     const entries =
-      call.argument === 0 &&
-      /^GameState\.Story\.(Get|Set|Has|Remove)$/.test(call.name)
+      call.argument === 0 && /^GameState\.Story\.(Get|Set|Has|Remove)$/.test(call.name)
         ? (references.storyValues ?? []).map((v) => ({
             id: v.key,
             description: `${v.type}: ${v.description ?? ''}`,

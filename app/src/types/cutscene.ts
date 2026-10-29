@@ -1,21 +1,21 @@
+export type CutsceneData =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: CutsceneData }
+  | CutsceneData[];
 export interface CutsceneStep {
   id: string;
   action: string;
-  arguments: Record<
-    string,
-    | string
-    | number
-    | boolean
-    | { [key: string]: import('../lib/storyValues').StoryData }
-    | null
-    | import('../lib/mapPosition').PositionArgument
-    | import('../lib/mapPosition').PathArgument
-  >;
+  arguments: Record<string, CutsceneData>;
   /** Only control.if has paths. Paths contain ordinary action steps in this first version. */
   then?: CutsceneStep[];
   else?: CutsceneStep[];
   /** Parallel tracks run ordinary actions sequentially and join at the end of the block. */
   tracks?: CutsceneStep[][];
+  argumentVariables?: Record<string, string>;
+  resultVariables?: (string | null)[];
 }
 
 export const CUTSCENE_CONDITION_ACTION = 'control.if';
@@ -45,12 +45,20 @@ export interface Cutscene {
   mapId: string;
   allowSkip: boolean;
   transition?: CutsceneTransition;
+  variables?: CutsceneVariable[];
   onStart?: CutsceneStep[];
   onComplete: {
     steps: CutsceneStep[];
     characterPlacements: CompletionPlacement[];
   };
   sequence: CutsceneStep[];
+}
+
+export interface CutsceneVariable {
+  name: string;
+  type: 'boolean' | 'number' | 'string' | 'position' | 'path' | 'table' | 'storyValue';
+  initialValue: unknown;
+  nullable?: boolean;
 }
 
 export type CutsceneAction = import('../lib/scriptingManifest').ScriptingAction;

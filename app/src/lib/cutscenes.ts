@@ -9,6 +9,14 @@ import {
 } from '../types/cutscene';
 import { allCutsceneSteps } from './cutsceneBranches';
 import {
+  cutsceneVariableSchema,
+  cutsceneDataSchema,
+  actionForCutsceneStep,
+  variableCompatible,
+  validVariableValue,
+  parallelVariableConflicts,
+} from './cutsceneVariables';
+import {
   mapPositionSchema,
   pixelPositionSchema,
   positionPickerMetadata,
@@ -77,8 +85,11 @@ const stepSchema = z
         mapPathSchema,
         storyDataSchema,
         z.null(),
+        cutsceneDataSchema,
       ]),
     ),
+    argumentVariables: z.record(z.string(), nonblank).optional(),
+    resultVariables: z.array(nonblank.nullable()).optional(),
   })
   .strict();
 const conditionalSchema = z
@@ -132,6 +143,7 @@ export const cutsceneSchema = z
     id: z.string().regex(/^[^\s:]+:[^\s]+$/, 'Use namespace:name'),
     mapId: nonblank,
     allowSkip: z.boolean(),
+    variables: z.array(cutsceneVariableSchema).optional(),
     transition: z
       .object({
         enabled: z.boolean(),
@@ -182,6 +194,9 @@ export function parseCutscene(raw: unknown): Cutscene {
   const result = cutsceneSchema.safeParse(raw);
   if (!result.success) throw new Error(`Invalid cutscene source: ${result.error.message}`);
   const ids = allCutsceneSteps(result.data).map((step) => step.id);
+  const variableNames = result.data.variables?.map((variable) => variable.name) ?? [];
+  if (new Set(variableNames).size !== variableNames.length)
+    throw new Error(`Cutscene ${result.data.id}: duplicate variable name`);
   if (new Set(ids).size !== ids.length)
     throw new Error(
       `Cutscene ${result.data.id}: duplicate step ID across setup, sequence and completion`,
@@ -332,6 +347,16 @@ export function validateCutscene(
   const anchors = new Set(map?.spatialPrimitives?.anchors?.map((a) => a.id) ?? []);
   const dialogues = new Set(refs.dialogueIds);
   const seen = new Set<string>();
+  const dynamicSpawns = scene.onStart?.some(
+    (step) =>
+      step.action === 'characters.spawn' && Object.keys(step.argumentVariables ?? {}).length > 0,
+  );
+  const variableNames = new Set<string>();
+  for (const [index, variable] of (scene.variables ?? []).entries()) {
+    if (variableNames.has(variable.name))
+      report(`variables.${index}.name`, 'Duplicate cutscene variable name');
+    variableNames.add(variable.name);
+  }
   const phaseSteps = [
     ...(scene.onStart ?? []).map((step, index) => ({ step, index, section: 'onStart' as const })),
     ...scene.sequence.flatMap((step, index) => [
@@ -369,6 +394,8 @@ export function validateCutscene(
     if (seen.has(step.id)) report(`${path}.id`, 'Duplicate step ID', step.id);
     seen.add(step.id);
     if (isParallelStep(step)) {
+      for (const conflict of parallelVariableConflicts(step.tracks!))
+        report(path, conflict, step.id);
       const claims = new Map<string, number>();
       step.tracks!.forEach((track, trackIndex) => {
         for (const child of track) {
@@ -382,7 +409,9 @@ export function validateCutscene(
           const resources = (action?.parameters ?? [])
             .filter(
               (parameter) =>
-                parameter.semanticType === 'characterRef' && parameter.name === 'character',
+                parameter.semanticType === 'characterRef' &&
+                parameter.name === 'character' &&
+                !child.argumentVariables?.[parameter.name],
             )
             .map((parameter) => `character:${child.arguments[parameter.name]}`);
           if (child.action === 'dialogue.play') resources.push('dialogue');
@@ -413,7 +442,7 @@ export function validateCutscene(
         );
       return;
     }
-    const action = actions.find((a) => a.id === step.action && a.contexts.includes('cutscene'));
+    const action = actionForCutsceneStep(scene, step, actions);
     if (!action) {
       report(path, `Unsupported cutscene action ${step.action}`, step.id);
       return;
@@ -425,6 +454,56 @@ export function validateCutscene(
     for (const name of Object.keys(step.arguments)) {
       if (!action.parameters.some((p) => p.name === name))
         report(`${path}.arguments.${name}`, 'Unknown argument', step.id);
+    }
+    for (const name of Object.keys(step.argumentVariables ?? {})) {
+      if (!action.parameters.some((parameter) => parameter.name === name))
+        report(`${path}.argumentVariables.${name}`, 'Unknown argument', step.id);
+      if (Object.prototype.hasOwnProperty.call(step.arguments, name))
+        report(
+          `${path}.argumentVariables.${name}`,
+          'Choose a literal or a variable, not both',
+          step.id,
+        );
+    }
+    if (step.resultVariables !== undefined) {
+      const outputs = action.outputs ?? [];
+      if (!outputs.length || outputs.length !== step.resultVariables.length)
+        report(
+          `${path}.resultVariables`,
+          'Result destinations must match the action outputs',
+          step.id,
+        );
+      const targets = new Set<string>();
+      step.resultVariables.forEach((name, index) => {
+        if (name === null) return;
+        const variable = scene.variables?.find((entry) => entry.name === name);
+        if (
+          !variable ||
+          !outputs[index] ||
+          !variableCompatible(outputs[index], variable) ||
+          targets.has(name)
+        )
+          report(
+            `${path}.resultVariables.${index}`,
+            `Invalid or incompatible result destination '${name}'`,
+            step.id,
+          );
+        targets.add(name);
+      });
+    }
+    const destination =
+      step.action === 'cutscene.setVariable'
+        ? scene.variables?.find((variable) => variable.name === step.arguments.name)
+        : undefined;
+    if (step.action === 'cutscene.setVariable') {
+      if (!destination)
+        report(`${path}.arguments.name`, 'Select a declared cutscene variable', step.id);
+      if (step.argumentVariables?.name)
+        report(
+          `${path}.argumentVariables.name`,
+          'Set Variable requires a literal destination name',
+          step.id,
+        );
     }
     const storyKey = step.arguments.key;
     const declaration = refs.storyValues?.find((entry) => entry.key === storyKey);
@@ -444,6 +523,28 @@ export function validateCutscene(
           ? parameter.defaultValue
           : authoredValue;
       const argumentPath = `${path}.arguments.${parameter.name}`;
+      const linked = step.argumentVariables?.[parameter.name];
+      if (linked) {
+        const variable = scene.variables?.find((entry) => entry.name === linked);
+        if (
+          !variable ||
+          !variableCompatible(
+            variable,
+            destination && parameter.name === 'value' ? destination : parameter,
+          )
+        )
+          report(
+            `${path}.argumentVariables.${parameter.name}`,
+            `Variable '${linked}' does not match ${parameter.name} (${parameter.type})`,
+            step.id,
+          );
+        continue;
+      }
+      if (destination && parameter.name === 'value') {
+        if (!validVariableValue(destination, value))
+          report(argumentPath, `Value must match ${destination.type}`, step.id);
+        continue;
+      }
       if (parameter.type === STORY_VALUE_TYPE) {
         if (!storyDataSchema.safeParse(value).success)
           report(
@@ -571,7 +672,11 @@ export function validateCutscene(
         report(argumentPath, 'Must not be blank', step.id);
         continue;
       }
-      if (values && !values.has(value))
+      if (
+        values &&
+        !values.has(value) &&
+        !(dynamicSpawns && parameter.semanticType === 'characterRef')
+      )
         report(argumentPath, `Missing ${parameter.semanticType}: ${value}`, step.id);
     }
     // Declarations become visible only after the entire setup step, independently of parameter order.
@@ -643,10 +748,12 @@ export function exportCutscene(
             id: step.id,
             action: step.action,
             arguments: Object.fromEntries(
-              actions
-                .find((a) => a.id === step.action)!
-                .parameters.map((p) => [p.name, step.arguments[p.name]]),
+              actionForCutsceneStep(scene, step, actions)!
+                .parameters.filter((p) => !step.argumentVariables?.[p.name])
+                .map((p) => [p.name, step.arguments[p.name]]),
             ),
+            ...(step.argumentVariables ? { argumentVariables: { ...step.argumentVariables } } : {}),
+            ...(step.resultVariables ? { resultVariables: [...step.resultVariables] } : {}),
           };
   return {
     $schema: '../schemas/cutscene.schema.json',
@@ -654,6 +761,7 @@ export function exportCutscene(
     id: scene.id,
     mapId: scene.mapId,
     allowSkip: scene.allowSkip,
+    ...(scene.variables !== undefined ? { variables: structuredClone(scene.variables) } : {}),
     ...(scene.transition ? { transition: { ...scene.transition } } : {}),
     ...(scene.onStart !== undefined ? { onStart: scene.onStart.map(serializeStep) } : {}),
     onComplete: {

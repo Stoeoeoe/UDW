@@ -87,6 +87,7 @@ type FieldType = {
 };
 
 export interface ConditionEditorProps {
+  cutsceneVariables?: readonly { name: string; type: string; nullable?: boolean }[];
   /** Author runtime expressions without evaluating live bindings against preview mocks. */
   syntaxOnly?: boolean;
   value: string;
@@ -610,6 +611,7 @@ const EMPTY_FUNCTIONS: ScriptFunction[] = [];
 const EMPTY_NAMESPACES: ScriptNamespace[] = [];
 
 export const ConditionEditor: React.FC<ConditionEditorProps> = ({
+  cutsceneVariables,
   syntaxOnly = false,
   value,
   onChange,
@@ -624,8 +626,14 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const characters = useEditorStore((s) => s.characters);
   const storyValues = useEditorStore((s) => s.project?.storyValues);
-  const storyWarning = useMemo(() => storyValueDiagnostics(value, storyValues ?? [])[0]?.message, [value, storyValues]);
-  const symbols = useMemo(() => bindingSymbols(manifest, CONDITION_SCOPE), [manifest]);
+  const storyWarning = useMemo(
+    () => storyValueDiagnostics(value, storyValues ?? [])[0]?.message,
+    [value, storyValues],
+  );
+  const symbols = useMemo(
+    () => bindingSymbols(manifest, { ...CONDITION_SCOPE, cutsceneVariables }),
+    [manifest, cutsceneVariables],
+  );
   const unavailable = useMemo(() => unavailableBindings(manifest, CONDITION_SCOPE), [manifest]);
   const contextIssues = useMemo(
     () => bindingDiagnostics(value, manifest, CONDITION_SCOPE),
@@ -768,7 +776,10 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   );
 
   const result = useMemo(
-    () => syntaxOnly ? validateLuaChunk(`return (${value || 'true'})`) : evalLuaCondition(value, testVarMap as Record<string, unknown>, luaStubs),
+    () =>
+      syntaxOnly
+        ? validateLuaChunk(`return (${value || 'true'})`)
+        : evalLuaCondition(value, testVarMap as Record<string, unknown>, luaStubs),
     [value, testVarMap, luaStubs, syntaxOnly],
   );
 

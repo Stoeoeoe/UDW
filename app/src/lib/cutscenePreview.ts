@@ -327,6 +327,15 @@ export function previewCutscene(
     }[],
   ) => {
     for (const { step, index, phase } of entries) {
+      if (step.action === 'cutscene.setVariable') continue; // Local data alone does not change spatial state.
+      if (Object.keys(step.argumentVariables ?? {}).length) {
+        invalidate();
+        notice(
+          'This action reads cutscene variables at runtime; its spatial result cannot be predicted here.',
+          step.id,
+        );
+        continue;
+      }
       if (isParallelStep(step)) {
         const tracks = step.tracks!;
         const before = structuredClone(characters);

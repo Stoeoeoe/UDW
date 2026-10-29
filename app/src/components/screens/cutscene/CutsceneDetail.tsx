@@ -91,6 +91,17 @@ import {
 } from '../../../lib/cutsceneBranches';
 import { DEFAULT_CUTSCENE_TRANSITION } from '../../../types/cutscene';
 import { CutscenePreviewPanel } from './CutscenePreviewPanel';
+import {
+  CutsceneVariablesEditor,
+  CutsceneVariableInput,
+  CutsceneJsonValueField,
+} from './CutsceneVariableFields';
+import {
+  actionForCutsceneStep,
+  setVariableAction,
+  variableCompatible,
+  initialVariableValue,
+} from '../../../lib/cutsceneVariables';
 import { InspectorPanel } from '../common/InspectorPanel';
 import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
@@ -161,7 +172,7 @@ export const CutsceneDetail: React.FC<{
         ? completionSteps
         : scene.sequence;
   const eligible = (section: 'onStart' | 'sequence' | 'completion') =>
-    actionsForCutscenePhase(actions, phaseFor(section));
+    actionsForCutscenePhase([...actions, setVariableAction(scene)], phaseFor(section));
   const map = currentMap?.id === scene.mapId ? currentMap : maps.find((m) => m.id === scene.mapId);
   const characters = map ? mapCharacterInstances(map, types) : [];
   const baseCharacterOptions = [
@@ -200,7 +211,7 @@ export const CutsceneDetail: React.FC<{
   }, [selectedSection, selectedStep]);
   // Undo or a manifest refresh can remove the selected step while the editor remains open.
   const panel = selection.kind === 'step' && !selectedStep ? 'scene' : selection.kind;
-  const actionFor = (step: CutsceneStep) => actions.find((a) => a.id === step.action);
+  const actionFor = (step: CutsceneStep) => actionForCutsceneStep(scene, step, actions);
   const cancelPicking = () => {
     setPicking(null);
     setEndpointPicking(null);
@@ -256,6 +267,11 @@ export const CutsceneDetail: React.FC<{
   ]);
 
   const optionsFor = (parameter: CutsceneAction['parameters'][number]) => {
+    if (selectedStep?.action === 'cutscene.setVariable' && parameter.name === 'name')
+      return (scene.variables ?? []).map((variable) => ({
+        id: variable.name,
+        label: `${variable.name} · ${variable.type}`,
+      }));
     if (parameter.resourceType)
       return (resources[parameter.resourceType] ?? []).map((entry) => ({
         id: entry.id,
@@ -618,6 +634,14 @@ export const CutsceneDetail: React.FC<{
       : undefined;
   const sceneFields = (
     <>
+      <CutsceneVariablesEditor
+        variables={scene.variables ?? []}
+        onChange={(variables) =>
+          update((draft) => {
+            draft.variables = variables;
+          })
+        }
+      />
       <Field label="Name">
         <Input
           value={labels[scene.id] ?? ''}
@@ -866,6 +890,11 @@ export const CutsceneDetail: React.FC<{
             !parameter.picker &&
             !parameter.resourceType;
           const authoredValue = selectedStep.arguments[parameter.name];
+          const linkedVariable = selectedStep.argumentVariables?.[parameter.name];
+          const settingVariable =
+            selectedStep.action === 'cutscene.setVariable' && parameter.name === 'value'
+              ? scene.variables?.find((variable) => variable.name === selectedStep.arguments.name)
+              : undefined;
           const storyKey = selectedStep.action.startsWith('story.') && parameter.name === 'key';
           const currentValue =
             authoredValue === undefined && parameter.optional === true
@@ -917,81 +946,101 @@ export const CutsceneDetail: React.FC<{
                   : `Unsupported manifest parameter: ${parameter.type} ${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`)
               }
             >
-              {parameter.type === STORY_VALUE_TYPE ? (
-                <StoryValueField
-                  key={
-                    selectedStep.id +
-                    '/' +
-                    parameter.name +
-                    '/' +
-                    String(selectedStep.arguments.key)
-                  }
-                  value={currentValue}
-                  declaredType={
-                    storyDefinitions?.find((entry) => entry.key === selectedStep.arguments.key)
-                      ?.type
-                  }
-                  declarationKey={
-                    typeof selectedStep.arguments.key === 'string'
-                      ? selectedStep.arguments.key
-                      : undefined
-                  }
-                  onDeclare={
-                    typeof selectedStep.arguments.key === 'string' &&
-                    selectedStep.arguments.key.trim()
-                      ? (type) => {
-                          const current = useEditorStore.getState().project;
-                          if (!current)
-                            throw new Error('Story declarations require an open project.');
-                          saveStoryValueDeclarations([
-                            ...(current.storyValues ?? []),
-                            { key: String(selectedStep.arguments.key), type },
-                          ]);
-                        }
-                      : undefined
-                  }
-                  onChange={(value) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find(
-                        (step) => step.id === selectedStep.id,
-                      )!.arguments[parameter.name] = value;
-                    })
-                  }
-                />
-              ) : luaCode ? (
-                <Box
-                  border="1px"
-                  borderColor="editorInlineBorder"
-                  borderRadius="md"
-                  overflow="hidden"
-                >
-                  <LuaScriptEditor
-                    value={typeof currentValue === 'string' ? currentValue : ''}
-                    height="260px"
-                    documentId={`cutscene/${scene.id}/${selectedStep.id}/${parameter.name}`}
-                    scope={{
-                      mode: 'script',
-                      context: 'cutscene',
-                      phase: phaseFor(selectedSection),
-                    }}
-                    argumentReferences={{
-                      anchors: anchorOptions.map((anchor) => ({
-                        id: anchor.id,
-                        name: anchor.label,
-                      })),
-                      dialogues: [...dialogues.values()].map((dialogue) => ({
-                        id: dialogue.id,
-                        name: dialogue.name,
-                      })),
-                    }}
-                    characterReferences={characterOptions.map((actor) => ({
-                      id: actor.id,
-                      name: actor.label,
-                    }))}
-                    gameVariables={gameVariables}
-                    scriptTables={scriptTables}
-                    scriptFunctions={scriptFunctions}
-                    scriptNamespaces={scriptNamespaces}
+              <CutsceneVariableInput
+                variables={scene.variables ?? []}
+                linked={linkedVariable}
+                label={parameterLabel(parameter)}
+                allowLink={
+                  selectedStep.action !== 'cutscene.setVariable' || parameter.name !== 'name'
+                }
+                expected={
+                  selectedStep.action === 'cutscene.setVariable' && parameter.name === 'value'
+                    ? (scene.variables?.find(
+                        (variable) => variable.name === selectedStep.arguments.name,
+                      ) ?? parameter)
+                    : parameter
+                }
+                onLink={(name) => {
+                  cancelPicking();
+                  update((draft) => {
+                    const step = allCutsceneSteps(draft).find(
+                      (entry) => entry.id === selectedStep.id,
+                    )!;
+                    if (name) {
+                      (step.argumentVariables ??= {})[parameter.name] = name;
+                      delete step.arguments[parameter.name];
+                    } else {
+                      if (step.argumentVariables) delete step.argumentVariables[parameter.name];
+                      step.arguments[parameter.name] = createCutsceneStep(
+                        actionFor(selectedStep)!,
+                      ).arguments[parameter.name];
+                    }
+                  });
+                }}
+              >
+                {settingVariable?.nullable && currentValue === null ? (
+                  <HStack>
+                    <Text>nil</Text>
+                    <Button
+                      size="xs"
+                      onClick={() =>
+                        update((draft) => {
+                          allCutsceneSteps(draft).find(
+                            (entry) => entry.id === selectedStep.id,
+                          )!.arguments.value = initialVariableValue(
+                            settingVariable.type,
+                          ) as CutsceneStep['arguments'][string];
+                        })
+                      }
+                    >
+                      Set a value
+                    </Button>
+                  </HStack>
+                ) : settingVariable?.type === 'table' ? (
+                  <CutsceneJsonValueField
+                    label="value"
+                    value={currentValue}
+                    onChange={(value) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find(
+                          (entry) => entry.id === selectedStep.id,
+                        )!.arguments.value = value as CutsceneStep['arguments'][string];
+                      })
+                    }
+                  />
+                ) : parameter.type === STORY_VALUE_TYPE ? (
+                  <StoryValueField
+                    key={
+                      selectedStep.id +
+                      '/' +
+                      parameter.name +
+                      '/' +
+                      String(selectedStep.arguments.key)
+                    }
+                    value={currentValue}
+                    declaredType={
+                      storyDefinitions?.find((entry) => entry.key === selectedStep.arguments.key)
+                        ?.type
+                    }
+                    declarationKey={
+                      typeof selectedStep.arguments.key === 'string'
+                        ? selectedStep.arguments.key
+                        : undefined
+                    }
+                    onDeclare={
+                      typeof selectedStep.arguments.key === 'string' &&
+                      selectedStep.arguments.key.trim()
+                        ? (type) => {
+                            const current = useEditorStore.getState().project;
+                            if (!current)
+                              throw new Error('Story declarations require an open project.');
+                            saveStoryValueDeclarations([
+                              ...(current.storyValues ?? []),
+                              { key: String(selectedStep.arguments.key), type },
+                            ]);
+                          }
+                        : undefined
+                    }
                     onChange={(value) =>
                       update((draft) => {
                         allCutsceneSteps(draft).find(
@@ -1000,185 +1049,302 @@ export const CutsceneDetail: React.FC<{
                       })
                     }
                   />
-                </Box>
-              ) : pathMetadata ? (
-                <MapPathField
-                  key={selectedStep.id + '/' + parameter.name}
-                  value={selectedStep.arguments[parameter.name]}
-                  modes={pathMetadata.placementModes}
-                  anchors={anchorOptions}
-                  pickingIndex={
-                    picking?.stepId === selectedStep.id && picking.parameter === parameter.name
-                      ? picking.waypoint
-                      : undefined
-                  }
-                  onChange={(value) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
-                        parameter.name
-                      ] = value;
-                    })
-                  }
-                  onPick={(waypoint, mode) => {
-                    setHoverPosition(null);
-                    setPicking({
-                      stepId: selectedStep.id,
-                      parameter: parameter.name,
-                      mapId: scene.mapId,
-                      mode,
-                      waypoint,
-                    });
-                  }}
-                  onModeChange={(mode) => {
-                    if (mode === 'anchor') cancelPicking();
-                    else if (picking?.parameter === parameter.name) {
-                      setPicking({ ...picking, mode });
+                ) : luaCode ? (
+                  <Box
+                    border="1px"
+                    borderColor="editorInlineBorder"
+                    borderRadius="md"
+                    overflow="hidden"
+                  >
+                    <LuaScriptEditor
+                      value={typeof currentValue === 'string' ? currentValue : ''}
+                      height="260px"
+                      documentId={`cutscene/${scene.id}/${selectedStep.id}/${parameter.name}`}
+                      scope={{
+                        mode: 'script',
+                        context: 'cutscene',
+                        phase: phaseFor(selectedSection),
+                        cutsceneVariables: scene.variables ?? [],
+                      }}
+                      argumentReferences={{
+                        anchors: anchorOptions.map((anchor) => ({
+                          id: anchor.id,
+                          name: anchor.label,
+                        })),
+                        dialogues: [...dialogues.values()].map((dialogue) => ({
+                          id: dialogue.id,
+                          name: dialogue.name,
+                        })),
+                      }}
+                      characterReferences={characterOptions.map((actor) => ({
+                        id: actor.id,
+                        name: actor.label,
+                      }))}
+                      gameVariables={gameVariables}
+                      scriptTables={scriptTables}
+                      scriptFunctions={scriptFunctions}
+                      scriptNamespaces={scriptNamespaces}
+                      onChange={(value) =>
+                        update((draft) => {
+                          allCutsceneSteps(draft).find(
+                            (step) => step.id === selectedStep.id,
+                          )!.arguments[parameter.name] = value;
+                        })
+                      }
+                    />
+                  </Box>
+                ) : pathMetadata ? (
+                  <MapPathField
+                    key={selectedStep.id + '/' + parameter.name}
+                    value={selectedStep.arguments[parameter.name]}
+                    modes={pathMetadata.placementModes}
+                    anchors={anchorOptions}
+                    pickingIndex={
+                      picking?.stepId === selectedStep.id && picking.parameter === parameter.name
+                        ? picking.waypoint
+                        : undefined
+                    }
+                    onChange={(value) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                          parameter.name
+                        ] = value;
+                      })
+                    }
+                    onPick={(waypoint, mode) => {
                       setHoverPosition(null);
+                      setPicking({
+                        stepId: selectedStep.id,
+                        parameter: parameter.name,
+                        mapId: scene.mapId,
+                        mode,
+                        waypoint,
+                      });
+                    }}
+                    onModeChange={(mode) => {
+                      if (mode === 'anchor') cancelPicking();
+                      else if (picking?.parameter === parameter.name) {
+                        setPicking({ ...picking, mode });
+                        setHoverPosition(null);
+                      }
+                    }}
+                    onCancel={cancelPicking}
+                  />
+                ) : positionMetadata ? (
+                  <PositionField
+                    key={selectedStep.id + '/' + parameter.name}
+                    value={selectedStep.arguments[parameter.name]}
+                    modes={positionMetadata.placementModes}
+                    anchors={anchorOptions}
+                    isPicking={
+                      picking?.stepId === selectedStep.id && picking.parameter === parameter.name
                     }
-                  }}
-                  onCancel={cancelPicking}
-                />
-              ) : positionMetadata ? (
-                <PositionField
-                  key={selectedStep.id + '/' + parameter.name}
-                  value={selectedStep.arguments[parameter.name]}
-                  modes={positionMetadata.placementModes}
-                  anchors={anchorOptions}
-                  isPicking={
-                    picking?.stepId === selectedStep.id && picking.parameter === parameter.name
-                  }
-                  onChange={(value) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
-                        parameter.name
-                      ] = value;
-                    })
-                  }
-                  onPick={(mode) => {
-                    setHoverPosition(null);
-                    setPicking({
-                      stepId: selectedStep.id,
-                      parameter: parameter.name,
-                      mapId: scene.mapId,
-                      mode,
-                    });
-                  }}
-                  onModeChange={(mode) => {
-                    if (mode === 'anchor') {
-                      cancelPicking();
-                      return;
+                    onChange={(value) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                          parameter.name
+                        ] = value;
+                      })
                     }
-                    if (picking?.parameter === parameter.name) {
-                      setPicking({ ...picking, mode });
+                    onPick={(mode) => {
                       setHoverPosition(null);
+                      setPicking({
+                        stepId: selectedStep.id,
+                        parameter: parameter.name,
+                        mapId: scene.mapId,
+                        mode,
+                      });
+                    }}
+                    onModeChange={(mode) => {
+                      if (mode === 'anchor') {
+                        cancelPicking();
+                        return;
+                      }
+                      if (picking?.parameter === parameter.name) {
+                        setPicking({ ...picking, mode });
+                        setHoverPosition(null);
+                      }
+                    }}
+                    onCancel={cancelPicking}
+                  />
+                ) : boolean ? (
+                  <Switch
+                    aria-label={parameterLabel(parameter)}
+                    isChecked={
+                      typeof currentValue === 'boolean'
+                        ? currentValue
+                        : parameter.defaultValue === true
                     }
-                  }}
-                  onCancel={cancelPicking}
-                />
-              ) : boolean ? (
-                <Switch
-                  aria-label={parameterLabel(parameter)}
-                  isChecked={
-                    typeof currentValue === 'boolean'
-                      ? currentValue
-                      : parameter.defaultValue === true
-                  }
-                  onChange={(e) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find(
-                        (step) => step.id === selectedStep.id,
-                      )!.arguments[parameter.name] = e.target.checked;
-                    })
-                  }
-                />
-              ) : numeric ? (
-                <NumericCutsceneArgument
-                  value={
-                    typeof currentValue === 'object'
-                      ? ''
-                      : ((currentValue as string | number) ?? '')
-                  }
-                  onChange={(value) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
-                        parameter.name
-                      ] = value;
-                    })
-                  }
-                />
-              ) : options ? (
-                <ReferenceSelect
-                  value={
-                    typeof selectedStep.arguments[parameter.name] === 'string'
-                      ? (selectedStep.arguments[parameter.name] as string)
-                      : ''
-                  }
-                  options={options}
-                  onChange={(value) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
-                        parameter.name
-                      ] = value;
-                      if (parameter.resourceType === 'character' && value) {
-                        const step = allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!;
-                        const declaration = actionFor(selectedStep)?.parameters.find(
-                          (p) => p.semanticType === 'characterDeclaration',
-                        );
-                        if (declaration && !step.arguments[declaration.name]) {
-                          const label =
-                            characterDefinitions.find((character) => character.id === value)
-                              ?.name ||
-                            value.split(':').pop() ||
-                            'guest';
-                          const base =
-                            label
-                              .toLowerCase()
-                              .replace(/[^a-z0-9_-]+/g, '-')
-                              .replace(/^-+|-+$/g, '') || 'guest';
-                          const used = new Set([
-                            ...baseCharacterOptions.map((character) => character.id),
-                            ...declaredCharactersBefore(draft, actions, []),
-                          ]);
-                          let name = base;
-                          for (let suffix = 2; used.has(name); suffix++) name = `${base}-${suffix}`;
-                          step.arguments[declaration.name] = name;
+                    onChange={(e) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find(
+                          (step) => step.id === selectedStep.id,
+                        )!.arguments[parameter.name] = e.target.checked;
+                      })
+                    }
+                  />
+                ) : numeric ? (
+                  <NumericCutsceneArgument
+                    value={
+                      typeof currentValue === 'object'
+                        ? ''
+                        : ((currentValue as string | number) ?? '')
+                    }
+                    onChange={(value) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                          parameter.name
+                        ] = value;
+                      })
+                    }
+                  />
+                ) : options ? (
+                  <ReferenceSelect
+                    value={
+                      typeof selectedStep.arguments[parameter.name] === 'string'
+                        ? (selectedStep.arguments[parameter.name] as string)
+                        : ''
+                    }
+                    options={options}
+                    onChange={(value) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                          parameter.name
+                        ] = value;
+                        if (parameter.resourceType === 'character' && value) {
+                          const step = allCutsceneSteps(draft).find(
+                            (s) => s.id === selectedStep.id,
+                          )!;
+                          const declaration = actionFor(selectedStep)?.parameters.find(
+                            (p) => p.semanticType === 'characterDeclaration',
+                          );
+                          if (declaration && !step.arguments[declaration.name]) {
+                            const label =
+                              characterDefinitions.find((character) => character.id === value)
+                                ?.name ||
+                              value.split(':').pop() ||
+                              'guest';
+                            const base =
+                              label
+                                .toLowerCase()
+                                .replace(/[^a-z0-9_-]+/g, '-')
+                                .replace(/^-+|-+$/g, '') || 'guest';
+                            const used = new Set([
+                              ...baseCharacterOptions.map((character) => character.id),
+                              ...declaredCharactersBefore(draft, actions, []),
+                            ]);
+                            let name = base;
+                            for (let suffix = 2; used.has(name); suffix++)
+                              name = `${base}-${suffix}`;
+                            step.arguments[declaration.name] = name;
+                          }
                         }
-                      }
-                    })
-                  }
-                />
-              ) : (
-                <Input
-                  isDisabled={!supported}
-                  list={storyKey ? 'cutscene-story-keys' : undefined}
-                  value={
-                    typeof currentValue === 'object'
-                      ? ''
-                      : ((currentValue as string | number) ?? '')
-                  }
-                  onChange={(e) =>
-                    update((draft) => {
-                      allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
-                        parameter.name
-                      ] = e.target.value;
-                      if (storyKey && selectedStep.action === 'story.set') {
-                        const step = allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!;
-                        const declaration = storyDefinitions?.find(
-                          (entry) => entry.key === e.target.value,
-                        );
                         if (
-                          declaration &&
-                          !matchesStoryType(step.arguments.value, declaration.type)
-                        )
-                          step.arguments.value = defaultStoryValue(declaration.type);
-                      }
+                          selectedStep.action === 'cutscene.setVariable' &&
+                          parameter.name === 'name'
+                        ) {
+                          const step = allCutsceneSteps(draft).find(
+                            (entry) => entry.id === selectedStep.id,
+                          )!;
+                          const variable = draft.variables?.find((entry) => entry.name === value);
+                          if (step.argumentVariables) delete step.argumentVariables.value;
+                          if (variable)
+                            step.arguments.value = initialVariableValue(
+                              variable.type,
+                            ) as CutsceneStep['arguments'][string];
+                        }
+                      })
+                    }
+                  />
+                ) : (
+                  <Input
+                    isDisabled={!supported}
+                    list={storyKey ? 'cutscene-story-keys' : undefined}
+                    value={
+                      typeof currentValue === 'object'
+                        ? ''
+                        : ((currentValue as string | number) ?? '')
+                    }
+                    onChange={(e) =>
+                      update((draft) => {
+                        allCutsceneSteps(draft).find((s) => s.id === selectedStep.id)!.arguments[
+                          parameter.name
+                        ] = e.target.value;
+                        if (storyKey && selectedStep.action === 'story.set') {
+                          const step = allCutsceneSteps(draft).find(
+                            (s) => s.id === selectedStep.id,
+                          )!;
+                          const declaration = storyDefinitions?.find(
+                            (entry) => entry.key === e.target.value,
+                          );
+                          if (
+                            declaration &&
+                            !matchesStoryType(step.arguments.value, declaration.type)
+                          )
+                            step.arguments.value = defaultStoryValue(declaration.type);
+                        }
+                      })
+                    }
+                  />
+                )}
+              </CutsceneVariableInput>
+              {settingVariable?.nullable && currentValue !== null && (
+                <Button
+                  size="xs"
+                  mt={1}
+                  variant="ghost"
+                  onClick={() =>
+                    update((draft) => {
+                      const step = allCutsceneSteps(draft).find(
+                        (entry) => entry.id === selectedStep.id,
+                      )!;
+                      if (step.argumentVariables) delete step.argumentVariables.value;
+                      step.arguments.value = null;
                     })
                   }
-                />
+                >
+                  Set nil
+                </Button>
               )}
             </Field>
           );
         })}
+      {(actionFor(selectedStep)?.outputs ?? []).map((output, outputIndex, outputs) => (
+        <Field key={output.name} label={`Store ${output.name} in`}>
+          <Select
+            aria-label={`Store ${output.name} in`}
+            value={selectedStep.resultVariables?.[outputIndex] ?? ''}
+            onChange={(event) =>
+              update((draft) => {
+                const step = allCutsceneSteps(draft).find((entry) => entry.id === selectedStep.id)!;
+                const destinations = step.resultVariables ?? outputs.map(() => null);
+                destinations[outputIndex] = event.target.value || null;
+                if (destinations.every((name) => name === null)) delete step.resultVariables;
+                else step.resultVariables = destinations;
+              })
+            }
+          >
+            <option value="">Discard output</option>
+            {(scene.variables ?? [])
+              .filter((variable) => variableCompatible(output, variable))
+              .map((variable) => (
+                <option key={variable.name} value={variable.name}>
+                  {variable.name} · {variable.type}
+                </option>
+              ))}
+            {selectedStep.resultVariables?.[outputIndex] &&
+              !scene.variables?.some(
+                (variable) =>
+                  variable.name === selectedStep.resultVariables?.[outputIndex] &&
+                  variableCompatible(output, variable),
+              ) && (
+                <option value={selectedStep.resultVariables[outputIndex]!}>
+                  Missing or incompatible: {selectedStep.resultVariables[outputIndex]}
+                </option>
+              )}
+          </Select>
+        </Field>
+      ))}
       <Text textStyle="helperText">{actionFor(selectedStep)?.description}</Text>
       <Text textStyle="helperText">
         {actionFor(selectedStep)?.execution === 'awaitable'
@@ -1611,6 +1777,7 @@ export const CutsceneDetail: React.FC<{
               <Field label="Lua condition">
                 <ConditionEditor
                   syntaxOnly
+                  cutsceneVariables={scene.variables}
                   value={String(selectedStep.arguments.condition ?? '')}
                   variables={gameVariables}
                   tables={scriptTables}

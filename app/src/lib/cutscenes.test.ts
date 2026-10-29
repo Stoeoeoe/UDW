@@ -51,6 +51,79 @@ const refs = () => ({
 const scene = (): Cutscene => parseCutscene(prototype);
 
 describe('Unity cutscene contract', () => {
+  it('round-trips typed variables, links and named multiple-output destinations', () => {
+    const source = scene();
+    source.variables = [
+      { name: 'actor', type: 'string', initialValue: 'player' },
+      { name: 'done', type: 'boolean', initialValue: false },
+      { name: 'count', type: 'number', initialValue: 0 },
+    ];
+    const move = source.sequence[0];
+    delete move.arguments.character;
+    move.argumentVariables = { character: 'actor' };
+    const multiple = {
+      ...actions[0],
+      id: 'test.multiple',
+      parameters: [],
+      outputs: [
+        { name: 'success', type: 'boolean' },
+        { name: 'count', type: 'number' },
+      ],
+      execution: 'immediate' as const,
+    };
+    source.sequence.push({
+      id: 'compute',
+      action: multiple.id,
+      arguments: {},
+      resultVariables: ['done', 'count'],
+    });
+    const palette = [...actions, multiple];
+    expect(validateCutscene(source, palette, refs())).toEqual([]);
+    expect(parseCutscene(exportCutscene(source, palette, refs()))).toEqual(source);
+    source.sequence[source.sequence.length - 1].resultVariables = ['count', 'done'];
+    expect(
+      validateCutscene(source, palette, refs()).filter((issue) =>
+        issue.message.includes('incompatible'),
+      ),
+    ).toHaveLength(2);
+    move.argumentVariables.character = 'count';
+    expect(validateCutscene(source, palette, refs())).toContainEqual(
+      expect.objectContaining({
+        stepId: move.id,
+        message: expect.stringContaining('does not match'),
+      }),
+    );
+  });
+
+  it('validates Set Variable data, unknown names, initial values and parallel read/write dependencies', () => {
+    const source = scene();
+    source.variables = [{ name: 'actor', type: 'string', initialValue: 'player' }];
+    const setting = {
+      id: 'set',
+      action: 'cutscene.setVariable',
+      arguments: { name: 'actor', value: 'player' },
+    };
+    source.sequence.unshift(setting);
+    expect(validateCutscene(source, actions, refs())).toEqual([]);
+    source.sequence[0].arguments.value = 42;
+    expect(validateCutscene(source, actions, refs())).toContainEqual(
+      expect.objectContaining({ message: 'Value must match string' }),
+    );
+    const move = structuredClone(source.sequence[1]);
+    move.argumentVariables = { character: 'actor' };
+    delete move.arguments.character;
+    setting.arguments.value = 'player';
+    source.sequence = [
+      { id: 'parallel', action: 'control.parallel', arguments: {}, tracks: [[setting], [move]] },
+    ];
+    expect(validateCutscene(source, actions, refs())).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('share a written variable') }),
+    );
+    source.variables.push({ ...source.variables[0] });
+    expect(() => parseCutscene(source)).toThrow('duplicate variable name');
+    source.variables = [{ name: 'actor', type: 'number', initialValue: 'not a number' }];
+    expect(() => parseCutscene(source)).toThrow('Initial value must match number');
+  });
   it('round-trips parallel tracks, validates their references and rejects shared owners', () => {
     const source = scene();
     const original = structuredClone(source.sequence);

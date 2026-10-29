@@ -1,5 +1,38 @@
 # Cutscene authoring
 
+## Cutscene variables and outputs
+
+Scene settings contain **Cutscene variables**. Declare a unique name, type and
+initial value; values reset on each playback and are shared by Before start,
+Sequence and On completion. They are not persistent story state. Types include
+boolean, number, string, position, path, table and storyValue. Complex initial
+values use JSON; positions and paths use the existing map-pixel/anchor structures.
+Allow nil explicitly when a nullable result or parameter needs it.
+
+Use the **⚡** beside a parameter to select a variable of a compatible type. The
+linked field shows its variable name. **Use literal value** switches back to an
+editable literal. Variable links are saved separately as `argumentVariables`;
+they never masquerade as story-data objects. Set Variable's destination is a
+literal name; its value can itself use a variable link.
+
+**Set Variable** is available in every phase. Lua nodes write the same values via
+`Cutscene.Variables.name = value`; conditions can read them, but cannot write.
+Autocomplete includes the scene's declared names and types. For table values,
+modify a local copy and assign the whole table back. Renaming/removing declarations
+does not silently replace linked IDs or rewrite Lua: fix the reported references.
+
+Non-void actions show one **Store … in** selector per declared output. Most actions
+have zero or one output, but the manifest supports several named typed Lua values.
+Leave a selector at **Discard output** when unused. Destinations must have compatible
+types, and all results are assigned together after successful execution (or after
+an awaited action completes). Cancellation publishes no unfinished results.
+
+Parallel tracks can read the same variable, but a value written by one track is
+only safe to use in another track after joining. Validation rejects cross-track
+read/write conflicts. Preview leaves computed spatial state unknown rather than
+executing Lua or assuming initial values still apply. Unity validates resolved
+resource/character IDs and other dynamic constraints before starting each action.
+
 ## Parallel tracks
 
 Use **Add step > Parallel block** in Sequence to start several tracks together.

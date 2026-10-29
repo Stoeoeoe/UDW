@@ -23,14 +23,14 @@ describe('numeric cutscene arguments', () => {
     const exported = exportCutscene(parsed, actions, refs);
     expect(JSON.parse(JSON.stringify(exported)).sequence[0].arguments.seconds).toBe(seconds);
   });
-  it.each(['0.5', 'not a number', '', null, true])(
+  it.each(['0.5', 'not a number', '', null, true, {}, []])(
     'rejects values that do not match a numeric parameter: %j',
     (seconds) => {
       expect(validateCutscene(source(seconds), actions, refs).length).toBeGreaterThan(0);
       expect(() => exportCutscene(source(seconds) as never, actions, refs)).toThrow();
     },
   );
-  it.each([NaN, Infinity, -Infinity, {}, []])('rejects invalid numeric data: %j', (seconds) => {
+  it.each([NaN, Infinity, -Infinity])('rejects invalid numeric data: %j', (seconds) => {
     expect(() => parseCutscene(source(seconds))).toThrow();
   });
   it('validates each argument against its declared type without converting references', () => {
