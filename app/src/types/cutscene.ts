@@ -52,6 +52,10 @@ export interface Cutscene {
     characterPlacements: CompletionPlacement[];
   };
   sequence: CutsceneStep[];
+  /** A graph owns its phase. The corresponding list must be empty, never a stale projection. */
+  graphs?: Partial<
+    Record<import('./cutsceneGraph').CutscenePhase, import('./cutsceneGraph').CutsceneGraph>
+  >;
 }
 
 export interface CutsceneVariable {

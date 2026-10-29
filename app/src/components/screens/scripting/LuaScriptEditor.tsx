@@ -53,6 +53,10 @@ export interface LuaScriptEditorProps {
   characterReferences?: readonly { id: string; name: string }[];
   scope?: LuaBindingScope;
   argumentReferences?: LuaArgumentReferences;
+  /** Edit a value expression while presenting a complete chunk to LuaLS. */
+  expression?: boolean;
+  /** Canvas nodes use absolute widgets so React Flow's transform also moves popups. */
+  fixedOverflowWidgets?: boolean;
 }
 
 // ─── Lua language configuration ──────────────────────────────────────────────
@@ -508,7 +512,11 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   characterReferences,
   scope = SCRIPT_SCOPE,
   argumentReferences,
+  expression = false,
+  fixedOverflowWidgets = true,
 }) => {
+  const lspLineOffset = expression ? 1 : 0;
+  const lspValue = expression ? `return (\n${value}\n)` : value;
   const monacoRef = useRef<typeof Monaco | null>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const disposablesRef = useRef<Monaco.IDisposable[]>([]);
@@ -530,7 +538,10 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     monaco.editor.setModelMarkers(
       model,
       'lua-bindings',
-      [...bindingDiagnostics(value, manifest, scope), ...storyValueDiagnostics(value, storyValues ?? [])].map((issue) => {
+      [
+        ...bindingDiagnostics(value, manifest, scope),
+        ...storyValueDiagnostics(value, storyValues ?? []),
+      ].map((issue) => {
         const start = model.getPositionAt(issue.from);
         const end = model.getPositionAt(issue.to);
         return {
@@ -577,7 +588,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   useEffect(() => {
     if (!lspReady) return;
     const client = getLspClient();
-    client.openDocument(uri, value);
+    client.openDocument(uri, lspValue);
     return () => {
       client.closeDocument(uri);
     };
@@ -586,8 +597,8 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   }, [lspReady, uri]);
 
   useEffect(() => {
-    if (lspReady) getLspClient().updateDocument(uri, value);
-  }, [lspReady, uri, value]);
+    if (lspReady) getLspClient().updateDocument(uri, lspValue);
+  }, [lspReady, uri, lspValue]);
 
   // Sync document content to LSP on change
   const handleChange = useCallback(
@@ -609,15 +620,21 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
         const model = editorRef.current?.getModel();
         if (!model) return;
 
-        const markers: Monaco.editor.IMarkerData[] = diagnostics.map((d) => ({
-          severity: lspSeverityToMonaco(d.severity, monaco),
-          message: d.message,
-          startLineNumber: d.range.start.line + 1,
-          startColumn: d.range.start.character + 1,
-          endLineNumber: d.range.end.line + 1,
-          endColumn: d.range.end.character + 1,
-          source: d.source ?? 'LuaLS',
-        }));
+        const markers: Monaco.editor.IMarkerData[] = diagnostics
+          .filter(
+            (d) =>
+              d.range.start.line >= lspLineOffset &&
+              d.range.start.line < lspLineOffset + model.getLineCount(),
+          )
+          .map((d) => ({
+            severity: lspSeverityToMonaco(d.severity, monaco),
+            message: d.message,
+            startLineNumber: d.range.start.line + 1 - lspLineOffset,
+            startColumn: d.range.start.character + 1,
+            endLineNumber: Math.min(model.getLineCount(), d.range.end.line + 1 - lspLineOffset),
+            endColumn: d.range.end.character + 1,
+            source: d.source ?? 'LuaLS',
+          }));
 
         monaco.editor.setModelMarkers(model, 'lua-ls', markers);
       },
@@ -628,7 +645,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
       const model = editorRef.current?.getModel();
       if (model) monaco.editor.setModelMarkers(model, 'lua-ls', []);
     };
-  }, [mounted, lspReady, uri]);
+  }, [mounted, lspReady, uri, lspLineOffset]);
 
   // Register providers
   useEffect(() => {
@@ -701,7 +718,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             try {
               const lspItems = await getLspClient().completion(
                 uri,
-                position.lineNumber - 1,
+                position.lineNumber - 1 + lspLineOffset,
                 position.column - 1,
               );
               for (const item of lspItems) {
@@ -786,7 +803,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             try {
               const hover = await getLspClient().hover(
                 uri,
-                position.lineNumber - 1,
+                position.lineNumber - 1 + lspLineOffset,
                 position.column - 1,
               );
               if (!hover) return null;
@@ -806,9 +823,9 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
                 contents,
                 range: hover.range
                   ? {
-                      startLineNumber: hover.range.start.line + 1,
+                      startLineNumber: hover.range.start.line + 1 - lspLineOffset,
                       startColumn: hover.range.start.character + 1,
-                      endLineNumber: hover.range.end.line + 1,
+                      endLineNumber: hover.range.end.line + 1 - lspLineOffset,
                       endColumn: hover.range.end.character + 1,
                     }
                   : undefined,
@@ -829,7 +846,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             try {
               const sigHelp = await getLspClient().signatureHelp(
                 uri,
-                position.lineNumber - 1,
+                position.lineNumber - 1 + lspLineOffset,
                 position.column - 1,
               );
               if (!sigHelp) return null;
@@ -884,6 +901,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     scope,
     unavailable,
     storyValues,
+    lspLineOffset,
   ]);
 
   const handleBeforeMount: BeforeMount = (monaco) => {
@@ -920,7 +938,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
         localityBonus: true,
       },
       // Position suggest widget above cursor when near bottom of editor
-      fixedOverflowWidgets: true,
+      fixedOverflowWidgets,
     });
   };
 
@@ -940,7 +958,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
         fontSize: 13,
         tabSize: 2,
         wordWrap: 'on',
-        fixedOverflowWidgets: true,
+        fixedOverflowWidgets,
       }}
     />
   );

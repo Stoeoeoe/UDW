@@ -156,6 +156,33 @@ export function getManifestActions(
 }
 
 export const EMPTY_SCRIPTING_ACTIONS: ScriptingAction[] = [];
+/** Read-only Lua calls available in the same isolated API used by conditions. */
+export function getManifestGraphFunctions(manifest: ScriptingManifest): ScriptingAction[] {
+  return manifest.modules.flatMap((module) =>
+    module.methods.flatMap((method) => {
+      if (method.writesState || (method.action && method.callable !== true)) return [];
+      const outputs =
+        method.outputs ??
+        (method.returnType && method.returnType !== 'nil'
+          ? [{ name: 'result', type: method.returnType, nullable: method.returnNullable }]
+          : []);
+      if (!outputs.length) return [];
+      return [
+        {
+          id: `pure:${module.path}.${method.name}`,
+          displayName: `${module.path}.${method.name}`,
+          category: module.path,
+          description: 'Read-only Lua function',
+          execution: 'immediate' as const,
+          contexts: ['cutscene'],
+          phases: ['setup' as const, 'sequence' as const, 'completion' as const],
+          parameters: method.parameters,
+          outputs,
+        },
+      ];
+    }),
+  );
+}
 export const EMPTY_SCRIPTING_RESOURCES: ScriptingResources = {};
 
 /** Project character definitions are editor resources; Unity prefab resolution is external. */

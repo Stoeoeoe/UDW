@@ -5,7 +5,8 @@ import { NumberInput, NumberInputField } from '@chakra-ui/react';
 export const NumericCutsceneArgument: React.FC<{
   value: string | number;
   onChange: (value: number | '') => void;
-}> = ({ value, onChange }) => {
+  label?: string;
+}> = ({ value, onChange, label }) => {
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
   return (
@@ -16,7 +17,7 @@ export const NumericCutsceneArgument: React.FC<{
         onChange(text.trim() && Number.isFinite(numericValue) ? numericValue : '');
       }}
     >
-      <NumberInputField />
+      <NumberInputField aria-label={label} />
     </NumberInput>
   );
 };

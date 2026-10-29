@@ -19,7 +19,9 @@
     },
     "formatVersion": {
       "type": "integer",
-      "enum": [2]
+      "enum": [
+        2
+      ]
     },
     "id": {
       "type": "string",
@@ -31,7 +33,6 @@
     },
     "sequence": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "oneOf": [
           {
@@ -54,12 +55,33 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "type", "initialValue"],
+        "required": [
+          "name",
+          "type",
+          "initialValue"
+        ],
         "properties": {
-          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
-          "type": { "enum": ["boolean", "number", "string", "position", "path", "table", "storyValue"] },
-          "nullable": { "type": "boolean" },
-          "initialValue": { "$ref": "#/definitions/luaValue" }
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "type": {
+            "enum": [
+              "boolean",
+              "number",
+              "string",
+              "position",
+              "path",
+              "table",
+              "storyValue"
+            ]
+          },
+          "nullable": {
+            "type": "boolean"
+          },
+          "initialValue": {
+            "$ref": "#/definitions/luaValue"
+          }
         }
       }
     },
@@ -67,7 +89,9 @@
       "type": "object",
       "description": "Enables the shared entrance and exit transition. Timings are configured globally in Unity's CutscenePresentation settings asset.",
       "additionalProperties": false,
-      "required": ["enabled"],
+      "required": [
+        "enabled"
+      ],
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -78,20 +102,29 @@
     "onComplete": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["characterPlacements", "steps"],
+      "required": [
+        "characterPlacements",
+        "steps"
+      ],
       "properties": {
         "characterPlacements": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["character"],
+            "required": [
+              "character"
+            ],
             "oneOf": [
               {
-                "required": ["anchor"]
+                "required": [
+                  "anchor"
+                ]
               },
               {
-                "required": ["position"]
+                "required": [
+                  "position"
+                ]
               }
             ],
             "properties": {
@@ -101,7 +134,13 @@
               },
               "facing": {
                 "type": "string",
-                "enum": ["preserve", "North", "East", "South", "West"]
+                "enum": [
+                  "preserve",
+                  "North",
+                  "East",
+                  "South",
+                  "West"
+                ]
               },
               "anchor": {
                 "type": "string",
@@ -110,7 +149,10 @@
               "position": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["x", "y"],
+                "required": [
+                  "x",
+                  "y"
+                ],
                 "properties": {
                   "x": {
                     "type": "integer",
@@ -138,35 +180,96 @@
       "items": {
         "$ref": "#/definitions/actionStep"
       }
+    },
+    "graphs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onStart": {
+          "$ref": "#/definitions/graph"
+        },
+        "sequence": {
+          "$ref": "#/definitions/graph"
+        },
+        "completion": {
+          "$ref": "#/definitions/graph"
+        }
+      }
     }
   },
   "definitions": {
     "luaValue": {
       "anyOf": [
-        { "type": ["boolean", "number", "string", "null"] },
-        { "type": "array", "items": { "$ref": "#/definitions/luaValue" } },
-        { "type": "object", "additionalProperties": { "$ref": "#/definitions/luaValue" } }
+        {
+          "type": [
+            "boolean",
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/luaValue"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/luaValue"
+          }
+        }
       ]
     },
     "storyValue": {
       "anyOf": [
-        { "type": "boolean" },
-        { "type": "string" },
-        { "type": "number" },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
         {
           "type": "object",
-          "propertyNames": { "pattern": "\\S" },
-          "additionalProperties": { "$ref": "#/definitions/storyValue" }
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/storyValue"
+          }
         }
       ]
     },
     "actionStep": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "action", "arguments"],
+      "required": [
+        "id",
+        "action",
+        "arguments"
+      ],
       "properties": {
-        "argumentVariables": { "type": "object", "additionalProperties": { "type": "string", "pattern": "\\S" } },
-        "resultVariables": { "type": "array", "items": { "type": ["string", "null"], "pattern": "\\S" } },
+        "argumentVariables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "resultVariables": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "\\S"
+          }
+        },
         "id": {
           "type": "string",
           "pattern": "\\S"
@@ -175,17 +278,28 @@
           "type": "string",
           "pattern": "\\S",
           "not": {
-            "enum": ["control.if", "control.parallel"]
+            "enum": [
+              "control.if",
+              "control.parallel"
+            ]
           }
         },
         "arguments": {
           "type": "object",
           "additionalProperties": {
             "anyOf": [
-              { "$ref": "#/definitions/luaValue" },
-              { "$ref": "#/definitions/storyValue" },
-              { "type": "null" },
-              { "type": "boolean" },
+              {
+                "$ref": "#/definitions/luaValue"
+              },
+              {
+                "$ref": "#/definitions/storyValue"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
               {
                 "type": "string",
                 "pattern": "\\S"
@@ -196,7 +310,10 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["x", "y"],
+                "required": [
+                  "x",
+                  "y"
+                ],
                 "properties": {
                   "x": {
                     "type": "integer",
@@ -216,7 +333,9 @@
                     "pattern": "\\S"
                   }
                 },
-                "required": ["anchor"],
+                "required": [
+                  "anchor"
+                ],
                 "additionalProperties": false
               },
               {
@@ -227,7 +346,10 @@
                     {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["x", "y"],
+                      "required": [
+                        "x",
+                        "y"
+                      ],
                       "properties": {
                         "x": {
                           "type": "integer",
@@ -247,7 +369,9 @@
                           "pattern": "\\S"
                         }
                       },
-                      "required": ["anchor"],
+                      "required": [
+                        "anchor"
+                      ],
                       "additionalProperties": false
                     }
                   ]
@@ -261,18 +385,36 @@
     "parallelStep": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "action", "arguments", "tracks"],
+      "required": [
+        "id",
+        "action",
+        "arguments",
+        "tracks"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "\\S" },
-        "action": { "enum": ["control.parallel"] },
-        "arguments": { "type": "object", "additionalProperties": false, "properties": {} },
+        "id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "action": {
+          "enum": [
+            "control.parallel"
+          ]
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
         "tracks": {
           "type": "array",
           "minItems": 2,
           "items": {
             "type": "array",
             "minItems": 1,
-            "items": { "$ref": "#/definitions/actionStep" }
+            "items": {
+              "$ref": "#/definitions/actionStep"
+            }
           }
         }
       }
@@ -280,19 +422,29 @@
     "conditionalStep": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "action", "arguments", "then", "else"],
+      "required": [
+        "id",
+        "action",
+        "arguments",
+        "then",
+        "else"
+      ],
       "properties": {
         "id": {
           "type": "string",
           "pattern": "\\S"
         },
         "action": {
-          "enum": ["control.if"]
+          "enum": [
+            "control.if"
+          ]
         },
         "arguments": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["condition"],
+          "required": [
+            "condition"
+          ],
           "properties": {
             "condition": {
               "type": "string",
@@ -313,6 +465,206 @@
           }
         }
       }
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodes",
+        "edges"
+      ],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "position"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "kind": {
+                "enum": [
+                  "entry",
+                  "exit",
+                  "action",
+                  "function",
+                  "variable",
+                  "position",
+                  "expression",
+                  "lua",
+                  "branch",
+                  "parallel",
+                  "join"
+                ]
+              },
+              "position": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                }
+              },
+              "step": {
+                "$ref": "#/definitions/actionStep"
+              },
+              "method": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "variable": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "expression": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/definitions/luaValue"
+                }
+              },
+              "outputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "type"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "type": {
+                      "enum": [
+                        "boolean",
+                        "number",
+                        "string",
+                        "position",
+                        "path",
+                        "table",
+                        "storyValue"
+                      ]
+                    },
+                    "nullable": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "resultVariables": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "pair": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "tracks": {
+                "type": "integer",
+                "minimum": 2
+              }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source",
+              "sourcePin",
+              "target",
+              "targetPin",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "source": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "sourcePin": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "targetPin": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "kind": {
+                "enum": [
+                  "execution",
+                  "data"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "graphs"
+        ],
+        "properties": {
+          "graphs": {
+            "required": [
+              "sequence"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sequence": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "sequence": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
 }

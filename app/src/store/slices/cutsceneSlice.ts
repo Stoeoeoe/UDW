@@ -14,7 +14,11 @@ import { fileSystem } from '../../lib/fileSystem';
 import { resourceFileKey } from '../../lib/resourceRegistry';
 import { qualifyResourceId } from '../../lib/resourceIds';
 import { cancelPendingSaveUnit, scheduleSaveUnit, useSaveStore } from '../../lib/saveManager';
-import { getManifestActions, withProjectCharacters } from '../../lib/scriptingManifest';
+import {
+  getManifestActions,
+  getManifestGraphFunctions,
+  withProjectCharacters,
+} from '../../lib/scriptingManifest';
 import { useScriptingManifestStore } from '../useScriptingManifestStore';
 
 export interface CutsceneSnapshot {
@@ -296,6 +300,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
               getManifestActions(manifest, 'cutscene'),
               {
                 maps,
+                graphFunctions: getManifestGraphFunctions(manifest),
                 entityTypes: state.entityTypes,
                 dialogueIds: [...state.dialogues.keys()],
                 resources: withProjectCharacters(manifest.resources, state.characters),

@@ -15,6 +15,13 @@ export interface MapPositionPick {
   onHover: (position: MapPosition | null) => void;
 }
 interface MapPreviewPickerProps {
+  /** Optional authoring handles; coordinates use map tiles, matching annotations. */
+  editablePoints?: {
+    points: { index: number; position: [number, number] }[];
+    selected: number;
+    onSelect: (index: number) => void;
+    onMove: (index: number, position: MapPosition) => void;
+  };
   /** The map to render and pick from */
   mapId: string;
   /** Currently selected tile position (highlighted in cyan) */
@@ -203,6 +210,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   focusPositions,
   focusKey,
   overlays,
+  editablePoints,
 }) => {
   const { tileSize } = useProject();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -506,6 +514,36 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
           scale={effectiveScale}
           pan={pan}
         />
+        {editablePoints?.points.map(({ index, position }) => (
+          <button
+            key={index}
+            type="button"
+            className={`cutscene-spatial-point ${editablePoints.selected === index ? 'selected' : ''}`}
+            aria-label={`Map waypoint ${index + 1}`}
+            style={{
+              left: position[0] * NATIVE_TILE_PX * effectiveScale + pan.x,
+              top: position[1] * NATIVE_TILE_PX * effectiveScale + pan.y,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              editablePoints.onSelect(index);
+            }}
+            onPointerMove={(e) => {
+              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+              const position = getPosition(e);
+              if (position) editablePoints.onMove(index, position);
+            }}
+            onPointerUp={(e) => {
+              e.stopPropagation();
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }}
+          >
+            {index + 1}
+          </button>
+        ))}
 
         {/* Coords overlay */}
         {selectedPosition && (

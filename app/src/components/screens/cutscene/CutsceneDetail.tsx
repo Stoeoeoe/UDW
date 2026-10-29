@@ -73,7 +73,7 @@ import type {
   CompletionFacing,
 } from '../../../types/cutscene';
 import { Field, ReadOnlyIdField, InspectorSection } from '../../common/Fields';
-import { type MapPreviewOverlay } from '../../common/MapPreviewPicker';
+import { MapPreviewPicker, type MapPreviewOverlay } from '../../common/MapPreviewPicker';
 import { SequenceCard, SequenceTypeMenu, SortableSequenceItem } from '../../common/SequenceEditor';
 import { SplitEditorCanvas } from '../../common/SplitEditorCanvas';
 import { NumericCutsceneArgument } from './NumericCutsceneArgument';
@@ -112,7 +112,9 @@ export const CutsceneDetail: React.FC<{
   scene: Cutscene;
   leftPanel?: React.ReactNode;
   notice?: React.ReactNode;
-}> = ({ scene, leftPanel, notice }) => {
+  onGraph?: () => void;
+  settingsOnly?: 'scene' | 'completion';
+}> = ({ scene, leftPanel, notice, onGraph, settingsOnly }) => {
   const maps = useEditorStore((s) => s.maps);
   const currentMap = useEditorStore((s) => s.currentMap);
   const characterDefinitions = useEditorStore((s) => s.characters);
@@ -1726,6 +1728,25 @@ export const CutsceneDetail: React.FC<{
       </DndContext>
     );
   };
+  if (settingsOnly)
+    return (
+      <VStack align="stretch" spacing={4}>
+        {settingsOnly === 'completion' ? completionFields : sceneFields}
+        {positionPick && map && (
+          <Box h="410px">
+            <MapPreviewPicker
+              mapId={map.id}
+              width={600}
+              height={360}
+              leftDragPan
+              positionPick={positionPick}
+              overlays={overlays}
+            />
+          </Box>
+        )}
+      </VStack>
+    );
+
   return (
     <ResizableEditorLayout
       header={{ title: labels[scene.id] || scene.id }}
@@ -1825,6 +1846,11 @@ export const CutsceneDetail: React.FC<{
           title=""
           headerActions={
             <>
+              {onGraph && (
+                <Button size="xs" variant="outline" onClick={onGraph}>
+                  Graph
+                </Button>
+              )}
               <Button size="xs" variant="outline" onClick={() => setSelection({ kind: 'scene' })}>
                 Scene settings
               </Button>

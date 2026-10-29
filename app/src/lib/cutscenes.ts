@@ -9,6 +9,12 @@ import {
 } from '../types/cutscene';
 import { allCutsceneSteps } from './cutsceneBranches';
 import {
+  cutsceneGraphSchema,
+  graphPhases,
+  phaseSteps as graphPhaseSteps,
+  validateGraphPlan,
+} from './cutsceneGraph';
+import {
   cutsceneVariableSchema,
   cutsceneDataSchema,
   actionForCutsceneStep,
@@ -157,7 +163,15 @@ export const cutsceneSchema = z
         characterPlacements: z.array(completionPlacementSchema),
       })
       .strict(),
-    sequence: z.array(z.union([stepSchema, conditionalSchema, parallelSchema])).min(1),
+    sequence: z.array(z.union([stepSchema, conditionalSchema, parallelSchema])),
+    graphs: z
+      .object({
+        onStart: cutsceneGraphSchema.optional(),
+        sequence: cutsceneGraphSchema.optional(),
+        completion: cutsceneGraphSchema.optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -193,7 +207,20 @@ export function parseCutscene(raw: unknown): Cutscene {
 
   const result = cutsceneSchema.safeParse(raw);
   if (!result.success) throw new Error(`Invalid cutscene source: ${result.error.message}`);
-  const ids = allCutsceneSteps(result.data).map((step) => step.id);
+  if (!result.data.sequence.length && !result.data.graphs?.sequence)
+    throw new Error('The sequence needs at least one step or an execution graph');
+  for (const phase of graphPhases)
+    if (result.data.graphs?.[phase] && graphPhaseSteps(result.data, phase).length)
+      throw new Error(`${phase}: a graph and list cannot both own a phase`);
+  const ids = [
+    ...allCutsceneSteps(result.data).map((step) => step.id),
+    ...Object.values(result.data.graphs ?? {}).flatMap(
+      (graph) =>
+        graph?.nodes
+          .filter((n) => ['action', 'lua', 'branch', 'parallel'].includes(n.kind))
+          .map((n) => n.id) ?? [],
+    ),
+  ];
   const variableNames = result.data.variables?.map((variable) => variable.name) ?? [];
   if (new Set(variableNames).size !== variableNames.length)
     throw new Error(`Cutscene ${result.data.id}: duplicate variable name`);
@@ -219,6 +246,7 @@ export function mapCharacterInstances(map: GameMap, entityTypes: EntityType[]): 
 }
 
 export interface CutsceneReferences {
+  graphFunctions?: CutsceneAction[];
   storyValues?: readonly import('../types/schema').StoryValueDefinition[];
   resources?: ScriptingResources;
   tileSize?: number;
@@ -322,6 +350,42 @@ export function validateCutscene(
         };
       });
   const scene: Cutscene = shape.data;
+  if (!scene.sequence.length && !scene.graphs?.sequence)
+    return [{ path: 'sequence', message: 'Add at least one sequence step' }];
+  if (scene.graphs && Object.keys(scene.graphs).length) {
+    const projected = structuredClone(scene);
+    delete projected.graphs;
+    try {
+      for (const phase of graphPhases) {
+        const graph = scene.graphs[phase];
+        if (!graph) continue;
+        if (graphPhaseSteps(scene, phase).length)
+          throw new Error(`${phase}: a graph and list cannot both own a phase`);
+        const plan = validateGraphPlan(
+          graph,
+          scene,
+          [...actions, ...(refs.graphFunctions ?? [])],
+          phase,
+        );
+        projected.variables = [...(projected.variables ?? []), ...plan.variables.slice(scene.variables?.length ?? 0)];
+        if (phase === 'sequence') projected.sequence = plan.steps;
+        else if (phase === 'onStart') projected.onStart = plan.steps;
+        else projected.onComplete.steps = plan.steps;
+        for (const node of graph.nodes)
+          if (node.kind === 'expression' || node.kind === 'lua') {
+            const errors = validateLuaChunk(
+              node.kind === 'expression'
+                ? `return (${node.expression || ''})`
+                : node.expression || '',
+            );
+            if (!errors.ok) throw new Error(`${node.id}: ${errors.error}`);
+          }
+      }
+      return validateCutscene(projected, actions, refs);
+    } catch (error) {
+      return [{ path: 'graphs', message: (error as Error).message }];
+    }
+  }
   const diagnostics: CutsceneDiagnostic[] = [];
   const report = (path: string, message: string, stepId?: string) =>
     diagnostics.push({
@@ -771,6 +835,7 @@ export function exportCutscene(
       ),
     },
     sequence: scene.sequence.map(serializeStep),
+    ...(scene.graphs ? { graphs: structuredClone(scene.graphs) } : {}),
   };
 }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Text, VStack, useDisclosure, useToast } from '@chakra-ui/react';
 import { FiFilm } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -7,11 +7,13 @@ import { ListPanel } from '../common/ListPanel';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { CutsceneDetail } from './CutsceneDetail';
+import { CutsceneGraphEditor } from './CutsceneGraphEditor';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { createEditorResourceDocument } from '../../../lib/editorResourceTypes';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 
 export const CutsceneEditor: React.FC<{ cutsceneId?: string }> = ({ cutsceneId }) => {
+  const [graphMode, setGraphMode] = useState(false);
   const scenes = useEditorStore((s) => s.cutscenes);
   const selectedId = useEditorStore((s) => s.selectedCutsceneId);
   const labels = useEditorStore((s) => s.cutsceneLabels);
@@ -54,10 +56,18 @@ export const CutsceneEditor: React.FC<{ cutsceneId?: string }> = ({ cutsceneId }
 
   return (
     <>
-      {scene ? (
+      {scene && (graphMode || (scene.graphs && Object.keys(scene.graphs).length > 0)) ? (
+        <CutsceneGraphEditor
+          key={scene.id}
+          scene={scene}
+          onList={() => setGraphMode(false)}
+          notice={loadError || manifestError ? controls : undefined}
+        />
+      ) : scene ? (
         <CutsceneDetail
           key={scene.id}
           scene={scene}
+          onGraph={() => setGraphMode(true)}
           notice={loadError || manifestError ? controls : undefined}
           leftPanel={
             cutsceneId ? undefined : (
