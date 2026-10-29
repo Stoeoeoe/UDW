@@ -4,10 +4,6 @@ import {
   Button,
   HStack,
   Input,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Select,
   Switch,
   Text,
@@ -16,68 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { Field, InspectorSection } from '../../common/Fields';
 import type { CutsceneVariable } from '../../../types/cutscene';
-import {
-  initialVariableValue,
-  variableCompatible,
-  variableTypes,
-} from '../../../lib/cutsceneVariables';
-
-export function CutsceneVariableInput({
-  variables,
-  linked,
-  expected,
-  label,
-  onLink,
-  children,
-  allowLink = true,
-}: {
-  variables: readonly CutsceneVariable[];
-  linked?: string;
-  expected: { type: string; nullable?: boolean };
-  label: string;
-  onLink: (name?: string) => void;
-  children: React.ReactNode;
-  allowLink?: boolean;
-}) {
-  return (
-    <HStack align="start" spacing={2}>
-      <Box flex={1} minW={0}>
-        {linked ? (
-          <Text fontFamily="mono" py={1}>
-            ⚡ {linked}
-          </Text>
-        ) : (
-          children
-        )}
-      </Box>
-      {allowLink && (
-        <Menu>
-          <MenuButton
-            as={Button}
-            size="xs"
-            variant={linked ? 'solid' : 'outline'}
-            aria-label={`Variable for ${label}`}
-          >
-            ⚡
-          </MenuButton>
-          <MenuList>
-            <MenuItem onClick={() => onLink(undefined)}>Use literal value</MenuItem>
-            {variables
-              .filter((variable) => variableCompatible(variable, expected))
-              .map((variable) => (
-                <MenuItem key={variable.name} onClick={() => onLink(variable.name)}>
-                  {variable.name} · {variable.type}
-                </MenuItem>
-              ))}
-            {!variables.some((variable) => variableCompatible(variable, expected)) && (
-              <MenuItem isDisabled>No compatible variables</MenuItem>
-            )}
-          </MenuList>
-        </Menu>
-      )}
-    </HStack>
-  );
-}
+import { initialVariableValue, variableTypes } from '../../../lib/cutsceneVariables';
 
 export function CutsceneJsonValueField({
   value,

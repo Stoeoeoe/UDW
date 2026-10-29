@@ -9,7 +9,6 @@ import {
   ModalCloseButton,
   ModalHeader,
   Text,
-  Tooltip,
 } from '@chakra-ui/react';
 import {
   ReactFlow,
@@ -63,7 +62,7 @@ import { CutsceneGraphNode, type GraphViewNode } from './CutsceneGraphNode';
 import { CutsceneGraphToolbar } from './CutsceneGraphToolbar';
 import { GraphEditingContext } from './CutsceneGraphContext';
 import { CutsceneSpatialEditor } from './CutsceneSpatialEditor';
-import { CutsceneDetail } from './CutsceneDetail';
+import { CutsceneSettings } from './CutsceneSettings';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
 import EditorModal from '../../common/EditorModal';
@@ -71,21 +70,14 @@ import '@xyflow/react/dist/style.css';
 import './CutsceneGraph.css';
 
 const nodeTypes = { cutscene: CutsceneGraphNode };
-function GraphWorkspace({
-  scene,
-  onList,
-  notice,
-}: {
-  scene: Cutscene;
-  onList: () => void;
-  notice?: React.ReactNode;
-}) {
+function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.ReactNode }) {
   const [phase, setPhase] = useState<CutscenePhase>('sequence');
   const [settings, setSettings] = useState<'scene' | 'completion'>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectedEdges, setSelectedEdges] = useState<Set<string>>(new Set());
   const [insertionEdge, setInsertionEdge] = useState<string>();
   const insertionTarget = useRef<string>();
+  const insertionWires = useRef<{ id: string; points: { x: number; y: number }[] }[]>([]);
   const draggingNodes = useRef(false);
   const [clipboard, setClipboard] = useState<CutsceneGraph>();
   const pasteOffset = useRef(48);
@@ -216,7 +208,10 @@ function GraphWorkspace({
         n.id,
         {
           // A newly mounted/resized Lua node can still have an older measurement.
-          width: Math.max(n.measured?.width ?? 0, typeof n.style?.width === 'number' ? n.style.width : 300),
+          width: Math.max(
+            n.measured?.width ?? 0,
+            typeof n.style?.width === 'number' ? n.style.width : 300,
+          ),
           height: n.measured?.height ?? 260,
         },
       ]),
@@ -231,27 +226,12 @@ function GraphWorkspace({
     node: GraphViewNode,
   ) => {
     if (!['action', 'lua'].includes(node.data.authored.kind)) return;
-    const point = event;
+    const point = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
     let nearest: string | undefined;
-    let distance = 28;
-    const paths = new Map(
-      Array.from(root.current!.querySelectorAll<SVGGElement>('.react-flow__edge')).map(
-        (element) => [
-          element.dataset.id,
-          element.querySelector<SVGPathElement>('.react-flow__edge-path'),
-        ],
-      ),
-    );
-    for (const edge of graph.edges) {
-      if (edge.kind !== 'execution' || edge.source === node.id || edge.target === node.id) continue;
-      const path = paths.get(edge.id);
-      if (!path) continue; // A wire outside the rendered viewport is not a drop target.
-      const matrix = path.getScreenCTM();
-      if (!matrix) continue; // The SVG can detach while React Flow updates visible edges.
-      const length = path.getTotalLength();
-      for (let position = 0; position <= length; position += 10) {
-        const sample = path.getPointAtLength(position).matrixTransform(matrix);
-        const next = Math.hypot(sample.x - point.clientX, sample.y - point.clientY);
+    let distance = 28 / flow.getZoom();
+    for (const edge of insertionWires.current) {
+      for (const sample of edge.points) {
+        const next = Math.hypot(sample.x - point.x, sample.y - point.y);
         if (next < distance) {
           distance = next;
           nearest = edge.id;
@@ -268,6 +248,7 @@ function GraphWorkspace({
       if (edge && nodes.length === 1) insertExecutionNode(draft, nodes[0].id, edge);
     });
     setDrag({});
+    insertionWires.current = [];
     insertionTarget.current = undefined;
     setInsertionEdge(undefined);
   };
@@ -645,53 +626,6 @@ function GraphWorkspace({
       argumentReferences,
     ],
   );
-  const canRestore = Object.values(scene.graphs ?? {}).every(
-    (g) =>
-      g &&
-      !g.nodes.some((n) => n.kind === 'lua') &&
-      g.edges.every(
-        (e) =>
-          e.kind !== 'data' ||
-          (g.nodes.find((n) => n.id === e.target)?.kind === 'branch' &&
-            g.nodes.find((n) => n.id === e.source)?.kind === 'expression'),
-      ) &&
-      g.nodes.every(
-        (n) =>
-          !isPureGraphNode(n) ||
-          (n.kind === 'expression' &&
-            g.edges.some(
-              (e) => e.source === n.id && g.nodes.find((t) => t.id === e.target)?.kind === 'branch',
-            )),
-      ),
-  );
-  const restoreList = () => {
-    if (!canRestore) return;
-    try {
-      const restored = structuredClone(scene);
-      for (const key of ['onStart', 'sequence', 'completion'] as const)
-        if (restored.graphs?.[key]) {
-          const g = restored.graphs[key]!;
-          const plan = validateGraphPlan(g, scene, actions, key);
-          for (const step of plan.steps)
-            if (step.action === 'control.if') {
-              const e = g.edges.find((e) => e.target === step.id && e.targetPin === 'condition');
-              step.arguments.condition = e
-                ? g.nodes.find((n) => n.id === e.source)!.expression!
-                : String(g.nodes.find((n) => n.id === step.id)!.arguments!.condition);
-            }
-          if (key === 'sequence') restored.sequence = plan.steps;
-          else if (key === 'onStart') restored.onStart = plan.steps;
-          else restored.onComplete.steps = plan.steps;
-        }
-      delete restored.graphs;
-      edit((scenes) => {
-        scenes[scenes.findIndex((s) => s.id === scene.id)] = restored;
-      });
-      onList();
-    } catch (error) {
-      setMessage((error as Error).message);
-    }
-  };
   return (
     <ResizableEditorLayout
       header={{ title: labels[scene.id] || scene.id }}
@@ -726,27 +660,6 @@ function GraphWorkspace({
           }}
           headerActions={
             <>
-              <Tooltip
-                label={
-                  canRestore
-                    ? 'Switch to the list representation'
-                    : 'Pure nodes and direct data connections require Graph view'
-                }
-              >
-                <Box>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    isDisabled={!canRestore || Boolean(spatial)}
-                    onClick={restoreList}
-                  >
-                    List
-                  </Button>
-                </Box>
-              </Tooltip>
-              <Button size="xs" colorScheme="blue">
-                Graph
-              </Button>
               <Button
                 size="xs"
                 variant="outline"
@@ -870,8 +783,34 @@ function GraphWorkspace({
                       connecting.current = params;
                     }}
                     onConnectEnd={onConnectEnd}
-                    onNodeDragStart={() => {
+                    onNodeDragStart={(_, node, nodes) => {
                       draggingNodes.current = true;
+                      // Other wires stay fixed during a single-node drag. Snapshot their graph
+                      // geometry before highlighting can replace their SVG elements.
+                      insertionWires.current =
+                        nodes.length === 1
+                          ? graph.edges.flatMap((edge) => {
+                              if (
+                                edge.kind !== 'execution' ||
+                                edge.source === node.id ||
+                                edge.target === node.id
+                              )
+                                return [];
+                              const element = Array.from(
+                                root.current!.querySelectorAll<SVGGElement>('.react-flow__edge'),
+                              ).find((el) => el.dataset.id === edge.id);
+                              const path =
+                                element?.querySelector<SVGPathElement>('.react-flow__edge-path');
+                              if (!path) return [];
+                              const points = [];
+                              const total = path.getTotalLength();
+                              for (let length = 0; length <= total; length += 10) {
+                                const point = path.getPointAtLength(length);
+                                points.push({ x: point.x, y: point.y });
+                              }
+                              return [{ id: edge.id, points }];
+                            })
+                          : [];
                     }}
                     onNodeDrag={(event, node, nodes) => {
                       insertionTarget.current =
@@ -1034,7 +973,13 @@ function GraphWorkspace({
                       </ModalHeader>
                       <ModalCloseButton />
                       <ModalBody pb={5}>
-                        <CutsceneDetail scene={scene} settingsOnly={settings} />
+                        {settings && (
+                          <CutsceneSettings
+                            scene={scene}
+                            mode={settings}
+                            characterOptions={roles}
+                          />
+                        )}
                       </ModalBody>
                     </Box>
                   </EditorModal>
@@ -1047,11 +992,7 @@ function GraphWorkspace({
     />
   );
 }
-export const CutsceneGraphEditor = (props: {
-  scene: Cutscene;
-  onList: () => void;
-  notice?: React.ReactNode;
-}) => (
+export const CutsceneGraphEditor = (props: { scene: Cutscene; notice?: React.ReactNode }) => (
   <ReactFlowProvider>
     <GraphWorkspace {...props} />
   </ReactFlowProvider>

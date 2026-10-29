@@ -1,6 +1,6 @@
 # Cutscene graph editor
 
-Open a cutscene and choose **Graph** beside Scene settings. Existing list-authored content is projected into a left-to-right React Flow canvas. The first graph edit stores that phase as a graph; its old step list is cleared. Other phases and the completion placement plan retain their existing behavior. Graph documents reopen in Graph view, participate in the existing save queue and undo/redo history, and are validated before export.
+Opening a cutscene goes directly to the left-to-right React Flow canvas. The graph is the sole authoring view. Existing ordered source content opens as nodes; the first graph edit stores that phase as a graph and clears its old step list. Other phases and the completion placement plan retain their existing behavior. Graph documents participate in the existing save queue and undo/redo history and are validated before export.
 
 ## Nodes and connections
 
@@ -30,7 +30,7 @@ If / Else and Parallel create paired join nodes. Branch joins converge the selec
 
 Export/import rejects disconnected executable nodes, cycles, mismatched or missing pins, duplicate IDs, unavailable producer results, unmatched joins, invalid Lua, invalid literals/references, incompatible result destinations and conflicting parallel claims/local accesses. A value produced only by one alternative branch cannot be consumed unconditionally after its join. Cross-track output reads must wait until the parallel join.
 
-The List button converts graphs representable by the existing list format back into lists. Pure data nodes, direct value connections and Lua result declarations require Graph view; conversion is disabled rather than dropping those semantics. Structured list-origin conditions remain convertible.
+There is no List view or graph-to-list conversion. Scene settings, local variables and final placements have dedicated forms available from the graph. Ordered steps remain an accepted source/import representation and the existing compiler's internal execution plan; they no longer have a separate authoring UI.
 
 ## Canvas shortcuts and layout
 

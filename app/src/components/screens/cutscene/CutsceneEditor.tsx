@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button, Text, VStack, useDisclosure, useToast } from '@chakra-ui/react';
 import { FiFilm } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { ListPanel } from '../common/ListPanel';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
-import { CutsceneDetail } from './CutsceneDetail';
 import { CutsceneGraphEditor } from './CutsceneGraphEditor';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { createEditorResourceDocument } from '../../../lib/editorResourceTypes';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 
 export const CutsceneEditor: React.FC<{ cutsceneId?: string }> = ({ cutsceneId }) => {
-  const [graphMode, setGraphMode] = useState(false);
   const scenes = useEditorStore((s) => s.cutscenes);
   const selectedId = useEditorStore((s) => s.selectedCutsceneId);
-  const labels = useEditorStore((s) => s.cutsceneLabels);
   const project = useEditorStore((s) => s.project);
   const manifestError = useScriptingManifestStore(
     (s) =>
@@ -56,35 +52,11 @@ export const CutsceneEditor: React.FC<{ cutsceneId?: string }> = ({ cutsceneId }
 
   return (
     <>
-      {scene && (graphMode || (scene.graphs && Object.keys(scene.graphs).length > 0)) ? (
+      {scene ? (
         <CutsceneGraphEditor
           key={scene.id}
           scene={scene}
-          onList={() => setGraphMode(false)}
           notice={loadError || manifestError ? controls : undefined}
-        />
-      ) : scene ? (
-        <CutsceneDetail
-          key={scene.id}
-          scene={scene}
-          onGraph={() => setGraphMode(true)}
-          notice={loadError || manifestError ? controls : undefined}
-          leftPanel={
-            cutsceneId ? undefined : (
-              <ListPanel
-                title="Cutscenes"
-                enableSearch
-                items={scenes.map((s) => ({
-                  id: s.id,
-                  label: labels[s.id] || s.id,
-                  sublabel: s.mapId,
-                }))}
-                selectedId={selectedId}
-                onSelect={(id) => useEditorStore.setState({ selectedCutsceneId: id })}
-                onAdd={create.onOpen}
-              />
-            )
-          }
         />
       ) : (
         <ResizableEditorLayout
@@ -95,7 +67,7 @@ export const CutsceneEditor: React.FC<{ cutsceneId?: string }> = ({ cutsceneId }
               <EmptyScreen
                 icon={<FiFilm />}
                 title="No cutscene selected"
-                description="Create a cutscene, select its map, then add action steps."
+                description="Create a cutscene, select its map, then connect action nodes."
                 buttonLabel="Create Cutscene"
                 onCreate={create.onOpen}
               />
