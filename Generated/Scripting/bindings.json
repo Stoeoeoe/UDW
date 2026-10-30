@@ -954,6 +954,92 @@
       ]
     },
     {
+      "path": "Time",
+      "methods": [
+        {
+          "name": "GetCurrent",
+          "parameters": [],
+          "returnType": "TimeLuaView",
+          "returnNullable": true,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "table",
+              "nullable": true
+            }
+          ]
+        },
+        {
+          "name": "SetTime",
+          "parameters": [
+            {
+              "name": "hour",
+              "type": "number"
+            },
+            {
+              "name": "minute",
+              "type": "number"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "callable": true,
+          "outputs": [],
+          "action": {
+            "id": "time.setTime",
+            "displayName": "Set time of day",
+            "category": "Time",
+            "description": "Move forward within the current day; refresh daylight and cooldowns.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "StartNewDay",
+          "parameters": [],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "callable": true,
+          "outputs": [],
+          "action": {
+            "id": "time.startNewDay",
+            "displayName": "Start new day",
+            "category": "Time",
+            "description": "Advance to the next morning and process daily systems immediately, without the bedtime sequence.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "Wallet",
       "methods": [
         {
@@ -1047,6 +1133,35 @@
         {
           "name": "plowed",
           "type": "boolean"
+        }
+      ]
+    },
+    {
+      "name": "TimeLuaView",
+      "fields": [
+        {
+          "name": "dayOfSeason",
+          "type": "integer"
+        },
+        {
+          "name": "daysSinceStart",
+          "type": "integer"
+        },
+        {
+          "name": "hour",
+          "type": "integer"
+        },
+        {
+          "name": "minute",
+          "type": "integer"
+        },
+        {
+          "name": "season",
+          "type": "string"
+        },
+        {
+          "name": "totalMinutes",
+          "type": "number"
         }
       ]
     }

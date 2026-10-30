@@ -82,6 +82,38 @@ namespace Core.TimeAndWeather
 
         private bool _started;
 
+        internal void RequireScriptTimeChange()
+        {
+            if (!_started)
+                throw new System.InvalidOperationException("Scripted time changes require the initialized UrTimeManager.");
+            if (_dayTransitionRoutine != null)
+                throw new System.InvalidOperationException("Cannot change scripted time during an overnight transition.");
+        }
+
+        public void ValidateTimeOfDay(int hour, int minute)
+        {
+            RequireScriptTimeChange();
+            if (hour < startOfDay || hour >= endOfDay || minute < 0 || minute >= 60)
+                throw new System.ArgumentOutOfRangeException(nameof(hour),
+                    $"Time must be between {startOfDay:00}:00 and {endOfDay - 1:00}:59.");
+        }
+
+        /// <summary>Moves forward within the current day, refreshing daylight and clock-driven cooldowns.</summary>
+        public void SetTimeOfDay(int hour, int minute)
+        {
+            ValidateTimeOfDay(hour, minute);
+            var time = GameState.Time;
+            if (hour * 60 + minute < time.hour * 60 + time.minute)
+                throw new System.InvalidOperationException("The game clock cannot rewind. Start a new day before selecting an earlier time.");
+            var previousMinute = time.TotalMinutes;
+            time.hour = hour;
+            time.minute = minute;
+            time.secondsTowardNextMinute = 0f;
+            WeatherManager.Instance.RefreshDaylight();
+            if (time.TotalMinutes != previousMinute)
+                GameTimeChangedEvent.Trigger(time.TotalMinutes);
+        }
+
         /// <summary>Refreshes runtime conditions after GameState.Load, without advancing time.</summary>
         public void ApplySavedTime()
         {

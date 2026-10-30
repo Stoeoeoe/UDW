@@ -15,7 +15,7 @@ using UnityEngine.Rendering;
 namespace Core.TimeAndWeather.Editor
 {
     /// <summary>Checks seasonal weather selection, load refresh and presentation notifications against the real clock.</summary>
-    public sealed class WeatherManagerTests : IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>
+    public sealed class WeatherManagerTests : IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>, IEventListener<GameTimeChangedEvent>
     {
         private GameTestFixture _fixture;
         private UrTimeManager _clock;
@@ -27,6 +27,7 @@ namespace Core.TimeAndWeather.Editor
         private Color _daylight;
         private WeatherData _dailyWeather;
         private float _previousWaterRain;
+        private readonly List<long> _clockNotifications = new();
 
         [SetUp]
         public void SetUp()
@@ -54,6 +55,8 @@ namespace Core.TimeAndWeather.Editor
             EventBus<WeatherUpdateEvent>.Subscribe(this);
             EventBus<DayLightUpdateEvent>.Subscribe(this);
             EventBus<NewDayEvent>.Subscribe(this);
+            _clockNotifications.Clear();
+            EventBus<GameTimeChangedEvent>.Subscribe(this);
         }
 
         [TearDown]
@@ -62,6 +65,7 @@ namespace Core.TimeAndWeather.Editor
             EventBus<WeatherUpdateEvent>.Unsubscribe(this);
             EventBus<DayLightUpdateEvent>.Unsubscribe(this);
             EventBus<NewDayEvent>.Unsubscribe(this);
+            EventBus<GameTimeChangedEvent>.Unsubscribe(this);
             _fixture.Dispose();
             WaterInteraction.Rain = _previousWaterRain;
         }
@@ -75,6 +79,94 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_daylight, Is.EqualTo(Color.green));
             Assert.That(_dailyWeather, Is.Null);
             Assert.That(WaterInteraction.Rain, Is.EqualTo(0.35f));
+        }
+
+        [Test]
+        public void LuaTimeQueriesAreDetachedReadOnlyAndReadTheCurrentSaveRoot()
+        {
+            var engine = new VulcanusLuaEngine();
+            Assert.That(() => engine.EvaluateCondition("Time.GetCurrent().hour == 6"), Throws.Exception);
+            _clock.Start();
+            Assert.That(engine.EvaluateCondition("Time.GetCurrent().season == 'Spring' and Time.GetCurrent().dayOfSeason == 5"), Is.True);
+            engine.Execute("local now = Time.GetCurrent(); now.hour = 22");
+            Assert.That(GameState.Time.hour, Is.EqualTo(6));
+            Assert.That(() => engine.EvaluateCondition("Time.SetTime(18, 30)"), Throws.Exception);
+            var replacement = new GameSaveData();
+            replacement.time.initialized = true;
+            replacement.time.hour = 15;
+            replacement.time.daysSinceStart = 3;
+            replacement.time.season = Core.TimeAndWeather.Season.Spring;
+            replacement.time.dayOfSeason = 7;
+            typeof(GameStateManager).GetField("_data", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(GameStateManager.Instance, replacement);
+            Assert.That(engine.EvaluateCondition("Time.GetCurrent().hour == 15 and Time.GetCurrent().totalMinutes == 3780"), Is.True);
+        }
+
+        [TestCase("setup")]
+        [TestCase("sequence")]
+        [TestCase("completion")]
+        public void LuaTimeActionsAdvanceTheClockAndDailySystemsInEveryPhase(string phase)
+        {
+            _clock.Start();
+            GameState.Time.hour = 20;
+            GameState.Time.dayOfSeason = 14;
+            GameState.Time.secondsTowardNextMinute = 3;
+            var source = JArray.Parse("[{ 'id':'tomorrow', 'action':'time.startNewDay', 'arguments':{} }, { 'id':'evening', 'action':'time.setTime', 'arguments':{ 'hour':18, 'minute':30 } }]");
+            var lua = CutsceneSequenceCompiler.Compile(source, "Time fixture", out var steps);
+            var api = new TimeLuaApi();
+            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(TimeLuaApi), () => api));
+            using var session = VulcanusLuaEngine.StartSession(bindings, lua, "Time fixture", phase: phase);
+            session.Tick(0);
+            Assert.That(session.IsRunning, Is.False);
+            Assert.That(GameState.Time.daysSinceStart, Is.EqualTo(2));
+            Assert.That(GameState.Time.dayOfSeason, Is.EqualTo(1));
+            Assert.That(GameState.Time.season, Is.EqualTo(Core.TimeAndWeather.Season.Summer));
+            Assert.That(GameState.Time.hour, Is.EqualTo(18));
+            Assert.That(GameState.Time.minute, Is.EqualTo(30));
+            Assert.That(GameState.Time.secondsTowardNextMinute, Is.Zero);
+            Assert.That(_dailyWeather, Is.SameAs(_summer.weatherData.GetRandomItem()));
+            Assert.That(_clockNotifications, Is.EqualTo(new long[] { 1800, 2550 }));
+            Assert.That(_daylight, Is.EqualTo(Color.yellow));
+        }
+
+        [TestCase(-1, 0)]
+        [TestCase(24, 0)]
+        [TestCase(18.5, 0)]
+        [TestCase(18, 60)]
+        [TestCase(18, -1)]
+        [TestCase(18, 0.5)]
+        [TestCase(double.NaN, 0)]
+        [TestCase(18, double.PositiveInfinity)]
+        [TestCase(5, 59)]
+        [TestCase(23, 0)]
+        public void LuaTimeRejectsInvalidClockInputsWithoutChangingState(double hour, double minute)
+        {
+            _clock.Start();
+            var previous = GameState.Time.TotalMinutes;
+            Assert.That(() => new TimeLuaApi().SetTime(hour, minute), Throws.TypeOf<System.ArgumentOutOfRangeException>());
+            Assert.That(GameState.Time.TotalMinutes, Is.EqualTo(previous));
+            Assert.That(_clockNotifications, Is.Empty);
+        }
+
+        [Test]
+        public void LuaTimeRejectsUninitializedAndTransitioningClocksAndNeverRewinds()
+        {
+            var api = new TimeLuaApi();
+            Assert.That(() => api.StartNewDay(), Throws.InvalidOperationException);
+            _clock.Start();
+            new VulcanusLuaEngine().Execute("Time.SetTime(18, 30)");
+            Assert.That(() => api.SetTime(18, 29), Throws.InvalidOperationException);
+            var previous = GameState.Time.TotalMinutes;
+            Set(_clock, "_dayTransitionRoutine", new object[0].GetEnumerator());
+            try
+            {
+                Assert.That(() => api.SetTime(19, 0), Throws.InvalidOperationException);
+                Assert.That(() => api.StartNewDay(), Throws.InvalidOperationException);
+            }
+            finally { Set(_clock, "_dayTransitionRoutine", null); }
+            api.SetTime(18, 30);
+            Assert.That(GameState.Time.TotalMinutes, Is.EqualTo(previous));
+            Assert.That(_clockNotifications, Has.Count.EqualTo(1));
         }
 
         [TestCase("setup")]
@@ -210,6 +302,7 @@ namespace Core.TimeAndWeather.Editor
         public void OnEvent(WeatherUpdateEvent change) => _notifications.Add(change.WeatherData);
         public void OnEvent(DayLightUpdateEvent change) => _daylight = change.Color;
         public void OnEvent(NewDayEvent change) => _dailyWeather = _weather.CurrentWeather;
+        public void OnEvent(GameTimeChangedEvent change) => _clockNotifications.Add(GameState.Time.TotalMinutes);
 
         private IEnumerator Apply(WeatherData weather) => (IEnumerator)typeof(WeatherManager)
             .GetMethod("ApplyWeather", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_weather, new object[] { weather });

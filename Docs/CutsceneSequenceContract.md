@@ -1,5 +1,31 @@
 # Cutscene steps
 
+## Lua time API
+
+`Time.GetCurrent()` is available to dialogue conditions, expressions and scripts.
+It returns a detached table with `season` (the enum name, such as `Spring`),
+`dayOfSeason`, `daysSinceStart` (starting at 1), `hour`, `minute` and `totalMinutes`.
+It reads the live save root on each call; editing the returned table does not change time.
+
+```lua
+Time.GetCurrent().hour >= 18 and Time.GetCurrent().season == 'Spring'
+```
+
+Writable scripts and cutscene actions support `Time.SetTime(hour, minute)`
+(`time.setTime`) and `Time.StartNewDay()` (`time.startNewDay`) in every phase.
+Hours and minutes must be whole numbers. SetTime moves forward within the
+configured morning-to-bedtime window (bedtime itself is excluded), resets the
+partial clock tick, refreshes daylight and publishes clock changes for cooldowns.
+Rewinding is rejected because saved cooldowns use a monotonic game clock.
+StartNewDay advances to the next morning using normal season rollover, weather
+and daily processing. It does not run the fade, return-home or overnight recovery
+sequence. Neither operation is allowed during an active overnight transition.
+
+```lua
+Time.StartNewDay()
+Time.SetTime(18, 30)
+```
+
 ## Cinematic movement and collision
 
 `characters.moveTo` and `characters.walkPath` accept optional `ignoreCollisions`
