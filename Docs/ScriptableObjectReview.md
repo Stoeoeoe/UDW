@@ -154,8 +154,6 @@ Do not move serialized fields into a new base class just to standardize names. P
 
 **Implementation status (5 October 2026):** removed the unused duplicate `ToolData.toolName` field, populated inherited item names for the hoe and watering jar, and grouped tool, plant, terrain and season asset menus under consistent categories. Other informational authoring observations below remain unchanged.
 
-**Implementation status (5 October 2026):** removed the unused duplicate `ToolData.toolName` field, populated inherited item names for the hoe and watering jar, and grouped tool, plant, terrain and season asset menus under consistent categories. Other informational authoring observations below remain unchanged.
-
 - The four default Resources catalog `.asset` files were absent at review time. [DefaultCatalogAssets](../Assets/Core/Catalogs/Editor/DefaultCatalogAssets.cs:17) creates them automatically, including before play/build. Confirm their generated contents and intended source-control policy after Unity imports the current changes. Absence alone is not a runtime defect if bootstrapping runs successfully.
 - [TestSkill.asset](../Assets/Skills/TestSkill.asset:15) has ID `TestSkill` and lives outside `SkillCatalog.Path` (`Assets/Resources/Skills`). It will not be discovered by that default catalog. If this is intended shipped content, give it a valid authored ID and put/import it within the chosen discovery scope; if it is a deliberate fixture, document that. Do not automatically broaden all catalog scopes just for an unused test asset.
 - `ToolData.toolName` was removed as an unused duplicate of inherited `ItemName`; the two shipped tool assets now have distinct inherited display names.
