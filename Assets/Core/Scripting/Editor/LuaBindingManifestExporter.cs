@@ -5,6 +5,7 @@ using System.Text;
 using Character;
 using Character.Animations;
 using Core.Catalogs.Editor;
+using Core.Divinity;
 using Core.TimeAndWeather;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -36,8 +37,10 @@ namespace Core.Scripting.Editor
                 CatalogDiscovery.Refresh(sounds);
                 var weather = AssetDatabase.LoadAssetAtPath<WeatherCatalog>($"Assets/Resources/{WeatherCatalog.ResourceName}.asset");
                 CatalogDiscovery.Refresh(weather);
+                var deities = AssetDatabase.LoadAssetAtPath<DeityCatalog>($"Assets/Resources/{DeityCatalog.ResourceName}.asset");
+                CatalogDiscovery.Refresh(deities);
                 var libraries = CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray();
-                PopulateResources(manifest, catalog, libraries, sounds, weather);
+                PopulateResources(manifest, catalog, libraries, sounds, weather, deities);
                 AssetDatabase.RegisterCustomDependency(DependencyName, Hash128.Compute(Serialize(manifest)));
                 var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), RelativePath);
                 if (!WriteIfChanged(path, manifest)) return;
@@ -50,8 +53,10 @@ namespace Core.Scripting.Editor
             }
         }
 
-        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries, SoundCatalog sounds, WeatherCatalog weather)
+        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries, SoundCatalog sounds, WeatherCatalog weather, DeityCatalog deities)
         {
+            manifest.resources.Add("deity", deities.EnabledDefinitions.OrderBy(deity => deity.Id, StringComparer.Ordinal)
+                .Select(deity => new LuaResourceDescription { id = deity.Id, description = deity.DisplayName }).ToArray());
             manifest.resources.Add("weather", weather.EnabledDefinitions.OrderBy(definition => definition.id, StringComparer.Ordinal)
                 .Select(definition => new LuaResourceDescription { id = definition.id, description = definition.label }).ToArray());
             manifest.resources.Add("sound", sounds.EnabledDefinitions.OrderBy(sound => sound.Id, StringComparer.Ordinal)

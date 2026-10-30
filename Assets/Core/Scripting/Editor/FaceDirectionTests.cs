@@ -635,7 +635,7 @@ namespace Core.Scripting.Editor
             Assert.That(effect.characterParameter, Is.EqualTo("character"));
             Assert.That(effect.directionParameter, Is.EqualTo("direction"));
             var catalog = Resources.Load<Character.Animations.CharacterAnimationCatalog>(Character.Animations.CharacterAnimationCatalog.ResourceName);
-            LuaBindingManifestExporter.PopulateResources(manifest, catalog, new[] { _actor.Animator.AnimationLibrary }, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName));
+            LuaBindingManifestExporter.PopulateResources(manifest, catalog, new[] { _actor.Animator.AnimationLibrary }, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName));
             Assert.That(manifest.resources["direction"].Select(resource => resource.id), Is.EquivalentTo(new[] { "North", "East", "South", "West" }));
         }
 

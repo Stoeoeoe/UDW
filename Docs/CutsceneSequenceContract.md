@@ -1,5 +1,31 @@
 # Cutscene steps
 
+## Lua divine favour API
+
+`DivineFavour.GetFavour(deityId)` reads the player's saved favour in dialogue
+conditions, expressions and scripts. A registered, enabled deity with no saved
+score returns zero; an unknown or disabled deity is an error.
+
+Writable scripts can call `DivineFavour.AddFavour(deityId, points)`. Points must
+be integers and may be negative. It returns the resulting score, updates boons
+and publishes the normal favour change event through the existing manager.
+Both calls resolve live state, including after loading a save.
+
+```lua
+-- Dialogue condition
+DivineFavour.GetFavour('mars') >= 10
+
+-- Reward or penalty in a writable script
+DivineFavour.AddFavour('mars', 5)
+DivineFavour.AddFavour('mars', -2)
+```
+
+The visual action `divinity.addFavour` takes `deityId` and `points`, and is
+available in setup, sequence and completion for cutscenes and NPC routines.
+The generated bindings manifest supplies enabled deity choices from the catalog.
+Literal deity IDs are checked when binding the sequence, before actions run;
+computed IDs are checked when invoked. Conditions cannot call `AddFavour`.
+
 ## Lua time API
 
 `Time.GetCurrent()` is available to dialogue conditions, expressions and scripts.

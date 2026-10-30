@@ -654,6 +654,77 @@
       ]
     },
     {
+      "path": "DivineFavour",
+      "methods": [
+        {
+          "name": "AddFavour",
+          "parameters": [
+            {
+              "name": "deityId",
+              "type": "string",
+              "resourceType": "deity"
+            },
+            {
+              "name": "points",
+              "type": "number"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": true,
+          "callable": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ],
+          "action": {
+            "id": "divinity.addFavour",
+            "displayName": "Add divine favour",
+            "category": "Divinity",
+            "description": "Add or subtract saved favour points and update the deity's boons.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "GetFavour",
+          "parameters": [
+            {
+              "name": "deityId",
+              "type": "string",
+              "resourceType": "deity"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "GameState.Player.Skills",
       "methods": [
         {
@@ -1167,6 +1238,12 @@
     }
   ],
   "resources": {
+    "deity": [
+      {
+        "id": "mars",
+        "description": "Mars"
+      }
+    ],
     "weather": [
       {
         "id": "HeavySnow",

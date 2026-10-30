@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Character.Animations;
+using Core.Divinity;
 using Core.TimeAndWeather;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -29,12 +30,13 @@ namespace Core.Scripting.Editor
             var catalog = ScriptableObject.CreateInstance<CharacterAnimationCatalog>();
             var sounds = ScriptableObject.CreateInstance<SoundCatalog>();
             var weather = ScriptableObject.CreateInstance<WeatherCatalog>();
+            var deities = ScriptableObject.CreateInstance<DeityCatalog>();
             try
             {
-                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, catalog, Array.Empty<MemaoAnimationLibrary>(), sounds, weather),
+                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, catalog, Array.Empty<MemaoAnimationLibrary>(), sounds, weather, deities),
                     Throws.InvalidOperationException.With.Message.Contains("No resources exported for type 'custom'"));
             }
-            finally { UnityEngine.Object.DestroyImmediate(catalog); UnityEngine.Object.DestroyImmediate(sounds); UnityEngine.Object.DestroyImmediate(weather); }
+            finally { UnityEngine.Object.DestroyImmediate(catalog); UnityEngine.Object.DestroyImmediate(sounds); UnityEngine.Object.DestroyImmediate(weather); UnityEngine.Object.DestroyImmediate(deities); }
         }
 
         [Test]
@@ -43,13 +45,18 @@ namespace Core.Scripting.Editor
             var manifest = VulcanusLuaEngine.DescribeBindings();
             var catalog = Resources.Load<CharacterAnimationCatalog>(CharacterAnimationCatalog.ResourceName);
             var libraries = Core.Catalogs.Editor.CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray();
-            LuaBindingManifestExporter.PopulateResources(manifest, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName));
+            LuaBindingManifestExporter.PopulateResources(manifest, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName), Resources.Load<DeityCatalog>(DeityCatalog.ResourceName));
             var path = Path.Combine(Path.GetTempPath(), "bindings-" + Guid.NewGuid().ToString("N") + ".json");
             try
             {
                 Assert.That(LuaBindingManifestExporter.WriteIfChanged(path, manifest), Is.True);
                 Assert.That(LuaBindingManifestExporter.WriteIfChanged(path, manifest), Is.False);
                 var json = JObject.Parse(File.ReadAllText(path));
+                Assert.That(json["resources"]["deity"].Select(resource => (string)resource["id"]),
+                    Is.EquivalentTo(Resources.Load<DeityCatalog>(DeityCatalog.ResourceName).EnabledDefinitions.Select(deity => deity.Id)));
+                var favour = json["modules"].SelectMany(module => module["methods"])
+                    .Single(method => (string)method["action"]?["id"] == "divinity.addFavour");
+                Assert.That((string)favour["parameters"].Single(parameter => (string)parameter["name"] == "deityId")["resourceType"], Is.EqualTo("deity"));
                 Assert.That(json["resources"]["weather"].Select(resource => (string)resource["id"]),
                     Is.EquivalentTo(Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName).EnabledDefinitions.Select(weather => weather.id)));
                 Assert.That(json["resources"]["weather"].Select(resource => (string)resource["id"]), Does.Contain("Sunny"));
