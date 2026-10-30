@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Character
@@ -8,8 +9,8 @@ namespace Character
     /// <summary>Shared entry point for character movement. Currently supports straight-line routes only.</summary>
     public static class CharacterNavigation
     {
-        public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination, bool immediateAcceleration = false) =>
-            new(actor, destination, immediateAcceleration);
+        public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination, bool immediateAcceleration = false,
+            bool ignoreCollisions = false) => new(actor, destination, immediateAcceleration, ignoreCollisions);
     }
 
     /// <summary>Walks to a position and owns movement until arrival or cancellation.</summary>
@@ -24,12 +25,15 @@ namespace Character
         private readonly Vector2 _facing;
         private readonly float _speed;
         private readonly bool _immediateAcceleration;
+        private readonly List<(Collider2D collider, LayerMask excluded, int priority, int queryMask)> _collisionOverrides = new();
+        private readonly List<Collider2D> _overlaps = new();
+        private readonly HashSet<Collider2D> _warnedObstacles = new();
         private bool _disposed;
 
         public NavigationMoveStatus Status { get; private set; } = NavigationMoveStatus.Moving;
         public string Error { get; private set; }
 
-        internal NavigationMove(GameCharacter actor, Vector2 destination, bool immediateAcceleration)
+        internal NavigationMove(GameCharacter actor, Vector2 destination, bool immediateAcceleration, bool ignoreCollisions)
         {
             if (!actor) throw new ArgumentNullException(nameof(actor));
             if (!actor.isActiveAndEnabled || !actor.IsRuntimeInitialized)
@@ -58,7 +62,7 @@ namespace Character
                 : (direction.y >= 0 ? Vector2.up : Vector2.down);
 
             // Check the actual character footprint before starting. This version cannot take a detour.
-            if (!HasClearDirectRoute(out var obstruction))
+            if (!HasClearDirectRoute(out var obstruction) && !ignoreCollisions)
             {
                 Status = NavigationMoveStatus.Unreachable;
                 Error = $"No clear straight-line route to the destination. Character '{actor.name}', " +
@@ -70,6 +74,18 @@ namespace Character
             // Block ordinary input while this move controls the character.
             _controller.ClaimMovement(this);
             _actor.SetControlBlocked(this, true);
+            if (ignoreCollisions)
+            {
+                foreach (var collider in _body.GetComponentsInChildren<Collider2D>(true))
+                {
+                    if (collider.attachedRigidbody != _body || collider.isTrigger || !collider.isActiveAndEnabled) continue;
+                    var queryMask = (Physics2D.GetLayerCollisionMask(collider.gameObject.layer) |
+                        collider.includeLayers.value) & ~collider.excludeLayers.value;
+                    _collisionOverrides.Add((collider, collider.excludeLayers, collider.layerOverridePriority, queryMask));
+                    collider.excludeLayers = ~0;
+                    collider.layerOverridePriority = int.MaxValue;
+                }
+            }
         }
 
         private bool HasClearDirectRoute(out string obstruction)
@@ -114,6 +130,7 @@ namespace Character
                 return;
             }
 
+            WarnAboutOverlaps();
             var remaining = _destination - _body.position;
             if (remaining.magnitude <= ArrivalDistance)
             {
@@ -130,6 +147,23 @@ namespace Character
             _actor.SetMovementState(MovementState.Walking);
         }
 
+        private void WarnAboutOverlaps()
+        {
+            foreach (var state in _collisionOverrides)
+            {
+                var filter = new ContactFilter2D { useTriggers = false };
+                filter.SetLayerMask(state.queryMask);
+                state.collider.Overlap(filter, _overlaps);
+                foreach (var obstacle in _overlaps)
+                {
+                    if (obstacle.attachedRigidbody == _body || !_warnedObstacles.Add(obstacle)) continue;
+                    Debug.LogWarning($"Collision ignored during movement: character '{_actor.name}' overlaps " +
+                        $"'{obstacle.name}' ({obstacle.GetType().Name}, layer '{LayerMask.LayerToName(obstacle.gameObject.layer)}'). " +
+                        "Adjust the cutscene staging or path if this overlap is unintended.", _actor);
+                }
+            }
+        }
+
         private void Finish(NavigationMoveStatus status, string error)
         {
             Status = status;
@@ -142,6 +176,13 @@ namespace Character
             if (_disposed) return;
             _disposed = true;
             if (Status == NavigationMoveStatus.Moving) Status = NavigationMoveStatus.Cancelled;
+            foreach (var state in _collisionOverrides)
+            {
+                // A scene unload may have destroyed the collider before its action is disposed.
+                if (!state.collider) continue;
+                state.collider.excludeLayers = state.excluded;
+                state.collider.layerOverridePriority = state.priority;
+            }
             // Scene teardown can already have destroyed the actor or controller.
             if (_controller) _controller.ReleaseMovement(this);
             if (_actor)

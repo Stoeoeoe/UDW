@@ -1,5 +1,21 @@
 # Cutscene steps
 
+## Cinematic movement and collision
+
+`characters.moveTo` and `characters.walkPath` accept optional `ignoreCollisions`
+(default `false`). Normal movement still rejects obstructed straight routes.
+Opt in when cinematic staging needs a character to pass through another actor
+or scenery: the action temporarily excludes physical contacts for that actor's
+solid colliders, leaving its body simulated and its interaction sensors intact.
+It restores each collider's authored exclusions and priority on arrival,
+cancellation or disposal. Each encountered obstacle produces one overlap warning
+per movement segment, rather than aborting the cutscene. This does not perform
+pathfinding or prove that the staging looks correct; review warnings and keep
+terminal placements clear of other actors.
+
+Give scenes explicit visual breathing room with Wait nodes: establish the opening
+shot, hold reactions and arrivals, and allow impacts to settle before recovery.
+
 ## Per-run variables and action outputs
 
 Source v2 optionally declares `variables`, for example:

@@ -1,0 +1,31 @@
+{
+  "dialogueId": "base:stormglass_afterglow",
+  "dialogueName": "Stormglass — A Bargain with Thunder",
+  "generatedAt": "2026-10-29T21:52:10.846Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:stormglass_afterglow.01",
+      "text": "The rain stops before the thunder does.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_afterglow.02",
+      "text": "There. The storm has your name now.",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_afterglow.03",
+      "text": "Can it at least learn to knock?",
+      "nodeId": "line-3",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_afterglow.04",
+      "text": "That was it knocking.",
+      "nodeId": "line-4",
+      "sourceType": "line"
+    }
+  ]
+}

@@ -54,7 +54,9 @@ namespace Core.Scripting.Editor
                     "lua" => new[] { "expression", "outputs", "resultVariables" }, "branch" => new[] { "arguments", "pair" },
                     "parallel" => new[] { "pair", "tracks" }, "join" => new[] { "pair" }, _ => Array.Empty<string>()
                 };
-                if (n.Properties().Any(p => !new[] { "id", "kind", "position" }.Concat(fields).Contains(p.Name))) throw Invalid($"{n["id"]}: fields do not match node kind.");
+                if (n.Properties().Any(p => !new[] { "id", "kind", "position", "comment" }.Concat(fields).Contains(p.Name))) throw Invalid($"{n["id"]}: fields do not match node kind.");
+                if ((n["comment"] != null || Kind(n) == "comment") && n["comment"]?.Type != JTokenType.String)
+                    throw Invalid($"{n["id"]}: comment must be text.");
                 if (n["arguments"] is JObject a && a.Properties().Any(p => !_signatures[Text(n, "id")].Inputs.Any(i => i.name == p.Name))) throw Invalid($"{n["id"]}: unknown argument.");
                 var destinations = n["step"]?["resultVariables"] ?? n["resultVariables"];
                 if (destinations is JArray results) ValidateDestinations(Text(n, "id"), results);
@@ -71,6 +73,7 @@ namespace Core.Scripting.Editor
             {
                 if (token is not JObject e || !edgeIds.Add(Text(e, "id"))) throw Invalid("Invalid or duplicate connection.");
                 var from = Node(Text(e, "source")); var to = Node(Text(e, "target"));
+                if (Kind(from) == "comment" || Kind(to) == "comment") throw Invalid("Comment nodes cannot have connections.");
                 if (ReferenceEquals(from, to)) throw Invalid("Self connections are not allowed.");
                 var sourcePin = Text(e, "sourcePin"); var targetPin = Text(e, "targetPin");
                 if (Text(e, "kind") == "data")
@@ -116,7 +119,7 @@ namespace Core.Scripting.Editor
         {
             var compiler = new CutsceneGraphCompiler(graph, source, phase, used, variables);
             compiler.Walk(compiler.Text(compiler._nodes.Values.Single(n => Kind(n) == "entry"), "id"), null, new HashSet<string>(), false);
-            foreach (var n in compiler._nodes.Values.Where(n => !Pure(n)))
+            foreach (var n in compiler._nodes.Values.Where(n => !Pure(n) && Kind(n) != "comment"))
                 if (!compiler._visited.Contains(compiler.Text(n, "id"))) throw compiler.Invalid($"Node '{n["id"]}' is disconnected from execution.");
             foreach (var id in compiler._used) used.Add(id);
             steps = compiler._steps.ToArray();
@@ -156,7 +159,7 @@ namespace Core.Scripting.Editor
                     catch (SyntaxErrorException error) { throw Invalid($"{id}: {error.DecoratedMessage}"); }
                     return (Array.Empty<LuaParameterDescription>(), outputs);
                 case "branch": return (new[] { new LuaParameterDescription { name = "condition", type = "boolean" } }, Array.Empty<LuaOutputDescription>());
-                case "entry": case "exit": case "parallel": case "join": return (Array.Empty<LuaParameterDescription>(), Array.Empty<LuaOutputDescription>());
+                case "entry": case "exit": case "parallel": case "join": case "comment": return (Array.Empty<LuaParameterDescription>(), Array.Empty<LuaOutputDescription>());
                 default: throw Invalid($"{id}: unsupported node kind.");
             }
         }

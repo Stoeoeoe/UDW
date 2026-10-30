@@ -274,6 +274,12 @@
               "type": "boolean",
               "optional": true,
               "defaultValue": true
+            },
+            {
+              "name": "ignoreCollisions",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": false
             }
           ],
           "returnType": "nil",
@@ -284,7 +290,7 @@
             "id": "characters.moveTo",
             "displayName": "Move to anchor",
             "category": "Movement",
-            "description": "Walk an existing character to a map anchor. Immediate acceleration keeps full walking speed until arrival; disable it for eased starts and stops.",
+            "description": "Walk an existing character to a map anchor. Disable immediate acceleration for eased starts and stops. Ignore collisions allows cinematic movement through obstacles, warning on overlaps; collision settings are restored afterward.",
             "contexts": [
               "cutscene",
               "npcRoutine"
@@ -494,6 +500,12 @@
               "type": "boolean",
               "optional": true,
               "defaultValue": true
+            },
+            {
+              "name": "ignoreCollisions",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": false
             }
           ],
           "returnType": "nil",
@@ -504,7 +516,7 @@
             "id": "characters.walkPath",
             "displayName": "Walk path",
             "category": "Movement",
-            "description": "Walk through an ordered list of map positions and anchors. Immediate acceleration keeps full walking speed through each segment; disable it for eased starts and stops.",
+            "description": "Walk through ordered map positions and anchors. Disable immediate acceleration for eased starts and stops. Ignore collisions allows cinematic movement through obstacles, warning on overlaps; collision settings are restored afterward.",
             "contexts": [
               "cutscene",
               "npcRoutine"

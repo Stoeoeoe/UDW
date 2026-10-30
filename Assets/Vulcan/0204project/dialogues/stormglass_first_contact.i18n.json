@@ -1,0 +1,25 @@
+{
+  "dialogueId": "base:stormglass_first_contact",
+  "dialogueName": "Stormglass — Count the Silence",
+  "generatedAt": "2026-10-29T21:52:10.832Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:stormglass_first_contact.01",
+      "text": "This is stormglass. It only answers a heartbeat that doesn't belong here.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_first_contact.02",
+      "text": "Whose heartbeat?",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_first_contact.03",
+      "text": "Yours. Count the silence after the flash. Whatever happens, I'll still be here.",
+      "nodeId": "line-3",
+      "sourceType": "line"
+    }
+  ]
+}

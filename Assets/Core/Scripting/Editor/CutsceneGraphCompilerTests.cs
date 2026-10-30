@@ -41,6 +41,28 @@ namespace Core.Scripting.Editor
         }
 
         [Test]
+        public void CommentsAreRetainedAsAuthoringDataButNeverExecutedOrConnected()
+        {
+            var wait = Wait("wait", 0.5);
+            wait["comment"] = "Let the opening shot settle.";
+            var note = Node("note", "comment");
+            note["comment"] = "Both actors should be visible here.\nKeep this hold.";
+            var graph = Graph(wait, note);
+            graph["edges"] = new JArray(Edge("entry", "wait"), Edge("wait", "exit"));
+            var code = Compile(graph, out var steps);
+            Assert.That(steps.Select(s => s.Id), Is.EqualTo(new[] { "wait" }));
+            Assert.That(code, Does.Not.Contain("Both actors"));
+            foreach (var kind in new[] { "execution", "data" })
+            {
+                var invalid = (JObject)graph.DeepClone();
+                ((JArray)invalid["edges"]).Add(Edge("note", "wait", kind: kind));
+                Assert.That(() => Compile(invalid, out _), Throws.TypeOf<FormatException>().With.Message.Contains("Comment nodes cannot have connections"));
+            }
+            note["comment"] = 12;
+            Assert.That(() => Compile(graph, out _), Throws.TypeOf<FormatException>().With.Message.Contains("comment must be text"));
+        }
+
+        [Test]
         public void PureExpressionUsesTheReadOnlyBudgetedEnvironment()
         {
             var pure = Node("pure", "expression"); pure["expression"] = "1 / 4"; pure["outputs"] = new JArray(new JObject { ["name"] = "value", ["type"] = "number" });

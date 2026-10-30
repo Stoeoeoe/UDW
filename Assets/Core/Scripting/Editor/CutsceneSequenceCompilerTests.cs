@@ -248,11 +248,11 @@ namespace Core.Scripting.Editor
                 Step("greet", "characters.face", new JObject { ["target"] = "player", ["character"] = "npc-placement" }),
                 Step("talk", "dialogue.play", new JObject { ["dialogue"] = "base:greeting" }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, "fixture:intro", out var steps);
-            Assert.That(compiled, Is.EqualTo("Characters.MoveTo(\"npc-placement\", \"meeting\", true);\nCharacters.Face(\"npc-placement\", \"player\");\nDialogue.Play(\"base:greeting\");\n"));
+            Assert.That(compiled, Is.EqualTo("Characters.MoveTo(\"npc-placement\", \"meeting\", true, false);\nCharacters.Face(\"npc-placement\", \"player\");\nDialogue.Play(\"base:greeting\");\n"));
             Assert.That(CutsceneSequenceCompiler.Compile(sequence, "fixture:intro"), Is.EqualTo(compiled));
             Assert.That(steps.Select(step => step.Id), Is.EqualTo(new[] { "approach", "greet", "talk" }));
-            Assert.That(steps[0].Arguments.Select(argument => argument.Name), Is.EqualTo(new[] { "character", "destination", "immediateAcceleration" }));
-            Assert.That(steps[0].Arguments.Select(argument => argument.Value), Is.EqualTo(new[] { "npc-placement", "meeting", "true" }));
+            Assert.That(steps[0].Arguments.Select(argument => argument.Name), Is.EqualTo(new[] { "character", "destination", "immediateAcceleration", "ignoreCollisions" }));
+            Assert.That(steps[0].Arguments.Select(argument => argument.Value), Is.EqualTo(new[] { "npc-placement", "meeting", "true", "false" }));
         }
 
         [Test]

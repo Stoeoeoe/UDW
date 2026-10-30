@@ -14,6 +14,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Scripting;
 using UnityEngine.Tilemaps;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
@@ -60,6 +61,65 @@ namespace Core.Scripting.Editor
 
         [TearDown]
         public void TearDown() => _fixture.Dispose();
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void CinematicMovementCrossesAnObstacleAndRestoresCollisions(bool cancelDuringOverlap)
+        {
+            var simulationMode = Physics2D.simulationMode;
+            Physics2D.simulationMode = SimulationMode2D.Script;
+            try
+            {
+                var body = _actor.GetComponent<Rigidbody2D>();
+                var solid = _actor.GetComponentsInChildren<Collider2D>().First(c => !c.isTrigger && c.attachedRigidbody == body);
+                solid.excludeLayers = 1 << 31;
+                solid.layerOverridePriority = 7;
+                var start = body.position;
+                var destination = start + Vector2.right * 3;
+                var wall = new GameObject("Cinematic test obstacle", typeof(BoxCollider2D), typeof(Rigidbody2D));
+                wall.transform.SetParent(_fixture.Root.transform);
+                wall.transform.position = solid.bounds.center + Vector3.right * 1.5f;
+                var mask = Physics2D.GetLayerCollisionMask(solid.gameObject.layer) & ~(1 << 31);
+                Assert.That(mask, Is.Not.Zero, "The authored character must collide with at least one layer.");
+                wall.layer = Enumerable.Range(0, 31).First(layer => (mask & (1 << layer)) != 0);
+                wall.GetComponent<BoxCollider2D>().size = new Vector2(0.2f, 3);
+                wall.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+                Physics2D.SyncTransforms();
+
+                using (var blocked = CharacterNavigation.MoveTo(_actor, destination))
+                    Assert.That(blocked.Status, Is.EqualTo(NavigationMoveStatus.Unreachable));
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
+                    "Collision ignored during movement:.*Cinematic test obstacle"));
+                using (var move = CharacterNavigation.MoveTo(_actor, destination, true, true))
+                {
+                    Assert.That(solid.enabled, Is.True);
+                    Assert.That(solid.isTrigger, Is.False);
+                    for (var step = 0; step < 600 && move.Status == NavigationMoveStatus.Moving; step++)
+                    {
+                        move.Tick(Time.fixedDeltaTime);
+                        GameTestFixture.Invoke(_actor.Controller, "FixedUpdate");
+                        Assert.That(Physics2D.Simulate(Time.fixedDeltaTime), Is.True);
+                        if (cancelDuringOverlap && body.position.x >= start.x + 1.5f)
+                        {
+                            move.Tick(0);
+                            move.Dispose();
+                        }
+                    }
+                    Assert.That(move.Status, Is.EqualTo(cancelDuringOverlap
+                        ? NavigationMoveStatus.Cancelled : NavigationMoveStatus.Arrived));
+                    if (!cancelDuringOverlap)
+                        Assert.That(Vector2.Distance(body.position, destination), Is.LessThanOrEqualTo(0.04f));
+                }
+                Assert.That(solid.excludeLayers.value, Is.EqualTo(1 << 31));
+                Assert.That(solid.layerOverridePriority, Is.EqualTo(7));
+                Assert.That(_actor.Controller.IsMovementOwned, Is.False);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Physics2D.simulationMode = simulationMode;
+            }
+        }
 
         [TestCase(true)]
         [TestCase(false)]

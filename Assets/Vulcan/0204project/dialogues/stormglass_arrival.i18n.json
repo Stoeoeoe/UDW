@@ -1,0 +1,25 @@
+{
+  "dialogueId": "base:stormglass_arrival",
+  "dialogueName": "Stormglass — Keep to the Path",
+  "generatedAt": "2026-10-29T21:52:10.821Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:stormglass_arrival.01",
+      "text": "Keep to the middle of the path. The rain remembers every footprint.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_arrival.02",
+      "text": "And if we stop?",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_arrival.03",
+      "text": "Then it remembers us.",
+      "nodeId": "line-3",
+      "sourceType": "line"
+    }
+  ]
+}

@@ -15,3 +15,7 @@ MonoBehaviour:
   project: {fileID: -1814933055721424766, guid: 970770d7999d5f945b71ec98f97650ba, type: 3}
   dialogues:
   - {fileID: 2757037704936936944, guid: f8a9105e804ffdc459df3f8bb0c6006a, type: 3}
+  - {fileID: 2757037704936936944, guid: 0a878a54d33a65f4bb00f9c4ece4567d, type: 3}
+  - {fileID: 2757037704936936944, guid: edd00df96a5b4694f80aedf0466e15e6, type: 3}
+  - {fileID: 2757037704936936944, guid: da064c0947e04b54baa3cf60c2c103f9, type: 3}
+  - {fileID: 2757037704936936944, guid: 47ee67ed2afe8dc4089b26d80a55aa90, type: 3}

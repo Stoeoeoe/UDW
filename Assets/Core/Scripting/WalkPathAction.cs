@@ -10,12 +10,14 @@ namespace Core.Scripting
         private readonly GameCharacter character;
         private readonly Vector2[] points;
         private readonly bool immediateAcceleration;
+        private readonly bool ignoreCollisions;
         private MoveToAction move;
         private int index;
         private bool disposed;
         public bool IsCompleted => index == points.Length;
 
-        public WalkPathAction(GameCharacter character, Vector2[] points, bool immediateAcceleration = true)
+        public WalkPathAction(GameCharacter character, Vector2[] points, bool immediateAcceleration = true,
+            bool ignoreCollisions = false)
         {
             if (!character) throw new ArgumentNullException(nameof(character));
             if (points == null || points.Length == 0)
@@ -26,7 +28,8 @@ namespace Core.Scripting
             this.character = character;
             this.points = (Vector2[])points.Clone();
             this.immediateAcceleration = immediateAcceleration;
-            move = new MoveToAction(character, points[0], immediateAcceleration);
+            this.ignoreCollisions = ignoreCollisions;
+            move = new MoveToAction(character, points[0], immediateAcceleration, ignoreCollisions);
         }
 
         public void Tick(float deltaTime)
@@ -44,7 +47,7 @@ namespace Core.Scripting
                 move.Dispose();
                 move = null;
                 index++;
-                if (!IsCompleted) move = new MoveToAction(character, points[index], immediateAcceleration);
+                if (!IsCompleted) move = new MoveToAction(character, points[index], immediateAcceleration, ignoreCollisions);
             }
         }
 

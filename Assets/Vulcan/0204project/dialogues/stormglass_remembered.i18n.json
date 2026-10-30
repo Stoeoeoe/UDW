@@ -1,0 +1,25 @@
+{
+  "dialogueId": "base:stormglass_remembered",
+  "dialogueName": "Stormglass — An Echo Knows You",
+  "generatedAt": "2026-10-29T21:52:10.838Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:stormglass_remembered.01",
+      "text": "You've heard it before. It kept the shape of your silence.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_remembered.02",
+      "text": "Tell me this ends differently.",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:stormglass_remembered.03",
+      "text": "This time the storm knows your name. The answer will be gentler.",
+      "nodeId": "line-3",
+      "sourceType": "line"
+    }
+  ]
+}

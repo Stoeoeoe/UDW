@@ -9,8 +9,9 @@ namespace Core.Scripting
     {
         private readonly NavigationMove _move;
 
-        public MoveToAction(GameCharacter character, Vector2 destination, bool immediateAcceleration = true) =>
-            _move = CharacterNavigation.MoveTo(character, destination, immediateAcceleration);
+        public MoveToAction(GameCharacter character, Vector2 destination, bool immediateAcceleration = true,
+            bool ignoreCollisions = false) =>
+            _move = CharacterNavigation.MoveTo(character, destination, immediateAcceleration, ignoreCollisions);
 
         public bool IsCompleted => _move.Status == NavigationMoveStatus.Arrived;
         public void Tick(float deltaTime)
