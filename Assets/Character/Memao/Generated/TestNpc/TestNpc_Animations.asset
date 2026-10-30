@@ -1,0 +1,187 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 069281b9576475c448c413f7f62f0c98, type: 3}
+  m_Name: TestNpc_Animations
+  m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.MemaoAnimationLibrary
+  clips:
+  - name: Idle_D
+    clip: {fileID: 7400000, guid: 5b5f4bfc6ec43604297057bd9b096dc8, type: 2}
+  - name: Idle_U
+    clip: {fileID: 7400000, guid: f4750bc85de3b5d4da2e90f9d003c735, type: 2}
+  - name: Idle_L
+    clip: {fileID: 7400000, guid: 82a39315cd2b883468f6c7b8a534e984, type: 2}
+  - name: Idle_R
+    clip: {fileID: 7400000, guid: e0e6b8ae4d5751e4dbb62b03b1e2eebc, type: 2}
+  - name: Walk_D
+    clip: {fileID: 7400000, guid: c66f2ee49be0c7643b8754bd7c8397b9, type: 2}
+  - name: Walk_U
+    clip: {fileID: 7400000, guid: a745d436f7e1e674492b43f9c1ea0b08, type: 2}
+  - name: Walk_L
+    clip: {fileID: 7400000, guid: 95cec4cc6d75b914b8e0f5c5e65e66e4, type: 2}
+  - name: Walk_R
+    clip: {fileID: 7400000, guid: 0aa08c74325f4a041995bff2c1c75296, type: 2}
+  - name: Run_D
+    clip: {fileID: 7400000, guid: 36815982ca3fcf34993ae5bea7a60011, type: 2}
+  - name: Run_U
+    clip: {fileID: 7400000, guid: 9bc15d3ebfad1dd44bb5920f423ccdda, type: 2}
+  - name: Run_L
+    clip: {fileID: 7400000, guid: 91fde6e91121e4843b40aecb6af61ae5, type: 2}
+  - name: Run_R
+    clip: {fileID: 7400000, guid: 753ab3f59882587478df8b41b272af6f, type: 2}
+  - name: Pickup_D
+    clip: {fileID: 7400000, guid: ab3a1a2d9ec749f40aa8edee001bad64, type: 2}
+  - name: Pickup_U
+    clip: {fileID: 7400000, guid: 51b3f9fd631ca104ea38f85585858f1e, type: 2}
+  - name: Pickup_L
+    clip: {fileID: 7400000, guid: 0ad31342369c1014a9ea800046f8117e, type: 2}
+  - name: Pickup_R
+    clip: {fileID: 7400000, guid: 7dc793bf193a2554aad634b5b911f128, type: 2}
+  - name: Mine_D
+    clip: {fileID: 7400000, guid: 977179c94341d6047b3223fecbfb05ba, type: 2}
+  - name: Mine_U
+    clip: {fileID: 7400000, guid: e6ae8adb27db9a544803560a53932844, type: 2}
+  - name: Mine_L
+    clip: {fileID: 7400000, guid: 6fe579a5c6c46434ba8d1e08dd632aa7, type: 2}
+  - name: Mine_R
+    clip: {fileID: 7400000, guid: f64fb990ac7eff144a3179a6e5f142c7, type: 2}
+  - name: Chop_D
+    clip: {fileID: 7400000, guid: 645b595097c022a40b9394c1e22d2c79, type: 2}
+  - name: Chop_U
+    clip: {fileID: 7400000, guid: ba52f85cc4c2b8240b9483fe2ea93026, type: 2}
+  - name: Chop_L
+    clip: {fileID: 7400000, guid: 6358fda6b62b8be41b92d284e1eb9345, type: 2}
+  - name: Chop_R
+    clip: {fileID: 7400000, guid: ccbca10c0526f1941acc421ebdd56f8b, type: 2}
+  - name: Seed_D
+    clip: {fileID: 7400000, guid: 2242b5d2e65990049a99a9af81a933a9, type: 2}
+  - name: Seed_U
+    clip: {fileID: 7400000, guid: 75f5d8e8e3dc7b14dba3f93deac33896, type: 2}
+  - name: Seed_L
+    clip: {fileID: 7400000, guid: e330694b9498a344192f63149a122d5b, type: 2}
+  - name: Seed_R
+    clip: {fileID: 7400000, guid: 026fb9f1c0ffa5744bfd45abdf42da10, type: 2}
+  - name: Water_D
+    clip: {fileID: 7400000, guid: 7626495f6679b56428be9d242952e07f, type: 2}
+  - name: Water_U
+    clip: {fileID: 7400000, guid: a8fe9bb20982feb4594003b54f490bbf, type: 2}
+  - name: Water_L
+    clip: {fileID: 7400000, guid: f2618f8c71f45df4d8ba80327a24a9ba, type: 2}
+  - name: Water_R
+    clip: {fileID: 7400000, guid: e8d5c97e0c2e8894089d00281dab8ce2, type: 2}
+  - name: Reap_D
+    clip: {fileID: 7400000, guid: a2828f2973bb94e4f9e811f076bbbaa1, type: 2}
+  - name: Reap_U
+    clip: {fileID: 7400000, guid: 94dc73daea9fe3d4397a4fe1231eb345, type: 2}
+  - name: Reap_L
+    clip: {fileID: 7400000, guid: b4349b88a581f73448a0e990530562f7, type: 2}
+  - name: Reap_R
+    clip: {fileID: 7400000, guid: c91fb6ee4ffe89c49ae138450849e7be, type: 2}
+  - name: Slash_D
+    clip: {fileID: 7400000, guid: 70494c5e3a37131499bb1e2f6ff70b6d, type: 2}
+  - name: Slash_U
+    clip: {fileID: 7400000, guid: 79cdabefbe0fe434d9a459b3083a7154, type: 2}
+  - name: Slash_L
+    clip: {fileID: 7400000, guid: 0da44259d481c3c47800258c16661f71, type: 2}
+  - name: Slash_R
+    clip: {fileID: 7400000, guid: 511d022151a20c546a201275895bd227, type: 2}
+  - name: Hurt_D
+    clip: {fileID: 7400000, guid: 53f3c463b6030e24dbefc4d9cccdcaf5, type: 2}
+  - name: Hurt_U
+    clip: {fileID: 7400000, guid: a79c1e29f9aaea24c96f5f46497103eb, type: 2}
+  - name: Hurt_L
+    clip: {fileID: 7400000, guid: 5b7ee2bfb0d23594bb767d43993f3837, type: 2}
+  - name: Hurt_R
+    clip: {fileID: 7400000, guid: 4fcc9633f1681a74481b5ceef7b2f078, type: 2}
+  - name: Downed_D
+    clip: {fileID: 7400000, guid: 874a75752cca56c438dbd873c097b45f, type: 2}
+  - name: Downed_U
+    clip: {fileID: 7400000, guid: cb5263bb3af8b81439d995b20dbebc7c, type: 2}
+  - name: Downed_L
+    clip: {fileID: 7400000, guid: 91b01ec282375224c89187883a9d121f, type: 2}
+  - name: Downed_R
+    clip: {fileID: 7400000, guid: 74d0e90e416675e4a98ce5fb24924529, type: 2}
+  - name: Death_D
+    clip: {fileID: 7400000, guid: fca4210ded81e174998936a529bc4378, type: 2}
+  - name: Death_U
+    clip: {fileID: 7400000, guid: 401e6ae7e58a2324a8c4dfe22c3fee93, type: 2}
+  - name: Death_L
+    clip: {fileID: 7400000, guid: 29ef5a25c570b084bb38af61edd72616, type: 2}
+  - name: Death_R
+    clip: {fileID: 7400000, guid: 784f234d86a68614db6f49c548eff479, type: 2}
+  - name: Eat_D
+    clip: {fileID: 7400000, guid: 10fc29e428b7a8c4888ae227cdbfc23f, type: 2}
+  - name: Eat_U
+    clip: {fileID: 7400000, guid: 6f9d1f5558006084b9bb2b7bc30bd717, type: 2}
+  - name: Eat_L
+    clip: {fileID: 7400000, guid: f34a3dc45ba080249983315b20b842c7, type: 2}
+  - name: Eat_R
+    clip: {fileID: 7400000, guid: 60e2de98a2608694bbc6b8674f386721, type: 2}
+  - name: Drink_D
+    clip: {fileID: 7400000, guid: dbf3e84bad4e6f840b78b60cf03a6eec, type: 2}
+  - name: Drink_U
+    clip: {fileID: 7400000, guid: dedf915d8c5cc4741ad023f2d140f2ed, type: 2}
+  - name: Drink_L
+    clip: {fileID: 7400000, guid: 161f3c6263e78ea40be40121983bf838, type: 2}
+  - name: Drink_R
+    clip: {fileID: 7400000, guid: bca2adfcfd7f53641bddc0aa274310dd, type: 2}
+  - name: Wave_D
+    clip: {fileID: 7400000, guid: 291f990773df93e4896ac79c19dd5f60, type: 2}
+  - name: Wave_U
+    clip: {fileID: 7400000, guid: 0cd78dc042583a640865674980cbf1bc, type: 2}
+  - name: Wave_L
+    clip: {fileID: 7400000, guid: 99e2c39b6aba92b47aa00af718d929d9, type: 2}
+  - name: Wave_R
+    clip: {fileID: 7400000, guid: ec65357e0bd4ac448b32a70f8d63ed8c, type: 2}
+  - name: Laugh_D
+    clip: {fileID: 7400000, guid: ccaadf874bfee844787c7b1796c7a9a8, type: 2}
+  - name: Laugh_U
+    clip: {fileID: 7400000, guid: a4d119dc74b29fc44b47de4f80c5ee8b, type: 2}
+  - name: Laugh_L
+    clip: {fileID: 7400000, guid: 11d23580781c40c4d9249a44c70d6193, type: 2}
+  - name: Laugh_R
+    clip: {fileID: 7400000, guid: 743e511ba20796e48b855ab9d63dc08c, type: 2}
+  - name: Shrug_D
+    clip: {fileID: 7400000, guid: 46fad70ab40e02346ae22a326163e134, type: 2}
+  - name: Shrug_U
+    clip: {fileID: 7400000, guid: 8d2da7823f93c8544b94df80c9ed8c31, type: 2}
+  - name: Shrug_L
+    clip: {fileID: 7400000, guid: 338cb472edc7480419a659c9e3aa3830, type: 2}
+  - name: Shrug_R
+    clip: {fileID: 7400000, guid: 3e6d57b9d2bc3b2488e7c27daefd7ce8, type: 2}
+  - name: Think_D
+    clip: {fileID: 7400000, guid: 984f0a2b2850ee54caa27de3ee088bf7, type: 2}
+  - name: Think_U
+    clip: {fileID: 7400000, guid: 11822caccf5c37f4988bd3720bd60e8b, type: 2}
+  - name: Think_L
+    clip: {fileID: 7400000, guid: aaf56549404564a4ea16f5ffec13a533, type: 2}
+  - name: Think_R
+    clip: {fileID: 7400000, guid: f77a83b65a83759488ef2ac06c2a5973, type: 2}
+  - name: Sit_D
+    clip: {fileID: 7400000, guid: 10d20165ebf1d0c4fb8f1f86cce8823e, type: 2}
+  - name: Sit_U
+    clip: {fileID: 7400000, guid: 02d1aeecc52309047a969faa3a00175e, type: 2}
+  - name: Sit_L
+    clip: {fileID: 7400000, guid: bbbff4b47701a2641a117017c7025ccd, type: 2}
+  - name: Sit_R
+    clip: {fileID: 7400000, guid: 9050cc6340aa9224780db054564c0f1a, type: 2}
+  - name: Read_D
+    clip: {fileID: 7400000, guid: 058e3892e21051c4a8dbbb6c178a6d9b, type: 2}
+  - name: Read_U
+    clip: {fileID: 7400000, guid: 787b21b55ab6ed94897b830674cdf0bd, type: 2}
+  - name: Read_L
+    clip: {fileID: 7400000, guid: 17dd09b09c027e04ea77926fbca50512, type: 2}
+  - name: Read_R
+    clip: {fileID: 7400000, guid: 21fd1a4ecfe9e454bb2d8e7dce855058, type: 2}
+  - name: Paint_L
+    clip: {fileID: 7400000, guid: 0179efae9568b694194847264f289de7, type: 2}
+  - name: Paint_R
+    clip: {fileID: 7400000, guid: 08301f2320ea104458bf73f85d83ff77, type: 2}
