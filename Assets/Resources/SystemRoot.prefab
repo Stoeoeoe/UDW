@@ -19968,6 +19968,7 @@ MonoBehaviour:
   playerFollowVCam: {fileID: 966487095202109748}
   playerFollowPriority: 10
   confiner: {fileID: 573069605520707741}
+  flashEase: 7
 --- !u!1 &6578218402676915608
 GameObject:
   m_ObjectHideFlags: 0

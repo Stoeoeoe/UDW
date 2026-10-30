@@ -47,6 +47,6 @@ MonoBehaviour:
   weatherData:
     items:
     - item: {fileID: 11400000, guid: fa88b243cea3c47409bae67f1494024e, type: 2}
-      weight: 1
-    - item: {fileID: 11400000, guid: 3948c96c0d03660448f599782cf068d0, type: 2}
       weight: 0
+    - item: {fileID: 11400000, guid: 3948c96c0d03660448f599782cf068d0, type: 2}
+      weight: 1

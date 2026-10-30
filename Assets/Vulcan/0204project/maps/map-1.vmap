@@ -3700,8 +3700,8 @@
           "id": "inst_cb49f64a549c",
           "tilesetId": "base:villagetileset",
           "objectDefinitionId": "tree",
-          "x": 208,
-          "y": 16
+          "x": 368,
+          "y": 256
         },
         {
           "id": "inst_406b549ba796",
@@ -3709,6 +3709,13 @@
           "objectDefinitionId": "tree",
           "x": 146,
           "y": 270
+        },
+        {
+          "id": "inst_2446abf49f26",
+          "tilesetId": "base:villagetileset",
+          "objectDefinitionId": "tree",
+          "x": 272,
+          "y": 0
         }
       ]
     },
@@ -4282,6 +4289,22 @@
         ],
         "tags": [],
         "cutsceneId": "base:cutscene-prototype"
+      },
+      {
+        "id": "trigger-1793311092593",
+        "type": "cutscene",
+        "shape": "rectangle",
+        "position": [
+          64,
+          176
+        ],
+        "size": [
+          32,
+          32
+        ],
+        "tags": [],
+        "cutsceneId": "base:stormglass",
+        "label": "Stormglass"
       }
     ],
     "collisions": [

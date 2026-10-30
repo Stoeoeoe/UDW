@@ -57,7 +57,7 @@ namespace Core.Dialogue.Vulcanus
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, node.Emotion);
             SetBody(string.Empty);
-            SetHint("Click, Enter or Space to continue");
+            //SetHint("Click, Enter or Space to continue");
             ClearChoices();
             SetContinueVisible(true);
 

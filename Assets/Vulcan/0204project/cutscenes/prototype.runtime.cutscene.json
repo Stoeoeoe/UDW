@@ -23,7 +23,7 @@
       "id": "beat-4fef7eac-df65-4551-a28f-33aad28e6e7b",
       "action": "weather.setWeather",
       "arguments": {
-        "weather": "Sunny"
+        "weather": "LightRainSpring"
       }
     }
   ],
@@ -88,16 +88,7 @@
       "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
       "action": "cutscene.wait",
       "arguments": {
-        "seconds": 2
-      }
-    },
-    {
-      "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
-      "action": "characters.playAnimation",
-      "arguments": {
-        "character": "player",
-        "animation": "base:pass-out",
-        "holdLastFrame": true
+        "seconds": 1.25
       }
     },
     {
@@ -113,17 +104,26 @@
       "action": "camera.flash",
       "arguments": {
         "color": "#FFFFFF",
-        "durationSeconds": 0.3,
-        "easeInSeconds": 0.05,
-        "holdSeconds": 0.2,
-        "easeOutSeconds": 0.05
+        "durationSeconds": 0.24,
+        "easeInSeconds": 0.02,
+        "holdSeconds": 0.1,
+        "easeOutSeconds": 0.02
+      }
+    },
+    {
+      "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
+      "action": "characters.playAnimation",
+      "arguments": {
+        "character": "player",
+        "animation": "base:pass-out",
+        "holdLastFrame": true
       }
     },
     {
       "id": "prototype-impact-shake",
       "action": "camera.shake",
       "arguments": {
-        "durationSeconds": 0.5,
+        "durationSeconds": 1.5,
         "strength": 1
       }
     },
@@ -131,7 +131,7 @@
       "id": "prototype-impact-hold",
       "action": "cutscene.wait",
       "arguments": {
-        "seconds": 10
+        "seconds": 2
       }
     },
     {
@@ -139,6 +139,14 @@
       "action": "cutscene.runLua",
       "arguments": {
         "code": "local a = 123;\r\nWallet.AddMoney(a);\r\n"
+      }
+    },
+    {
+      "id": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
+      "action": "story.set",
+      "arguments": {
+        "key": "is_rabatentent",
+        "value": true
       }
     }
   ]
