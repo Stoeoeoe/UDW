@@ -6,6 +6,7 @@ import { canonicalVariableType, variableCompatible } from './cutsceneVariables';
 export interface GraphTemplate {
   id: string;
   label: string;
+  category: string;
   node: Omit<CutsceneGraphNode, 'id' | 'position'>;
 }
 export function graphTemplates(
@@ -38,6 +39,7 @@ export function graphTemplates(
     .map((action) => ({
       id: action.id,
       label: action.displayName,
+      category: action.category,
       node: action.id.startsWith('pure:')
         ? { kind: 'function', method: action.id.slice(5), arguments: defaults(action) }
         : { kind: 'action', step: { id: '', action: action.id, arguments: defaults(action) } },
@@ -46,6 +48,7 @@ export function graphTemplates(
     ...(scene.variables ?? []).map((variable) => ({
       id: `variable:${variable.name}`,
       label: `Get ${variable.name}`,
+      category: 'Variables',
       node: { kind: 'variable' as const, variable: variable.name },
     })),
   );
@@ -53,19 +56,28 @@ export function graphTemplates(
     {
       id: 'position',
       label: 'Make position',
+      category: 'Values',
       node: { kind: 'position', arguments: { x: 0, y: 0 } },
     },
     {
       id: 'expression',
       label: 'Read-only Lua expression',
+      category: 'Scripting',
       node: { kind: 'expression', expression: '0', outputs: [{ name: 'value', type: 'number' }] },
     },
   );
+  templates.push({
+    id: 'comment',
+    label: 'Comment',
+    category: 'Comments',
+    node: { kind: 'comment', comment: '' },
+  });
   if (phase === 'sequence')
     templates.push(
       {
         id: 'lua',
         label: 'Lua script with results',
+        category: 'Scripting',
         node: {
           kind: 'lua',
           expression: 'return 0',
@@ -75,11 +87,33 @@ export function graphTemplates(
       {
         id: 'branch',
         label: 'If / Else',
+        category: 'Flow',
         node: { kind: 'branch', arguments: { condition: false } },
       },
-      { id: 'parallel', label: 'Parallel / Join', node: { kind: 'parallel', tracks: 2 } },
+      {
+        id: 'parallel',
+        label: 'Parallel / Join',
+        category: 'Flow',
+        node: { kind: 'parallel', tracks: 2 },
+      },
     );
   return templates;
+}
+
+/** Preserve catalog order within alphabetically sorted categories. Search names and categories. */
+export function groupGraphTemplates<T extends GraphTemplate>(
+  choices: T[],
+  query: string,
+): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  const search = query.trim().toLowerCase();
+  for (const choice of choices) {
+    if (!`${choice.category} ${choice.label}`.toLowerCase().includes(search)) continue;
+    const group = groups.get(choice.category) ?? [];
+    group.push(choice);
+    groups.set(choice.category, group);
+  }
+  return [...groups].sort(([a], [b]) => a.localeCompare(b));
 }
 
 /** Stable declaration order: use the first compatible pin, including repeated output types. */

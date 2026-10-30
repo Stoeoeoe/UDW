@@ -14,7 +14,10 @@ export interface CutsceneGraphNode {
     | 'lua'
     | 'branch'
     | 'parallel'
-    | 'join';
+    | 'join'
+    | 'comment';
+  /** Editor annotation; never executed or evaluated. */
+  comment?: string;
   method?: string;
   position: { x: number; y: number };
   step?: CutsceneStep;

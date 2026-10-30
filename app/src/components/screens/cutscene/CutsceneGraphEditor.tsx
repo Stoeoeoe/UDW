@@ -46,6 +46,7 @@ import {
 } from '../../../lib/cutsceneGraph';
 import {
   graphTemplates,
+  groupGraphTemplates,
   matchingGraphTemplates,
   type GraphTemplate,
 } from '../../../lib/cutsceneGraphPalette';
@@ -375,6 +376,8 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     const source = draft.nodes.find((n) => n.id === connection.source)!;
     const target = draft.nodes.find((n) => n.id === connection.target)!;
     if (source === target) throw new Error('A node cannot connect to itself');
+    if (source.kind === 'comment' || target.kind === 'comment')
+      throw new Error('Comment nodes cannot have connections');
     const output = graphSignature(source, scene, actions).outputs.find(
       (p) => p.name === connection.sourceHandle,
     );
@@ -473,6 +476,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
       choices = [];
     }
   }
+  const choiceGroups = groupGraphTemplates(choices, query);
   const insert = (template: GraphTemplate & { pin?: string }) => {
     const id = `node-${crypto.randomUUID()}`,
       position = picker!.position;
@@ -911,23 +915,34 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                           ? 'Compatible pins · connects the first matching pin'
                           : 'Actions and pure values'}
                       </Text>
-                      {choices
-                        .filter((c) => c.label.toLowerCase().includes(query.toLowerCase()))
-                        .map((choice) => (
-                          <Button
-                            key={choice.id}
-                            size="xs"
-                            variant="ghost"
-                            w="full"
-                            justifyContent="start"
-                            fontWeight="normal"
-                            onClick={() => insert(choice)}
+                      {choiceGroups.map(([category, items]) => (
+                        <Box key={category} role="group" aria-label={category} mb={2}>
+                          <Text
+                            fontSize="10px"
+                            fontWeight="semibold"
+                            color="editorMutedText"
+                            px={2}
+                            py={1}
                           >
-                            {choice.label}
-                            {choice.pin ? ` → ${choice.pin}` : ''}
-                          </Button>
-                        ))}
-                      {!choices.length && (
+                            {category} · {items.length}
+                          </Text>
+                          {items.map((choice) => (
+                            <Button
+                              key={choice.id}
+                              size="xs"
+                              variant="ghost"
+                              w="full"
+                              justifyContent="start"
+                              fontWeight="normal"
+                              onClick={() => insert(choice)}
+                            >
+                              {choice.label}
+                              {choice.pin ? ` → ${choice.pin}` : ''}
+                            </Button>
+                          ))}
+                        </Box>
+                      ))}
+                      {!choiceGroups.length && (
                         <Text fontSize="xs" p={2}>
                           No compatible functions or values.
                         </Text>

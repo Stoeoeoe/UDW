@@ -171,7 +171,7 @@ export function getManifestGraphFunctions(manifest: ScriptingManifest): Scriptin
         {
           id: `pure:${module.path}.${method.name}`,
           displayName: `${module.path}.${method.name}`,
-          category: module.path,
+          category: method.action?.category ?? module.path,
           description: 'Read-only Lua function',
           execution: 'immediate' as const,
           contexts: ['cutscene'],

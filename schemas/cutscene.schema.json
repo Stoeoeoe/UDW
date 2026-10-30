@@ -501,7 +501,8 @@
                   "lua",
                   "branch",
                   "parallel",
-                  "join"
+                  "join",
+                  "comment"
                 ]
               },
               "position": {
@@ -526,6 +527,9 @@
               "method": {
                 "type": "string",
                 "pattern": "\\S"
+              },
+              "comment": {
+                "type": "string"
               },
               "variable": {
                 "type": "string",

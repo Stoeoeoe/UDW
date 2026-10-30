@@ -57,6 +57,25 @@ const graph = (): CutsceneGraph => ({
   ],
 });
 
+it('keeps canvas notes where authored during layout and preserves annotations on copy', () => {
+  const source = graph();
+  source.nodes.push({
+    id: 'note',
+    kind: 'comment',
+    comment: 'Walk together',
+    position: { x: 70, y: -300 },
+  });
+  source.nodes.find((n) => n.id === 'wait')!.comment = 'Reaction hold';
+  layoutCutsceneGraph(source, new Map());
+  expect(source.nodes.find((n) => n.id === 'note')!.position).toEqual({ x: 70, y: -300 });
+  const copied = copyGraphSelection(source, new Set(['note', 'wait']));
+  const ids = pasteGraphSelection(source, copied);
+  expect(source.nodes.filter((n) => ids.includes(n.id)).map((n) => n.comment)).toEqual([
+    'Reaction hold',
+    'Walk together',
+  ]);
+});
+
 describe('cutscene graph editing', () => {
   it('inserts an isolated action between both ends of an execution wire', () => {
     const source = graph();
@@ -141,12 +160,16 @@ describe('cutscene graph editing', () => {
   });
   it('leaves room for a wider Lua node between ordinary nodes', () => {
     const source = graph();
-    const sizes = new Map(source.nodes.map((n) => [n.id, { width: n.id === 'wait' ? 460 : 300, height: 260 }]));
+    const sizes = new Map(
+      source.nodes.map((n) => [n.id, { width: n.id === 'wait' ? 460 : 300, height: 260 }]),
+    );
     layoutCutsceneGraph(source, sizes);
     for (const edge of source.edges) {
       const left = source.nodes.find((n) => n.id === edge.source)!;
       const right = source.nodes.find((n) => n.id === edge.target)!;
-      expect(right.position.x - left.position.x - sizes.get(left.id)!.width).toBeGreaterThanOrEqual(110);
+      expect(right.position.x - left.position.x - sizes.get(left.id)!.width).toBeGreaterThanOrEqual(
+        110,
+      );
     }
   });
 });

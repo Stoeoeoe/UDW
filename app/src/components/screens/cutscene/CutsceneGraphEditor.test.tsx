@@ -111,6 +111,34 @@ const mount = () =>
 const scene = () => useEditorStore.getState().cutscenes[0];
 
 describe('graph-only cutscene authoring', () => {
+  it('edits inline and standalone comments with undo, and searches categorized nodes', () => {
+    mount();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add node comment' })[0]);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Begin comment' }), {
+      target: { value: 'Establish the shot' },
+    });
+    expect(scene().graphs?.sequence?.nodes.find((n) => n.kind === 'entry')?.comment).toBe(
+      'Establish the shot',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add node', exact: true }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search graph nodes' }), {
+      target: { value: 'Comments' },
+    });
+    const group = screen.getByRole('group', { name: 'Comments' });
+    fireEvent.click(within(group).getByRole('button', { name: 'Comment', exact: true }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Canvas comment' }), {
+      target: { value: 'Wait for both actors here' },
+    });
+    expect(scene().graphs?.sequence?.nodes.find((n) => n.kind === 'comment')?.comment).toBe(
+      'Wait for both actors here',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Undo (Ctrl/Cmd+Z)' }));
+    expect(scene().graphs?.sequence?.nodes.find((n) => n.kind === 'comment')?.comment).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove node comment' }));
+    expect(
+      scene().graphs?.sequence?.nodes.find((n) => n.kind === 'entry')?.comment,
+    ).toBeUndefined();
+  });
   it('opens ordered content as nodes without a List switch or step editor', () => {
     mount();
     expect(screen.getByLabelText('Cutscene graph')).toBeInTheDocument();

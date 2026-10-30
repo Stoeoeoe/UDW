@@ -1,5 +1,16 @@
 import React, { lazy, Suspense, useContext, useMemo, useState } from 'react';
-import { Box, Button, HStack, Input, Select, Switch, Text } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  HStack,
+  IconButton,
+  Input,
+  Select,
+  Switch,
+  Text,
+  Textarea,
+} from '@chakra-ui/react';
+import { FiMessageSquare, FiX } from 'react-icons/fi';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { CutsceneData } from '../../../types/cutscene';
 import type { CutsceneGraphNode as AuthoredNode } from '../../../types/cutsceneGraph';
@@ -114,13 +125,55 @@ export const CutsceneGraphNode = React.memo(
         <Text fontSize="10px">{label}</Text>
       </Box>
     );
+    const commentField = (
+      <Textarea
+        className="nodrag nowheel nopan cutscene-graph-comment-text"
+        aria-label={n.kind === 'comment' ? 'Canvas comment' : `${title} comment`}
+        placeholder="Write a comment…"
+        size="xs"
+        value={n.comment ?? ''}
+        onKeyDown={(e) => e.stopPropagation()}
+        onChange={(e) =>
+          change(n.id, (node) => {
+            node.comment = e.target.value;
+          })
+        }
+      />
+    );
+    if (n.kind === 'comment')
+      return (
+        <Box className={`cutscene-graph-node cutscene-graph-note ${selected ? 'selected' : ''}`}>
+          <Box className="cutscene-graph-node-title">
+            <Text fontSize="xs" fontWeight="semibold">
+              Comment
+            </Text>
+          </Box>
+          {commentField}
+        </Box>
+      );
     return (
       <Box className={`cutscene-graph-node ${pure ? 'pure' : ''} ${selected ? 'selected' : ''}`}>
         <Box className="cutscene-graph-node-title">
-          <Text fontWeight="semibold" fontSize="sm">
-            {pure ? 'ƒ ' : ''}
-            {title}
-          </Text>
+          <HStack justify="space-between">
+            <Text fontWeight="semibold" fontSize="sm">
+              {pure ? 'ƒ ' : ''}
+              {title}
+            </Text>
+            <IconButton
+              className="nodrag"
+              size="xs"
+              variant="ghost"
+              aria-label={n.comment === undefined ? 'Add node comment' : 'Remove node comment'}
+              title={n.comment === undefined ? 'Add comment' : 'Remove comment'}
+              icon={n.comment === undefined ? <FiMessageSquare /> : <FiX />}
+              onClick={() =>
+                change(n.id, (node) => {
+                  if (node.comment === undefined) node.comment = '';
+                  else delete node.comment;
+                })
+              }
+            />
+          </HStack>
           <Text fontSize="9px" color="editorMutedText">
             {pure
               ? 'Pure · evaluated by its consumer'
@@ -129,6 +182,7 @@ export const CutsceneGraphNode = React.memo(
                 : 'Execution'}
           </Text>
         </Box>
+        {n.comment !== undefined && commentField}
         {!pure && (
           <HStack className="cutscene-graph-execution" justify="space-between">
             {n.kind !== 'entry' && n.kind !== 'join' && exec('target', 'in', 'In')}

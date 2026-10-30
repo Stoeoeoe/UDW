@@ -98,7 +98,7 @@ export function layoutCutsceneGraph(
   const layout = new dagre.graphlib.Graph({ multigraph: true });
   layout.setGraph({ rankdir: 'LR', nodesep: 70, ranksep: 110, marginx: 50, marginy: 60 });
   layout.setDefaultEdgeLabel(() => ({}));
-  for (const node of graph.nodes)
+  for (const node of graph.nodes.filter((n) => n.kind !== 'comment'))
     layout.setNode(node.id, sizes.get(node.id) ?? { width: 300, height: 260 });
   for (const edge of graph.edges)
     layout.setEdge(
@@ -109,6 +109,7 @@ export function layoutCutsceneGraph(
     );
   dagre.layout(layout);
   for (const node of graph.nodes) {
+    if (node.kind === 'comment') continue;
     const placed = layout.node(node.id);
     node.position = { x: placed.x - placed.width / 2, y: placed.y - placed.height / 2 };
   }

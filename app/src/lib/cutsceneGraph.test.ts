@@ -5,7 +5,11 @@ import {
   setPhaseGraph,
   validateGraphPlan,
 } from './cutsceneGraph';
-import { graphTemplates, matchingGraphTemplates } from './cutsceneGraphPalette';
+import {
+  graphTemplates,
+  groupGraphTemplates,
+  matchingGraphTemplates,
+} from './cutsceneGraphPalette';
 import { getManifestGraphFunctions, parseScriptingManifest } from './scriptingManifest';
 import { exportCutscene, parseCutscene, readCutsceneActions, validateCutscene } from './cutscenes';
 import manifest from './__fixtures__/unity-bindings-v2.json';
@@ -28,6 +32,53 @@ const refs = {
   entityTypes: [],
   dialogueIds: [],
 };
+
+describe('graph annotations and categorized choices', () => {
+  it('round-trips comments without adding execution steps and rejects wired notes', () => {
+    const s = scene();
+    const graph = graphFromSteps(s.sequence);
+    graph.nodes.find((n) => n.kind === 'action')!.comment = 'Let the opening shot settle.';
+    graph.nodes.push({
+      id: 'note',
+      kind: 'comment',
+      comment: 'Arrival beat\nKeep both actors visible.',
+      position: { x: 40, y: -200 },
+    });
+    setPhaseGraph(s, 'sequence', graph);
+    const plan = validateGraphPlan(graph, s, actions, 'sequence');
+    expect(plan.steps).toHaveLength(1);
+    const restored = parseCutscene(exportCutscene(s, actions, refs));
+    expect(restored.graphs?.sequence).toEqual(graph);
+    for (const kind of ['execution', 'data'] as const) {
+      const invalid = structuredClone(graph);
+      invalid.edges.push({
+        id: 'note-wire',
+        source: 'note',
+        sourcePin: 'next',
+        target: graph.nodes.find((n) => n.kind === 'action')!.id,
+        targetPin: 'in',
+        kind,
+      });
+      expect(() => validateGraphPlan(invalid, s, actions, 'sequence')).toThrow(
+        'Comment nodes cannot have connections',
+      );
+    }
+  });
+  it('groups compatible choices using existing categories and searches category names', () => {
+    const templates = graphTemplates(scene(), actions, 'sequence');
+    const compatible = matchingGraphTemplates(templates, scene(), actions, {
+      direction: 'output',
+      type: 'number',
+    });
+    const wait = compatible.find((t) => t.id === 'cutscene.wait')!;
+    expect(wait.category).toBe(actions.find((a) => a.id === 'cutscene.wait')!.category);
+    expect(
+      groupGraphTemplates(compatible, wait.category).flatMap(([, items]) => items),
+    ).toContainEqual(wait);
+    expect(compatible.some((t) => t.id === 'comment')).toBe(false);
+    expect(groupGraphTemplates(compatible, 'no such function')).toEqual([]);
+  });
+});
 function withResults(): CutsceneGraph {
   const g = graphFromSteps(scene().sequence);
   const entry = g.nodes.find((n) => n.kind === 'entry')!;
@@ -142,23 +193,63 @@ describe('cutscene execution and typed data graph', () => {
 describe('graph setup contracts', () => {
   it('preserves literal Make Position values for map binding validation', () => {
     const source = scene();
-    source.onStart = [{ id: 'place', action: 'characters.place', arguments: { character: 'player', position: { x: 0, y: 0 } } }];
+    source.onStart = [
+      {
+        id: 'place',
+        action: 'characters.place',
+        arguments: { character: 'player', position: { x: 0, y: 0 } },
+      },
+    ];
     const graph = graphFromSteps(source.onStart);
-    graph.nodes.push({ id: 'position', kind: 'position', position: { x: 0, y: 0 }, arguments: { x: 16, y: 32 } });
-    graph.edges.push({ id: 'point', kind: 'data', source: 'position', sourcePin: 'position', target: 'place', targetPin: 'position' });
+    graph.nodes.push({
+      id: 'position',
+      kind: 'position',
+      position: { x: 0, y: 0 },
+      arguments: { x: 16, y: 32 },
+    });
+    graph.edges.push({
+      id: 'point',
+      kind: 'data',
+      source: 'position',
+      sourcePin: 'position',
+      target: 'place',
+      targetPin: 'position',
+    });
     const plan = validateGraphPlan(graph, source, actions, 'onStart');
     expect(plan.steps[0].arguments.position).toEqual({ x: 16, y: 32 });
     expect(plan.steps[0].argumentVariables).toBeUndefined();
-    graph.nodes.find(n => n.id === 'position')!.arguments!.x = -1;
-    expect(() => validateGraphPlan(graph, source, actions, 'onStart')).toThrow(/nonnegative integer/);
+    graph.nodes.find((n) => n.id === 'position')!.arguments!.x = -1;
+    expect(() => validateGraphPlan(graph, source, actions, 'onStart')).toThrow(
+      /nonnegative integer/,
+    );
   });
   it('rejects a parallel variable write against a getter in another track', () => {
-    const source = scene(); source.variables = [{ name: 'delay', type: 'number', initialValue: 1 }];
-    source.sequence = [{ id: 'parallel', action: 'control.parallel', arguments: {}, tracks: [[{ id: 'set', action: 'cutscene.setVariable', arguments: { name: 'delay', value: 2 } }], source.sequence] }];
+    const source = scene();
+    source.variables = [{ name: 'delay', type: 'number', initialValue: 1 }];
+    source.sequence = [
+      {
+        id: 'parallel',
+        action: 'control.parallel',
+        arguments: {},
+        tracks: [
+          [{ id: 'set', action: 'cutscene.setVariable', arguments: { name: 'delay', value: 2 } }],
+          source.sequence,
+        ],
+      },
+    ];
     const graph = graphFromSteps(source.sequence);
     graph.nodes.push({ id: 'get', kind: 'variable', variable: 'delay', position: { x: 0, y: 0 } });
-    graph.edges.push({ id: 'read', kind: 'data', source: 'get', sourcePin: 'value', target: 'wait', targetPin: 'seconds' });
-    expect(() => validateGraphPlan(graph, source, actions, 'sequence')).toThrow(/conflict on cutscene variables/);
+    graph.edges.push({
+      id: 'read',
+      kind: 'data',
+      source: 'get',
+      sourcePin: 'value',
+      target: 'wait',
+      targetPin: 'seconds',
+    });
+    expect(() => validateGraphPlan(graph, source, actions, 'sequence')).toThrow(
+      /conflict on cutscene variables/,
+    );
   });
 });
 

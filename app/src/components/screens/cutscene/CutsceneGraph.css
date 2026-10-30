@@ -20,6 +20,23 @@
   border-color: var(--chakra-colors-blue-300);
   box-shadow: 0 0 0 1px var(--chakra-colors-blue-300);
 }
+.cutscene-graph-node.cutscene-graph-note {
+  border-color: var(--chakra-colors-yellow-600);
+  background: var(--chakra-colors-editorInlineBg);
+}
+.cutscene-graph-note .cutscene-graph-node-title {
+  background: var(--chakra-colors-editorInlineBg);
+}
+.cutscene-graph-comment-text {
+  min-height: 80px;
+  resize: vertical;
+  border: 0;
+  border-radius: 0;
+  color: var(--chakra-colors-editorMutedText);
+}
+.cutscene-graph-note .cutscene-graph-comment-text {
+  min-height: 140px;
+}
 .cutscene-graph-node-title {
   padding: 10px 14px;
   background: var(--chakra-colors-editorSequenceBg);

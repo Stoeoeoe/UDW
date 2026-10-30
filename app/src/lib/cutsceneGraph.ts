@@ -36,8 +36,10 @@ export const cutsceneGraphSchema = z
             'branch',
             'parallel',
             'join',
+            'comment',
           ]),
           method: nonblank.optional(),
+          comment: z.string().optional(),
           position: z.object({ x: z.number().finite(), y: z.number().finite() }).strict(),
           step: z
             .object({
@@ -88,6 +90,7 @@ export const graphNodeFields: Record<CutsceneGraphNode['kind'], string[]> = {
   branch: ['arguments', 'pair'],
   parallel: ['pair', 'tracks'],
   join: ['pair'],
+  comment: [],
 };
 export const phaseSteps = (scene: Cutscene, phase: CutscenePhase) =>
   phase === 'onStart'
@@ -265,10 +268,12 @@ export function validateGraphPlan(
   for (const n of graph.nodes) {
     if (
       Object.keys(n).some(
-        (key) => !['id', 'kind', 'position', ...graphNodeFields[n.kind]].includes(key),
+        (key) => !['id', 'kind', 'position', 'comment', ...graphNodeFields[n.kind]].includes(key),
       )
     )
       throw new Error(`${n.id}: fields do not match its node kind`);
+    if (n.kind === 'comment' && typeof n.comment !== 'string')
+      throw new Error(`${n.id}: a comment node requires comment text`);
     const signature = signatures.get(n.id)!;
     for (const [parameter, name] of Object.entries(n.step?.argumentVariables ?? {})) {
       const input = signature.inputs.find(p => p.name === parameter);
@@ -305,6 +310,8 @@ export function validateGraphPlan(
     if (!source || !target || source === target)
       throw new Error(`${e.id}: missing node or self connection`);
     const key = `${e.target}/${e.targetPin}`;
+    if (source.kind === 'comment' || target.kind === 'comment')
+      throw new Error('Comment nodes cannot have connections');
     if (e.kind === 'data') {
       if (target.step?.argumentVariables?.[e.targetPin]) throw new Error(`${e.id}: an input cannot have both a variable binding and data wire`);
       if (incoming.has(key)) throw new Error(`${e.id}: input already connected`);
@@ -579,7 +586,7 @@ export function validateGraphPlan(
   }
   const steps = walk(entries[0].id, undefined, new Set());
   for (const n of graph.nodes) {
-    if (!isPureGraphNode(n) && !visited.has(n.id))
+    if (n.kind !== 'comment' && !isPureGraphNode(n) && !visited.has(n.id))
       throw new Error(`${n.id}: node is disconnected from execution`);
     if (isPureGraphNode(n)) dependency(n.id, new Set(graph.nodes.map((n) => n.id)));
   }
