@@ -35,7 +35,6 @@ describe('cutscene explorer resources', () => {
       entityTypes: [],
       items: [],
       dialogues: [],
-      gameVariables: [],
       cutscenes: state.cutscenes,
       cutsceneLabels: state.cutsceneLabels,
       cutsceneFolders: state.cutsceneFolders,

@@ -109,10 +109,6 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'dialogue');
       params.set('id', document.dialogueId);
       break;
-    case 'variable':
-      params.set('doc', 'variable');
-      params.set('id', document.variableKey);
-      break;
     case 'entities':
     case 'characters':
     case 'items':
@@ -240,18 +236,6 @@ export function documentFromHash(
       type: 'dialogue',
       id: dialogue.id,
       name: dialogue.name,
-    });
-  }
-
-  if (doc === 'variable') {
-    const variableKey = params.get('id');
-    if (!variableKey) return null;
-    const variable = snapshot.gameVariables?.find((v) => v.key === variableKey);
-    if (!variable) return null;
-    return createEditorResourceDocument({
-      type: 'variable',
-      id: variable.key,
-      name: variable.key,
     });
   }
 

@@ -49,7 +49,7 @@ describe('condition Lua language support', () => {
     });
     render(
       <ChakraProvider>
-        <ConditionEditor value="Story.Set(, true)" onChange={() => {}} variables={[]} />
+        <ConditionEditor value="Story.Set(, true)" onChange={() => {}} />
       </ChakraProvider>,
     );
     await waitFor(() => expect(mock.source).not.toBeNull());
@@ -84,7 +84,7 @@ describe('condition Lua language support', () => {
     });
     render(
       <ChakraProvider>
-        <ConditionEditor value="" onChange={() => {}} variables={[]} />
+        <ConditionEditor value="" onChange={() => {}} />
       </ChakraProvider>,
     );
     await waitFor(() => expect(mock.source).not.toBeNull());
@@ -103,7 +103,7 @@ describe('condition Lua language support', () => {
     useScriptingManifestStore.setState({ manifest });
     render(
       <ChakraProvider>
-        <ConditionEditor value="" onChange={() => {}} variables={[]} />
+        <ConditionEditor value="" onChange={() => {}} />
       </ChakraProvider>,
     );
     await waitFor(() => expect(mock.props).not.toBeNull());

@@ -108,35 +108,6 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       });
     }
 
-    // 1.75 Game variables
-    if (proj?.gameVariables?.length) {
-      set((state) => {
-        state.gameVariables = castDraft(proj.gameVariables!);
-      });
-    }
-
-    // 1.76 Scripting primitives
-    if (proj?.scriptTables?.length) {
-      set((state) => {
-        state.scriptTables = castDraft(proj.scriptTables!);
-      });
-    }
-    if (proj?.scriptFunctions?.length) {
-      set((state) => {
-        state.scriptFunctions = castDraft(proj.scriptFunctions!);
-      });
-    }
-    if (proj?.scriptNamespaces?.length) {
-      set((state) => {
-        state.scriptNamespaces = castDraft(proj.scriptNamespaces!);
-      });
-    }
-    if (proj?.scriptContextTypes?.length) {
-      set((state) => {
-        state.scriptContextTypes = castDraft(proj.scriptContextTypes!);
-      });
-    }
-
     setResourceLoadingState(set, 'Loading characters and items', 0.48);
 
     // 1.8 Characters

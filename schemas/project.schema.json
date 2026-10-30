@@ -107,54 +107,31 @@
       "description": "Optional story-value declarations used for editor warnings and key completion. Declarations do not initialize runtime values.",
       "items": {
         "type": "object",
-        "required": ["key", "type"],
+        "required": [
+          "key",
+          "type"
+        ],
         "additionalProperties": false,
         "properties": {
-          "key": { "type": "string", "minLength": 1, "pattern": "\\S" },
-          "type": { "enum": ["boolean", "long", "double", "string", "object"] },
-          "description": { "type": "string" }
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "type": {
+            "enum": [
+              "boolean",
+              "long",
+              "double",
+              "string",
+              "object"
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
         }
       }
-    },
-    "gameVariables": {
-      "type": "array",
-      "description": "Named variables exposed to the Lua sandbox at runtime.",
-      "items": {
-        "$ref": "#/$defs/GameVariable"
-      }
-    },
-    "scriptTables": {
-      "type": "array",
-      "description": "Reusable table definitions with named fields, referenceable as a type.",
-      "items": {
-        "$ref": "#/$defs/ScriptTable"
-      }
-    },
-    "scriptFunctions": {
-      "type": "array",
-      "description": "Global functions callable anywhere in the Lua sandbox.",
-      "items": {
-        "$ref": "#/$defs/ScriptFunction"
-      }
-    },
-    "scriptNamespaces": {
-      "type": "array",
-      "description": "Singleton table-like namespaces (e.g. weather, camera, audio).",
-      "items": {
-        "$ref": "#/$defs/ScriptNamespace"
-      }
-    },
-    "scriptContextTypes": {
-      "type": "array",
-      "description": "Context types defining the shape of 'self' for script execution contexts.",
-      "items": {
-        "$ref": "#/$defs/ScriptContextType"
-      }
-    },
-    "defaultDialogueContextTypeId": {
-      "type": "string",
-      "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
-      "description": "Default ScriptContextType id injected as 'self' for dialogue scripts when no dialogue type override is selected."
     },
     "dialogueTypes": {
       "type": "array",
@@ -177,7 +154,11 @@
   "$defs": {
     "TerrainType": {
       "type": "object",
-      "required": ["id", "displayName", "color"],
+      "required": [
+        "id",
+        "displayName",
+        "color"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -196,7 +177,13 @@
     },
     "LayerDefinition": {
       "type": "object",
-      "required": ["id", "name", "type", "color", "zIndex"],
+      "required": [
+        "id",
+        "name",
+        "type",
+        "color",
+        "zIndex"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -208,7 +195,11 @@
         },
         "type": {
           "type": "string",
-          "enum": ["tile", "entity", "terrain"]
+          "enum": [
+            "tile",
+            "entity",
+            "terrain"
+          ]
         },
         "color": {
           "type": "string",
@@ -244,7 +235,13 @@
         },
         "category": {
           "type": "string",
-          "enum": ["object", "trigger", "spawn", "transition", "decoration"]
+          "enum": [
+            "object",
+            "trigger",
+            "spawn",
+            "transition",
+            "decoration"
+          ]
         },
         "displayName": {
           "type": "string"
@@ -284,7 +281,9 @@
         },
         "sprite": {
           "type": "object",
-          "required": ["path"],
+          "required": [
+            "path"
+          ],
           "additionalProperties": false,
           "properties": {
             "path": {
@@ -301,7 +300,13 @@
     },
     "PropertyDefinition": {
       "type": "object",
-      "required": ["key", "label", "type", "defaultValue", "required"],
+      "required": [
+        "key",
+        "label",
+        "type",
+        "defaultValue",
+        "required"
+      ],
       "additionalProperties": false,
       "properties": {
         "key": {
@@ -397,260 +402,22 @@
         {
           "type": "object",
           "additionalProperties": {
-            "type": ["string", "number", "boolean", "null"]
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
           }
         }
       ]
     },
-    "GameVariable": {
-      "type": "object",
-      "required": ["key", "type", "category", "defaultValue"],
-      "additionalProperties": false,
-      "properties": {
-        "key": {
-          "type": "string",
-          "description": "Dotted Lua path used to access this variable at runtime (e.g. 'weather.isRain').",
-          "pattern": "^[a-zA-Z][a-zA-Z0-9_.]*$"
-        },
-        "type": {
-          "type": "string",
-          "enum": ["boolean", "number", "string", "enum", "table"],
-          "description": "Runtime value type. 'table' references a ScriptTable definition."
-        },
-        "category": {
-          "type": "string",
-          "description": "Editor grouping label (e.g. 'Weather', 'Date', 'Game State')."
-        },
-        "description": {
-          "type": "string",
-          "description": "Optional human-readable description shown in the editor."
-        },
-        "defaultValue": {
-          "oneOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "description": "Default value for primitive types. Ignored when type is 'table'."
-        },
-        "enumValues": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Allowed values when type is 'enum'."
-        },
-        "tableId": {
-          "type": "string",
-          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
-          "description": "Reference to a ScriptTable definition when type is 'table'."
-        },
-        "complexFields": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/TableField"
-          },
-          "description": "Legacy inline field definitions. Use tableId instead for new data."
-        },
-        "folderPath": {
-          "type": "string",
-          "description": "Virtual folder path for workspace organization. Empty string or absent = root."
-        }
-      }
-    },
-    "ScriptTable": {
-      "type": "object",
-      "required": ["id", "name", "fields"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-        },
-        "name": {
-          "type": "string",
-          "description": "Table type name (e.g. 'npcData', 'questEntry')."
-        },
-        "description": {
-          "type": "string"
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/TableField"
-          }
-        }
-      }
-    },
-    "TableField": {
-      "type": "object",
-      "required": ["key", "type", "defaultValue"],
-      "additionalProperties": false,
-      "properties": {
-        "key": {
-          "type": "string",
-          "description": "Field name within the Lua table.",
-          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
-        },
-        "type": {
-          "type": "string",
-          "enum": ["boolean", "number", "string", "enum"],
-          "description": "Primitive type of this field."
-        },
-        "description": {
-          "type": "string"
-        },
-        "defaultValue": {
-          "oneOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ]
-        },
-        "enumValues": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Allowed values when type is 'enum'."
-        }
-      }
-    },
-    "ScriptParam": {
-      "type": "object",
-      "required": ["name", "type"],
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Parameter name."
-        },
-        "type": {
-          "type": "string",
-          "enum": ["boolean", "number", "string", "enum", "table", "void"],
-          "description": "Parameter type."
-        },
-        "description": {
-          "type": "string"
-        },
-        "enumValues": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Allowed values when type is 'enum'."
-        }
-      }
-    },
-    "ScriptFunction": {
-      "type": "object",
-      "required": ["id", "name", "params", "returnType"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-        },
-        "name": {
-          "type": "string",
-          "description": "Lua-callable function name."
-        },
-        "description": {
-          "type": "string"
-        },
-        "params": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ScriptParam"
-          }
-        },
-        "returnType": {
-          "type": "string",
-          "enum": ["boolean", "number", "string", "enum", "table", "void"],
-          "description": "Return type ('void' = no return value)."
-        },
-        "returnTableId": {
-          "type": "string",
-          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
-          "description": "Reference to a ScriptTable definition when returnType is 'table'."
-        }
-      }
-    },
-    "ScriptNamespace": {
-      "type": "object",
-      "required": ["id", "name", "fields", "functions"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-        },
-        "name": {
-          "type": "string",
-          "description": "Lua global name (e.g. 'weather', 'camera')."
-        },
-        "description": {
-          "type": "string"
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/GameVariable"
-          }
-        },
-        "functions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ScriptFunction"
-          }
-        }
-      }
-    },
-    "ScriptContextType": {
-      "type": "object",
-      "required": ["id", "name", "fields", "functions"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-        },
-        "name": {
-          "type": "string",
-          "description": "Context type name (e.g. 'npc', 'cutscene')."
-        },
-        "description": {
-          "type": "string"
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/GameVariable"
-          }
-        },
-        "functions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ScriptFunction"
-          }
-        }
-      }
-    },
     "DialogueType": {
       "type": "object",
-      "required": ["id", "name"],
+      "required": [
+        "id",
+        "name"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -662,17 +429,16 @@
         },
         "description": {
           "type": "string"
-        },
-        "contextTypeId": {
-          "type": "string",
-          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
-          "description": "Optional ScriptContextType id used instead of the project's default dialogue context."
         }
       }
     },
     "ItemClass": {
       "type": "object",
-      "required": ["id", "name", "properties"],
+      "required": [
+        "id",
+        "name",
+        "properties"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {

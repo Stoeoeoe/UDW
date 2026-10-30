@@ -6,11 +6,6 @@ import {
   EntityType,
   Character,
   DialogueDocument,
-  GameVariable,
-  ScriptTable,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptContextType,
   PropertyDefinition,
 } from './schema';
 
@@ -121,14 +116,8 @@ export interface EditorState {
   selectedDialogueId: string | null;
   selectedDialogueNodeId: string | null;
 
-  // Game variable registry (persisted in project)
-  gameVariables: GameVariable[];
 
   // Scripting primitives (persisted in project)
-  scriptTables: ScriptTable[];
-  scriptFunctions: ScriptFunction[];
-  scriptNamespaces: ScriptNamespace[];
-  scriptContextTypes: ScriptContextType[];
 
   // Project-level layer definitions (template layers for maps)
   layerDefinitions: LayerDefinition[];

@@ -9,7 +9,6 @@ export const editorResourceTypeIds = [
   'item',
   'dialogue',
   'cutscene',
-  'variable',
 ] as const;
 
 export type EditorResourceTypeId = (typeof editorResourceTypeIds)[number];

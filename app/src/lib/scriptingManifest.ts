@@ -53,6 +53,9 @@ const actionSchema = z
 const manifestSchema = z
   .object({
     schemaVersion: z.literal(2),
+    tables: z
+      .array(z.object({ name: nonblank, fields: z.array(parameterSchema) }).passthrough())
+      .optional(),
     resources: z
       .record(
         z.string(),

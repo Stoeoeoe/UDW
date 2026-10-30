@@ -72,11 +72,6 @@ export const DialogueEditor: React.FC = () => {
           selectedDialogue={controller.selectedDialogue}
           selectedNode={controller.selectedNode}
           characters={controller.characters}
-          gameVariables={controller.gameVariables}
-          scriptTables={controller.scriptTables}
-          scriptFunctions={controller.scriptFunctions}
-          scriptNamespaces={controller.scriptNamespaces}
-          activeContextType={controller.activeContextType}
           duplicateMsgKeys={controller.duplicateMsgKeys}
           dialogueNodeTargets={controller.dialogueNodeTargets}
           dialogues={controller.dialogues}

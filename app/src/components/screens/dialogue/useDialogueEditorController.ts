@@ -17,7 +17,6 @@ import {
   getBrokenReferenceNodeIds,
   getDuplicateMsgKeys,
   nowIso,
-  resolveDialogueContextType,
 } from './dialogueUtils';
 import {
   addChoiceOptionToDialogue,
@@ -36,10 +35,6 @@ import {
 
 export interface DialogueEditorController {
   characters: ReturnType<typeof useEditorStore.getState>['characters'];
-  gameVariables: ReturnType<typeof useEditorStore.getState>['gameVariables'];
-  scriptTables: ReturnType<typeof useEditorStore.getState>['scriptTables'];
-  scriptFunctions: ReturnType<typeof useEditorStore.getState>['scriptFunctions'];
-  scriptNamespaces: ReturnType<typeof useEditorStore.getState>['scriptNamespaces'];
   dialogues: Map<string, DialogueDocument>;
   selectedDialogueId: string | null;
   selectedNodeId: string | null;
@@ -54,7 +49,6 @@ export interface DialogueEditorController {
   actionLuaValidation: ActionLuaValidation | null;
   duplicateMsgKeys: Set<string>;
   brokenReferenceNodeIds: Set<string>;
-  activeContextType: ReturnType<typeof resolveDialogueContextType>;
   dialogueNodeTargets: string[];
   sensors: ReturnType<typeof useSensors>;
   renameNode: (oldId: string, newId: string) => void;
@@ -91,11 +85,6 @@ export function useDialogueEditorController(): DialogueEditorController {
   const characters = useEditorStore((state) => state.characters);
   const storedSelectedDialogueId = useEditorStore((state) => state.selectedDialogueId);
   const storeDialogues = useEditorStore((state) => state.dialogues);
-  const gameVariables = useEditorStore((state) => state.gameVariables);
-  const scriptTables = useEditorStore((state) => state.scriptTables);
-  const scriptFunctions = useEditorStore((state) => state.scriptFunctions);
-  const scriptNamespaces = useEditorStore((state) => state.scriptNamespaces);
-  const scriptContextTypes = useEditorStore((state) => state.scriptContextTypes);
   const workspaceTabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
 
@@ -161,10 +150,6 @@ export function useDialogueEditorController(): DialogueEditorController {
     [dialogues, selectedDialogue],
   );
 
-  const activeContextType = useMemo(
-    () => resolveDialogueContextType(project, selectedDialogue, scriptContextTypes),
-    [project, scriptContextTypes, selectedDialogue],
-  );
 
   const flushSavesNow = useCallback(async () => {
     if (!project) return;
@@ -504,10 +489,6 @@ export function useDialogueEditorController(): DialogueEditorController {
 
   return {
     characters,
-    gameVariables,
-    scriptTables,
-    scriptFunctions,
-    scriptNamespaces,
     dialogues,
     selectedDialogueId,
     selectedNodeId,
@@ -522,7 +503,6 @@ export function useDialogueEditorController(): DialogueEditorController {
     actionLuaValidation,
     duplicateMsgKeys,
     brokenReferenceNodeIds,
-    activeContextType,
     dialogueNodeTargets,
     sensors,
     renameNode,

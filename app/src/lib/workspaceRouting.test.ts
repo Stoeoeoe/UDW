@@ -4,7 +4,6 @@ import {
   Character,
   DialogueDocument,
   EntityType,
-  GameVariable,
   Item,
   Map as GameMap,
   Tileset,
@@ -33,7 +32,6 @@ function createSnapshot(
     entityTypes?: EntityType[];
     items?: Item[];
     dialogues?: DialogueDocument[];
-    gameVariables?: GameVariable[];
   } = {},
 ) {
   return {
@@ -43,7 +41,6 @@ function createSnapshot(
     entityTypes: overrides.entityTypes ?? [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
-    gameVariables: overrides.gameVariables ?? [],
   };
 }
 
@@ -117,14 +114,6 @@ describe('workspaceRouting', () => {
           nodes: [{ id: 'step_1', type: 'line', text: '', msgKey: 'dlg.intro.01', next: null }],
         },
       ],
-      gameVariables: [
-        {
-          key: 'weather.isRain',
-          type: 'boolean',
-          category: 'Weather',
-          defaultValue: false,
-        },
-      ],
     });
 
     expect(
@@ -179,16 +168,5 @@ describe('workspaceRouting', () => {
       ),
     ).toMatchObject({ kind: 'dialogue', dialogueId: 'intro' });
 
-    expect(
-      documentFromHash(
-        documentToHash({
-          kind: 'variable',
-          variableKey: 'weather.isRain',
-          label: 'weather.isRain',
-          saveUnitId: 'configuration',
-        }),
-        snapshot,
-      ),
-    ).toMatchObject({ kind: 'variable', variableKey: 'weather.isRain' });
   });
 });

@@ -10,7 +10,7 @@ export { EntityEditor } from './entity/EntityEditor';
 export { default as CharacterEditor } from './character/CharacterEditor';
 export { default as ItemEditor } from './item/ItemEditor';
 export { DialogueEditor } from './dialogue';
-export { VariableEditor } from './scripting/VariableEditor';
+export { ScriptingApiBrowser } from './scripting/ScriptingApiBrowser';
 export { SettingsEditor } from './settings/SettingsEditor';
 
 export * from './common';

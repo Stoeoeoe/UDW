@@ -7,7 +7,6 @@ import {
   DialogueNodeEditorMeta,
   DialogueNodeType,
   Project,
-  ScriptContextType,
 } from '../../../types/schema';
 
 export type DialogueTab = 'timeline' | 'settings';
@@ -592,17 +591,3 @@ export function getDialogueTypeById(
   if (!project || !dialogueTypeId) return undefined;
   return project.dialogueTypes?.find((dialogueType) => dialogueType.id === dialogueTypeId);
 }
-
-export function resolveDialogueContextType(
-  project: Project | null | undefined,
-  dialogue: DialogueDocument | null | undefined,
-  scriptContextTypes: ScriptContextType[],
-): ScriptContextType | undefined {
-  const dialogueType = getDialogueTypeById(project, dialogue?.dialogueTypeId);
-  const contextTypeId = dialogueType?.contextTypeId || project?.defaultDialogueContextTypeId;
-  if (!contextTypeId) return undefined;
-  return scriptContextTypes.find((context) => context.id === contextTypeId);
-}
-
-// Unused in current code but exported to avoid re-importing ScriptContextType elsewhere
-export type { ScriptContextType };

@@ -8,7 +8,7 @@ import {
   ItemEditor,
   MapEditor,
   TilesetEditor,
-  VariableEditor,
+  ScriptingApiBrowser,
   SettingsEditor,
 } from '../screens';
 import { ConfigurationEditor } from '../screens/settings/ConfigurationEditor';
@@ -50,7 +50,7 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
     case 'dialogues':
       return <DialogueEditor />;
     case 'scripting':
-      return <VariableEditor />;
+      return <ScriptingApiBrowser />;
     case 'data':
       return <DataEditor />;
     case 'character':
@@ -61,8 +61,6 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <ItemResourceDocument itemId={tab.document.itemId} />;
     case 'dialogue':
       return <DialogueResourceDocument dialogueId={tab.document.dialogueId} />;
-    case 'variable':
-      return <VariableEditor />;
     default:
       return null;
   }

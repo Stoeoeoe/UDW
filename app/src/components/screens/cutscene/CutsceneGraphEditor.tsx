@@ -408,7 +408,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     if (data && target.step?.argumentVariables)
       delete target.step.argumentVariables[connection.targetHandle!];
     if (!data && (isPureGraphNode(source) || isPureGraphNode(target)))
-      throw new Error('Pure nodes have data pins only');
+      throw new Error('Read-only nodes have data pins only');
     draft.edges = draft.edges.filter((e) =>
       data
         ? !(e.kind === 'data' && e.target === target.id && e.targetPin === connection.targetHandle)

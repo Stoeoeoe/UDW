@@ -10,13 +10,6 @@
 import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
 import Editor, { OnMount, BeforeMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
-import {
-  GameVariable,
-  ScriptTable,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptContextType,
-} from '../../../types/schema';
 import { getLspClient, LspDiagnostic, LspCompletionItem } from '../../../lib/lspClient';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -42,11 +35,6 @@ export interface LuaScriptEditorProps {
   value: string;
   onChange: (value: string) => void;
   height?: string;
-  gameVariables?: GameVariable[];
-  scriptTables?: ScriptTable[];
-  scriptFunctions?: ScriptFunction[];
-  scriptNamespaces?: ScriptNamespace[];
-  activeContextType?: ScriptContextType | null;
   /** Unique identifier for this editor instance (used as LSP document URI) */
   documentId?: string;
   /** Live character bindings available to this script (for example cutscene actors). */
@@ -237,133 +225,6 @@ function ensureLuaLanguage(monaco: typeof Monaco) {
 
 // ─── Build static completion items (game-specific) ───────────────────────────
 
-function buildGameCompletionItems(
-  monaco: typeof Monaco,
-  gameVariables: GameVariable[],
-  scriptTables: ScriptTable[],
-  scriptFunctions: ScriptFunction[],
-  scriptNamespaces: ScriptNamespace[],
-  activeContextType: ScriptContextType | null | undefined,
-): Monaco.languages.CompletionItem[] {
-  const items: Monaco.languages.CompletionItem[] = [];
-  const range = undefined!;
-
-  for (const variable of gameVariables) {
-    items.push({
-      label: variable.key,
-      kind: monaco.languages.CompletionItemKind.Variable,
-      detail: `(${variable.type}) ${variable.description ?? ''}`.trim(),
-      insertText: variable.key,
-      range,
-    });
-
-    if (variable.type === 'table') {
-      const table = variable.tableId
-        ? scriptTables.find((t) => t.id === variable.tableId)
-        : undefined;
-      const fields = table?.fields ?? variable.complexFields ?? [];
-      for (const field of fields) {
-        const fullKey = `${variable.key}.${field.key}`;
-        items.push({
-          label: fullKey,
-          kind: monaco.languages.CompletionItemKind.Field,
-          detail: `(${field.type}) ${field.description ?? ''}`.trim(),
-          insertText: fullKey,
-          range,
-        });
-      }
-    }
-  }
-
-  for (const fn of scriptFunctions) {
-    const paramList = fn.params.map((p) => p.name).join(', ');
-    items.push({
-      label: fn.name,
-      kind: monaco.languages.CompletionItemKind.Function,
-      detail: `(${fn.returnType}) ${fn.name}(${paramList})`,
-      documentation: fn.description,
-      insertText: fn.name + '($0)',
-      insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      range,
-    });
-  }
-
-  for (const ns of scriptNamespaces) {
-    items.push({
-      label: ns.name,
-      kind: monaco.languages.CompletionItemKind.Module,
-      detail: ns.description ?? `namespace ${ns.name}`,
-      insertText: ns.name,
-      range,
-    });
-
-    for (const field of ns.fields) {
-      const fullKey = `${ns.name}.${field.key}`;
-      items.push({
-        label: fullKey,
-        kind: monaco.languages.CompletionItemKind.Field,
-        detail: `(${field.type}) ${field.description ?? ''}`.trim(),
-        insertText: fullKey,
-        range,
-      });
-    }
-
-    for (const fn of ns.functions) {
-      const paramList = fn.params.map((p) => p.name).join(', ');
-      const fullName = `${ns.name}.${fn.name}`;
-      items.push({
-        label: fullName,
-        kind: monaco.languages.CompletionItemKind.Function,
-        detail: `(${fn.returnType}) ${fullName}(${paramList})`,
-        documentation: fn.description,
-        insertText: fullName + '($0)',
-        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-        range,
-      });
-    }
-  }
-
-  if (activeContextType) {
-    items.push({
-      label: 'self',
-      kind: monaco.languages.CompletionItemKind.Keyword,
-      detail: `context: ${activeContextType.name}`,
-      documentation: activeContextType.description,
-      insertText: 'self',
-      range,
-    });
-
-    for (const field of activeContextType.fields) {
-      const fullKey = `self.${field.key}`;
-      items.push({
-        label: fullKey,
-        kind: monaco.languages.CompletionItemKind.Field,
-        detail: `(${field.type}) ${field.description ?? ''}`.trim(),
-        insertText: fullKey,
-        range,
-      });
-    }
-
-    for (const fn of activeContextType.functions) {
-      const paramList = fn.params.map((p) => p.name).join(', ');
-      const fullName = `self:${fn.name}`;
-      items.push({
-        label: fullName,
-        kind: monaco.languages.CompletionItemKind.Method,
-        detail: `(${fn.returnType}) ${fullName}(${paramList})`,
-        documentation: fn.description,
-        insertText: `self:${fn.name}($0)`,
-        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-        range,
-      });
-    }
-  }
-
-  return items;
-}
-
-// ─── LSP completion → Monaco completion conversion ───────────────────────────
-
 const LSP_TO_MONACO_KIND: Record<number, number> = {
   1: 4, // Text → Value (will be overridden)
   2: 1, // Method
@@ -503,11 +364,6 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   value,
   onChange,
   height = '220px',
-  gameVariables = [],
-  scriptTables = [],
-  scriptFunctions = [],
-  scriptNamespaces = [],
-  activeContextType = null,
   documentId,
   characterReferences,
   scope = SCRIPT_SCOPE,
@@ -561,18 +417,6 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   }, [mounted, value, manifest, scope, uri, storyValues]);
 
   // Build static game completions
-  const gameCompletionItems = useMemo(() => {
-    if (!monacoRef.current) return [];
-    return buildGameCompletionItems(
-      monacoRef.current,
-      gameVariables,
-      scriptTables,
-      scriptFunctions,
-      scriptNamespaces,
-      activeContextType,
-    );
-  }, [mounted, gameVariables, scriptTables, scriptFunctions, scriptNamespaces, activeContextType]);
-
   // Initialize LSP
   useEffect(() => {
     let cancelled = false;
@@ -685,16 +529,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             startLineNumber: start.lineNumber,
             startColumn: start.column,
           };
-          const scanned = luaCode(textBefore);
-          const staticItems =
-            scanned.blocked || scanned.string || matches.argument
-              ? []
-              : gameCompletionItems.filter((item) => {
-                  const label = typeof item.label === 'string' ? item.label : item.label.label;
-                  return label.startsWith(path) && !unavailable.has(label);
-                });
           const suggestions: Monaco.languages.CompletionItem[] = [
-            ...staticItems.map((item) => ({ ...item, range: staticRange })),
             ...matches.options.map((symbol) => ({
               label: symbol.label,
               kind:
@@ -890,7 +725,6 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     };
   }, [
     mounted,
-    gameCompletionItems,
     lspReady,
     uri,
     symbols,

@@ -176,7 +176,7 @@ export const CutsceneGraphNode = React.memo(
           </HStack>
           <Text fontSize="9px" color="editorMutedText">
             {pure
-              ? 'Pure · evaluated by its consumer'
+              ? 'Read-only · calculated when needed'
               : signature.action?.execution === 'awaitable'
                 ? 'Completes before continuing'
                 : 'Execution'}

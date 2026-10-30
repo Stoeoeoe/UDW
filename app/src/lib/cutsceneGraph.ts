@@ -239,7 +239,7 @@ export function graphSignature(
       new Set(node.outputs.map((o) => o.name)).size !== node.outputs.length ||
       (node.kind === 'expression' && node.outputs.length !== 1)
     )
-      throw new Error(`${node.id}: declare distinct typed outputs (one for a pure expression)`);
+      throw new Error(`${node.id}: declare distinct typed outputs (one for a read-only expression)`);
     return { inputs: [], outputs: node.outputs };
   }
   return {
@@ -383,7 +383,7 @@ export function validateGraphPlan(
         throw new Error(`${id}: output is not guaranteed to have completed before its consumer`);
       return;
     }
-    if (pureStack.has(id)) throw new Error(`${id}: pure data cycle`);
+    if (pureStack.has(id)) throw new Error(`${id}: cycle between read-only values`);
     pureStack.add(id);
     for (const p of signatures.get(id)!.inputs) {
       const e = incoming.get(`${id}/${p.name}`);

@@ -5,7 +5,6 @@ import {
   EntityType,
   Item,
   DialogueDocument,
-  GameVariable,
 } from '../types/schema';
 import { ResourceKind, WorkspaceTreeNode } from '../types/workspace';
 import {
@@ -32,7 +31,6 @@ export interface WorkspaceTreeInput {
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
   cutsceneFolders?: Record<string, string>;
-  gameVariables: GameVariable[];
 }
 
 // ─── Tree builder ─────────────────────────────────────────────────────────────
@@ -251,8 +249,6 @@ function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
       return 'cutscenes';
     case 'dialogue':
       return 'dialogues';
-    case 'variable':
-      return 'variables';
   }
 }
 

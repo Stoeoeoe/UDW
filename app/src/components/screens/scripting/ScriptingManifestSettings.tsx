@@ -2,12 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Badge, Button, HStack, Input, Text, VStack, useToast } from '@chakra-ui/react';
 import { DetailPanel } from '../../common/DetailPanel';
 import { Field, InspectorSection } from '../../common/Fields';
-import { SectionLabel } from '../../common/Typography';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 
 export const ScriptingManifestSettings: React.FC = () => {
   const filename = useScriptingManifestStore((s) => s.path);
-  const manifest = useScriptingManifestStore((s) => s.manifest);
   const status = useScriptingManifestStore((s) => s.status);
   const error = useScriptingManifestStore((s) => s.error);
   const lastReadAt = useScriptingManifestStore((s) => s.lastReadAt);
@@ -92,36 +90,6 @@ export const ScriptingManifestSettings: React.FC = () => {
             </Text>
           )}
         </InspectorSection>
-        {manifest && (
-          <InspectorSection title="Available Lua API">
-            <Text textStyle="helperText">
-              Manifest v{manifest.schemaVersion} · {manifest.modules.length} modules ·{' '}
-              {manifest.modules.reduce((count, module) => count + module.methods.length, 0)} methods
-            </Text>
-            {manifest.modules.map((module) => (
-              <VStack key={module.path} align="stretch" spacing={2}>
-                <SectionLabel>{module.path}</SectionLabel>
-                {module.methods.map((method) => (
-                  <VStack key={method.name} align="stretch" spacing={1}>
-                    <Text fontFamily="mono" fontSize="sm">
-                      {module.path}.{method.name}(
-                      {method.parameters.map((p) => `${p.name}: ${p.type}`).join(', ')}) →{' '}
-                      {method.returnType ?? 'nil'}
-                    </Text>
-                    {method.action && (
-                      <HStack>
-                        <Badge>{method.action.execution}</Badge>
-                        <Text textStyle="helperText">
-                          {method.action.contexts.join(', ')} · {method.action.description}
-                        </Text>
-                      </HStack>
-                    )}
-                  </VStack>
-                ))}
-              </VStack>
-            ))}
-          </InspectorSection>
-        )}
       </VStack>
     </DetailPanel>
   );

@@ -5,7 +5,6 @@ import {
   EntityType,
   Item,
   DialogueDocument,
-  GameVariable,
 } from './schema';
 import { ToolType } from './editor';
 import { EditorResourceTypeId } from './editorResource';
@@ -95,12 +94,6 @@ export type WorkspaceDocument =
       dialogueId: string;
       label: string;
       saveUnitId: string;
-    }
-  | {
-      kind: 'variable';
-      variableKey: string;
-      label: string;
-      saveUnitId: 'configuration';
     };
 
 export type WorkspaceConfigTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses';
@@ -185,5 +178,4 @@ export interface WorkspaceProjectSnapshot {
   cutscenes?: import('./cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
   cutsceneFolders?: Record<string, string>;
-  gameVariables?: GameVariable[];
 }

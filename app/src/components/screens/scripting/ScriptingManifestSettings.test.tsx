@@ -2,7 +2,7 @@ import React from 'react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { VariableEditor } from './VariableEditor';
+import { ScriptingApiBrowser } from './ScriptingApiBrowser';
 import { ScriptingManifestSettings } from './ScriptingManifestSettings';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { theme } from '../../../theme';
@@ -42,10 +42,10 @@ describe('Scripting manifest location', () => {
   it('configures a watched filesystem path in the Scripting menu and shows the entire API', async () => {
     render(
       <ChakraProvider theme={theme}>
-        <VariableEditor />
+        <ScriptingApiBrowser />
       </ChakraProvider>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Lua Manifest' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Manifest connection' }));
     fireEvent.change(screen.getByLabelText('Manifest filesystem location'), {
       target: { value: filename },
     });
@@ -56,12 +56,11 @@ describe('Scripting manifest location', () => {
     expect(invoke).toHaveBeenCalledWith('app:scripting-manifest-watch', filename);
     const module = manifest.modules.find((m) => m.methods.some((method) => !method.action))!;
     const method = module.methods.find((m) => !m.action)!;
-    expect(
-      screen.getByText(
-        (text, element) =>
-          element?.tagName === 'P' && text.includes(`${module.path}.${method.name}(`),
-      ),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Lua API', exact: true }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search Lua API' }), {
+      target: { value: `${module.path}.${method.name}` },
+    });
+    expect(screen.getAllByText(`${module.path}.${method.name}`).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
   });
 

@@ -364,28 +364,6 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     getFolderPath: (resourceId) =>
       useEditorStore.getState().dialogues.get(resourceId)?.folderPath ?? '',
   },
-  variable: {
-    id: 'variable',
-    label: 'Variable',
-    collectionLabel: 'Variables',
-    editorIcon: 'configuration',
-    createFlow: 'none',
-    metadataFlow: 'none',
-    sharedSaveUnitId: 'configuration',
-    accentColor: 'gray.300',
-    tint: 'rgba(148,163,184,0.1)',
-    hoverTint: 'rgba(148,163,184,0.16)',
-    rowGradient: 'linear(to-r, rgba(148,163,184,0.14), rgba(148,163,184,0.03) 72%, transparent)',
-    headerGradient: 'linear(to-r, rgba(148,163,184,0.1), rgba(148,163,184,0.03) 68%, transparent)',
-    canCreate: false,
-    canRename: false,
-    canEditMetadata: false,
-    canDelete: false,
-    canRevealInFileExplorer: false,
-    getFolderPath: (resourceId) =>
-      useEditorStore.getState().gameVariables.find((variable) => variable.key === resourceId)
-        ?.folderPath ?? '',
-  },
 };
 
 export function isEditorResourceTypeId(value: string): value is EditorResourceTypeId {
@@ -479,8 +457,6 @@ export function getEditorResourceDocumentId(
       return document.cutsceneId;
     case 'dialogue':
       return document.dialogueId;
-    case 'variable':
-      return document.variableKey;
     default:
       return null;
   }
@@ -604,13 +580,6 @@ export function createEditorResourceDocument(
         label: resource.name,
         saveUnitId,
       };
-    case 'variable':
-      return {
-        kind: 'variable',
-        variableKey: resource.id,
-        label: resource.name,
-        saveUnitId: saveUnitId as 'configuration',
-      };
   }
 }
 
@@ -625,7 +594,6 @@ export function getEditorResourceTypeFromDocument(
     case 'item':
     case 'dialogue':
     case 'cutscene':
-    case 'variable':
       return document.kind;
     default:
       return null;
@@ -658,5 +626,5 @@ export function getDocumentResourceKind(
   document: WorkspaceDocument | undefined,
 ): EditorResourceTypeId | null {
   const type = getEditorResourceTypeFromDocument(document);
-  return type && type !== 'variable' ? type : null;
+  return type;
 }

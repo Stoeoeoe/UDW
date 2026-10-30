@@ -14,11 +14,6 @@ import {
   EntityInstance,
   EntityOverride,
   Variation,
-  GameVariable,
-  ScriptTable,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptContextType,
   PropertyValues,
 } from '../types/schema';
 import { ToolType } from '../types/editor';
@@ -438,35 +433,6 @@ export function applyEntityPatch(
 
 export async function persistProject(project: Project): Promise<void> {
   saveProjectDebounced(project, 'configuration');
-}
-
-export type ScriptingStateSnapshot = {
-  project: Project | null;
-  gameVariables: GameVariable[];
-  scriptTables: ScriptTable[];
-  scriptFunctions: ScriptFunction[];
-  scriptNamespaces: ScriptNamespace[];
-  scriptContextTypes: ScriptContextType[];
-};
-
-export async function persistScriptingState(
-  snapshot: ScriptingStateSnapshot,
-  setState: (updater: (s: { project: Project | null }) => void) => void,
-): Promise<void> {
-  const proj = snapshot.project;
-  if (!proj) return;
-  const projectToSave = {
-    ...proj,
-    gameVariables: snapshot.gameVariables,
-    scriptTables: snapshot.scriptTables,
-    scriptFunctions: snapshot.scriptFunctions,
-    scriptNamespaces: snapshot.scriptNamespaces,
-    scriptContextTypes: snapshot.scriptContextTypes,
-  };
-  await persistProject(projectToSave);
-  setState((state) => {
-    state.project = castDraft(projectToSave);
-  });
 }
 
 // ============================================================================

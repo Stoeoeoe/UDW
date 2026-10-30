@@ -58,17 +58,9 @@ export interface Project {
   tileMetadataDefinitions?: PropertyDefinition[];
   // Project-level location metadata definitions for maps/locations
   locationMetadataDefinitions?: PropertyDefinition[];
-  // Named variables exposed to the Lua sandbox at runtime
-  gameVariables?: GameVariable[];
   // Optional authoring declarations for persisted GameState.Story values.
   storyValues?: StoryValueDefinition[];
-  // Scripting primitives
-  scriptTables?: ScriptTable[];
-  scriptFunctions?: ScriptFunction[];
-  scriptNamespaces?: ScriptNamespace[];
-  scriptContextTypes?: ScriptContextType[];
-  // Dialogue scripting defaults
-  defaultDialogueContextTypeId?: string;
+  // Dialogue content categories.
   dialogueTypes?: DialogueType[];
 }
 
@@ -393,87 +385,11 @@ export interface WorldMapMetadata {
 }
 
 // Game Variable Definitions — named runtime values exposed to the Lua sandbox
-export type GameVariableType = 'boolean' | 'number' | 'string' | 'enum' | 'table';
 
 export interface StoryValueDefinition {
   key: string;
   type: 'boolean' | 'long' | 'double' | 'string' | 'object';
   description?: string;
-}
-
-/** A primitive field inside a table. No nesting beyond this. */
-export interface TableField {
-  key: string; // Field name within the table
-  type: 'boolean' | 'number' | 'string' | 'enum';
-  description?: string;
-  defaultValue: boolean | number | string;
-  enumValues?: string[]; // Only when type === 'enum'
-}
-
-/** A reusable table definition with named fields. */
-export interface ScriptTable {
-  id: string;
-  name: string; // Lua-accessible name (e.g. "npcData", "questEntry")
-  description?: string;
-  fields: TableField[];
-}
-
-export interface GameVariable extends KeyedEditorResource {
-  key: string; // Dotted Lua path, e.g. "weather.isRain" or "date.season"
-  type: GameVariableType;
-  category: string; // Grouping label, e.g. "Weather", "Date", "Game State"
-  description?: string;
-  // For primitive types:
-  defaultValue: boolean | number | string;
-  enumValues?: string[]; // Only used when type === 'enum'
-  // For table type — reference a ScriptTable by ID:
-  tableId?: string; // Only used when type === 'table'
-  // Legacy: inline complex fields (migrated to tableId)
-  complexFields?: TableField[];
-}
-
-// ─── Scripting Primitives ────────────────────────────────────────────────────
-// Shared building blocks for global functions, namespaces, and context types.
-
-export type ScriptPrimitiveType = 'boolean' | 'number' | 'string' | 'enum' | 'table' | 'void';
-
-export interface ScriptParam {
-  name: string;
-  type: ScriptPrimitiveType;
-  description?: string;
-  enumValues?: string[]; // Only when type === 'enum'
-}
-
-/** A callable function exposed to the Lua sandbox. */
-export interface ScriptFunction {
-  id: string;
-  name: string; // Lua-callable name (e.g. "wait", "pan")
-  description?: string;
-  params: ScriptParam[];
-  returnType: ScriptPrimitiveType; // 'void' = no return
-  returnTableId?: string; // Only used when returnType === 'table'
-}
-
-/** A singleton table-like namespace (e.g. weather, camera, audio). */
-export interface ScriptNamespace {
-  id: string;
-  name: string; // Lua global name (e.g. "weather")
-  description?: string;
-  fields: GameVariable[]; // Same shape as registry variables
-  functions: ScriptFunction[];
-}
-
-/**
- * Defines the shape of `self` for a script execution context
- * (e.g. npc, cutscene, dialogue). Not accessible by name in Lua —
- * injected as `self` by the runtime.
- */
-export interface ScriptContextType {
-  id: string;
-  name: string; // e.g. "npc", "cutscene"
-  description?: string;
-  fields: GameVariable[];
-  functions: ScriptFunction[];
 }
 
 // Item Definitions
@@ -506,7 +422,6 @@ export interface DialogueType {
   id: string;
   name: string;
   description?: string;
-  contextTypeId?: string;
 }
 
 export interface DialogueNodeEditorMeta {

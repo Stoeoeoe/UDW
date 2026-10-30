@@ -6,12 +6,10 @@ import type {
   DialogueNode,
   EntityInstance,
   EntityType,
-  GameVariable,
   Item,
   Layer,
   Map as GameMap,
   Project,
-  ScriptFunction,
   Tileset,
   Variation,
 } from '../types/schema';
@@ -268,26 +266,9 @@ function normalizeDialogue(dialogue: DialogueDocument, prefix: string): Dialogue
     nodes: collection(dialogue.nodes, (node) => normalizeDialogueNode(node, prefix)),
   };
 }
-const normalizeVariable = (variable: GameVariable): GameVariable => ({
-  ...variable,
-  tableId: localReference(variable.tableId),
-});
-const normalizeFunction = (fn: ScriptFunction): ScriptFunction => ({
-  ...localDefinition(fn),
-  returnTableId: localReference(fn.returnTableId),
-});
 export function normalizeProject(project: Project): Project {
   if (project.storyValues !== undefined) validateStoryValueDeclarations(project.storyValues);
   const idPrefix = normalizeIdPrefix(project.idPrefix ?? DEFAULT_ID_PREFIX);
-  const normalizeScriptScope = <
-    T extends { id: string; fields: GameVariable[]; functions: ScriptFunction[] },
-  >(
-    scope: T,
-  ): T => ({
-    ...localDefinition(scope),
-    fields: scope.fields?.map(normalizeVariable),
-    functions: collection(scope.functions, normalizeFunction),
-  });
   return {
     ...project,
     id: project.id === undefined ? project.id : normalizeLocalId(project.id),
@@ -299,15 +280,8 @@ export function normalizeProject(project: Project): Project {
       ...entity,
       id: qualifyResourceId(entity.id, idPrefix),
     })),
-    gameVariables: project.gameVariables?.map(normalizeVariable),
-    scriptTables: collection(project.scriptTables, localDefinition),
-    scriptFunctions: collection(project.scriptFunctions, normalizeFunction),
-    scriptNamespaces: collection(project.scriptNamespaces, normalizeScriptScope),
-    scriptContextTypes: collection(project.scriptContextTypes, normalizeScriptScope),
-    defaultDialogueContextTypeId: localReference(project.defaultDialogueContextTypeId),
     dialogueTypes: collection(project.dialogueTypes, (type) => ({
       ...localDefinition(type),
-      contextTypeId: localReference(type.contextTypeId),
     })),
   };
 }

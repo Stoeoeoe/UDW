@@ -38,7 +38,6 @@ export function useWorkspaceInit() {
   const cutscenes = useEditorStore((s) => s.cutscenes);
   const cutsceneLabels = useEditorStore((s) => s.cutsceneLabels);
   const cutsceneFolders = useEditorStore((s) => s.cutsceneFolders);
-  const gameVariables = useEditorStore((state) => state.gameVariables);
 
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
@@ -61,7 +60,6 @@ export function useWorkspaceInit() {
         cutscenes,
         cutsceneLabels,
         cutsceneFolders,
-        gameVariables,
       }),
     [
       maps,
@@ -73,7 +71,6 @@ export function useWorkspaceInit() {
       cutscenes,
       cutsceneLabels,
       cutsceneFolders,
-      gameVariables,
     ],
   );
 
@@ -118,7 +115,6 @@ export function useWorkspaceInit() {
       cutscenes,
       cutsceneLabels,
       cutsceneFolders,
-      gameVariables,
     };
     const restored = restoreWorkspaceSession(projectPath, snapshot);
 
@@ -155,7 +151,6 @@ export function useWorkspaceInit() {
     cutscenes,
     cutsceneLabels,
     cutsceneFolders,
-    gameVariables,
     treeNodes,
     openDocument,
     activateTab,
@@ -176,7 +171,6 @@ export function useWorkspaceInit() {
         cutscenes,
         cutsceneLabels,
         cutsceneFolders,
-        gameVariables,
       });
       if (!document) return;
       const tab = openDocument(document);
@@ -199,7 +193,6 @@ export function useWorkspaceInit() {
     cutscenes,
     cutsceneLabels,
     cutsceneFolders,
-    gameVariables,
     openDocument,
     activateTab,
   ]);

@@ -14,22 +14,12 @@ import {
   DialogueChoiceNode,
   DialogueDocument,
   DialogueNode,
-  GameVariable,
-  ScriptContextType,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptTable,
 } from '../../../types/schema';
 
 interface DialogueNodeInspectorProps {
   selectedDialogue: DialogueDocument | null;
   selectedNode: DialogueNode | null;
   characters: Character[];
-  gameVariables: GameVariable[];
-  scriptTables: ScriptTable[];
-  scriptFunctions: ScriptFunction[];
-  scriptNamespaces: ScriptNamespace[];
-  activeContextType: ScriptContextType | undefined;
   duplicateMsgKeys: Set<string>;
   dialogueNodeTargets: string[];
   dialogues: Map<string, DialogueDocument>;
@@ -59,11 +49,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
   selectedDialogue,
   selectedNode,
   characters,
-  gameVariables,
-  scriptTables,
-  scriptFunctions,
-  scriptNamespaces,
-  activeContextType,
   duplicateMsgKeys,
   dialogueNodeTargets,
   dialogues,
@@ -124,11 +109,6 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
         <DialogueActionInspectorSection
           selectedDialogue={selectedDialogue}
           node={selectedNode}
-          gameVariables={gameVariables}
-          scriptTables={scriptTables}
-          scriptFunctions={scriptFunctions}
-          scriptNamespaces={scriptNamespaces}
-          activeContextType={activeContextType}
           actionLuaValidation={actionLuaValidation}
           updateSelectedNode={updateSelectedNode}
           renameNode={renameNode}

@@ -99,7 +99,6 @@ describe('story value authoring', () => {
       entityTypes: [],
       items: [],
       dialogues: [],
-      gameVariables: [],
     };
     expect(documentFromHash(documentToHash(document), snapshot)).toEqual(document);
     expect(getWorkspaceTabId(document)).toBe('data');

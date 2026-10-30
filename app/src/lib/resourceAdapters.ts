@@ -6,7 +6,6 @@ import {
   Character,
   DialogueDocument,
   EntityType,
-  GameVariable,
   Item,
   Map as GameMap,
   Tileset,
@@ -48,14 +47,6 @@ export function dialogueDocument(dialogue: DialogueDocument): WorkspaceDocument 
     type: 'dialogue',
     id: getSchemaResourceId(dialogue),
     name: getSchemaResourceName(dialogue),
-  });
-}
-
-export function variableDocument(variable: GameVariable): WorkspaceDocument {
-  return createEditorResourceDocument({
-    type: 'variable',
-    id: getSchemaResourceId(variable),
-    name: getSchemaResourceName(variable),
   });
 }
 
@@ -146,18 +137,6 @@ export function listCutsceneDescriptors(
   }));
 }
 
-export function listVariableDescriptors(variables: GameVariable[]): ResourceDescriptor[] {
-  return variables.map((variable) => ({
-    type: 'variable',
-    kind: 'variable',
-    id: getSchemaResourceId(variable),
-    name: getSchemaResourceName(variable),
-    folderPath: normalizeFolderPath(variable.folderPath),
-    document: variableDocument(variable),
-    saveUnitId: getEditorResourceSaveUnitId('variable', variable.key),
-  }));
-}
-
 export function listLocationDescriptors(maps: GameMap[]): ResourceDescriptor[] {
   return maps.map((map) => ({
     type: 'location',
@@ -190,7 +169,6 @@ export interface AllResourceDescriptors {
   items: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
   cutscenes: ResourceDescriptor[];
-  variables: ResourceDescriptor[];
 }
 
 export function buildAllResourceDescriptors(state: {
@@ -203,7 +181,6 @@ export function buildAllResourceDescriptors(state: {
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
   cutsceneFolders?: Record<string, string>;
-  gameVariables: GameVariable[];
 }): AllResourceDescriptors {
   return {
     locations: listLocationDescriptors(state.maps),
@@ -212,7 +189,6 @@ export function buildAllResourceDescriptors(state: {
     entities: listEntityDescriptors(state.entityTypes),
     items: listItemDescriptors(state.items),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
-    variables: listVariableDescriptors(state.gameVariables),
     cutscenes: listCutsceneDescriptors(
       state.cutscenes ?? [],
       state.cutsceneLabels,
@@ -267,9 +243,6 @@ export async function setResourceFolderPath(
       break;
     case 'entity':
       await store.updateEntityType(id, { folderPath: normalizedFolderPath });
-      break;
-    case 'variable':
-      await store.updateGameVariable(id, { folderPath: normalizedFolderPath });
       break;
     case 'tileset':
       await store.updateTileset(id, { folderPath: normalizedFolderPath });
@@ -326,7 +299,5 @@ function listDescriptorsForKind(
       return listItemDescriptors(state.items);
     case 'dialogue':
       return listDialogueDescriptors(Array.from(state.dialogues.values()));
-    case 'variable':
-      return listVariableDescriptors(state.gameVariables);
   }
 }

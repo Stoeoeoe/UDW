@@ -4,7 +4,6 @@ import {
   Character,
   DialogueDocument,
   EntityType,
-  GameVariable,
   Item,
   Map as GameMap,
   Tileset,
@@ -33,7 +32,6 @@ function createTreeInput(
     entityTypes?: EntityType[];
     items?: Item[];
     dialogues?: DialogueDocument[];
-    gameVariables?: GameVariable[];
   } = {},
 ) {
   return {
@@ -43,7 +41,6 @@ function createTreeInput(
     entityTypes: overrides.entityTypes ?? [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
-    gameVariables: overrides.gameVariables ?? [],
   };
 }
 
@@ -148,14 +145,6 @@ describe('buildWorkspaceTree', () => {
             createdAt: '2026-04-23T00:00:00.000Z',
             updatedAt: '2026-04-23T00:00:00.000Z',
             nodes: [{ id: 'step_1', type: 'line', text: '', msgKey: 'dlg.intro.01', next: null }],
-          },
-        ],
-        gameVariables: [
-          {
-            key: 'weather.isRain',
-            type: 'boolean',
-            category: 'Weather',
-            defaultValue: false,
           },
         ],
       }),

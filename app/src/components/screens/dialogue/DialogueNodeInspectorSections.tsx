@@ -22,11 +22,6 @@ import {
   DialogueChoiceNode,
   DialogueDocument,
   DialogueNode,
-  GameVariable,
-  ScriptContextType,
-  ScriptFunction,
-  ScriptNamespace,
-  ScriptTable,
 } from '../../../types/schema';
 
 interface BaseSectionProps {
@@ -306,11 +301,6 @@ export const DialogueChoiceInspectorSection: React.FC<ChoiceSectionProps> = ({
 
 interface ActionSectionProps extends BaseSectionProps {
   node: Extract<DialogueNode, { type: 'action' }>;
-  gameVariables: GameVariable[];
-  scriptTables: ScriptTable[];
-  scriptFunctions: ScriptFunction[];
-  scriptNamespaces: ScriptNamespace[];
-  activeContextType: ScriptContextType | undefined;
   actionLuaValidation: ActionLuaValidation | null;
   updateSelectedNode: (updater: (node: DialogueNode) => DialogueNode) => void;
 }
@@ -318,11 +308,6 @@ interface ActionSectionProps extends BaseSectionProps {
 export const DialogueActionInspectorSection: React.FC<ActionSectionProps> = ({
   selectedDialogue,
   node,
-  gameVariables,
-  scriptTables,
-  scriptFunctions,
-  scriptNamespaces,
-  activeContextType,
   actionLuaValidation,
   updateSelectedNode,
   renameNode,
@@ -354,11 +339,6 @@ export const DialogueActionInspectorSection: React.FC<ActionSectionProps> = ({
               return { ...current, lua: value };
             })
           }
-          gameVariables={gameVariables}
-          scriptTables={scriptTables}
-          scriptFunctions={scriptFunctions}
-          scriptNamespaces={scriptNamespaces}
-          activeContextType={activeContextType}
         />
       </Box>
       <Text

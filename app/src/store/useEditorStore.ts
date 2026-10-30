@@ -34,7 +34,6 @@ import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
 import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
 import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice';
 import { createLayerDefinitionSlice, LayerDefinitionSlice } from './slices/layerDefinitionSlice';
-import { createScriptingSlice, ScriptingSlice } from './slices/scriptingSlice';
 import { createToolSlice, ToolSlice } from './slices/toolSlice';
 import { createTilePaintSlice, TilePaintSlice } from './slices/tilePaintSlice';
 import { createTilesetSlice, TilesetSlice } from './slices/tilesetSlice';
@@ -62,7 +61,6 @@ export interface EditorStore
     TerrainSlice,
     EntityTypeSlice,
     LayerDefinitionSlice,
-    ScriptingSlice,
     ToolSlice,
     TilePaintSlice,
     TilesetSlice,
@@ -289,7 +287,6 @@ export const useEditorStore = create<EditorStore>()(
           ...createTerrainSlice(set, get, {} as never),
           ...createEntityTypeSlice(set, get, {} as never),
           ...createLayerDefinitionSlice(set, get, {} as never),
-          ...createScriptingSlice(set, get, {} as never),
           ...createToolSlice(set, get, {} as never),
           ...createTilePaintSlice(set, get, {} as never),
           ...createTilesetSlice(set, get, {} as never),
@@ -385,11 +382,6 @@ export const useEditorStore = create<EditorStore>()(
                   state.entityTypes = [];
                   state.tileMetadataDefinitions = [];
                   state.locationMetadataDefinitions = [];
-                  state.gameVariables = [];
-                  state.scriptTables = [];
-                  state.scriptFunctions = [];
-                  state.scriptNamespaces = [];
-                  state.scriptContextTypes = [];
                   state.characters = [];
                   state.selectedCharacterId = null;
                   state.dialogues = new globalThis.Map();
