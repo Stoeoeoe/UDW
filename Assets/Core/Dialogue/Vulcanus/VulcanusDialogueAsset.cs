@@ -162,11 +162,6 @@ namespace Core.Dialogue.Vulcanus
             return fallbackText ?? string.Empty;
         }
 
-        public string ResolveEffectiveContextTypeId()
-        {
-            return project != null ? project.ResolveDialogueContextTypeId(dialogueTypeId) : string.Empty;
-        }
-
         private void OnEnable()
         {
             RebuildCaches();

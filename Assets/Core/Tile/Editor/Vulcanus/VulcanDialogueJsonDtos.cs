@@ -64,54 +64,6 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("description")] public string Description { get; set; }
-        [JsonProperty("contextTypeId")] public string ContextTypeId { get; set; }
     }
 
-    internal class GameVariableDto
-    {
-        [JsonProperty("key")] public string Key { get; set; }
-        [JsonProperty("type")] public string Type { get; set; }
-        [JsonProperty("category")] public string Category { get; set; }
-        [JsonProperty("description")] public string Description { get; set; }
-        [JsonProperty("defaultValue")] public Newtonsoft.Json.Linq.JToken DefaultValue { get; set; }
-        [JsonProperty("enumValues")] public List<string> EnumValues { get; set; } = new();
-        [JsonProperty("tableId")] public string TableId { get; set; }
-        [JsonProperty("folderPath")] public string FolderPath { get; set; }
-    }
-
-    internal class ScriptParamDto
-    {
-        [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("type")] public string Type { get; set; }
-        [JsonProperty("description")] public string Description { get; set; }
-        [JsonProperty("enumValues")] public List<string> EnumValues { get; set; } = new();
-    }
-
-    internal class ScriptFunctionDto
-    {
-        [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("description")] public string Description { get; set; }
-        [JsonProperty("params")] public List<ScriptParamDto> Params { get; set; } = new();
-        [JsonProperty("returnType")] public string ReturnType { get; set; }
-        [JsonProperty("returnTableId")] public string ReturnTableId { get; set; }
-    }
-
-    internal class ScriptNamespaceDto
-    {
-        [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("description")] public string Description { get; set; }
-        [JsonProperty("fields")] public List<GameVariableDto> Fields { get; set; } = new();
-        [JsonProperty("functions")] public List<ScriptFunctionDto> Functions { get; set; } = new();
-    }
-
-    internal class ScriptContextTypeDto
-    {
-        [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("description")] public string Description { get; set; }
-        [JsonProperty("fields")] public List<GameVariableDto> Fields { get; set; } = new();
-        [JsonProperty("functions")] public List<ScriptFunctionDto> Functions { get; set; } = new();
-    }
 }

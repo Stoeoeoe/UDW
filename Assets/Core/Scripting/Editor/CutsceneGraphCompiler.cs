@@ -153,7 +153,7 @@ namespace Core.Scripting.Editor
                 case "expression": case "lua":
                     var outputs = n["outputs"]?.ToObject<LuaOutputDescription[]>() ?? Array.Empty<LuaOutputDescription>();
                     if (outputs.Length == 0 || outputs.Select(o => o.name).Distinct().Count() != outputs.Length || Kind(n) == "expression" && outputs.Length != 1)
-                        throw Invalid($"{id}: declare distinct typed results (one for a pure expression).");
+                        throw Invalid($"{id}: declare distinct typed results (one for a read-only expression).");
                     var expression = Text(n, "expression");
                     try { new Script(CoreModules.Preset_HardSandbox).LoadString(Kind(n) == "expression" ? "return (" + expression + "\n)" : expression); }
                     catch (SyntaxErrorException error) { throw Invalid($"{id}: {error.DecoratedMessage}"); }
@@ -193,7 +193,7 @@ namespace Core.Scripting.Editor
                 return "__graphResults[" + Quote(id) + "]";
             }
             if (memo.TryGetValue(id, out var cached)) return cached;
-            if (!stack.Add(id)) throw Invalid($"{id}: pure data cycle.");
+            if (!stack.Add(id)) throw Invalid($"{id}: cycle between read-only values.");
             string expression;
             if (Kind(n) == "variable") expression = "{Cutscene.Variables[" + Quote(Text(n, "variable")) + "]}";
             else if (Kind(n) == "expression")

@@ -10,15 +10,5 @@ namespace Core.Dialogue.Vulcanus
             return null;
         }
 
-        public bool TryResolveContextType(VulcanusProject project, VulcanusDialogueAsset dialogue,
-            out VulcanusProject.ScriptContextTypeDefinition contextType)
-        {
-            contextType = default;
-            if (project == null)
-                return false;
-
-            var contextTypeId = dialogue != null ? project.ResolveDialogueContextTypeId(dialogue.DialogueTypeId) : project.DefaultDialogueContextTypeId;
-            return project.TryGetScriptContextType(contextTypeId, out contextType);
-        }
     }
 }

@@ -63,7 +63,7 @@ namespace Core.Scripting
         /// <summary>Evaluates a graph's pure expression against the read-only API and current locals.</summary>
         public DynValue EvaluateValue(string expression)
         {
-            if (string.IsNullOrWhiteSpace(expression)) throw new ArgumentException("Enter a pure expression.", nameof(expression));
+            if (string.IsNullOrWhiteSpace(expression)) throw new ArgumentException("Enter a read-only expression.", nameof(expression));
 
             if (!_conditions.TryGetValue(expression, out var function))
             {

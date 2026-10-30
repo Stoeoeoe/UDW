@@ -11,8 +11,6 @@ namespace Core.Dialogue.Vulcanus
     public interface IDialogueContextResolver
     {
         object ResolveSelf(VulcanusProject project, VulcanusDialogueAsset dialogue);
-        bool TryResolveContextType(VulcanusProject project, VulcanusDialogueAsset dialogue,
-            out VulcanusProject.ScriptContextTypeDefinition contextType);
     }
 
     public interface IDialoguePresenter
