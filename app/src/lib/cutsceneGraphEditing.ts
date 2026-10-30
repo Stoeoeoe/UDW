@@ -40,11 +40,16 @@ export function insertExecutionNode(graph: CutsceneGraph, nodeId: string, edgeId
   return true;
 }
 
-/** Copy internal wires only. Structural controls travel with their matching join. */
-export function copyGraphSelection(graph: CutsceneGraph, selected: Set<string>): CutsceneGraph {
+/** Structural controls travel with their matching join. */
+function selectedGraphNodes(graph: CutsceneGraph, selected: Set<string>) {
   const ids = new Set(selected);
   for (const node of graph.nodes) if (ids.has(node.id) && node.pair) ids.add(node.pair);
-  const nodes = graph.nodes.filter((n) => ids.has(n.id) && n.kind !== 'entry' && n.kind !== 'exit');
+  return graph.nodes.filter((n) => ids.has(n.id) && n.kind !== 'entry' && n.kind !== 'exit');
+}
+
+/** Copy internal wires only. */
+export function copyGraphSelection(graph: CutsceneGraph, selected: Set<string>): CutsceneGraph {
+  const nodes = selectedGraphNodes(graph, selected);
   const included = new Set(nodes.map((n) => n.id));
   return structuredClone({
     nodes,
@@ -83,7 +88,7 @@ export function deleteGraphSelection(
   selected: Set<string>,
   edges: Set<string>,
 ): void {
-  const remove = new Set(copyGraphSelection(graph, selected).nodes.map((n) => n.id));
+  const remove = new Set(selectedGraphNodes(graph, selected).map((n) => n.id));
   graph.nodes = graph.nodes.filter((n) => !remove.has(n.id));
   graph.edges = graph.edges.filter(
     (e) => !edges.has(e.id) && !remove.has(e.source) && !remove.has(e.target),

@@ -198,7 +198,7 @@ export function graphFromSteps(steps: readonly CutsceneStep[]): CutsceneGraph {
 
 export function graphSignature(
   node: CutsceneGraphNode,
-  scene: Cutscene,
+  scene: Pick<Cutscene, 'variables'>,
   actions: CutsceneAction[],
 ): {
   inputs: CutsceneAction['parameters'];

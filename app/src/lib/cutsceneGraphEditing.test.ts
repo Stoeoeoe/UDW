@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { produce } from 'immer';
 import {
   copyGraphSelection,
   pasteGraphSelection,
@@ -138,6 +139,14 @@ describe('cutscene graph editing', () => {
     deleteGraphSelection(source, new Set(['start', 'end', 'split']), new Set(['b']));
     expect(source.nodes.map((n) => n.id)).toEqual(['start', 'wait', 'end']);
     expect(source.edges).toEqual([]);
+  });
+  it('deletes a paired selection inside an immutable edit without cloning draft proxies', () => {
+    const source = graph();
+    const result = produce(source, (draft) =>
+      deleteGraphSelection(draft, new Set(['split']), new Set()),
+    );
+    expect(result.nodes.map((n) => n.id)).toEqual(['start', 'wait', 'end']);
+    expect(source.nodes).toHaveLength(5);
   });
 
   it('lays out measured nodes left to right without changing graph semantics', () => {

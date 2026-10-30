@@ -7,7 +7,7 @@ import {
 } from './cutsceneGraph';
 import {
   graphTemplates,
-  groupGraphTemplates,
+  filterGraphTemplates,
   matchingGraphTemplates,
 } from './cutsceneGraphPalette';
 import { getManifestGraphFunctions, parseScriptingManifest } from './scriptingManifest';
@@ -64,7 +64,7 @@ describe('graph annotations and categorized choices', () => {
       );
     }
   });
-  it('groups compatible choices using existing categories and searches category names', () => {
+  it('filters compatible choices by optional category without adding headings', () => {
     const templates = graphTemplates(scene(), actions, 'sequence');
     const compatible = matchingGraphTemplates(templates, scene(), actions, {
       direction: 'output',
@@ -72,11 +72,14 @@ describe('graph annotations and categorized choices', () => {
     });
     const wait = compatible.find((t) => t.id === 'cutscene.wait')!;
     expect(wait.category).toBe(actions.find((a) => a.id === 'cutscene.wait')!.category);
-    expect(
-      groupGraphTemplates(compatible, wait.category).flatMap(([, items]) => items),
-    ).toContainEqual(wait);
+    expect(filterGraphTemplates(compatible, wait.category)).toContainEqual(wait);
     expect(compatible.some((t) => t.id === 'comment')).toBe(false);
-    expect(groupGraphTemplates(compatible, 'no such function')).toEqual([]);
+    expect(filterGraphTemplates(compatible, 'no such function')).toEqual([]);
+    expect(
+      filterGraphTemplates(compatible, '', wait.category).every(
+        (c) => c.category === wait.category,
+      ),
+    ).toBe(true);
   });
 });
 function withResults(): CutsceneGraph {

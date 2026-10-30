@@ -40,11 +40,16 @@ canvas context menu for a movable, editable note with no pins. Both kinds are
 saved with the graph and support undo, copy and paste. Notes never execute and
 cannot be connected. Auto layout leaves standalone notes at their authored positions.
 
-The node picker groups actions and calls by their existing categories. Search
-matches category names as well as node names. Dragging from a pin still limits
-the groups to compatible nodes and connects the first compatible pin.
+The node picker shows a compact flat list. An optional category selector narrows
+the results, and search matches category names as well as node names. Dragging
+from a pin limits the list to compatible nodes and connects the first compatible pin.
 
 The thin toolbar below the phase tabs contains Add, Undo/Redo, Duplicate, Paste, Delete, Auto layout, Fit and shortcut help. Auto layout (Shift+L) uses Dagre to arrange execution and data dependencies left to right, using measured node sizes, then fits the view. It changes positions only and is one undoable edit. F fits the current layout without moving nodes.
+
+The canvas applies all React Flow node changes locally, including measurements
+and live drag positions. Drag frames do not update authored data or undo history;
+dropping commits one edit. Unchanged node data and Lua scopes retain their identity
+when another node is edited, so unrelated code editors do not rerender.
 
 Shift+drag selects a region; Ctrl/Cmd+click adds to selection. Ctrl/Cmd+A selects all. Ctrl/Cmd+C and V copy/paste selected nodes within the graph editor; Ctrl/Cmd+D duplicates them. Only internal wires are copied, and structural controls include their paired join. Entry/exit nodes are never duplicated or deleted. Delete/Backspace removes selected nodes and wires. Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y redoes. Escape closes the picker and clears selection. Text fields retain native typing and clipboard shortcuts. A Shortcuts tooltip is available in the toolbar.
 

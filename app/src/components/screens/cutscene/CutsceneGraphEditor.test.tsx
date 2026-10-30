@@ -111,6 +111,25 @@ const mount = () =>
 const scene = () => useEditorStore.getState().cutscenes[0];
 
 describe('graph-only cutscene authoring', () => {
+  it('preserves untouched nodes while editing, and uses current state after undo', () => {
+    mount();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add node comment' })[0]);
+    const before = new Map(mocks.nodes.map((n) => [n.id, n.data]));
+    const entry = mocks.nodes.find((n) => n.data.authored.kind === 'entry');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Begin comment' }), {
+      target: { value: 'Opening' },
+    });
+    for (const node of mocks.nodes)
+      if (node.id !== entry.id) expect(node.data).toBe(before.get(node.id));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo (Ctrl/Cmd+Z)' }));
+    expect(screen.getByRole('textbox', { name: 'Begin comment' })).toHaveValue('');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Begin comment' }), {
+      target: { value: 'Revised opening' },
+    });
+    expect(scene().graphs?.sequence?.nodes.find((n) => n.kind === 'entry')?.comment).toBe(
+      'Revised opening',
+    );
+  });
   it('edits inline and standalone comments with undo, and searches categorized nodes', () => {
     mount();
     fireEvent.click(screen.getAllByRole('button', { name: 'Add node comment' })[0]);
@@ -124,8 +143,11 @@ describe('graph-only cutscene authoring', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Search graph nodes' }), {
       target: { value: 'Comments' },
     });
-    const group = screen.getByRole('group', { name: 'Comments' });
-    fireEvent.click(within(group).getByRole('button', { name: 'Comment', exact: true }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Node category' }), {
+      target: { value: 'Comments' },
+    });
+    expect(screen.queryByRole('group', { name: 'Comments' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Comment', exact: true }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Canvas comment' }), {
       target: { value: 'Wait for both actors here' },
     });

@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { produce } from 'immer';
 import {
   Box,
   Flex,
   Button,
   HStack,
   Input,
+  Select,
   ModalBody,
   ModalCloseButton,
   ModalHeader,
   Text,
 } from '@chakra-ui/react';
 import {
-  ReactFlow,
   ReactFlowProvider,
   Background,
   Controls,
@@ -46,7 +47,7 @@ import {
 } from '../../../lib/cutsceneGraph';
 import {
   graphTemplates,
-  groupGraphTemplates,
+  filterGraphTemplates,
   matchingGraphTemplates,
   type GraphTemplate,
 } from '../../../lib/cutsceneGraphPalette';
@@ -60,6 +61,7 @@ import type {
   CutscenePhase,
 } from '../../../types/cutsceneGraph';
 import { CutsceneGraphNode, type GraphViewNode } from './CutsceneGraphNode';
+import { CutsceneGraphCanvas } from './CutsceneGraphCanvas';
 import { CutsceneGraphToolbar } from './CutsceneGraphToolbar';
 import { GraphEditingContext } from './CutsceneGraphContext';
 import { CutsceneSpatialEditor } from './CutsceneSpatialEditor';
@@ -84,6 +86,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
   const pasteOffset = useRef(48);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
+  const [pickerCategory, setPickerCategory] = useState('');
   const [picker, setPicker] = useState<{
     x: number;
     y: number;
@@ -99,7 +102,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     value: CutsceneData | undefined;
     start?: [number, number];
   }>();
-  const [drag, setDrag] = useState<Record<string, { x: number; y: number }>>({});
   const root = useRef<HTMLDivElement>(null);
   const connecting = useRef<OnConnectStartParams>();
   const droppingPin = useRef(false);
@@ -113,8 +115,8 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     [manifest],
   );
   const actions = useMemo(
-    () => [...baseActions, ...functions, setVariableAction(scene)],
-    [baseActions, functions, scene],
+    () => [...baseActions, ...functions, setVariableAction({ variables: scene.variables })],
+    [baseActions, functions, scene.variables],
   );
   const maps = useEditorStore((s) => s.maps),
     currentMap = useEditorStore((s) => s.currentMap);
@@ -163,8 +165,8 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
         setMessage('Finish or cancel the map edit before changing the graph.');
         return;
       }
-      const next = structuredClone(graph);
-      change(next);
+      // Keep untouched node identities so one field edit does not rebuild every node/editor.
+      const next = produce(graph, change);
       edit((scenes) => {
         const draft = scenes.find((s) => s.id === scene.id)!;
         setPhaseGraph(draft, phase, next);
@@ -248,12 +250,14 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
         draft.nodes.find((n) => n.id === moved.id)!.position = moved.position;
       if (edge && nodes.length === 1) insertExecutionNode(draft, nodes[0].id, edge);
     });
-    setDrag({});
     insertionWires.current = [];
     insertionTarget.current = undefined;
     setInsertionEdge(undefined);
   };
-  const templates = useMemo(() => graphTemplates(scene, actions, phase), [scene, actions, phase]);
+  const templates = useMemo(
+    () => (picker ? graphTemplates(scene, actions, phase) : []),
+    [picker, scene, actions, phase],
+  );
   // Code/position edits must not invalidate every Lua editor's actor completions.
   const declaredRoles = useMemo(() => {
     const result: string[] = [];
@@ -279,56 +283,70 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     ],
     [map, types, declaredRoles],
   );
-  const authoredNodes: GraphViewNode[] = useMemo(
-    () =>
-      graph.nodes.map((n) => {
-        const options: Record<string, { id: string; label: string }[]> = {};
-        let hasLua = n.kind === 'lua' || n.kind === 'expression';
-        try {
-          for (const p of graphSignature(n, scene, actions).inputs) {
-            if (p.picker === 'lua') hasLua = true;
-            if (p.semanticType === 'characterRef') options[p.name] = roles;
-            if (p.semanticType === 'anchorRef')
-              options[p.name] = (map?.spatialPrimitives?.anchors ?? []).map((a) => ({
-                id: a.id,
-                label: a.name || a.id,
-              }));
-            if (p.semanticType === 'dialogueRef')
-              options[p.name] = [...dialogues.values()].map((d) => ({
-                id: d.id,
-                label: d.name || d.id,
-              }));
-            if (n.step?.action === 'cutscene.setVariable' && p.name === 'name')
-              options[p.name] = (scene.variables ?? []).map((v) => ({ id: v.name, label: v.name }));
-          }
-        } catch {
-          /* Invalid authored nodes render their diagnostic instead of fabricated ports. */
-        }
-        return {
-          id: n.id,
-          type: 'cutscene',
-          position: n.position,
-          style: { width: hasLua ? 460 : 300 },
-          data: {
-            authored: n,
-            incoming: graph.edges
-              .filter((e) => e.kind === 'data' && e.target === n.id)
-              .map((e) => e.targetPin),
-            tracks: graph.nodes.find((owner) => owner.id === n.pair)?.tracks ?? 2,
-            options,
-          },
-        };
-      }),
-    [graph, scene, actions, roles, map, dialogues],
+  const nodeCache = useMemo(
+    () => new WeakMap<AuthoredNode, { incoming: string; tracks: number; view: GraphViewNode }>(),
+    [actions, scene.variables, roles, map, dialogues],
   );
+  const authoredNodes: GraphViewNode[] = useMemo(() => {
+    const incoming = new Map<string, string[]>();
+    for (const edge of graph.edges)
+      if (edge.kind === 'data') {
+        const pins = incoming.get(edge.target) ?? [];
+        pins.push(edge.targetPin);
+        incoming.set(edge.target, pins);
+      }
+    const nodesById = new Map(graph.nodes.map((n) => [n.id, n]));
+    return graph.nodes.map((n) => {
+      const pins = incoming.get(n.id) ?? [];
+      const key = JSON.stringify(pins);
+      const tracks = nodesById.get(n.pair ?? '')?.tracks ?? 2;
+      const cached = nodeCache.get(n);
+      if (cached && cached.incoming === key && cached.tracks === tracks) return cached.view;
+      const options: Record<string, { id: string; label: string }[]> = {};
+      let hasLua = n.kind === 'lua' || n.kind === 'expression';
+      try {
+        for (const p of graphSignature(n, scene, actions).inputs) {
+          if (p.picker === 'lua') hasLua = true;
+          if (p.semanticType === 'characterRef') options[p.name] = roles;
+          if (p.semanticType === 'anchorRef')
+            options[p.name] = (map?.spatialPrimitives?.anchors ?? []).map((a) => ({
+              id: a.id,
+              label: a.name || a.id,
+            }));
+          if (p.semanticType === 'dialogueRef')
+            options[p.name] = [...dialogues.values()].map((d) => ({
+              id: d.id,
+              label: d.name || d.id,
+            }));
+          if (n.step?.action === 'cutscene.setVariable' && p.name === 'name')
+            options[p.name] = (scene.variables ?? []).map((v) => ({ id: v.name, label: v.name }));
+        }
+      } catch {
+        /* Invalid authored nodes render their diagnostic instead of fabricated ports. */
+      }
+      const view: GraphViewNode = {
+        id: n.id,
+        type: 'cutscene',
+        position: n.position,
+        style: { width: hasLua ? 460 : 300 },
+        data: {
+          authored: n,
+          incoming: pins,
+          tracks,
+          options,
+        },
+      };
+      nodeCache.set(n, { incoming: key, tracks, view });
+      return view;
+    });
+  }, [graph, scene.variables, actions, roles, map, dialogues, nodeCache]);
   const viewNodes = useMemo(
     () =>
       authoredNodes.map((node) => ({
         ...node,
-        position: drag[node.id] ?? node.position,
         selected: selected.has(node.id),
       })),
-    [authoredNodes, drag, selected],
+    [authoredNodes, selected],
   );
   const authoredEdges: Edge[] = useMemo(
     () =>
@@ -435,6 +453,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
   const showPicker = (clientX: number, clientY: number, from?: OnConnectStartParams) => {
     const rect = root.current!.getBoundingClientRect();
     setQuery('');
+    setPickerCategory('');
     setPicker({
       x: Math.max(0, Math.min(rect.width - 320, clientX - rect.left)),
       y: Math.max(0, Math.min(rect.height - 410, clientY - rect.top)),
@@ -453,30 +472,34 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
       droppingPin.current = false;
     }, 0);
   };
-  let choices: (GraphTemplate & { pin?: string })[] = templates;
-  if (picker?.from) {
+  const choices = useMemo<(GraphTemplate & { pin?: string })[]>(() => {
+    if (!picker) return [];
+    if (!picker.from) return templates;
     try {
       const from = graph.nodes.find((n) => n.id === picker.from!.nodeId)!;
       const signature = graphSignature(from, scene, actions);
       const pin = (picker.from.handleType === 'target' ? signature.inputs : signature.outputs).find(
         (p) => p.name === picker.from!.handleId?.slice(5),
       );
-      choices =
-        picker.from.handleId?.startsWith('data:') && pin
-          ? matchingGraphTemplates(templates, scene, actions, {
-              ...pin,
-              direction: picker.from.handleType === 'target' ? 'input' : 'output',
-            })
-          : picker.from.handleId?.startsWith('exec:')
-            ? templates
-                .filter((t) => ['action', 'lua'].includes(t.node.kind))
-                .map((t) => ({ ...t, pin: picker.from!.handleType === 'target' ? 'next' : 'in' }))
-            : [];
+      return picker.from.handleId?.startsWith('data:') && pin
+        ? matchingGraphTemplates(templates, scene, actions, {
+            ...pin,
+            direction: picker.from.handleType === 'target' ? 'input' : 'output',
+          })
+        : picker.from.handleId?.startsWith('exec:')
+          ? templates
+              .filter((t) => ['action', 'lua'].includes(t.node.kind))
+              .map((t) => ({ ...t, pin: picker.from!.handleType === 'target' ? 'next' : 'in' }))
+          : [];
     } catch {
-      choices = [];
+      return [];
     }
-  }
-  const choiceGroups = groupGraphTemplates(choices, query);
+  }, [picker, templates, graph, scene, actions]);
+  const categories = useMemo(() => [...new Set(choices.map((c) => c.category))].sort(), [choices]);
+  const visibleChoices = useMemo(
+    () => filterGraphTemplates(choices, query, pickerCategory),
+    [choices, query, pickerCategory],
+  );
   const insert = (template: GraphTemplate & { pin?: string }) => {
     const id = `node-${crypto.randomUUID()}`,
       position = picker!.position;
@@ -608,27 +631,27 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     }),
     [map, dialogues],
   );
+  // Nodes need declarations, not the changing graph. Event callbacks read the latest operations.
+  const nodeScene = useMemo(
+    () => ({ id: scene.id, variables: scene.variables }),
+    [scene.id, scene.variables],
+  );
+  const nodeOperations = useRef({ changeNode, openSpatial });
+  nodeOperations.current = { changeNode, openSpatial };
   const editingContext = useMemo(
     () => ({
-      scene,
+      scene: nodeScene,
       actions,
       resources,
       phase: phase === 'onStart' ? ('setup' as const) : phase,
-      change: changeNode,
-      spatial: openSpatial,
+      change: (id: string, change: (node: AuthoredNode) => void) =>
+        nodeOperations.current.changeNode(id, change),
+      spatial: (id: string, parameter: string, type: 'position' | 'path') =>
+        nodeOperations.current.openSpatial(id, parameter, type),
       characterReferences,
       argumentReferences,
     }),
-    [
-      scene,
-      actions,
-      resources,
-      phase,
-      changeNode,
-      openSpatial,
-      characterReferences,
-      argumentReferences,
-    ],
+    [nodeScene, actions, resources, phase, characterReferences, argumentReferences],
   );
   return (
     <ResizableEditorLayout
@@ -778,7 +801,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                       </Text>
                     </Box>
                   )}
-                  <ReactFlow
+                  <CutsceneGraphCanvas
                     nodes={viewNodes}
                     edges={viewEdges}
                     nodeTypes={nodeTypes}
@@ -792,7 +815,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                       // Other wires stay fixed during a single-node drag. Snapshot their graph
                       // geometry before highlighting can replace their SVG elements.
                       insertionWires.current =
-                        nodes.length === 1
+                        nodes.length === 1 && ['action', 'lua'].includes(node.data.authored.kind)
                           ? graph.edges.flatMap((edge) => {
                               if (
                                 edge.kind !== 'execution' ||
@@ -841,7 +864,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                             if (c.type === 'position' && c.position)
                               draft.nodes.find((n) => n.id === c.id)!.position = c.position;
                         });
-                        setDrag({});
                         return;
                       }
                       if (changes.some((c) => c.type === 'select'))
@@ -852,13 +874,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                               if (c.selected) next.add(c.id);
                               else next.delete(c.id);
                             }
-                          return next;
-                        });
-                      if (changes.some((c) => c.type === 'position' && c.position))
-                        setDrag((previous) => {
-                          const next = { ...previous };
-                          for (const c of changes)
-                            if (c.type === 'position' && c.position) next[c.id] = c.position;
                           return next;
                         });
                     }}
@@ -889,7 +904,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                   >
                     <Background gap={24} size={1} />
                     <Controls showInteractive={false} />
-                  </ReactFlow>
+                  </CutsceneGraphCanvas>
                   {picker && (
                     <Box
                       className="cutscene-graph-picker"
@@ -910,43 +925,46 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                           ×
                         </Button>
                       </HStack>
-                      <Text fontSize="10px" color="editorMutedText" mb={2}>
-                        {picker.from
-                          ? 'Compatible pins · connects the first matching pin'
-                          : 'Actions and pure values'}
-                      </Text>
-                      {choiceGroups.map(([category, items]) => (
-                        <Box key={category} role="group" aria-label={category} mb={2}>
-                          <Text
-                            fontSize="10px"
-                            fontWeight="semibold"
-                            color="editorMutedText"
-                            px={2}
-                            py={1}
-                          >
-                            {category} · {items.length}
-                          </Text>
-                          {items.map((choice) => (
-                            <Button
-                              key={choice.id}
-                              size="xs"
-                              variant="ghost"
-                              w="full"
-                              justifyContent="start"
-                              fontWeight="normal"
-                              onClick={() => insert(choice)}
-                            >
-                              {choice.label}
-                              {choice.pin ? ` → ${choice.pin}` : ''}
-                            </Button>
-                          ))}
-                        </Box>
-                      ))}
-                      {!choiceGroups.length && (
-                        <Text fontSize="xs" p={2}>
-                          No compatible functions or values.
+                      <Select
+                        size="xs"
+                        mb={2}
+                        aria-label="Node category"
+                        value={pickerCategory}
+                        onChange={(e) => setPickerCategory(e.target.value)}
+                      >
+                        <option value="">All categories</option>
+                        {categories.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </Select>
+                      {picker.from && (
+                        <Text fontSize="10px" color="editorMutedText" mb={2}>
+                          Compatible nodes · connects the first matching pin
                         </Text>
                       )}
+                      <Box className="cutscene-graph-picker-results">
+                        {visibleChoices.map((choice) => (
+                          <Button
+                            key={choice.id}
+                            size="xs"
+                            variant="ghost"
+                            w="full"
+                            justifyContent="start"
+                            fontWeight="normal"
+                            onClick={() => insert(choice)}
+                          >
+                            {choice.label}
+                            {choice.pin ? ` → ${choice.pin}` : ''}
+                          </Button>
+                        ))}
+                        {!visibleChoices.length && (
+                          <Text fontSize="xs" p={2}>
+                            No compatible functions or values.
+                          </Text>
+                        )}
+                      </Box>
                     </Box>
                   )}
                   {spatial && map && (

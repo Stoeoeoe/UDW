@@ -86,7 +86,10 @@ export function initialVariableValue(type: CutsceneVariable['type']): unknown {
   if (type === 'path') return [{ x: 0, y: 0 }];
   return {};
 }
-export function setVariableAction(scene: Cutscene, step?: CutsceneStep): CutsceneAction {
+export function setVariableAction(
+  scene: Pick<Cutscene, 'variables'>,
+  step?: CutsceneStep,
+): CutsceneAction {
   const variable = scene.variables?.find((entry) => entry.name === step?.arguments.name);
   const type = variable?.type ?? 'string';
   return {
@@ -119,7 +122,7 @@ export function setVariableAction(scene: Cutscene, step?: CutsceneStep): Cutscen
   };
 }
 export const actionForCutsceneStep = (
-  scene: Cutscene,
+  scene: Pick<Cutscene, 'variables'>,
   step: CutsceneStep,
   actions: CutsceneAction[],
 ) =>

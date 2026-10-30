@@ -5,7 +5,7 @@ import type { ScriptingResources } from '../../../lib/scriptingManifest';
 import type { LuaArgumentReferences } from '../../../lib/luaBindings';
 
 export const GraphEditingContext = createContext<{
-  scene: Cutscene;
+  scene: Pick<Cutscene, 'id' | 'variables'>;
   actions: CutsceneAction[];
   resources: ScriptingResources;
   phase: 'setup' | 'sequence' | 'completion';

@@ -100,20 +100,20 @@ export function graphTemplates(
   return templates;
 }
 
-/** Preserve catalog order within alphabetically sorted categories. Search names and categories. */
-export function groupGraphTemplates<T extends GraphTemplate>(
+/** Flat catalog results; categories narrow the list without repeated headings. */
+export function filterGraphTemplates<T extends GraphTemplate>(
   choices: T[],
   query: string,
-): [string, T[]][] {
-  const groups = new Map<string, T[]>();
+  category = '',
+): T[] {
   const search = query.trim().toLowerCase();
-  for (const choice of choices) {
-    if (!`${choice.category} ${choice.label}`.toLowerCase().includes(search)) continue;
-    const group = groups.get(choice.category) ?? [];
-    group.push(choice);
-    groups.set(choice.category, group);
-  }
-  return [...groups].sort(([a], [b]) => a.localeCompare(b));
+  return choices
+    .filter(
+      (choice) =>
+        (!category || choice.category === category) &&
+        `${choice.category} ${choice.label}`.toLowerCase().includes(search),
+    )
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /** Stable declaration order: use the first compatible pin, including repeated output types. */
