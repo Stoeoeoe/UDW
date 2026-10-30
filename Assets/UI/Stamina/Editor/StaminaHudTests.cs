@@ -25,6 +25,8 @@ namespace UI.Stamina.Editor
         private StaminaHudPresenter _presenter;
         private ProgressBar _meter;
         private Label _value;
+        private ProgressBar _healthMeter;
+        private Label _healthValue;
 
         [SetUp]
         public void SetUp()
@@ -65,6 +67,8 @@ namespace UI.Stamina.Editor
             GameTestFixture.Invoke(_presenter, "OnEnable");
             _meter = document.rootVisualElement.Q<ProgressBar>("staminaMeter");
             _value = document.rootVisualElement.Q<Label>("staminaValue");
+            _healthMeter = document.rootVisualElement.Q<ProgressBar>("healthMeter");
+            _healthValue = document.rootVisualElement.Q<Label>("healthValue");
         }
 
         [TearDown]
@@ -96,6 +100,22 @@ namespace UI.Stamina.Editor
             Assert.That(_toolAction.Executions, Is.Zero);
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(expected));
             Assert.That(_value.text, Is.EqualTo($"{expected} / 100"));
+        }
+
+        [Test]
+        public void HealthBarTracksPlayerDamageHealingAndSurplusOnly()
+        {
+            Assert.That(_healthValue.text, Is.EqualTo("100 / 100"));
+            _character.Health.TakeDamage(30);
+            Assert.That(_healthMeter.value, Is.EqualTo(70f));
+            Assert.That(_healthValue.text, Is.EqualTo("70 / 100"));
+            var other = _fixture.CreateCharacter();
+            other.Health.TakeDamage(50);
+            Assert.That(_healthValue.text, Is.EqualTo("70 / 100"));
+            _character.Health.Heal(30);
+            _character.Health.GrantOvercharge(20);
+            Assert.That(_healthMeter.value, Is.EqualTo(100f));
+            Assert.That(_healthValue.text, Is.EqualTo("120 / 100"));
         }
 
         [Test]

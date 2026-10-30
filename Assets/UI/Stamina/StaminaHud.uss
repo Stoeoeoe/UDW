@@ -1,3 +1,13 @@
+.resource-hud-row {
+    flex-direction: column;
+    width: 140px;
+    align-self: flex-end;
+}
+
+.resource-hud-panel {
+    width: 140px;
+}
+
 .stamina-hud {
     margin: 6px 0 0 0;
     padding: 8px 12px;
@@ -6,6 +16,7 @@
     border-color: rgba(238, 226, 193, 0.16);
     border-radius: 6px;
 }
+
 
 .stamina-hud-header {
     flex-direction: row;
@@ -61,5 +72,17 @@
 }
 
 .stamina-hud--overcharged .stamina-hud-value {
+    color: rgb(221, 194, 135);
+}
+
+.health-hud-meter .unity-progress-bar__progress {
+    background-color: rgb(190, 105, 94);
+}
+
+.health-hud--overcharged .unity-progress-bar__progress {
+    background-color: rgb(190, 159, 91);
+}
+
+.health-hud--overcharged .stamina-hud-value {
     color: rgb(221, 194, 135);
 }
