@@ -63,7 +63,7 @@ namespace Core.Scripting.Editor
             Assert.That(api.Finished, Is.False);
             var state = CurrentState();
             Assert.That(state.Clip, Is.SameAs(_animation.Clip));
-            state.Time = state.Length;
+            AdvanceAnimation(state.Length);
             session.Tick(0);
             Assert.That(api.Finished, Is.True);
             Assert.That(session.IsRunning, Is.False);
@@ -78,12 +78,18 @@ namespace Core.Scripting.Editor
             _actor.Animator.OnLocationEnter(null);
             using var action = new PlayAnimationAction(_actor, _animation, true);
             var state = CurrentState();
-            state.Time = state.Length + 0.1f;
+            var animancer = _actor.GetComponentInChildren<NamedAnimancerComponent>(true);
+            AdvanceAnimation(state.Length + 0.1f);
+            var completedTime = state.Time;
             action.Dispose();
             Assert.That(action.IsCompleted, Is.True);
             Assert.That(CurrentState(), Is.SameAs(state));
-            Assert.That(state.Time, Is.EqualTo(state.Length).Within(0.0001));
+            Assert.That(state.Time, Is.EqualTo(completedTime).Within(0.0001));
             Assert.That(state.IsPlaying, Is.False);
+            Assert.That(animancer.Animator.transform.localScale.z, Is.EqualTo(2f).Within(0.0001));
+            animancer.Evaluate(0.5f);
+            Assert.That(state.Time, Is.EqualTo(completedTime).Within(0.0001));
+            Assert.That(animancer.Animator.transform.localScale.z, Is.EqualTo(2f).Within(0.0001));
             _actor.Orientation.ForceDirection(Vector2.left);
             _actor.SetMovementState(MovementState.Idle);
             Assert.That(CurrentState(), Is.SameAs(state));
@@ -96,7 +102,7 @@ namespace Core.Scripting.Editor
         {
             using var first = new PlayAnimationAction(_actor, _animation, true);
             var state = CurrentState();
-            state.Time = state.Length;
+            AdvanceAnimation(state.Length);
             first.Dispose();
             using var next = _actor.Animator.PlayOneShot(_animation);
             first.Dispose();
@@ -211,7 +217,7 @@ namespace Core.Scripting.Editor
             Assert.That(method.action.preview.spatialState, Is.EqualTo("unknown"));
             var sequence = JArray.Parse("[{'id':'gesture','action':'characters.playAnimation','arguments':{'character':'player','animation':'base:pass-out'}}]");
             Assert.That(CutsceneSequenceCompiler.Compile(sequence, "animation.json"),
-                Is.EqualTo("Characters.PlayAnimation(\"player\", \"base:pass-out\");\n"));
+                Is.EqualTo("Characters.PlayAnimation(\"player\", \"base:pass-out\", false);\n"));
         }
 
         [Test]
@@ -249,7 +255,7 @@ namespace Core.Scripting.Editor
         private CharacterAnimation CreateAnimation(string id)
         {
             var clip = _fixture.Own(new AnimationClip());
-            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.z"), AnimationCurve.Constant(0, 1, 1));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.z"), AnimationCurve.Linear(0, 1, 1, 2));
             var animation = _fixture.Own(ScriptableObject.CreateInstance<CharacterAnimation>());
             animation.name = id;
             Set(animation, "animationId", id);
@@ -259,6 +265,13 @@ namespace Core.Scripting.Editor
 
         private AnimancerState CurrentState() => (AnimancerState)typeof(UrCharacterAnimator)
             .GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_actor.Animator);
+
+        private void AdvanceAnimation(float seconds)
+        {
+            var animancer = _actor.GetComponentInChildren<NamedAnimancerComponent>(true);
+            animancer.Evaluate(); // Apply the queued playback start before advancing the native graph.
+            animancer.Evaluate(seconds);
+        }
 
         private static void Set(object target, string name, object value)
         {

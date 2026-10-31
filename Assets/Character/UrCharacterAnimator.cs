@@ -205,7 +205,8 @@ namespace Character
                 if (!ReferenceEquals(_owner._oneShot, this)) return;
                 if (_holdLastFrame && IsCompleted)
                 {
-                    _state.Time = _state.Length;
+                    // A completed non-looping clip already samples its final pose, even after overshooting its length.
+                    // Keep that pose without seeking to a nonzero time (which requires Animancer Pro).
                     _state.IsPlaying = false;
                     _owner._holdingLastFrame = true;
                     _owner.animancer.Evaluate();
