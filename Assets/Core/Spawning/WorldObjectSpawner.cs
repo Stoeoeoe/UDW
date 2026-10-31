@@ -119,6 +119,8 @@ namespace Core.Spawning
             }
             foreach (var pair in GameState.World.GetStates<SpawnedObjectState>(_locationId).ToArray())
             {
+                // An earlier spot's OnEnable can expire a pickup included in this restoration snapshot.
+                if (!GameState.World.TryGet(_locationId, pair.Key, out SpawnedObjectState _)) continue;
                 if (pair.Value.removed || pair.Value.authored && !_placements.ContainsKey(pair.Key)) continue;
                 try { Materialize(pair.Key, pair.Value); }
                 catch (Exception exception) { Debug.LogException(exception, this); }

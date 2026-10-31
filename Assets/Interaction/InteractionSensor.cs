@@ -22,8 +22,20 @@ namespace Interaction
 
         [ReadOnly] [ShowInInspector] public AbstractInteractable Current { get; private set; }
 
+        public void ValidateConfiguration()
+        {
+            var owner = GetComponentInParent<GameCharacter>(true);
+            if (!owner || !ambientSensor || !triggerSensor)
+                throw new InvalidOperationException($"Interaction sensor '{name}' requires its character, ambient sensor and facing sensor.");
+            var ground = owner.ToolInteractionAnchor.position;
+            if (Vector3.Distance(ambientSensor.transform.position, ground) > 0.001f ||
+                Vector3.Distance(triggerSensor.transform.position, ground) > 0.001f)
+                throw new InvalidOperationException($"Character '{owner.name}' interaction sensors must pivot at its ground interaction anchor.");
+        }
+
         private void Awake()
         {
+            ValidateConfiguration();
             _owner = GetComponentInParent<GameCharacter>();
             ambientSensor.OnDetected.AddListener((_, __) => _dirty = true);
             ambientSensor.OnLostDetection.AddListener((_, __) => _dirty = true);

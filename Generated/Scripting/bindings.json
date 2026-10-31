@@ -1282,6 +1282,10 @@
         "description": "PassOut"
       },
       {
+        "id": "base:pickup",
+        "description": "Pickup"
+      },
+      {
         "id": "base:prototype-sitting",
         "description": "PrototypeSittingAnimation"
       }

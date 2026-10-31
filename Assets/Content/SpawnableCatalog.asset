@@ -17,5 +17,11 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 1334576898638670829, guid: f38df0a5dec8ae04ba805b75350d5fb5, type: 3}
     enabled: 1
+  - definition: {fileID: 6250042538160048773, guid: c352630354bd59e4fab5ed7d989ec2f4, type: 3}
+    enabled: 1
+  - definition: {fileID: 1010214707762559703, guid: 41dda1a748171384781f08ff25101ff2, type: 3}
+    enabled: 1
+  - definition: {fileID: 951881172881740803, guid: 6e045675a7a2c0443ad3272aa576a643, type: 3}
+    enabled: 1
   - definition: {fileID: 1531555327375799097, guid: bef8951bb68ccef42b9e7ff75bbd7422, type: 3}
     enabled: 1

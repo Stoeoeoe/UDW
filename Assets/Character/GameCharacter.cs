@@ -115,6 +115,7 @@ namespace Character
             attributes.ValidateConfiguration();
             actionRegistry.ValidateConfiguration();
             toolActionRegistry.ValidateConfiguration();
+            interactionSensor.ValidateConfiguration();
             animator.ValidateConfiguration();
         }
 

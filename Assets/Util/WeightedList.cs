@@ -60,6 +60,9 @@ namespace Util
         [ReadOnly]
         [LabelText("Item Count")]
         public int Count => items?.Count ?? 0;
+
+        /// <summary>Authored entries, including weights, for configuration validation.</summary>
+        public IReadOnlyList<WeightedItem> Entries => items;
     
         public WeightedList()
         {
@@ -139,18 +142,12 @@ namespace Util
         public T GetRandomItem()
         {
             if (items == null || items.Count == 0)
-            {
-                Debug.LogWarning("WeightedList is empty!");
-                return default(T);
-            }
+                throw new InvalidOperationException("Cannot select an item from an empty weighted list.");
         
             RecalculateChances();
         
-            if (TotalWeight <= 0f)
-            {
-                Debug.LogWarning("Total weight is 0 or negative!");
-                return items[0].item;
-            }
+            if (!float.IsFinite(TotalWeight) || TotalWeight <= 0f)
+                throw new InvalidOperationException("A weighted list requires a positive, finite total weight.");
         
             float randomValue = Random.Range(0f, TotalWeight);
             float cumulative = 0f;
@@ -158,13 +155,14 @@ namespace Util
             foreach (var item in items)
             {
                 cumulative += Mathf.Max(0f, item.weight);
-                if (randomValue <= cumulative)
+                if (item.weight > 0f && randomValue < cumulative)
                 {
                     return item.item;
                 }
             }
         
-            return items[items.Count - 1].item;
+            // Unity's float Range includes its upper endpoint. Never select a zero-weight tail.
+            return items.Last(item => item.weight > 0f).item;
         }
     
         /// <summary>

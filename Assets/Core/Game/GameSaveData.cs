@@ -87,6 +87,8 @@ namespace Core.Game
                         throw new FormatException("The save contains an invalid world object.");
                     if (obj.Value is Inventory.ContainerState container)
                         Core.Inventory.ContainerStorage.ValidateState(container, Character.CharacterCatalog.Require, Inventory.ItemCatalog.Find);
+                    if (obj.Value is Items.ForagingSpotState forageSpot) forageSpot.Validate();
+                    if (obj.Value is Items.ForagePickupState foragePickup) foragePickup.Validate();
                 }
             }
         }

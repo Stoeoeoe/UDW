@@ -4219,6 +4219,26 @@
   ],
   "entities": [
     {
+      "id": "foraging-spot-01",
+      "typeId": "base:foraging-spot",
+      "label": "Weighted Forage Spot",
+      "position": [
+        320,
+        48
+      ],
+      "properties": {}
+    },
+    {
+      "id": "forage-fig-01",
+      "typeId": "base:forage-fig",
+      "label": "Fig",
+      "position": [
+        224,
+        80
+      ],
+      "properties": {}
+    },
+    {
       "id": "cutscene-prototype-host-01",
       "typeId": "base:cutscene-prototype-host",
       "position": [

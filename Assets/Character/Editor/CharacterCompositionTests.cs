@@ -45,6 +45,27 @@ namespace Character.Editor
         }
 
         [Test]
+        public void InteractionSensorsPivotAtTheSameGroundPointAsTargeting()
+        {
+            var ground = _character.ToolInteractionAnchor.position;
+            var facing = _character.GetComponentInChildren<SensorToolkit.TriggerSensor2D>(true);
+            var ambient = _character.GetComponentInChildren<SensorToolkit.RangeSensor2D>(true);
+            Assert.That(Vector3.Distance(facing.transform.position, ground), Is.LessThan(0.001f));
+            Assert.That(Vector3.Distance(ambient.transform.position, ground), Is.LessThan(0.001f));
+            facing.transform.localPosition += Vector3.up;
+            Assert.Throws<InvalidOperationException>(_character.InteractionSensor.ValidateConfiguration);
+        }
+
+        [Test]
+        public void CharacterYSortingUsesItsGroundFootprint()
+        {
+            var sorting = _character.GetComponent<YSortByPosition>();
+            var rootOrder = Mathf.RoundToInt(-_character.transform.position.y * 100f) + sorting.Offset;
+            var groundOrder = Mathf.RoundToInt(-_character.ToolInteractionAnchor.position.y * 100f);
+            Assert.That(rootOrder, Is.EqualTo(groundOrder).Within(1));
+        }
+
+        [Test]
         public void MissingInventoryFailsAtConfigurationBoundary()
         {
             typeof(GameCharacter).GetProperty(nameof(GameCharacter.MainInventory)).SetValue(_character, null);

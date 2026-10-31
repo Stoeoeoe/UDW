@@ -82,5 +82,11 @@ namespace Core.Items
             float pitch = Random.Range(pitchMin, pitchMax);
             MoreMountains.Tools.MMSfxEvent.Trigger(clip, audioMixerGroup, volume, pitch);
         }
+
+        public void RequirePickupSound(AudioClip overrideClip)
+        {
+            if (!overrideClip && !defaultPickupSound)
+                throw new System.InvalidOperationException("Forage pickups require an item pickup sound or ItemManager's default pickup sound.");
+        }
     }
 }

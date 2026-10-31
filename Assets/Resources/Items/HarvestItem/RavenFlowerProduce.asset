@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 89b63581bba5775479ac3e0e2789fa7f, type: 3}
+  m_Script: {fileID: 11500000, guid: 0e4bcf3b58924a24faddecdcb201bd8f, type: 3}
   m_Name: RavenFlowerProduce
   m_EditorClassIdentifier: Assembly-CSharp::Plants.ProduceItem
   _itemId: raven_flower_produce
@@ -23,3 +23,4 @@ MonoBehaviour:
   _sellBasePrice: 0
   _worldRepresentationPrefab: {fileID: 0}
   _pickupSound: {fileID: 0}
+  groundLifetimeDays: 2
