@@ -17,3 +17,5 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 11400000, guid: 069137c8f23bb9f4e848a252ccc3eedb, type: 2}
     enabled: 1
+  - definition: {fileID: 11400000, guid: 269abb96705d0c74f9503e46af4ef08f, type: 2}
+    enabled: 1

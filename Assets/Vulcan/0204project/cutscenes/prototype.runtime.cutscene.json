@@ -48,106 +48,313 @@
       }
     ]
   },
-  "sequence": [
-    {
-      "id": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662",
-      "action": "cutscene.wait",
-      "arguments": {
-        "seconds": 0.2
-      }
-    },
-    {
-      "id": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
-      "action": "characters.walkPath",
-      "arguments": {
-        "character": "player",
-        "path": [
-          {
-            "x": 168,
-            "y": 104
-          },
-          {
-            "x": 200,
-            "y": 120
-          },
-          {
-            "x": 216,
-            "y": 168
+  "sequence": [],
+  "graphs": {
+    "sequence": {
+      "nodes": [
+        {
+          "id": "entry-d3d285d3-d244-4e0b-ab9c-dccfdb88bd1e",
+          "kind": "entry",
+          "position": {
+            "x": 0,
+            "y": 180
           }
-        ]
-      }
-    },
-    {
-      "id": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
-      "action": "dialogue.play",
-      "arguments": {
-        "dialogue": "base:dlg_cutscene_test"
-      }
-    },
-    {
-      "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
-      "action": "cutscene.wait",
-      "arguments": {
-        "seconds": 1.25
-      }
-    },
-    {
-      "id": "prototype-impact-sound",
-      "action": "audio.playSound",
-      "arguments": {
-        "sound": "base:prototype-impact",
-        "position": null
-      }
-    },
-    {
-      "id": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52",
-      "action": "camera.flash",
-      "arguments": {
-        "color": "#FFFFFF",
-        "durationSeconds": 0.24,
-        "easeInSeconds": 0.02,
-        "holdSeconds": 0.1,
-        "easeOutSeconds": 0.02
-      }
-    },
-    {
-      "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
-      "action": "characters.playAnimation",
-      "arguments": {
-        "character": "player",
-        "animation": "base:pass-out",
-        "holdLastFrame": true
-      }
-    },
-    {
-      "id": "prototype-impact-shake",
-      "action": "camera.shake",
-      "arguments": {
-        "durationSeconds": 1.5,
-        "strength": 1
-      }
-    },
-    {
-      "id": "prototype-impact-hold",
-      "action": "cutscene.wait",
-      "arguments": {
-        "seconds": 2
-      }
-    },
-    {
-      "id": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2",
-      "action": "cutscene.runLua",
-      "arguments": {
-        "code": "local a = 123;\r\nWallet.AddMoney(a);\r\n"
-      }
-    },
-    {
-      "id": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
-      "action": "story.set",
-      "arguments": {
-        "key": "is_rabatentent",
-        "value": true
-      }
+        },
+        {
+          "id": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662",
+          "kind": "action",
+          "position": {
+            "x": 360,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 0.2
+            }
+          }
+        },
+        {
+          "id": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
+          "kind": "action",
+          "position": {
+            "x": 720,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
+            "action": "characters.walkPath",
+            "arguments": {
+              "character": "player",
+              "path": [
+                {
+                  "x": 168,
+                  "y": 104
+                },
+                {
+                  "x": 200,
+                  "y": 120
+                },
+                {
+                  "x": 216,
+                  "y": 168
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
+          "kind": "action",
+          "position": {
+            "x": 1080,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
+            "action": "dialogue.play",
+            "arguments": {
+              "dialogue": "base:dlg_cutscene_test"
+            }
+          }
+        },
+        {
+          "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
+          "kind": "action",
+          "position": {
+            "x": 1440,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 1.25
+            }
+          }
+        },
+        {
+          "id": "prototype-impact-sound",
+          "kind": "action",
+          "position": {
+            "x": 1800,
+            "y": 180
+          },
+          "step": {
+            "id": "prototype-impact-sound",
+            "action": "audio.playSound",
+            "arguments": {
+              "sound": "base:thunder",
+              "position": null
+            }
+          }
+        },
+        {
+          "id": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52",
+          "kind": "action",
+          "position": {
+            "x": 2160,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52",
+            "action": "camera.flash",
+            "arguments": {
+              "color": "#FFFFFF",
+              "durationSeconds": 0.24,
+              "easeInSeconds": 0.02,
+              "holdSeconds": 0.1,
+              "easeOutSeconds": 0.02
+            }
+          }
+        },
+        {
+          "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
+          "kind": "action",
+          "position": {
+            "x": 2520,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
+            "action": "characters.playAnimation",
+            "arguments": {
+              "character": "player",
+              "animation": "base:pass-out",
+              "holdLastFrame": true
+            }
+          }
+        },
+        {
+          "id": "prototype-impact-shake",
+          "kind": "action",
+          "position": {
+            "x": 2880,
+            "y": 180
+          },
+          "step": {
+            "id": "prototype-impact-shake",
+            "action": "camera.shake",
+            "arguments": {
+              "durationSeconds": 1.5,
+              "strength": 1
+            }
+          }
+        },
+        {
+          "id": "prototype-impact-hold",
+          "kind": "action",
+          "position": {
+            "x": 3240,
+            "y": 180
+          },
+          "step": {
+            "id": "prototype-impact-hold",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 2
+            }
+          }
+        },
+        {
+          "id": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2",
+          "kind": "action",
+          "position": {
+            "x": 3600,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2",
+            "action": "cutscene.runLua",
+            "arguments": {
+              "code": "local a = 123;\r\nWallet.AddMoney(a);\r\n"
+            }
+          }
+        },
+        {
+          "id": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
+          "kind": "action",
+          "position": {
+            "x": 3960,
+            "y": 180
+          },
+          "step": {
+            "id": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
+            "action": "story.set",
+            "arguments": {
+              "key": "is_rabatentent",
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "exit-ba2c1e36-9087-4f11-b838-de34d1256092",
+          "kind": "exit",
+          "position": {
+            "x": 4320,
+            "y": 180
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "entry-d3d285d3-d244-4e0b-ab9c-dccfdb88bd1e:next:beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662:in",
+          "source": "entry-d3d285d3-d244-4e0b-ab9c-dccfdb88bd1e",
+          "sourcePin": "next",
+          "target": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662:next:beat-bf316665-59b6-4bd9-bed5-52e329a4600b:in",
+          "source": "beat-3f192afc-bed7-4a96-a3dc-d54f67ebd662",
+          "sourcePin": "next",
+          "target": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b:next:beat-72159519-3ca8-4a06-a988-525da0065d0b:in",
+          "source": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
+          "sourcePin": "next",
+          "target": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-72159519-3ca8-4a06-a988-525da0065d0b:next:beat-c05b392e-31ba-4897-ae11-efc522d12110:in",
+          "source": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
+          "sourcePin": "next",
+          "target": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110:next:prototype-impact-sound:in",
+          "source": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
+          "sourcePin": "next",
+          "target": "prototype-impact-sound",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "prototype-impact-sound:next:beat-f08de368-f1a8-4587-bebf-6a66343d3b52:in",
+          "source": "prototype-impact-sound",
+          "sourcePin": "next",
+          "target": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52:next:beat-895f5614-f637-4c3a-930a-99b6ab59abf7:in",
+          "source": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52",
+          "sourcePin": "next",
+          "target": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7:next:prototype-impact-shake:in",
+          "source": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
+          "sourcePin": "next",
+          "target": "prototype-impact-shake",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "prototype-impact-shake:next:prototype-impact-hold:in",
+          "source": "prototype-impact-shake",
+          "sourcePin": "next",
+          "target": "prototype-impact-hold",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "prototype-impact-hold:next:beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2:in",
+          "source": "prototype-impact-hold",
+          "sourcePin": "next",
+          "target": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2:next:beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f:in",
+          "source": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2",
+          "sourcePin": "next",
+          "target": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f:next:exit-ba2c1e36-9087-4f11-b838-de34d1256092:in",
+          "source": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
+          "sourcePin": "next",
+          "target": "exit-ba2c1e36-9087-4f11-b838-de34d1256092",
+          "targetPin": "in",
+          "kind": "execution"
+        }
+      ]
     }
-  ]
+  }
 }

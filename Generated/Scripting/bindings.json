@@ -1270,6 +1270,10 @@
       {
         "id": "base:prototype-impact",
         "description": "PrototypeImpact"
+      },
+      {
+        "id": "base:thunder",
+        "description": "Thunder"
       }
     ],
     "animation": [
