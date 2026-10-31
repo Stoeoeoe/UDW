@@ -121,7 +121,9 @@ namespace UI.Shared
         {
             if (!screenFader) throw new InvalidOperationException("UrGUIManager requires the shared screen fader.");
             if (!toolHud) throw new InvalidOperationException("UrGUIManager requires the hotbar CanvasGroup.");
-            _hudRoot = GetComponent<UIDocument>().rootVisualElement.Q("gameHud")
+            var root = GetComponent<UIDocument>().rootVisualElement;
+            root.StretchToParentSize();
+            _hudRoot = root.Q("gameHud")
                 ?? throw new InvalidOperationException("UrGUIManager requires the gameHud root in its UI document.");
             SetHudOpacity(1);
             LevelManager.Instance?.RegisterLifecycle(this);

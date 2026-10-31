@@ -2215,6 +2215,7 @@ Transform:
   - {fileID: 3997705227323603445}
   - {fileID: 2937310220239482421}
   - {fileID: 3666859091866977424}
+  - {fileID: 5206374779788682829}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &-5602565127603773880
@@ -2343,6 +2344,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c2168fb36c9b804180d45036c82fbc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.CutsceneRunner
+  skipConfirmation: {fileID: 6717119555344198721}
+  timeScaleController: {fileID: 1500776327173921673}
 --- !u!1 &1124810803398170432
 GameObject:
   m_ObjectHideFlags: 0
@@ -18705,6 +18708,78 @@ MonoBehaviour:
   LevelName: LevelSelection
   DoNotUseLevelManager: 0
   DestroyPersistentCharacter: 0
+--- !u!1 &6204027441340360178
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5206374779788682829}
+  - component: {fileID: 814587835597499004}
+  - component: {fileID: 6717119555344198721}
+  m_Layer: 0
+  m_Name: Cutscene skip confirmation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5206374779788682829
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6204027441340360178}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3245482728486734529}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &814587835597499004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6204027441340360178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 2af599cf247cb8b47b48d33b6f225ad3, type: 2}
+  m_ParentUI: {fileID: 7410992665882482011}
+  sourceAsset: {fileID: 9197481963319205126, guid: 12083e21b9c4c5646b14207585e5d10e, type: 3}
+  m_SortingOrder: 100
+  m_Position: 1
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!114 &6717119555344198721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6204027441340360178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 878de0fe1a455db41bd9ddf39b53c45a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Shared.CutsceneSkipConfirmation
+  pauseWhileOpen: 3
+  soundOverrides: {fileID: 0}
+  inputActionMap: UI
+  timeScaleController: {fileID: 1500776327173921673}
 --- !u!1 &6219149581838824483
 GameObject:
   m_ObjectHideFlags: 0
@@ -24311,7 +24386,6 @@ MonoBehaviour:
   _initialEntryKey: 
   _initialFacingDirection: {x: 0, y: 0}
   _mainCharacterPrefab: {fileID: 1754888933028988936, guid: 204dcfde5843dd14b8cca533c2b59858, type: 3}
-  _VulcanusWorldCatalog: {fileID: 0}
   _defaultSpawnKey: Default
 --- !u!1 &8334041893401315472
 GameObject:

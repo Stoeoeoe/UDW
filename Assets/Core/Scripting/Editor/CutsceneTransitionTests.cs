@@ -19,6 +19,7 @@ namespace Core.Scripting.Editor
         private CutsceneRun _run;
         private LuaExecutionSession _session;
         private Observer _observer;
+        private Core.TimeAndWeather.TimeScaleController _timeScale;
 
         [SetUp]
         public void SetUp()
@@ -35,6 +36,10 @@ namespace Core.Scripting.Editor
             fader.ShowSceneImmediately();
             Set(_gui, "screenFader", fader);
             _runner = _fixture.Root.AddComponent<CutsceneRunner>();
+            _timeScale = _fixture.Root.AddComponent<Core.TimeAndWeather.TimeScaleController>();
+            GameTestFixture.Invoke(_timeScale, "Awake");
+            GameTestFixture.Invoke(_timeScale, "OnEnable");
+            Set(_runner, "timeScaleController", _timeScale);
             Set(_runner, "_gui", _gui);
             var presentation = _fixture.Own(ScriptableObject.CreateInstance<CutscenePresentationSettings>());
             Set(presentation, "fadeSeconds", 0.3f);
@@ -62,6 +67,7 @@ namespace Core.Scripting.Editor
         {
             _session.Dispose();
             _gui.ResetTransition();
+            GameTestFixture.Invoke(_timeScale, "OnDisable");
             _fixture.Dispose();
         }
 
@@ -101,6 +107,7 @@ namespace Core.Scripting.Editor
         {
             _session.Tick(0);
             Assert.That(_run.Skip(), Is.True);
+            Assert.That(Time.timeScale, Is.Zero);
             Assert.That(_observer.ActionDisposed, Is.False);
             Assert.That(_observer.CompletionApplied, Is.False);
             Transition.Goto(1f);
@@ -113,6 +120,7 @@ namespace Core.Scripting.Editor
             Assert.That(_observer.CompletionApplied, Is.True);
             Assert.That(GameState.Story.CompletedCutscenes.Contains(_run.Definition.CutsceneId), Is.True);
             Assert.That(_run.IsRunning, Is.True, "Input remains claimed through the exit reveal.");
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "Time resumes only when the reveal has begun.");
         }
 
         [TestCase(-1f)]
@@ -146,7 +154,7 @@ namespace Core.Scripting.Editor
             [LuaAction("test.wait", "Wait", "Test", "Active action.", "cutscene", Phases = new[] { "sequence" })]
             public ILuaAction Wait() => this;
             [LuaAction("test.finish", "Finish", "Test", "Completion under cover.", "cutscene", Phases = new[] { "completion" })]
-            public void Finish() { Assert.That(_group.alpha, Is.EqualTo(1)); CompletionApplied = true; }
+            public void Finish() { Assert.That(_group.alpha, Is.EqualTo(1)); Assert.That(Time.timeScale, Is.Zero); CompletionApplied = true; }
             public bool IsCompleted => false;
             public void Tick(float deltaTime) { }
             public void Dispose() { Assert.That(_group.alpha, Is.EqualTo(1)); ActionDisposed = true; }

@@ -43,6 +43,11 @@ namespace Core.Scripting.Editor
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The map must finish initialization.");
                 yield return null;
             }
+            BindLiveScene();
+        }
+
+        private void BindLiveScene()
+        {
             Assert.That(VulcanusDialogueRunner.Instance, Is.Not.Null, "The Systems prefab must provide the shared dialogue UI.");
             _talk = CreateDialogue("fixture:talk",
                 new VulcanusDialogueLineNode("entry", "", "", "Hello", "", "choice"),
@@ -170,6 +175,164 @@ namespace Core.Scripting.Editor
                 AssertClosed();
             }
             finally { service.Cancel(); Object.Destroy(cancelled); Object.Destroy(skipped); }
+        }
+
+        [UnityTest]
+        public IEnumerator PlayerSkipRequiresConfirmationAndCancelKeepsTheCutsceneRunning()
+        {
+            var service = CutsceneRunner.Instance;
+            var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
+            var definition = CreateCutscene("fixture:confirmed-skip", true, "fixture_confirmed_skip", "fixture:talk");
+            var document = prompt.GetComponent<UIDocument>();
+            try
+            {
+                Assert.That(service.TryStart(definition, out var run), Is.True);
+                yield return null;
+                Assert.That(RequestSkip(service), Is.True);
+                Assert.That(prompt.IsOpen, Is.True);
+                Assert.That(Time.timeScale, Is.Zero);
+                Assert.That(run.Skipped, Is.False);
+                var keep = document.rootVisualElement.Q<Button>("keepWatching");
+                Assert.That(document.rootVisualElement.panel.focusController.focusedElement, Is.SameAs(keep));
+                Submit(document.rootVisualElement.Q<Button>("confirmSkip"));
+                Assert.That(run.Skipped, Is.False, "The opening frame cannot also accept the confirmation.");
+                yield return new WaitForSecondsRealtime(0.2f);
+                Assert.That(run.Skipped, Is.False);
+                Assert.That(Time.timeScale, Is.Zero);
+                var overlay = document.rootVisualElement.Q("skipConfirmation");
+                Assert.That(overlay.worldBound.width, Is.EqualTo(overlay.panel.visualTree.worldBound.width).Within(1));
+                Assert.That(overlay.worldBound.height, Is.EqualTo(overlay.panel.visualTree.worldBound.height).Within(1));
+                using (var cancel = NavigationCancelEvent.GetPooled())
+                    document.rootVisualElement.Q("skipConfirmation").SendEvent(cancel);
+                Assert.That(prompt.IsOpen, Is.False);
+                Assert.That(run.IsRunning, Is.True);
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+                Assert.That(RequestSkip(service), Is.False, "Cancel must not reopen the prompt in the same frame.");
+                yield return null;
+                Assert.That(RequestSkip(service), Is.True);
+                yield return null;
+                Submit(keep);
+                var deadline = Time.realtimeSinceStartup + 1;
+                while (prompt.IsOpen && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(prompt.IsOpen, Is.False);
+                Assert.That(run.Skipped, Is.False);
+                yield return null;
+                Assert.That(RequestSkip(service), Is.True);
+                yield return null;
+                Submit(document.rootVisualElement.Q<Button>("confirmSkip"));
+                deadline = Time.realtimeSinceStartup + 1;
+                while (run.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(run.Skipped, Is.True);
+                Assert.That(run.IsRunning, Is.False);
+                Assert.That(prompt.IsOpen, Is.False);
+                Assert.That(GameState.Story.Has("fixture_confirmed_skip"), Is.True);
+            }
+            finally { service.Cancel(); Object.Destroy(definition); }
+        }
+
+        [UnityTest]
+        public IEnumerator SkipPromptRespectsUnskippableRunsAndClosesOnCancellation()
+        {
+            var service = CutsceneRunner.Instance;
+            var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
+            var locked = CreateCutscene("fixture:locked-skip", false, "fixture_locked_skip", "fixture:talk");
+            var skippable = CreateCutscene("fixture:cancel-prompt", true, "fixture_cancel_prompt", "fixture:talk");
+            try
+            {
+                Assert.That(service.TryStart(locked, out var first), Is.True);
+                Assert.That(RequestSkip(service), Is.False);
+                Assert.That(prompt.IsOpen, Is.False);
+                first.Cancel();
+                yield return null;
+                Assert.That(service.TryStart(skippable, out var second), Is.True);
+                Assert.That(RequestSkip(service), Is.True);
+                second.Cancel();
+                Assert.That(prompt.IsOpen, Is.False);
+                Assert.That(second.Skipped, Is.False);
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+                Assert.That(GameState.Story.Has("fixture_cancel_prompt"), Is.False);
+            }
+            finally { service.Cancel(); Object.Destroy(locked); Object.Destroy(skippable); }
+        }
+
+        [UnityTest]
+        public IEnumerator SkipPromptFreezesTimedPlaybackUntilDismissed()
+        {
+            var service = CutsceneRunner.Instance;
+            var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
+            var sequence = JArray.Parse("[{ 'id':'wait', 'action':'cutscene.wait', 'arguments':{ 'seconds':0.2 } }, { 'id':'talk', 'action':'dialogue.play', 'arguments':{ 'dialogue':'fixture:end' } }]");
+            var lua = CutsceneSequenceCompiler.Compile(sequence, "fixture:paused-skip", out var steps);
+            var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
+            definition.Configure("fixture:paused-skip", MapManager.Instance.CurrentMap.MapId, lua, steps, true,
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "GameState.Story.Set('fixture_paused_skip', true)", "", Array.Empty<CutsceneStep>()),
+                "", Array.Empty<CutsceneStep>(), new CutsceneTransition(enabled: false));
+            try
+            {
+                Assert.That(service.TryStart(definition, out var run), Is.True);
+                yield return null;
+                Assert.That(RequestSkip(service), Is.True);
+                var step = service.CurrentStepId;
+                yield return new WaitForSecondsRealtime(0.5f);
+                Assert.That(Time.timeScale, Is.Zero);
+                Assert.That(run.IsRunning, Is.True);
+                Assert.That(service.CurrentStepId, Is.EqualTo(step));
+                Assert.That(GameState.Story.Has("fixture_paused_skip"), Is.False);
+                using (var cancel = NavigationCancelEvent.GetPooled())
+                    prompt.GetComponent<UIDocument>().rootVisualElement.Q("skipConfirmation").SendEvent(cancel);
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+                var deadline = Time.realtimeSinceStartup + 3;
+                while (run.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(run.IsRunning, Is.False);
+                Assert.That(run.Skipped, Is.False);
+                Assert.That(GameState.Story.Has("fixture_paused_skip"), Is.True);
+            }
+            finally { service.Cancel(); Object.Destroy(definition); }
+        }
+
+        [UnityTest]
+        public IEnumerator ConfirmedSkipKeepsTimeFrozenUntilExitReveal()
+        {
+            var service = CutsceneRunner.Instance;
+            var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
+            var sequence = JArray.Parse("[{ 'id':'wait', 'action':'cutscene.wait', 'arguments':{ 'seconds':60 } }]");
+            var lua = CutsceneSequenceCompiler.Compile(sequence, "fixture:skip-exit-pause", out var steps);
+            var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
+            definition.Configure("fixture:skip-exit-pause", MapManager.Instance.CurrentMap.MapId, lua, steps, true,
+                new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "GameState.Story.Set('fixture_skip_exit_pause', true)", "", Array.Empty<CutsceneStep>()),
+                "", Array.Empty<CutsceneStep>(), new CutsceneTransition());
+            try
+            {
+                Assert.That(service.TryStart(definition, out var run), Is.True);
+                var phase = typeof(CutsceneRunner).GetField("_transitionPhase", BindingFlags.Instance | BindingFlags.NonPublic);
+                var deadline = Time.realtimeSinceStartup + 10;
+                while (phase.GetValue(service).ToString() != "None" && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(phase.GetValue(service).ToString(), Is.EqualTo("None"));
+                Assert.That(RequestSkip(service), Is.True);
+                yield return null;
+                Submit(prompt.GetComponent<UIDocument>().rootVisualElement.Q<Button>("confirmSkip"));
+                deadline = Time.realtimeSinceStartup + 10;
+                while (!GameState.Story.Has("fixture_skip_exit_pause") && Time.realtimeSinceStartup < deadline)
+                {
+                    Assert.That(Time.timeScale, Is.Zero, "Confirmation must never release time during exit cover.");
+                    yield return null;
+                }
+                Assert.That(run.Skipped, Is.True);
+                Assert.That(prompt.IsOpen, Is.False);
+                Assert.That(GameState.Story.Has("fixture_skip_exit_pause"), Is.True);
+                Assert.That(phase.GetValue(service).ToString(), Is.EqualTo("ExitReveal"));
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+            }
+            finally { service.Cancel(); Object.Destroy(definition); }
+        }
+
+        private static bool RequestSkip(CutsceneRunner service) => (bool)typeof(CutsceneRunner)
+            .GetMethod("RequestSkip", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(service, null);
+
+        private static void Submit(Button button)
+        {
+            using var submit = NavigationSubmitEvent.GetPooled();
+            submit.target = button;
+            button.SendEvent(submit);
         }
 
         private static CutsceneDefinition CreateCutscene(string id, bool skip, string completionFlag, string dialogue,

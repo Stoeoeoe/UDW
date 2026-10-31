@@ -20,6 +20,8 @@ namespace Core.Scripting
     public sealed class CutsceneRunner : Singleton<CutsceneRunner>, IEventListener<DayTransitionStarted>
     {
         private CutsceneCatalog _catalog;
+        [SerializeField] private CutsceneSkipConfirmation skipConfirmation;
+        [SerializeField] private TimeScaleController timeScaleController;
         [ShowInInspector, ReadOnly] private CutscenePresentationSettings _presentation;
         private readonly VulcanusLuaEngine _completionActions = new();
         private LevelManager _level;
@@ -42,6 +44,8 @@ namespace Core.Scripting
             _presentation = Resources.Load<CutscenePresentationSettings>(CutscenePresentationSettings.ResourceName);
             if (!_presentation) throw new InvalidOperationException("Cutscenes require Resources/CutscenePresentation settings.");
             _presentation.RequireValidConfiguration();
+            if (!skipConfirmation) throw new InvalidOperationException("CutsceneRunner requires its skip confirmation screen.");
+            if (!timeScaleController) throw new InvalidOperationException("CutsceneRunner requires the time scale controller.");
         }
 
         private void OnEnable()
@@ -123,9 +127,11 @@ namespace Core.Scripting
             if (run == null) return;
             try
             {
+                if (Input.InputManager.Instance.SkipCutscenePressed) RequestSkip();
+                if (skipConfirmation.IsOpen) return;
+                _transition.Play();
                 AdvanceTransition(run);
                 if (!ReferenceEquals(ActiveRun, run)) return;
-                if (Input.InputManager.Instance.SkipCutscenePressed && Skip(run)) return;
                 if (_transitionPhase == TransitionPhase.EntranceCover) return;
                 if (_finishRequested)
                 {
@@ -162,6 +168,7 @@ namespace Core.Scripting
                     _completionCommitted = ApplyOutcome(run, completed: true);
                     _transitionPhase = TransitionPhase.ExitReveal;
                     _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
+                    timeScaleController.SetPaused(run, false);
                     break;
                 case TransitionPhase.ExitReveal:
                     Finish(run, completed: true);
@@ -196,7 +203,17 @@ namespace Core.Scripting
         {
             if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || _finishRequested || !run.Definition.AllowSkip) return false;
             run.Skipped = true;
+            timeScaleController.SetPaused(run, true);
             RequestCompletion(run);
+            return true;
+        }
+
+        internal bool RequestSkip()
+        {
+            var run = ActiveRun;
+            if (run == null || !run.IsRunning || _finishRequested || !run.Definition.AllowSkip) return false;
+            if (!skipConfirmation.Show(() => Skip(run))) return false;
+            _transition.Pause();
             return true;
         }
 
@@ -247,6 +264,7 @@ namespace Core.Scripting
             if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || _settlingOutcome) return;
             // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
             run.IsRunning = false;
+            if (skipConfirmation) skipConfirmation.Hide();
             var committed = _completionCommitted;
             try
             {
@@ -258,6 +276,7 @@ namespace Core.Scripting
                 _transition = null;
                 _transitionPhase = TransitionPhase.None;
                 _finishRequested = _completionCommitted = false;
+                timeScaleController.SetPaused(run, false);
                 foreach (var placement in run.Placements)
                     if (placement.Character) placement.Character.SetControlBlocked(run, false);
                 run.Characters?.FinishSpawns(keep: committed);

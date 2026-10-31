@@ -70,6 +70,7 @@ namespace Core.Dialogue.Vulcanus
             var elapsed = 0f;
             while (revealed < localizedText.Length && !_revealRequested && charactersPerSecond > 0f)
             {
+                if (!ReceivesInput || Time.timeScale == 0f) { yield return null; continue; }
                 elapsed += Time.unscaledDeltaTime * charactersPerSecond;
                 while (elapsed >= 1f && revealed < localizedText.Length)
                 {

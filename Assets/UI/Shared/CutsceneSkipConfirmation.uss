@@ -1,0 +1,27 @@
+.skip-confirmation {
+    display: none;
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    background-color: rgba(12, 18, 15, 0.7);
+    align-items: center;
+    justify-content: center;
+}
+.skip-confirmation-panel {
+    width: 88%; max-width: 480px;
+    flex-shrink: 0;
+    padding: 24px;
+    background-color: rgb(238, 226, 193);
+    border-width: 3px; border-color: rgb(177, 139, 73);
+    color: rgb(49, 43, 32);
+}
+.skip-confirmation-title { font-size: 24px; -unity-font-style: bold; white-space: normal; }
+.skip-confirmation-message { margin-top: 12px; white-space: normal; }
+.skip-confirmation-buttons { flex-direction: row; flex-wrap: wrap; margin-top: 20px; }
+.skip-confirmation-button {
+    flex-grow: 1; min-height: 40px; margin: 4px;
+    padding: 8px;
+    background-color: rgb(249, 242, 218);
+    color: rgb(49, 43, 32);
+    border-width: 2px; border-color: rgb(177, 139, 73);
+}
+.skip-confirmation-button:hover, .skip-confirmation-button:focus { border-color: rgb(75, 105, 67); background-color: rgb(226, 232, 202); }

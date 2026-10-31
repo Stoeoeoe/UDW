@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="CutsceneSkipConfirmation.uss" />
+    <ui:VisualElement name="skipConfirmation" class="skip-confirmation" focusable="true">
+        <ui:VisualElement class="skip-confirmation-panel">
+            <ui:Label text="Skip this cutscene?" class="skip-confirmation-title" />
+            <ui:Label text="Are you sure you want to skip the rest of this cutscene?" class="skip-confirmation-message" />
+            <ui:VisualElement class="skip-confirmation-buttons">
+                <ui:Button name="keepWatching" text="Keep watching" class="skip-confirmation-button" />
+                <ui:Button name="confirmSkip" text="Skip cutscene" class="skip-confirmation-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

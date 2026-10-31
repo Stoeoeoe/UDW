@@ -827,8 +827,19 @@ step identity after releasing control and restoring staging.
 While staging, normal gameplay, world interactions and global menu shortcuts
 are blocked. UI input stays enabled for dialogue and skip. The in-game calendar
 pauses without changing Unity time scale or freezing Rigidbody2D movement.
-Escape/controller UI Cancel skips the entire run only when `allowSkip` is true;
-it never dismisses a standalone dialogue. Pause menus are unavailable during v1
+Escape/controller UI Cancel opens a confirmation only when `allowSkip` is true.
+The player must select **Skip cutscene** to skip; **Keep watching** is focused by
+default. Escape/controller Cancel dismisses the confirmation, and the opening
+press cannot also confirm it. The confirmation pauses Unity time, cutscene script
+progression, transition tweens and covered dialogue text reveal until dismissed.
+Dismissing it releases its own pause and restores the previous time scale; dialogue input
+belongs to the confirmation until it closes. Completion or cancellation closes
+the prompt. The `CutsceneRun.Skip()` API still skips directly for explicit callers.
+Confirming a skip hands the pause to the run before closing the dialog. Time stays
+frozen through the exit cover and completion changes, resuming when exit reveal
+starts. Without transitions it resumes after completion is settled. Cancellation
+also releases the run's pause.
+UI Cancel never dismisses a standalone dialogue. Pause menus are unavailable during v1
 staging. Camera, animation and audio commands remain outside the initial action
 set.
 

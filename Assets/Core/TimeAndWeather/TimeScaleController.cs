@@ -24,6 +24,8 @@ namespace Core.TimeAndWeather
         }
 
         private readonly Stack<Request> _requests = new();
+        private readonly HashSet<object> _pauseOwners = new();
+        private float _scaleBeforePause;
         private float _initialFixedDeltaTime, _initialMaximumDeltaTime;
 
         private void Awake()
@@ -43,13 +45,32 @@ namespace Core.TimeAndWeather
         {
             MMTimeScaleEvent.Unregister(OnTimeScaleEvent);
             MMFreezeFrameEvent.Unregister(OnFreezeFrame);
+            _pauseOwners.Clear();
             ResetScale();
+        }
+
+        public void SetPaused(object owner, bool paused)
+        {
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            if (paused)
+            {
+                if (!_pauseOwners.Add(owner)) return;
+                if (_pauseOwners.Count == 1) _scaleBeforePause = Time.timeScale;
+                Apply(0);
+            }
+            else
+            {
+                if (!_pauseOwners.Remove(owner) || _pauseOwners.Count > 0) return;
+                Apply(_scaleBeforePause);
+                Apply(Current(0));
+            }
         }
 
         private void Update() => Advance(Time.unscaledDeltaTime);
 
         private void Advance(float dt)
         {
+            if (_pauseOwners.Count > 0) { Apply(0); return; }
             if (_requests.TryPeek(out var top))
             {
                 top.Elapsed += dt;
@@ -118,6 +139,7 @@ namespace Core.TimeAndWeather
 
         private void Apply(float scale)
         {
+            if (_pauseOwners.Count > 0) scale = 0;
             // Guards against NaN from misconfigured feedbacks; authored curves can also overshoot, so clamp to Unity's range.
             scale = float.IsNaN(scale) ? normalTimeScale : Mathf.Clamp(scale, 0f, 100f);
             if (updateTimescale) Time.timeScale = scale;

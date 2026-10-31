@@ -73,6 +73,28 @@ namespace Core.TimeAndWeather.Editor
         }
 
         [Test]
+        public void ModalPauseStopsTimeAndEffectTimersUntilItsOwnersReleaseIt()
+        {
+            MMTimeScaleEvent.Trigger(MMTimeScaleMethods.For, 0.5f, 1f, false, 0f, false);
+            Advance(0.1f);
+            var first = new object();
+            var second = new object();
+            _controller.SetPaused(first, true);
+            _controller.SetPaused(first, true);
+            _controller.SetPaused(second, true);
+            Assert.That(Time.timeScale, Is.Zero);
+            Advance(10f);
+            _controller.SetPaused(first, false);
+            Assert.That(Time.timeScale, Is.Zero);
+            _controller.SetPaused(second, false);
+            Assert.That(Time.timeScale, Is.EqualTo(0.5f));
+            Advance(0.8f);
+            Assert.That(Time.timeScale, Is.EqualTo(0.5f), "The underlying effect timer did not advance during the modal pause.");
+            Advance(0.2f);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void UnfreezeReleasesOnlyTheTopRequestWhileResetClearsAllRequests()
         {
             MMTimeScaleEvent.Trigger(MMTimeScaleMethods.For, 0.5f, 0f, false, 0f, true);
