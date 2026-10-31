@@ -45,7 +45,8 @@ namespace Core.Common.Editor
             var singletonBase = typeof(T).BaseType;
             while (singletonBase != null && !(singletonBase.IsGenericType &&
                    (singletonBase.GetGenericTypeDefinition() == typeof(Singleton<>) ||
-                    singletonBase.GetGenericTypeDefinition() == typeof(MMSingleton<>))))
+                    singletonBase.GetGenericTypeDefinition() == typeof(MMSingleton<>) ||
+                    singletonBase.GetGenericTypeDefinition() == typeof(MMPersistentSingleton<>))))
                 singletonBase = singletonBase.BaseType;
             if (singletonBase == null) throw new ArgumentException($"{typeof(T).Name} is not a supported singleton.");
             var field = singletonBase.GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic);
@@ -58,7 +59,7 @@ namespace Core.Common.Editor
             _services.Add(service);
             configure?.Invoke(component);
             // More Mountains skips registration in EditMode; Core.Singleton registers during Awake.
-            if (!initialize || singletonBase.GetGenericTypeDefinition() == typeof(MMSingleton<>))
+            if (!initialize || singletonBase.GetGenericTypeDefinition() != typeof(Singleton<>))
                 field.SetValue(null, component);
             if (initialize)
             {

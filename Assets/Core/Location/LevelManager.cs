@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
+using Core.Catalogs;
 using Core.Events;
 using Core.Game;
 using Core.Tile;
@@ -30,8 +31,6 @@ namespace Core.Location
 
         [SerializeField] MainCharacter _mainCharacterPrefab;
 
-        [Header("Vulcanus")] [SerializeField] VulcanusWorldCatalog _VulcanusWorldCatalog;
-
         [Header("Fallback spawn (editor / first run)")] [SerializeField]
         string _defaultSpawnKey = "Default";
 
@@ -46,8 +45,7 @@ namespace Core.Location
 
         // - Location lookup ---------------------------------------------------------
 
-        List<LocationData> _allLocations = new();
-        Dictionary<string, LocationData> _locationById = new();
+        private LocationCatalog _locations;
         Dictionary<string, LocationData> _locationByScenePath = new(StringComparer.OrdinalIgnoreCase);
 
         // - Lifecycle callbacks ---------------------------------------------------
@@ -59,26 +57,9 @@ namespace Core.Location
         protected override void OnAwake()
         {
             base.OnAwake();
-            _allLocations = Resources.LoadAll<LocationData>("Locations").ToList();
-
-            if (_VulcanusWorldCatalog != null)
-            {
-                var mappedLocations = _VulcanusWorldCatalog.GetMappedLocations();
-                for (int i = 0; i < mappedLocations.Length; i++)
-                {
-                    var location = mappedLocations[i];
-                    if (location == null || _allLocations.Contains(location))
-                        continue;
-
-                    _allLocations.Add(location);
-                }
-            }
-
-            _locationById = _allLocations
-                .Where(l => l != null && !string.IsNullOrWhiteSpace(l.id))
-                .GroupBy(l => l.id, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-            _locationByScenePath = Core.Catalogs.IdIndex.FirstWins(_allLocations,
+            _locations = CatalogResources.Load<LocationCatalog>(LocationCatalog.ResourceName);
+            if (!_locations) throw new InvalidOperationException("LevelManager requires the generated LocationCatalog.");
+            _locationByScenePath = Core.Catalogs.IdIndex.FirstWins(_locations.EnabledDefinitions,
                 location => location ? location.ScenePath : null, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -194,7 +175,7 @@ namespace Core.Location
         }
 
         public LocationData GetLocationDataById(string id) =>
-            _locationById.GetValueOrDefault(id);
+            _locations.Get(id);
 
         public void RegisterLifecycle(ILocationLifecycle component)
         {

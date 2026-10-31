@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Core.Location;
+using Core.Catalogs.Editor;
 using Core.Spawning;
 using Core.Spawning.Editor;
 using Core.Tile.Editor.Vulcanus;
@@ -100,7 +101,7 @@ namespace Core.Tile.Editor
             _mapJson = JObject.Parse(@"{
                 'id':'test:map', 'name':'A display name', 'width':4, 'height':4,
                 'tilesetRefs':['TEST:TILES'],
-                'metadata':{'id':'override:forbidden','scenePath':'wrong','locationType':'Indoor'},
+                'metadata':{'id':'override:forbidden','scenePath':'wrong','locationType':'Indoor','muteWeatherAudio':true},
                 'layers':[
                     {'name':'Terrain','kind':'terrain','data':[[0]],'terrainData':[[0]],'terrainPalette':['dirt']},
                     {'name':'Furniture','kind':'object','zOrder':7,'objectInstances':[
@@ -149,6 +150,7 @@ namespace Core.Tile.Editor
             Assert.That(location.id, Is.EqualTo(map.MapId));
             Assert.That(location.scenePath, Is.EqualTo(_scenePath));
             Assert.That(location.locationType, Is.EqualTo(LocationType.Indoor));
+            Assert.That(location.muteWeatherAudio, Is.True);
             Assert.That(map.TerrainTilemap.GetTile(new Vector3Int(0, 3, 0)), Is.Not.Null);
             Assert.That(map.TryGetTerrainType(new Vector2Int(0, 3), out var terrain), Is.True);
             Assert.That(terrain, Is.EqualTo(TerrainType.Dirt));
@@ -479,6 +481,30 @@ namespace Core.Tile.Editor
             Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(_mapPath), Is.Null);
             Assert.That(AssetDatabase.LoadAssetAtPath<TextAsset>(_mapPath), Is.Null);
             Assert.That(File.Exists(Absolute(_scenePath)), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator LocationCatalogAutomaticallyTracksImportedMapsWithoutManagerAssignments()
+        {
+            var catalog = ScriptableObject.CreateInstance<LocationCatalog>();
+            AssetDatabase.CreateAsset(catalog, _root + "/locations.asset");
+            ImportMap();
+            yield return AwaitCatalog(() => catalog.Get("TEST:MAP"));
+            Assert.That(catalog.Get("test:map"), Is.SameAs(ImportedLocation()));
+
+            var owner = new GameObject("Location lookup");
+            owner.SetActive(false);
+            _views.Add(owner);
+            var manager = owner.AddComponent<LevelManager>();
+            typeof(LevelManager).GetField("_locations", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(manager, catalog);
+            Assert.That(manager.GetLocationDataById("TEST:MAP"), Is.SameAs(ImportedLocation()));
+
+            _mapJson["id"] = "test:renamed";
+            ImportMap();
+            yield return AwaitCatalog(() => catalog.Get("test:renamed") && !catalog.Get("test:map"));
+            Assert.That(catalog.Get("test:renamed"), Is.SameAs(ImportedLocation()));
+            AssetDatabase.DeleteAsset(_mapPath);
+            yield return AwaitCatalog(() => !catalog.Get("test:renamed"));
         }
 
         [UnityTest]

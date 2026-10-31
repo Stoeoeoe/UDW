@@ -343,6 +343,22 @@ namespace Core.Tile.Editor
             Assert.That(_map.CurrentBounds.size, Is.EqualTo(Vector3.zero));
         }
 
+        [Test]
+        public void IndoorMapWithEmptyTerrainUsesAuthoredBounds()
+        {
+            var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/indoor.vmap");
+            var instance = _fixture.Own(Object.Instantiate(source));
+            var imported = instance.GetComponent<VulcanusImportedMap>();
+            Assert.That(imported.TerrainTilemap.GetUsedTilesCount(), Is.Zero);
+            Set(_map, "_currentMap", imported);
+            Set(_map, "_terrainTilemap", imported.TerrainTilemap);
+            var bounds = _map.CurrentBounds;
+            Assert.That(bounds.min, Is.EqualTo(instance.transform.position));
+            Assert.That(bounds.size, Is.EqualTo(new Vector3(imported.Width, imported.Height, 0)));
+            Assert.That(bounds.size.x, Is.GreaterThan(0));
+            Assert.That(bounds.size.y, Is.GreaterThan(0));
+        }
+
         [TestCase(3, 4, 5, true)]
         [TestCase(4, 4, 5, false)]
         [TestCase(0, 0, 0, true)]

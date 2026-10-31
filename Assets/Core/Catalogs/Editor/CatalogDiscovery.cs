@@ -71,7 +71,8 @@ namespace Core.Catalogs.Editor
                  path.EndsWith(".character.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".runtime.cutscene.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".runtime.dialogue.json", StringComparison.OrdinalIgnoreCase) ||
-                 path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase)) &&
+                 path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase) ||
+                 path.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase)) &&
                 !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) Schedule();
         }
 

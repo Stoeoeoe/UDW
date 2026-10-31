@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Collections.Generic;
 using Core.Common.Editor;
 using DG.Tweening;
 using NUnit.Framework;
@@ -18,6 +19,7 @@ namespace Core.Location.Editor
         private UnityEngine.UI.Image _image;
         private CanvasGroup _group;
         private Texture2D _mask;
+        private readonly List<UnityEngine.Camera> _otherMainCameras = new();
 
         [TearDown]
         public void TearDown()
@@ -26,6 +28,9 @@ namespace Core.Location.Editor
             if (_root) Object.DestroyImmediate(_root);
             if (_target) { _target.Release(); Object.DestroyImmediate(_target); }
             if (_mask) Object.DestroyImmediate(_mask);
+            foreach (var camera in _otherMainCameras)
+                if (camera) camera.enabled = true;
+            _otherMainCameras.Clear();
         }
 
         [TestCase(ScreenFader.MosaicOrder.Random)]
@@ -125,8 +130,9 @@ namespace Core.Location.Editor
             Assert.That(CountBlackPixels(), Is.Zero);
         }
 
-        [Test]
-        public void WeatherShaderBlendsBackToTheSceneUnderTheCutsceneCover()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WeatherShaderBlendsBackToTheSceneUnderCutsceneOrIndoorCover(bool indoors)
         {
             var material = new Material(Shader.Find("Game/UberWeatherShader"));
             var target = new RenderTexture(8, 8, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
@@ -134,6 +140,7 @@ namespace Core.Location.Editor
             var previous = RenderTexture.active;
             try
             {
+                Shader.SetGlobalFloat("_IndoorWeatherCover", indoors ? 1f : 0f);
                 material.SetTexture("_BlitTexture", Texture2D.blackTexture);
                 material.SetFloat("_CloudEnabled", 1f);
                 material.SetTexture("_CloudTex", Texture2D.whiteTexture);
@@ -152,12 +159,13 @@ namespace Core.Location.Editor
                     RenderTexture.active = target;
                     pixels.ReadPixels(new Rect(0, 0, 8, 8), 0, 0);
                     pixels.Apply();
-                    Assert.That(pixels.GetPixel(4, 4).r, Is.EqualTo(0.25f * (1f - cover)).Within(0.01f));
+                    Assert.That(pixels.GetPixel(4, 4).r, Is.EqualTo(indoors ? 0f : 0.25f * (1f - cover)).Within(0.01f));
                 }
             }
             finally
             {
                 Shader.SetGlobalFloat("_CutsceneWeatherCover", 0f);
+                Shader.SetGlobalFloat("_IndoorWeatherCover", 0f);
                 RenderTexture.active = previous;
                 target.Release();
                 Object.DestroyImmediate(target);
@@ -225,6 +233,17 @@ namespace Core.Location.Editor
             _camera = cameraObject.AddComponent<UnityEngine.Camera>();
             if (effect == ScreenFader.Effect.Iris) _camera.tag = "MainCamera";
             _camera.enabled = false;
+            if (effect == ScreenFader.Effect.Iris)
+            {
+                // Iris uses Camera.main. Isolate it from cameras in the user's open scene.
+                foreach (var camera in Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsSortMode.None))
+                    if (camera != _camera && camera.enabled && camera.CompareTag("MainCamera"))
+                    {
+                        _otherMainCameras.Add(camera);
+                        camera.enabled = false;
+                    }
+                _camera.enabled = true;
+            }
             _camera.orthographic = true;
             _camera.orthographicSize = 0.5f;
             _camera.transform.position = new Vector3(0, 0, -10);

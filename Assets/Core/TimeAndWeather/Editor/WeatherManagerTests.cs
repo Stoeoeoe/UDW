@@ -4,11 +4,13 @@ using System.Reflection;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
+using Core.Location;
 using Core.Scripting;
 using Core.Scripting.Editor;
 using Core.Tile.Water;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -27,15 +29,19 @@ namespace Core.TimeAndWeather.Editor
         private Color _daylight;
         private WeatherData _dailyWeather;
         private float _previousWaterRain;
+        private float _previousIndoorCover;
+        private WeatherSoundManagerProbe _sound;
         private readonly List<long> _clockNotifications = new();
 
         [SetUp]
         public void SetUp()
         {
             _previousWaterRain = WaterInteraction.Rain;
+            _previousIndoorCover = Shader.GetGlobalFloat("_IndoorWeatherCover");
             _fixture = new GameTestFixture("Weather tests");
             _fixture.Root.SetActive(true);
             _fixture.AddSingleton<GameStateManager>();
+            _sound = _fixture.RegisterSingleton<WeatherSoundManagerProbe>();
             var volumeObject = new GameObject("Weather volume");
             volumeObject.transform.SetParent(_fixture.Root.transform);
             _volume = volumeObject.AddComponent<Volume>();
@@ -68,6 +74,7 @@ namespace Core.TimeAndWeather.Editor
             EventBus<GameTimeChangedEvent>.Unsubscribe(this);
             _fixture.Dispose();
             WaterInteraction.Rain = _previousWaterRain;
+            Shader.SetGlobalFloat("_IndoorWeatherCover", _previousIndoorCover);
         }
 
         [Test]
@@ -299,6 +306,142 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_daylight, Is.EqualTo(Color.green));
         }
 
+        [Test]
+        public void RoomsUseIndoorLightRampAndSuppressWeatherUntilReturningOutside()
+        {
+            _clock.Start();
+            var rainy = _weather.CurrentWeather;
+            rainy.indoorDaylightColorGradient = new Gradient
+            {
+                colorKeys = new[] { new GradientColorKey(Color.gray, 0), new GradientColorKey(Color.blue, 1) }
+            };
+            var room = Location(Core.Common.LocationType.Indoor);
+            _weather.OnLocationEnter(room);
+            Assert.That(_weather.CurrentWeather, Is.SameAs(rainy));
+            Assert.That(WaterInteraction.Rain, Is.Zero);
+            Assert.That(Shader.GetGlobalFloat("_IndoorWeatherCover"), Is.EqualTo(1));
+            Assert.That(_daylight, Is.EqualTo(rainy.indoorDaylightColorGradient.Evaluate(_clock.DayProgress)));
+            _clock.SetTimeOfDay(18, 0);
+            Assert.That(_daylight, Is.EqualTo(rainy.indoorDaylightColorGradient.Evaluate(_clock.DayProgress)));
+            CompleteWeather(_summer.weatherData.GetRandomItem());
+            Assert.That(Shader.GetGlobalFloat("_IndoorWeatherCover"), Is.EqualTo(1));
+            Assert.That(_daylight, Is.EqualTo(Color.white));
+            CompleteWeather(rainy);
+            Assert.That(WaterInteraction.Rain, Is.Zero, "Changing weather in a room must not enable rain splashes.");
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            Assert.That(Shader.GetGlobalFloat("_IndoorWeatherCover"), Is.Zero);
+            Assert.That(WaterInteraction.Rain, Is.EqualTo(0.35f));
+            Assert.That(_daylight, Is.EqualTo(Color.green));
+        }
+
+        [Test]
+        public void WeatherAmbienceSwapsForRoomsCanBeMutedAndReleasesItsLoopOnDisable()
+        {
+            _clock.Start();
+            var rainy = _weather.CurrentWeather;
+            rainy.outdoorAmbience = _fixture.Own(AudioClip.Create("Outdoor rain", 100, 1, 44100, false));
+            rainy.indoorAmbience = _fixture.Own(AudioClip.Create("Muffled rain", 100, 1, 44100, false));
+            var outdoors = Location(Core.Common.LocationType.Outdoor);
+            var room = Location(Core.Common.LocationType.Indoor);
+            _weather.OnLocationEnter(outdoors);
+            Assert.That(_sound.LastSource.clip, Is.SameAs(rainy.outdoorAmbience));
+            Assert.That(_sound.Options.Loop && _sound.Options.Persistent, Is.True);
+            Assert.That(_sound.Options.SpatialBlend, Is.Zero);
+            _weather.OnLocationEnter(outdoors);
+            Assert.That(_sound.Plays, Is.EqualTo(1), "Moving between outdoor maps keeps the same ambience running.");
+            _weather.OnLocationEnter(room);
+            Assert.That(_sound.LastSource.clip, Is.SameAs(rainy.indoorAmbience));
+            Assert.That(_sound.Frees, Is.EqualTo(1));
+            room.muteWeatherAudio = true;
+            _weather.OnLocationEnter(room);
+            Assert.That(_sound.Frees, Is.EqualTo(2));
+            CompleteWeather(rainy);
+            Assert.That(_sound.Plays, Is.EqualTo(2), "Weather changes must respect a silent location.");
+            outdoors.muteWeatherAudio = true;
+            _weather.OnLocationEnter(outdoors);
+            Assert.That(_sound.Plays, Is.EqualTo(2), "The opt-out also applies outdoors.");
+            outdoors.muteWeatherAudio = false;
+            _weather.OnLocationEnter(outdoors);
+            Assert.That(_sound.LastSource.clip, Is.SameAs(rainy.outdoorAmbience));
+            GameTestFixture.Invoke(_weather, "OnDisable");
+            Assert.That(_sound.Frees, Is.EqualTo(3));
+            Assert.That(Shader.GetGlobalFloat("_IndoorWeatherCover"), Is.Zero);
+        }
+
+        [Test]
+        public void MissingIndoorClipMeansSilenceAndDoesNotReuseOutdoorRain()
+        {
+            _clock.Start();
+            _weather.CurrentWeather.outdoorAmbience = _fixture.Own(AudioClip.Create("Rain", 100, 1, 44100, false));
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
+            Assert.That(_sound.Plays, Is.EqualTo(1));
+            Assert.That(_sound.Frees, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SharedRainLoopIsMuffledIndoorsAndRestoredOutsideWithoutRestarting()
+        {
+            _clock.Start();
+            var rainy = _weather.CurrentWeather;
+            rainy.outdoorAmbience = rainy.indoorAmbience = _fixture.Own(AudioClip.Create("Rain", 44100, 1, 44100, false));
+            rainy.ambienceVolume = 0.8f;
+            rainy.indoorAmbienceVolumeMultiplier = 0.6f;
+            rainy.indoorAmbienceLowPass = true;
+            rainy.indoorAmbienceCutoffFrequency = 1500;
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            var source = _sound.LastSource;
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
+            var filter = source.GetComponent<AudioLowPassFilter>();
+            Assert.That(filter.enabled, Is.True);
+            Assert.That(filter.cutoffFrequency, Is.EqualTo(1500).Within(0.01f));
+            Assert.That(source.volume, Is.EqualTo(0.48f).Within(0.001f));
+            Assert.That(_sound.Plays, Is.EqualTo(1));
+            Assert.That(_sound.Frees, Is.Zero);
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            Assert.That(filter.enabled, Is.False);
+            Assert.That(source.volume, Is.EqualTo(0.8f));
+            Assert.That(_sound.Plays, Is.EqualTo(1));
+            _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
+            var dry = _summer.weatherData.GetRandomItem();
+            dry.indoorAmbience = rainy.indoorAmbience;
+            CompleteWeather(dry);
+            Assert.That(filter.enabled, Is.False, "New weather settings apply even when the clip stays the same.");
+            Assert.That(source.volume, Is.EqualTo(1f));
+            CompleteWeather(rainy);
+            Assert.That(filter.enabled, Is.True);
+            var room = Location(Core.Common.LocationType.Indoor);
+            room.muteWeatherAudio = true;
+            _weather.OnLocationEnter(room);
+            Assert.That(_sound.Frees, Is.EqualTo(1));
+            Assert.That(filter.enabled, Is.False, "Returning a source to the shared pool must clear weather filtering.");
+        }
+
+        [TestCase(float.NaN, 1500)]
+        [TestCase(-0.1f, 1500)]
+        [TestCase(1.1f, 1500)]
+        [TestCase(0.6f, float.PositiveInfinity)]
+        [TestCase(0.6f, 0)]
+        [TestCase(0.6f, 22001)]
+        public void InvalidIndoorAudioSettingsFailBeforeChangingWeather(float volume, float cutoff)
+        {
+            _clock.Start();
+            var previous = _weather.CurrentWeather;
+            var invalid = _fixture.Own(ScriptableObject.CreateInstance<WeatherData>());
+            invalid.indoorAmbienceVolumeMultiplier = volume;
+            invalid.indoorAmbienceCutoffFrequency = cutoff;
+            Assert.Throws<System.ArgumentException>(() => _weather.SetWeather(invalid));
+            Assert.That(_weather.CurrentWeather, Is.SameAs(previous));
+        }
+
+        private LocationData Location(Core.Common.LocationType type)
+        {
+            var location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+            location.id = type == Core.Common.LocationType.Indoor ? "test:room" : "test:outside";
+            location.locationType = type;
+            return location;
+        }
+
         public void OnEvent(WeatherUpdateEvent change) => _notifications.Add(change.WeatherData);
         public void OnEvent(DayLightUpdateEvent change) => _daylight = change.Color;
         public void OnEvent(NewDayEvent change) => _dailyWeather = _weather.CurrentWeather;
@@ -331,5 +474,27 @@ namespace Core.TimeAndWeather.Editor
 
         private static void Set(object target, string field, object value) => target.GetType()
             .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
+    }
+
+    public sealed class WeatherSoundManagerProbe : MMSoundManager
+    {
+        public int Plays, Frees;
+        public AudioSource LastSource;
+        public MMSoundManagerPlayOptions Options;
+        protected override void Awake() { }
+        public override AudioSource PlaySound(AudioClip clip, MMSoundManagerPlayOptions options)
+        {
+            Plays++;
+            Options = options;
+            LastSource = gameObject.AddComponent<AudioSource>();
+            LastSource.clip = clip;
+            return LastSource;
+        }
+        public override void FreeSound(AudioSource source)
+        {
+            Frees++;
+            source.Stop();
+            source.clip = null;
+        }
     }
 }

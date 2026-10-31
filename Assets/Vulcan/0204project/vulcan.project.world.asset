@@ -21,6 +21,10 @@ MonoBehaviour:
     candidatePrefabPaths:
     - Assets/Environment/Torch.prefab
   mapBindings:
+  - mapId: base:indoor
+    mapPrefab: {fileID: -8855744147391826209, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
+    locationData: {fileID: 447913706122126786, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
+    sourceAssetGuid: 066d4a6a73f28c04ab723abbb0be2de3
   - mapId: base:map-1
     mapPrefab: {fileID: -1433788042044329938, guid: d0b207797bae4d244bf3348ac6ee6098, type: 3}
     locationData: {fileID: 447913706122126786, guid: d0b207797bae4d244bf3348ac6ee6098, type: 3}

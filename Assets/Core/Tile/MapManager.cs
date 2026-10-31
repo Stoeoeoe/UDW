@@ -45,11 +45,9 @@ namespace Core.Tile
             {
                 // Tilemap.cellBounds max is already exclusive, so CellToWorld(max) gives us the
                 // outer map edge directly.
-                if (_terrainTilemap != null)
+                if (_terrainTilemap != null && _terrainTilemap.cellBounds.size.x > 0 && _terrainTilemap.cellBounds.size.y > 0)
                 {
                     var cellBounds = _terrainTilemap.cellBounds;
-                    if (cellBounds.size == Vector3Int.zero)
-                        return new Bounds(Vector3.zero, Vector3.zero);
 
                     var worldMin = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMin, cellBounds.yMin, 0));
                     var worldMax = _terrainTilemap.CellToWorld(new Vector3Int(cellBounds.xMax, cellBounds.yMax, 0));
@@ -62,7 +60,7 @@ namespace Core.Tile
                     return new Bounds((min + max) * 0.5f, max - min);
                 }
 
-                // Fallback to map metadata if available
+                // Object-only rooms can have an empty terrain layer but still have authored map dimensions.
                 if (_currentMap != null)
                 {
                     var width = Mathf.Max(1, _currentMap.Width);

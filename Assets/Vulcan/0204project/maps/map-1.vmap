@@ -4252,14 +4252,14 @@
     "anchors": [
       {
         "id": "anchor-1776461296590",
-        "name": "Arrival",
+        "name": "Arrival from house",
         "position": [
-          224,
-          176
+          32,
+          48
         ],
         "facing": [
-          0,
-          1
+          1,
+          0
         ],
         "tags": []
       },
@@ -4277,6 +4277,19 @@
         "tags": [
           "prototype"
         ]
+      },
+      {
+        "id": "anchor-1793454919843",
+        "name": "Anchor",
+        "position": [
+          256,
+          256
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": []
       }
     ],
     "triggers": [
@@ -4325,6 +4338,21 @@
         "tags": [],
         "cutsceneId": "base:stormglass",
         "label": "Stormglass"
+      },
+      {
+        "id": "trigger-1793454880264",
+        "type": "locationLinkTrigger",
+        "shape": "rectangle",
+        "position": [
+          0,
+          32
+        ],
+        "size": [
+          32,
+          32
+        ],
+        "tags": [],
+        "label": "Go to house"
       }
     ],
     "collisions": [
@@ -4391,6 +4419,14 @@
       "targetMapId": "base:map-2",
       "targetAnchorId": "anchor-1776461150757",
       "label": "Exit to Map 2"
+    },
+    {
+      "id": "link-1793455007110",
+      "triggerId": "trigger-1793454880264",
+      "targetMapId": "base:indoor",
+      "targetAnchorId": "anchor-1793454943629",
+      "linkType": "open",
+      "label": "To House"
     }
   ],
   "variations": [

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd9f1ef8bb5070f44bbc6748475bed91, type: 3}
+  m_Name: LocationCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Location.LocationCatalog
+  entries:
+  - definition: {fileID: 11400000, guid: 3f3e5bd81c79f0c45bb7c97d7d1f44ce, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 519aff2edb21476499b89667e4e6fe97, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 33f341d742892814ebfc3e5d8582fae8, type: 2}
+    enabled: 1
+  - definition: {fileID: 447913706122126786, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
+    enabled: 1
+  - definition: {fileID: 447913706122126786, guid: d0b207797bae4d244bf3348ac6ee6098, type: 3}
+    enabled: 1
+  - definition: {fileID: 447913706122126786, guid: ef40c5f321e7ffe43b545e477b7f6c57, type: 3}
+    enabled: 1
+  - definition: {fileID: 447913706122126786, guid: 369140c4811b0fe498847e5872798968, type: 3}
+    enabled: 1
+  - definition: {fileID: 447913706122126786, guid: de6b29fcf78341f48b889c29d07f4cfb, type: 3}
+    enabled: 1

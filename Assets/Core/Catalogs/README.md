@@ -93,3 +93,10 @@ carry gameplay meaning and must not become a sorted flat catalog.
 `TypewriterSoundCatalog` discovers sounds throughout `Assets` and indexes `ActorId`, not asset names. It preserves case-insensitive speaker matching through `IdComparer`; flat catalogs otherwise retain ordinal comparison. Shared duplicate validation uses the same comparer as lookup, so `Player` and `player` cannot coexist in the speaker catalog. `DataManager` exposes this catalog directly, and all presenters use `TypewriterSoundResolver`; there is no Resources folder scan or copied list/dictionary.
 
 The delayed import hook also covers `.vitm` imports, moves and deletions, so imported item definitions and changed IDs update automatically without entering play. Catalog writes remain excluded from import-triggered scheduling to avoid refresh loops.
+
+`LocationCatalog` discovers `LocationData` throughout `Assets`, including subassets
+of imported `.vmap` files. Map imports, moves and deletions also schedule discovery.
+`LevelManager` uses this catalog for location and scene lookup, so adding a location
+requires no manager assignment. Location IDs compare case-insensitively, matching
+the existing link and world-catalog contract. Project-scoped world catalogs remain
+responsible for map/prefab relationships; they do not register runtime locations.

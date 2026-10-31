@@ -80,6 +80,10 @@ namespace Core.TimeAndWeather.Editor
             _clock = clock;
 
             Set(gui, "screenFader", fader);
+            Set(gui, "toolHud", Child("Hotbar").AddComponent<CanvasGroup>());
+            var document = gui.GetComponent<UnityEngine.UIElements.UIDocument>();
+            document.panelSettings = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
             GameTestFixture.Invoke(gui, "Start");
             var weather = _fixture.Own(ScriptableObject.CreateInstance<WeatherData>());
             var season = _fixture.Own(ScriptableObject.CreateInstance<SeasonData>());

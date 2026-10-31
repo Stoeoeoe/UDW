@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Core.Divinity;
 using Core.Inventory;
+using Core.Location;
 using Core.Scripting;
 using Core.TimeAndWeather;
 using Interaction.Dialog;
@@ -33,6 +34,7 @@ namespace Core.Catalogs.Editor
             Create<TypewriterSoundCatalog>(folder, TypewriterSoundCatalog.ResourceName, created);
             Create<SoundCatalog>(folder, SoundCatalog.ResourceName, created);
             Create<WeatherCatalog>(folder, WeatherCatalog.ResourceName, created);
+            Create<LocationCatalog>(folder, LocationCatalog.ResourceName, created);
             return created.AsReadOnly();
         }
 

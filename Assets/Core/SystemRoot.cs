@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace Core
 {
+    // Reject scene-authored duplicates before any of their services can awaken or register.
+    [DefaultExecutionOrder(-2000)]
     public class SystemRoot : MonoBehaviour
     {
         public static SystemRoot Instance { get; private set; }
@@ -12,6 +14,7 @@ namespace Core
         {
             if (Instance != null && Instance != this)
             {
+                gameObject.SetActive(false);
                 Destroy(gameObject); // Duplicate detected, kill this one
                 return;
             }

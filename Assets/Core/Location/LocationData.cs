@@ -9,6 +9,8 @@ namespace Core.Location
         [NamespacedId] public string id;
         public string label;
         public LocationType locationType = LocationType.Outdoor;
+        [Tooltip("Disable weather ambience in this location. Other game sounds are unaffected.")]
+        public bool muteWeatherAudio;
         [Tooltip("Scene asset path. Imported maps set this independently of the map ID and display name.")]
         public string scenePath;
 

@@ -542,6 +542,16 @@
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/PropertyValue" },
       "properties": {
+        "locationType": {
+          "type": "string",
+          "enum": ["Indoor", "Outdoor"],
+          "default": "Outdoor"
+        },
+        "muteWeatherAudio": {
+          "type": "boolean",
+          "default": false,
+          "description": "Mute weather ambience in this location without muting other game audio."
+        },
         "description": { "type": "string" },
         "music": { "type": "string" },
         "ambience": { "type": "string" },

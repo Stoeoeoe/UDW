@@ -43,6 +43,13 @@ Wrappers are created once; existing scene contents are preserved on reimport, an
 their Build Settings registration is checked again. Unity requires a saved current
 scene before creating or opening another scene additively.
 
+`LocationCatalog` automatically discovers `LocationData` assets and imported map
+subassets throughout `Assets`, including other content projects. It refreshes after
+map imports, moves and deletions and before play/build. `LevelManager` loads this
+generated Resources catalog; no world-catalog assignment on `SystemRoot` or manual
+location asset creation is needed. World catalogs continue to own project-scoped
+map/prefab relationships used by authoring and importers.
+
 `LevelManager` loads the explicit scene path and uses it to resolve initial locations
 and filter location lifecycle callbacks. Hand-authored locations without a scene path
 continue to use their ID as the scene name.

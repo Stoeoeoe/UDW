@@ -1366,5 +1366,50 @@
       "zOrder": 9999
     }
   ],
-  "entities": []
+  "entities": [],
+  "locationLinks": [
+    {
+      "id": "link-1793455025194",
+      "triggerId": "trigger-1793454828014",
+      "targetMapId": "base:map-1",
+      "targetAnchorId": "anchor-1776461296590",
+      "linkType": "open"
+    }
+  ],
+  "spatialPrimitives": {
+    "triggers": [
+      {
+        "id": "trigger-1793454828014",
+        "type": "locationLinkTrigger",
+        "shape": "rectangle",
+        "position": [
+          112,
+          240
+        ],
+        "size": [
+          32,
+          16
+        ],
+        "tags": []
+      }
+    ],
+    "anchors": [
+      {
+        "id": "anchor-1793454943629",
+        "name": "Anchor",
+        "position": [
+          128,
+          230
+        ],
+        "facing": [
+          0,
+          -1
+        ],
+        "tags": []
+      }
+    ]
+  },
+  "metadata": {
+    "locationType": "Indoor"
+  }
 }

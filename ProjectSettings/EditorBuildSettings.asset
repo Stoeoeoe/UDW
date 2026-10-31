@@ -35,5 +35,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/mymap.unity
     guid: 7f50032cc14735a4c864f506afde4b13
+  - enabled: 1
+    path: Assets/Scenes/Maps/indoor.unity
+    guid: 3b8592bb27bf8e04ca078c33cba1ab86
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 9b1e9412d9c91f943b13a95b6e42f252, type: 2}

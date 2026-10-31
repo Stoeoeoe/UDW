@@ -109,6 +109,7 @@ Shader "Game/UberWeatherShader"
             // Global presentation value: weather changes under a cutscene cover stay hidden.
             // Zero is normal weather, so scenes without a cutscene need no initialization.
             float _CutsceneWeatherCover;
+            float _IndoorWeatherCover;
             
             TEXTURE2D(_NoiseTex);
             SAMPLER(sampler_NoiseTex);
@@ -489,7 +490,7 @@ Shader "Game/UberWeatherShader"
                 // Blend weather effects
                 weatherColor.a = saturate(weatherColor.a);
                 col.rgb = lerp(col.rgb, weatherColor.rgb, weatherColor.a);
-                col.rgb = lerp(col.rgb, sceneColor, _CutsceneWeatherCover);
+                col.rgb = lerp(col.rgb, sceneColor, max(_CutsceneWeatherCover, _IndoorWeatherCover));
                 
                 return col;
             }
