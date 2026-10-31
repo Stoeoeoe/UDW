@@ -145,6 +145,10 @@ export async function applyTerrainShape(params: {
     if (tileX < 0 || tileX >= currentMap.width || tileY < 0 || tileY >= currentMap.height) continue;
 
     const corners = getCornerTerrainsForTile(tileX, tileY, terrainGridRef);
+    if (corners.every((c) => c === null)) {
+      tilesToErase.push({ x: tileX, y: tileY });
+      continue;
+    }
     const matchingTile = findBestMatchingTileWithFallback(tileset, corners, true);
 
     if (matchingTile !== null) {
@@ -154,8 +158,6 @@ export async function applyTerrainShape(params: {
         tilesetId: activeTilesetId,
         tileIndex: matchingTile,
       });
-    } else if (corners.every((c) => c === null)) {
-      tilesToErase.push({ x: tileX, y: tileY });
     }
   }
 

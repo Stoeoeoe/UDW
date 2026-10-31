@@ -42,6 +42,53 @@ describe('applyTerrainShape', () => {
     ],
   ]);
 
+  it.each(['point', 'rect'] as const)(
+    'erases terrain with the %s brush instead of painting unassigned tiles',
+    async (mode) => {
+      const currentMap = structuredClone(map);
+      currentMap.layers[0].data![1][1] = 0;
+      currentMap.layers[0].terrainData![1][1] = 'grass';
+      const terrainTilesets = new Map<string, Tileset>([
+        [
+          'village',
+          {
+            ...tilesets.get('village')!,
+            tiles: {
+              0: { terrainCorners: ['grass', 'grass', 'grass', 'grass'] },
+              1: {},
+              2: { terrainCorners: [null, null, null, null] },
+            },
+          },
+        ],
+      ]);
+      const paintTilesBatch = vi.fn();
+      const eraseTilesBatch = vi.fn();
+      const paintTerrainDataBatch = vi.fn();
+
+      await applyTerrainShape({
+        currentMap,
+        selectedLayerId: 'terrain',
+        activeTilesetId: 'village',
+        tilesets: terrainTilesets,
+        paintTilesBatch,
+        eraseTilesBatch,
+        paintTerrainDataBatch,
+        brushSize: 1,
+        mode,
+        start: { x: 1, y: 1 },
+        end: { x: 1, y: 1 },
+        terrainId: null,
+        terrainGridRef: new Map(),
+      });
+
+      expect(paintTilesBatch).not.toHaveBeenCalled();
+      expect(eraseTilesBatch).toHaveBeenCalledWith('terrain', [{ x: 1, y: 1 }]);
+      expect(paintTerrainDataBatch).toHaveBeenCalledWith('terrain', [
+        { x: 1, y: 1, terrainId: null },
+      ]);
+    },
+  );
+
   it('clips a terrain brush centered outside the map to in-bounds terrain cells', async () => {
     const paintTerrainDataBatch = vi.fn();
 
