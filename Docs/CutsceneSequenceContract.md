@@ -228,6 +228,12 @@ Cancellation/failure clears presentation and retains the existing rollback polic
 Completion that already committed under black is retained if presentation is then
 interrupted. Very short scenes finish the entrance before beginning the exit.
 
+The runner awaits presentation transitions with Unity `Awaitable`, while `Update`
+continues to tick the Lua session in its normal execution order. Each presented
+run owns a cancellation token. Cancelling a run stops its pending awaits before
+synchronously settling staging, presentation and control ownership; an old
+continuation cannot advance a replacement run.
+
 The initial sequence contract is an ordered list of action steps. Unity compiles
 the list to Lua; the Lua session executes it. There is no second command runner.
 Sources ending in `.runtime.cutscene.json` import into `CutsceneDefinition`

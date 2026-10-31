@@ -11,6 +11,7 @@ using Core.Dialogue.Vulcanus;
 using Core.Location;
 using Core.Tile;
 using Core.Tile.Vulcanus;
+using DG.Tweening;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UI.Shared;
@@ -303,10 +304,10 @@ namespace Core.Scripting.Editor
             try
             {
                 Assert.That(service.TryStart(definition, out var run), Is.True);
-                var phase = typeof(CutsceneRunner).GetField("_transitionPhase", BindingFlags.Instance | BindingFlags.NonPublic);
+                var transition = typeof(CutsceneRunner).GetField("_transition", BindingFlags.Instance | BindingFlags.NonPublic);
                 var deadline = Time.realtimeSinceStartup + 10;
-                while (phase.GetValue(service).ToString() != "None" && Time.realtimeSinceStartup < deadline) yield return null;
-                Assert.That(phase.GetValue(service).ToString(), Is.EqualTo("None"));
+                while (transition.GetValue(service) != null && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(transition.GetValue(service), Is.Null, "The entrance reveal must finish.");
                 Assert.That(RequestSkip(service), Is.True);
                 yield return null;
                 Submit(prompt.GetComponent<UIDocument>().rootVisualElement.Q<Button>("confirmSkip"));
@@ -319,7 +320,7 @@ namespace Core.Scripting.Editor
                 Assert.That(run.Skipped, Is.True);
                 Assert.That(prompt.IsOpen, Is.False);
                 Assert.That(GameState.Story.Has("fixture_skip_exit_pause"), Is.True);
-                Assert.That(phase.GetValue(service).ToString(), Is.EqualTo("ExitReveal"));
+                Assert.That(run.IsRunning, Is.True, "Completion commits before the exit reveal releases control.");
                 Assert.That(Time.timeScale, Is.EqualTo(1f));
             }
             finally { service.Cancel(); Object.Destroy(definition); }
@@ -480,6 +481,175 @@ namespace Core.Scripting.Editor
                     Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.True);
                 }
                 finally { service.Cancel(); Object.Destroy(definition); }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator SetupAndStartedWaitUntilTheEntranceHasFadedToBlack()
+        {
+            var service = CutsceneRunner.Instance;
+            var definition = CreatePresentedPhaseDefinition("fixture:entrance-timing");
+            var player = MainCharacter.CurrentMainCharacter;
+            var originalFacing = player.Orientation.FacingDirection;
+            var started = false;
+            var group = Object.FindFirstObjectByType<ScreenFader>().GetComponent<CanvasGroup>();
+            Action<CutsceneRun> onStarted = _ =>
+            {
+                Assert.That(group.alpha, Is.EqualTo(1));
+                Assert.That(player.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
+                started = true;
+            };
+            service.Started += onStarted;
+            try
+            {
+                Assert.That(service.TryStart(definition, out _), Is.True);
+                var cover = CurrentTransition(service);
+                cover.SetUpdate(UpdateType.Manual);
+                cover.Goto(0.15f);
+                Assert.That(group.alpha, Is.EqualTo(0.5f).Within(0.01));
+                Assert.That(started, Is.False);
+                Assert.That(player.Orientation.FacingDirection, Is.EqualTo(originalFacing));
+                cover.Goto(1f);
+                yield return null;
+                Assert.That(group.alpha, Is.EqualTo(1));
+                Assert.That(started, Is.False, "Setup waits for the hold on black.");
+                cover.Complete();
+                var deadline = Time.realtimeSinceStartup + 5f;
+                while (!started && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(started, Is.True);
+                Assert.That(CurrentTransition(service), Is.Not.SameAs(cover));
+            }
+            finally { service.Started -= onStarted; service.Cancel(); Object.Destroy(definition); }
+        }
+
+        [UnityTest]
+        public IEnumerator SkipFadesToBlackBeforeDisposingTheActiveActionAndApplyingCompletion()
+        {
+            var service = CutsceneRunner.Instance;
+            var definition = CreatePresentedPhaseDefinition("fixture:skip-cover-timing");
+            var player = MainCharacter.CurrentMainCharacter;
+            var group = Object.FindFirstObjectByType<ScreenFader>().GetComponent<CanvasGroup>();
+            try
+            {
+                Assert.That(service.TryStart(definition, out var run), Is.True);
+                var session = (LuaExecutionSession)typeof(CutsceneRun).GetProperty("Session",
+                    BindingFlags.Instance | BindingFlags.NonPublic).GetValue(run);
+                CurrentTransition(service).Complete();
+                var deadline = Time.realtimeSinceStartup + 5f;
+                while (service.CurrentStepId == null && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(service.CurrentStepId, Is.EqualTo("wait"));
+                var reveal = CurrentTransition(service);
+                reveal.SetUpdate(UpdateType.Manual);
+                Assert.That(run.Skip(), Is.True);
+                Assert.That(Time.timeScale, Is.Zero);
+                yield return null;
+                Assert.That(CurrentTransition(service), Is.SameAs(reveal), "Skip finishes the entrance reveal first.");
+                reveal.Complete();
+                while (ReferenceEquals(CurrentTransition(service), reveal) && Time.realtimeSinceStartup < deadline) yield return null;
+                var cover = CurrentTransition(service);
+                Assert.That(cover, Is.Not.Null);
+                cover.SetUpdate(UpdateType.Manual);
+                cover.Goto(1f);
+                yield return null;
+                Assert.That(group.alpha, Is.EqualTo(1));
+                Assert.That(session.IsRunning, Is.True, "The skipped action remains owned through the exit hold.");
+                Assert.That(GameState.Story.Has(definition.CutsceneId), Is.False);
+                cover.Complete();
+                while (!GameState.Story.Has(definition.CutsceneId) && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(GameState.Story.Has(definition.CutsceneId), Is.True);
+                Assert.That(session.IsRunning, Is.False);
+                Assert.That(player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
+                Assert.That(run.IsRunning, Is.True, "Input stays claimed through the exit reveal.");
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+            }
+            finally { service.Cancel(); Object.Destroy(definition); }
+        }
+
+        private static Tween CurrentTransition(CutsceneRunner service) => (Tween)typeof(CutsceneRunner)
+            .GetField("_transition", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(service);
+
+        private static CutsceneDefinition CreatePresentedPhaseDefinition(string id)
+        {
+            var definition = CreatePhaseDefinition(id, 60);
+            definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
+                definition.OnComplete, definition.OnStartLua, definition.OnStart, new CutsceneTransition());
+            return definition;
+        }
+
+        [UnityTest]
+        public IEnumerator CancellingPresentationSettlesImmediatelyAndCannotAdvanceAReplacementRun()
+        {
+            var service = CutsceneRunner.Instance;
+            var player = MainCharacter.CurrentMainCharacter;
+            var transition = typeof(CutsceneRunner).GetField("_transition", BindingFlags.Instance | BindingFlags.NonPublic);
+            foreach (var stage in new[] { "entrance", "started-listener", "entrance-reveal", "sequence", "exit-cover", "exit-reveal" })
+            {
+                var id = "fixture:cancel-presentation-" + stage;
+                var definition = CreatePhaseDefinition(id, 60);
+                definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
+                    definition.OnComplete, definition.OnStartLua, definition.OnStart, new CutsceneTransition());
+                var replacement = CreatePhaseDefinition(id + "-replacement", 60);
+                replacement.Configure(replacement.CutsceneId, replacement.MapId, replacement.Lua, replacement.Steps, true,
+                    replacement.OnComplete, replacement.OnStartLua, replacement.OnStart, new CutsceneTransition());
+                var originalFacing = player.Orientation.FacingDirection;
+                var started = false;
+                Action<CutsceneRun> onStarted = run =>
+                {
+                    started = true;
+                    if (stage == "started-listener") run.Cancel();
+                };
+                service.Started += onStarted;
+                try
+                {
+                    Assert.That(service.TryStart(definition, out var old), Is.True);
+                    var deadline = Time.realtimeSinceStartup + 10f;
+                    if (stage != "entrance")
+                    {
+                        while (!started && Time.realtimeSinceStartup < deadline) yield return null;
+                        Assert.That(started, Is.True);
+                    }
+                    if (stage is "sequence" or "exit-cover" or "exit-reveal")
+                    {
+                        while (transition.GetValue(service) != null && Time.realtimeSinceStartup < deadline) yield return null;
+                        Assert.That(transition.GetValue(service), Is.Null);
+                    }
+                    if (stage is "exit-cover" or "exit-reveal")
+                    {
+                        Assert.That(old.Skip(), Is.True);
+                        while (transition.GetValue(service) == null && Time.realtimeSinceStartup < deadline) yield return null;
+                        Assert.That(transition.GetValue(service), Is.Not.Null);
+                    }
+                    if (stage == "exit-reveal")
+                    {
+                        while (!GameState.Story.CompletedCutscenes.Contains(id) && Time.realtimeSinceStartup < deadline) yield return null;
+                        Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.True);
+                    }
+
+                    old.Cancel();
+                    Assert.That(old.IsRunning, Is.False);
+                    Assert.That(service.IsRunning, Is.False);
+                    Assert.That(player.IsControlBlocked, Is.False);
+                    Assert.That(Time.timeScale, Is.EqualTo(1f));
+                    Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.EqualTo(stage == "exit-reveal"));
+                    Assert.That(player.Orientation.FacingDirection,
+                        Is.EqualTo(stage == "exit-reveal" ? Vector2.left : originalFacing));
+
+                    service.Started -= onStarted;
+                    Assert.That(service.TryStart(replacement, out var next), Is.True);
+                    old.Cancel();
+                    for (var frame = 0; frame < 3; frame++) yield return null;
+                    Assert.That(service.ActiveRun, Is.SameAs(next));
+                    Assert.That(next.IsRunning, Is.True);
+                    Assert.That(player.IsControlBlocked, Is.True);
+                    Assert.That(GameState.Story.CompletedCutscenes.Contains(replacement.CutsceneId), Is.False);
+                }
+                finally
+                {
+                    service.Started -= onStarted;
+                    service.Cancel();
+                    Object.Destroy(definition);
+                    Object.Destroy(replacement);
+                }
             }
         }
 

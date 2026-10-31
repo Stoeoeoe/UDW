@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Character;
 using Core.Catalogs;
 using Core.Dialogue.Vulcanus;
@@ -27,10 +28,9 @@ namespace Core.Scripting
         private LevelManager _level;
         private UrGUIManager _gui;
         private MainCharacter _player;
-        private enum TransitionPhase { None, EntranceCover, EntranceReveal, ExitCover, ExitReveal }
-        private TransitionPhase _transitionPhase;
         private Tween _transition;
-        private bool _finishRequested, _completionCommitted, _settlingOutcome;
+        private CancellationTokenSource _playbackCancellation;
+        private bool _sequenceReady, _finishRequested, _completionCommitted, _settlingOutcome;
         [field: NonSerialized]
         [ShowInInspector, ReadOnly] public CutsceneRun ActiveRun { get; private set; }
         [ShowInInspector, ReadOnly] public string CurrentStepId => ActiveRun?.CurrentStepId;
@@ -101,8 +101,9 @@ namespace Core.Scripting
             {
                 if (definition.Transition.Enabled)
                 {
-                    _transitionPhase = TransitionPhase.EntranceCover;
+                    _playbackCancellation = new CancellationTokenSource();
                     _transition = _gui.CoverCutscene(_presentation.FadeSeconds, _presentation.HoldSeconds);
+                    PlayPresentation(run, _playbackCancellation.Token);
                 }
                 else StartSequence(run);
             }
@@ -119,6 +120,7 @@ namespace Core.Scripting
             ExecuteImmediate(run, run.Definition.OnStartLua, run.Definition.OnStart, "setup");
             run.BindEndpoints();
             Started?.Invoke(run);
+            if (ReferenceEquals(ActiveRun, run) && run.IsRunning) _sequenceReady = true;
         }
 
         private void Update()
@@ -130,14 +132,7 @@ namespace Core.Scripting
                 if (Input.InputManager.Instance.SkipCutscenePressed) RequestSkip();
                 if (skipConfirmation.IsOpen) return;
                 _transition.Play();
-                AdvanceTransition(run);
-                if (!ReferenceEquals(ActiveRun, run)) return;
-                if (_transitionPhase == TransitionPhase.EntranceCover) return;
-                if (_finishRequested)
-                {
-                    if (_transitionPhase == TransitionPhase.None) BeginExit(run);
-                    return;
-                }
+                if (!_sequenceReady || _finishRequested) return;
                 foreach (var placement in run.Placements) placement.RequireLive();
                 run.Session.Tick(Time.deltaTime);
                 if (!run.Session.IsRunning) RequestCompletion(run);
@@ -149,45 +144,49 @@ namespace Core.Scripting
             }
         }
 
-        private void AdvanceTransition(CutsceneRun run)
+        // Unity callback boundary: all failures are reported after synchronous ownership cleanup.
+        private async void PlayPresentation(CutsceneRun run, CancellationToken cancellation)
         {
-            if (_transitionPhase == TransitionPhase.None || (_transition.IsActive() && !_transition.IsComplete())) return;
-            switch (_transitionPhase)
+            try
             {
-                case TransitionPhase.EntranceCover:
-                    StartSequence(run);
-                    if (!ReferenceEquals(ActiveRun, run)) return;
-                    _transitionPhase = TransitionPhase.EntranceReveal;
-                    _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
-                    break;
-                case TransitionPhase.EntranceReveal:
-                    _transitionPhase = TransitionPhase.None;
-                    _transition = null;
-                    break;
-                case TransitionPhase.ExitCover:
-                    _completionCommitted = ApplyOutcome(run, completed: true);
-                    _transitionPhase = TransitionPhase.ExitReveal;
-                    _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
-                    timeScaleController.SetPaused(run, false);
-                    break;
-                case TransitionPhase.ExitReveal:
-                    Finish(run, completed: true);
-                    break;
+                await WaitForTransition(cancellation);
+                StartSequence(run);
+                cancellation.ThrowIfCancellationRequested(); // Started listeners can cancel this run.
+                _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
+                await WaitForTransition(cancellation);
+                _transition = null;
+
+                while (!_finishRequested) await Awaitable.NextFrameAsync(cancellation);
+
+                _transition = _gui.CoverCutscene(_presentation.FadeSeconds, _presentation.HoldSeconds);
+                await WaitForTransition(cancellation);
+                _completionCommitted = ApplyOutcome(run, completed: true);
+                _transition = _gui.RevealCutscene(_presentation.RevealSeconds);
+                timeScaleController.SetPaused(run, false);
+                await WaitForTransition(cancellation);
+                Finish(run, completed: true);
             }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+            catch (Exception error)
+            {
+                Cancel(run);
+                Debug.LogException(new InvalidOperationException(DescribeError(run, error.Message), error), this);
+            }
+        }
+
+        private async Awaitable WaitForTransition(CancellationToken cancellation)
+        {
+            // Checking on Unity frames preserves the prompt's pause even if the tween has just completed.
+            while (skipConfirmation.IsOpen || (_transition.IsActive() && !_transition.IsComplete()))
+                await Awaitable.NextFrameAsync(cancellation);
+            cancellation.ThrowIfCancellationRequested();
         }
 
         private void RequestCompletion(CutsceneRun run)
         {
             // Skip freezes script progression now; the active action is disposed under the exit cover.
             _finishRequested = true;
-            if (_transitionPhase == TransitionPhase.None) BeginExit(run);
-        }
-
-        private void BeginExit(CutsceneRun run)
-        {
-            if (!run.Definition.Transition.Enabled) { Finish(run, completed: true); return; }
-            _transitionPhase = TransitionPhase.ExitCover;
-            _transition = _gui.CoverCutscene(_presentation.FadeSeconds, _presentation.HoldSeconds);
+            if (!run.Definition.Transition.Enabled) Finish(run, completed: true);
         }
 
         private static string DescribeError(CutsceneRun run, string message) => run.CurrentStepId is string step
@@ -264,6 +263,10 @@ namespace Core.Scripting
             if (!ReferenceEquals(ActiveRun, run) || !run.IsRunning || _settlingOutcome) return;
             // Cleanup can close UI and invoke callbacks. Mark the run terminal before any of them can re-enter.
             run.IsRunning = false;
+            var cancellation = _playbackCancellation;
+            _playbackCancellation = null;
+            cancellation?.Cancel();
+            cancellation?.Dispose();
             if (skipConfirmation) skipConfirmation.Hide();
             var committed = _completionCommitted;
             try
@@ -272,10 +275,9 @@ namespace Core.Scripting
             }
             finally
             {
-                if (_transitionPhase != TransitionPhase.None) _gui.ResetTransition();
+                if (_transition != null) _gui.ResetTransition();
                 _transition = null;
-                _transitionPhase = TransitionPhase.None;
-                _finishRequested = _completionCommitted = false;
+                _sequenceReady = _finishRequested = _completionCommitted = false;
                 timeScaleController.SetPaused(run, false);
                 foreach (var placement in run.Placements)
                     if (placement.Character) placement.Character.SetControlBlocked(run, false);
