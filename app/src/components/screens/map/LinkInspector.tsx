@@ -89,6 +89,17 @@ export const LinkInspector: React.FC = () => {
         </InspectorSection>
 
         <InspectorSection title="Source Trigger">
+          <Field label="Activation">
+            <CompactSelect
+              value={link.linkType ?? 'door'}
+              onChange={(event) =>
+                update({ linkType: event.target.value as LocationLink['linkType'] })
+              }
+            >
+              <option value="door">Door (press Interact)</option>
+              <option value="open">Open (walk into trigger)</option>
+            </CompactSelect>
+          </Field>
           <Field
             label="Trigger Zone"
             helperText={

@@ -45,12 +45,14 @@ const NewLinkDialogForm: React.FC<{
   const form = useForm({
     defaultValues: {
       label: link.label ?? '',
+      linkType: link.linkType ?? 'door',
       triggerId: link.triggerId ?? '',
       targetMapId: link.targetMapId ?? '',
       targetAnchorId: link.targetAnchorId ?? '',
     },
     onSubmit: async ({ value }) => {
       const updates: Partial<LocationLink> = {
+        linkType: value.linkType,
         triggerId: value.triggerId,
         targetMapId: value.targetMapId,
         targetAnchorId: value.targetAnchorId,
@@ -127,6 +129,24 @@ const NewLinkDialogForm: React.FC<{
                       if (e.key === 'Escape') handleCancel();
                     }}
                   />
+                </FormControl>
+              )}
+            </form.Field>
+
+            <form.Field name="linkType">
+              {(field) => (
+                <FormControl>
+                  <FieldLabel>Activation</FieldLabel>
+                  <Select
+                    size="sm"
+                    bg="gray.800"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value as 'door' | 'open')}
+                    onBlur={field.handleBlur}
+                  >
+                    <option value="door">Door (press Interact)</option>
+                    <option value="open">Open (walk into trigger)</option>
+                  </Select>
                 </FormControl>
               )}
             </form.Field>

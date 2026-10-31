@@ -172,6 +172,8 @@ export interface Map extends NamedEditorResource {
 export interface LocationLink {
   id: string;
   label?: string;
+  // Door requires Interact; open activates on player contact.
+  linkType?: 'door' | 'open';
   // Source trigger — references a MapTrigger on this map.
   triggerId: string;
   // Target map id.
