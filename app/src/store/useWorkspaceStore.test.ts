@@ -199,4 +199,21 @@ describe('useWorkspaceStore', () => {
       'tileset:tileset-1',
     ]);
   });
+
+  it('toggles favorites by resource identity and clears project navigation on reset', () => {
+    const store = useWorkspaceStore.getState();
+    store.toggleFavoriteResource('character:base:player');
+    store.toggleFavoriteResource('item:base:torch');
+    store.toggleFavoriteResource('character:base:player');
+    expect(useWorkspaceStore.getState().favoriteResourceKeys).toEqual(['item:base:torch']);
+    store.restoreNavigation({
+      favoriteResourceKeys: ['cutscene:base:intro'],
+      recentResourceKeys: ['location:town'],
+    });
+    expect(useWorkspaceStore.getState().favoriteResourceKeys).toEqual(['cutscene:base:intro']);
+    expect(useWorkspaceStore.getState().recentResourceKeys).toEqual(['location:town']);
+    store.resetWorkspace();
+    expect(useWorkspaceStore.getState().favoriteResourceKeys).toEqual([]);
+    expect(useWorkspaceStore.getState().recentResourceKeys).toEqual([]);
+  });
 });

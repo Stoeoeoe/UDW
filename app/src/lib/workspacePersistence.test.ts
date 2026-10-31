@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { WorkspaceTab } from '../types/workspace';
-import { persistWorkspaceSession, restoreWorkspaceSession } from './workspacePersistence';
+import {
+  persistWorkspaceSession,
+  restoreWorkspaceSession,
+  persistWorkspaceNavigation,
+  restoreWorkspaceNavigation,
+} from './workspacePersistence';
 
 const projectPath = '/projects/test-project';
 
@@ -47,6 +52,7 @@ const tileset = {
 describe('workspacePersistence', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    window.localStorage.clear();
   });
 
   it('restores persisted tabs and active tab for a project', () => {
@@ -138,5 +144,46 @@ describe('workspacePersistence', () => {
 
     expect(restored?.tabs.map((tab) => tab.id)).toEqual(['location:map-2']);
     expect(restored?.activeTabId).toBe('location:map-2');
+  });
+
+  it('keeps favorites and recent content per project across window sessions', () => {
+    const navigation = {
+      favoriteResourceKeys: ['character:base:player', 'item:base:torch'],
+      recentResourceKeys: ['cutscene:base:intro', 'location:town'],
+    };
+    persistWorkspaceNavigation(projectPath, navigation);
+    persistWorkspaceNavigation('/projects/other', {
+      favoriteResourceKeys: ['item:other'],
+      recentResourceKeys: [],
+    });
+    window.sessionStorage.clear();
+    expect(restoreWorkspaceNavigation(projectPath)).toEqual(navigation);
+    expect(restoreWorkspaceNavigation('/projects/other').favoriteResourceKeys).toEqual([
+      'item:other',
+    ]);
+    expect(restoreWorkspaceNavigation('/projects/new')).toEqual({
+      favoriteResourceKeys: [],
+      recentResourceKeys: [],
+    });
+  });
+
+  it('validates optional stored navigation and keeps the eight most recent keys', () => {
+    const key = `vulcanus.workspaceNavigation:${projectPath}`;
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        favoriteResourceKeys: ['item:torch', null, 4, '', 'item:torch'],
+        recentResourceKeys: Array.from({ length: 12 }, (_, i) => `location:${i}`),
+      }),
+    );
+    expect(restoreWorkspaceNavigation(projectPath)).toEqual({
+      favoriteResourceKeys: ['item:torch'],
+      recentResourceKeys: Array.from({ length: 8 }, (_, i) => `location:${i}`),
+    });
+    window.localStorage.setItem(key, '{broken');
+    expect(restoreWorkspaceNavigation(projectPath)).toEqual({
+      favoriteResourceKeys: [],
+      recentResourceKeys: [],
+    });
   });
 });

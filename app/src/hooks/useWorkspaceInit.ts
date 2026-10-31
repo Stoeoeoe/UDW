@@ -14,7 +14,12 @@ import {
 } from '../lib/workspaceController';
 import { WorkspaceTab, WorkspaceTreeNode } from '../types/workspace';
 import { useSaveStore } from '../lib/saveManager';
-import { persistWorkspaceSession, restoreWorkspaceSession } from '../lib/workspacePersistence';
+import {
+  persistWorkspaceSession,
+  restoreWorkspaceSession,
+  persistWorkspaceNavigation,
+  restoreWorkspaceNavigation,
+} from '../lib/workspacePersistence';
 
 function getPreferredInitialDocument(nodes: WorkspaceTreeNode[]): WorkspaceTreeNode | null {
   const primaryDocument = findFirstDocument(
@@ -42,9 +47,12 @@ export function useWorkspaceInit() {
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
   const expandedNodeIds = useWorkspaceStore((state) => state.expandedNodeIds);
+  const favoriteResourceKeys = useWorkspaceStore((state) => state.favoriteResourceKeys);
+  const recentResourceKeys = useWorkspaceStore((state) => state.recentResourceKeys);
   const openDocument = useWorkspaceStore((state) => state.openDocument);
   const activateTab = useWorkspaceStore((state) => state.activateTab);
   const restoreWorkspace = useWorkspaceStore((state) => state.restoreWorkspace);
+  const restoreNavigation = useWorkspaceStore((state) => state.restoreNavigation);
   const setExpanded = useWorkspaceStore((state) => state.setExpanded);
   const resetWorkspace = useWorkspaceStore((state) => state.resetWorkspace);
 
@@ -117,6 +125,7 @@ export function useWorkspaceInit() {
       cutsceneFolders,
     };
     const restored = restoreWorkspaceSession(projectPath, snapshot);
+    restoreNavigation(restoreWorkspaceNavigation(projectPath));
 
     if (restored) {
       restoreWorkspace(restored);
@@ -155,6 +164,7 @@ export function useWorkspaceInit() {
     openDocument,
     activateTab,
     restoreWorkspace,
+    restoreNavigation,
   ]);
 
   React.useEffect(() => {
@@ -201,6 +211,17 @@ export function useWorkspaceInit() {
     if (!projectPath || !resourcesLoaded) return;
     persistWorkspaceSession(projectPath, { tabs, activeTabId, expandedNodeIds });
   }, [projectPath, resourcesLoaded, tabs, activeTabId, expandedNodeIds]);
+
+  React.useEffect(() => {
+    if (!projectPath || !resourcesLoaded || initializedProjectPathRef.current !== projectPath)
+      return;
+    // Initialization above may have restored preferences during this same effect flush.
+    const current = useWorkspaceStore.getState();
+    persistWorkspaceNavigation(projectPath, {
+      favoriteResourceKeys: current.favoriteResourceKeys,
+      recentResourceKeys: current.recentResourceKeys,
+    });
+  }, [projectPath, resourcesLoaded, favoriteResourceKeys, recentResourceKeys]);
 
   React.useEffect(() => {
     if (!project) return;

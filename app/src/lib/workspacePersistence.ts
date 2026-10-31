@@ -16,6 +16,55 @@ interface RestoredWorkspaceSession {
 }
 
 const STORAGE_PREFIX = 'vulcanus.workspaceSession:';
+const NAVIGATION_STORAGE_PREFIX = 'vulcanus.workspaceNavigation:';
+
+interface WorkspaceNavigation {
+  favoriteResourceKeys: string[];
+  recentResourceKeys: string[];
+}
+
+/** Local editor preferences, kept separate from session-only tabs and exported project files. */
+export function persistWorkspaceNavigation(
+  projectPath: string,
+  navigation: WorkspaceNavigation,
+): void {
+  try {
+    window.localStorage.setItem(
+      `${NAVIGATION_STORAGE_PREFIX}${projectPath}`,
+      JSON.stringify(navigation),
+    );
+  } catch {
+    // Navigation preferences are optional when local storage is unavailable.
+  }
+}
+
+export function restoreWorkspaceNavigation(projectPath: string): WorkspaceNavigation {
+  const empty: WorkspaceNavigation = { favoriteResourceKeys: [], recentResourceKeys: [] };
+  try {
+    const raw = window.localStorage.getItem(`${NAVIGATION_STORAGE_PREFIX}${projectPath}`);
+    if (!raw) return empty;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return empty;
+    const readKeys = (value: unknown): string[] =>
+      Array.isArray(value)
+        ? [
+            ...new Set(
+              value.filter(
+                (key): key is string => typeof key === 'string' && key.trim().length > 0,
+              ),
+            ),
+          ]
+        : [];
+    return {
+      favoriteResourceKeys: readKeys((parsed as Partial<WorkspaceNavigation>).favoriteResourceKeys),
+      recentResourceKeys: readKeys(
+        (parsed as Partial<WorkspaceNavigation>).recentResourceKeys,
+      ).slice(0, 8),
+    };
+  } catch {
+    return empty;
+  }
+}
 
 function getStorageKey(projectPath: string): string {
   return `${STORAGE_PREFIX}${projectPath}`;

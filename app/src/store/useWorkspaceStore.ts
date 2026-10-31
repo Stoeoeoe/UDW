@@ -17,6 +17,7 @@ interface WorkspaceStore {
   activeTabId: string | null;
   expandedNodeIds: string[];
   recentResourceKeys: string[];
+  favoriteResourceKeys: string[];
   locationSessions: Record<string, LocationTabSession>;
   tilesetSessions: Record<string, TilesetTabSession>;
   autosaveEnabled: boolean;
@@ -41,6 +42,11 @@ interface WorkspaceStore {
   toggleNode: (nodeId: string) => void;
   setExpanded: (nodeId: string, expanded: boolean) => void;
   markRecentResource: (resourceKey: string) => void;
+  toggleFavoriteResource: (resourceKey: string) => void;
+  restoreNavigation: (state: {
+    favoriteResourceKeys: string[];
+    recentResourceKeys: string[];
+  }) => void;
   setLocationSession: (tabId: string, session: LocationTabSession) => void;
   setTilesetSession: (tabId: string, session: TilesetTabSession) => void;
   setAutosaveEnabled: (enabled: boolean) => void;
@@ -153,6 +159,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   activeTabId: null,
   expandedNodeIds: defaultExpandedNodeIds(),
   recentResourceKeys: [],
+  favoriteResourceKeys: [],
   locationSessions: {},
   tilesetSessions: {},
   autosaveEnabled: readAutosavePreference(),
@@ -385,6 +392,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       ].slice(0, 8),
     })),
 
+  toggleFavoriteResource: (resourceKey) =>
+    set((state) => ({
+      favoriteResourceKeys: state.favoriteResourceKeys.includes(resourceKey)
+        ? state.favoriteResourceKeys.filter((entry) => entry !== resourceKey)
+        : [...state.favoriteResourceKeys, resourceKey],
+    })),
+
+  restoreNavigation: ({ favoriteResourceKeys, recentResourceKeys }) =>
+    set({ favoriteResourceKeys, recentResourceKeys }),
+
   setLocationSession: (tabId, session) =>
     set((state) => ({
       locationSessions: {
@@ -412,6 +429,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       activeTabId: null,
       expandedNodeIds: defaultExpandedNodeIds(),
       recentResourceKeys: [],
+      favoriteResourceKeys: [],
       locationSessions: {},
       tilesetSessions: {},
     }),

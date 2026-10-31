@@ -62,7 +62,7 @@ describe('cutscene explorer resources', () => {
         <WorkspaceExplorer
           nodes={nodes}
           expandedNodeIds={['group:cutscenes']}
-          activeTabId={null}
+          activeTabId={`cutscene:${prototype.id}`}
           onToggleNode={toggle}
           onOpenNode={open}
         />
@@ -76,7 +76,7 @@ describe('cutscene explorer resources', () => {
       }),
       expect.anything(),
     );
-    fireEvent.click(screen.getByText('Cutscenes'));
+    fireEvent.click(screen.getByRole('group', { name: 'Cutscenes section' }));
     expect(toggle).toHaveBeenCalledWith('group:cutscenes');
   });
 
@@ -87,7 +87,7 @@ describe('cutscene explorer resources', () => {
         <WorkspaceExplorer
           nodes={tree()}
           expandedNodeIds={['group:cutscenes']}
-          activeTabId={null}
+          activeTabId={`cutscene:${prototype.id}`}
           onToggleNode={vi.fn()}
           onOpenNode={vi.fn()}
           onOpenDocument={open}
