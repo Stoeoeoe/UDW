@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using System;
 using Character;
 using Core.Context;
@@ -18,16 +18,16 @@ namespace Plants
         public override float ActionDuration => Owner.Animator.AnimationLibrary
             .GetDirectional(AnimationAction, Owner.Orientation.FacingDirection).length;
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
-            if (!CanExecute(snapshot)) yield break;
+            if (!CanExecute(snapshot)) return Completed();
             if (!Owner.Animator.PlayNamedAction(AnimationAction))
                 throw new InvalidOperationException("Planting requires an available Seed animation.");
             _playingSeedAnimation = true;
             var character = snapshot.Character as MainCharacter;
             PlantManager.Instance.TrySowCarriedSeed(Core.Location.LevelManager.Instance.CurrentLocationData.id,
                 snapshot.CurrentTileDataUnderPointer, character!.MainInventory, character.CurrentSelectedSlotIndex);
-            yield break;
+            return Completed();
         }
 
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot)

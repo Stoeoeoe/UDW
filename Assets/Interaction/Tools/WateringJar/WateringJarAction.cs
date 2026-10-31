@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using System;
 using Character;
 using Core.Context;
@@ -40,27 +40,29 @@ namespace Interaction.Tools.WateringJar
         public override bool CanExecuteAfterPreparation(PlayerInteractionContextSnapshot snapshot) =>
             CanExecute(snapshot);
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             if (IsRefilling)
             {
-                yield return new WaitForSeconds(refillDuration);
+                await Awaitable.WaitForSecondsAsync(refillDuration, cancellation);
                 Water.Refill();
-                yield break;
+                return;
             }
 
             // A pour still spends water on bare or already-wet ground, even though no farmland changes.
             if (AffectedTiles.Count == 0)
             {
                 Water.TryConsume(ToolData.chargePerUsage);
-                yield break;
+                return;
             }
 
-            foreach (var tile in AffectedTiles)
+            var affectedTiles = AffectedTiles;
+            foreach (var tile in affectedTiles)
             {
-                if (!Water.TryConsume(ToolData.chargePerUsage)) yield break;
+                if (!Water.TryConsume(ToolData.chargePerUsage)) return;
                 MapManager.Instance.IrrigateTile(tile);
-                if (AffectedTiles.Count > 1) yield return new WaitForSeconds(0.2f);
+                cancellation.ThrowIfCancellationRequested();
+                if (affectedTiles.Count > 1) await Awaitable.WaitForSecondsAsync(0.2f, cancellation);
             }
         }
 

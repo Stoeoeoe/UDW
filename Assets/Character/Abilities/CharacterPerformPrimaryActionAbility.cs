@@ -1,3 +1,4 @@
+using System;
 using Core.Context;
 using Core.Events;
 using Core.Location;
@@ -11,7 +12,6 @@ namespace Character.Abilities
     public class CharacterPerformPrimaryActionAbility : CharacterAbility
     {
         public ActionExecutor ActionExecutor { get; private set; }
-        private Coroutine _runningAction;
         private PlayerInteractionContext _context;
         private bool _suppressPrimaryUntilRelease;
 
@@ -39,10 +39,11 @@ namespace Character.Abilities
             if (_context) _context.OnContextChanged -= HandleContextChanged;
         }
 
+        private void OnDisable() => ActionExecutor?.InterruptCurrentAction();
+
         private void HandleContextChanged(PlayerInteractionContextSnapshot snapshot)
         {
             if (!snapshot.CanInteractWithWorld) _suppressPrimaryUntilRelease = true;
-            // Stop the coroutine too: resetting the executor alone releases its preparation wait.
             if (!snapshot.CanInteractWithWorld && ActionExecutor.State == ActionExecutionState.Preparing)
                 InterruptAction();
         }
@@ -81,7 +82,7 @@ namespace Character.Abilities
             if (input.PerformPrimaryActionDown && ActionExecutor.IsIdle && !pointerOverUI)
             {
                 var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
-                if (action) _runningAction = StartCoroutine(ActionExecutor.Run(action, !action.HasPreparationPhase));
+                if (action) RunAction(action);
             }
         }
 
@@ -91,12 +92,14 @@ namespace Character.Abilities
             InterruptAction();
         }
 
-        /// <summary>Stops the running action and releases its preparation, feedback and control ownership.</summary>
-        public void InterruptAction()
+        // Input callback boundary: observe failures after the executor has released its resources.
+        private async void RunAction(AbstractAction action)
         {
-            if (_runningAction != null) StopCoroutine(_runningAction);
-            _runningAction = null;
-            ActionExecutor.InterruptCurrentAction();
+            try { await ActionExecutor.RunAsync(action, !action.HasPreparationPhase); }
+            catch (Exception error) { Debug.LogException(error, this); }
         }
+
+        /// <summary>Cancels the attempt and synchronously releases its action and control ownership.</summary>
+        public void InterruptAction() => ActionExecutor.InterruptCurrentAction();
     }
 }

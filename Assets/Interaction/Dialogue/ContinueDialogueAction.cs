@@ -1,4 +1,5 @@
-using System.Collections;
+using UnityEngine;
+using System.Threading;
 using Core.Context;
 using Core.Dialogue.Vulcanus;
 
@@ -7,10 +8,10 @@ namespace Interaction.Dialogue
     public class ContinueDialogueAction : PrimaryAction
     {
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             VulcanusDialogueRunner.Instance.TryAdvanceActiveDialogue();
-            yield break;
+            return Completed();
         }
 
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot)

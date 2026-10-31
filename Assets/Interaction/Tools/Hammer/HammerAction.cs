@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using Character;
 using Core.Context;
 using Structures;
@@ -13,7 +13,7 @@ namespace Interaction.Tools.Hammer
         [SerializeField, Min(0)] private int baseRepairAmount = 1;
         [SerializeField] private SkillDefinition repairSkill;
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             if (snapshot.CurrentInteractable is IRepairable repairable)
             {
@@ -25,7 +25,7 @@ namespace Interaction.Tools.Hammer
                 var repairAmount = Mathf.Max(0, Mathf.RoundToInt(baseRepairAmount + bonus));
                 repairable.Repair(repairAmount);
             }
-            yield break;
+            return Completed();
         }
 
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot)

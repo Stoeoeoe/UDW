@@ -1,5 +1,5 @@
 using System;
-using System.Collections;
+using System.Threading;
 using Character;
 using Core.Context;
 using MoreMountains.Feedbacks;
@@ -7,10 +7,7 @@ using UnityEngine;
 
 namespace Interaction
 {
-    /// <summary>
-    /// Executes actions through preparation, execution, finish and cooldown, then releases their resources.
-    /// Handles feedbacks and character freezing during action execution.
-    /// </summary>
+    /// <summary>Owns an action attempt from preparation through cooldown, cancellation and cleanup.</summary>
     public class ActionExecutor
     {
         public AbstractAction CurrentAction { get; private set; }
@@ -30,152 +27,140 @@ namespace Interaction
 
         private readonly GameCharacter _owner;
         private readonly Func<PlayerInteractionContextSnapshot> _snapshotProvider;
+        private CancellationTokenSource _attempt;
+        private AwaitableCompletionSource _preparationReleased;
         private bool _frozeCharacter;
-
         private PlayerInteractionContextSnapshot _currentSnapshot;
 
-        /// <summary>Runs actions for one character using the current world-interaction context.</summary>
         public ActionExecutor(GameCharacter owner, Func<PlayerInteractionContextSnapshot> snapshotProvider)
         {
             _owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             _snapshotProvider = snapshotProvider;
         }
 
-        /// <summary>
-        /// Runs an attempt, waiting for preparation release and retaining ownership until cleanup completes.
-        /// </summary>
-        public IEnumerator Run(AbstractAction action, bool skipPrepare = false)
+        /// <summary>Runs one attempt. Expected interruption completes normally after releasing its resources.</summary>
+        public async Awaitable RunAsync(AbstractAction action, bool skipPrepare = false)
         {
-            if (!IsIdle) yield break;
-
+            if (!IsIdle) return;
             RefreshSnapshot();
+            if (!_currentSnapshot.CanInteractWithWorld) return;
 
-            if (!_currentSnapshot.CanInteractWithWorld) yield break;
-
+            using var attempt = new CancellationTokenSource();
+            var cancellation = attempt.Token;
+            _attempt = attempt;
             CurrentAction = action;
             try
             {
                 if (!action.CanExecute(_currentSnapshot))
                 {
-                    yield return RunPhase(action.FailureFeedback, action.OnFailure);
-                    yield break;
+                    await RunPhase(action.FailureFeedback, action.OnFailure, cancellation);
+                    return;
                 }
 
+                cancellation.ThrowIfCancellationRequested();
                 FreezeIfNeeded(action);
+                cancellation.ThrowIfCancellationRequested();
                 if (!skipPrepare && action.HasPreparationPhase)
-                    yield return RunPreparePhase(action);
+                {
+                    var released = _preparationReleased = new AwaitableCompletionSource();
+                    using var registration = cancellation.Register(() => released.TrySetCanceled());
+                    State = ActionExecutionState.Preparing;
+                    await RunPhase(action.PrepareFeedback, action.OnPrepare, cancellation);
+                    await released.Awaitable;
+                    cancellation.ThrowIfCancellationRequested();
+                    _preparationReleased = null;
+                }
 
-                // Release captures the final context after preparation/aiming.
+                // Release commits the final aim, after any preparation callbacks have finished.
                 RefreshSnapshot();
-                if (!_currentSnapshot.CanInteractWithWorld) yield break;
+                if (!_currentSnapshot.CanInteractWithWorld) return;
                 if (!action.CanExecuteAfterPreparation(_currentSnapshot))
                 {
-                    yield return RunPhase(action.PostPrepareFailureFeedback, action.OnPostPrepareFailure);
-                    yield break;
+                    await RunPhase(action.PostPrepareFailureFeedback, action.OnPostPrepareFailure, cancellation);
+                    return;
                 }
 
-                yield return RunExecutePhase(action);
-                yield return RunFinishPhase(action);
+                cancellation.ThrowIfCancellationRequested();
+                State = ActionExecutionState.Executing;
+                await RunPhase(action.ExecuteFeedback, action.OnExecute, cancellation);
+                if (action.ActionDuration > 0)
+                    await Awaitable.WaitForSecondsAsync(action.ActionDuration, cancellation);
+                await RunPhase(action.FinishFeedback, action.OnFinish, cancellation);
 
                 Unfreeze();
+                cancellation.ThrowIfCancellationRequested();
                 if (action.CooldownTime > 0)
                 {
                     State = ActionExecutionState.Cooldown;
-                    yield return new WaitForSeconds(action.CooldownTime);
+                    cancellation.ThrowIfCancellationRequested();
+                    await Awaitable.WaitForSecondsAsync(action.CooldownTime, cancellation);
                 }
             }
-            finally
-            {
-                // Explicit interruption may already have ended this attempt before its iterator is disposed.
-                if (CurrentAction == action) EndAttempt();
-            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+            finally { EndAttempt(attempt); }
         }
 
-        private IEnumerator RunPreparePhase(AbstractAction action)
+        private async Awaitable RunPhase(MMFeedbacks feedback,
+            Func<PlayerInteractionContextSnapshot, CancellationToken, Awaitable> phase, CancellationToken cancellation)
         {
-            State = ActionExecutionState.Preparing;
-            yield return RunPhase(action.PrepareFeedback, action.OnPrepare);
-            yield return new WaitUntil(() => State != ActionExecutionState.Preparing);
-        }
-
-        private IEnumerator RunExecutePhase(AbstractAction action)
-        {
-            State = ActionExecutionState.Executing;
-            yield return RunPhase(action.ExecuteFeedback, action.OnExecute);
-
-            if (action.ActionDuration > 0)
-                yield return new WaitForSeconds(action.ActionDuration);
-        }
-
-        private IEnumerator RunFinishPhase(AbstractAction action)
-        {
-            yield return RunPhase(action.FinishFeedback, action.OnFinish);
-        }
-
-        /// <summary>
-        /// Runs a single phase: plays feedback, then executes the phase callback.
-        /// </summary>
-        private IEnumerator RunPhase(MMFeedbacks feedback, Func<PlayerInteractionContextSnapshot, IEnumerator> phaseCallback)
-        {
-            PlayFeedback(feedback);
-            yield return phaseCallback(_currentSnapshot);
-        }
-
-        private void PlayFeedback(MMFeedbacks feedback)
-        {
+            cancellation.ThrowIfCancellationRequested();
             if (feedback) feedback.PlayFeedbacks(CurrentAction.GetActionExecutionLocation(_currentSnapshot));
+            cancellation.ThrowIfCancellationRequested();
+            await phase(_currentSnapshot, cancellation);
+            cancellation.ThrowIfCancellationRequested();
         }
 
         private void RefreshSnapshot() => _currentSnapshot = _snapshotProvider();
 
         private void FreezeIfNeeded(AbstractAction action)
         {
-            _frozeCharacter = false;
             if (!action.FreezeCharacterDuringAction) return;
-            _owner.SetControlBlocked(this, true);
             _frozeCharacter = true;
+            _owner.SetControlBlocked(this, true);
         }
 
         private void Unfreeze()
         {
             if (!_frozeCharacter) return;
-            if (_owner) _owner.SetControlBlocked(this, false); // Owner may have been destroyed during a scene transition.
             _frozeCharacter = false;
+            if (_owner) _owner.SetControlBlocked(this, false);
         }
 
         public void ContinueFromPrepare()
         {
-            if (State == ActionExecutionState.Preparing)
-                State = ActionExecutionState.Executing;
+            if (State != ActionExecutionState.Preparing) return;
+            var released = _preparationReleased;
+            State = ActionExecutionState.Executing;
+            released.TrySetResult();
         }
 
-        private void EndAttempt()
+        private void EndAttempt(CancellationTokenSource attempt)
         {
-            if (!CurrentAction) return;
+            if (!ReferenceEquals(_attempt, attempt)) return;
+            // Detach before cleanup callbacks can re-enter interruption. Remain busy until cleanup finishes.
+            _attempt = null;
             try { CurrentAction.OnEnd(_currentSnapshot); }
             finally
             {
                 Unfreeze();
-                Reset();
+                CurrentAction = null;
+                _currentSnapshot = null;
+                _preparationReleased = null;
+                State = ActionExecutionState.Idle;
             }
         }
 
-        private void Reset()
-        {
-            CurrentAction = null;
-            _currentSnapshot = null;
-            State = ActionExecutionState.Idle;
-        }
-        
         public void InterruptCurrentAction()
         {
-            try
+            var attempt = _attempt;
+            if (attempt == null) return;
+            try { CurrentAction.Interrupt(_currentSnapshot); }
+            finally
             {
-                if (CurrentAction) CurrentAction.Interrupt(_currentSnapshot);
+                try { attempt.Cancel(); }
+                finally { EndAttempt(attempt); }
             }
-            finally { EndAttempt(); }
         }
-
 
         public override string ToString() => $"ActionExecutor(State={State}, Action={CurrentAction?.ActionName})";
     }

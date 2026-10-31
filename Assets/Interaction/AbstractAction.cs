@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using Character;
 using Core.Context;
 using MoreMountains.Feedbacks;
@@ -14,6 +14,11 @@ namespace Interaction
     /// </summary>
     public abstract class AbstractAction : MonoBehaviour
     {
+        // Unity has no CompletedTask equivalent. Each call produces its own pooled, single-consumer awaitable.
+#pragma warning disable CS1998
+        protected static async Awaitable Completed() { }
+#pragma warning restore CS1998
+
         [field: SerializeField] public string ActionName { get; private set; }
         public virtual bool HasPreparationPhase => false;
         
@@ -58,17 +63,14 @@ namespace Interaction
         /// It will execute the PrepareFeedback before this.
         /// This can be something like showing a preview of the action's effect area or showing a "charging" effect.
         /// </summary>
-        public virtual IEnumerator OnPrepare(PlayerInteractionContextSnapshot snapshot)
-        {
-            yield break;
-        }
+        public virtual Awaitable OnPrepare(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation) => Completed();
         
         /// <summary>
         /// Override to specify what happens when the action is executed.
         /// It will execute the ExecuteFeedback before this.
         /// This should be the main logic of the action.
         /// </summary>
-        public abstract IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot);
+        public abstract Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation);
 
         /// <summary>
         /// Override to specify what happens when the action is interrupted.
@@ -81,10 +83,7 @@ namespace Interaction
         /// Override to specify what happens when the action finishes (before cooldown).
         /// It will execute the FinishFeedback before this.
         /// </summary>
-        public virtual IEnumerator OnFinish(PlayerInteractionContextSnapshot snapshot)
-        {
-            yield break;
-        }
+        public virtual Awaitable OnFinish(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation) => Completed();
 
         /// <summary>Releases action-owned resources after success, rejection or interruption. The executor calls this once per attempt.</summary>
         public virtual void OnEnd(PlayerInteractionContextSnapshot snapshot) { }
@@ -93,15 +92,9 @@ namespace Interaction
         /// Override to specify what happens when the action fails the CanExecute() check.
         /// It will execute the FailureFeedback before this.
         /// </summary>
-        public virtual IEnumerator OnFailure(PlayerInteractionContextSnapshot snapshot)
-        {
-            yield break;
-        }
+        public virtual Awaitable OnFailure(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation) => Completed();
         
-        public virtual IEnumerator OnPostPrepareFailure(PlayerInteractionContextSnapshot snapshot)
-        {
-            yield break;
-        }
+        public virtual Awaitable OnPostPrepareFailure(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation) => Completed();
         
         
         /// <summary>

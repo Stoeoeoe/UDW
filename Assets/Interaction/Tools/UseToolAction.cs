@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using Core.Context;
 using MoreMountains.Feedbacks;
 using UnityEngine;
@@ -28,7 +28,7 @@ namespace Interaction.Tools
             return _toolAction.CanExecuteAfterPreparation(snapshot);
         }
 
-        public override IEnumerator OnPrepare(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnPrepare(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             _toolAction.gameObject.SetActive(true);
             _toolAction.CaptureTargets(snapshot);
@@ -37,23 +37,27 @@ namespace Interaction.Tools
                 snapshot.Character.TileHighlighter.SetTiles(_toolAction.AffectedTiles);
                 snapshot.Character.TileHighlighter.Show();
             }
-            yield return _toolAction.OnPrepare(snapshot);
+            await _toolAction.OnPrepare(snapshot, cancellation);
+            cancellation.ThrowIfCancellationRequested();
             PlayFeedback(_toolAction.PrepareFeedback, snapshot);
         }
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             _toolAction.HideTileHighlighter(snapshot);
             PlayFeedback(_toolAction.ExecuteFeedback, snapshot);
             Owner.Stamina.ConsumeStamina(_toolAction.StaminaCost);
-            yield return _toolAction.OnExecute(snapshot);
+            cancellation.ThrowIfCancellationRequested(); // Exhaustion can start an overnight transition.
+            await _toolAction.OnExecute(snapshot, cancellation);
+            cancellation.ThrowIfCancellationRequested();
         }
 
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot) => _toolAction.Interrupt(snapshot);
 
-        public override IEnumerator OnFinish(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnFinish(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
-            yield return _toolAction.OnFinish(snapshot);
+            await _toolAction.OnFinish(snapshot, cancellation);
+            cancellation.ThrowIfCancellationRequested();
             PlayFeedback(_toolAction.FinishFeedback, snapshot);
         }
 
@@ -65,15 +69,16 @@ namespace Interaction.Tools
             _toolAction.gameObject.SetActive(false);
         }
 
-        public override IEnumerator OnFailure(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnFailure(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             if (_toolAction.ToolData.consumeStaminaOnFailure)
                 Owner.Stamina.ConsumeStamina(_toolAction.StaminaCost);
-            yield return _toolAction.OnFailure(snapshot);
+            await _toolAction.OnFailure(snapshot, cancellation);
+            cancellation.ThrowIfCancellationRequested();
         }
 
-        public override IEnumerator OnPostPrepareFailure(PlayerInteractionContextSnapshot snapshot) =>
-            _toolAction.OnPostPrepareFailure(snapshot);
+        public override Awaitable OnPostPrepareFailure(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation) =>
+            _toolAction.OnPostPrepareFailure(snapshot, cancellation);
 
         public override Vector2 GetActionExecutionLocation(PlayerInteractionContextSnapshot snapshot) =>
             _toolAction.GetActionExecutionLocation(snapshot);

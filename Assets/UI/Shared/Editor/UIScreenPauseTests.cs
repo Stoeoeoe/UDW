@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Reflection;
 using Character;
@@ -17,10 +18,10 @@ namespace UI.Shared.Editor
     {
         public override bool HasPreparationPhase => true;
         public bool Executed;
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             Executed = true;
-            yield break;
+            return Completed();
         }
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot) { }
     }
@@ -341,15 +342,12 @@ namespace UI.Shared.Editor
             var snapshot = PlayerInteractionContextSnapshot.Empty() with { SceneReady = true, Character = _character };
             var action = _character.gameObject.AddComponent<MenuBlockingTestAction>();
             var executor = new ActionExecutor(_character, () => snapshot);
-            var routine = executor.Run(action);
-            Assert.That(routine.MoveNext(), Is.True);
-            var prepare = (IEnumerator)routine.Current;
-            Assert.That(prepare.MoveNext(), Is.True);
+            var run = executor.RunAsync(action);
             Assert.That(executor.State, Is.EqualTo(ActionExecutionState.Preparing));
             Assert.That(_character.IsControlBlocked, Is.True);
             snapshot = snapshot with { WorldInteractionBlocked = true };
             executor.ContinueFromPrepare();
-            Assert.That(routine.MoveNext(), Is.False);
+            run.GetAwaiter().GetResult();
             Assert.That(action.Executed, Is.False);
             Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(executor.IsIdle, Is.True);

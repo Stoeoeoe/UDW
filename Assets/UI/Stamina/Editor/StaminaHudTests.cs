@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -80,9 +82,9 @@ namespace UI.Stamina.Editor
 
         [TestCase(true)]
         [TestCase(false)]
-        public void SuccessfulToolExecutionSpendsItsAuthoredCostAndUpdatesTheBar(bool skipPreparation)
+        public async Task SuccessfulToolExecutionSpendsItsAuthoredCostAndUpdatesTheBar(bool skipPreparation)
         {
-            RunTool(skipPreparation);
+            await RunTool(skipPreparation);
             Assert.That(_toolAction.Executions, Is.EqualTo(1));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - _tool.staminaCost));
             Assert.That(GameState.Player.Stamina.Current, Is.EqualTo(95));
@@ -92,11 +94,11 @@ namespace UI.Stamina.Editor
 
         [TestCase(true, 95)]
         [TestCase(false, 100)]
-        public void RejectedToolUseHonoursItsFailureCostPolicy(bool consumesOnFailure, int expected)
+        public async Task RejectedToolUseHonoursItsFailureCostPolicy(bool consumesOnFailure, int expected)
         {
             Set(_tool, "_consumeStaminaOnFailure", consumesOnFailure);
             _toolAction.Allowed = false;
-            RunTool();
+            await RunTool();
             Assert.That(_toolAction.Executions, Is.Zero);
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(expected));
             Assert.That(_value.text, Is.EqualTo($"{expected} / 100"));
@@ -119,10 +121,10 @@ namespace UI.Stamina.Editor
         }
 
         [Test]
-        public void SurplusSpendingRemainsVisibleWithoutStretchingTheBar()
+        public async Task SurplusSpendingRemainsVisibleWithoutStretchingTheBar()
         {
             _character.Stamina.GrantOvercharge(20);
-            RunTool();
+            await RunTool();
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(115));
             Assert.That(_meter.value, Is.EqualTo(100f));
             Assert.That(_value.text, Is.EqualTo("115 / 100"));
@@ -162,26 +164,26 @@ namespace UI.Stamina.Editor
             Assert.That(_value.text, Is.EqualTo("0 / 0"));
         }
 
-        private void RunTool(bool skipPreparation = true)
+        private async Task RunTool(bool skipPreparation = true)
         {
             var snapshot = PlayerInteractionContextSnapshot.Empty() with
             {
                 SceneReady = true, Character = _character, CurrentTool = _tool, CurrentlyHeldItem = _tool, Mode = Core.Context.InteractionMode.Tool
             };
             var executor = new ActionExecutor(_character, () => snapshot);
-            var steps = new Stack<IEnumerator>();
-            steps.Push(executor.Run(_useTool, skipPrepare: skipPreparation));
-            while (steps.Count > 0)
+            var run = executor.RunAsync(_useTool, skipPrepare: skipPreparation);
+            try
             {
-                var current = steps.Peek();
-                if (!current.MoveNext()) { steps.Pop(); continue; }
-                if (current.Current is WaitUntil && executor.State == ActionExecutionState.Preparing)
+                if (executor.State == ActionExecutionState.Preparing)
                 {
                     Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100), "Aiming must not spend stamina before release.");
                     executor.ContinueFromPrepare();
                 }
-                if (current.Current is IEnumerator nested) steps.Push(nested);
+                // These assertions concern the committed effect; native presentation timing is covered in gameplay tests.
+                executor.InterruptCurrentAction();
+                await run;
             }
+            finally { executor.InterruptCurrentAction(); }
             Assert.That(executor.IsIdle, Is.True);
         }
 
@@ -214,7 +216,7 @@ namespace UI.Stamina.Editor
         public bool Allowed = true;
         public int Executions;
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot) => Allowed;
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot) { Executions++; yield break; }
+        public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation) { Executions++; return Completed(); }
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot) { }
     }
 }

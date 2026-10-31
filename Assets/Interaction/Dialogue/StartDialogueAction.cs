@@ -1,4 +1,5 @@
-using System.Collections;
+using UnityEngine;
+using System.Threading;
 using Core.Context;
 
 namespace Interaction.Dialogue
@@ -8,10 +9,10 @@ namespace Interaction.Dialogue
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot) =>
             snapshot.SceneReady && snapshot.ActionableInteractable is ShowVulcanusDialogueInteractable;
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             snapshot.ActionableInteractable?.TriggerInteraction(this.Owner);
-            yield break;
+            return Completed();
         }
 
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot)

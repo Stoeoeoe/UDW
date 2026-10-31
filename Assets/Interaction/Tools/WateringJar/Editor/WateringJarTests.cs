@@ -1,5 +1,9 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections;
+using UnityEngine.TestTools;
+using UnityEditor.SceneManagement;
 using System.Collections.Generic;
 using System.Reflection;
 using Character;
@@ -21,52 +25,71 @@ using TileData = Core.Tile.TileData;
 namespace Interaction.Tools.WateringJar.Editor
 {
     /// <summary>Checks saved water usage, fresh-water targeting, delayed refill and interruption.</summary>
+    [Explicit("Uses the playable map and native Unity action delays.")]
     public sealed class WateringJarTests
     {
-        private GameTestFixture _fixture;
+        private GameObject _root;
+        private readonly List<UnityEngine.Object> _assets = new();
         private MainCharacter _character;
         private WateringJarAction _jug;
         private MapManager _map;
         private Dictionary<Vector2Int, TileData> _tiles;
         private Vector2Int _front;
         private GameObject _gridRoot;
+        private readonly Dictionary<string, object> _originalMapFields = new();
 
-        [SetUp]
-        public void SetUp()
+        [UnitySetUp]
+        public IEnumerator SetUp()
         {
-            _fixture = new GameTestFixture("Water jug");
-            _fixture.AddSingleton<GameStateManager>();
-            var level = _fixture.RegisterSingleton<LevelManager>();
-            var location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
-            location.id = "test:jug";
-            Set(level, "<CurrentLocationData>k__BackingField", location);
-            _map = _fixture.AddSingleton<MapManager>(map => Set(map, "tileDataTypes", Array.Empty<TerrainData>()));
-            // Cell conversion and layoutGrid require an active Grid, independently of the inactive managers.
+            EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
+            yield return new EnterPlayMode();
+            var deadline = Time.realtimeSinceStartup + 15f;
+            while (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The playable map must finish initialization.");
+                yield return null;
+            }
+            _root = new GameObject("Water jug fixture");
+            _root.SetActive(false);
+            _map = MapManager.Instance;
+            foreach (var field in new[] { "_terrainTilemap", "_irrigatedTilemap", "irrigatedFarmlandTile", "_tileDataCache", "_terrainDataByType" })
+                _originalMapFields[field] = typeof(MapManager).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_map);
+            _character = MainCharacter.CurrentMainCharacter;
+            _character.MainInventory.Bind(new InventoryState());
+            // Keep the real services and player, with isolated terrain to control the tested tool targets.
             _gridRoot = new GameObject("Grid", typeof(Grid));
             var terrain = new GameObject("Terrain", typeof(Tilemap));
             terrain.transform.SetParent(_gridRoot.transform);
             Set(_map, "_terrainTilemap", terrain.GetComponent<Tilemap>());
             Set(_map, "_irrigatedTilemap", terrain.GetComponent<Tilemap>());
-            Set(_map, "irrigatedFarmlandTile", _fixture.Own(ScriptableObject.CreateInstance<RuleTile>()));
+            Set(_map, "irrigatedFarmlandTile", Own(ScriptableObject.CreateInstance<RuleTile>()));
             _tiles = new Dictionary<Vector2Int, TileData>();
             Set(_map, "_tileDataCache", _tiles);
-            _character = _fixture.CreateCharacter();
             GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(0.25f, 0.25f, 0));
             _character.Orientation.ForceDirection(Vector2.up);
             _character.Tiles.EnterLocation(_map);
             _front = new Vector2Int(0, 1);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/Tools/WateringJar/WateringJarToolPrefab.prefab");
-            var root = UnityEngine.Object.Instantiate(prefab, _fixture.Root.transform);
-            _jug = root.GetComponent<WateringJarAction>();
+            _jug = UnityEngine.Object.Instantiate(prefab, _root.transform).GetComponent<WateringJarAction>();
             _jug.Initialize(_character);
         }
 
-        [TearDown]
-        public void TearDown()
+        [UnityTearDown]
+        public IEnumerator TearDown()
         {
-            _fixture.Dispose();
-            UnityEngine.Object.DestroyImmediate(_gridRoot);
+            _character.PerformPrimaryAction.InterruptAction();
+            // ExitPlayMode can render one final gameplay frame before its teardown starts.
+            foreach (var field in _originalMapFields) Set(_map, field.Key, field.Value);
+            _originalMapFields.Clear();
+            _character.Tiles.EnterLocation(_map);
+            UnityEngine.Object.Destroy(_root);
+            UnityEngine.Object.Destroy(_gridRoot);
+            foreach (var asset in _assets) UnityEngine.Object.Destroy(asset);
+            _assets.Clear();
+            yield return new ExitPlayMode();
         }
+
+        private T Own<T>(T asset) where T : UnityEngine.Object { _assets.Add(asset); return asset; }
 
         [Test]
         public void StartsFullAndRebindingPreservesWaterAndUpgrades()
@@ -85,13 +108,13 @@ namespace Interaction.Tools.WateringJar.Editor
         [TestCase(1, 0, 0.95f, 0.95f)]
         [TestCase(0, -1, 0.25f, 0.01f)]
         [TestCase(-1, 0, 0.01f, 0.25f)]
-        public void BareGroundPourSpendsResourcesAndHonoursCooldownThenPlowedGroundIsWatered(int dx, int dy, float x, float y)
+        public async Task BareGroundPourSpendsResourcesAndHonoursCooldownThenPlowedGroundIsWatered(int dx, int dy, float x, float y)
         {
             GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(x, y, 0));
             _character.Orientation.ForceDirection(new Vector2(dx, dy));
             var (executor, wrapper) = ToolLifecycle();
             var tool = _jug.ToolData;
-            Run(executor, wrapper);
+            await Run(executor, wrapper);
             Assert.That(executor.IsIdle, Is.True, "Completed pours must release tool animation ownership.");
             Assert.That(executor.CurrentAction, Is.Null);
             Assert.That(_character.IsControlBlocked, Is.False);
@@ -100,19 +123,19 @@ namespace Interaction.Tools.WateringJar.Editor
 
             var expectedTarget = new Vector2Int(Mathf.FloorToInt(x) + dx, Mathf.FloorToInt(y) + dy);
             var land = Tile("dirt", true, expectedTarget);
-            Run(executor, wrapper);
+            await Run(executor, wrapper);
             Assert.That(land.FarmlandData.IsIrrigated, Is.True);
             Assert.That(_jug.Water.Current, Is.EqualTo(tool.maxCharge - 2 * tool.chargePerUsage));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 2 * tool.staminaCost));
             Assert.That(executor.IsIdle, Is.True);
             Assert.That(_character.IsControlBlocked, Is.False);
 
-            Run(executor, wrapper);
+            await Run(executor, wrapper);
             Assert.That(land.FarmlandData.IsIrrigated, Is.True);
             Assert.That(_jug.Water.Current, Is.EqualTo(tool.maxCharge - 3 * tool.chargePerUsage), "Already-wet ground still receives a pour.");
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 3 * tool.staminaCost));
 
-            Run(executor, wrapper, () => _jug.Water.Current = 0, expectExecution: false);
+            await Run(executor, wrapper, () => _jug.Water.Current = 0, expectExecution: false);
             Assert.That(executor.IsIdle, Is.True, "A rejection after preparation must reset the action.");
             Assert.That(executor.CurrentAction, Is.Null);
             Assert.That(_character.IsControlBlocked, Is.False);
@@ -124,10 +147,9 @@ namespace Interaction.Tools.WateringJar.Editor
             var tool = _jug.ToolData;
             _character.MainInventory.AddItem(tool, 1);
             _character.Loadout.SelectItem(0);
-            _character.ToolActionRegistry.Initialize(_character);
             _jug = (WateringJarAction)_character.ToolActionRegistry.GetToolAction(tool);
             var wrapper = UnityEngine.Object.Instantiate(
-                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _fixture.Root.transform)
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform)
                 .GetComponent<UseToolAction>();
             wrapper.Initialize(_character);
             var snapshot = PlayerInteractionContextSnapshot.Empty() with
@@ -138,36 +160,44 @@ namespace Interaction.Tools.WateringJar.Editor
             return (executor, wrapper);
         }
 
-        private static void Run(ActionExecutor executor, AbstractAction action, Action beforeRelease = null, bool expectExecution = true)
+        private static async Task Run(ActionExecutor executor, AbstractAction action, Action beforeRelease = null, bool expectExecution = true)
         {
-            var steps = new Stack<IEnumerator>();
-            var sawExecutionWait = false;
-            var sawCooldownWait = false;
-            steps.Push(executor.Run(action));
-            while (steps.Count > 0)
+            var sawCooldown = false;
+            void ObserveCooldown()
             {
-                var step = steps.Peek();
-                if (!step.MoveNext()) { steps.Pop(); continue; }
-                if (step.Current is WaitUntil && executor.State == ActionExecutionState.Preparing)
+                if (executor.State != ActionExecutionState.Cooldown) return;
+                sawCooldown = true;
+                Assert.That(executor.IsIdle, Is.False);
+                Assert.That(action.Owner.IsControlBlocked, Is.False);
+                executor.RunAsync(action).GetAwaiter().GetResult();
+            }
+            executor.StateChanged += ObserveCooldown;
+            try
+            {
+                var run = executor.RunAsync(action);
+                if (executor.State == ActionExecutionState.Preparing)
                 {
                     beforeRelease?.Invoke();
                     executor.ContinueFromPrepare();
                 }
-                if (step.Current is WaitForSeconds)
+                Assert.That(!executor.IsIdle, Is.EqualTo(expectExecution), "Only executed pours wait for their authored duration.");
+                if (expectExecution)
                 {
-                    sawExecutionWait |= executor.State == ActionExecutionState.Executing;
-                    sawCooldownWait |= executor.State == ActionExecutionState.Cooldown;
                     var tool = ((UseToolAction)action).CurrentTool;
                     var water = action.Owner.Loadout.GetToolCharge(tool).Current;
                     var stamina = action.Owner.Stamina.CurrentStamina;
-                    Assert.That(executor.Run(action).MoveNext(), Is.False, "Repeated input cannot start another pour during execution or cooldown.");
+                    await executor.RunAsync(action);
                     Assert.That(action.Owner.Loadout.GetToolCharge(tool).Current, Is.EqualTo(water));
                     Assert.That(action.Owner.Stamina.CurrentStamina, Is.EqualTo(stamina));
                 }
-                if (step.Current is IEnumerator nested) steps.Push(nested);
+                await run;
+                Assert.That(sawCooldown, Is.EqualTo(expectExecution));
             }
-            Assert.That(sawExecutionWait, Is.EqualTo(expectExecution), "Only executed pours run the authored action duration.");
-            Assert.That(sawCooldownWait, Is.EqualTo(expectExecution), "Only executed pours run the authored cooldown.");
+            finally
+            {
+                executor.StateChanged -= ObserveCooldown;
+                executor.InterruptCurrentAction();
+            }
         }
 
         [TestCase(0, 1, 0.25f, 0.25f)]
@@ -178,7 +208,7 @@ namespace Interaction.Tools.WateringJar.Editor
         [TestCase(0, -1, 0.25f, 0.01f)]
         [TestCase(-1, 0, 0.95f, 0.25f)]
         [TestCase(-1, 0, 0.01f, 0.25f)]
-        public void AdjacentWaterRefillsThroughTheFullLifecycleAtEitherEdgeOfTheStandingCell(int dx, int dy, float x, float y)
+        public async Task AdjacentWaterRefillsThroughTheFullLifecycleAtEitherEdgeOfTheStandingCell(int dx, int dy, float x, float y)
         {
             GameTestFixture.PlaceCharacterAtGroundPoint(_character, new Vector3(x, y, 0));
             _character.Orientation.ForceDirection(new Vector2(dx, dy));
@@ -189,7 +219,7 @@ namespace Interaction.Tools.WateringJar.Editor
 
             Assert.That(_character.Tiles.InFront, Is.SameAs(target));
             Assert.That(_jug.GetActionExecutionLocation(null), Is.EqualTo(target.WorldPosition));
-            Run(executor, wrapper);
+            await Run(executor, wrapper);
 
             Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100));
@@ -198,50 +228,36 @@ namespace Interaction.Tools.WateringJar.Editor
             Assert.That(_jug.gameObject.activeSelf, Is.False);
 
             // A full jug rejects another refill without taking ownership or spending resources.
-            Run(executor, wrapper, expectExecution: false);
+            await Run(executor, wrapper, expectExecution: false);
             Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100));
             Assert.That(_character.IsControlBlocked, Is.False);
         }
 
         [Test]
-        public void InterruptingTheExecutingRefillReleasesControlsAndAllowsAnotherAttempt()
+        public async Task InterruptingTheExecutingRefillReleasesControlsAndAllowsAnotherAttempt()
         {
             Tile("fresh_water");
             var (executor, wrapper) = ToolLifecycle();
             _jug.Water.Current = 2;
-            var steps = new Stack<IEnumerator>();
-            steps.Push(executor.Run(wrapper));
-            var waitingToRefill = false;
-            while (steps.Count > 0)
-            {
-                var step = steps.Peek();
-                if (!step.MoveNext()) { steps.Pop(); continue; }
-                if (step.Current is WaitUntil && executor.State == ActionExecutionState.Preparing)
-                    executor.ContinueFromPrepare();
-                if (step.Current is WaitForSeconds && executor.State == ActionExecutionState.Executing)
-                {
-                    waitingToRefill = true;
-                    break;
-                }
-                if (step.Current is IEnumerator nested) steps.Push(nested);
-            }
-            Assert.That(waitingToRefill, Is.True);
+            var run = executor.RunAsync(wrapper);
+            executor.ContinueFromPrepare();
+            Assert.That(executor.State, Is.EqualTo(ActionExecutionState.Executing));
             Assert.That(_jug.Water.Current, Is.EqualTo(2), "Water is granted only after the refill delay.");
             executor.InterruptCurrentAction();
-            while (steps.Count > 0) ((IDisposable)steps.Pop()).Dispose();
+            await run;
 
             Assert.That(executor.IsIdle, Is.True);
             Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(_jug.gameObject.activeSelf, Is.False);
             Assert.That(_jug.Water.Current, Is.EqualTo(2));
-            Run(executor, wrapper);
+            await Run(executor, wrapper);
             Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100));
         }
 
         [Test]
-        public void CapturedRefillUsesTheSameTargetForFeedbackCostAndExecution()
+        public async Task CapturedRefillUsesTheSameTargetForFeedbackCostAndExecution()
         {
             var water = Tile("fresh_water");
             var (_, wrapper) = ToolLifecycle();
@@ -257,9 +273,7 @@ namespace Interaction.Tools.WateringJar.Editor
             Assert.That(_jug.StaminaCost, Is.Zero);
             Assert.That(_jug.ExecuteFeedback, Is.SameAs(feedback));
             Assert.That(_jug.GetActionExecutionLocation(snapshot), Is.EqualTo(water.WorldPosition));
-            var routine = _jug.OnExecute(snapshot);
-            Assert.That(routine.MoveNext(), Is.True);
-            Assert.That(routine.MoveNext(), Is.False);
+            await _jug.OnExecute(snapshot, CancellationToken.None);
             Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
 
             wrapper.OnEnd(snapshot);
@@ -268,7 +282,7 @@ namespace Interaction.Tools.WateringJar.Editor
 
         [TestCase(true)]
         [TestCase(false)]
-        public void PreparationReleaseCapturesTheFinalAimForBothRefillAndWatering(bool finishFacingWater)
+        public async Task PreparationReleaseCapturesTheFinalAimForBothRefillAndWatering(bool finishFacingWater)
         {
             Tile("fresh_water");
             var soil = Tile("dirt", true, new Vector2Int(0, -1));
@@ -276,7 +290,7 @@ namespace Interaction.Tools.WateringJar.Editor
             var (executor, wrapper) = ToolLifecycle();
             _jug.Water.Current = 4;
 
-            Run(executor, wrapper, () => _character.Orientation.ForceDirection(finishFacingWater ? Vector2.up : Vector2.down));
+            await Run(executor, wrapper, () => _character.Orientation.ForceDirection(finishFacingWater ? Vector2.up : Vector2.down));
 
             Assert.That(_jug.Water.Current, Is.EqualTo(finishFacingWater ? _jug.Water.Capacity : 4 - _jug.ToolData.chargePerUsage));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(finishFacingWater ? 100 : 100 - _jug.ToolData.staminaCost));
@@ -286,14 +300,13 @@ namespace Interaction.Tools.WateringJar.Editor
         }
 
         [Test]
-        public void WateringSpendsPerTileAndStopsWhenEmpty()
+        public async Task WateringSpendsPerTileAndStopsWhenEmpty()
         {
             var first = Tile("dirt", true);
             var second = Tile("dirt", true, _front + Vector2Int.right);
             _jug.Water.Current = _jug.ToolData.chargePerUsage;
             Set(typeof(ToolAction), _jug, "_capturedAffectedTiles", new List<TileData> { first, second });
-            var routine = _jug.OnExecute(null);
-            while (routine.MoveNext()) { }
+            await _jug.OnExecute(null, CancellationToken.None);
             Assert.That(first.FarmlandData.IsIrrigated, Is.True);
             Assert.That(second.FarmlandData.IsIrrigated, Is.False);
             Assert.That(_jug.Water.Current, Is.Zero);
@@ -301,7 +314,25 @@ namespace Interaction.Tools.WateringJar.Editor
         }
 
         [Test]
-        public void RefillCompletesAfterTheFeedbackDelayAndUsesUpgradedCapacity()
+        public async Task InterruptedPourDoesNotSpendWaterOrIrrigateTheNextTile()
+        {
+            var first = Tile("dirt", true);
+            var second = Tile("dirt", true, _front + Vector2Int.right);
+            var initialWater = _jug.Water.Current;
+            Set(typeof(ToolAction), _jug, "_capturedAffectedTiles", new List<TileData> { first, second });
+            using var cancellation = new CancellationTokenSource();
+            var run = _jug.OnExecute(null, cancellation.Token);
+            Assert.That(first.FarmlandData.IsIrrigated, Is.True);
+            Assert.That(second.FarmlandData.IsIrrigated, Is.False);
+            cancellation.Cancel();
+            try { await run; Assert.Fail("The remaining pour must be cancelled."); }
+            catch (OperationCanceledException) { }
+            Assert.That(second.FarmlandData.IsIrrigated, Is.False);
+            Assert.That(_jug.Water.Current, Is.EqualTo(initialWater - _jug.ToolData.chargePerUsage));
+        }
+
+        [Test]
+        public async Task RefillCompletesAfterTheFeedbackDelayAndUsesUpgradedCapacity()
         {
             Tile("fresh_water");
             _jug.Water.Current = 0;
@@ -309,38 +340,40 @@ namespace Interaction.Tools.WateringJar.Editor
             Assert.That(_jug.CanExecute(null), Is.True);
             Assert.That(_jug.StaminaCost, Is.Zero);
             Assert.That(_jug.ExecuteFeedback, Is.Not.Null);
-            var routine = _jug.OnExecute(null);
-            Assert.That(routine.MoveNext(), Is.True);
-            Assert.That(routine.Current, Is.TypeOf<WaitForSeconds>());
+            var run = _jug.OnExecute(null, CancellationToken.None);
+            Assert.That(run.GetAwaiter().IsCompleted, Is.False);
             Assert.That(_jug.Water.Current, Is.Zero);
-            Assert.That(routine.MoveNext(), Is.False);
+            await run;
             Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
             Assert.That(_jug.CanExecute(null), Is.False, "A full jug does not start another refill.");
         }
 
         [Test]
-        public void InterruptedRefillDoesNotGrantWater()
+        public async Task InterruptedRefillDoesNotGrantWater()
         {
             Tile("fresh_water");
             _jug.Water.Current = 2;
-            var routine = _jug.OnExecute(null);
-            routine.MoveNext();
-            ((IDisposable)routine).Dispose();
+            using var cancellation = new CancellationTokenSource();
+            var run = _jug.OnExecute(null, cancellation.Token);
+            cancellation.Cancel();
+            try { await run; Assert.Fail("The refill must be cancelled."); }
+            catch (OperationCanceledException) { }
             Assert.That(_jug.Water.Current, Is.EqualTo(2));
         }
 
         [TestCase(false)]
         [TestCase(true)]
-        public void RefillUsesCachedFreshwaterFromTerrainOrAVisualLayer(bool visualLayer)
+        public async Task RefillUsesCachedFreshwaterFromTerrainOrAVisualLayer(bool visualLayer)
         {
             var water = (VulcanusTile)Tile("fresh_water").TilemapTile;
-            var grass = _fixture.Own(ScriptableObject.CreateInstance<VulcanusTile>());
+            var grass = Own(ScriptableObject.CreateInstance<VulcanusTile>());
             grass.Configure(1, "test:grass", "grass", TerrainType.Grass, Array.Empty<string>(), VulcanusCollisionKind.None);
-            var grassData = _fixture.Own(ScriptableObject.CreateInstance<TerrainData>());
-            var waterData = _fixture.Own(ScriptableObject.CreateInstance<TerrainData>());
+            var grassData = Own(ScriptableObject.CreateInstance<TerrainData>());
+            var waterData = Own(ScriptableObject.CreateInstance<TerrainData>());
             Set(grassData, "terrainType", TerrainType.Grass);
             Set(waterData, "terrainType", TerrainType.Water);
-            Set(_map, "_terrainDataByType", new Dictionary<TerrainType, TerrainData>
+            Set(_map, "_terrainDataByType", new Dictionary<TerrainType, TerrainData>(
+                (Dictionary<TerrainType, TerrainData>)_originalMapFields["_terrainDataByType"])
                 { [TerrainType.Grass] = grassData, [TerrainType.Water] = waterData });
             var terrain = (Tilemap)typeof(MapManager).GetField("_terrainTilemap", BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(_map);
@@ -359,9 +392,7 @@ namespace Interaction.Tools.WateringJar.Editor
             Assert.That(_jug.IsRefilling, Is.True);
             Assert.That(_jug.CanExecute(null), Is.True);
             Assert.That(_jug.StaminaCost, Is.Zero);
-            var routine = _jug.OnExecute(null);
-            Assert.That(routine.MoveNext(), Is.True);
-            Assert.That(routine.MoveNext(), Is.False);
+            await _jug.OnExecute(null, CancellationToken.None);
             Assert.That(_jug.Water.Current, Is.EqualTo(_jug.Water.Capacity));
             Assert.That(_map.GetTileDataAtCoordinates(_front).TilemapTile, Is.SameAs(visualLayer ? grass : water));
         }
@@ -391,11 +422,11 @@ namespace Interaction.Tools.WateringJar.Editor
         private TileData Tile(string terrain, bool farmable = false, Vector2Int? coordinates = null)
         {
             var at = coordinates ?? _front;
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<VulcanusTile>());
+            var definition = Own(ScriptableObject.CreateInstance<VulcanusTile>());
             definition.Configure(0, "test:tile", terrain, TerrainType.Water, Array.Empty<string>(), VulcanusCollisionKind.None);
             if (terrain == "fresh_water")
                 Set(definition, "properties", new[] { new VulcanusTile.VulcanusTileProperty { key = "isFreshwater", jsonValue = "true" } });
-            var data = _fixture.Own(ScriptableObject.CreateInstance<TerrainData>());
+            var data = Own(ScriptableObject.CreateInstance<TerrainData>());
             var tile = new TileData(definition, at.x, at.y, data, Vector3.zero, farmable,
                 isFreshwater: definition.IsFreshwater);
             if (farmable) tile.TryPlow();

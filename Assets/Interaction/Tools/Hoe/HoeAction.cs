@@ -1,4 +1,5 @@
-using System.Collections;
+using UnityEngine;
+using System.Threading;
 using Core.Context;
 using Core.Tile;
 
@@ -9,9 +10,9 @@ namespace Interaction.Tools.Hoe
     /// </summary>
     public class HoeAction : ToolAction
     {
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
-            yield return ForEachAffectedTile(snapshot, tile =>
+            await ForEachAffectedTile(snapshot, cancellation, tile =>
             {
                 MapManager.Instance.PlowTile(tile);
             });

@@ -1,4 +1,5 @@
-using System.Collections;
+using UnityEngine;
+using System.Threading;
 using Core.Context;
 using Core.Items;
 
@@ -15,12 +16,12 @@ namespace Interaction
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot) =>
             snapshot.SceneReady && snapshot.ActionableInteractable != null;
 
-        public override IEnumerator OnExecute(PlayerInteractionContextSnapshot snapshot)
+        public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             var interactable = snapshot.ActionableInteractable;
             _pickup = interactable as PickupableInteractable;
             interactable?.TriggerInteraction(Owner);
-            while (_pickup && _pickup.IsPickingUp) yield return null;
+            while (_pickup && _pickup.IsPickingUp) await Awaitable.NextFrameAsync(cancellation);
         }
 
         public override void Interrupt(PlayerInteractionContextSnapshot snapshot)

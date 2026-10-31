@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
@@ -127,40 +127,23 @@ namespace Interaction.Tools
         /// Helper method to execute an action on each affected tile with optional delay.
         /// Uses the captured targets during an attempt.
         /// </summary>
-        protected IEnumerator ForEachAffectedTile(
-            PlayerInteractionContextSnapshot snapshot, 
+        protected async Awaitable ForEachAffectedTile(
+            PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation,
             System.Action<TileData> action, 
             float delayBetweenTiles = 0.2f)
         {
             var affectedTiles = AffectedTiles;
             foreach (var tile in affectedTiles)
             {
+                cancellation.ThrowIfCancellationRequested();
                 action(tile);
+                cancellation.ThrowIfCancellationRequested();
                 if (affectedTiles.Count > 1)
                 {
-                    yield return new WaitForSeconds(delayBetweenTiles);
+                    await Awaitable.WaitForSecondsAsync(delayBetweenTiles, cancellation);
                 }
             }
         }
         
-        /// <summary>
-        /// Helper method to execute an async action on each affected tile with optional delay.
-        /// Uses the captured targets during an attempt.
-        /// </summary>
-        protected IEnumerator ForEachAffectedTileAsync(
-            PlayerInteractionContextSnapshot snapshot, 
-            System.Func<TileData, IEnumerator> action, 
-            float delayBetweenTiles = 0.2f)
-        {
-            var affectedTiles = AffectedTiles;
-            foreach (var tile in affectedTiles)
-            {
-                yield return action(tile);
-                if (affectedTiles.Count > 1)
-                {
-                    yield return new WaitForSeconds(delayBetweenTiles);
-                }
-            }
-        }
     }
 }

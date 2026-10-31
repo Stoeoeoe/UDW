@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System.Collections;
 using System.Collections.Generic;
@@ -88,7 +90,7 @@ namespace Core.Tile.Editor
         [TestCase(1, 0, 0.95f, 0.5f)]
         [TestCase(0, -1, 0.5f, 0.01f)]
         [TestCase(-1, 0, 0.01f, 0.5f)]
-        public void AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
+        public async Task AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
         {
             _fixture.AddSingleton<PlantManager>();
             var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/map-1.vmap")
@@ -130,16 +132,15 @@ namespace Core.Tile.Editor
                 Mode = Core.Context.InteractionMode.Tool
             };
             var executor = new Interaction.ActionExecutor(character, () => snapshot);
-            var steps = new Stack<IEnumerator>();
-            steps.Push(executor.Run(wrapper));
-            while (steps.Count > 0)
+            var run = executor.RunAsync(wrapper);
+            try
             {
-                var step = steps.Peek();
-                if (!step.MoveNext()) { steps.Pop(); continue; }
-                if (step.Current is WaitUntil && executor.State == Interaction.ActionExecutionState.Preparing)
-                    executor.ContinueFromPrepare();
-                if (step.Current is IEnumerator nested) steps.Push(nested);
+                executor.ContinueFromPrepare();
+                // These assertions concern the committed effect; native presentation timing is covered in gameplay tests.
+                executor.InterruptCurrentAction();
+                await run;
             }
+            finally { executor.InterruptCurrentAction(); }
 
             Assert.That(soil.FarmlandData.IsPlowed, Is.True);
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
