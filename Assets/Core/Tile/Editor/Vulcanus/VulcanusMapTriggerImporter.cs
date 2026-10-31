@@ -185,6 +185,12 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 id = !string.IsNullOrEmpty(dto.Id) ? dto.Id : Guid.NewGuid().ToString("N"),
                 label = dto.Label ?? string.Empty,
+                linkType = dto.LinkType switch
+                {
+                    "door" => LocationLinkType.Door,
+                    "open" => LocationLinkType.Open,
+                    _ => throw new InvalidOperationException($"Location link '{dto.Id}' has invalid linkType '{dto.LinkType}'. Expected 'door' or 'open'.")
+                },
                 sourcePosition = ReadTriggerPixelPosition(trigger),
                 triggerSize = ReadTriggerPixelSize(trigger),
                 targetMapId = dto.TargetMapId ?? string.Empty,
@@ -196,6 +202,9 @@ namespace Core.Tile.Editor.Vulcanus
                     : dto.TargetLinkId ?? string.Empty,
                 direction = dto.Direction ?? string.Empty
             };
+
+            if (string.IsNullOrWhiteSpace(data.targetLinkId))
+                throw new InvalidOperationException($"Location link '{dto.Id}' requires an arrival anchor.");
 
             if (anchorsById != null &&
                 !string.IsNullOrWhiteSpace(dto.TargetAnchorId) &&

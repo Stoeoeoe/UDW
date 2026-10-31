@@ -326,6 +326,7 @@ namespace Core.Tile.Editor.Vulcanus
     {
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("label")] public string Label { get; set; } = "";
+        [JsonProperty("linkType")] public string LinkType { get; set; } = "door";
         [JsonProperty("triggerId")] public string TriggerId { get; set; }
         [JsonProperty("targetMapId")] public string TargetMapId { get; set; } = "";
         [JsonProperty("targetAnchorId")] public string TargetAnchorId { get; set; }

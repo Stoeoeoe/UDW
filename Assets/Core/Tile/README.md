@@ -47,6 +47,13 @@ scene before creating or opening another scene additively.
 and filter location lifecycle callbacks. Hand-authored locations without a scene path
 continue to use their ID as the scene name.
 
+Location links use `linkType: "door"` (the default, press Interact) or
+`linkType: "open"` (activate on player contact). NPC contact does not activate
+interactables; NPC commands can explicitly call `TriggerInteraction`, except for
+player-only location links. Location requests are rejected during startup or an
+existing transition. Explicit arrival keys must resolve; only initial placement
+without a key falls back to a default spawn point.
+
 Run the `MapLoading` EditMode category for catalog, path, decoding, and integration
 coverage. Integration tests import disposable source assets, preserve Build Settings,
 and read the project's registered spawnable prefab without changing its catalog.

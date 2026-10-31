@@ -1,5 +1,4 @@
 using Core.Common;
-using PixelCrushers.DialogueSystem;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -8,7 +7,7 @@ namespace Interaction.Dialog
     [CreateAssetMenu(fileName = "TypewriterSound", menuName = "Game/Typewriter Sound", order = 6)]
     public class TypewriterSound : ValidatedScriptableObject<TypewriterSoundValidator>
     {
-        [SerializeField, Required, ActorPopup]
+        [SerializeField, Required]
         [Validation.Id("Assign a nonblank actor ID; catalog matching is case-insensitive.")]
         private string _actorId;
 

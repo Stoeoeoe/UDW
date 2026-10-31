@@ -70,12 +70,12 @@ namespace Core.Dialogue.Vulcanus.Editor
 
         }
 
-        private void Start(bool choice = false)
+        private void Start(bool choice = false, string speaker = "")
         {
             var dialogue = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueAsset>());
             VulcanusDialogueNode entry = choice
                 ? new VulcanusDialogueChoiceNode("entry", new[] { new VulcanusDialogueChoiceOption("yes", "Yes", "", "", "end") })
-                : new VulcanusDialogueLineNode("entry", "", "", "A line of dialogue.", "", "end");
+                : new VulcanusDialogueLineNode("entry", speaker, "", "A line of dialogue.", "", "end");
             dialogue.Configure(null, 1, "test:dialogue", "Test", "", false, "", "entry", Array.Empty<string>(), "", "",
                 new[] { entry, new VulcanusDialogueEndNode("end") }, Array.Empty<VulcanusDialogueAsset.ImportedMessage>(), Array.Empty<string>());
             _database.Configure(null, new[] { dialogue });
@@ -89,6 +89,17 @@ namespace Core.Dialogue.Vulcanus.Editor
             using var evt = NavigationSubmitEvent.GetPooled();
             evt.target = Overlay;
             Overlay.SendEvent(evt);
+        }
+
+        [TestCase("base:villager")]
+        [TestCase("")]
+        public void TypewriterSpeakerUsesOnlyTheActiveVulcanusLine(string speaker)
+        {
+            Start(speaker: speaker);
+            Assert.That(Interaction.Dialog.TypewriterSoundResolver.ResolveCurrentSpeakerId(),
+                Is.EqualTo(string.IsNullOrWhiteSpace(speaker) ? null : speaker));
+            GameTestFixture.Invoke(_runner, "OnDisable");
+            Assert.That(Interaction.Dialog.TypewriterSoundResolver.ResolveCurrentSpeakerId(), Is.Null);
         }
 
         private void SetKey(KeyCode key)

@@ -288,6 +288,12 @@
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string" },
+        "linkType": {
+          "type": "string",
+          "enum": ["door", "open"],
+          "default": "door",
+          "description": "Door requires Interact; open activates on player contact."
+        },
         "triggerId": {
           "type": "string",
           "description": "References a MapTrigger on this map."

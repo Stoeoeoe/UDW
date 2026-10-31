@@ -1,5 +1,5 @@
 using System;
-using PixelCrushers;
+using MoreMountains.Tools;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
@@ -33,7 +33,7 @@ namespace Core.Tile.Vulcanus
             if (facingDirection == Vector2.zero)
                 return;
 
-            MoreGizmos.DrawArrow(transform.position + (Vector3)(facingDirection.normalized * 0.5f), facingDirection.normalized, 0.25f);
+            MMDebug.DrawGizmoArrow(transform.position + (Vector3)(facingDirection.normalized * 0.5f), facingDirection.normalized * 0.25f, Color.green, 0.08f);
         }
     }
 }

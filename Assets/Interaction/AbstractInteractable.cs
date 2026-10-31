@@ -4,6 +4,7 @@ using Character;
 using Core.Context;
 using Core.Events;
 using Core.Game;
+using Core.Location;
 using Core.TimeAndWeather;
 using MoreMountains.Feedbacks;
 using Sirenix.OdinInspector;
@@ -264,15 +265,15 @@ namespace Interaction
         protected virtual void OnTriggerEnter2D(Collider2D other)
         {
             var character = other.GetComponentInParent<GameCharacter>();
-            if (!character) return;
+            if (!character || character != MainCharacter.CurrentMainCharacter) return;
             OnCharacterEntered(character);
-            if (!RequiresButtonPress) TriggerInteraction(character);
+            if (!RequiresButtonPress && LevelManager.Instance.SceneReady) TriggerInteraction(character);
         }
 
         protected virtual void OnTriggerExit2D(Collider2D other)
         {
             var character = other.GetComponentInParent<GameCharacter>();
-            if (character) OnCharacterExited(character);
+            if (character && character == MainCharacter.CurrentMainCharacter) OnCharacterExited(character);
         }
 
         protected virtual void OnCharacterEntered(GameCharacter character) => EnterFeedback?.PlayFeedbacks();

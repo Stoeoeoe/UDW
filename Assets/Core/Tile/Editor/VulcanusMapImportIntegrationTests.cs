@@ -341,8 +341,43 @@ namespace Core.Tile.Editor
             Assert.That(link.TargetLocation, Is.SameAs(_target));
             Assert.That(link.TargetLocationId, Is.EqualTo("test:target"));
             Assert.That(link.TargetEntryKey, Is.EqualTo("spawn"));
+            Assert.That(link.RequiresButtonPress, Is.True, "Links default to doors.");
             var anchor = map.GetComponentInChildren<VulcanusMapAnchor>(true);
             Assert.That(anchor.transform.localPosition, Is.EqualTo(new Vector3(1, 3, 0)));
+        }
+
+        [Test]
+        public void ReimportUpdatesLinkActivationFromOpenToDoor()
+        {
+            _mapJson["locationLinks"][0]["linkType"] = "open";
+            Assert.That(ImportMap().GetComponentInChildren<LocationLink>(true).RequiresButtonPress, Is.False);
+            _mapJson["locationLinks"][0]["linkType"] = "door";
+            Assert.That(ImportMap().GetComponentInChildren<LocationLink>(true).RequiresButtonPress, Is.True);
+        }
+
+        [Test]
+        public void UnknownLinkActivationFailsImport()
+        {
+            var dto = new LocationLinkDto { Id = "exit", LinkType = "invalid" };
+            var build = typeof(VulcanusMapTriggerImporter).GetMethod("BuildLocationLinkData", BindingFlags.Static | BindingFlags.NonPublic);
+            var error = Assert.Throws<TargetInvocationException>(() => build.Invoke(null, new object[]
+            {
+                dto, new MapTriggerDto(), new Dictionary<string, VulcanusMapAnchor>()
+            }));
+            Assert.That(error.InnerException, Is.TypeOf<InvalidOperationException>());
+            StringAssert.Contains("invalid linkType", error.InnerException.Message);
+        }
+
+        [Test]
+        public void LinkWithoutArrivalAnchorFailsImport()
+        {
+            var build = typeof(VulcanusMapTriggerImporter).GetMethod("BuildLocationLinkData", BindingFlags.Static | BindingFlags.NonPublic);
+            var error = Assert.Throws<TargetInvocationException>(() => build.Invoke(null, new object[]
+            {
+                new LocationLinkDto { Id = "exit" }, new MapTriggerDto(), new Dictionary<string, VulcanusMapAnchor>()
+            }));
+            Assert.That(error.InnerException, Is.TypeOf<InvalidOperationException>());
+            StringAssert.Contains("requires an arrival anchor", error.InnerException.Message);
         }
 
         [Test]

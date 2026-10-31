@@ -1,6 +1,4 @@
 using Core.Dialogue.Vulcanus;
-using PixelCrushers.DialogueSystem;
-using DialogueActor = PixelCrushers.DialogueSystem.Wrappers.DialogueActor;
 
 namespace Interaction.Dialog
 {
@@ -13,25 +11,6 @@ namespace Interaction.Dialog
                 var vulcanusSpeaker = VulcanusDialogueRunner.Instance.CurrentSpeakerId;
                 if (!string.IsNullOrWhiteSpace(vulcanusSpeaker))
                     return vulcanusSpeaker;
-            }
-
-            if (DialogueManager.currentConversant != null)
-            {
-                var actor = DialogueActor.GetDialogueActorComponent(DialogueManager.currentConversant);
-                if (actor != null)
-                {
-                    var actorName = actor.GetActorName();
-                    if (!string.IsNullOrWhiteSpace(actorName))
-                        return actorName;
-                }
-            }
-
-            if (DialogueManager.Instance != null &&
-                DialogueManager.Instance.activeConversation != null &&
-                DialogueManager.Instance.activeConversation.conversationModel != null &&
-                DialogueManager.Instance.activeConversation.conversationModel.ActorInfo != null)
-            {
-                return DialogueManager.Instance.activeConversation.conversationModel.ActorInfo.nameInDatabase;
             }
 
             return null;

@@ -1,6 +1,6 @@
 using Character;
 using Core.Tile.Vulcanus;
-using PixelCrushers;
+using MoreMountains.Tools;
 using System;
 using UnityEngine;
 
@@ -8,7 +8,7 @@ namespace Core.Location
 {
     /// <summary>
     /// Portal/door to another location. Calls LevelManager.Instance.LoadLocation.
-    /// Door = walk-in (button press needed). Open = no button press required.
+    /// Door requires a button press. Open activates on player contact.
     /// </summary>
     public class LocationLink : ILocationLink
     {
@@ -26,10 +26,9 @@ namespace Core.Location
         public override void ApplyVulcanusData(VulcanusLocationLinkData data, VulcanusWorldCatalog catalog)
         {
             Key = data.id;
+            linkType = data.linkType;
             targetLocationId = data.targetMapId;
-            targetEntryKey = string.IsNullOrWhiteSpace(data.targetLinkId)
-                ? data.targetMapId
-                : data.targetLinkId;
+            targetEntryKey = data.targetLinkId;
 
             if (catalog != null && catalog.TryGetLocationDataByMapId(data.targetMapId, out var mappedLocation))
                 targetLocation = mappedLocation;
@@ -42,6 +41,7 @@ namespace Core.Location
 
         protected override bool Interact(GameCharacter instigator)
         {
+            if (instigator != MainCharacter.CurrentMainCharacter) return false;
             var levelManager = LevelManager.Instance;
             if (!levelManager)
             {
@@ -49,9 +49,9 @@ namespace Core.Location
                 return false;
             }
 
-            var entryKey = string.IsNullOrWhiteSpace(targetEntryKey)
-                ? targetLocationId
-                : targetEntryKey;
+            var entryKey = targetEntryKey;
+            if (string.IsNullOrWhiteSpace(entryKey))
+                throw new InvalidOperationException($"Location link '{Key}' requires an arrival anchor.");
             var transitionFacing = exitFacingDirection != Vector2.zero ? exitFacingDirection : instigator.Orientation.FacingDirection;
 
             if (TargetsCurrentLocation(levelManager))
@@ -72,8 +72,7 @@ namespace Core.Location
                 return false;
             }
 
-            levelManager.LoadLocation(resolvedTarget, entryKey, transitionFacing);
-            return true;
+            return levelManager.LoadLocation(resolvedTarget, entryKey, transitionFacing);
         }
 
         private bool TargetsCurrentLocation(LevelManager levelManager)
@@ -97,7 +96,7 @@ namespace Core.Location
                 return;
 
             var position = transform.position + (Vector3)(facing.normalized * 0.5f);
-            MoreGizmos.DrawArrow(position, facing.normalized, 0.25f);
+            MMDebug.DrawGizmoArrow(position, facing.normalized * 0.25f, Color.green, 0.08f);
         }
     }
 }
