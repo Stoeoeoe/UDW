@@ -369,6 +369,8 @@ export interface EntityOverride {
 export interface MapMetadata {
   description?: string;
   music?: string;
+  musicCue?: string;
+  musicPreset?: string;
   ambience?: string;
   world?: WorldMapMetadata;
   entryPoints?: { id: string; position: [number, number] }[];

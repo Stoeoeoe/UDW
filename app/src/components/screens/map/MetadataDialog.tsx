@@ -56,7 +56,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
     );
   }
 
-  const updateMapMetadata = (key: 'description' | 'music' | 'ambience', value: string) => {
+  const updateMapMetadata = (key: 'description' | 'musicCue' | 'musicPreset' | 'ambience', value: string) => {
     updateCurrentMap({ metadata: { ...(currentMap.metadata || {}), [key]: value || undefined } });
   };
 
@@ -335,8 +335,16 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
             <FormControl>
               <FormLabel>Music Cue</FormLabel>
               <Input
-                value={currentMap.metadata?.music || ''}
-                onChange={(e) => updateMapMetadata('music', e.target.value)}
+                value={currentMap.metadata?.musicCue || ''}
+                onChange={(e) => updateMapMetadata('musicCue', e.target.value)}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Music Preset</FormLabel>
+              <Input
+                value={currentMap.metadata?.musicPreset || ''}
+                onChange={(e) => updateMapMetadata('musicPreset', e.target.value)}
               />
             </FormControl>
 
