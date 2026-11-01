@@ -130,21 +130,17 @@ namespace Core.Dialogue.Vulcanus.Editor
         [UnityTest]
         public IEnumerator DialogueFillsTheViewportAndRendersAtTheSelectedEdge()
         {
-            var window = ScriptableObject.CreateInstance<EditorWindow>();
             try
             {
-                window.position = new Rect(0, 0, 800, 600);
-                window.rootVisualElement.Add(_document.rootVisualElement);
-                window.Show();
                 _character.transform.position = new Vector3(0f, 3f, 0f);
                 Start();
                 yield return null;
                 yield return null;
 
-                var viewport = window.rootVisualElement.worldBound;
+                var viewport = Overlay.panel.visualTree.worldBound;
                 var panel = _document.rootVisualElement.Q("dialogue-panel");
                 Assert.That(Overlay.worldBound.height, Is.EqualTo(viewport.height).Within(1f));
-                Assert.That(panel.worldBound.yMin, Is.GreaterThan(viewport.center.y),
+                Assert.That(panel.parent.worldBound.yMax, Is.EqualTo(viewport.yMax - 24f).Within(1f),
                     "Bottom placement must move the rendered box, not just set its class.");
                 GameTestFixture.Invoke(_runner, "OnDisable");
 
@@ -152,13 +148,11 @@ namespace Core.Dialogue.Vulcanus.Editor
                 Start(choice: true);
                 yield return null;
                 yield return null;
-                Assert.That(panel.worldBound.yMax, Is.LessThan(viewport.center.y));
+                Assert.That(panel.worldBound.yMin, Is.EqualTo(viewport.yMin + 24f).Within(1f));
             }
             finally
             {
                 GameTestFixture.Invoke(_runner, "OnDisable");
-                window.Close();
-                UnityEngine.Object.DestroyImmediate(window);
             }
         }
 
