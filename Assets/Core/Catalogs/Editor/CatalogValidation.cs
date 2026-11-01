@@ -23,6 +23,17 @@ namespace Core.Catalogs.Editor
             }
             var duplicate = definitions.GroupBy(catalog.GetId, catalog.IdComparer).FirstOrDefault(group => group.Count() > 1);
             if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key}'.");
+            if (catalog is Core.Music.MusicCatalog)
+            {
+                foreach (var group in definitions.Cast<Core.Music.MusicCue>().GroupBy(cue => cue.Theme))
+                {
+                    var first = group.First();
+                    foreach (var cue in group.Skip(1))
+                        if (cue.bpm != first.bpm || cue.beatsPerBar != first.beatsPerBar || cue.loopBars != first.loopBars ||
+                            cue.stems[0].clip.frequency != first.stems[0].clip.frequency || cue.stems[0].clip.samples != first.stems[0].clip.samples)
+                            throw new InvalidOperationException($"Music theme '{group.Key}' has arrangements with different timing or sample counts.");
+                }
+            }
         }
 
         private static void ValidateConfiguration(ValidatedScriptableObject asset)

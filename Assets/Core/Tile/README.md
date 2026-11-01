@@ -43,6 +43,14 @@ Wrappers are created once; existing scene contents are preserved on reimport, an
 their Build Settings registration is checked again. Unity requires a saved current
 scene before creating or opening another scene additively.
 
+Map metadata `musicCue` selects an enabled, namespaced `MusicCue` ID and
+`musicPreset` selects one of that cue's presets. They import into a
+`MusicEnvironment` on the map prefab, so location music survives map reimports
+without scene overrides. Maps without music metadata submit no music request.
+Missing/disabled cues and missing/unknown presets fail at import. Apollo exports
+`Assets/Content/Music/<namespace>/<name>/cue.apollocue`, which imports its aligned
+PCM stems and presets into a catalog-discovered `MusicCue` automatically.
+
 `LocationCatalog` automatically discovers `LocationData` assets and imported map
 subassets throughout `Assets`, including other content projects. It refreshes after
 map imports, moves and deletions and before play/build. `LevelManager` loads this

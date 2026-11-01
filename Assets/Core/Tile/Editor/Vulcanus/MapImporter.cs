@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Character;
 using Core.Location;
+using Core.Music;
 using Core.Spawning;
 using Core.Spawning.Editor;
 using Core.Tile.Vulcanus;
@@ -63,6 +63,7 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
                 mapComponent.Configure(mapId, mapName, width, height, tileSize);
+                ImportMusic(ctx, mapRoot, dto.Metadata, mapId);
 
                 var gridGo = new GameObject("Grid");
                 gridGo.transform.SetParent(mapRoot.transform, false);
@@ -163,6 +164,31 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         // ── Location data ─────────────────────────────────────────────────────
+
+        private static void ImportMusic(AssetImportContext ctx, GameObject root, MapMetadataDto metadata, string mapId)
+        {
+            if (string.IsNullOrEmpty(metadata?.MusicCue))
+            {
+                if (!string.IsNullOrEmpty(metadata?.MusicPreset))
+                    throw new InvalidOperationException($"Map '{mapId}' specifies musicPreset without a musicCue.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(metadata.MusicPreset))
+                throw new InvalidOperationException($"Map '{mapId}' requires musicPreset for music cue '{metadata.MusicCue}'.");
+            var catalogPath = $"Assets/Resources/{MusicCatalog.ResourceName}.asset";
+            VulcanusImportHelpers.AddDependency(ctx, catalogPath);
+            var catalog = AssetDatabase.LoadAssetAtPath<MusicCatalog>(catalogPath);
+            if (!catalog) throw new InvalidOperationException("Map music requires the generated MusicCatalog.");
+            var cue = catalog.Get(metadata.MusicCue);
+            if (!cue) throw new InvalidOperationException($"Map '{mapId}' references missing or disabled music cue '{metadata.MusicCue}'.");
+            VulcanusImportHelpers.AddDependency(ctx, AssetDatabase.GetAssetPath(cue));
+            cue.RequireValidConfiguration();
+            if (cue.presets.All(preset => preset.id != metadata.MusicPreset))
+                throw new InvalidOperationException($"Map '{mapId}' references unknown music preset '{metadata.MusicPreset}' on '{cue.id}'.");
+            var environment = root.AddComponent<MusicEnvironment>();
+            environment.cue = cue;
+            environment.preset = metadata.MusicPreset;
+        }
 
         private static LocationData BuildLocationData(string mapId, string mapName, MapMetadataDto metadata, string mapAssetPath)
         {

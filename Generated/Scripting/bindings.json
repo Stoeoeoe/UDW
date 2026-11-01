@@ -963,6 +963,89 @@
       ]
     },
     {
+      "path": "Music",
+      "methods": [
+        {
+          "name": "Override",
+          "parameters": [
+            {
+              "name": "cue",
+              "type": "string",
+              "resourceType": "musicCue"
+            },
+            {
+              "name": "preset",
+              "type": "string"
+            },
+            {
+              "name": "quantization",
+              "type": "string",
+              "optional": true,
+              "defaultValue": "NextBar"
+            },
+            {
+              "name": "fadeSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 1.0
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [],
+          "action": {
+            "id": "music.override",
+            "displayName": "Override music",
+            "category": "Music",
+            "description": "Override environmental music until this cutscene finishes or releases it.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "Release",
+          "parameters": [],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [],
+          "action": {
+            "id": "music.release",
+            "displayName": "Release music",
+            "category": "Music",
+            "description": "Return to current environmental music.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "Player.Tags",
       "methods": [
         {
@@ -1238,6 +1321,16 @@
     }
   ],
   "resources": {
+    "musicCue": [
+      {
+        "id": "base:diana-shrine",
+        "description": "cue"
+      },
+      {
+        "id": "base:interior",
+        "description": "cue"
+      }
+    ],
     "deity": [
       {
         "id": "mars",

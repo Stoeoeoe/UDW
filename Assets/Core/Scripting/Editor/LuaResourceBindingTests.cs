@@ -33,7 +33,7 @@ namespace Core.Scripting.Editor
             var deities = ScriptableObject.CreateInstance<DeityCatalog>();
             try
             {
-                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, catalog, Array.Empty<MemaoAnimationLibrary>(), sounds, weather, deities),
+                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, catalog, Array.Empty<MemaoAnimationLibrary>(), sounds, weather, deities, Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName)),
                     Throws.InvalidOperationException.With.Message.Contains("No resources exported for type 'custom'"));
             }
             finally { UnityEngine.Object.DestroyImmediate(catalog); UnityEngine.Object.DestroyImmediate(sounds); UnityEngine.Object.DestroyImmediate(weather); UnityEngine.Object.DestroyImmediate(deities); }
@@ -45,7 +45,7 @@ namespace Core.Scripting.Editor
             var manifest = VulcanusLuaEngine.DescribeBindings();
             var catalog = Resources.Load<CharacterAnimationCatalog>(CharacterAnimationCatalog.ResourceName);
             var libraries = Core.Catalogs.Editor.CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray();
-            LuaBindingManifestExporter.PopulateResources(manifest, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName), Resources.Load<DeityCatalog>(DeityCatalog.ResourceName));
+            LuaBindingManifestExporter.PopulateResources(manifest, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName), Resources.Load<DeityCatalog>(DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
             var path = Path.Combine(Path.GetTempPath(), "bindings-" + Guid.NewGuid().ToString("N") + ".json");
             try
             {

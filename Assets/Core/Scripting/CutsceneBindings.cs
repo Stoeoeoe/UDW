@@ -25,6 +25,7 @@ namespace Core.Scripting
             VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
             VulcanusLuaEngine.Module(AudioLuaApi.BindCurrentMap),
             VulcanusLuaEngine.Module(WeatherLuaApi.BindCurrentWeather),
+            VulcanusLuaEngine.Module(MusicLuaApi.BindCurrentMusic),
             VulcanusLuaEngine.Module(CameraLuaApi.BindCurrentCamera)
         };
 

@@ -554,6 +554,8 @@
         },
         "description": { "type": "string" },
         "music": { "type": "string" },
+        "musicCue": { "type": "string", "description": "Namespaced enabled MusicCue ID. Requires musicPreset when assigned." },
+        "musicPreset": { "type": "string", "minLength": 1, "description": "Preset ID belonging to the assigned music cue." },
         "ambience": { "type": "string" },
         "world": { "$ref": "#/$defs/WorldMapMetadata" },
         "entryPoints": {

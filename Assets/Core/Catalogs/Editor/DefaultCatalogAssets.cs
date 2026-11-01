@@ -33,6 +33,7 @@ namespace Core.Catalogs.Editor
             Create<PlantCatalog>(folder, PlantCatalog.ResourceName, created);
             Create<TypewriterSoundCatalog>(folder, TypewriterSoundCatalog.ResourceName, created);
             Create<SoundCatalog>(folder, SoundCatalog.ResourceName, created);
+            Create<Music.MusicCatalog>(folder, Music.MusicCatalog.ResourceName, created);
             Create<WeatherCatalog>(folder, WeatherCatalog.ResourceName, created);
             Create<LocationCatalog>(folder, LocationCatalog.ResourceName, created);
             return created.AsReadOnly();

@@ -27,6 +27,12 @@ namespace Core.Tile.Editor.Vulcanus
                 {
                     var paths = VulcanusImportHelpers.BuildTilesetIndex(assetPath, projectPath);
                     var map = VulcanusImportHelpers.LoadDto<MapDto>(assetPath);
+                    if (!string.IsNullOrEmpty(map.Metadata?.MusicCue))
+                    {
+                        dependencies.Add($"Assets/Resources/{Music.MusicCatalog.ResourceName}.asset");
+                        var musicSource = "Assets/Content/Music/" + map.Metadata.MusicCue.Replace(':', '/') + "/cue.apollocue";
+                        if (File.Exists(VulcanusImportHelpers.ToAbsolutePath(musicSource))) dependencies.Add(musicSource);
+                    }
                     foreach (var id in map.TilesetRefs)
                         if (!string.IsNullOrWhiteSpace(id) && paths.TryGetValue(id, out var path)) dependencies.Add(path);
                     var triggers = map.SpatialPrimitives?.Triggers;

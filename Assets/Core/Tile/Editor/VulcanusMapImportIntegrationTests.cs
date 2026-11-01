@@ -39,6 +39,7 @@ namespace Core.Tile.Editor
         private readonly List<GameObject> _views = new();
         private readonly List<string> _extraScenePaths = new();
         private string _runnerScenePath;
+        private string _musicFixturePath;
 
         [OneTimeSetUp]
         public void PrepareRunnerScene()
@@ -121,6 +122,12 @@ namespace Core.Tile.Editor
         [TearDown]
         public void TearDown()
         {
+            if (_musicFixturePath != null)
+            {
+                AssetDatabase.DeleteAsset(Path.GetDirectoryName(_musicFixturePath));
+                _musicFixturePath = null;
+                CatalogDiscovery.Refresh(Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
+            }
             foreach (var view in _views) if (view) Object.DestroyImmediate(view);
             _views.Clear();
             if (_scenePath != null)
@@ -156,6 +163,23 @@ namespace Core.Tile.Editor
             Assert.That(terrain, Is.EqualTo(TerrainType.Dirt));
             Assert.That(File.Exists(Absolute(_scenePath)), Is.True);
             Assert.That(EditorBuildSettings.scenes.Any(scene => scene.path == location.ScenePath), Is.True);
+        }
+
+        [Test]
+        public void MapMusicUsesTheAuthoredCueAndPresetAcrossReimports()
+        {
+            var fixture = MusicFixture();
+            _mapJson["metadata"]["musicCue"] = fixture.id;
+            _mapJson["metadata"]["musicPreset"] = "full";
+            var music = ImportMap().GetComponent<Core.Music.MusicEnvironment>();
+            Assert.That(music.cue.id, Is.EqualTo(fixture.id));
+            Assert.That(music.preset, Is.EqualTo("full"));
+            music.cue.RequireValidConfiguration();
+            var dependencies = VulcanusImporterCoordinator.GatherDependenciesFromSourceFile(_mapPath);
+            Assert.That(dependencies, Does.Contain(AssetDatabase.GetAssetPath(fixture)));
+            Assert.That(dependencies, Does.Contain("Assets/Resources/MusicCatalog.asset"));
+            var cue = music.cue;
+            Assert.That(ImportMap().GetComponent<Core.Music.MusicEnvironment>().cue, Is.SameAs(cue));
         }
 
         [Test]
@@ -460,6 +484,9 @@ namespace Core.Tile.Editor
         [TestCase("missing-object")]
         [TestCase("missing-persistent-id")]
         [TestCase("duplicate-persistent-id")]
+        [TestCase("missing-music-cue")]
+        [TestCase("missing-music-preset")]
+        [TestCase("unknown-music-preset")]
         public void InvalidRequiredContentFailsImportInsteadOfProducingATextAsset(string fault)
         {
             string message;
@@ -468,6 +495,17 @@ namespace Core.Tile.Editor
                 case "missing-tileset": _mapJson["tilesetRefs"] = new JArray("missing"); message = "references missing tileset"; break;
                 case "missing-object": _mapJson["layers"][1]["objectInstances"][0]["objectDefinitionId"] = "missing"; message = "requires imported prefab"; break;
                 case "missing-persistent-id": _mapJson["entities"][0]["id"] = ""; message = "needs an authored instance ID"; break;
+                case "missing-music-cue":
+                    _mapJson["metadata"]["musicCue"] = "test:missing-music";
+                    _mapJson["metadata"]["musicPreset"] = "full";
+                    message = "references missing or disabled music cue"; break;
+                case "missing-music-preset":
+                    _mapJson["metadata"]["musicCue"] = MusicFixture().id;
+                    message = "requires musicPreset"; break;
+                case "unknown-music-preset":
+                    _mapJson["metadata"]["musicCue"] = MusicFixture().id;
+                    _mapJson["metadata"]["musicPreset"] = "missing";
+                    message = "references unknown music preset"; break;
                 default: ((JArray)_mapJson["entities"]).Add(_mapJson["entities"][0].DeepClone()); message = "Duplicate persistent entity ID"; break;
             }
             var errors = new List<string>();
@@ -589,6 +627,14 @@ namespace Core.Tile.Editor
                 Assert.That(_catalog.MapBindings.Single().LocationData, Is.SameAs(_target));
             }
             finally { BindCatalogProject(null); }
+        }
+
+        private Core.Music.MusicCue MusicFixture()
+        {
+            var cue = Core.Music.Editor.ApolloCueImporterTests.CreateFixture("map-import-" + Guid.NewGuid().ToString("N"));
+            _musicFixturePath = AssetDatabase.GetAssetPath(cue);
+            CatalogDiscovery.Refresh(Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
+            return cue;
         }
 
         private void BindCatalogProject(string path = "fixture.vproj")

@@ -3,6 +3,10 @@
   "version": 1,
   "id": "base:map-1",
   "name": "Map 1",
+  "metadata": {
+    "musicCue": "base:diana-shrine",
+    "musicPreset": "full"
+  },
   "width": 32,
   "height": 32,
   "baseTilesetId": "base:villagetileset",

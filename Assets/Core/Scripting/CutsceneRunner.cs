@@ -275,6 +275,8 @@ namespace Core.Scripting
             }
             finally
             {
+                run.MusicOverride?.Dispose();
+                run.MusicOverride = null;
                 if (_transition != null) _gui.ResetTransition();
                 _transition = null;
                 _sequenceReady = _finishRequested = _completionCommitted = false;

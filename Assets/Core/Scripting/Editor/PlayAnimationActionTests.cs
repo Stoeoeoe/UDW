@@ -235,13 +235,13 @@ namespace Core.Scripting.Editor
             catalog.Synchronize(new CharacterAnimationDefinition[] { _animation, loop, set, other, _actor.PassOutAnimation });
             var libraries = new[] { _actor.Animator.AnimationLibrary };
             var first = VulcanusLuaEngine.DescribeBindings();
-            LuaBindingManifestExporter.PopulateResources(first, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName));
+            LuaBindingManifestExporter.PopulateResources(first, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
             Assert.That(first.resources["animation"].Select(choice => choice.id),
                 Is.EqualTo(new[] { "base:pass-out", "test:another", "test:gesture" }));
             Assert.That(first.resources["animation"].Single(choice => choice.id == "test:gesture").description, Is.EqualTo("test:gesture"));
             catalog.SetEnabled(other, false);
             var next = VulcanusLuaEngine.DescribeBindings();
-            LuaBindingManifestExporter.PopulateResources(next, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName));
+            LuaBindingManifestExporter.PopulateResources(next, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
             Assert.That(next.resources["animation"].Select(choice => choice.id), Is.EqualTo(new[] { "base:pass-out", "test:gesture" }));
         }
 

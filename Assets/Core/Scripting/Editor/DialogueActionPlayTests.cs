@@ -36,7 +36,8 @@ namespace Core.Scripting.Editor
         [UnitySetUp]
         public IEnumerator SetUp()
         {
-            EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
+                EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
             while (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
@@ -650,6 +651,38 @@ namespace Core.Scripting.Editor
                     Object.Destroy(definition);
                     Object.Destroy(replacement);
                 }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator MusicOverrideReleasesOnCompletionSkipCancellationAndExplicitRelease()
+        {
+            var service = CutsceneRunner.Instance;
+            var catalog = Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName);
+            var director = Core.Music.MusicDirector.Instance;
+            using var environment = director.Requests.Request(catalog.Get("base:music-prototype-courtyard"), "calm");
+            foreach (var terminal in new[] { "complete", "skip", "cancel", "release" })
+            {
+                var id = "fixture:music-" + terminal;
+                var definition = CreatePhaseDefinition(id, terminal == "complete" ? 0.05 : 60);
+                var setup = CutsceneSequenceCompiler.Compile(JArray.Parse("[{ 'id':'music', 'action':'music.override', 'arguments': { 'cue':'base:music-prototype-temple', 'preset':'intense', 'quantization':'Immediate', 'fadeSeconds':0.05 } }]"), id, out var setupSteps, "setup");
+                definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
+                    definition.OnComplete, setup, setupSteps, new CutsceneTransition(enabled: false));
+                try
+                {
+                    Assert.That(service.TryStart(definition, out var run), Is.True);
+                    Assert.That(director.Requests.Winner.Cue.id, Is.EqualTo("base:music-prototype-temple"));
+                    environment.Update(catalog.Get("base:music-prototype-courtyard"), "active");
+                    if (terminal == "skip") Assert.That(run.Skip(), Is.True);
+                    else if (terminal == "cancel") run.Cancel();
+                    else if (terminal == "release") new MusicLuaApi(catalog).Release();
+                    var deadline = Time.realtimeSinceStartupAsDouble + 5;
+                    while (terminal == "complete" && run.IsRunning && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
+                    Assert.That(director.Requests.Winner, Is.SameAs(environment));
+                    Assert.That(director.Requests.Winner.Preset, Is.EqualTo("active"));
+                    Assert.That(director.Requests.Count, Is.EqualTo(1));
+                }
+                finally { service.Cancel(); Object.Destroy(definition); }
             }
         }
 

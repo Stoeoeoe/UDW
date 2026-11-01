@@ -167,6 +167,8 @@ namespace Core.Tile.Editor.Vulcanus
         // Known built-in fields
         [JsonProperty("description")] public string Description { get; set; }
         [JsonProperty("music")] public string Music { get; set; }
+        [JsonProperty("musicCue")] public string MusicCue { get; set; }
+        [JsonProperty("musicPreset")] public string MusicPreset { get; set; }
         [JsonProperty("ambience")] public string Ambience { get; set; }
 
         // Catch-all for project-defined locationMetadataDefinitions keys

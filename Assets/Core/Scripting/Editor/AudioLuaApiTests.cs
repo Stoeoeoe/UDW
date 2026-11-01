@@ -111,7 +111,7 @@ namespace Core.Scripting.Editor
             var weather = ScriptableObject.CreateInstance<WeatherCatalog>();
             try
             {
-                LuaBindingManifestExporter.PopulateResources(manifest, animations, Array.Empty<MemaoAnimationLibrary>(), _catalog, weather, Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName));
+                LuaBindingManifestExporter.PopulateResources(manifest, animations, Array.Empty<MemaoAnimationLibrary>(), _catalog, weather, Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
                 Assert.That(manifest.resources["sound"].Single().id, Is.EqualTo("test:bell"));
                 Assert.That(manifest.resources["sound"].Single().description, Is.EqualTo("Bell"));
                 Assert.That(manifest.modules.Single().methods.Length, Is.EqualTo(1));

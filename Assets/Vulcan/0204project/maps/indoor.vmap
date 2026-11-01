@@ -1410,6 +1410,8 @@
     ]
   },
   "metadata": {
-    "locationType": "Indoor"
+    "locationType": "Indoor",
+    "musicCue": "base:interior",
+    "musicPreset": "full"
   }
 }

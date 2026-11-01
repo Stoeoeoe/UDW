@@ -1,0 +1,257 @@
+{
+  "id": "base:diana-shrine",
+  "theme": "base:diana-shrine",
+  "bpm": 66.000066000066,
+  "beatsPerBar": 4,
+  "loopBars": 40,
+  "sampleRate": 48000,
+  "frames": 6981811,
+  "loop": {
+    "startBar": 1,
+    "endBar": 41,
+    "tail": "wrap",
+    "fadeOutSeconds": 0.75,
+    "startTick": 0,
+    "endTick": 153600,
+    "numerator": 4,
+    "denominator": 4
+  },
+  "source": {
+    "file": "../../../../../Apollo/base/diana-shrine/source.mid",
+    "sha256": "8c5b8de595bc7744466b66905a235f2dc85519ec64afb42edf987f80534ad588",
+    "ticksPerBeat": 960
+  },
+  "renderer": {
+    "name": "FluidSynth",
+    "version": "FluidSynth runtime version 2.6.1\r\nCopyright (C) 2000-2026 Peter Hanappe and others.\r\nDistributed under the LGPL license.\r\nSoundFont(R) is a registered trademark of Creative Technology Ltd.\r\n\r\nFluidSynth executable version 2.6.1\r\nSample type=float",
+    "gain": 0.2,
+    "reverb": false,
+    "chorus": false,
+    "bankSelect": "mma"
+  },
+  "stems": [
+    {
+      "id": "pan-flute-1",
+      "file": "../_stems/pan-flute-1--pan-flute--4ffb0b8aae77.ogg",
+      "tracks": [
+        1
+      ],
+      "instruments": [
+        {
+          "channel": 0,
+          "bank": 0,
+          "program": 75,
+          "preset": "Pan Flute"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "4ffb0b8aae7712328f3e2fdee054e16c8d64eb6aa24dea45389dcdd3ad202cda"
+    },
+    {
+      "id": "flute-2",
+      "file": "../_stems/flute-2--flute--a581f2dea8fb.ogg",
+      "tracks": [
+        2
+      ],
+      "instruments": [
+        {
+          "channel": 1,
+          "bank": 0,
+          "program": 73,
+          "preset": "Flute"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "a581f2dea8fb950c215bd174e61f150670846ade652509cfd06d22ba3b7b4491"
+    },
+    {
+      "id": "harp-lyre-3",
+      "file": "../_stems/harp-lyre-3--harp--e1d626bebf76.ogg",
+      "tracks": [
+        3
+      ],
+      "instruments": [
+        {
+          "channel": 2,
+          "bank": 0,
+          "program": 46,
+          "preset": "Harp"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "e1d626bebf7693f56c7c4c292c574003781dcc2ff5211a11dc744f0bc8e0128a"
+    },
+    {
+      "id": "voice-oohs-4",
+      "file": "../_stems/voice-oohs-4--voice-oohs--b712bd17e4a8.ogg",
+      "tracks": [
+        4
+      ],
+      "instruments": [
+        {
+          "channel": 3,
+          "bank": 0,
+          "program": 53,
+          "preset": "Voice Oohs"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "b712bd17e4a8ec81eb229dddb352866f80f6a12078646c5d999af65cfe852fa7"
+    },
+    {
+      "id": "hunting-horn-5",
+      "file": "../_stems/hunting-horn-5--french-horns--5b332827a9e1.ogg",
+      "tracks": [
+        5
+      ],
+      "instruments": [
+        {
+          "channel": 4,
+          "bank": 0,
+          "program": 60,
+          "preset": "French Horns"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "5b332827a9e147e1395adeaf237063b7a9132d3c96492bc8c6461828837b9f2a"
+    },
+    {
+      "id": "celesta-moonlight-6",
+      "file": "../_stems/celesta-moonlight-6--celeste--11b5dde30f2c.ogg",
+      "tracks": [
+        6
+      ],
+      "instruments": [
+        {
+          "channel": 5,
+          "bank": 0,
+          "program": 8,
+          "preset": "Celeste"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "11b5dde30f2c5945f265919f0fab600d77c802d4b5237021ab4f9c128f96dff1"
+    },
+    {
+      "id": "slow-strings-7",
+      "file": "../_stems/slow-strings-7--slow-strings--9eb259cae6ee.ogg",
+      "tracks": [
+        7
+      ],
+      "instruments": [
+        {
+          "channel": 6,
+          "bank": 0,
+          "program": 49,
+          "preset": "Slow Strings"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "9eb259cae6ee6719fcb8fe3683e51e368ee0f9c09e65d4f2bbaa816529474c12"
+    },
+    {
+      "id": "contrabass-8",
+      "file": "../_stems/contrabass-8--contra-bass--dae55b7a997b.ogg",
+      "tracks": [
+        8
+      ],
+      "instruments": [
+        {
+          "channel": 7,
+          "bank": 0,
+          "program": 43,
+          "preset": "Contra Bass"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "dae55b7a997b93486559125f152454b4071cdd5acc5694870fedd4a0592a3a5c"
+    },
+    {
+      "id": "percussion-9",
+      "file": "../_stems/percussion-9--standard--be322007c3d1.ogg",
+      "tracks": [
+        9
+      ],
+      "instruments": [
+        {
+          "channel": 9,
+          "bank": 128,
+          "program": 0,
+          "preset": "Standard"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 6981811,
+      "sha256": "be322007c3d1149395a546878fa72e617d7b70dff17df4b617760a46fa9d048e"
+    }
+  ],
+  "presets": [
+    {
+      "id": "full",
+      "gains": [
+        {
+          "stem": "pan-flute-1",
+          "gain": 1
+        },
+        {
+          "stem": "flute-2",
+          "gain": 1
+        },
+        {
+          "stem": "harp-lyre-3",
+          "gain": 1
+        },
+        {
+          "stem": "voice-oohs-4",
+          "gain": 1
+        },
+        {
+          "stem": "hunting-horn-5",
+          "gain": 1
+        },
+        {
+          "stem": "celesta-moonlight-6",
+          "gain": 1
+        },
+        {
+          "stem": "slow-strings-7",
+          "gain": 1
+        },
+        {
+          "stem": "contrabass-8",
+          "gain": 1
+        },
+        {
+          "stem": "percussion-9",
+          "gain": 1
+        }
+      ]
+    }
+  ]
+}

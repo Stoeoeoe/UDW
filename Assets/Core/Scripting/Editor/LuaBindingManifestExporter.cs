@@ -40,7 +40,9 @@ namespace Core.Scripting.Editor
                 var deities = AssetDatabase.LoadAssetAtPath<DeityCatalog>($"Assets/Resources/{DeityCatalog.ResourceName}.asset");
                 CatalogDiscovery.Refresh(deities);
                 var libraries = CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray();
-                PopulateResources(manifest, catalog, libraries, sounds, weather, deities);
+                var music = AssetDatabase.LoadAssetAtPath<Core.Music.MusicCatalog>($"Assets/Resources/{Core.Music.MusicCatalog.ResourceName}.asset");
+                CatalogDiscovery.Refresh(music);
+                PopulateResources(manifest, catalog, libraries, sounds, weather, deities, music);
                 AssetDatabase.RegisterCustomDependency(DependencyName, Hash128.Compute(Serialize(manifest)));
                 var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), RelativePath);
                 if (!WriteIfChanged(path, manifest)) return;
@@ -53,8 +55,10 @@ namespace Core.Scripting.Editor
             }
         }
 
-        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries, SoundCatalog sounds, WeatherCatalog weather, DeityCatalog deities)
+        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries, SoundCatalog sounds, WeatherCatalog weather, DeityCatalog deities, Core.Music.MusicCatalog music)
         {
+            manifest.resources.Add("musicCue", music.EnabledDefinitions.OrderBy(cue => cue.id, StringComparer.Ordinal)
+                .Select(cue => new LuaResourceDescription { id = cue.id, description = cue.name }).ToArray());
             manifest.resources.Add("deity", deities.EnabledDefinitions.OrderBy(deity => deity.Id, StringComparer.Ordinal)
                 .Select(deity => new LuaResourceDescription { id = deity.Id, description = deity.DisplayName }).ToArray());
             manifest.resources.Add("weather", weather.EnabledDefinitions.OrderBy(definition => definition.id, StringComparer.Ordinal)
@@ -98,7 +102,8 @@ namespace Core.Scripting.Editor
         private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
             if (imported.Concat(deleted).Concat(moved).Concat(movedFrom).Any(path =>
-                path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)))
+                path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".apollocue", StringComparison.OrdinalIgnoreCase)))
                 Schedule();
         }
 

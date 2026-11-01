@@ -81,6 +81,13 @@
       "defaultValue": ""
     },
     {
+      "key": "musicPreset",
+      "label": "Music Preset",
+      "type": "string",
+      "required": false,
+      "defaultValue": ""
+    },
+    {
       "key": "locationType",
       "label": "Location Type",
       "type": "enum",
