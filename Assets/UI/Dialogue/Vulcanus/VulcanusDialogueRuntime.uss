@@ -24,6 +24,10 @@
     padding: 24px;
 }
 
+.dialogue-anchor.is-top {
+    justify-content: flex-start;
+}
+
 .dialogue-shell {
     width: 560px;
     max-width: 100%;

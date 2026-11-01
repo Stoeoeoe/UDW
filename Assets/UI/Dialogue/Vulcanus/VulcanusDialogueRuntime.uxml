@@ -2,7 +2,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:VisualElement name="dialogue-overlay" class="dialogue-overlay">
         <ui:VisualElement name="dialogue-backdrop" class="dialogue-backdrop" />
-        <ui:VisualElement class="dialogue-anchor">
+        <ui:VisualElement name="dialogue-anchor" class="dialogue-anchor">
             <ui:VisualElement class="dialogue-shell">
                 <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
                     <ui:ScrollView name="dialogue-content" class="dialogue-content" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">

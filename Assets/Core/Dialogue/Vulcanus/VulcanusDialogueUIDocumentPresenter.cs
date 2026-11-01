@@ -23,6 +23,7 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private Interaction.Dialog.TypewriterSound defaultTypewriterSound;
 
         private VisualElement _overlay;
+        private VisualElement _anchor;
         private VisualElement _panel;
         private Label _speakerLabel;
         private Label _emotionLabel;
@@ -43,6 +44,7 @@ namespace Core.Dialogue.Vulcanus
         public void OnDialogueStarted(VulcanusDialogueExecutionContext context)
         {
             EnsureBuilt();
+            _anchor.RemoveFromClassList("is-top");
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(string.Empty, string.Empty);
             SetBody(string.Empty);
@@ -54,6 +56,7 @@ namespace Core.Dialogue.Vulcanus
         public IEnumerator PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context)
         {
             EnsureBuilt();
+            UpdatePlacement();
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, node.Emotion);
             SetBody(string.Empty);
@@ -94,6 +97,7 @@ namespace Core.Dialogue.Vulcanus
             VulcanusDialogueExecutionContext context, Action<VulcanusDialogueChoiceOption> onSelected)
         {
             EnsureBuilt();
+            UpdatePlacement();
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(string.Empty, string.Empty);
             SetBody(choicePromptText);
@@ -166,6 +170,7 @@ namespace Core.Dialogue.Vulcanus
             if (!layoutAsset || !styleSheet)
                 throw new InvalidOperationException("Dialogue requires its UXML layout and stylesheet.");
             _boundRoot = root;
+            root.style.flexGrow = 1;
             root.pickingMode = PickingMode.Ignore; // Only the visible overlay should intercept world clicks.
             root.Clear();
             root.styleSheets.Add(styleSheet);
@@ -288,6 +293,13 @@ namespace Core.Dialogue.Vulcanus
             _content.scrollOffset = Vector2.zero;
         }
 
+        private void UpdatePlacement()
+        {
+            var heroPosition = CharacterManager.Instance.MainCharacter.transform.position;
+            var viewportPosition = UnityEngine.Camera.main.WorldToViewportPoint(heroPosition);
+            _anchor.EnableInClassList("is-top", viewportPosition.y < 0.5f);
+        }
+
         private void SetSpeaker(string speaker, string emotion)
         {
             if (_speakerLabel != null)
@@ -340,6 +352,7 @@ namespace Core.Dialogue.Vulcanus
         {
             _content = root.Q<ScrollView>("dialogue-content");
             _overlay = root.Q<VisualElement>("dialogue-overlay");
+            _anchor = root.Q<VisualElement>("dialogue-anchor");
             _panel = root.Q<VisualElement>("dialogue-panel");
             _speakerLabel = root.Q<Label>("dialogue-speaker");
             _emotionLabel = root.Q<Label>("dialogue-emotion");
@@ -351,7 +364,7 @@ namespace Core.Dialogue.Vulcanus
 
         private bool ValidateBindings()
         {
-            return _content != null && _overlay != null &&
+            return _content != null && _overlay != null && _anchor != null &&
                    _panel != null &&
                    _bodyLabel != null &&
                    _hintLabel != null &&

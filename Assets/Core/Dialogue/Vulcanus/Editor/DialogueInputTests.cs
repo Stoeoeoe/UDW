@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
@@ -8,6 +10,7 @@ using UnityEngine.UIElements;
 using UI.Shared;
 using UI.Shared.Editor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Core.Dialogue.Vulcanus.Editor
 {
@@ -22,6 +25,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         private VulcanusDialogueDatabase _database;
         private VulcanusDialogueUIDocumentPresenter _presenter;
         private UIDocument _document;
+        private readonly List<UnityEngine.Camera> _sceneMainCameras = new();
         private VisualElement Overlay => _document.rootVisualElement.Q("dialogue-overlay");
 
         [SetUp]
@@ -34,6 +38,19 @@ namespace Core.Dialogue.Vulcanus.Editor
             _gui = _fixture.AddSingleton<UrGUIManager>(gui => gui.gameObject.SetActive(true));
             _character = _fixture.CreateCharacter();
             CharacterManager.Instance.RegisterMainCharacter(_character);
+            foreach (var sceneCamera in UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsSortMode.None))
+            {
+                if (!sceneCamera.CompareTag("MainCamera")) continue;
+                _sceneMainCameras.Add(sceneCamera);
+                sceneCamera.tag = "Untagged";
+            }
+            var cameraRoot = new GameObject("Dialogue camera");
+            cameraRoot.transform.SetParent(_fixture.Root.transform);
+            cameraRoot.tag = "MainCamera";
+            var camera = cameraRoot.AddComponent<UnityEngine.Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 5f;
+            camera.transform.position = new Vector3(0f, 0f, -10f);
             _fixture.AddSingleton<DataManager>();
             var root = new GameObject("Dialogue");
             root.SetActive(false);
@@ -67,6 +84,9 @@ namespace Core.Dialogue.Vulcanus.Editor
                 GameTestFixture.Invoke(_runner, "OnDestroy");
             }
             _fixture.Dispose();
+            foreach (var sceneCamera in _sceneMainCameras)
+                sceneCamera.tag = "MainCamera";
+            _sceneMainCameras.Clear();
 
         }
 
@@ -89,6 +109,57 @@ namespace Core.Dialogue.Vulcanus.Editor
             using var evt = NavigationSubmitEvent.GetPooled();
             evt.target = Overlay;
             Overlay.SendEvent(evt);
+        }
+
+        [TestCase(-3f, true)]
+        [TestCase(0f, false)]
+        [TestCase(3f, false)]
+        public void LinesAndChoicesPlaceTheBoxOppositeTheHero(float heroY, bool atTop)
+        {
+            _character.transform.position = new Vector3(0f, heroY, 0f);
+            Start();
+            var anchor = _document.rootVisualElement.Q("dialogue-anchor");
+            Assert.That(anchor.ClassListContains("is-top"), Is.EqualTo(atTop));
+            GameTestFixture.Invoke(_runner, "OnDisable");
+
+            _character.transform.position = new Vector3(0f, -heroY, 0f);
+            Start(choice: true);
+            Assert.That(anchor.ClassListContains("is-top"), Is.EqualTo(heroY > 0f));
+        }
+
+        [UnityTest]
+        public IEnumerator DialogueFillsTheViewportAndRendersAtTheSelectedEdge()
+        {
+            var window = ScriptableObject.CreateInstance<EditorWindow>();
+            try
+            {
+                window.position = new Rect(0, 0, 800, 600);
+                window.rootVisualElement.Add(_document.rootVisualElement);
+                window.Show();
+                _character.transform.position = new Vector3(0f, 3f, 0f);
+                Start();
+                yield return null;
+                yield return null;
+
+                var viewport = window.rootVisualElement.worldBound;
+                var panel = _document.rootVisualElement.Q("dialogue-panel");
+                Assert.That(Overlay.worldBound.height, Is.EqualTo(viewport.height).Within(1f));
+                Assert.That(panel.worldBound.yMin, Is.GreaterThan(viewport.center.y),
+                    "Bottom placement must move the rendered box, not just set its class.");
+                GameTestFixture.Invoke(_runner, "OnDisable");
+
+                _character.transform.position = new Vector3(0f, -3f, 0f);
+                Start(choice: true);
+                yield return null;
+                yield return null;
+                Assert.That(panel.worldBound.yMax, Is.LessThan(viewport.center.y));
+            }
+            finally
+            {
+                GameTestFixture.Invoke(_runner, "OnDisable");
+                window.Close();
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [TestCase("base:villager")]
