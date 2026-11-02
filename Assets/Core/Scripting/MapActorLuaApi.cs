@@ -266,6 +266,26 @@ namespace Core.Scripting
             return new PlayAnimationAction(ResolveActor(character), CharacterAnimationCatalog.RequireOneShot(animation), holdLastFrame);
         }
 
+        [UnityEngine.Scripting.Preserve]
+        public void ValidateEmote(string character, string emote, double durationSeconds = 0, double pauseAfterSeconds = 1)
+        {
+            RequireCurrentMap();
+            RequireKnownActor(character);
+            EmoteCatalog.Require(emote);
+            EmoteAction.ValidateDuration(durationSeconds);
+            CutsceneLuaApi.ValidateWait(pauseAfterSeconds);
+        }
+
+        [LuaAction("characters.emote", "Emote", "Animation", "Show a character emote, then pause for one second by default. Duration zero uses the definition's default; pauseAfterSeconds zero skips the pause. Missing character animations warn without hiding the callout.",
+            "cutscene", "npcRoutine", Validator = nameof(ValidateEmote), Phases = new[] { "sequence" })]
+        [LuaPreview(LuaPreviewSpatialState.Unknown)]
+        public ILuaAction Emote([LuaReference("characterRef", "mapCharacter")] string character,
+            [LuaResource("emote")] string emote, double durationSeconds = 0, double pauseAfterSeconds = 1)
+        {
+            RequireCurrentMap();
+            return new EmoteAction(ResolveActor(character), EmoteCatalog.Require(emote), durationSeconds, pauseAfterSeconds);
+        }
+
         private void RequireCurrentMap()
         {
             // These lookups are for one map. Don't use them while changing maps.

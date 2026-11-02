@@ -4,6 +4,8 @@ using UnityEngine;
 namespace Core.Scripting
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Sounds")]
+    [DefaultCatalog(SoundCatalog.ResourceName)]
+    [LuaResource("sound")]
     public sealed class SoundCatalog : DefinitionCatalog<SoundDefinition>
     {
         public const string ResourceName = "SoundCatalog";

@@ -1,9 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using Character.Animations;
 using Core.Tile.Vulcanus;
-using Core.TimeAndWeather;
 using MoreMountains.Tools;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -107,28 +105,42 @@ namespace Core.Scripting.Editor
         public void SoundResourcesAndOneActionAreExportedWithoutInvalidatingSpatialPreview()
         {
             var manifest = LuaBindingRegistry.DescribeTypes(typeof(AudioLuaApi));
-            var animations = ScriptableObject.CreateInstance<CharacterAnimationCatalog>();
-            var weather = ScriptableObject.CreateInstance<WeatherCatalog>();
+            manifest.resources.Add("sound", LuaBindingManifestExporter.DescribeCatalog(_catalog));
+            Assert.That(manifest.resources["sound"].Single().id, Is.EqualTo("test:bell"));
+            Assert.That(manifest.resources["sound"].Single().description, Is.EqualTo("Bell"));
+            Assert.That(manifest.modules.Single().methods.Length, Is.EqualTo(1));
+            foreach (var method in manifest.modules.Single().methods)
+            {
+                Assert.That(method.action.execution, Is.EqualTo("immediate"));
+                Assert.That(method.action.phases, Is.EquivalentTo(new[] { "setup", "sequence", "completion" }));
+                Assert.That(method.parameters[0].resourceType, Is.EqualTo("sound"));
+                Assert.That(method.action.preview.spatialState, Is.EqualTo("described"));
+                Assert.That(method.action.preview.effects, Is.Empty);
+            }
+            var position = manifest.modules.Single().methods.Single().parameters[1];
+            Assert.That(position.nullable, Is.True);
+            Assert.That(position.picker, Is.EqualTo("mapPosition"));
+            Assert.That(position.placementModes, Is.EquivalentTo(new[] { "tile", "pixel", "anchor" }));
+        }
+
+        [Test]
+        public void ResourceChoicesExcludeDisabledDefinitionsAndSortById()
+        {
+            var other = ScriptableObject.CreateInstance<SoundDefinition>();
+            other.name = "Another bell";
+            typeof(SoundDefinition).GetField("soundId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(other, "test:another-bell");
+            typeof(SoundDefinition).GetField("clip", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(other, _clip);
             try
             {
-                LuaBindingManifestExporter.PopulateResources(manifest, animations, Array.Empty<MemaoAnimationLibrary>(), _catalog, weather, Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
-                Assert.That(manifest.resources["sound"].Single().id, Is.EqualTo("test:bell"));
-                Assert.That(manifest.resources["sound"].Single().description, Is.EqualTo("Bell"));
-                Assert.That(manifest.modules.Single().methods.Length, Is.EqualTo(1));
-                foreach (var method in manifest.modules.Single().methods)
-                {
-                    Assert.That(method.action.execution, Is.EqualTo("immediate"));
-                    Assert.That(method.action.phases, Is.EquivalentTo(new[] { "setup", "sequence", "completion" }));
-                    Assert.That(method.parameters[0].resourceType, Is.EqualTo("sound"));
-                    Assert.That(method.action.preview.spatialState, Is.EqualTo("described"));
-                    Assert.That(method.action.preview.effects, Is.Empty);
-                }
-                var position = manifest.modules.Single().methods.Single().parameters[1];
-                Assert.That(position.nullable, Is.True);
-                Assert.That(position.picker, Is.EqualTo("mapPosition"));
-                Assert.That(position.placementModes, Is.EquivalentTo(new[] { "tile", "pixel", "anchor" }));
+                _catalog.Synchronize(new[] { _sound, other });
+                Assert.That(LuaBindingManifestExporter.DescribeCatalog(_catalog).Select(choice => choice.id),
+                    Is.EqualTo(new[] { "test:another-bell", "test:bell" }));
+                _catalog.SetEnabled(_sound, false);
+                var choices = LuaBindingManifestExporter.DescribeCatalog(_catalog);
+                Assert.That(choices.Single().id, Is.EqualTo("test:another-bell"));
+                Assert.That(choices.Single().description, Is.EqualTo("Another bell"));
             }
-            finally { Object.DestroyImmediate(animations); Object.DestroyImmediate(weather); }
+            finally { Object.DestroyImmediate(other); }
         }
     }
 

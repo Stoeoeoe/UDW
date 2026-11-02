@@ -54,12 +54,14 @@ namespace Core.Scripting
         public LuaReferenceAttribute(string type, string picker) { Type = type; Picker = picker; }
     }
 
-    /// <summary>A string ID selected from a named resource list.</summary>
+    /// <summary>Links a string parameter to a resource list, or declares the catalog exporting that list.</summary>
     /// <remarks>Unity exports its resource choices; Vulcanus supplies project characters. The action's validator resolves the selected ID before playback.</remarks>
-    [AttributeUsage(AttributeTargets.Parameter)]
+    [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Class, Inherited = false)]
     public sealed class LuaResourceAttribute : Attribute
     {
         public string Type { get; }
+        /// <summary>Public string field/property on the definition used as the picker label.</summary>
+        public string DescriptionMember { get; set; } = nameof(UnityEngine.Object.name);
         public LuaResourceAttribute(string type) => Type = type;
     }
 

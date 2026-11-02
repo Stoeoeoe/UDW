@@ -24,8 +24,9 @@ namespace Core.Catalogs.Editor
         public void ReturnsOnlyNewCatalogsAndDoesNotRecreateExistingAssets()
         {
             var created = DefaultCatalogAssets.CreateMissingCatalogs(_folder);
-            Assert.That(created.Select(catalog => catalog.GetType().Name),
-                Is.EqualTo(new[] { "ItemCatalog", "CharacterCatalog", "CharacterAnimationCatalog", "CutsceneCatalog", "SkillCatalog", "DeityCatalog", "PlantCatalog", "TypewriterSoundCatalog", "SoundCatalog", "MusicCatalog", "WeatherCatalog", "LocationCatalog" }));
+            Assert.That(created.OfType<ItemCatalog>().Single(), Is.Not.Null);
+            Assert.That(created.OfType<Character.Animations.EmoteCatalog>().Single(), Is.Not.Null);
+            Assert.That(created.OfType<Core.Spawning.SpawnableCatalog>(), Is.Empty, "Explicitly assigned catalogs have no default asset.");
             Assert.That(DefaultCatalogAssets.CreateMissingCatalogs(_folder), Is.Empty);
             foreach (var catalog in created)
                 Assert.That(AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(catalog)), Is.SameAs(catalog));
@@ -34,7 +35,7 @@ namespace Core.Catalogs.Editor
         [Test]
         public void ExistingSelectionsAreNotTouched()
         {
-            var catalog = (ItemCatalog)DefaultCatalogAssets.CreateMissingCatalogs(_folder)[0];
+            var catalog = DefaultCatalogAssets.CreateMissingCatalogs(_folder).OfType<ItemCatalog>().Single();
             var item = UnityEngine.ScriptableObject.CreateInstance<Core.Inventory.Editor.InventoryTestItem>();
             AssetDatabase.CreateAsset(item, _folder + "/Item.asset");
             catalog.Synchronize(new[] { item });

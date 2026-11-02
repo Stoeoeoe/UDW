@@ -160,6 +160,57 @@
       "path": "Characters",
       "methods": [
         {
+          "name": "Emote",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "emote",
+              "type": "string",
+              "resourceType": "emote"
+            },
+            {
+              "name": "durationSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.0
+            },
+            {
+              "name": "pauseAfterSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 1.0
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [],
+          "action": {
+            "id": "characters.emote",
+            "displayName": "Emote",
+            "category": "Animation",
+            "description": "Show a character emote, then pause for one second by default. Duration zero uses the definition's default; pauseAfterSeconds zero skips the pause. Missing character animations warn without hiding the callout.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": []
+            }
+          }
+        },
+        {
           "name": "Face",
           "parameters": [
             {
@@ -1321,6 +1372,78 @@
     }
   ],
   "resources": {
+    "direction": [
+      {
+        "id": "East",
+        "description": "East"
+      },
+      {
+        "id": "North",
+        "description": "North"
+      },
+      {
+        "id": "South",
+        "description": "South"
+      },
+      {
+        "id": "West",
+        "description": "West"
+      }
+    ],
+    "animation": [
+      {
+        "id": "base:laugh",
+        "description": "Laugh"
+      },
+      {
+        "id": "base:pass-out",
+        "description": "PassOut"
+      },
+      {
+        "id": "base:pickup",
+        "description": "Pickup"
+      },
+      {
+        "id": "base:prototype-sitting",
+        "description": "PrototypeSittingAnimation"
+      },
+      {
+        "id": "base:shrug",
+        "description": "Shrug"
+      },
+      {
+        "id": "base:think",
+        "description": "Think"
+      },
+      {
+        "id": "base:wave",
+        "description": "Wave"
+      }
+    ],
+    "deity": [
+      {
+        "id": "mars",
+        "description": "Mars"
+      }
+    ],
+    "emote": [
+      {
+        "id": "base:laugh",
+        "description": "Laugh"
+      },
+      {
+        "id": "base:shrug",
+        "description": "Shrug"
+      },
+      {
+        "id": "base:think",
+        "description": "Think"
+      },
+      {
+        "id": "base:wave",
+        "description": "Wave"
+      }
+    ],
     "musicCue": [
       {
         "id": "base:diana-shrine",
@@ -1331,10 +1454,18 @@
         "description": "cue"
       }
     ],
-    "deity": [
+    "sound": [
       {
-        "id": "mars",
-        "description": "Mars"
+        "id": "base:prototype-complete",
+        "description": "PrototypeComplete"
+      },
+      {
+        "id": "base:prototype-impact",
+        "description": "PrototypeImpact"
+      },
+      {
+        "id": "base:thunder",
+        "description": "Thunder"
       }
     ],
     "weather": [
@@ -1353,52 +1484,6 @@
       {
         "id": "Sunny",
         "description": "Sunny"
-      }
-    ],
-    "sound": [
-      {
-        "id": "base:prototype-complete",
-        "description": "PrototypeComplete"
-      },
-      {
-        "id": "base:prototype-impact",
-        "description": "PrototypeImpact"
-      },
-      {
-        "id": "base:thunder",
-        "description": "Thunder"
-      }
-    ],
-    "animation": [
-      {
-        "id": "base:pass-out",
-        "description": "PassOut"
-      },
-      {
-        "id": "base:pickup",
-        "description": "Pickup"
-      },
-      {
-        "id": "base:prototype-sitting",
-        "description": "PrototypeSittingAnimation"
-      }
-    ],
-    "direction": [
-      {
-        "id": "East",
-        "description": "East"
-      },
-      {
-        "id": "North",
-        "description": "North"
-      },
-      {
-        "id": "South",
-        "description": "South"
-      },
-      {
-        "id": "West",
-        "description": "West"
       }
     ]
   }

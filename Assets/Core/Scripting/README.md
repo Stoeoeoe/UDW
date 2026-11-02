@@ -93,11 +93,23 @@ preview is schematic and does not execute gameplay or arbitrary Lua.
 
 ## Export and check changes
 
+`Characters.Emote(character, emote)` is a timed character action for cutscene and
+NPC-routine sequences. It plays a shared emote definition's animation and/or icon
+for its authored duration, then pauses for one second by default. The optional
+`pauseAfterSeconds` argument adjusts or skips that pause. See [Character emotes](../../Character/Animations/README.md)
+for authoring and missing-animation behavior.
+
 Unity exports signatures, action metadata and resource choices to
 [`Generated/Scripting/bindings.json`](../../../Generated/Scripting/bindings.json)
 after script reload and relevant asset changes. Vulcanus consumes that manifest
 for authoring. To refresh explicitly, use **Tools > Scripting > Regenerate Lua
 bindings.json**. Do not edit the generated file or add a separate manual registry.
+
+Catalog resource lists are discovered from `[LuaResource("resourceType")]` on
+catalog classes, with `[DefaultCatalog(MyCatalog.ResourceName)]` declaring their
+default asset. Export reads IDs and enabled entries from the catalog. Labels use
+asset names unless `DescriptionMember` names another public string field/property
+on the definition. Adding a catalog resource needs no exporter or unrelated test edits.
 
 When extending an API, test its actual caller, read-only/write boundary, invalid
 authored inputs and any action cancellation/cleanup. Existing Edit Mode fixtures

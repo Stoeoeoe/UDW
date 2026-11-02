@@ -9,8 +9,10 @@ using Core.Game;
 using Core.Location;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using MoreMountains.Tools;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
@@ -234,15 +236,13 @@ namespace Core.Scripting.Editor
             Set(set, "baseAnimation", _animation);
             catalog.Synchronize(new CharacterAnimationDefinition[] { _animation, loop, set, other, _actor.PassOutAnimation });
             var libraries = new[] { _actor.Animator.AnimationLibrary };
-            var first = VulcanusLuaEngine.DescribeBindings();
-            LuaBindingManifestExporter.PopulateResources(first, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
-            Assert.That(first.resources["animation"].Select(choice => choice.id),
+            var first = LuaBindingManifestExporter.DescribeAnimations(catalog, libraries);
+            Assert.That(first.Select(choice => choice.id),
                 Is.EqualTo(new[] { "base:pass-out", "test:another", "test:gesture" }));
-            Assert.That(first.resources["animation"].Single(choice => choice.id == "test:gesture").description, Is.EqualTo("test:gesture"));
+            Assert.That(first.Single(choice => choice.id == "test:gesture").description, Is.EqualTo("test:gesture"));
             catalog.SetEnabled(other, false);
-            var next = VulcanusLuaEngine.DescribeBindings();
-            LuaBindingManifestExporter.PopulateResources(next, catalog, libraries, Resources.Load<SoundCatalog>(SoundCatalog.ResourceName), Resources.Load<Core.TimeAndWeather.WeatherCatalog>(Core.TimeAndWeather.WeatherCatalog.ResourceName), Resources.Load<Core.Divinity.DeityCatalog>(Core.Divinity.DeityCatalog.ResourceName), Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
-            Assert.That(next.resources["animation"].Select(choice => choice.id), Is.EqualTo(new[] { "base:pass-out", "test:gesture" }));
+            var next = LuaBindingManifestExporter.DescribeAnimations(catalog, libraries);
+            Assert.That(next.Select(choice => choice.id), Is.EqualTo(new[] { "base:pass-out", "test:gesture" }));
         }
 
         [Test]
@@ -265,6 +265,204 @@ namespace Core.Scripting.Editor
 
         private AnimancerState CurrentState() => (AnimancerState)typeof(UrCharacterAnimator)
             .GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_actor.Animator);
+
+        [Test]
+        public void EmoteKeepsItsPoseUntilItsDurationEndsAndCancellationReleasesIt()
+        {
+            var emote = CreateEmote();
+            using var action = new EmoteAction(_actor, emote);
+            var state = CurrentState();
+            AdvanceAnimation(state.Length / emote.PlaybackSpeed + 0.1f);
+            action.Tick(0.5f);
+            Assert.That(action.IsCompleted, Is.False);
+            Assert.That(CurrentState(), Is.SameAs(state));
+            action.Tick(0.5f);
+            Assert.That(action.IsCompleted, Is.True);
+            action.Dispose();
+            Assert.That(CurrentState(), Is.Null);
+
+            using var cancelled = new EmoteAction(_actor, emote);
+            cancelled.Dispose();
+            Assert.That(CurrentState(), Is.Null);
+        }
+
+        [Test]
+        public void PostEmotePauseReleasesThePoseBeforeTheNextActionCanContinue()
+        {
+            using var action = new EmoteAction(_actor, CreateEmote(), pauseAfterSeconds: 1);
+            action.Tick(1f);
+            Assert.That(CurrentState(), Is.Null);
+            Assert.That(action.IsCompleted, Is.False);
+            action.Tick(0.5f);
+            Assert.That(action.IsCompleted, Is.False);
+            action.Tick(0.5f);
+            Assert.That(action.IsCompleted, Is.True);
+        }
+
+        [Test]
+        public void AFrameCrossingTheEndOfTheGestureCountsOnlyItsRemainderTowardThePause()
+        {
+            using var action = new EmoteAction(_actor, CreateEmote(), pauseAfterSeconds: 1);
+            action.Tick(1.5f);
+            Assert.That(CurrentState(), Is.Null);
+            Assert.That(action.IsCompleted, Is.False);
+            action.Tick(0.5f);
+            Assert.That(action.IsCompleted, Is.True);
+        }
+
+        [TestCase(-1d)]
+        [TestCase(double.NaN)]
+        [TestCase(double.PositiveInfinity)]
+        public void InvalidPostEmotePausesFailBeforePlayback(double pauseAfterSeconds)
+        {
+            Assert.That(() => new EmoteAction(_actor, CreateEmote(), pauseAfterSeconds: pauseAfterSeconds),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(CurrentState(), Is.Null);
+        }
+
+        [TestCase(0d, 1f)]
+        [TestCase(0.25d, 0.25f)]
+        [TestCase(2.5d, 2.5f)]
+        public void EmoteDurationOverrideUsesTheDefaultOrTheRequestedSeconds(double durationSeconds, float expected)
+        {
+            var emote = CreateEmote();
+            Assert.That(emote.PlaybackSpeed, Is.EqualTo(0.5f));
+            using var action = new EmoteAction(_actor, emote, durationSeconds);
+            action.Tick(expected * 0.5f);
+            Assert.That(action.IsCompleted, Is.False);
+            action.Tick(expected * 0.5f);
+            Assert.That(action.IsCompleted, Is.True);
+            Assert.That(emote.Duration, Is.EqualTo(1f), "A play override must not modify the shared definition.");
+        }
+
+        [TestCase(-1d)]
+        [TestCase(double.NaN)]
+        [TestCase(double.PositiveInfinity)]
+        [TestCase(double.MaxValue)]
+        public void InvalidDurationOverridesFailBeforePlayback(double durationSeconds)
+        {
+            Assert.That(() => new EmoteAction(_actor, CreateEmote(), durationSeconds), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(CurrentState(), Is.Null);
+        }
+
+        [TestCase(0.5f)]
+        [TestCase(2f)]
+        public void EmoteSpeedScalesNativeMotionAndIsRestoredBeforeReusingTheClip(float speed)
+        {
+            var emote = CreateEmote();
+            Set(emote, "playbackSpeed", speed);
+            using var action = new EmoteAction(_actor, emote);
+            var state = CurrentState();
+            Assert.That(state.Speed, Is.EqualTo(speed));
+            AdvanceAnimation(state.Length * 0.25f);
+            Assert.That(state.Time, Is.EqualTo(state.Length * 0.25f * speed).Within(0.001f));
+            action.Tick(0.5f);
+            Assert.That(action.IsCompleted, Is.False, "Speed must not change the authored emote duration.");
+            using var replacement = _actor.Animator.PlayOneShot(_animation);
+            Assert.That(CurrentState().Speed, Is.EqualTo(1f));
+            action.Dispose();
+            Assert.That(replacement.IsInterrupted, Is.False);
+            Assert.That(CurrentState().Speed, Is.EqualTo(1f));
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void InvalidEmoteSpeedsFailAtTheConfigurationBoundary(float speed)
+        {
+            var emote = CreateEmote();
+            Set(emote, "playbackSpeed", speed);
+            Assert.That(emote.ValidateConfiguration().Any(error => error.Setting == "playbackSpeed"), Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void EmotePlaysItsOptionalSoundOnceIncludingWhenTheAnimationIsMissing(bool missingAnimation)
+        {
+            var manager = _fixture.AddSingleton<AudioTestSoundManager>();
+            var sound = _fixture.Own(ScriptableObject.CreateInstance<SoundDefinition>());
+            var clip = _fixture.Own(AudioClip.Create("Emote sound", 4410, 1, 44100, false));
+            Set(sound, "soundId", "test:emote-sound");
+            Set(sound, "clip", clip);
+            var emote = CreateEmote();
+            Set(emote, "sound", sound);
+            Set(emote, "playbackSpeed", 0.5f);
+            if (missingAnimation)
+            {
+                Set(_animation, "clip", null);
+                Set(_animation, "memaoAction", "MissingEmoteAnimation");
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Emote 'test:reaction'.*has no animation"));
+            }
+            Assert.That(emote.ValidateConfiguration(), Is.Empty);
+            using var action = new EmoteAction(_actor, emote);
+            action.Tick(0.1f);
+            action.Tick(0.1f);
+            Assert.That(manager.Calls, Is.EqualTo(1));
+            Assert.That(manager.Clip, Is.SameAs(clip));
+            Assert.That(manager.Options.MmSoundManagerTrack, Is.EqualTo(MMSoundManager.MMSoundManagerTracks.Sfx));
+            Assert.That(manager.Options.Location, Is.EqualTo(_actor.Graphics.position));
+            Assert.That(manager.Options.SpatialBlend, Is.EqualTo(1f));
+            Assert.That(manager.Options.Loop, Is.False);
+            Assert.That(manager.Options.Pitch, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void InvalidOptionalSoundFailsAtTheConfigurationBoundary()
+        {
+            var emote = CreateEmote();
+            var sound = _fixture.Own(ScriptableObject.CreateInstance<SoundDefinition>());
+            Set(sound, "soundId", "test:emote-sound");
+            Set(emote, "sound", sound);
+            Assert.That(emote.ValidateConfiguration().Any(error => error.Setting == "sound.clip"), Is.True);
+        }
+
+        [Test]
+        public void ReplacingAnEmoteDoesNotLetItsCleanupStopTheNewAnimation()
+        {
+            using var action = new EmoteAction(_actor, CreateEmote());
+            using var replacement = _actor.Animator.PlayOneShot(_animation);
+            Assert.That(() => action.Tick(0), Throws.InvalidOperationException.With.Message.Contains("interrupted"));
+            action.Dispose();
+            Assert.That(replacement.IsInterrupted, Is.False);
+        }
+
+        [Test]
+        public void InvalidEmoteDefinitionsFailAtTheConfigurationBoundary()
+        {
+            var emote = CreateEmote();
+            Assert.That(emote.ValidateConfiguration(), Is.Empty);
+            Set(emote, "duration", float.NaN);
+            Assert.That(emote.ValidateConfiguration().Any(error => error.Setting == "duration"), Is.True);
+            Set(emote, "duration", 1f);
+            Set(emote, "animation", null);
+            Assert.That(emote.ValidateConfiguration().Any(error => error.Setting == "animation"), Is.True);
+        }
+
+        [Test]
+        public void EmoteExportsAsAnAwaitableCharacterAction()
+        {
+            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Characters")
+                .methods.Single(method => method.action.id == "characters.emote");
+            Assert.That(method.action.execution, Is.EqualTo("awaitable"));
+            Assert.That(method.parameters.Single(parameter => parameter.name == "emote").resourceType, Is.EqualTo("emote"));
+            var source = JArray.Parse("[{'id':'react','action':'characters.emote','arguments':{'character':'player','emote':'test:reaction'}}]");
+            Assert.That(method.parameters.Single(parameter => parameter.name == "pauseAfterSeconds").defaultValue, Is.EqualTo(1d));
+            Assert.That(CutsceneSequenceCompiler.Compile(source, "emote.json"), Does.Contain("Characters.Emote(\"player\", \"test:reaction\", 0, 1)"));
+            source[0]["arguments"]["durationSeconds"] = 2.5;
+            Assert.That(CutsceneSequenceCompiler.Compile(source, "emote.json"), Does.Contain("Characters.Emote(\"player\", \"test:reaction\", 2.5, 1)"));
+            source[0]["arguments"]["pauseAfterSeconds"] = 0;
+            Assert.That(CutsceneSequenceCompiler.Compile(source, "emote.json"), Does.Contain("Characters.Emote(\"player\", \"test:reaction\", 2.5, 0)"));
+        }
+
+        private EmoteDefinition CreateEmote()
+        {
+            var emote = _fixture.Own(ScriptableObject.CreateInstance<EmoteDefinition>());
+            Set(emote, "emoteId", "test:reaction");
+            Set(emote, "duration", 1f);
+            Set(emote, "animation", _animation);
+            return emote;
+        }
 
         private void AdvanceAnimation(float seconds)
         {

@@ -108,7 +108,7 @@
           "id": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
           "kind": "action",
           "position": {
-            "x": 1080,
+            "x": 1440,
             "y": 180
           },
           "step": {
@@ -123,7 +123,7 @@
           "id": "beat-c05b392e-31ba-4897-ae11-efc522d12110",
           "kind": "action",
           "position": {
-            "x": 1440,
+            "x": 1800,
             "y": 180
           },
           "step": {
@@ -138,7 +138,7 @@
           "id": "prototype-impact-sound",
           "kind": "action",
           "position": {
-            "x": 1800,
+            "x": 2160,
             "y": 180
           },
           "step": {
@@ -154,7 +154,7 @@
           "id": "beat-f08de368-f1a8-4587-bebf-6a66343d3b52",
           "kind": "action",
           "position": {
-            "x": 2160,
+            "x": 2520,
             "y": 180
           },
           "step": {
@@ -173,7 +173,7 @@
           "id": "beat-895f5614-f637-4c3a-930a-99b6ab59abf7",
           "kind": "action",
           "position": {
-            "x": 2520,
+            "x": 2880,
             "y": 180
           },
           "step": {
@@ -190,7 +190,7 @@
           "id": "prototype-impact-shake",
           "kind": "action",
           "position": {
-            "x": 2880,
+            "x": 3240,
             "y": 180
           },
           "step": {
@@ -206,7 +206,7 @@
           "id": "prototype-impact-hold",
           "kind": "action",
           "position": {
-            "x": 3240,
+            "x": 3600,
             "y": 180
           },
           "step": {
@@ -221,7 +221,7 @@
           "id": "beat-d6af5471-1a0e-43f2-9653-2bd38cef95d2",
           "kind": "action",
           "position": {
-            "x": 3600,
+            "x": 3960,
             "y": 180
           },
           "step": {
@@ -236,7 +236,7 @@
           "id": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
           "kind": "action",
           "position": {
-            "x": 3960,
+            "x": 4320,
             "y": 180
           },
           "step": {
@@ -252,8 +252,24 @@
           "id": "exit-ba2c1e36-9087-4f11-b838-de34d1256092",
           "kind": "exit",
           "position": {
-            "x": 4320,
+            "x": 4680,
             "y": 180
+          }
+        },
+        {
+          "id": "prototype-greeting-wave",
+          "kind": "action",
+          "position": {
+            "x": 1080,
+            "y": 180
+          },
+          "step": {
+            "id": "prototype-greeting-wave",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:wave"
+            }
           }
         }
       ],
@@ -278,7 +294,7 @@
           "id": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b:next:beat-72159519-3ca8-4a06-a988-525da0065d0b:in",
           "source": "beat-bf316665-59b6-4bd9-bed5-52e329a4600b",
           "sourcePin": "next",
-          "target": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
+          "target": "prototype-greeting-wave",
           "targetPin": "in",
           "kind": "execution"
         },
@@ -351,6 +367,14 @@
           "source": "beat-6cce8293-5fd5-4a42-a2a0-dbad4cac8a3f",
           "sourcePin": "next",
           "target": "exit-ba2c1e36-9087-4f11-b838-de34d1256092",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "prototype-greeting-wave-next-beat-72159519-3ca8-4a06-a988-525da0065d0b-in",
+          "source": "prototype-greeting-wave",
+          "sourcePin": "next",
+          "target": "beat-72159519-3ca8-4a06-a988-525da0065d0b",
           "targetPin": "in",
           "kind": "execution"
         }

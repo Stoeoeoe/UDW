@@ -4,6 +4,7 @@ using UnityEngine;
 namespace Character
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Skills")]
+    [DefaultCatalog(SkillCatalog.ResourceName)]
     public sealed class SkillCatalog : DefinitionCatalog<SkillDefinition>
     {
         public const string ResourceName = "SkillCatalog";

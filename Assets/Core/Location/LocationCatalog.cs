@@ -5,6 +5,7 @@ using UnityEngine;
 namespace Core.Location
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Locations")]
+    [DefaultCatalog(LocationCatalog.ResourceName)]
     public sealed class LocationCatalog : DefinitionCatalog<LocationData>
     {
         public const string ResourceName = "LocationCatalog";

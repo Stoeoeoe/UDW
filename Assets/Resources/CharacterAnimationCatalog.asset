@@ -13,9 +13,17 @@ MonoBehaviour:
   m_Name: CharacterAnimationCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.CharacterAnimationCatalog
   entries:
+  - definition: {fileID: 11400000, guid: d15b74f53a72ffb44a4b9727a144c5e9, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 5ca016e6910b14f4db88ac348a0921dd, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: 0df20c764685e534d9719ec770a3c08b, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: e5ba9285631398a428acf53a3f8c1d32, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 36e1f817ee1b03d488c2df48a9d7cea7, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 0cc5e43b3fe81844781716bfa6fe807e, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: f862f6af1a1fd0d469c344bc14ada3b3, type: 2}
     enabled: 1

@@ -34,6 +34,7 @@ namespace Character
         private float _variationDelay;
         private Vector2 _interactionFacing;
         private OneShotPlayback _oneShot;
+        private TimedPlayback _timedPlayback;
         private bool _holdingLastFrame;
         internal OneShotPlayback HeldPlayback => _holdingLastFrame ? _oneShot : null;
 
@@ -189,6 +190,31 @@ namespace Character
             return _oneShot = new OneShotPlayback(this, state, holdLastFrame);
         }
 
+        /// <summary>Owns an emote's pose until its duration ends, including looping clips and finished finite clips.</summary>
+        public TimedPlayback PlayTimedAnimation(CharacterAnimation animation, float speed)
+        {
+            if (!isActiveAndEnabled) throw new InvalidOperationException("Timed playback requires an active animator.");
+            var state = PlayInteractionAnimation(animation);
+            _timedPlayback = new TimedPlayback(this, state);
+            state.Speed = speed;
+            return _timedPlayback;
+        }
+
+        public sealed class TimedPlayback : IDisposable
+        {
+            private readonly UrCharacterAnimator _owner;
+            private readonly AnimancerState _state;
+            private readonly float _previousSpeed;
+            internal TimedPlayback(UrCharacterAnimator owner, AnimancerState state)
+            { _owner = owner; _state = state; _previousSpeed = state.Speed; }
+            internal void RestoreSpeed() => _state.Speed = _previousSpeed;
+            public bool IsInterrupted => !ReferenceEquals(_owner._timedPlayback, this);
+            public void Dispose()
+            {
+                if (!IsInterrupted) _owner.EndInteractionAnimation();
+            }
+        }
+
         public sealed class OneShotPlayback : IDisposable
         {
             private readonly UrCharacterAnimator _owner;
@@ -226,6 +252,7 @@ namespace Character
         {
             _holdingLastFrame = false;
             _oneShot = null;
+            _timedPlayback = null;
             _interactionAnimationActive = false;
             _interactionSet = null;
             _interactionState = null;
@@ -235,6 +262,7 @@ namespace Character
         public void EndInteractionAnimation()
         {
             if (!_interactionAnimationActive) return;
+            _timedPlayback?.RestoreSpeed();
             _interactionState.Stop();
             ClearInteractionAnimation();
             if (!isActiveAndEnabled) return; // Disabling a character releases its slot without restarting its animation graph.

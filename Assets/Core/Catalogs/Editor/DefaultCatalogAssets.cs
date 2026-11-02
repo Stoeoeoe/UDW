@@ -1,16 +1,8 @@
-using Character;
-using Character.Animations;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Core.Divinity;
-using Core.Inventory;
-using Core.Location;
-using Core.Scripting;
-using Core.TimeAndWeather;
-using Interaction.Dialog;
-using Plants;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,19 +16,29 @@ namespace Core.Catalogs.Editor
             if (!AssetDatabase.IsValidFolder(folder))
                 AssetDatabase.CreateFolder(Path.GetDirectoryName(folder)?.Replace('\\', '/'), Path.GetFileName(folder));
             var created = new List<DefinitionCatalog>();
-            Create<ItemCatalog>(folder, ItemCatalog.ResourceName, created);
-            Create<CharacterCatalog>(folder, CharacterCatalog.ResourceName, created);
-            Create<CharacterAnimationCatalog>(folder, CharacterAnimationCatalog.ResourceName, created);
-            Create<CutsceneCatalog>(folder, CutsceneCatalog.ResourceName, created);
-            Create<SkillCatalog>(folder, SkillCatalog.ResourceName, created);
-            Create<DeityCatalog>(folder, DeityCatalog.ResourceName, created);
-            Create<PlantCatalog>(folder, PlantCatalog.ResourceName, created);
-            Create<TypewriterSoundCatalog>(folder, TypewriterSoundCatalog.ResourceName, created);
-            Create<SoundCatalog>(folder, SoundCatalog.ResourceName, created);
-            Create<Music.MusicCatalog>(folder, Music.MusicCatalog.ResourceName, created);
-            Create<WeatherCatalog>(folder, WeatherCatalog.ResourceName, created);
-            Create<LocationCatalog>(folder, LocationCatalog.ResourceName, created);
+            var types = TypeCache.GetTypesWithAttribute<DefaultCatalogAttribute>()
+                .OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var type in types)
+            {
+                if (!typeof(DefinitionCatalog).IsAssignableFrom(type) || type.IsAbstract || type.ContainsGenericParameters)
+                    throw new InvalidOperationException($"Default catalog {type.FullName} must be a concrete DefinitionCatalog.");
+                if (!names.Add(type.GetCustomAttribute<DefaultCatalogAttribute>().ResourceName))
+                    throw new InvalidOperationException($"Duplicate default catalog resource name on {type.FullName}.");
+            }
+            foreach (var type in types)
+                Create(folder, type, type.GetCustomAttribute<DefaultCatalogAttribute>().ResourceName, created);
             return created.AsReadOnly();
+        }
+
+        internal static DefinitionCatalog Load(Type type)
+        {
+            var declaration = type.GetCustomAttribute<DefaultCatalogAttribute>()
+                ?? throw new InvalidOperationException($"{type.Name} has no default catalog declaration.");
+            var path = $"Assets/Resources/{declaration.ResourceName}.asset";
+            var catalog = (DefinitionCatalog)AssetDatabase.LoadAssetAtPath(path, type);
+            if (!catalog) throw new InvalidOperationException($"The required {type.Name} is missing at '{path}'.");
+            return catalog;
         }
 
         [MenuItem("Tools/Catalogs/Create Missing Catalogs")]
@@ -48,13 +50,13 @@ namespace Core.Catalogs.Editor
                 : "Created catalogs:\n" + string.Join("\n", created.Select(AssetDatabase.GetAssetPath)));
         }
 
-        private static void Create<T>(string folder, string name, List<DefinitionCatalog> created) where T : DefinitionCatalog
+        private static void Create(string folder, Type type, string name, List<DefinitionCatalog> created)
         {
             var path = folder + "/" + name + ".asset";
             var existing = AssetDatabase.LoadMainAssetAtPath(path);
-            if (existing is T) return;
-            if (existing) throw new InvalidOperationException($"Cannot create {typeof(T).Name}: '{path}' is occupied by another asset.");
-            var catalog = ScriptableObject.CreateInstance<T>();
+            if (existing && existing.GetType() == type) return;
+            if (existing) throw new InvalidOperationException($"Cannot create {type.Name}: '{path}' is occupied by another asset.");
+            var catalog = (DefinitionCatalog)ScriptableObject.CreateInstance(type);
             AssetDatabase.CreateAsset(catalog, path);
             created.Add(catalog);
         }

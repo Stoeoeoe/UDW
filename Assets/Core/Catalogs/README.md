@@ -51,8 +51,17 @@ Adding content of an existing type needs no registry edits: create/import its
 definition under that catalog's `Path`. Unity import/save hooks and the pre-play
 and pre-build refresh discover it automatically. Imported source formats must
 produce Unity definition assets; arbitrary JSON is not itself a definition asset.
-Adding a *new catalog type* still requires its class and, if desired, one default
-asset registration in `DefaultCatalogAssets` (not one registration per content item).
+For a *new catalog type*, add `[DefaultCatalog(MyCatalog.ResourceName)]` to its
+class if it needs a default Resources asset. Editor setup discovers this declaration;
+there is no central list to update. Explicitly assigned catalogs omit the attribute.
+
+To export a catalog as Lua resource choices, also annotate its class with
+`[LuaResource("myResource")]`. Export uses the existing catalog IDs and enabled
+entries, sorted by ID. Labels use the definition's asset name, or a public string
+field/property named by `DescriptionMember = nameof(MyDefinition.DisplayName)`.
+Discovery, default asset loading and export use reflection; no resource provider
+class or exporter registration is required. Animation choices retain their special
+finite-single-clip filtering, and directions come from the shared cardinal values.
 
 Cutscenes use the same pipeline: `.runtime.cutscene.json` sources under Assets
 import into `CutsceneDefinition` assets, and `CutsceneCatalog` discovers them.

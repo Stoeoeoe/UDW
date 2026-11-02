@@ -323,7 +323,7 @@
           "id": "approach-together",
           "kind": "parallel",
           "position": {
-            "x": 3600,
+            "x": 4200,
             "y": 180
           },
           "pair": "approach-joined",
@@ -333,7 +333,7 @@
           "id": "player-follows-path",
           "kind": "action",
           "position": {
-            "x": 4200,
+            "x": 4800,
             "y": -180
           },
           "step": {
@@ -352,7 +352,7 @@
           "id": "player-route",
           "kind": "variable",
           "position": {
-            "x": 3600,
+            "x": 4200,
             "y": -600
           },
           "variable": "playerRoute"
@@ -361,7 +361,7 @@
           "id": "keeper-follows-path",
           "kind": "action",
           "position": {
-            "x": 4200,
+            "x": 4800,
             "y": 360
           },
           "step": {
@@ -392,7 +392,7 @@
           "id": "first-light-delay",
           "kind": "action",
           "position": {
-            "x": 4200,
+            "x": 4800,
             "y": 940
           },
           "step": {
@@ -405,7 +405,7 @@
           "id": "breath-before-light",
           "kind": "expression",
           "position": {
-            "x": 3600,
+            "x": 4200,
             "y": 1390
           },
           "expression": "math.max(0.12, Cutscene.Variables.pulseSeconds * 0.75)",
@@ -420,7 +420,7 @@
           "id": "storm-center",
           "kind": "position",
           "position": {
-            "x": 4740,
+            "x": 5340,
             "y": 1390
           },
           "arguments": {
@@ -432,7 +432,7 @@
           "id": "distant-thunder",
           "kind": "action",
           "position": {
-            "x": 4800,
+            "x": 5400,
             "y": 940
           },
           "step": {
@@ -447,7 +447,7 @@
           "id": "blue-lightning",
           "kind": "action",
           "position": {
-            "x": 5400,
+            "x": 6000,
             "y": 940
           },
           "step": {
@@ -464,7 +464,7 @@
           "id": "first-rumble",
           "kind": "action",
           "position": {
-            "x": 6000,
+            "x": 6600,
             "y": 940
           },
           "step": {
@@ -479,7 +479,7 @@
           "id": "let-thunder-roll",
           "kind": "action",
           "position": {
-            "x": 6600,
+            "x": 7200,
             "y": 940
           },
           "step": {
@@ -495,7 +495,7 @@
           "id": "approach-joined",
           "kind": "join",
           "position": {
-            "x": 7200,
+            "x": 7800,
             "y": 180
           },
           "pair": "approach-together"
@@ -504,7 +504,7 @@
           "id": "turn-to-keeper",
           "kind": "action",
           "position": {
-            "x": 8400,
+            "x": 9000,
             "y": 180
           },
           "step": {
@@ -520,7 +520,7 @@
           "id": "keeper-meets-eyes",
           "kind": "action",
           "position": {
-            "x": 9000,
+            "x": 9600,
             "y": 180
           },
           "step": {
@@ -536,7 +536,7 @@
           "id": "does-the-storm-remember",
           "kind": "function",
           "position": {
-            "x": 9000,
+            "x": 9600,
             "y": -440
           },
           "method": "GameState.Story.Has",
@@ -548,7 +548,7 @@
           "id": "remembered-or-first-time",
           "kind": "branch",
           "position": {
-            "x": 10200,
+            "x": 10800,
             "y": 180
           },
           "pair": "memory-joined"
@@ -557,7 +557,7 @@
           "id": "remembered-warning",
           "kind": "action",
           "position": {
-            "x": 10800,
+            "x": 11400,
             "y": -180
           },
           "step": {
@@ -572,7 +572,7 @@
           "id": "gentler-echo",
           "kind": "action",
           "position": {
-            "x": 11400,
+            "x": 12000,
             "y": -180
           },
           "step": {
@@ -588,7 +588,7 @@
           "id": "first-warning",
           "kind": "action",
           "position": {
-            "x": 10800,
+            "x": 11400,
             "y": 480
           },
           "step": {
@@ -603,7 +603,7 @@
           "id": "full-storm",
           "kind": "action",
           "position": {
-            "x": 11400,
+            "x": 12000,
             "y": 480
           },
           "step": {
@@ -619,7 +619,7 @@
           "id": "memory-joined",
           "kind": "join",
           "position": {
-            "x": 12000,
+            "x": 12600,
             "y": 180
           },
           "pair": "remembered-or-first-time"
@@ -628,7 +628,7 @@
           "id": "tune-the-echo",
           "kind": "action",
           "position": {
-            "x": 12600,
+            "x": 13800,
             "y": 180
           },
           "step": {
@@ -643,7 +643,7 @@
           "id": "the-storm-answers",
           "kind": "parallel",
           "position": {
-            "x": 13200,
+            "x": 14400,
             "y": 180
           },
           "pair": "impact-joined",
@@ -653,7 +653,7 @@
           "id": "player-staggers",
           "kind": "action",
           "position": {
-            "x": 13800,
+            "x": 15000,
             "y": -180
           },
           "step": {
@@ -670,7 +670,7 @@
           "id": "keeper-watches-sky",
           "kind": "action",
           "position": {
-            "x": 13800,
+            "x": 15000,
             "y": 390
           },
           "step": {
@@ -686,7 +686,7 @@
           "id": "keeper-counts-silence",
           "kind": "action",
           "position": {
-            "x": 14400,
+            "x": 15600,
             "y": 390
           },
           "step": {
@@ -702,7 +702,7 @@
           "id": "white-out",
           "kind": "action",
           "position": {
-            "x": 13800,
+            "x": 15000,
             "y": 940
           },
           "step": {
@@ -723,7 +723,7 @@
           "id": "thunder-at-our-feet",
           "kind": "action",
           "position": {
-            "x": 14400,
+            "x": 15600,
             "y": 940
           },
           "step": {
@@ -742,7 +742,7 @@
           "id": "answering-rumble",
           "kind": "action",
           "position": {
-            "x": 15000,
+            "x": 16200,
             "y": 940
           },
           "step": {
@@ -760,7 +760,7 @@
           "id": "wait-for-the-echo",
           "kind": "action",
           "position": {
-            "x": 15600,
+            "x": 16800,
             "y": 940
           },
           "step": {
@@ -773,7 +773,7 @@
           "id": "echo-length",
           "kind": "variable",
           "position": {
-            "x": 15000,
+            "x": 16200,
             "y": 1390
           },
           "variable": "echoHold"
@@ -782,7 +782,7 @@
           "id": "impact-joined",
           "kind": "join",
           "position": {
-            "x": 16200,
+            "x": 17400,
             "y": 180
           },
           "pair": "the-storm-answers"
@@ -791,7 +791,7 @@
           "id": "the-rain-forgets",
           "kind": "action",
           "position": {
-            "x": 17400,
+            "x": 18600,
             "y": 180
           },
           "step": {
@@ -806,7 +806,7 @@
           "id": "recover-at-the-crossing",
           "kind": "position",
           "position": {
-            "x": 17400,
+            "x": 18600,
             "y": -440
           },
           "arguments": {
@@ -818,7 +818,7 @@
           "id": "player-gets-bearings",
           "kind": "action",
           "position": {
-            "x": 18000,
+            "x": 19200,
             "y": 180
           },
           "step": {
@@ -833,7 +833,7 @@
           "id": "step-into-daylight",
           "kind": "action",
           "position": {
-            "x": 19200,
+            "x": 20400,
             "y": 180
           },
           "step": {
@@ -851,7 +851,7 @@
           "id": "look-back-at-keeper",
           "kind": "action",
           "position": {
-            "x": 19800,
+            "x": 21000,
             "y": 180
           },
           "step": {
@@ -867,7 +867,7 @@
           "id": "a-bargain-with-thunder",
           "kind": "action",
           "position": {
-            "x": 20400,
+            "x": 21600,
             "y": 180
           },
           "step": {
@@ -882,7 +882,7 @@
           "id": "let-the-silence-stay",
           "kind": "action",
           "position": {
-            "x": 21000,
+            "x": 23400,
             "y": 180
           },
           "step": {
@@ -898,7 +898,7 @@
           "id": "scene-exit",
           "kind": "exit",
           "position": {
-            "x": 21600,
+            "x": 24000,
             "y": 180
           }
         },
@@ -921,7 +921,7 @@
           "id": "weigh-the-warning",
           "kind": "action",
           "position": {
-            "x": 3000,
+            "x": 3600,
             "y": 180
           },
           "step": {
@@ -936,7 +936,7 @@
           "id": "settle-at-the-crossing",
           "kind": "action",
           "position": {
-            "x": 7800,
+            "x": 8400,
             "y": 180
           },
           "step": {
@@ -951,7 +951,7 @@
           "id": "hold-the-look",
           "kind": "action",
           "position": {
-            "x": 9600,
+            "x": 10200,
             "y": 180
           },
           "step": {
@@ -966,7 +966,7 @@
           "id": "recover-in-the-silence",
           "kind": "action",
           "position": {
-            "x": 16800,
+            "x": 18000,
             "y": 180
           },
           "step": {
@@ -981,7 +981,7 @@
           "id": "find-our-feet",
           "kind": "action",
           "position": {
-            "x": 18600,
+            "x": 19800,
             "y": 180
           },
           "step": {
@@ -989,6 +989,70 @@
             "action": "cutscene.wait",
             "arguments": {
               "seconds": 0.6
+            }
+          }
+        },
+        {
+          "id": "player-considers-warning",
+          "kind": "action",
+          "position": {
+            "x": 3000,
+            "y": 180
+          },
+          "step": {
+            "id": "player-considers-warning",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:think"
+            }
+          }
+        },
+        {
+          "id": "keeper-shrugs-at-storm",
+          "kind": "action",
+          "position": {
+            "x": 13200,
+            "y": 180
+          },
+          "step": {
+            "id": "keeper-shrugs-at-storm",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "storm-keeper",
+              "emote": "base:shrug"
+            }
+          }
+        },
+        {
+          "id": "player-laughs-at-knocking",
+          "kind": "action",
+          "position": {
+            "x": 22200,
+            "y": 180
+          },
+          "step": {
+            "id": "player-laughs-at-knocking",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:laugh"
+            }
+          }
+        },
+        {
+          "id": "player-farewell-wave",
+          "kind": "action",
+          "position": {
+            "x": 22800,
+            "y": 180
+          },
+          "step": {
+            "id": "player-farewell-wave",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:wave"
             }
           }
         }
@@ -1070,7 +1134,7 @@
           "id": "keeper-introduction-next-weigh-the-warning-in",
           "source": "keeper-introduction",
           "sourcePin": "next",
-          "target": "weigh-the-warning",
+          "target": "player-considers-warning",
           "targetPin": "in",
           "kind": "execution"
         },
@@ -1246,7 +1310,7 @@
           "id": "memory-joined-next-tune-the-echo-in",
           "source": "memory-joined",
           "sourcePin": "next",
-          "target": "tune-the-echo",
+          "target": "keeper-shrugs-at-storm",
           "targetPin": "in",
           "kind": "execution"
         },
@@ -1390,7 +1454,7 @@
           "id": "a-bargain-with-thunder-next-let-the-silence-stay-in",
           "source": "a-bargain-with-thunder",
           "sourcePin": "next",
-          "target": "let-the-silence-stay",
+          "target": "player-laughs-at-knocking",
           "targetPin": "in",
           "kind": "execution"
         },
@@ -1447,6 +1511,38 @@
           "source": "find-our-feet",
           "sourcePin": "next",
           "target": "step-into-daylight",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-considers-warning-next-weigh-the-warning-in",
+          "source": "player-considers-warning",
+          "sourcePin": "next",
+          "target": "weigh-the-warning",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-shrugs-at-storm-next-tune-the-echo-in",
+          "source": "keeper-shrugs-at-storm",
+          "sourcePin": "next",
+          "target": "tune-the-echo",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-laughs-at-knocking-next-let-the-silence-stay-in",
+          "source": "player-laughs-at-knocking",
+          "sourcePin": "next",
+          "target": "player-farewell-wave",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-farewell-wave-next-let-the-silence-stay-in",
+          "source": "player-farewell-wave",
+          "sourcePin": "next",
+          "target": "let-the-silence-stay",
           "targetPin": "in",
           "kind": "execution"
         }

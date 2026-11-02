@@ -4,6 +4,7 @@ using UnityEngine;
 namespace Core.Scripting
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Cutscenes")]
+    [DefaultCatalog(CutsceneCatalog.ResourceName)]
     public sealed class CutsceneCatalog : DefinitionCatalog<CutsceneDefinition>
     {
         public const string ResourceName = "CutsceneCatalog";

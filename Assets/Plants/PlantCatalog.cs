@@ -5,6 +5,7 @@ namespace Plants
 {
     /// <summary>Discovered plant definitions and their enabled ID lookup for runtime crop resolution.</summary>
     [CreateAssetMenu(menuName = "Game/Catalogs/Plants")]
+    [DefaultCatalog(PlantCatalog.ResourceName)]
     public sealed class PlantCatalog : DefinitionCatalog<PlantData>
     {
         public const string ResourceName = "PlantCatalog";

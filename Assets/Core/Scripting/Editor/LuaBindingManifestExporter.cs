@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Character;
 using Character.Animations;
+using Core.Catalogs;
 using Core.Catalogs.Editor;
-using Core.Divinity;
-using Core.TimeAndWeather;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -30,19 +31,7 @@ namespace Core.Scripting.Editor
             {
                 var manifest = VulcanusLuaEngine.DescribeBindings();
                 DefaultCatalogAssets.CreateMissingCatalogs();
-                var catalog = AssetDatabase.LoadAssetAtPath<CharacterAnimationCatalog>(
-                    $"Assets/Resources/{CharacterAnimationCatalog.ResourceName}.asset");
-                CatalogDiscovery.Refresh(catalog);
-                var sounds = AssetDatabase.LoadAssetAtPath<SoundCatalog>($"Assets/Resources/{SoundCatalog.ResourceName}.asset");
-                CatalogDiscovery.Refresh(sounds);
-                var weather = AssetDatabase.LoadAssetAtPath<WeatherCatalog>($"Assets/Resources/{WeatherCatalog.ResourceName}.asset");
-                CatalogDiscovery.Refresh(weather);
-                var deities = AssetDatabase.LoadAssetAtPath<DeityCatalog>($"Assets/Resources/{DeityCatalog.ResourceName}.asset");
-                CatalogDiscovery.Refresh(deities);
-                var libraries = CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray();
-                var music = AssetDatabase.LoadAssetAtPath<Core.Music.MusicCatalog>($"Assets/Resources/{Core.Music.MusicCatalog.ResourceName}.asset");
-                CatalogDiscovery.Refresh(music);
-                PopulateResources(manifest, catalog, libraries, sounds, weather, deities, music);
+                PopulateResources(manifest);
                 AssetDatabase.RegisterCustomDependency(DependencyName, Hash128.Compute(Serialize(manifest)));
                 var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), RelativePath);
                 if (!WriteIfChanged(path, manifest)) return;
@@ -55,27 +44,55 @@ namespace Core.Scripting.Editor
             }
         }
 
-        internal static void PopulateResources(LuaBindingManifest manifest, CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries, SoundCatalog sounds, WeatherCatalog weather, DeityCatalog deities, Core.Music.MusicCatalog music)
+        internal static void PopulateResources(LuaBindingManifest manifest)
         {
-            manifest.resources.Add("musicCue", music.EnabledDefinitions.OrderBy(cue => cue.id, StringComparer.Ordinal)
-                .Select(cue => new LuaResourceDescription { id = cue.id, description = cue.name }).ToArray());
-            manifest.resources.Add("deity", deities.EnabledDefinitions.OrderBy(deity => deity.Id, StringComparer.Ordinal)
-                .Select(deity => new LuaResourceDescription { id = deity.Id, description = deity.DisplayName }).ToArray());
-            manifest.resources.Add("weather", weather.EnabledDefinitions.OrderBy(definition => definition.id, StringComparer.Ordinal)
-                .Select(definition => new LuaResourceDescription { id = definition.id, description = definition.label }).ToArray());
-            manifest.resources.Add("sound", sounds.EnabledDefinitions.OrderBy(sound => sound.Id, StringComparer.Ordinal)
-                .Select(sound => new LuaResourceDescription { id = sound.Id, description = sound.name }).ToArray());
-            manifest.resources.Add("animation", catalog.EnabledDefinitions.OfType<CharacterAnimation>()
-                .Where(animation => IsOneShotCandidate(animation, libraries))
-                .OrderBy(animation => animation.Id, StringComparer.Ordinal)
-                .Select(animation => new LuaResourceDescription { id = animation.Id, description = animation.name }).ToArray());
-            manifest.resources.Add("direction", CardinalDirections.Values.Keys.OrderBy(id => id, StringComparer.Ordinal)
-                .Select(id => new LuaResourceDescription { id = id, description = id }).ToArray());
+            var catalogs = TypeCache.GetTypesWithAttribute<LuaResourceAttribute>()
+                .Select(DefaultCatalogAssets.Load).ToArray();
+            foreach (var catalog in catalogs) CatalogDiscovery.Refresh(catalog);
+            PopulateResources(manifest, catalogs);
+        }
+
+        internal static void PopulateResources(LuaBindingManifest manifest, IEnumerable<DefinitionCatalog> catalogs)
+        {
+            manifest.resources.Add("direction", DescribeDirections());
+            foreach (var catalog in catalogs.OrderBy(catalog => catalog.GetType().GetCustomAttribute<LuaResourceAttribute>().Type, StringComparer.Ordinal))
+            {
+                var resourceType = catalog.GetType().GetCustomAttribute<LuaResourceAttribute>().Type;
+                if (manifest.resources.ContainsKey(resourceType))
+                    throw new InvalidOperationException($"Duplicate Lua resource catalog for type '{resourceType}'.");
+                manifest.resources.Add(resourceType, catalog is CharacterAnimationCatalog animations
+                    ? DescribeAnimations(animations, CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray())
+                    : DescribeCatalog(catalog));
+            }
             foreach (var parameter in manifest.modules.SelectMany(module => module.methods).SelectMany(method => method.parameters))
                 // Vulcanus owns the character definitions and supplies this selector itself.
                 if (parameter.resourceType != null && parameter.resourceType != "character" && !manifest.resources.ContainsKey(parameter.resourceType))
                     throw new InvalidOperationException($"No resources exported for type '{parameter.resourceType}'.");
         }
+
+        internal static LuaResourceDescription[] DescribeCatalog(DefinitionCatalog catalog)
+        {
+            var metadata = catalog.GetType().GetCustomAttribute<LuaResourceAttribute>();
+            var member = catalog.DefinitionType.GetMember(metadata.DescriptionMember, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
+            Func<UnityEngine.Object, string> description = member switch
+            {
+                PropertyInfo property when property.PropertyType == typeof(string) => definition => (string)property.GetValue(definition),
+                FieldInfo field when field.FieldType == typeof(string) => definition => (string)field.GetValue(definition),
+                _ => throw new InvalidOperationException($"Lua resource '{metadata.Type}': {catalog.DefinitionType.Name}.{metadata.DescriptionMember} must be a public string field or property.")
+            };
+            return catalog.Entries.Where(entry => entry.Enabled).Select(entry => entry.Definition)
+                .OrderBy(catalog.GetId, StringComparer.Ordinal)
+                .Select(definition => new LuaResourceDescription { id = catalog.GetId(definition), description = description(definition) }).ToArray();
+        }
+
+        internal static LuaResourceDescription[] DescribeDirections() => CardinalDirections.Values.Keys.OrderBy(id => id, StringComparer.Ordinal)
+            .Select(id => new LuaResourceDescription { id = id, description = id }).ToArray();
+
+        internal static LuaResourceDescription[] DescribeAnimations(CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries) =>
+            catalog.EnabledDefinitions.OfType<CharacterAnimation>()
+                .Where(animation => IsOneShotCandidate(animation, libraries))
+                .OrderBy(animation => animation.Id, StringComparer.Ordinal)
+                .Select(animation => new LuaResourceDescription { id = animation.Id, description = animation.name }).ToArray();
 
         private static bool IsOneShotCandidate(CharacterAnimation animation, MemaoAnimationLibrary[] libraries)
         {
