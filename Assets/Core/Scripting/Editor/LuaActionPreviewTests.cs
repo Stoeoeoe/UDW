@@ -10,6 +10,7 @@ namespace Core.Scripting.Editor
 {
     public sealed class LuaActionPreviewTests
     {
+
         [Test]
         public void LuaBlockExportsItsCodeEditorHintAndUnknownPreview()
         {

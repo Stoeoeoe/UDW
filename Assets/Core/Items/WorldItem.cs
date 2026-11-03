@@ -3,6 +3,8 @@ using Core.Inventory;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Rendering;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core.Items
 {
@@ -15,6 +17,8 @@ namespace Core.Items
     /// </summary>
     public class WorldItem : MonoBehaviour
     {
+        [Inject] private ItemManager _itemManager;
+
         [SerializeField] private ItemDefinition item;
         [SerializeField] private int quantity = 1;
 
@@ -32,7 +36,7 @@ namespace Core.Items
         public ItemDefinition Item => item;
         public int Quantity => quantity;
 
-        public static WorldItem CreateInactive(ItemDefinition definition, int amount, Vector3 position,
+        public static WorldItem CreateInactive(IObjectResolver resolver, ItemDefinition definition, int amount, Vector3 position,
             WorldItem prefab = null, float pickupDelay = 0f)
         {
             var staging = new GameObject("Item initialization");
@@ -43,7 +47,7 @@ namespace Core.Items
                 WorldItem drop;
                 if (prefab)
                 {
-                    drop = Instantiate(prefab, position, Quaternion.identity, staging.transform);
+                    drop = resolver.Instantiate(prefab, position, Quaternion.identity, staging.transform);
                     root = drop.gameObject;
                     root.SetActive(false);
                 }
@@ -54,6 +58,7 @@ namespace Core.Items
                     root.transform.SetParent(staging.transform, false);
                     root.transform.position = position;
                     drop = root.AddComponent<WorldItem>();
+                    resolver.InjectGameObject(root);
                 }
                 drop.Initialize(definition, amount);
                 drop.DelayPickup(pickupDelay);
@@ -91,13 +96,13 @@ namespace Core.Items
         {
             if (!item) return;
 
-            var mgr = ItemManager.Instance;
+            var mgr = _itemManager;
 
             // ── Magnet collider ──────────────────────────────────────────────────────
             if (!_magnetCollider) _magnetCollider = GetComponent<CircleCollider2D>();
             if (!_magnetCollider) _magnetCollider = gameObject.AddComponent<CircleCollider2D>();
             _magnetCollider.isTrigger = true;
-            _magnetCollider.radius = mgr != null ? mgr.MagnetRadius : 2.5f;
+            _magnetCollider.radius = mgr.MagnetRadius;
 
             // ── Visual ───────────────────────────────────────────────────────────────
             var existing = transform.Find("Visual");
@@ -137,7 +142,7 @@ namespace Core.Items
             if (Time.unscaledTime < _pickupAvailableAt) return;
             if (!_target) return;
 
-            var mgr = ItemManager.Instance;
+            var mgr = _itemManager;
             var targetPosition = _character.CharacterCenter.position;
 
             float dist = Vector2.Distance(transform.position, targetPosition);
@@ -191,7 +196,7 @@ namespace Core.Items
             }
 
             _visual?.PlayPickup();
-            ItemManager.Instance?.PlayPickupSound(item.PickupSound);
+            _itemManager.PlayPickupSound(item.PickupSound);
             Destroy(gameObject);
         }
 

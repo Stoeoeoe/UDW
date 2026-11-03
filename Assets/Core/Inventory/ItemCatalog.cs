@@ -12,10 +12,6 @@ namespace Core.Inventory
         // Existing items live under Resources/Items and Plants. Preserve their authored locations.
         public override string Path => "Assets";
         protected override string GetDefinitionId(ItemDefinition definition) => definition.ItemId;
-        public static ItemDefinition Find(string id)
-        {
-            var catalog = CatalogResources.Load<ItemCatalog>(ResourceName);
-            return catalog ? catalog.Get(id) : null;
-        }
+        public ItemDefinition Find(string id) => Get(id);
     }
 }

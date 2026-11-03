@@ -13,7 +13,7 @@ it; override individual settings only when needed.
 
 The item definition supplies inventory identity, optional pickup sound override
 and positive **Ground Lifetime Days**. Spawn through
-`WorldObjectSpawner.Instance.Spawn(pickupPrefab, worldPosition)`, or place the
+`spawner.Spawn(pickupPrefab, worldPosition)` through an injected `WorldObjectSpawner`, or place the
 registered prefab ID (for example `base:forage-fig`) in Vulcanus with a stable
 instance ID. The existing importer and spawner handle persistence and activation.
 

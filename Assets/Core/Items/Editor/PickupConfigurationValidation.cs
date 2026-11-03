@@ -45,10 +45,10 @@ namespace Core.Items.Editor
         public static void CheckItem(ForageableItem item)
         {
             item.RequireValidConfiguration();
-            if (ItemCatalog.Find(item.ItemId) != item)
+            if (Resources.Load<ItemCatalog>(ItemCatalog.ResourceName).Find(item.ItemId) != item)
                 throw new InvalidOperationException($"Forage '{item.name}' must be enabled in the item catalog.");
             AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab")
-                .GetComponentInChildren<ItemManager>(true).RequirePickupSound(item.PickupSound);
+                .GetComponent<Core.SystemRoot>().Items.RequirePickupSound(item.PickupSound);
         }
 
         public static void CheckPrefabs()

@@ -818,8 +818,8 @@ in setup, sequence and completion phases and do not change spatial preview state
 
 ## Running a cutscene
 
-The runner loads the shared `Resources/CutsceneCatalog` through `CatalogResources`
-at initialization; no Inspector catalog assignment is needed.
+The runner receives the shared `Resources/CutsceneCatalog` from SystemRoot's
+reflected catalog registrations; no Inspector catalog assignment is needed.
 
 `CutsceneRunner.TryStart(id, out run)` resolves an enabled catalog entry. Unknown
 IDs are setup errors. Busy, not-ready, already-completed, occupied-player and

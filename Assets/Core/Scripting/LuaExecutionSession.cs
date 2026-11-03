@@ -46,17 +46,19 @@ namespace Core.Scripting
             // Conditions run in the same read-only, instruction-budgeted API used by dialogue.
             // A separate environment prevents expressions from calling actions or writable bindings.
             VulcanusLuaEngine conditions = null;
+            VulcanusLuaEngine CreateEngine() => (bindings.Runtime
+                ?? throw new InvalidOperationException("Lua expressions require the session's bound LuaRuntime.")).CreateEngine(variables);
             script.Globals.Set("__cutsceneCondition", DynValue.NewCallback((_, args) =>
-                DynValue.NewBoolean((conditions ??= new VulcanusLuaEngine(variables)).EvaluateCondition(args[0].String))));
+                DynValue.NewBoolean((conditions ??= CreateEngine()).EvaluateCondition(args[0].String))));
             script.Globals.Set("__cutsceneValue", DynValue.NewCallback((_, args) =>
             {
-                var value = (conditions ??= new VulcanusLuaEngine(variables)).EvaluateValue(args[0].String);
+                var value = (conditions ??= CreateEngine()).EvaluateValue(args[0].String);
                 LuaValues.RequireType(value, args[1].String, args[2].CastToBool());
                 return LuaValues.Copy(value, script);
             }));
             script.Globals.Set("__cutsceneLua", DynValue.NewCallback((_, args) =>
             {
-                var value = new VulcanusLuaEngine(variables).ExecuteValues(args[0].String);
+                var value = CreateEngine().ExecuteValues(args[0].String);
                 var count = value.Type == DataType.Void ? 0 : value.Type == DataType.Tuple ? value.Tuple.Length : 1;
                 if (count != (int)args[1].Number) throw new InvalidOperationException("Lua node returned a different number of values than its declared outputs.");
                 return value.Type == DataType.Tuple
@@ -66,7 +68,7 @@ namespace Core.Scripting
             script.Globals.Set("__cutscenePure", DynValue.NewCallback((_, args) =>
             {
                 var arguments = Enumerable.Range(1, (int)args[2].Number).Select(i => args[1].Table.Get(i)).ToArray();
-                var value = (conditions ??= new VulcanusLuaEngine(variables)).CallReadOnly(args[0].String, arguments);
+                var value = (conditions ??= CreateEngine()).CallReadOnly(args[0].String, arguments);
                 return value.Type == DataType.Tuple ? DynValue.NewTuple(value.Tuple.Select(v => LuaValues.Copy(v, script)).ToArray()) : LuaValues.Copy(value, script);
             }));
             script.Globals.Set("__cutsceneCheck", DynValue.NewCallback((_, args) =>

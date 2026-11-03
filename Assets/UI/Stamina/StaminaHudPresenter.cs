@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Character;
 using Core.Events;
@@ -12,6 +13,8 @@ namespace UI.Stamina
     public sealed class StaminaHudPresenter : MonoBehaviour, IEventListener<StaminaChangedEvent>, IEventListener<HealthChangedEvent>,
         IEventListener<MainCharacterChangedEvent>
     {
+        [Inject] private CharacterManager _characterManager;
+
         private ProgressBar _meter;
         private Label _value;
         private VisualElement _root;
@@ -41,7 +44,7 @@ namespace UI.Stamina
             this.Subscribe<StaminaChangedEvent>();
             this.Subscribe<HealthChangedEvent>();
             this.Subscribe<MainCharacterChangedEvent>();
-            Bind(CharacterManager.Instance.MainCharacter);
+            Bind(_characterManager.MainCharacter);
         }
 
         private void OnDisable()

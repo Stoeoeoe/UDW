@@ -2,7 +2,7 @@
 
 Open **Tools > Spawning > Catalog** to edit the catalog in a dedicated Odin window. It inspects the asset directly, reusing its prefab list and validation rather than keeping separate window data.
 
-1. `Assets/Resources/SystemRoot.prefab` owns the configured `WorldObjectSpawner` and its `Assets/Content/SpawnableCatalog.asset` reference. The Systems scene uses that prefab, and direct map Play Mode auto-creates it through Bootstrapper. Keep one spawner in the prefab so both entry paths restore persistent entities. It registers for LevelManager's location lifecycle in Start, after automatic bootstrap has initialized the managers; map initialization happens before reconstruction.
+1. `Assets/Resources/SystemRoot.prefab` owns the configured `WorldObjectSpawner` and its `Assets/Content/SpawnableCatalog.asset` reference. The Systems scene uses that prefab, and direct map Play Mode auto-creates it through Bootstrapper. Keep one spawner in the prefab so both entry paths restore persistent entities. SystemRoot injects the managers and connects their enabled location listeners; map initialization happens before reconstruction.
 2. Add `SpawnedObject` to the root of an active prefab (or derive it for specific gameplay). The first child `AbstractInteractable`, if present, has its uses and saved cooldowns bound automatically.
 3. Put the prefab under `Assets/Content/Spawnables` and manually assign its stable lowercase `namespace:name` ID, such as `base:chest`. Never change an ID once used in saves. The catalog holds explicit prefab references; runtime does not scan folders. The folder is only an editor authoring convention. Renaming or moving a prefab does not change its ID, but moving it outside the authoring folder removes it from the next catalog refresh. Prefabs loaded by mods must be registered through `WorldObjectSpawner.Register` before spawning or restoring them.
 
@@ -10,7 +10,8 @@ Odin's AssetList populates when the Inspector draws it. **Tools > Spawning > Ref
 
 ```csharp
 // Absolute world coordinates; tile callers resolve the tile's WorldPosition first:
-var chest = WorldObjectSpawner.Instance.Spawn(chestPrefab, new Vector3(12.5f, 7.5f, 0));
+// Inject WorldObjectSpawner into this caller as spawner.
+var chest = spawner.Spawn(chestPrefab, new Vector3(12.5f, 7.5f, 0));
 
 // Permanent removal, not just removal of the scene view:
 chest.Remove();

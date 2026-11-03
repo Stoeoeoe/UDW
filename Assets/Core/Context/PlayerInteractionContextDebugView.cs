@@ -1,3 +1,4 @@
+using VContainer;
 using System.Reflection;
 using Character;
 using UnityEngine;
@@ -7,6 +8,8 @@ namespace Core.Context
 {
     public class PlayerInteractionContextDebugView : MonoBehaviour
     {
+        [Inject] private PlayerInteractionContext _playerInteractionContext;
+
         private bool _visible;
 
         private void Update()
@@ -21,8 +24,7 @@ namespace Core.Context
         {
             if (!_visible) return;
 
-            var ctx = PlayerInteractionContext.Instance;
-            if (!ctx) return;
+            var ctx = _playerInteractionContext;
 
             var snapshot = ctx.CurrentSnapshot;
             if (snapshot == null)

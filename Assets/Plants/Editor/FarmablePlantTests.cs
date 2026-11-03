@@ -1,3 +1,4 @@
+using Plants;
 using System;
 using System.Reflection;
 using Core.Common;
@@ -23,12 +24,12 @@ namespace Plants.Editor
     }
 
     [Category("FarmingTerrain")]
-    public sealed class FarmablePlantTests
+    public sealed class FarmablePlantTests : Core.Common.Editor.GameTest
     {
         private GameObject _root;
         private PlantData _data;
         private FarmablePlant _view;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private PlantState _state;
         private PlantCatalog _catalog;
         private Sprite _sprite;
@@ -36,37 +37,21 @@ namespace Plants.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new Core.Common.Editor.GameTestFixture();
-            _fixture.AddSingleton<GameStateManager>();
-            _fixture.AddSingleton<PlantManager>();
-            _root = new GameObject("Crop visual tests");
-            _root.SetActive(false);
-            _view = _root.AddComponent<FarmablePlant>();
+
             _state = new PlantState("test:crop");
-            GameState.World.Set("farm", "plant:1,1", _state);
-            _data = ScriptableObject.CreateInstance<PlantData>();
+            _data = Game.Asset<PlantData>();
             Core.Common.Editor.ConfigurationTestData.Set(_data, "plantId", _state.plantID);
-            _sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero);
+            _sprite = Game.Own(Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero));
             var stages = PlantDataTests.Stages(0, 2);
             foreach (var stage in stages)
                 stage.GetType().GetField("_representation", BindingFlags.Instance | BindingFlags.NonPublic)
                     .SetValue(stage, new SpriteOrPrefab { sprite = _sprite });
             typeof(PlantData).GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, stages);
-            _catalog = ScriptableObject.CreateInstance<PlantCatalog>();
-            _catalog.Synchronize(new Object[] { _data });
-            typeof(PlantManager).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(PlantManager.Instance, _catalog);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            Object.DestroyImmediate(_root);
-            _fixture?.Dispose();
-            Object.DestroyImmediate(_catalog);
-            Object.DestroyImmediate(_data);
-            Object.DestroyImmediate(_sprite);
+            _catalog = Game.Catalog<PlantCatalog>(_data);
+            _view = Game.Create<FarmablePlant>();
+            _root = _view.gameObject;
+            Game.State.World.Set("farm", "plant:1,1", _state);
         }
 
         [Test]
@@ -156,6 +141,7 @@ namespace Plants.Editor
                 SetRepresentation(1, mature);
                 _root.transform.position = new Vector3(12, -4, 0);
                 BindView();
+                Game.Root.SetActive(true);
                 _root.SetActive(true);
                 _state.daysPassedSincePlanting = 2;
                 _view.OnEvent(new PlantGrowthEvent { LocationId = "farm", Position = Vector2Int.one, NewStageIndex = 1 });

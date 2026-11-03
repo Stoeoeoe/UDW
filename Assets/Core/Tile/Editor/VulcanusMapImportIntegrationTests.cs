@@ -25,8 +25,9 @@ using LocationType = Core.Common.LocationType;
 namespace Core.Tile.Editor
 {
     [Category("MapLoading")]
-    public sealed class VulcanusMapImportIntegrationTests
+    public sealed class VulcanusMapImportIntegrationTests : Core.Common.Editor.GameTest
     {
+
         private string _root;
         private string _mapPath;
         private string _scenePath;
@@ -347,7 +348,7 @@ namespace Core.Tile.Editor
             var staging = new GameObject("Inactive map staging");
             staging.SetActive(false);
             _views.Add(staging);
-            var map = Object.Instantiate(ImportMap(), staging.transform);
+            var map = Game.InjectObject(Object.Instantiate(ImportMap(), staging.transform));
             Assert.DoesNotThrow(() => Core.Inventory.Editor.ContainerConfigurationValidation.Check(staging));
             var template = map.PersistentEntities.Single().template;
             template.transform.parent.gameObject.SetActive(true);
@@ -443,7 +444,7 @@ namespace Core.Tile.Editor
             Assert.That(loadedScene.Invoke(null, new object[] { scene.name }), Is.EqualTo(scene));
             root.SetActive(false);
             _views.Add(root);
-            var manager = root.AddComponent<LevelManager>();
+            var manager = Game.InjectObject(root.AddComponent<LevelManager>());
             typeof(LevelManager).GetField("_locationByScenePath", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(manager, new Dictionary<string, LocationData>(StringComparer.OrdinalIgnoreCase) { [location.scenePath] = location });
             var resolved = typeof(LevelManager).GetMethod("GetLocationForScene", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -455,7 +456,7 @@ namespace Core.Tile.Editor
             var listenerRoot = new GameObject("Inactive location listener");
             listenerRoot.SetActive(false);
             _views.Add(listenerRoot);
-            var listener = listenerRoot.AddComponent<WorldObjectSpawner>();
+            var listener = Game.InjectObject(listenerRoot.AddComponent<WorldObjectSpawner>());
             SceneManager.MoveGameObjectToScene(listenerRoot, scene);
             var canReceive = typeof(LevelManager).GetMethod("CanReceiveLocation", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(canReceive.Invoke(manager, new object[] { listener, location }), Is.EqualTo(true));
@@ -533,7 +534,7 @@ namespace Core.Tile.Editor
             var owner = new GameObject("Location lookup");
             owner.SetActive(false);
             _views.Add(owner);
-            var manager = owner.AddComponent<LevelManager>();
+            var manager = Game.InjectObject(owner.AddComponent<LevelManager>());
             typeof(LevelManager).GetField("_locations", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(manager, catalog);
             Assert.That(manager.GetLocationDataById("TEST:MAP"), Is.SameAs(ImportedLocation()));
 

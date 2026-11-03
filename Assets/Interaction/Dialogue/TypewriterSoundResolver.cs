@@ -2,8 +2,10 @@ using Core.Dialogue.Vulcanus;
 
 namespace Interaction.Dialog
 {
-    public static class TypewriterSoundResolver
+    public sealed class TypewriterSoundResolver
     {
+        private readonly TypewriterSoundCatalog _catalog;
+        public TypewriterSoundResolver(TypewriterSoundCatalog catalog) => _catalog = catalog;
         public static string ResolveCurrentSpeakerId()
         {
             if (VulcanusDialogueRunner.Instance != null && VulcanusDialogueRunner.Instance.IsDialogueActive)
@@ -16,10 +18,9 @@ namespace Interaction.Dialog
             return null;
         }
 
-        public static TypewriterSound ResolveTypewriterSound(string speakerId, TypewriterSound defaultSound)
+        public TypewriterSound ResolveTypewriterSound(string speakerId, TypewriterSound defaultSound)
         {
-            var catalog = DataManager.Instance.TypewriterSounds;
-            var sound = catalog ? catalog.Get(speakerId) : null;
+            var sound = _catalog.Get(speakerId);
             return sound ? sound : defaultSound;
         }
     }

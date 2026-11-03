@@ -1,3 +1,5 @@
+using Core.Location;
+using VContainer;
 using System;
 using System.Collections;
 using System.Linq;
@@ -33,7 +35,7 @@ namespace Core.Music.Editor
             yield return new EnterPlayMode();
             Application.runInBackground = true;
             var deadline = Time.realtimeSinceStartupAsDouble + 15;
-            while (!Core.Location.LevelManager.Instance || !Core.Location.LevelManager.Instance.SceneReady)
+            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartupAsDouble, Is.LessThan(deadline));
                 yield return null;

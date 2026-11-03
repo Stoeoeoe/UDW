@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Core.Events;
 using Core.Game;
@@ -11,6 +12,8 @@ namespace UI.Clock
     [RequireComponent(typeof(UIDocument)), DisallowMultipleComponent, DefaultExecutionOrder(300)]
     public sealed class ClockHudPresenter : MonoBehaviour, IEventListener<GameTimeChangedEvent>
     {
+        [Inject] private GameState _gameState;
+
         private Label _time, _date;
 
         private void OnEnable()
@@ -34,7 +37,7 @@ namespace UI.Clock
 
         private void Refresh()
         {
-            var time = GameState.Time;
+            var time = _gameState.Time;
             _time.text = $"{time.hour:00}:{time.minute:00}";
             _date.text = $"{time.season} · Day {time.dayOfSeason}";
         }

@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Character;
 using Core.Spawning;
@@ -8,6 +9,9 @@ namespace Core.Inventory
     /// <summary>Persistent world view. The spawner binds owner and contents before enabling it.</summary>
     public sealed class PersistentContainer : SpawnedObject
     {
+        [Inject] private ItemCatalog _itemCatalog;
+        [Inject] private CharacterCatalog _characterCatalog;
+
         [SerializeField] private CharacterDefinition owner;
         [SerializeField, Min(1)] private int capacity = 20;
         [SerializeField] private string displayName = "Chest";
@@ -17,7 +21,7 @@ namespace Core.Inventory
         public ContainerStorage Storage { get; private set; }
         public event Action Changed;
 
-        public void ValidateConfiguration()
+        private void ValidateFields()
         {
             if (!owner || capacity <= 0 || string.IsNullOrWhiteSpace(displayName))
                 throw new InvalidOperationException($"Container '{name}' requires an owner, positive capacity and display name.");
@@ -25,14 +29,22 @@ namespace Core.Inventory
             if (startingContents == null || startingContents.Length > capacity)
                 throw new InvalidOperationException($"Container '{name}' starting contents must fit its capacity.");
             foreach (var stack in startingContents)
-                if (!stack.Item || ItemCatalog.Find(stack.Item.ItemId) != stack.Item
+                if (!stack.Item
                     || stack.Quantity <= 0 || stack.Quantity > stack.Item.MaxStackSize)
                     throw new InvalidOperationException($"Container '{name}' starting contents require registered items and valid stack quantities.");
         }
 
-        public override SpawnedObjectState CreateState()
+        public void ValidateConfiguration(ItemCatalog items)
         {
-            ValidateConfiguration();
+            ValidateFields();
+            foreach (var stack in startingContents)
+                if (items.Find(stack.Item.ItemId) != stack.Item)
+                    throw new InvalidOperationException($"Container '{name}' starting contents require registered items.");
+        }
+
+        public override SpawnedObjectState CreateState(int currentDay)
+        {
+            ValidateFields();
             var state = new ContainerState { OwnerCharacterId = owner.CharacterId,
                 Inventory = new InventoryState { Slots = new InventorySlotState[capacity] } };
             for (int i = 0; i < startingContents.Length; i++)
@@ -42,10 +54,10 @@ namespace Core.Inventory
 
         protected override void OnStateBound()
         {
-            ValidateConfiguration();
+            ValidateConfiguration(_itemCatalog);
             if (State is not ContainerState state)
                 throw new InvalidOperationException($"Container '{PersistentId}' requires ContainerState.");
-            Storage = new ContainerStorage(state, CharacterCatalog.Require, ItemCatalog.Find);
+            Storage = new ContainerStorage(state, _characterCatalog.Require, _itemCatalog.Find);
         }
 
         private void Awake()

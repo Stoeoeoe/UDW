@@ -1,3 +1,4 @@
+using Core.Game;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,8 +18,9 @@ using UnityEngine;
 
 namespace Core.Game.Editor
 {
-    public sealed class WorldStatePersistenceTests
+    public sealed class WorldStatePersistenceTests : Core.Common.Editor.GameTest
     {
+
         [Test]
         public void GlobalObjectsCanBeStoredEnumeratedAndRemovedWithoutALocation()
         {
@@ -142,9 +144,9 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Health = null;
-            Assert.Throws<FormatException>(data.Validate);
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
             data.player.Health = new HealthState { Initialized = true, Current = -1 };
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("health"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("health"));
         }
 
         [Test]
@@ -152,9 +154,9 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Stamina = null;
-            Assert.Throws<FormatException>(data.Validate);
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
             data.player.Stamina = new StaminaState { Initialized = true, Current = -1 };
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("stamina"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("stamina"));
         }
 
         [Test]
@@ -162,13 +164,13 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Boosts = null;
-            Assert.Throws<FormatException>(data.Validate);
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
             data.player.Boosts = new CharacterBoostState();
             data.player.Boosts.Active["sleep:well-rested"] = new ActiveAttributeBoost { ExpiresAtMinute = -1, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f } } };
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("boost"));
             data.player.Boosts.Active.Clear();
             data.player.Boosts.Active[""] = new ActiveAttributeBoost { ExpiresAtMinute = 60, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f } } };
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("boost"));
         }
 
         [TestCase("missing")]
@@ -194,7 +196,7 @@ namespace Core.Game.Editor
             if (fault == "missing") boost.Bonuses = null;
             if (fault == "empty") boost.Bonuses = Array.Empty<AppliedAttributeBonus>();
             data.player.Boosts.Active["item:test:tonic"] = boost;
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("boost"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("boost"));
         }
 
         [TestCase(-1)]
@@ -203,10 +205,10 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Health = new HealthState { Initialized = true, Current = 100, Overcharge = surplus };
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("health"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("health"));
             data.player.Health.Overcharge = 0;
             data.player.Stamina = new StaminaState { Initialized = true, Current = 100, Overcharge = surplus };
-            Assert.That(Assert.Throws<FormatException>(data.Validate).Message, Does.Contain("stamina"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("stamina"));
         }
 
         [Test]
@@ -280,9 +282,9 @@ namespace Core.Game.Editor
 
             try
             {
-                GameSaveService.Save(slot, data);
+                Game.Get<GameSaveService>().Save(slot, data);
 
-                Assert.That(GameSaveService.TryLoad(slot, out var loaded), Is.True);
+                Assert.That(Game.Get<GameSaveService>().TryLoad(slot, out var loaded), Is.True);
                 Assert.That(loaded.schemaVersion, Is.EqualTo(GameSaveData.CurrentVersion));
                 Assert.That(loaded.worldBaselineVersion, Is.EqualTo(1));
                 Assert.That(loaded.time.daysSinceStart, Is.EqualTo(4));
@@ -367,7 +369,7 @@ namespace Core.Game.Editor
         public void EveryGameStateSectionIsPartOfTheSaveRoot()
         {
             var facade = typeof(GameState);
-            foreach (var property in typeof(GameState).GetProperties(BindingFlags.Public | BindingFlags.Static))
+            foreach (var property in typeof(GameState).GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 var field = typeof(GameSaveData).GetField(property.Name.ToLowerInvariant(), BindingFlags.Public | BindingFlags.Instance);
                 Assert.That(field, Is.Not.Null, $"GameState.{property.Name} has no persisted section.");
@@ -378,7 +380,7 @@ namespace Core.Game.Editor
                 if (field.Name == nameof(GameSaveData.schemaVersion) || field.Name == nameof(GameSaveData.worldBaselineVersion))
                     continue;
                 var name = char.ToUpperInvariant(field.Name[0]) + field.Name.Substring(1);
-                Assert.That(facade.GetProperty(name, BindingFlags.Public | BindingFlags.Static), Is.Not.Null,
+                Assert.That(facade.GetProperty(name, BindingFlags.Public | BindingFlags.Instance), Is.Not.Null,
                     $"Save section '{field.Name}' is not exposed through GameState.");
             }
 
@@ -397,13 +399,13 @@ namespace Core.Game.Editor
             data.time.dayOfSeason = 1;
             var gameObject = new GameObject("Save test character");
             gameObject.SetActive(false);
-            var character = gameObject.AddComponent<GameCharacter>();
+            var character = Game.InjectObject(gameObject.AddComponent<GameCharacter>());
             typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(data.player.Skills, new object[] { character });
             try
             {
-                GameSaveService.Save(slot, data);
-                Assert.That(GameSaveService.TryLoad(slot, out var loaded), Is.True);
+                Game.Get<GameSaveService>().Save(slot, data);
+                Assert.That(Game.Get<GameSaveService>().TryLoad(slot, out var loaded), Is.True);
                 Assert.That(loaded.player.Skills, Is.Not.Null);
             }
             finally

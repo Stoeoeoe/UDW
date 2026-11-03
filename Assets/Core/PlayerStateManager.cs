@@ -2,6 +2,7 @@ using Character;
 using System;
 using System.Linq;
 using Core.Game;
+using Core.Divinity;
 using Core.Inventory;
 using Core.Location;
 using Interaction.Tools;
@@ -12,18 +13,24 @@ namespace Core
 {
     /// <summary>
     /// Initializes player state and the starting loadout across scene loads.
-    /// Lives on SystemRoot. Add starting tools/items here instead of on GameCharacter.
+    /// Uses the root's authored player settings, independently of Unity callbacks.
     /// </summary>
-    public class PlayerStateManager : Singleton<PlayerStateManager>
+    public sealed class PlayerStateManager
     {
-        [SerializeField] ToolData[] _startingTools = Array.Empty<ToolData>();
-        [SerializeField] ItemDefinition[] _startingItems = Array.Empty<ItemDefinition>();
-        [Header("Starting home")]
-        [SerializeField] private LocationData _startingHomeLocation;
-        [SerializeField] private string _startingBedId;
+        private readonly GameState _gameState;
+        private readonly DivineFavour _favour;
+        private readonly PlayerSettings _settings;
 
-        public LocationData StartingHomeLocation => _startingHomeLocation;
-        public string StartingBedId => _startingBedId;
+        public PlayerStateManager(GameState state, DivineFavour favour, PlayerSettings settings)
+        {
+            settings.Validate();
+            _gameState = state;
+            _favour = favour;
+            _settings = settings;
+        }
+
+        public LocationData StartingHomeLocation => _settings.startingHomeLocation;
+        public string StartingBedId => _settings.startingBedId;
 
         /// <summary>
         /// Called during GameCharacter runtime initialization on every spawn.
@@ -31,18 +38,18 @@ namespace Core
         /// </summary>
         public void InitializeCharacter(MainCharacter character)
         {
-            var player = GameState.Player;
+            var player = _gameState.Player;
             InitializeHome();
             // Attribute sources are rebound before resource state, without clipping saved points at an intermediate maximum.
             character.Health.Unbind();
             character.Stamina.Unbind();
             character.InitializeSkills(player.Skills);
             character.Wallet.Bind(player.Wallet);
-            GameStateManager.Instance.DivineFavour.BindCharacter(character);
+            _favour.BindCharacter(character);
 
             var inventory = character.MainInventory;
             inventory.Bind(player.Inventory);
-            var loadout = _startingTools.Cast<ItemDefinition>().Concat(_startingItems);
+            var loadout = _settings.startingTools.Cast<ItemDefinition>().Concat(_settings.startingItems);
             if (!inventory.ApplyStartingLoadout(loadout))
                 throw new InvalidOperationException("The configured starting loadout does not fit the player's inventory.");
 
@@ -54,10 +61,8 @@ namespace Core
         /// <summary>Seeds a new player's home once. Loaded and subsequently reassigned homes remain authoritative.</summary>
         public void InitializeHome()
         {
-            if (GameState.Player.Home != null) return;
-            if (!_startingHomeLocation)
-                throw new InvalidOperationException("PlayerStateManager requires a configured starting home location.");
-            GameState.Player.Home = new PlayerHomeState(_startingHomeLocation.id, _startingBedId);
+            if (_gameState.Player.Home != null) return;
+            _gameState.Player.Home = new PlayerHomeState(StartingHomeLocation.id, StartingBedId);
         }
 
     }

@@ -4,6 +4,7 @@
     "camera.shake": { "version": 1, "spatialState": "described", "effects": [] },
     "audio.playSound": { "version": 1, "spatialState": "described", "effects": [] },
     "cutscene.runLua": { "version": 1, "spatialState": "unknown", "effects": [] },
+    "characters.emote": { "version": 1, "spatialState": "unknown", "effects": [] },
     "characters.faceDirection": {
       "version": 1,
       "spatialState": "described",

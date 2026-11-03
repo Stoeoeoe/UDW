@@ -13,11 +13,9 @@ namespace Plants
 
         /// <summary>
         /// Triggers a SowPlantEvent informing listeners that a plant has been sown at the specified position.
-        /// If locationId is not provided, it defaults to the current location.
         /// </summary>
-        public static void Trigger(Vector2Int position, string plantId, string locationId = null)
+        public static void Trigger(Vector2Int position, string plantId, string locationId)
         {
-            locationId ??= LevelManager.Instance?.CurrentLocationData?.id;
             EventBus<SowPlantEvent>.Raise(new SowPlantEvent
             {
                 PlantId    = plantId,

@@ -11,7 +11,7 @@ namespace Core.Spawning
         [NamespacedId]
         [SerializeField] private string prefabId;
         public string PrefabId => prefabId;
-        public virtual SpawnedObjectState CreateState() => new();
+        public virtual SpawnedObjectState CreateState(int currentDay) => new();
 
         public string PersistentId { get; private set; }
         public SpawnedObjectState State { get; private set; }

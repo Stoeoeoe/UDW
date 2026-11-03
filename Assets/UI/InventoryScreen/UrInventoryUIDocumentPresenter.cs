@@ -1,3 +1,4 @@
+using VContainer;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
@@ -18,6 +19,11 @@ namespace UI.InventoryScreen
     [RequireComponent(typeof(UIDocument))]
     public sealed class UrInventoryUIDocumentPresenter : InventoryScreenView, IEventListener<WalletChangedEvent>
     {
+        [Inject] private UrGUIManager _urGUIManager;
+
+        [Inject] private Input.InputManager _inputManager;
+        [Inject] private ItemManager _itemManager;
+
         [SerializeField] private UIDocument document;
         [SerializeField] private VisualTreeAsset layoutAsset;
         private VisualElement _overlay, _grid, _heldCursor, _heldIcon, _boundRoot, _context, _equipment;
@@ -50,8 +56,8 @@ namespace UI.InventoryScreen
         public void OnEvent(WalletChangedEvent e) { if (e.Wallet == MainCharacter.CurrentMainCharacter?.Wallet) RequestRefresh(); }
         private void Update()
         {
-            if (PlayerInputManager.Instance && PlayerInputManager.Instance.OpenInventoryPressed &&
-                (!UrGUIManager.HasOpenScreens || ReceivesInput)) ToggleInventory();
+            if (_inputManager.OpenInventoryPressed &&
+                (!_urGUIManager.HasOpenScreens || ReceivesInput)) ToggleInventory();
         }
         private bool EnsureBindings()
         {
@@ -375,7 +381,7 @@ namespace UI.InventoryScreen
                 var current = Selected;
                 if (index != _selectedSlotIndex || current.Item != stack.Item || current.Quantity != stack.Quantity) { HideContext(); return; }
                 var character = MainCharacter.CurrentMainCharacter;
-                HideContext(); Feedback(ItemManager.Instance.TryDrop(TargetInventory, index, character.transform.position));
+                HideContext(); Feedback(_itemManager.TryDrop(TargetInventory, index, character.transform.position));
             }, "confirmDropButton");
             AddPromptButton("Keep in bag", HideContext, "cancelPromptButton").Focus();
         }

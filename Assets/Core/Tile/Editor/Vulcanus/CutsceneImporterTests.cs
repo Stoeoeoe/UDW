@@ -496,7 +496,7 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var path = _folder + "/intro.runtime.cutscene.json";
             var secondPath = _folder + "/second.runtime.cutscene.json";
-            var catalog = CatalogResources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName);
+            var catalog = Resources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName);
             Assert.That(catalog, Is.Not.Null);
             var source = Source("test:intro");
             Write(path, source);

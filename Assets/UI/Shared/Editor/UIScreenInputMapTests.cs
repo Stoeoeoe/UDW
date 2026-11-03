@@ -1,3 +1,4 @@
+using UI.Shared;
 using System;
 using Core.Location;
 using Core.TimeAndWeather;
@@ -10,10 +11,10 @@ using Object = UnityEngine.Object;
 namespace UI.Shared.Editor
 {
     [Category("UIScreen")]
-    public sealed class UIScreenInputMapTests
+    public sealed class UIScreenInputMapTests : Core.Common.Editor.GameTest
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private Input.InputManager _input;
         private UrGUIManager _manager;
         private PauseTestScreen _first, _second;
@@ -21,14 +22,14 @@ namespace UI.Shared.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new Core.Common.Editor.GameTestFixture("Screen input maps");
-            _root = _fixture.Root;
+
+            _root = Game.Root;
             _root.SetActive(true);
-            _input = UIScreenPauseTests.CreateScreenServices(_fixture,
+            _input = UIScreenPauseTests.CreateScreenServices(Game,
                 actions => actions.AddActionMap("Inspection").AddAction("Inspect", InputActionType.Button));
-            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            _first = _root.AddComponent<PauseTestScreen>();
-            _second = _root.AddComponent<PauseTestScreen>();
+            _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
+            _first = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
+            _second = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
             _first.PauseWhileOpen = _second.PauseWhileOpen = ScreenPauseMode.None;
         }
 
@@ -36,7 +37,7 @@ namespace UI.Shared.Editor
         public void TearDown()
         {
             _manager?.CloseAll();
-            _fixture?.Dispose();
+
         }
 
         [Test]
@@ -172,7 +173,7 @@ namespace UI.Shared.Editor
         {
             _first.InputActionMap = map;
             Assert.Throws<ArgumentException>(() => _first.Open(null));
-            Assert.That(UrGUIManager.HasOpenScreens, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().HasOpenScreens, Is.False);
             Assert.That(_first.Visible, Is.False);
             Assert.That(_input.PlayerControls.enabled, Is.True);
         }

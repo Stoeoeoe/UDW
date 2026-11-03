@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections;
 using Character;
@@ -16,6 +17,12 @@ namespace Interaction
     [RequireComponent(typeof(Collider2D))]
     public abstract class AbstractInteractable : MonoBehaviour, IEventListener<GameTimeChangedEvent>
     {
+        [Inject] private GameState _gameState;
+
+        [Inject] private PlayerInteractionContext _playerInteractionContext;
+        [Inject] protected UrTimeManager _urTimeManager;
+        [Inject] protected LevelManager _levelManager;
+
         [Header("Interaction")]
         [Tooltip("If false, triggers on contact (walk-in portals). If true, player must press Interact.")]
         [SerializeField] private bool requiresButtonPress = true;
@@ -143,8 +150,7 @@ namespace Interaction
         public virtual void TriggerInteraction(GameCharacter instigator)
         {
             if (instigator == MainCharacter.CurrentMainCharacter &&
-                PlayerInteractionContext.Instance != null &&
-                PlayerInteractionContext.Instance.CurrentSnapshot.WorldInteractionBlocked) return;
+                _playerInteractionContext.CurrentSnapshot.WorldInteractionBlocked) return;
             if (!CanInteract || !Interact(instigator))
             {
                 if (DeniedFeedback) DeniedFeedback.PlayFeedbacks();
@@ -173,10 +179,8 @@ namespace Interaction
                 }
                 if (UsesSavedCooldown)
                 {
-                    if (!GameState.Time.initialized) return InteractionState.Unavailable;
-                    if (cooldownMode == InteractionCooldownMode.UntilTime && UrTimeManager.Instance == null)
-                        return InteractionState.Unavailable;
-                    if (savedState != null && savedState.IsCoolingDown(GameState.Time.TotalMinutes))
+                    if (!_gameState.Time.initialized) return InteractionState.Unavailable;
+                    if (savedState != null && savedState.IsCoolingDown(_gameState.Time.TotalMinutes))
                         return InteractionState.CoolingDown;
                 }
             }
@@ -188,8 +192,8 @@ namespace Interaction
         private bool TryGetSavedState(out InteractableState state)
         {
             state = _bound;
-            if (GameStateManager.Instance == null || string.IsNullOrWhiteSpace(persistentId)) return false;
-            if (state == null) GameState.World.TryGet(persistentId, out state);
+            if (string.IsNullOrWhiteSpace(persistentId)) return false;
+            if (state == null) _gameState.World.TryGet(persistentId, out state);
             return true;
         }
 
@@ -197,12 +201,12 @@ namespace Interaction
         {
             if (!NeedsSavedState) return;
             TryGetSavedState(out var state);
-            if (state == null) GameState.World.Set(persistentId, state = new InteractableState());
+            if (state == null) _gameState.World.Set(persistentId, state = new InteractableState());
             state.uses++;
             state.availableAtMinute = cooldownMode switch
             {
-                InteractionCooldownMode.InGameHours => GameState.Time.TotalMinutes + (long)inGameHourCooldown * 60,
-                InteractionCooldownMode.UntilTime => UrTimeManager.Instance.GetNextBoundaryMinute(cooldownBoundary),
+                InteractionCooldownMode.InGameHours => _gameState.Time.TotalMinutes + (long)inGameHourCooldown * 60,
+                InteractionCooldownMode.UntilTime => _urTimeManager.GetNextBoundaryMinute(cooldownBoundary),
                 _ => 0
             };
         }
@@ -267,7 +271,7 @@ namespace Interaction
             var character = other.GetComponentInParent<GameCharacter>();
             if (!character || character != MainCharacter.CurrentMainCharacter) return;
             OnCharacterEntered(character);
-            if (!RequiresButtonPress && LevelManager.Instance.SceneReady) TriggerInteraction(character);
+            if (!RequiresButtonPress && _levelManager.SceneReady) TriggerInteraction(character);
         }
 
         protected virtual void OnTriggerExit2D(Collider2D other)

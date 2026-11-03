@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections.Generic;
 using Character;
@@ -13,8 +14,8 @@ namespace Core.Scripting
     {
         [SerializeField] private string cutsceneId;
         private Collider2D _area;
-        private LevelManager _level;
-        private CutsceneRunner _runner;
+        [Inject] private LevelManager _level;
+        [Inject] private CutsceneRunner _runner;
         private readonly HashSet<Collider2D> _playerColliders = new();
         private bool _attempted;
         private bool _leftDuringCutscene;
@@ -29,13 +30,13 @@ namespace Core.Scripting
             if (string.IsNullOrWhiteSpace(cutsceneId)) throw new InvalidOperationException("A cutscene trigger requires its permanent cutscene ID.");
             _area = GetComponent<Collider2D>();
             if (!_area.isTrigger) throw new InvalidOperationException("A cutscene trigger requires a trigger collider.");
-            CutsceneRunner.Instance.Resolve(cutsceneId); // Broken bindings fail before a player enters the area.
+            _runner.Resolve(cutsceneId); // Broken bindings fail before a player enters the area.
         }
 
         private void OnEnable()
         {
-            _level = LevelManager.Instance;
-            _runner = CutsceneRunner.Instance;
+
+
             _level.LocationReady += OnReady;
             _runner.Finished += OnCutsceneFinished;
             if (_level.SceneReady) CheckInitialOverlap();

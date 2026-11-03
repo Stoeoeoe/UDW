@@ -1,3 +1,4 @@
+using VContainer;
 using Core;
 using Core.Inventory;
 using UnityEngine;
@@ -6,58 +7,42 @@ using UnityEngine.Audio;
 namespace Core.Items
 {
     /// <summary>
-    /// Global configuration for world items: magnet behaviour and default pickup sound.
-    /// Lives on SystemRoot (persistent across scenes).
+    /// Creates item drops and applies the root's authored pickup settings.
     /// </summary>
-    public class ItemManager : Singleton<ItemManager>
+    public sealed class ItemManager
     {
-        [Header("Magnet")]
-        [SerializeField] private float magnetRadius = 2.5f;
-        [SerializeField] private float pickupRadius = 0.25f;
-        [SerializeField] private float maxSpeed     = 12f;
-        [Tooltip("Speed multiplier over normalized approach distance. X=0 is just entering range, X=1 is at pickup radius.")]
-        [SerializeField] private AnimationCurve magnetCurve = AnimationCurve.EaseInOut(0f, 0.1f, 1f, 1f);
+        private readonly IObjectResolver _resolver;
+        private readonly ItemSettings _settings;
 
-        [Header("Fade")]
-        [Tooltip("Item begins fading to transparent when closer than this distance to the player.")]
-        [SerializeField] private float fadeStartDistance = 0.6f;
-        [SerializeField] private float fadeDuration      = 0.15f;
-
-        [Header("Default Pickup Sound")]
-        [SerializeField] private AudioClip       defaultPickupSound;
-        [SerializeField] private AudioMixerGroup audioMixerGroup;
-        [SerializeField] private float           volume   = 1f;
-        [SerializeField] [Range(0f, 2f)] private float pitchMin = 0.9f;
-        [SerializeField] [Range(0f, 2f)] private float pitchMax = 1.1f;
-        [Header("Dropping")]
-        [SerializeField] private WorldItem droppedItemPrefab;
-        [SerializeField] private Vector2 dropOffset = new(0f, -1f);
-        [SerializeField, Min(0f)] private float dropPickupDelay = 2f;
-
-        public static WorldItem PrepareDrop(ItemDefinition item, int quantity, Vector3 position, float pickupDelay = 0f)
+        public ItemManager(IObjectResolver resolver, ItemSettings settings)
         {
-            var manager = Instance;
-            return WorldItem.CreateInactive(item, quantity, position, manager ? manager.droppedItemPrefab : null, pickupDelay);
+            settings.Validate();
+            _resolver = resolver;
+            _settings = settings;
+        }
+
+        public WorldItem PrepareDrop(ItemDefinition item, int quantity, Vector3 position, float pickupDelay = 0f)
+        {
+            return WorldItem.CreateInactive(_resolver, item, quantity, position, _settings.droppedItemPrefab, pickupDelay);
         }
 
         public bool TryDrop(SlotInventory inventory, int slot, Vector3 position)
         {
-            if (!droppedItemPrefab) throw new System.InvalidOperationException("ItemManager requires a dropped-item prefab.");
             var stack = inventory.GetSlot(slot);
             if (stack.IsEmpty || stack.Item.PreventDropping || inventory.HeldStack.IsOccupied) return false;
-            var dropped = PrepareDrop(stack.Item, stack.Quantity, position + (Vector3)dropOffset, dropPickupDelay);
+            var dropped = PrepareDrop(stack.Item, stack.Quantity, position + (Vector3)_settings.dropOffset, _settings.dropPickupDelay);
             inventory.Storage.SetSlot(slot, ItemStack.Empty);
             dropped.gameObject.SetActive(true);
             InventoryChangedEvent.Trigger(inventory);
             return true;
         }
 
-        public float          MagnetRadius      => magnetRadius;
-        public float          PickupRadius      => pickupRadius;
-        public float          MaxSpeed          => maxSpeed;
-        public float          FadeStartDistance => fadeStartDistance;
-        public float          FadeDuration      => fadeDuration;
-        public AnimationCurve MagnetCurve       => magnetCurve;
+        public float MagnetRadius => _settings.magnetRadius;
+        public float PickupRadius => _settings.pickupRadius;
+        public float MaxSpeed => _settings.maxSpeed;
+        public float FadeStartDistance => _settings.fadeStartDistance;
+        public float FadeDuration => _settings.fadeDuration;
+        public AnimationCurve MagnetCurve => _settings.magnetCurve;
 
         /// <summary>
         /// Samples the magnet curve to get a speed value for the current distance.
@@ -66,9 +51,9 @@ namespace Core.Items
         public float EvaluateSpeed(float dist)
         {
             // t=0 when just entering magnetRadius, t=1 when at pickupRadius
-            float range = magnetRadius - pickupRadius;
-            float t     = range > 0f ? 1f - Mathf.Clamp01((dist - pickupRadius) / range) : 1f;
-            return maxSpeed * magnetCurve.Evaluate(t);
+            float range = MagnetRadius - PickupRadius;
+            float t = range > 0f ? 1f - Mathf.Clamp01((dist - PickupRadius) / range) : 1f;
+            return MaxSpeed * MagnetCurve.Evaluate(t);
         }
 
         /// <summary>
@@ -76,17 +61,13 @@ namespace Core.Items
         /// </summary>
         public void PlayPickupSound(AudioClip overrideClip = null)
         {
-            var clip = overrideClip ? overrideClip : defaultPickupSound;
+            var clip = overrideClip ? overrideClip : _settings.defaultPickupSound;
             if (!clip) return;
 
-            float pitch = Random.Range(pitchMin, pitchMax);
-            MoreMountains.Tools.MMSfxEvent.Trigger(clip, audioMixerGroup, volume, pitch);
+            float pitch = Random.Range(_settings.pitchMin, _settings.pitchMax);
+            MoreMountains.Tools.MMSfxEvent.Trigger(clip, _settings.audioMixerGroup, _settings.volume, pitch);
         }
 
-        public void RequirePickupSound(AudioClip overrideClip)
-        {
-            if (!overrideClip && !defaultPickupSound)
-                throw new System.InvalidOperationException("Forage pickups require an item pickup sound or ItemManager's default pickup sound.");
-        }
+        public void RequirePickupSound(AudioClip overrideClip) => _settings.RequirePickupSound(overrideClip);
     }
 }

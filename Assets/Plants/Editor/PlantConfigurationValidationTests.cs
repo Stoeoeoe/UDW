@@ -16,8 +16,9 @@ using Object = UnityEngine.Object;
 namespace Plants.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class PlantConfigurationValidationTests
+    public sealed class PlantConfigurationValidationTests : Core.Common.Editor.GameTest
     {
+
         private PlantData _plant;
         private ProduceItem _produce;
         private GameObject _visual;
@@ -211,7 +212,7 @@ namespace Plants.Editor
                 LogAssert.ignoreFailingMessages = true;
                 Set(_plant, "_harvestItem", null);
                 AssetDatabase.CreateAsset(_plant, path);
-                subAsset = Object.Instantiate(_plant);
+                subAsset = Game.InjectObject(Object.Instantiate(_plant));
                 subAsset.name = "Invalid sub-asset";
                 AssetDatabase.AddObjectToAsset(subAsset, _plant);
                 var errors = ValidatedAssetValidation.ValidateProject();

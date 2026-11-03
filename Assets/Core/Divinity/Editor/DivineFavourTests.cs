@@ -1,3 +1,4 @@
+using Core.Divinity;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,8 +15,9 @@ using Object = UnityEngine.Object;
 
 namespace Core.Divinity.Editor
 {
-    public sealed class DivineFavourTests
+    public sealed class DivineFavourTests : Core.Common.Editor.GameTest
     {
+
         private readonly List<Object> _objects = new();
         private readonly List<DivineFavourManager> _managers = new();
 
@@ -26,8 +28,6 @@ namespace Core.Divinity.Editor
             _managers.Clear();
             foreach (var instance in _objects) Object.DestroyImmediate(instance);
             _objects.Clear();
-            typeof(DeityDefinitions).GetMethod("Reset", BindingFlags.Static | BindingFlags.NonPublic)
-                .Invoke(null, null);
         }
 
         [Test]
@@ -42,7 +42,7 @@ namespace Core.Divinity.Editor
             var health = CreateBoon(CharacterAttributeType.MaxHealth, 10);
             var deity = CreateDeity("test:" + Guid.NewGuid().ToString("N"), "TestDeity", 0, defense);
             AddLevel(deity, 20, health);
-            DeityDefinitions.Register(deity);
+            Game.Get<DeityDefinitions>().Register(deity);
             var state = new DivineFavourState();
             var manager = CreateManager(state);
             var character = CreateCharacter();
@@ -77,7 +77,7 @@ namespace Core.Divinity.Editor
         {
             var deity = CreateDeity("test:" + Guid.NewGuid().ToString("N"), "TestDeity", 2,
                 CreateBoon(CharacterAttributeType.WalkSpeed, 1));
-            DeityDefinitions.Register(deity);
+            Game.Get<DeityDefinitions>().Register(deity);
             var manager = CreateManager(new DivineFavourState());
             var first = CreateCharacter();
             var second = CreateCharacter();
@@ -101,8 +101,8 @@ namespace Core.Divinity.Editor
             var boon = CreateBoon(CharacterAttributeType.PhysicalDefense, 2);
             var first = CreateDeity("test:" + Guid.NewGuid().ToString("N"), "First", 100, boon);
             var second = CreateDeity("test:" + Guid.NewGuid().ToString("N"), "Second", 0, boon);
-            DeityDefinitions.Register(first);
-            DeityDefinitions.Register(second);
+            Game.Get<DeityDefinitions>().Register(first);
+            Game.Get<DeityDefinitions>().Register(second);
             var manager = CreateManager(new DivineFavourState());
             var character = CreateCharacter();
             manager.BindCharacter(character);
@@ -134,7 +134,7 @@ namespace Core.Divinity.Editor
         {
             var deity = CreateDeity("test:" + Guid.NewGuid().ToString("N"), "QuietDay", 0,
                 CreateBoon(CharacterAttributeType.PhysicalDefense, 2));
-            DeityDefinitions.Register(deity);
+            Game.Get<DeityDefinitions>().Register(deity);
             var state = new DivineFavourState();
             var manager = CreateManager(state);
             manager.BindCharacter(CreateCharacter());
@@ -200,8 +200,8 @@ namespace Core.Divinity.Editor
             var id = "test:" + Guid.NewGuid().ToString("N");
             var first = CreateDeity(id, "First", 0);
             var duplicate = CreateDeity(id, "Other", 0);
-            DeityDefinitions.Register(first);
-            Assert.Throws<InvalidOperationException>(() => DeityDefinitions.Register(duplicate));
+            Game.Get<DeityDefinitions>().Register(first);
+            Assert.Throws<InvalidOperationException>(() => Game.Get<DeityDefinitions>().Register(duplicate));
         }
 
         [Test]
@@ -252,7 +252,7 @@ namespace Core.Divinity.Editor
 
         private DivineFavourManager CreateManager(DivineFavourState state)
         {
-            var manager = new DivineFavourManager(state);
+            var manager = new DivineFavourManager(state, Game.Get<DeityDefinitions>());
             _managers.Add(manager);
             return manager;
         }
@@ -262,7 +262,7 @@ namespace Core.Divinity.Editor
             var gameObject = new GameObject("Favour test character");
             gameObject.SetActive(false);
             _objects.Add(gameObject);
-            return gameObject.AddComponent<GameCharacter>();
+            return Game.InjectObject(gameObject.AddComponent<GameCharacter>());
         }
 
         private BoonDefinition CreateBoon(CharacterAttributeType attribute, float flat)

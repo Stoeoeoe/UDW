@@ -21,7 +21,7 @@ no audio position, transient override or extra save data is persisted. Game stat
 callers can use `SetPreset`, or own a request handle for temporary zones/events:
 
 ```csharp
-var music = MusicDirector.Instance;
+// Inject MusicDirector into this caller as music.
 var request = music.Requests.Request(cue, "active", priority: 10,
     quantization: MusicQuantization.NextBar, fadeSeconds: 1);
 request.Update(cue, "intense");

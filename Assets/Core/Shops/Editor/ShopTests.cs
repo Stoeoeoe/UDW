@@ -16,11 +16,11 @@ namespace Core.Shops.Editor
 {
     public sealed class ShopTestItem : ItemDefinition { }
 
-    public sealed class ShopTests : IEventListener<WalletChangedEvent>,
+    public sealed class ShopTests : Core.Common.Editor.GameTest, IEventListener<WalletChangedEvent>,
         IEventListener<ShopPurchaseEvent>, IEventListener<ShopSaleEvent>, IEventListener<ShopRestockedEvent>
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private GameStateManager _manager;
         private Shop _shop;
         private SlotInventory _inventory;
@@ -40,18 +40,18 @@ namespace Core.Shops.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(GameStateManager.Instance, Is.Null, "Run outside a game session.");
+
             _random = UnityEngine.Random.state;
             _checkTrade = false;
             _mutateOnWalletChange = false;
             _purchases.Clear();
             _sales.Clear();
             _restocks.Clear();
-            _fixture = new Core.Common.Editor.GameTestFixture("Shop tests");
-            _root = _fixture.Root;
-            _manager = _fixture.AddSingleton<GameStateManager>();
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            GameState.Time.daysSinceStart = 1;
+
+            _root = Game.Root;
+            _manager = Game.Get<GameStateManager>();
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            Game.State.Time.daysSinceStart = 1;
             _item = ScriptableObject.CreateInstance<ShopTestItem>();
             Set(_item, "_itemId", "test:shop-item");
             Set(_item, "_buyBasePrice", 10);
@@ -60,11 +60,11 @@ namespace Core.Shops.Editor
             _never = new ShopOffering { id = "never", item = _item, restock = ShopRestockMode.Never, minStock = 3, maxStock = 3 };
             _definition = ScriptableObject.CreateInstance<ShopDefinition>();
             Set(_definition, "offerings", new[] { _daily, _never });
-            _shop = _root.AddComponent<Shop>();
+            _shop = Game.InjectObject(_root.AddComponent<Shop>());
             Set(_shop, "shopId", "test:vendor");
             Set(_shop, "definition", _definition);
             Invoke(_shop, "OnEnable");
-            _inventory = _root.AddComponent<SlotInventory>();
+            _inventory = Game.InjectObject(_root.AddComponent<SlotInventory>());
             Set(_inventory, "_inventoryName", "ShopTestInventory");
             Set(_inventory, "_numberOfSlots", 1);
             Invoke(_inventory, "Awake");
@@ -83,7 +83,7 @@ namespace Core.Shops.Editor
             EventBus<ShopSaleEvent>.Unsubscribe(this);
             EventBus<ShopRestockedEvent>.Unsubscribe(this);
             if (_shop) Invoke(_shop, "OnDisable");
-            _fixture?.Dispose();
+
             Object.DestroyImmediate(_definition);
             Object.DestroyImmediate(_item);
             UnityEngine.Random.state = _random;
@@ -92,23 +92,23 @@ namespace Core.Shops.Editor
         [Test]
         public void BuySellAndReloadRoundTripInventoryWalletAndVendorStockTogether()
         {
-            _inventory.Bind(GameState.Player.Inventory, id => id == _item.ItemId ? _item : null);
+            _inventory.Bind(Game.State.Player.Inventory, id => id == _item.ItemId ? _item : null);
             _inventory.ApplyStartingLoadout(Array.Empty<ItemDefinition>());
             typeof(Wallet).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_wallet, new object[] { GameState.Player.Wallet });
+                .Invoke(_wallet, new object[] { Game.State.Player.Wallet });
             _wallet.Add(100);
             Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
-            var data = (GameSaveData)typeof(GameStateManager).GetField("_data", BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(_manager);
+            var data = (GameSaveData)typeof(GameState).GetProperty("Data", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(Game.State);
             data.time.initialized = true;
             data.time.dayOfSeason = 1;
             data.time.hour = 6;
-            data.Validate();
+            data.Validate(Game.Get<Character.CharacterCatalog>(), Game.Get<Core.Inventory.ItemCatalog>());
             var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
-            loaded.Validate();
+            loaded.Validate(Game.Get<Character.CharacterCatalog>(), Game.Get<Core.Inventory.ItemCatalog>());
             _inventory.Bind(loaded.player.Inventory, id => id == _item.ItemId ? _item : null);
             Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(74));
             Assert.That(_inventory.GetSlot(0).Item, Is.SameAs(_item));
@@ -124,7 +124,7 @@ namespace Core.Shops.Editor
             Assert.That(_shop.GetOfferings().Select(row => row.OfferingId), Is.EqualTo(new[] { "daily", "never" }));
             Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(_shop.Buy("never", _wallet, _inventory, 3), Is.EqualTo(ShopTradeResult.Success));
-            GameState.Time.daysSinceStart = 2;
+            Game.State.Time.daysSinceStart = 2;
             NewDayEvent.Trigger(2);
             Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(5));
             Assert.That(_shop.GetOfferings()[1].Quantity, Is.Zero);
@@ -137,12 +137,12 @@ namespace Core.Shops.Editor
             _daily.minStock = 1;
             _daily.maxStock = 99;
             _shop.GetOfferings();
-            Assert.That(GameState.World.TryGet(_shop.Id, out ShopState state), Is.True);
+            Assert.That(Game.State.World.TryGet(_shop.Id, out ShopState state), Is.True);
             var quantity = state.offerings["daily"].quantity;
             var available = state.offerings["daily"].available;
             var bytes = SerializationUtility.SerializeValue(state, DataFormat.JSON);
             var restored = SerializationUtility.DeserializeValue<ShopState>(bytes, DataFormat.JSON);
-            GameState.World.Set(_shop.Id, restored);
+            Game.State.World.Set(_shop.Id, restored);
             var before = UnityEngine.Random.state;
             _shop.GetOfferings();
             Invoke(_shop, "OnDisable");
@@ -161,9 +161,9 @@ namespace Core.Shops.Editor
             Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.Unavailable));
             Invoke(_shop, "OnDisable");
             _daily.dailyAppearanceChance = 1;
-            GameState.Time.daysSinceStart = 12;
+            Game.State.Time.daysSinceStart = 12;
             Assert.That(_shop.GetOfferings()[0].OfferingId, Is.EqualTo("daily"));
-            GameState.World.TryGet(_shop.Id, out ShopState state);
+            Game.State.World.TryGet(_shop.Id, out ShopState state);
             Assert.That(state.offerings["daily"].lastProcessedDay, Is.EqualTo(12));
             Assert.That(state.offerings["never"].quantity, Is.EqualTo(3));
         }
@@ -228,7 +228,7 @@ namespace Core.Shops.Editor
             Assert.That(purchase.BalanceAfter, Is.EqualTo(70));
             Assert.That(purchase.StockBefore, Is.EqualTo(5));
             Assert.That(purchase.StockAfter, Is.EqualTo(3));
-            Assert.That(purchase.GameMinute, Is.EqualTo(GameState.Time.TotalMinutes));
+            Assert.That(purchase.GameMinute, Is.EqualTo(Game.State.Time.TotalMinutes));
 
             Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(_sales.Count, Is.EqualTo(1));
@@ -261,7 +261,7 @@ namespace Core.Shops.Editor
             _shop.GetOfferings();
             Assert.That(_restocks.Count, Is.EqualTo(1));
             _never.dailyAppearanceChance = 0;
-            GameState.Time.daysSinceStart = 2;
+            Game.State.Time.daysSinceStart = 2;
             NewDayEvent.Trigger(2);
             Assert.That(_restocks.Count, Is.EqualTo(2));
             var daily = _restocks[1];
@@ -300,7 +300,7 @@ namespace Core.Shops.Editor
         [Test]
         public void VendorsSharingADefinitionKeepSeparateStockAndReorderingKeepsOfferingIdentity()
         {
-            var other = _root.AddComponent<Shop>();
+            var other = Game.InjectObject(_root.AddComponent<Shop>());
             Set(other, "shopId", "test:other-vendor");
             Set(other, "definition", _definition);
             _shop.GetOfferings();

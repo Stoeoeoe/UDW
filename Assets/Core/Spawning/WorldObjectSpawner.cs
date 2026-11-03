@@ -5,13 +5,20 @@ using Core.Game;
 using Core.Location;
 using Core.Tile;
 using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core.Spawning
 {
     /// <summary>Creates saved entities and materializes their views for the current location.</summary>
     [DefaultExecutionOrder(-900)]
-    public sealed class WorldObjectSpawner : Singleton<WorldObjectSpawner>, ILocationLifecycle
+    public sealed class WorldObjectSpawner : Core.GameManager, ILocationLifecycle
     {
+        [Inject] private IObjectResolver _resolver;
+        [Inject] private GameState _gameState;
+
+        [Inject] private MapManager _mapManager;
+
         [SerializeField] private SpawnableCatalog catalog;
         private readonly Dictionary<string, SpawnedObject> _prefabs = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SpawnedObject> _instances = new(StringComparer.Ordinal);
@@ -19,7 +26,6 @@ namespace Core.Spawning
         private Transform _stagingRoot;
         private Transform _locationRoot;
         private string _locationId;
-        private LevelManager _levelManager;
 
         /// <summary>Objects currently spawned in this location, including those restored from a save.</summary>
         public IReadOnlyCollection<SpawnedObject> SpawnedObjects => _instances.Values;
@@ -35,21 +41,9 @@ namespace Core.Spawning
             foreach (var prefab in catalog.Prefabs) Register(prefab);
         }
 
-        private void Start()
+        protected override void OnDisable()
         {
-            // Auto-created SystemRoot children can enable before LevelManager.Awake.
-            _levelManager = LevelManager.Instance;
-            _levelManager.RegisterLifecycle(this);
-        }
-
-        private void OnEnable()
-        {
-            if (_levelManager) _levelManager.RegisterLifecycle(this);
-        }
-
-        private void OnDisable()
-        {
-            if (_levelManager) _levelManager.UnregisterLifecycle(this);
+            base.OnDisable();
             ClearViews();
         }
 
@@ -69,30 +63,30 @@ namespace Core.Spawning
                 throw new InvalidOperationException("Enter a location before spawning an object.");
             if (Resolve(prefab.PrefabId) != prefab)
                 throw new InvalidOperationException($"'{prefab.name}' is not registered.");
-            state ??= prefab.CreateState();
+            state ??= prefab.CreateState(_gameState.Time.daysSinceStart);
             state.prefabId = prefab.PrefabId;
             state.position = position;
             state.rotation = prefab.transform.rotation;
             state.authored = false;
             state.removed = false;
             var id = Guid.NewGuid().ToString("N");
-            GameState.World.Set(_locationId, id, state);
+            _gameState.World.Set(_locationId, id, state);
             return Materialize(id, state);
         }
 
         public bool Despawn(string id)
         {
             if (_instances.Remove(id, out var instance)) DestroyView(instance.gameObject);
-            if (GameState.World.TryGet(_locationId, id, out SpawnedObjectState state) && state.authored)
+            if (_gameState.World.TryGet(_locationId, id, out SpawnedObjectState state) && state.authored)
             {
                 state.removed = true;
                 return true;
             }
-            return GameState.World.Remove(_locationId, id);
+            return _gameState.World.Remove(_locationId, id);
         }
 
         public void OnLocationEnter(LocationData location) =>
-            EnterLocation(location, MapManager.Instance?.CurrentMap?.PersistentEntities ?? Array.Empty<AuthoredSpawnPlacement>());
+            EnterLocation(location, _mapManager.CurrentMap.PersistentEntities);
 
         /// <summary>Restores the location and seeds missing authored records from their configured templates.</summary>
         public void EnterLocation(LocationData location, IReadOnlyList<AuthoredSpawnPlacement> placements)
@@ -107,20 +101,20 @@ namespace Core.Spawning
                 try
                 {
                     _placements.Add(placement.id, placement);
-                    if (GameState.World.TryGet(_locationId, placement.id, out SpawnedObjectState _)) continue;
-                    var state = placement.template.CreateState();
+                    if (_gameState.World.TryGet(_locationId, placement.id, out SpawnedObjectState _)) continue;
+                    var state = placement.template.CreateState(_gameState.Time.daysSinceStart);
                     state.prefabId = placement.template.PrefabId;
                     state.position = placement.template.transform.position;
                     state.rotation = placement.template.transform.rotation;
                     state.authored = true;
-                    GameState.World.Set(_locationId, placement.id, state);
+                    _gameState.World.Set(_locationId, placement.id, state);
                 }
                 catch (Exception exception) { Debug.LogException(exception, this); }
             }
-            foreach (var pair in GameState.World.GetStates<SpawnedObjectState>(_locationId).ToArray())
+            foreach (var pair in _gameState.World.GetStates<SpawnedObjectState>(_locationId).ToArray())
             {
                 // An earlier spot's OnEnable can expire a pickup included in this restoration snapshot.
-                if (!GameState.World.TryGet(_locationId, pair.Key, out SpawnedObjectState _)) continue;
+                if (!_gameState.World.TryGet(_locationId, pair.Key, out SpawnedObjectState _)) continue;
                 if (pair.Value.removed || pair.Value.authored && !_placements.ContainsKey(pair.Key)) continue;
                 try { Materialize(pair.Key, pair.Value); }
                 catch (Exception exception) { Debug.LogException(exception, this); }
@@ -140,7 +134,7 @@ namespace Core.Spawning
         {
             var prefab = Resolve(state.prefabId);
             var template = state.authored ? _placements[id].template : prefab;
-            var instance = Instantiate(template, state.position, state.rotation, _stagingRoot);
+            var instance = _resolver.Instantiate(template, state.position, state.rotation, _stagingRoot);
             instance.Bind(this, id, state);
             _instances.Add(id, instance); // OnEnable may remove itself during reparenting.
             instance.transform.SetParent(_locationRoot, true);

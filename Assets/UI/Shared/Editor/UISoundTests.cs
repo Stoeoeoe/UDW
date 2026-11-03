@@ -1,3 +1,4 @@
+using UI.Shared;
 using System.Collections.Generic;
 using System.Reflection;
 using MoreMountains.Tools;
@@ -10,10 +11,10 @@ using Object = UnityEngine.Object;
 namespace UI.Shared.Editor
 {
     [Category("UIScreen")]
-    public sealed class UISoundTests
+    public sealed class UISoundTests : Core.Common.Editor.GameTest
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private UrGUIManager _manager;
         private PauseTestScreen _screen;
         private AudioClip _clip;
@@ -27,14 +28,14 @@ namespace UI.Shared.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(UrGUIManager.Instance, Is.Null);
+
             _played.Clear();
-            _fixture = new Core.Common.Editor.GameTestFixture("UI sound tests");
-            _root = _fixture.Root;
+
+            _root = Game.Root;
             _root.SetActive(true);
-            UIScreenPauseTests.CreateScreenServices(_fixture);
-            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            _screen = _root.AddComponent<PauseTestScreen>();
+            UIScreenPauseTests.CreateScreenServices(Game);
+            _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
+            _screen = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
             _clip = AudioClip.Create("UI cue", 32, 1, 44100, false);
             _assets.Add(_clip);
             MMSoundManagerSoundPlayEvent.Register(Capture);
@@ -44,7 +45,7 @@ namespace UI.Shared.Editor
         public void TearDown()
         {
             MMSoundManagerSoundPlayEvent.Unregister(Capture);
-            _fixture?.Dispose();
+
             foreach (var asset in _assets) Object.DestroyImmediate(asset);
             _assets.Clear();
         }
@@ -126,6 +127,7 @@ namespace UI.Shared.Editor
         [Test]
         public void MissingProfilesAndCuesAreSilent()
         {
+            _manager.SoundProfile = null;
             Assert.That(_manager.PlaySound(UISoundCue.Click), Is.False);
             _manager.SoundProfile = Profile(Cue(UISoundCue.Open));
             Assert.That(_manager.PlaySound(UISoundCue.Click), Is.False);

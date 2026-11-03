@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Character;
 using Core.Events;
@@ -17,8 +18,10 @@ namespace Core.Camera
     /// Cutscene pattern: call ActivateVCam(cutsceneCam) to push it over the player cam via
     /// priority, then DeactivateVCam when done to hand control back.
     /// </summary>
-    public class CameraManager : Singleton<CameraManager>, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
+    public class CameraManager : Core.GameManager, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
     {
+        [Inject] private MapManager _mapManager;
+
         [Tooltip("The required virtual camera used to follow the player.")] [SerializeField]
         private CinemachineCamera playerFollowVCam;
 
@@ -183,18 +186,18 @@ namespace Core.Camera
                 FollowTarget(existing.transform);
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             this.Subscribe();
-            LevelManager.Instance.RegisterLifecycle(this);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
             StopShake();
             StopFlash();
             this.Unsubscribe();
-            LevelManager.Instance.UnregisterLifecycle(this);
+            base.OnDisable();
         }
 
         public void OnEvent(MainCharacterChangedEvent e)
@@ -241,7 +244,7 @@ namespace Core.Camera
 
         public void OnLocationEnter(LocationData location)
         {
-            var bounds = MapManager.Instance.CurrentBounds;
+            var bounds = _mapManager.CurrentBounds;
             var mapCollider = confiner.BoundingShape2D as BoxCollider2D;
             if (!mapCollider)
             {

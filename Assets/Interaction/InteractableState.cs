@@ -12,12 +12,6 @@ namespace Interaction
 
         public InteractableState() { }
 
-        /// <summary>Starts a cooldown relative to the current in-game time.</summary>
-        public InteractableState(int hoursFromNow)
-        {
-            availableAtMinute = GameState.Time.TotalMinutes + (long)hoursFromNow * 60;
-        }
-
         public bool IsUsedUp(int maximumUses) => maximumUses >= 0 && uses >= maximumUses;
         public bool IsCoolingDown(long currentMinute) => currentMinute < availableAtMinute;
     }

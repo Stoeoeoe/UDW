@@ -2,6 +2,8 @@ using System;
 using Core.Events;
 using Interaction;
 using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Plants
 {
@@ -9,6 +11,9 @@ namespace Plants
     public class FarmablePlant : MonoBehaviour, IEventListener<PlantGrowthEvent>, IEventListener<PlantConditionChangedEvent>,
         IEventListener<PlantHarvestedEvent>, IEventListener<PlantRemovedEvent>
     {
+        [Inject] private IObjectResolver _resolver;
+        [Inject] private PlantManager _plantManager;
+
         private string _locationId;
         private Vector2Int _position;
         private PlantData _plantData;
@@ -21,7 +26,7 @@ namespace Plants
         /// <summary>Binds the scene view to an existing saved crop before enabling it.</summary>
         public void Bind(string locationId, Vector2Int position, PlantData plantData, PlantState state)
         {
-            if (PlantManager.Instance.GetPlantState(locationId, position) != state)
+            if (_plantManager.GetPlantState(locationId, position) != state)
                 throw new InvalidOperationException("The crop must be stored at its bound location before binding its view.");
             _locationId = locationId;
             _position   = position;
@@ -37,6 +42,7 @@ namespace Plants
                 if (layer < 0) throw new InvalidOperationException("Crop interaction requires the Interactable layer.");
                 gameObject.layer = layer;
                 _picking = gameObject.AddComponent<PlantHarvestInteractable>();
+                _resolver.InjectGameObject(gameObject);
             }
             _picking.Bind(locationId, position, plantData, state);
             SetVisual(plantData.GetGrowthStageIndexByDays(state.daysPassedSincePlanting));
@@ -62,7 +68,7 @@ namespace Plants
         {
             if (_condition != PlantCondition.Healthy || e.LocationId != _locationId || e.Position != _position) return;
             // A daily callback may already have harvested/regrown or replaced the saved plant.
-            if (PlantManager.Instance.GetPlantState(_locationId, _position) != _state) return;
+            if (_plantManager.GetPlantState(_locationId, _position) != _state) return;
             var stage = _plantData.GetGrowthStageIndexByDays(_state.daysPassedSincePlanting);
             if (stage != _stageIndex) SetVisual(stage);
         }
@@ -70,7 +76,7 @@ namespace Plants
         public void OnEvent(PlantConditionChangedEvent e)
         {
             if (_condition == e.Condition || e.LocationId != _locationId || e.Position != _position) return;
-            if (PlantManager.Instance.GetPlantState(_locationId, _position) != _state) return;
+            if (_plantManager.GetPlantState(_locationId, _position) != _state) return;
             _condition = e.Condition;
             if (_condition == PlantCondition.Wilted && _plantData.WiltedRepresentation == null) TintWiltedVisual();
             else SetVisual(_stageIndex);

@@ -2,14 +2,15 @@ using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class LuaPhaseExecutionTests
+    public sealed class LuaPhaseExecutionTests : Core.Common.Editor.GameTest
     {
+
         [TestCase("setup", "Stage")]
         [TestCase("completion", "Finish")]
         public void ImmediatePhasesExecuteOnlyTheirDeclaredActions(string phase, string method)
         {
             var api = new PhaseApi();
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), $"Test.{method}()", "phase-fixture", phase: phase);
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api), $"Test.{method}()", "phase-fixture", phase: phase);
             session.Tick(0);
             Assert.That(api.Calls, Is.EqualTo(1));
             Assert.That(session.IsRunning, Is.False);
@@ -21,7 +22,7 @@ namespace Core.Scripting.Editor
         public void ScriptsCannotCallActionsFromAnotherPhase(string phase, string method)
         {
             var api = new PhaseApi();
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), $"Test.{method}()", "phase-fixture", phase: phase);
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api), $"Test.{method}()", "phase-fixture", phase: phase);
             Assert.That(() => session.Tick(0), Throws.InvalidOperationException);
             Assert.That(api.Calls, Is.Zero);
         }
@@ -29,7 +30,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void UnsupportedPhaseIsRejectedAtSessionCreation()
         {
-            Assert.That(() => VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new PhaseApi()), "Test.Stage()", "phase-fixture", phase: "typo"),
+            Assert.That(() => VulcanusLuaEngine.StartSession(Game.Bind(new PhaseApi()), "Test.Stage()", "phase-fixture", phase: "typo"),
                 Throws.ArgumentException);
         }
 

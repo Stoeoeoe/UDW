@@ -9,16 +9,19 @@ using Sirenix.Serialization;
 namespace Core.Game
 {
     /// <summary>Convenient access to the state of the current game session.</summary>
-    public static class GameState
+    public sealed class GameState
     {
-        private static GameStateManager Manager => GameStateManager.Instance;
-
-        public static WorldState World => Manager.World;
-        public static PlayerState Player => Manager.Player;
-        public static StoryState Story => Manager.Story;
-        public static GameTimeState Time => Manager.Time;
-        public static void Save(string slot) => Manager.Save(slot);
-        public static bool Load(string slot) => Manager.Load(slot);
+        internal GameSaveData Data { get; private set; } = new();
+        internal event Action Restored;
+        internal void Restore(GameSaveData data)
+        {
+            Data = data;
+            Restored?.Invoke();
+        }
+        public WorldState World => Data.world;
+        public PlayerState Player => Data.player;
+        public StoryState Story => Data.story;
+        public GameTimeState Time => Data.time;
     }
 
     [Serializable]

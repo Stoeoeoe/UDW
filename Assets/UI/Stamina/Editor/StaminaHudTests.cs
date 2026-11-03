@@ -17,9 +17,9 @@ using UnityEngine;
 namespace UI.Stamina.Editor
 {
     /// <summary>Checks real tool dispatch and the authored stamina bar against the same live player resource.</summary>
-    public sealed class StaminaHudTests
+    public sealed class StaminaHudTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private ToolData _tool;
         private UseToolAction _useTool;
@@ -33,18 +33,15 @@ namespace UI.Stamina.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Tool stamina and HUD");
-            _fixture.AddSingleton<GameStateManager>();
-            _fixture.AddSingleton<CharacterManager>();
-            _fixture.AddSingleton<Core.PlayerStateManager>();
-            GameState.Time.daysSinceStart = 1;
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            _character = _fixture.CreateCharacter();
-            _tool = _fixture.Own(Object.Instantiate(AssetDatabase.LoadAssetAtPath<ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset")));
+
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            _character = Game.CreateCharacter();
+            _tool = Game.Own(Game.InjectObject(Object.Instantiate(AssetDatabase.LoadAssetAtPath<ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset"))));
             Set(_tool, "_showTileHighlighterOnPrepare", false);
             var template = new GameObject("Test tool action");
-            template.transform.SetParent(_fixture.Root.transform);
-            var action = template.AddComponent<StaminaTestToolAction>();
+            template.transform.SetParent(Game.Root.transform);
+            var action = Game.InjectObject(template.AddComponent<StaminaTestToolAction>());
             typeof(ToolAction).GetProperty(nameof(ToolAction.ToolData)).SetValue(action, _tool);
             Set(_character.ToolActionRegistry, "toolActionPrefabs", new List<ToolAction> { action });
             _character.EnsureRuntimeInitialized();
@@ -52,19 +49,19 @@ namespace UI.Stamina.Editor
             _character.Loadout.SelectItem(0);
             _toolAction = (StaminaTestToolAction)_character.ToolActionRegistry.GetToolAction(_tool);
             _useTool = new GameObject("Tool dispatcher").AddComponent<UseToolAction>();
-            _useTool.transform.SetParent(_fixture.Root.transform);
+            _useTool.transform.SetParent(Game.Root.transform);
             _useTool.Initialize(_character);
-            CharacterManager.Instance.RegisterMainCharacter(_character);
+            Game.Get<CharacterManager>().RegisterMainCharacter(_character);
 
-            _fixture.Root.SetActive(true);
+            Game.Root.SetActive(true);
             BuildToolMap();
             var hud = new GameObject("Stamina HUD");
             hud.SetActive(false);
-            hud.transform.SetParent(_fixture.Root.transform);
+            hud.transform.SetParent(Game.Root.transform);
             var document = hud.AddComponent<UIDocument>();
             document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
-            _presenter = hud.AddComponent<StaminaHudPresenter>();
+            _presenter = Game.InjectObject(hud.AddComponent<StaminaHudPresenter>());
             hud.SetActive(true);
             GameTestFixture.Invoke(_presenter, "OnEnable");
             _meter = document.rootVisualElement.Q<ProgressBar>("staminaMeter");
@@ -77,7 +74,7 @@ namespace UI.Stamina.Editor
         public void TearDown()
         {
             if (_presenter) GameTestFixture.Invoke(_presenter, "OnDisable");
-            _fixture.Dispose();
+
         }
 
         [TestCase(true)]
@@ -87,7 +84,7 @@ namespace UI.Stamina.Editor
             await RunTool(skipPreparation);
             Assert.That(_toolAction.Executions, Is.EqualTo(1));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - _tool.staminaCost));
-            Assert.That(GameState.Player.Stamina.Current, Is.EqualTo(95));
+            Assert.That(Game.State.Player.Stamina.Current, Is.EqualTo(95));
             Assert.That(_meter.value, Is.EqualTo(95f).Within(0.001));
             Assert.That(_value.text, Is.EqualTo("95 / 100"));
         }
@@ -111,7 +108,7 @@ namespace UI.Stamina.Editor
             _character.Health.TakeDamage(30);
             Assert.That(_healthMeter.value, Is.EqualTo(70f));
             Assert.That(_healthValue.text, Is.EqualTo("70 / 100"));
-            var other = _fixture.CreateCharacter();
+            var other = Game.CreateCharacter();
             other.Health.TakeDamage(50);
             Assert.That(_healthValue.text, Is.EqualTo("70 / 100"));
             _character.Health.Heal(30);
@@ -139,7 +136,7 @@ namespace UI.Stamina.Editor
             _character.Stamina.ConsumeStamina(30);
             GameTestFixture.Invoke(_presenter, "OnEnable");
             Assert.That(_meter.value, Is.EqualTo(70f).Within(0.001));
-            var other = _fixture.CreateCharacter();
+            var other = Game.CreateCharacter();
             other.Stamina.ConsumeStamina(50);
             Assert.That(_value.text, Is.EqualTo("70 / 100"));
         }
@@ -147,8 +144,8 @@ namespace UI.Stamina.Editor
         [Test]
         public void PlayerReplacementWaitsForResourceBindingThenShowsTheNewPlayer()
         {
-            var other = _fixture.CreateCharacter();
-            CharacterManager.Instance.RegisterMainCharacter(other);
+            var other = Game.CreateCharacter();
+            Game.Get<CharacterManager>().RegisterMainCharacter(other);
             Assert.That(_value.text, Is.Empty);
             other.Stamina.Initialize(new StaminaState { Initialized = true, Current = 40 });
             Assert.That(_value.text, Is.EqualTo("40 / 100"));
@@ -189,13 +186,13 @@ namespace UI.Stamina.Editor
 
         private void BuildToolMap()
         {
-            var map = _fixture.RegisterSingleton<Core.Tile.MapManager>();
+            var map = Game.Get<Core.Tile.MapManager>();
             var grid = new GameObject("Tool map", typeof(Grid));
-            grid.transform.SetParent(_fixture.Root.transform);
+            grid.transform.SetParent(Game.Root.transform);
             var tiles = new GameObject("Terrain", typeof(UnityEngine.Tilemaps.Tilemap));
             tiles.transform.SetParent(grid.transform);
             var tilemap = tiles.GetComponent<UnityEngine.Tilemaps.Tilemap>();
-            var terrain = _fixture.Own(ScriptableObject.CreateInstance<Core.Tile.TerrainData>());
+            var terrain = Game.Asset<Core.Tile.TerrainData>();
             var cache = new Dictionary<Vector2Int, Core.Tile.TileData>();
             for (var y = -1; y <= 1; y++)
                 cache.Add(new Vector2Int(0, y), new Core.Tile.TileData(null, 0, y, terrain,

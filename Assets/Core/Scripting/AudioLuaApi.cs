@@ -22,9 +22,6 @@ namespace Core.Scripting
             _sounds = sounds ? sounds : throw new InvalidOperationException("The required SoundCatalog is missing.");
         }
 
-        internal static AudioLuaApi BindCurrentMap() => new(MMSoundManager.Current,
-            MapManager.Instance.CurrentMap, CatalogResources.Load<SoundCatalog>(SoundCatalog.ResourceName));
-
         private SoundDefinition RequireSound(string sound)
         {
             var definition = _sounds.Get(sound);

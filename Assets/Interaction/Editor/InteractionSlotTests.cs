@@ -27,9 +27,9 @@ namespace Interaction.Editor
     }
 
     /// <summary>Checks exclusive occupation, animated release, presentation cues and interrupted character lifecycles.</summary>
-    public sealed class InteractionSlotTests
+    public sealed class InteractionSlotTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character, _other;
         private InteractionSlot _slot;
         private Vector3 _graphicsPosition, _graphicsScale;
@@ -44,13 +44,11 @@ namespace Interaction.Editor
             // their own tweens manually; enable that gate temporarily without creating a runtime driver.
             _dotweenWasInitialized = (bool)DOTweenInitialized.GetValue(null);
             DOTweenInitialized.SetValue(null, true);
-            _fixture = new GameTestFixture("Seating");
-            _fixture.AddSingleton<CharacterManager>();
-            _fixture.RegisterSingleton<LevelManager>();
+
             _character = CreateCharacter();
             _other = CreateCharacter();
             var seat = new GameObject("Seat");
-            seat.transform.SetParent(_fixture.Root.transform);
+            seat.transform.SetParent(Game.Root.transform);
             _slot = seat.AddComponent<InteractionSlot>();
             var exit = new GameObject("Exit").transform;
             exit.SetParent(seat.transform);
@@ -62,7 +60,7 @@ namespace Interaction.Editor
             _exit = seat.AddComponent<SeatingFeedbackProbe>();
             Set(_slot, "entryFeedback", _entry);
             Set(_slot, "exitFeedback", _exit);
-            _fixture.Root.SetActive(true);
+            Game.Root.SetActive(true);
             GameTestFixture.Invoke(_slot, "Awake");
             _graphicsPosition = _character.Graphics.localPosition;
             _graphicsScale = _character.Graphics.localScale;
@@ -71,7 +69,7 @@ namespace Interaction.Editor
         private MainCharacter CreateCharacter()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
-            var root = Object.Instantiate(prefab, _fixture.Root.transform);
+            var root = Game.InjectObject(Object.Instantiate(prefab, Game.Root.transform));
             var character = root.GetComponent<MainCharacter>();
             GameTestFixture.Invoke(root.GetComponent<Controller2D>(), "Awake");
             GameTestFixture.Invoke(character, "Awake");
@@ -90,7 +88,7 @@ namespace Interaction.Editor
                 _slot.Occupant?.ReleaseImmediately();
                 GameTestFixture.Invoke(_character.Occupation, "OnDisable");
                 GameTestFixture.Invoke(_other.Occupation, "OnDisable");
-                _fixture.Dispose();
+
             }
             finally { DOTweenInitialized.SetValue(null, _dotweenWasInitialized); }
         }
@@ -113,7 +111,7 @@ namespace Interaction.Editor
         public void NormalSeatInteractionUpdatesAvailabilityAndRejectsAnAlreadySeatedCharacter()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/BenchPrototype.prefab");
-            var bench = Object.Instantiate(prefab, _fixture.Root.transform);
+            var bench = Game.InjectObject(Object.Instantiate(prefab, Game.Root.transform));
             var seat = bench.GetComponent<SeatInteractable>();
             var slot = bench.GetComponentInChildren<InteractionSlot>();
             GameTestFixture.Invoke(slot, "Awake");
@@ -139,10 +137,10 @@ namespace Interaction.Editor
         [Test]
         public void FailedSeatEntryDoesNotConsumeAUseStartCooldownOrPlaySuccessFeedback()
         {
-            _fixture.AddSingleton<GameStateManager>();
-            GameState.Time.initialized = true;
+
+            Game.State.Time.initialized = true;
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/BenchPrototype.prefab");
-            var bench = Object.Instantiate(prefab, _fixture.Root.transform);
+            var bench = Game.InjectObject(Object.Instantiate(prefab, Game.Root.transform));
             var seat = bench.GetComponent<SeatInteractable>();
             var slot = bench.GetComponentInChildren<InteractionSlot>();
             var id = Guid.NewGuid().ToString("N");
@@ -164,7 +162,7 @@ namespace Interaction.Editor
             seat.TriggerInteraction(_character);
             Assert.That(seat.CanInteract, Is.True);
             Assert.That(seat.RemainingUses, Is.EqualTo(2));
-            Assert.That(GameState.World.TryGet(id, out InteractableState state), Is.False);
+            Assert.That(Game.State.World.TryGet(id, out InteractableState state), Is.False);
             Assert.That(slot.Occupant, Is.Null);
             Assert.That(_entry.Plays, Is.EqualTo(entryCues));
             Assert.That(_exit.Plays, Is.EqualTo(1));
@@ -173,16 +171,16 @@ namespace Interaction.Editor
             seat.TriggerInteraction(_character);
             Assert.That(seat.CanInteract, Is.True);
             Assert.That(seat.RemainingUses, Is.EqualTo(2));
-            Assert.That(GameState.World.TryGet(id, out state), Is.False);
+            Assert.That(Game.State.World.TryGet(id, out state), Is.False);
             Assert.That(_entry.Plays, Is.EqualTo(entryCues));
             Assert.That(_exit.Plays, Is.EqualTo(2));
 
             seat.TriggerInteraction(_other);
             Assert.That(slot.Occupant, Is.SameAs(_other.Occupation));
             Assert.That(seat.RemainingUses, Is.EqualTo(1));
-            Assert.That(GameState.World.TryGet(id, out state), Is.True);
+            Assert.That(Game.State.World.TryGet(id, out state), Is.True);
             Assert.That(state.uses, Is.EqualTo(1));
-            Assert.That(state.availableAtMinute, Is.EqualTo(GameState.Time.TotalMinutes + 60));
+            Assert.That(state.availableAtMinute, Is.EqualTo(Game.State.Time.TotalMinutes + 60));
             Assert.That(_entry.Plays, Is.EqualTo(entryCues + 1));
             _other.Occupation.ReleaseImmediately();
             Assert.That(seat.CanInteract, Is.False, "A successful entry starts the configured cooldown.");
@@ -198,13 +196,13 @@ namespace Interaction.Editor
             runtimeType.GetMethod("Setup").Invoke(runtime, null);
             try
             {
-                var input = _fixture.AddSingleton<Input.InputManager>(manager =>
+                var input = Game.Start<Input.InputManager>(manager =>
                 {
-                    manager.GetComponent<PlayerInput>().actions = _fixture.Own(Object.Instantiate(
-                        AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions")));
+                    manager.GetComponent<PlayerInput>().actions = Game.Own(Game.InjectObject(Object.Instantiate(
+                        AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions"))));
                     manager.gameObject.SetActive(true);
                 });
-                var context = _fixture.AddSingleton<PlayerInteractionContext>();
+                var context = Game.Start<PlayerInteractionContext>();
                 GameTestFixture.Invoke(_character.GetAbility<CharacterOccupationAbility>(), "Awake");
                 var keyboard = InputSystem.AddDevice<Keyboard>();
                 try
@@ -280,7 +278,7 @@ namespace Interaction.Editor
             Assert.That(_character.Occupation.TryExit(), Is.False);
             Assert.That(_entry.Plays, Is.EqualTo(1));
             Assert.That(_exit.Plays, Is.Zero);
-            var another = Object.Instantiate(_slot, _fixture.Root.transform);
+            var another = Game.InjectObject(Object.Instantiate(_slot, Game.Root.transform));
             Assert.That(_character.Occupation.TryEnter(another), Is.False);
             Object.DestroyImmediate(another);
         }
@@ -601,7 +599,7 @@ namespace Interaction.Editor
 
         private AnimationClip CreateClip()
         {
-            var clip = _fixture.Own(new AnimationClip());
+            var clip = Game.Own(new AnimationClip());
             AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.z"),
                 AnimationCurve.Constant(0, 1, 1));
             return clip;
@@ -719,7 +717,7 @@ namespace Interaction.Editor
 
         private CharacterAnimation CreateAnimation(string id)
         {
-            var animation = _fixture.Own(ScriptableObject.CreateInstance<CharacterAnimation>());
+            var animation = Game.Asset<CharacterAnimation>();
             SetAnimationId(animation, "test:" + id);
             Set(animation, "clip", CreateClip());
             return animation;
@@ -727,7 +725,7 @@ namespace Interaction.Editor
 
         private CharacterAnimationSet CreateAnimationSet(CharacterAnimation baseAnimation, CharacterAnimation variation)
         {
-            var set = _fixture.Own(ScriptableObject.CreateInstance<CharacterAnimationSet>());
+            var set = Game.Asset<CharacterAnimationSet>();
             SetAnimationId(set, "test:set");
             Set(set, "baseAnimation", baseAnimation);
             Set(set, "variations", new[] { Variation(variation, 1f) });

@@ -29,8 +29,8 @@ namespace Core.Inventory.Editor
                 }
             foreach (var container in root.GetComponentsInChildren<PersistentContainer>(true))
             {
-                container.ValidateConfiguration();
-                if (CharacterCatalog.Require(container.Owner.CharacterId) != container.Owner)
+                container.ValidateConfiguration(Resources.Load<ItemCatalog>(ItemCatalog.ResourceName));
+                if (Resources.Load<CharacterCatalog>(CharacterCatalog.ResourceName).Require(container.Owner.CharacterId) != container.Owner)
                     throw new InvalidOperationException($"Container '{container.name}' requires an enabled, registered owner.");
                 var interactable = container.GetComponent<ContainerInteractable>();
                 if (!interactable) throw new InvalidOperationException($"Container '{container.name}' requires its interaction component.");

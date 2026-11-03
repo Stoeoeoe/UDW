@@ -1,3 +1,4 @@
+using Core.Context;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -19,29 +20,28 @@ using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class FaceDirectionTests
+    public sealed class FaceDirectionTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _actor;
         private MapActorLuaApi _api;
+        private static string PrototypeCharacterId => AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Content/Spawnables/CutscenePrototypeHost.prefab").GetComponent<GameCharacter>().CharacterId;
 
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Cardinal facing");
-            _fixture.AddSingleton<GameStateManager>();
-            _fixture.AddSingleton<CharacterManager>();
-            _fixture.AddSingleton<Core.PlayerStateManager>();
-            var level = _fixture.RegisterSingleton<LevelManager>();
-            var maps = _fixture.RegisterSingleton<MapManager>();
-            GameState.Time.daysSinceStart = 1;
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            _actor = _fixture.CreateCharacter();
+
+            var level = Game.Get<LevelManager>();
+            var maps = Game.Get<MapManager>();
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            _actor = Game.CreateCharacter();
             _actor.EnsureRuntimeInitialized();
             _actor.transform.parent.gameObject.SetActive(true);
             // Facing and coordinate conversion need a valid map, not the playable map's textures/water bake.
             var mapRoot = new GameObject("Empty character test map", typeof(Grid), typeof(VulcanusImportedMap));
-            mapRoot.transform.SetParent(_fixture.Root.transform);
+            mapRoot.transform.SetParent(Game.Root.transform);
             var map = mapRoot.GetComponent<VulcanusImportedMap>();
             map.Configure("test:characters", "Character test map", 32, 24, 16);
             Tilemap Layer(string name)
@@ -53,14 +53,12 @@ namespace Core.Scripting.Editor
             map.SetTilemaps(Layer("Terrain"), Layer("Farmland"), Layer("Plowed"), Layer("Irrigated"), Layer("Overlay"));
             map.SetTerrainCells(Array.Empty<VulcanusImportedMap.TerrainCell>());
             typeof(MapManager).GetField("_currentMap", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(maps, map);
-            typeof(LevelManager).GetProperty(nameof(LevelManager.SceneReady)).SetValue(level, true);
-            _fixture.Root.SetActive(true);
+            Game.Ready = true;
+            Game.Root.SetActive(true);
             _api = (MapActorLuaApi)typeof(MapActorLuaApi).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
                 .Invoke(new object[] { map, _actor, Array.Empty<SpawnedObject>() });
+            Game.Inject(_api);
         }
-
-        [TearDown]
-        public void TearDown() => _fixture.Dispose();
 
         [TestCase(false)]
         [TestCase(true)]
@@ -77,7 +75,7 @@ namespace Core.Scripting.Editor
                 var start = body.position;
                 var destination = start + Vector2.right * 3;
                 var wall = new GameObject("Cinematic test obstacle", typeof(BoxCollider2D), typeof(Rigidbody2D));
-                wall.transform.SetParent(_fixture.Root.transform);
+                wall.transform.SetParent(Game.Root.transform);
                 wall.transform.position = solid.bounds.center + Vector3.right * 1.5f;
                 var mask = Physics2D.GetLayerCollisionMask(solid.gameObject.layer) & ~(1 << 31);
                 Assert.That(mask, Is.Not.Zero, "The authored character must collide with at least one layer.");
@@ -228,7 +226,7 @@ namespace Core.Scripting.Editor
             var original = _actor.Graphics.position;
             var point = new MapPosition(x, y);
             var lua = CutsceneSequenceCompiler.Compile(Sequence("East"), "endpoint.json", out var steps);
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            var definition = Game.Asset<CutsceneDefinition>();
             definition.Configure("test:pixel-endpoint", "test:characters", lua, steps, true,
                 new CutsceneCompletion(new[] { new CutsceneCharacterPlacement("player", point) }, "", "", Array.Empty<CutsceneStep>()),
                 "", Array.Empty<CutsceneStep>());
@@ -238,7 +236,7 @@ namespace Core.Scripting.Editor
             _api.Place("player", new MapPosition(32, 32));
             _actor.Orientation.ForceDirection(Vector2.up);
             type.GetMethod("Apply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(placement, new object[] { completed });
-            var expected = completed ? point.ToWorld(MapManager.Instance.CurrentMap) : original;
+            var expected = completed ? point.ToWorld(Game.Get<MapManager>().CurrentMap) : original;
             Assert.That(Vector3.Distance(_actor.Graphics.position, expected), Is.LessThan(0.0001f));
             Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(completed ? Vector2.up : Vector2.right));
         }
@@ -253,7 +251,7 @@ namespace Core.Scripting.Editor
             _actor.Orientation.ForceDirection(Vector2.right);
             var original = _actor.transform.position;
             var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "facing.json", out var steps);
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            var definition = Game.Asset<CutsceneDefinition>();
             var endpoints = facing == null ? Array.Empty<CutsceneCharacterPlacement>() : new[] { new CutsceneCharacterPlacement("player", new MapPosition(168, 104), facing) };
             definition.Configure("test:completion-facing", "test:characters", lua, steps, true,
                 new CutsceneCompletion(endpoints, "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
@@ -272,7 +270,7 @@ namespace Core.Scripting.Editor
         [TestCase("South", 0, -1)]
         public void AnchorFinalFacingCanBeUsedPreservedOrOverridden(string facing, int x, int y)
         {
-            var map = MapManager.Instance.CurrentMap;
+            var map = Game.Get<MapManager>().CurrentMap;
             var anchor = new GameObject("Meeting", typeof(VulcanusMapAnchor)).GetComponent<VulcanusMapAnchor>();
             anchor.transform.SetParent(map.transform);
             anchor.transform.position = new Vector3(5, 8, 0);
@@ -280,7 +278,8 @@ namespace Core.Scripting.Editor
             var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "facing.json", out var steps);
             _api = (MapActorLuaApi)typeof(MapActorLuaApi).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
                 .Invoke(new object[] { map, _actor, Array.Empty<SpawnedObject>() });
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            Game.Inject(_api);
+            var definition = Game.Asset<CutsceneDefinition>();
             definition.Configure("test:anchor-facing", "test:characters", lua, steps, true,
                 new CutsceneCompletion(new[] { new CutsceneCharacterPlacement("player", "meeting", facing) }, "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
             var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
@@ -301,7 +300,7 @@ namespace Core.Scripting.Editor
             GameTestFixture.Invoke(_actor.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true), "Awake");
             _actor.Animator.OnLocationEnter(null);
             var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "hold-rollback.json", out var steps);
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            var definition = Game.Asset<CutsceneDefinition>();
             definition.Configure("test:hold-rollback", "test:characters", lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
             var type = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
@@ -336,7 +335,7 @@ namespace Core.Scripting.Editor
             var position = _actor.transform.position;
             var initialFacing = _actor.Orientation.FacingDirection;
             var lua = CutsceneSequenceCompiler.Compile(Sequence(direction), "facing.json", out var steps);
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
             Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(initialFacing), "Binding must not execute actions.");
             using var run = VulcanusLuaEngine.StartSession(bindings, lua, "facing.json");
             run.Tick(0);
@@ -354,7 +353,7 @@ namespace Core.Scripting.Editor
         {
             CutsceneSequenceCompiler.Compile(Sequence(direction), "facing.json", out var steps);
             var initial = _actor.Orientation.FacingDirection;
-            Assert.That(() => CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api)),
+            Assert.That(() => Game.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api)),
                 Throws.InvalidOperationException.With.Message.Contains("step 'turn'").And.Message.Contains("Unknown direction"));
             Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(initial));
         }
@@ -371,17 +370,18 @@ namespace Core.Scripting.Editor
             var variables = new[] { new CutsceneVariableDefinition("actor", "string", "\"player\"") };
             var source = JArray.Parse("[{id:'turn',action:'characters.faceDirection',arguments:{direction:'North'},argumentVariables:{character:'actor'}}]");
             var lua = CutsceneSequenceCompiler.Compile(source, "computed-player", out var steps, variables: variables);
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            var definition = Game.Asset<CutsceneDefinition>();
             definition.Configure("test:computed-player", "test:characters", lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()),
                 "", Array.Empty<CutsceneStep>(), localVariables: variables);
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
             var state = new CutsceneVariables(variables);
             using var session = VulcanusLuaEngine.StartSession(bindings, lua, "computed-player", variables: state);
-            var owner = _fixture.RegisterSingleton<CutsceneRunner>();
+            var owner = Game.Get<CutsceneRunner>();
             var placementType = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
             var run = (CutsceneRun)typeof(CutsceneRun).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
                 .Invoke(new object[] { owner, definition, session, Array.CreateInstance(placementType, 0), bindings, _api, state });
+            Game.Inject(_api);
             var callback = typeof(LuaBindingRegistry).GetField("DynamicActionBound", BindingFlags.Instance | BindingFlags.NonPublic);
             callback.SetValue(bindings, Delegate.CreateDelegate(callback.FieldType, run,
                 typeof(CutsceneRun).GetMethod("BindDynamicAction", BindingFlags.Instance | BindingFlags.NonPublic)));
@@ -401,7 +401,7 @@ namespace Core.Scripting.Editor
         [TestCase(171, 106)]
         public void PlaceAlignsFeetInTransformedMapSpaceAndPreservesFacing(double x, double y)
         {
-            var map = MapManager.Instance.CurrentMap;
+            var map = Game.Get<MapManager>().CurrentMap;
             map.transform.position = new Vector3(7, -3, 0);
             map.transform.rotation = Quaternion.Euler(0, 0, 15);
             map.transform.localScale = new Vector3(1.5f, 1.5f, 1);
@@ -409,7 +409,7 @@ namespace Core.Scripting.Editor
             _actor.Orientation.ForceDirection(Vector2.right);
             var before = _actor.transform.position;
             var lua = CutsceneSequenceCompiler.Compile(PlaceStep(new JObject { ["x"] = x, ["y"] = y }), "place.json", out var steps);
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
             Assert.That(_actor.transform.position, Is.EqualTo(before));
             var restored = JsonUtility.FromJson<CutsceneStep>(JsonUtility.ToJson(steps.Single()));
             Assert.That(restored.Arguments.Single(argument => argument.Name == "position").Position.X, Is.EqualTo(x));
@@ -446,7 +446,7 @@ namespace Core.Scripting.Editor
         public void DirectLuaRejectsMalformedPositionTables(string literal)
         {
             var before = _actor.transform.position;
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(_api), $"Characters.Place('player', {literal})", "bad-position");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(_api), $"Characters.Place('player', {literal})", "bad-position");
             Assert.That(() => run.Tick(0), Throws.InvalidOperationException);
             Assert.That(_actor.transform.position, Is.EqualTo(before));
         }
@@ -454,7 +454,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void PositionOutsideMapIsRejectedBeforePlacement()
         {
-            var map = MapManager.Instance.CurrentMap;
+            var map = Game.Get<MapManager>().CurrentMap;
             var before = _actor.transform.position;
             Assert.That(() => _api.ValidatePlace("player", new MapPosition((double)map.Width * map.TileSize + 1, 0)),
                 Throws.TypeOf<ArgumentOutOfRangeException>().With.Message.Contains("outside map"));
@@ -468,7 +468,7 @@ namespace Core.Scripting.Editor
             {
                 new CutsceneArgument("character", "player"), new CutsceneArgument("position", "168,104")
             }) };
-            Assert.That(() => CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api)),
+            Assert.That(() => Game.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api)),
                 Throws.InvalidOperationException.With.Message.Contains("position").And.Message.Contains("not a position"));
         }
 
@@ -502,7 +502,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void AnchorPositionsRoundTripAndPlaceFeetWithoutApplyingAnchorFacing()
         {
-            var map = MapManager.Instance.CurrentMap;
+            var map = Game.Get<MapManager>().CurrentMap;
             var anchor = new GameObject("Meeting", typeof(VulcanusMapAnchor)).GetComponent<VulcanusMapAnchor>();
             anchor.transform.SetParent(map.transform);
             anchor.transform.position = new Vector3(5, 8, 0);
@@ -511,7 +511,7 @@ namespace Core.Scripting.Editor
             var lua = CutsceneSequenceCompiler.Compile(PlaceStep(new JObject { ["anchor"] = "meeting" }), "anchor.json", out var steps);
             var restored = JsonUtility.FromJson<CutsceneStep>(JsonUtility.ToJson(steps.Single()));
             Assert.That(restored.Arguments.Single(argument => argument.Name == "position").Position.Anchor, Is.EqualTo("meeting"));
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(MapActorLuaApi), () => _api));
             using var session = VulcanusLuaEngine.StartSession(bindings, lua, "anchor.json");
             session.Tick(0);
             Assert.That(Vector3.Distance(_actor.Graphics.position, anchor.transform.position), Is.LessThan(0.0001f));
@@ -524,21 +524,21 @@ namespace Core.Scripting.Editor
         public void SpawnPreflightDeclaresRolesWithoutCreatingWorldObjects()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/CutscenePrototypeHost.prefab").GetComponent<SpawnedObject>();
-            var catalog = _fixture.Own(ScriptableObject.CreateInstance<SpawnableCatalog>());
+            var catalog = Game.Asset<SpawnableCatalog>();
             catalog.Synchronize(new[] { prefab });
-            var spawner = _fixture.AddSingleton<WorldObjectSpawner>(value =>
+            var spawner = Game.Start<WorldObjectSpawner>(value =>
                 typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(value, catalog));
-            _api.ValidateSpawn("guest", "base:cutscene-prototype-host", new MapPosition(168, 104));
+            _api.ValidateSpawn("guest", PrototypeCharacterId, new MapPosition(168, 104));
             _api.ValidateFaceDirection("guest", "North");
             _api.ValidateFace("player", "guest");
             _api.ValidatePlace("guest", new MapPosition(171, 106));
             Assert.That(spawner.SpawnedObjects, Is.Empty);
-            Assert.That(() => _api.ValidateSpawn("guest", "base:cutscene-prototype-host", new MapPosition(1, 1)),
+            Assert.That(() => _api.ValidateSpawn("guest", PrototypeCharacterId, new MapPosition(1, 1)),
                 Throws.InvalidOperationException.With.Message.Contains("unique"));
-            Assert.That(() => _api.ValidateSpawn("player", "base:cutscene-prototype-host", new MapPosition(1, 1)),
+            Assert.That(() => _api.ValidateSpawn("player", PrototypeCharacterId, new MapPosition(1, 1)),
                 Throws.InvalidOperationException.With.Message.Contains("unique"));
             Assert.That(() => _api.ValidateFaceDirection("not-declared", "North"), Throws.InvalidOperationException);
-            Assert.That(() => _api.ValidateSpawn("other", "base:cutscene-prototype-host", new MapPosition("missing")),
+            Assert.That(() => _api.ValidateSpawn("other", PrototypeCharacterId, new MapPosition("missing")),
                 Throws.InvalidOperationException.With.Message.Contains("missing"));
             Assert.That(() => _api.ValidateFaceDirection("other", "North"), Throws.InvalidOperationException);
         }
@@ -553,7 +553,7 @@ namespace Core.Scripting.Editor
             Assert.That(method.action.phases, Is.EqualTo(new[] { "setup" }));
             Assert.That(method.action.preview.effects.Single().definitionParameter, Is.EqualTo("definition"));
             var source = new JArray(new JObject { ["id"] = "create-guest", ["action"] = "characters.spawn",
-                ["arguments"] = new JObject { ["character"] = "guest", ["definition"] = "base:cutscene-prototype-host",
+                ["arguments"] = new JObject { ["character"] = "guest", ["definition"] = PrototypeCharacterId,
                     ["position"] = new JObject { ["x"] = 168, ["y"] = 104 } } });
             Assert.That(() => CutsceneSequenceCompiler.Compile(source, "spawn.json"), Throws.TypeOf<FormatException>());
             Assert.That(CutsceneSequenceCompiler.Compile(source, "spawn.json", out _, "setup"), Does.Contain("Characters.Spawn"));
@@ -565,38 +565,38 @@ namespace Core.Scripting.Editor
         {
             var holder = new GameObject("Spawn fixture templates");
             holder.SetActive(false);
-            holder.transform.SetParent(_fixture.Root.transform);
-            var template = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Content/Spawnables/CutscenePrototypeHost.prefab"), holder.transform);
+            holder.transform.SetParent(Game.Root.transform);
+            var template = Game.InjectObject(Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Content/Spawnables/CutscenePrototypeHost.prefab"), holder.transform));
             Object.DestroyImmediate(template.GetComponent<SpawnedObject>());
             var prefab = template.AddComponent<EditModeSpawnedActor>();
             typeof(SpawnedObject).GetField("prefabId", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(prefab, "base:cutscene-prototype-host");
-            var catalog = _fixture.Own(ScriptableObject.CreateInstance<SpawnableCatalog>());
+            var catalog = Game.Asset<SpawnableCatalog>();
             catalog.Synchronize(new SpawnedObject[] { prefab });
-            var spawner = _fixture.AddSingleton<WorldObjectSpawner>(value =>
+            var spawner = Game.Start<WorldObjectSpawner>(value =>
                 typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(value, catalog));
             spawner.gameObject.SetActive(true);
-            var location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+            var location = Game.Asset<LocationData>();
             location.id = "test:characters";
             spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             var point = new MapPosition(168, 104);
-            _api.ValidateSpawn("guest", "base:cutscene-prototype-host", point);
-            var bindings = new LuaBindingRegistry(_api);
+            _api.ValidateSpawn("guest", PrototypeCharacterId, point);
+            var bindings = Game.Bind(_api);
             var lua = CutsceneSequenceCompiler.Compile(new JArray(new JObject { ["id"] = "turn", ["action"] = "characters.faceDirection",
                 ["arguments"] = new JObject { ["character"] = "guest", ["direction"] = "East" } }), "spawn.json", out var steps);
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<CutsceneDefinition>());
+            var definition = Game.Asset<CutsceneDefinition>();
             definition.Configure("test:spawn", location.id, lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
             var variables = new CutsceneVariables(definition.Variables);
             using var sequence = VulcanusLuaEngine.StartSession(bindings, lua, "spawn.json", variables: variables);
-            var owner = _fixture.RegisterSingleton<CutsceneRunner>();
+            var owner = Game.Get<CutsceneRunner>();
             var placementType = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
             var run = (CutsceneRun)typeof(CutsceneRun).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
                 .Invoke(new object[] { owner, definition, sequence, Array.CreateInstance(placementType, 0), bindings, _api, variables });
             typeof(MapActorLuaApi).GetMethod("BeginRun", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { run });
             using (var setup = VulcanusLuaEngine.StartSession(bindings,
-                "Characters.Spawn('guest', 'base:cutscene-prototype-host', { x = 168, y = 104 })", "spawn.json:setup", phase: "setup"))
+                "Characters.Spawn('guest', '" + PrototypeCharacterId + "', { x = 168, y = 104 })", "spawn.json:setup", phase: "setup"))
             {
                 setup.Tick(0);
                 Assert.That(setup.IsRunning, Is.False);
@@ -605,18 +605,18 @@ namespace Core.Scripting.Editor
             var character = spawn.GetComponentInChildren<GameCharacter>(true);
             Assert.That(character.IsRuntimeInitialized, Is.True);
             Assert.That(character.IsControlBlocked, Is.True);
-            Assert.That(Vector3.Distance(character.Graphics.position, point.ToWorld(MapManager.Instance.CurrentMap)), Is.LessThan(0.0001f));
+            Assert.That(Vector3.Distance(character.Graphics.position, point.ToWorld(Game.Get<MapManager>().CurrentMap)), Is.LessThan(0.0001f));
             sequence.Tick(0);
             Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
             var id = spawn.PersistentId;
-            Assert.That(GameState.World.TryGet(location.id, id, out SpawnedObjectState state), Is.True);
+            Assert.That(Game.State.World.TryGet(location.id, id, out SpawnedObjectState state), Is.True);
             Assert.That(state.position, Is.EqualTo(spawn.transform.position));
             character.SetControlBlocked(run, false);
             // These callbacks were invoked explicitly in OnStateBound, so release their EditMode bindings explicitly too.
             GameTestFixture.Invoke(character.PerformPrimaryAction, "OnDestroy");
             GameTestFixture.Invoke(character, "OnDestroy");
             typeof(MapActorLuaApi).GetMethod("FinishSpawns", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { keep });
-            Assert.That(GameState.World.TryGet(location.id, id, out SpawnedObjectState _), Is.EqualTo(keep));
+            Assert.That(Game.State.World.TryGet(location.id, id, out SpawnedObjectState _), Is.EqualTo(keep));
             Assert.That(spawner.SpawnedObjects.Count, Is.EqualTo(keep ? 1 : 0));
         }
 
@@ -665,6 +665,8 @@ namespace Core.Scripting.Editor
     // EditMode does not run Awake on instantiated characters. Establish the same required bindings before Spawn returns.
     public sealed class EditModeSpawnedActor : SpawnedObject
     {
+        [VContainer.Inject] private PlayerInteractionContext _context;
+
         protected override void OnStateBound()
         {
             var character = GetComponentInChildren<GameCharacter>(true);
@@ -675,7 +677,7 @@ namespace Core.Scripting.Editor
                 typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(ability, character);
             typeof(Character.Abilities.CharacterPerformPrimaryActionAbility).GetProperty("ActionExecutor")
                 .SetValue(character.PerformPrimaryAction, new Interaction.ActionExecutor(character,
-                    () => Core.Context.PlayerInteractionContext.Instance.CurrentSnapshot));
+                    () => _context.CurrentSnapshot));
             GameTestFixture.Invoke(character.Occupation, "Awake");
             character.EnsureRuntimeInitialized();
         }

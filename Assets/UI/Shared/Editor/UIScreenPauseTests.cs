@@ -1,3 +1,4 @@
+using UI.Shared;
 using System.Threading;
 using System;
 using System.Reflection;
@@ -43,10 +44,10 @@ namespace UI.Shared.Editor
     }
 
     [Category("UIScreen")]
-    public sealed class UIScreenPauseTests
+    public sealed class UIScreenPauseTests : Core.Common.Editor.GameTest
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private UrGUIManager _manager;
         private PauseTestScreen _first;
         private PauseTestScreen _second;
@@ -57,48 +58,48 @@ namespace UI.Shared.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(UrGUIManager.Instance, Is.Null, "Run outside a game session.");
+
             _timeScale = Time.timeScale;
             _fixedDeltaTime = Time.fixedDeltaTime;
             _maximumDeltaTime = Time.maximumDeltaTime;
-            _fixture = new Core.Common.Editor.GameTestFixture("Screen pause tests");
-            _root = _fixture.Root;
+
+            _root = Game.Root;
             _root.SetActive(true);
-            CreateScreenServices(_fixture);
-            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            _first = _root.AddComponent<PauseTestScreen>();
-            _second = _root.AddComponent<PauseTestScreen>();
-            _character = _fixture.CreateCharacter();
+            CreateScreenServices(Game);
+            _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
+            _first = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
+            _second = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
+            _character = Game.CreateCharacter();
         }
 
         [TearDown]
         public void TearDown()
         {
             _manager?.CloseAll();
-            _fixture?.Dispose();
+
             Time.timeScale = _timeScale;
             Time.maximumDeltaTime = _maximumDeltaTime;
             Time.fixedDeltaTime = _fixedDeltaTime;
         }
 
-        private MainCharacter CreateMainCharacter(string name) => _fixture.CreateCharacter(name);
+        private MainCharacter CreateMainCharacter(string name) => Game.CreateCharacter(name);
 
         [Test]
         public void MainCharacterDeathClosesAllScreensWithoutChangingTheDeadCondition()
         {
             var main = CreateMainCharacter("Main character");
-            CharacterManager.Instance.RegisterMainCharacter(main);
+            Game.Get<CharacterManager>().RegisterMainCharacter(main);
             _first.Open(main);
             _second.Open(main);
             main.SetConditionState(ConditionState.Dead);
             Assert.That(_first.Visible || _second.Visible, Is.False);
             Assert.That(_first.CloseCount, Is.EqualTo(1));
             Assert.That(_second.CloseCount, Is.EqualTo(1));
-            Assert.That(UrGUIManager.HasOpenScreens, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
-            Assert.That(UrGUIManager.IsCharacterPaused(main), Is.False);
+            Assert.That(Game.Get<UrGUIManager>().HasOpenScreens, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(main), Is.False);
             Assert.That(main.ConditionState, Is.EqualTo(ConditionState.Dead));
-            Assert.That(Input.InputManager.Instance.ActiveMapName, Is.EqualTo("PlayerControls"));
+            Assert.That(Game.Get<Input.InputManager>().ActiveMapName, Is.EqualTo("PlayerControls"));
         }
 
         [Test]
@@ -106,8 +107,8 @@ namespace UI.Shared.Editor
         {
             var previous = CreateMainCharacter("Previous main");
             var current = CreateMainCharacter("Current main");
-            CharacterManager.Instance.RegisterMainCharacter(previous);
-            CharacterManager.Instance.RegisterMainCharacter(current);
+            Game.Get<CharacterManager>().RegisterMainCharacter(previous);
+            Game.Get<CharacterManager>().RegisterMainCharacter(current);
             _first.Open(current);
             previous.SetConditionState(ConditionState.Dead);
             _character.SetConditionState(ConditionState.Dead);
@@ -120,7 +121,7 @@ namespace UI.Shared.Editor
         public void ReenablingTheManagerRestoresTheCurrentCharacterSubscriptionOnce()
         {
             var main = CreateMainCharacter("Main character");
-            CharacterManager.Instance.RegisterMainCharacter(main);
+            Game.Get<CharacterManager>().RegisterMainCharacter(main);
             Invoke(_manager, "OnDisable");
             var conditionEvent = typeof(GameCharacter).GetField("OnConditionStateChanged",
                 BindingFlags.Instance | BindingFlags.NonPublic);
@@ -155,7 +156,7 @@ namespace UI.Shared.Editor
             _first.Rebind(replacement);
             Assert.That(_manager.IsTopScreen(_second), Is.True);
             Assert.That(_character.IsControlBlocked, Is.True);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.True);
             Assert.That(original.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.None));
             Assert.That(replacement.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.Flex));
             Assert.That(replacement.enabledSelf, Is.False);
@@ -176,12 +177,12 @@ namespace UI.Shared.Editor
             Assert.That(_first.Open(_character), Is.True);
             Assert.That(_first.Visible, Is.True);
             Assert.That(_character.IsControlBlocked, Is.EqualTo(characterPaused));
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.EqualTo(clockPaused));
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.EqualTo(clockPaused));
             Assert.That(Time.timeScale, Is.EqualTo(_timeScale), "Screen pauses must preserve gameplay time-scale requests.");
             _first.Close();
             Assert.That(_first.Visible, Is.False);
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         [TestCase(true)]
@@ -192,10 +193,10 @@ namespace UI.Shared.Editor
             _second.Open(_character);
             (closeFirst ? _first : _second).Close();
             Assert.That(_character.IsControlBlocked, Is.True);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.True);
             (closeFirst ? _second : _first).Close();
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         [Test]
@@ -204,8 +205,8 @@ namespace UI.Shared.Editor
             _first.Open(_character);
             _second.Open(_character, ScreenPauseMode.None);
             _first.Close();
-            Assert.That(UrGUIManager.HasOpenScreens, Is.True);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().HasOpenScreens, Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             Assert.That(_character.IsControlBlocked, Is.False);
         }
 
@@ -215,7 +216,7 @@ namespace UI.Shared.Editor
             _first.Open(_character);
             _first.Open(_character);
             _first.Open(_character, ScreenPauseMode.Character);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             Assert.That(_character.IsControlBlocked, Is.True);
             _first.Close();
             _first.Close();
@@ -249,7 +250,7 @@ namespace UI.Shared.Editor
         [Test]
         public void UpdatingTheTargetReleasesOnlyTheOldCharacter()
         {
-            var other = _fixture.CreateCharacter("Other character");
+            var other = Game.CreateCharacter("Other character");
             _first.Open(_character);
             _first.Open(other);
             Assert.That(_character.IsControlBlocked, Is.False);
@@ -265,7 +266,7 @@ namespace UI.Shared.Editor
             typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_first, null);
             Assert.That(_first.Visible, Is.False);
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         [TestCase(false)]
@@ -278,8 +279,8 @@ namespace UI.Shared.Editor
             else Invoke(_manager, "OnDisable");
             Assert.That(_first.Visible || _second.Visible, Is.False);
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(UrGUIManager.HasOpenScreens, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().HasOpenScreens, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         [Test]
@@ -289,7 +290,7 @@ namespace UI.Shared.Editor
                 () => throw new InvalidOperationException("Failed presentation"), () => { },
                 ScreenPauseMode.CharacterAndClock, _character));
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         [Test]
@@ -303,7 +304,7 @@ namespace UI.Shared.Editor
             body.linearVelocity = Vector2.right * 4;
             _first.Open(_character, ScreenPauseMode.Character);
             Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
-            var movement = _character.gameObject.AddComponent<Character.Abilities.MovementAbility>();
+            var movement = Game.InjectObject(_character.gameObject.AddComponent<Character.Abilities.MovementAbility>());
             typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(movement, _character);
             body.linearVelocity = Vector2.right;
@@ -318,8 +319,8 @@ namespace UI.Shared.Editor
         [Test]
         public void NonPausingMenusBlockWorldContextImmediatelyUntilTheLastScreenCloses()
         {
-            Assert.That(PlayerInteractionContext.Instance, Is.Null);
-            var context = _fixture.AddSingleton<PlayerInteractionContext>();
+
+            var context = Game.Start<PlayerInteractionContext>();
             _first.Open(_character, ScreenPauseMode.None);
             _second.Open(_character, ScreenPauseMode.None);
             Assert.That(context.CurrentSnapshot.WorldInteractionBlocked, Is.True);
@@ -356,70 +357,48 @@ namespace UI.Shared.Editor
         [Test]
         public void TheCalendarResumesWhileANonPausingScreenRemainsOpen()
         {
-            Assert.That(GameStateManager.Instance, Is.Null);
-            using var services = new Core.Common.Editor.GameTestFixture("Isolated game clock");
-            services.AddSingleton<GameStateManager>();
-            var clock = services.AddSingleton<UrTimeManager>();
-            GameState.Time.hour = 6;
-            GameState.Time.minute = 0;
-            GameState.Time.secondsTowardNextMinute = 10;
+
+            var clock = Game.Start<UrTimeManager>(time => typeof(UrTimeManager)
+                .GetField("secondsPerInGameMinute", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(time, 10f));
+            Game.State.Time.hour = 6;
+            Game.State.Time.minute = 0;
+            Game.State.Time.secondsTowardNextMinute = 10;
             _first.Open(_character, ScreenPauseMode.GameClock);
             _second.Open(_character, ScreenPauseMode.None);
             Invoke(clock, "Update");
-            Assert.That(GameState.Time.minute, Is.Zero);
-            Assert.That(GameState.Time.secondsTowardNextMinute, Is.EqualTo(10));
+            Assert.That(Game.State.Time.minute, Is.Zero);
+            Assert.That(Game.State.Time.secondsTowardNextMinute, Is.EqualTo(10));
             _first.Close();
             Invoke(clock, "Update");
-            Assert.That(GameState.Time.minute, Is.GreaterThan(0));
+            Assert.That(Game.State.Time.minute, Is.GreaterThan(0));
             Assert.That(_second.Visible, Is.True);
 
         }
 
         [Test]
-        public void LocationRegistrationRetriesAfterAllManagersHaveAwakened()
+        public void LocationRegistrationFollowsManagerEnableAndDisable()
         {
-            var faderObject = new GameObject("Required transition fader", typeof(RectTransform), typeof(ScreenFader));
-            faderObject.transform.SetParent(_root.transform);
-            var fader = faderObject.GetComponent<ScreenFader>();
-            Invoke(fader, "Awake");
-            typeof(UrGUIManager).GetField("screenFader", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_manager, fader);
-            _manager.GetComponent<UnityEngine.UIElements.UIDocument>().rootVisualElement.Add(
-                new UnityEngine.UIElements.VisualElement { name = "gameHud" });
-            var hotbar = new GameObject("Required hotbar", typeof(CanvasGroup));
-            hotbar.transform.SetParent(_root.transform);
-            typeof(UrGUIManager).GetField("toolHud", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_manager, hotbar.GetComponent<CanvasGroup>());
-            Assert.That(LevelManager.Instance, Is.Null);
+            var level = Game.Get<LevelManager>();
+            var listeners = (System.Collections.Generic.List<ILocationLifecycle>)typeof(LevelManager)
+                .GetField("_lifecycleComponents", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(level);
+            Assert.That(listeners, Contains.Item(_manager));
             Invoke(_manager, "OnEnable");
-            using var services = new Core.Common.Editor.GameTestFixture("Late location manager");
-            var level = services.RegisterSingleton<LevelManager>();
-            try
-            {
-                Invoke(_manager, "Start");
-                var listeners = (System.Collections.Generic.List<ILocationLifecycle>)typeof(LevelManager)
-                    .GetField("_lifecycleComponents", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(level);
-                Assert.That(listeners, Contains.Item(_manager));
-                Invoke(_manager, "Start");
-                Assert.That(listeners.FindAll(listener => ReferenceEquals(listener, _manager)).Count, Is.EqualTo(1));
-            }
-            finally
-            {
-                level.UnregisterLifecycle(_manager);
-
-            }
+            Assert.That(listeners.FindAll(listener => ReferenceEquals(listener, _manager)).Count, Is.EqualTo(1));
+            Invoke(_manager, "OnDisable");
+            Assert.That(listeners, Has.No.Member(_manager));
+            Invoke(_manager, "OnEnable");
+            Assert.That(listeners, Contains.Item(_manager));
         }
 
         internal static Input.InputManager CreateScreenServices(Core.Common.Editor.GameTestFixture fixture,
             Action<UnityEngine.InputSystem.InputActionAsset> configureActions = null)
         {
-            fixture.AddSingleton<CharacterManager>();
-            return fixture.AddSingleton<Input.InputManager>(input =>
+            return fixture.Start<Input.InputManager>(input =>
             {
                 var player = input.GetComponent<UnityEngine.InputSystem.PlayerInput>();
                 var authored = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>(
                     "Assets/InputSystem_Actions.inputactions");
-                player.actions = fixture.Own(Object.Instantiate(authored));
+                player.actions = fixture.Own(fixture.InjectObject(Object.Instantiate(authored)));
                 configureActions?.Invoke(player.actions);
                 player.defaultActionMap = "PlayerControls";
                 input.gameObject.SetActive(true);

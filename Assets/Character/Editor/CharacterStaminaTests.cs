@@ -10,9 +10,9 @@ using NUnit.Framework;
 namespace Character.Editor
 {
     /// <summary>Checks stamina consumption, recovery, live save binding and maximum changes through a valid character fixture.</summary>
-    public sealed class CharacterStaminaTests : IEventListener<StaminaChangedEvent>, IEventListener<StaminaDepletedEvent>
+    public sealed class CharacterStaminaTests : Core.Common.Editor.GameTest, IEventListener<StaminaChangedEvent>, IEventListener<StaminaDepletedEvent>
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private Stamina _stamina;
         private StaminaState _state;
@@ -22,8 +22,8 @@ namespace Character.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Character stamina");
-            _character = _fixture.CreateCharacter();
+
+            _character = Game.CreateCharacter();
             _stamina = _character.Stamina;
             _state = new StaminaState();
             _stamina.Initialize(_state);
@@ -38,7 +38,7 @@ namespace Character.Editor
         {
             EventBus<StaminaChangedEvent>.Unsubscribe(this);
             EventBus<StaminaDepletedEvent>.Unsubscribe(this);
-            _fixture.Dispose();
+
         }
 
         [Test]
@@ -128,14 +128,14 @@ namespace Character.Editor
         [Test]
         public void PlayerInitializationUsesTheLiveSaveStateInsteadOfAnEventCopy()
         {
-            _fixture.AddSingleton<GameStateManager>();
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            GameState.Player.Stamina = new StaminaState { Initialized = true, Current = 37 };
-            var player = _fixture.AddSingleton<Core.PlayerStateManager>();
+
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            Game.State.Player.Stamina = new StaminaState { Initialized = true, Current = 37 };
+            var player = Game.Get<Core.PlayerStateManager>();
             player.InitializeCharacter(_character);
             Assert.That(_stamina.CurrentStamina, Is.EqualTo(37));
             _stamina.ConsumeStamina(7);
-            Assert.That(GameState.Player.Stamina.Current, Is.EqualTo(30));
+            Assert.That(Game.State.Player.Stamina.Current, Is.EqualTo(30));
             player.InitializeCharacter(_character);
             Assert.That(_stamina.CurrentStamina, Is.EqualTo(30));
         }

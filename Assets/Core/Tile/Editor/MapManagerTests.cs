@@ -1,3 +1,4 @@
+using Core.Tile;
 using System.Threading;
 using System.Threading.Tasks;
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
@@ -19,10 +20,10 @@ using Object = UnityEngine.Object;
 namespace Core.Tile.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class MapManagerTests
+    public sealed class MapManagerTests : Core.Common.Editor.GameTest
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private GameObject _gridRoot;
         private GameStateManager _state;
         private LevelManager _level;
@@ -40,17 +41,14 @@ namespace Core.Tile.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(GameStateManager.Instance, Is.Null, "Run outside a game session.");
-            Assert.That(LevelManager.Instance, Is.Null, "Run outside a game session.");
-            Assert.That(MapManager.Instance, Is.Null, "Run outside a game session.");
-            _fixture = new Core.Common.Editor.GameTestFixture("Map manager tests");
-            _root = _fixture.Root;
-            _state = _fixture.AddSingleton<GameStateManager>();
+
+            _root = Game.Root;
+            _state = Game.Get<GameStateManager>();
             // These tests supply a location directly without initializing scene loading.
-            _level = _fixture.RegisterSingleton<LevelManager>();
+            _level = Game.Get<LevelManager>();
             _location = Asset<LocationData>();
             _location.id = "test:farm";
-            Set(_level, "<CurrentLocationData>k__BackingField", _location);
+            Game.Location = _location;
             var terrainTypes = new Dictionary<TerrainType, TerrainData>();
             foreach (var type in new[] { TerrainType.Dirt, TerrainType.Grass, TerrainType.Sand, TerrainType.Water })
             {
@@ -58,7 +56,7 @@ namespace Core.Tile.Editor
                 Set(data, "terrainType", type);
                 terrainTypes.Add(type, data);
             }
-            _map = _fixture.AddSingleton<MapManager>(map =>
+            _map = Game.Start<MapManager>(map =>
                 Set(map, "tileDataTypes", terrainTypes.Values.ToArray()));
             // Grid needs an active hierarchy for Unity to initialize its cell transform.
             // Keep managers inactive so scene loading and gameplay callbacks stay isolated.
@@ -80,7 +78,7 @@ namespace Core.Tile.Editor
         [TearDown]
         public void TearDown()
         {
-            _fixture?.Dispose();
+
             Object.DestroyImmediate(_gridRoot);
             foreach (var asset in _assets) Object.DestroyImmediate(asset);
             _assets.Clear();
@@ -92,7 +90,6 @@ namespace Core.Tile.Editor
         [TestCase(-1, 0, 0.01f, 0.5f)]
         public async Task AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
         {
-            _fixture.AddSingleton<PlantManager>();
             var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/map-1.vmap")
                 .GetComponent<VulcanusImportedMap>();
             var sourceCell = new Vector3Int(6, 21, 0);
@@ -104,7 +101,8 @@ namespace Core.Tile.Editor
             var soil = _map.GetTileDataAtCoordinates(Vector2Int.zero);
             Assert.That(soil.IsFarmable, Is.True);
 
-            var character = _fixture.CreateCharacter();
+            Game.Start<MoreMountains.Tools.MMSoundManager>();
+            var character = Game.CreateCharacter();
             var direction = new Vector2Int(dx, dy);
             var anchor = _terrain.CellToWorld(new Vector3Int(-dx, -dy, 0)) + new Vector3(x, y, 0);
             Core.Common.Editor.GameTestFixture.PlaceCharacterAtGroundPoint(character, anchor);
@@ -114,8 +112,8 @@ namespace Core.Tile.Editor
             character.MainInventory.AddItem(tool, 1);
             character.Loadout.SelectItem(0);
             character.ToolActionRegistry.Initialize(character);
-            var wrapper = Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform).GetComponent<Interaction.Tools.UseToolAction>();
+            var wrapper = Game.InjectObject(Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform)).GetComponent<Interaction.Tools.UseToolAction>();
             wrapper.Initialize(character);
             _root.SetActive(true);
             character.transform.parent.gameObject.SetActive(true);
@@ -144,7 +142,7 @@ namespace Core.Tile.Editor
 
             Assert.That(soil.FarmlandData.IsPlowed, Is.True);
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
-            Assert.That(GameState.World.TryGet<FarmlandState>(_location.id, "farmland:0,0", out var saved), Is.True);
+            Assert.That(Game.State.World.TryGet<FarmlandState>(_location.id, "farmland:0,0", out var saved), Is.True);
             Assert.That(saved.plowed, Is.True);
             Assert.That(character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.staminaCost));
             Assert.That(executor.IsIdle, Is.True);
@@ -155,7 +153,6 @@ namespace Core.Tile.Editor
         [TestCase(false, true)]
         public void OccupancyIgnoresTriggersButKeepsSolidObstacles(bool trigger, bool occupied)
         {
-            _fixture.AddSingleton<PlantManager>();
             _gridRoot.transform.position = new Vector3(1000, -1000, 0);
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
             BuildCache();
@@ -348,7 +345,7 @@ namespace Core.Tile.Editor
         public void IndoorMapWithEmptyTerrainUsesAuthoredBounds()
         {
             var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/indoor.vmap");
-            var instance = _fixture.Own(Object.Instantiate(source));
+            var instance = Game.Own(Game.InjectObject(Object.Instantiate(source)));
             var imported = instance.GetComponent<VulcanusImportedMap>();
             Assert.That(imported.TerrainTilemap.GetUsedTilesCount(), Is.Zero);
             Set(_map, "_currentMap", imported);
@@ -395,7 +392,7 @@ namespace Core.Tile.Editor
             Assert.That(tile.FarmlandData.IsIrrigated, Is.False);
             Assert.That(_plowed.GetTile(cell), Is.Null);
             Assert.That(_irrigated.GetTile(cell), Is.Null);
-            Assert.That(GameState.World.GetStates<FarmlandState>(), Is.Empty);
+            Assert.That(Game.State.World.GetStates<FarmlandState>(), Is.Empty);
         }
 
         [TestCase(false)]
@@ -407,7 +404,7 @@ namespace Core.Tile.Editor
             _map.IrrigateTile(tile);
             Assert.That(tile.FarmlandData?.IsIrrigated ?? false, Is.False);
             Assert.That(_irrigated.GetTile(new Vector3Int(-2, 3)), Is.Null);
-            Assert.That(GameState.World.GetStates<FarmlandState>(), Is.Empty);
+            Assert.That(Game.State.World.GetStates<FarmlandState>(), Is.Empty);
         }
 
         [Test]
@@ -421,7 +418,7 @@ namespace Core.Tile.Editor
             Assert.That(tile.FarmlandData, Is.Null);
             Assert.That(_plowed.GetTile(new Vector3Int(-2, 3)), Is.Null);
             Assert.That(_irrigated.GetTile(new Vector3Int(-2, 3)), Is.Null);
-            Assert.That(GameState.World.GetStates<FarmlandState>(), Is.Empty);
+            Assert.That(Game.State.World.GetStates<FarmlandState>(), Is.Empty);
         }
 
         [Test]
@@ -430,9 +427,9 @@ namespace Core.Tile.Editor
             _terrain.SetTile(new Vector3Int(-2, 3), Tile(TerrainType.Dirt, true));
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
             BuildCache();
-            GameState.World.Set(_location.id, "farmland:-2,3", new FarmlandState { plowed = true, irrigated = true });
-            GameState.World.Set(_location.id, "farmland:99,99", new FarmlandState { plowed = true });
-            GameState.World.Set("other:farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set(_location.id, "farmland:-2,3", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set(_location.id, "farmland:99,99", new FarmlandState { plowed = true });
+            Game.State.World.Set("other:farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
             Invoke(_map, "RestoreFarmlandState");
             var tile = _map.GetTileDataAtCoordinates(new Vector2Int(-2, 3));
             Assert.That(tile.FarmlandData.IsPlowed && tile.FarmlandData.IsIrrigated, Is.True);
@@ -440,7 +437,7 @@ namespace Core.Tile.Editor
             Assert.That(_irrigated.GetTile(new Vector3Int(-2, 3)), Is.SameAs(_irrigatedTile));
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData.IsPlowed, Is.False);
             Assert.That(_plowed.GetTile(new Vector3Int(99, 99)), Is.Null);
-            Assert.That(GameState.World.GetStates<FarmlandState>().Count(), Is.EqualTo(3));
+            Assert.That(Game.State.World.GetStates<FarmlandState>().Count(), Is.EqualTo(3));
         }
 
         [Test]
@@ -448,7 +445,7 @@ namespace Core.Tile.Editor
         {
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
             BuildCache();
-            GameState.World.Set(_location.id, "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set(_location.id, "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
             Invoke(_map, "RestoreFarmlandState");
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData, Is.Null);
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.Null);
@@ -460,7 +457,7 @@ namespace Core.Tile.Editor
         {
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
             BuildCache();
-            GameState.World.Set(_location.id, "farmland:0,0", new FarmlandState { irrigated = true });
+            Game.State.World.Set(_location.id, "farmland:0,0", new FarmlandState { irrigated = true });
             Invoke(_map, "RestoreFarmlandState");
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData.IsIrrigated, Is.False);
             Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.Null);
@@ -497,10 +494,10 @@ namespace Core.Tile.Editor
             Assert.That(data.ValidateConfiguration(), Is.Empty);
             var catalog = Asset<PlantCatalog>();
             catalog.Synchronize(new Object[] { data });
-            var plants = _fixture.AddSingleton<PlantManager>();
+            var plants = Game.Get<PlantManager>();
             Set(plants, "_catalog", catalog);
             var plant = new PlantState(data.plantId);
-            GameState.World.Set(_location.id, "plant:0,0", plant);
+            Game.State.World.Set(_location.id, "plant:0,0", plant);
             NewDayEvent.Trigger(1);
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
             Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
@@ -531,7 +528,7 @@ namespace Core.Tile.Editor
 
         private void AssertLand(bool plowed, bool irrigated)
         {
-            Assert.That(GameState.World.TryGet(_location.id, "farmland:-2,3", out FarmlandState state), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, "farmland:-2,3", out FarmlandState state), Is.True);
             Assert.That(state.plowed, Is.EqualTo(plowed));
             Assert.That(state.irrigated, Is.EqualTo(irrigated));
         }

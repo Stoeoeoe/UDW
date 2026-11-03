@@ -1,3 +1,4 @@
+using VContainer;
 using Core.Equipment;
 using Core.Inventory;
 using Items;
@@ -18,6 +19,10 @@ namespace UI.InventoryScreen
     /// </summary>
     public class UrInventoryDisplay : InventoryScreenView
     {
+        [Inject] private UrGUIManager _urGUIManager;
+
+        [Inject] private Input.InputManager _inputManager;
+
         [Header("Slot Configuration")]
         [Tooltip("The prefab to instantiate for each inventory slot")]
         public GameObject SlotPrefab;
@@ -84,7 +89,7 @@ namespace UI.InventoryScreen
         protected virtual void Update()
         {
             // Handle open/close input
-            if (Input.InputManager.Instance.OpenInventoryPressed && (!UrGUIManager.HasOpenScreens || ReceivesInput))
+            if (_inputManager.OpenInventoryPressed && (!_urGUIManager.HasOpenScreens || ReceivesInput))
             {
                 ToggleInventory();
             }

@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,6 +14,8 @@ namespace Core.Dialogue.Vulcanus
 {
     public class VulcanusDialogueUGUIPresenter : ManagedUIScreen, IDialoguePresenter, IDialogueAdvanceHandler
     {
+        [Inject] private TypewriterSoundResolver _typewriterSoundResolver;
+
         [Header("Root")]
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private GameObject rootObject;
@@ -371,7 +374,7 @@ namespace Core.Dialogue.Vulcanus
         }
 
         private TypewriterSound ResolveTypewriterSound(string speakerId) =>
-            TypewriterSoundResolver.ResolveTypewriterSound(speakerId, defaultTypewriterSound);
+            _typewriterSoundResolver.ResolveTypewriterSound(speakerId, defaultTypewriterSound);
 
         private void SetSpeakerPortraitStub(string speaker, string emotion)
         {

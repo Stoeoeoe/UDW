@@ -1,3 +1,4 @@
+using VContainer;
 using Input;
 using MoreMountains.Tools;
 using UnityEngine;
@@ -10,6 +11,8 @@ namespace Character.Abilities
     /// </summary>
     public class MovementAbility : CharacterAbility
     {
+        [Inject] private Input.InputManager _inputManager;
+
         [Header("Footsteps")]
         [SerializeField] float baseFootstepInterval = 0.4f;
         [SerializeField] float footstepVolume = 0.5f;
@@ -28,8 +31,8 @@ namespace Character.Abilities
                 return;
             }
 
-            var input   = InputManager.Instance.Move;
-            bool run    = InputManager.Instance.RunHeld;
+            var input   = _inputManager.Move;
+            bool run    = _inputManager.RunHeld;
             float speed = run ? Character.Attributes.RunSpeed : Character.Attributes.WalkSpeed;
 
             Controller.SetMovementInput(input, speed);

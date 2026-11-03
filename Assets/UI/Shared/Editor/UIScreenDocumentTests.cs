@@ -1,3 +1,4 @@
+using UI.Shared;
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System.Reflection;
 using System.Collections;
@@ -20,10 +21,10 @@ using Object = UnityEngine.Object;
 namespace UI.Shared.Editor
 {
     [Category("UIScreen")]
-    public sealed class UIScreenDocumentTests : IEventListener<ItemSelectedEvent>
+    public sealed class UIScreenDocumentTests : Core.Common.Editor.GameTest, IEventListener<ItemSelectedEvent>
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private GameObject _screenRoot;
         private UrGUIManager _manager;
         private UIDocument _document;
@@ -35,18 +36,18 @@ namespace UI.Shared.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(UrGUIManager.Instance, Is.Null, "Run outside a game session.");
+
             _selectionEvents = 0;
             _selected = default;
-            _fixture = new Core.Common.Editor.GameTestFixture("UI document tests");
-            _root = _fixture.Root;
+
+            _root = Game.Root;
             _root.SetActive(true);
-            UIScreenPauseTests.CreateScreenServices(_fixture);
-            _manager = _fixture.AddSingleton<UrGUIManager>(manager => manager.gameObject.SetActive(true));
+            UIScreenPauseTests.CreateScreenServices(Game);
+            _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
             var inventoryRoot = new GameObject("Test inventory");
             inventoryRoot.transform.SetParent(_root.transform);
             inventoryRoot.SetActive(false);
-            _inventory = inventoryRoot.AddComponent<SlotInventory>();
+            _inventory = Game.InjectObject(inventoryRoot.AddComponent<SlotInventory>());
             _inventory.Bind(new InventoryState { Slots = new InventorySlotState[2] });
             _tool = ScriptableObject.CreateInstance<ToolData>();
             Set(typeof(ItemDefinition), _tool, "_itemId", "test:tool");
@@ -74,7 +75,7 @@ namespace UI.Shared.Editor
                 UIScreenPauseTests.Invoke(dialogueRunner, "OnDisable");
                 UIScreenPauseTests.Invoke(dialogueRunner, "OnDestroy");
             }
-            _fixture?.Dispose();
+
             Object.DestroyImmediate(_tool);
         }
 
@@ -171,7 +172,7 @@ namespace UI.Shared.Editor
             _inventory.SetSlot(1, new ItemStack(_tool, 4));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);
             var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
-            var bar = owner.AddComponent<UI.Hotbar.ToolHotbar>();
+            var bar = Game.InjectObject(owner.AddComponent<UI.Hotbar.ToolHotbar>());
             bar.TargetInventoryName = _inventory.InventoryName;
             bar.PlayerId = _inventory.PlayerID;
             Set(typeof(UI.Hotbar.ToolHotbar), bar, "_targetInventory", _inventory);
@@ -320,7 +321,7 @@ namespace UI.Shared.Editor
                 Assert.That(_selectionEvents, Is.EqualTo(i + 1));
                 Submit(_document.rootVisualElement.Q<Button>("closeButton"));
                 Assert.That(presenter.IsOpen, Is.False);
-                Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+                Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             }
             presenter.OpenInventory();
             _inventory.Loadout.SelectItem(-1); _selectionEvents = 2;
@@ -348,7 +349,7 @@ namespace UI.Shared.Editor
             button.Focus();
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
             var overlay = _document.rootVisualElement.Q("menuOverlay");
-            var popup = _screenRoot.AddComponent<PauseTestScreen>();
+            var popup = Game.InjectObject(_screenRoot.AddComponent<PauseTestScreen>());
             popup.OpenElement(overlay);
             Assert.That(firstDocument.rootVisualElement.Q("menuOverlay").enabledSelf, Is.False);
             popup.Close();
@@ -366,7 +367,7 @@ namespace UI.Shared.Editor
             button.Focus();
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
             var overlay = _document.rootVisualElement.Q("menuOverlay");
-            var popup = _screenRoot.AddComponent<PauseTestScreen>();
+            var popup = Game.InjectObject(_screenRoot.AddComponent<PauseTestScreen>());
             popup.OpenElement(overlay);
             overlay.Add(button);
             popup.Close();
@@ -384,7 +385,7 @@ namespace UI.Shared.Editor
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
             var secondDocument = _document;
             secondDocument.sortingOrder = 0;
-            var second = _screenRoot.AddComponent<PauseTestScreen>();
+            var second = Game.InjectObject(_screenRoot.AddComponent<PauseTestScreen>());
             second.OpenElement(secondDocument.rootVisualElement.Q("menuOverlay"));
             Assert.That(secondDocument.sortingOrder, Is.GreaterThan(firstDocument.sortingOrder));
             Submit(firstDocument.rootVisualElement.Q<Button>("useButton"));
@@ -434,7 +435,7 @@ namespace UI.Shared.Editor
         public void ShopReactivationUsesTheNewTreesCloseButton()
         {
             CreateDocument("Assets/UI/Shop/ShopScreen.uxml");
-            var presenter = _screenRoot.AddComponent<ShopUIDocumentPresenter>();
+            var presenter = Game.InjectObject(_screenRoot.AddComponent<ShopUIDocumentPresenter>());
             UIScreenPauseTests.Invoke(presenter, "Awake");
             UIScreenPauseTests.Invoke(presenter, "OnEnable");
             var oldRoot = _document.rootVisualElement;
@@ -451,13 +452,13 @@ namespace UI.Shared.Editor
             Submit(_document.rootVisualElement.Q<Button>("closeButton"));
             Assert.That(_manager.IsOpen(presenter), Is.False);
             Assert.That(overlay.style.display.value, Is.EqualTo(DisplayStyle.None));
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         private UrInventoryUIDocumentPresenter CreateInventoryScreen()
         {
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
-            var presenter = _screenRoot.AddComponent<UrInventoryUIDocumentPresenter>();
+            var presenter = Game.InjectObject(_screenRoot.AddComponent<UrInventoryUIDocumentPresenter>());
             Set(typeof(InventoryScreenView), presenter, "_targetInventory", _inventory);
             Assert.That(presenter, Is.Not.InstanceOf<UrInventoryDisplay>());
             Assert.That(_screenRoot.GetComponent<CanvasGroup>(), Is.Null);
@@ -536,23 +537,23 @@ namespace UI.Shared.Editor
         [Test]
         public void ContainerScreenTransfersBothWaysAndReleasesItsModalPauseOnClose()
         {
-            var character = _fixture.CreateCharacter("Chest owner");
+            var character = Game.CreateCharacter("Chest owner");
             character.MainInventory.AddItem(_tool, 1);
             var holder = new GameObject("Inactive chest staging");
             holder.SetActive(false);
             holder.transform.SetParent(_root.transform);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab");
-            var chest = Object.Instantiate(prefab, holder.transform).GetComponent<PersistentContainer>();
+            var chest = Game.InjectObject(Object.Instantiate(prefab, holder.transform)).GetComponent<PersistentContainer>();
             typeof(Core.Spawning.SpawnedObject).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(chest, new object[] { null, "test-chest", chest.CreateState() });
+                .Invoke(chest, new object[] { null, "test-chest", chest.CreateState(Game.State.Time.daysSinceStart) });
             holder.SetActive(true);
             CreateDocument("Assets/UI/Containers/ContainerScreen.uxml");
-            var screen = _screenRoot.AddComponent<UI.Containers.ContainerScreen>();
+            var screen = Game.InjectObject(_screenRoot.AddComponent<UI.Containers.ContainerScreen>());
             Set(typeof(UI.Containers.ContainerScreen), screen, "document", _document);
             UIScreenPauseTests.Invoke(screen, "Awake");
             screen.Open(chest, character);
-            Assert.That(UrGUIManager.IsCharacterPaused(character), Is.True);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(character), Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.True);
             Submit(_document.rootVisualElement.Q("bagGrid").Q<Button>());
             Assert.That(character.MainInventory.GetSlot(0).IsEmpty, Is.True);
             Assert.That(chest.Storage.Inventory.GetSlot(0).Item, Is.SameAs(_tool));
@@ -561,8 +562,8 @@ namespace UI.Shared.Editor
             Assert.That(chest.Storage.Inventory.GetSlot(0).IsEmpty, Is.True);
             Assert.That(character.MainInventory.GetSlot(0).Item, Is.SameAs(_tool));
             Submit(_document.rootVisualElement.Q<Button>("closeContainer"));
-            Assert.That(UrGUIManager.IsCharacterPaused(character), Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(character), Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             Assert.That(_manager.IsOpen(screen), Is.False);
         }
 
@@ -571,13 +572,13 @@ namespace UI.Shared.Editor
         {
             var runnerRoot = new GameObject("Dialogue runner");
             runnerRoot.transform.SetParent(_root.transform);
-            var runner = runnerRoot.AddComponent<VulcanusDialogueRunner>();
+            var runner = Game.InjectObject(runnerRoot.AddComponent<VulcanusDialogueRunner>());
             CreateDocument(AssetDatabase.GUIDToAssetPath("63af131c2305b2949b9a347cc475d06a"));
-            var presenter = _screenRoot.AddComponent<VulcanusDialogueUIDocumentPresenter>();
+            var presenter = Game.InjectObject(_screenRoot.AddComponent<VulcanusDialogueUIDocumentPresenter>());
             Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "layoutAsset", _document.visualTreeAsset);
             Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "styleSheet",
                 AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uss"));
-            var database = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueDatabase>());
+            var database = Game.Asset<VulcanusDialogueDatabase>();
             database.Configure(null, System.Array.Empty<VulcanusDialogueAsset>());
             Set(typeof(VulcanusDialogueRunner), runner, "database", database);
             Set(typeof(VulcanusDialogueRunner), runner, "presenter", presenter);
@@ -586,7 +587,7 @@ namespace UI.Shared.Editor
             presenter.PauseWhileOpen = ScreenPauseMode.None;
             var context = new VulcanusDialogueExecutionContext();
             presenter.OnDialogueStarted(context);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             presenter.OnDialogueFinished(context);
             var oldRoot = _document.rootVisualElement;
             typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(presenter, null);
@@ -597,9 +598,9 @@ namespace UI.Shared.Editor
             presenter.OnDialogueStarted(context);
             Assert.That(_document.rootVisualElement, Is.Not.SameAs(oldRoot));
             Assert.That(_document.rootVisualElement.Q("dialogue-overlay").style.display.value, Is.EqualTo(DisplayStyle.Flex));
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.True);
             presenter.OnDialogueFinished(context);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
         }
 
         private void CreateDocument(string layout)

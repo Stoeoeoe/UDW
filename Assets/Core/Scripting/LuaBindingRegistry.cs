@@ -16,6 +16,7 @@ namespace Core.Scripting
     /// </remarks>
     public sealed class LuaBindingRegistry
     {
+        public LuaRuntime Runtime { get; set; }
         private readonly List<Module> _modules = new();
         private readonly Dictionary<Type, FieldInfo[]> _dtoFields = new();
 

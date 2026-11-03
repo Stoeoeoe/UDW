@@ -16,8 +16,6 @@ namespace Core.Scripting
             _manager.PrepareFlash();
         }
 
-        internal static CameraLuaApi BindCurrentCamera() => new(CameraManager.Instance);
-
         [Preserve]
         public static void ValidateShake(double durationSeconds, double strength) => CameraManager.ValidateShake(durationSeconds, strength);
 

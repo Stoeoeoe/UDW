@@ -24,8 +24,9 @@ using Object = UnityEngine.Object;
 namespace Core.Common.Editor
 {
     [Category("ConfigurationValidation")]
-    public sealed class ConfigurationValidatorTests
+    public sealed class ConfigurationValidatorTests : Core.Common.Editor.GameTest
     {
+
         private readonly List<Object> _objects = new();
 
         [TearDown]
@@ -162,7 +163,7 @@ namespace Core.Common.Editor
         public void SkillRejectsMissingLevelsInvalidGrantsAndInvalidModRegistration()
         {
             var skill = Asset<SkillDefinition>(); Set(skill, "levels", Array.Empty<SkillLevelDefinition>());
-            AssertError(skill, "levels"); Assert.Throws<ArgumentException>(() => SkillDefinitions.Register(skill));
+            AssertError(skill, "levels"); Assert.Throws<ArgumentException>(() => Game.Get<SkillDefinitions>().Register(skill));
             var level = new SkillLevelDefinition(); Set(level, "value", float.NaN); Set(level, "grantedTags", new[] { "State..Broken" });
             Set(level, "attributeBonuses", new AttributeBonus[] { null }); Set(skill, "levels", new[] { level });
             AssertError(skill, "levels[0].value"); AssertError(skill, "levels[0].grantedTags[0]"); AssertError(skill, "levels[0].attributeBonuses[0]");
@@ -183,7 +184,7 @@ namespace Core.Common.Editor
             var level = new FavourLevel(); Set(level, "requiredPoints", 0); Set(level, "boons", new BoonDefinition[] { null });
             Set(deity, "levels", new[] { level });
             AssertError(deity, "_dailyDecay"); AssertError(deity, "levels[0].requiredPoints"); AssertError(deity, "levels[0].boons[0]");
-            Assert.Throws<ArgumentException>(() => DeityDefinitions.Register(deity));
+            Assert.Throws<ArgumentException>(() => Game.Get<DeityDefinitions>().Register(deity));
         }
 
         [Test]

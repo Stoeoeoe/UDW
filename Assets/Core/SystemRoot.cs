@@ -1,32 +1,43 @@
-using Core.Game;
-using UI.Shared;
+using Core.Location;
 using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core
 {
-    // Reject scene-authored duplicates before any of their services can awaken or register.
+    /// <summary>VContainer's project root: authored settings and Unity presentation components.</summary>
     [DefaultExecutionOrder(-2000)]
-    public class SystemRoot : MonoBehaviour
+    public class SystemRoot : LifetimeScope
     {
-        public static SystemRoot Instance { get; private set; }
+        [SerializeField] private PlayerSettings player = new();
+        [SerializeField] private Core.Items.ItemSettings items = new();
+        public PlayerSettings Player => player;
+        public Core.Items.ItemSettings Items => items;
 
-        private void Awake()
+        protected override void Configure(IContainerBuilder builder) => ConfigureServices(builder, gameObject);
+
+        public static void ConfigureServices(IContainerBuilder builder, GameObject root)
         {
-            if (Instance != null && Instance != this)
+            var configuration = root.GetComponent<SystemRoot>();
+            GameServices.Register(builder, configuration.player, configuration.items);
+            // Keep authored component instances and their Inspector configuration.
+            foreach (var manager in root.GetComponentsInChildren<GameManager>(true))
+                builder.RegisterInstance(manager, manager.GetType());
+            builder.RegisterBuildCallback(container =>
             {
-                gameObject.SetActive(false);
-                Destroy(gameObject); // Duplicate detected, kill this one
-                return;
-            }
-
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-
-            // Scene-specific test roots and the default prefab share the same state setup.
-            if (!TryGetComponent<GameStateManager>(out _))
-                gameObject.AddComponent<GameStateManager>();
-            if (!TryGetComponent<UrGUIManager>(out _))
-                gameObject.AddComponent<UrGUIManager>();
+                container.InjectGameObject(root);
+                // These session subscriptions must exist before the first overnight transition.
+                container.Resolve<Plants.PlantManager>();
+                container.Resolve<Core.Divinity.DivineFavour>();
+                container.Resolve<PlayerStateManager>();
+                var level = container.Resolve<LevelManager>();
+                foreach (var manager in root.GetComponentsInChildren<GameManager>(true))
+                    if (manager is ILocationLifecycle lifecycle)
+                    {
+                        manager.Activated += () => level.RegisterLifecycle(lifecycle);
+                        manager.Deactivated += () => level.UnregisterLifecycle(lifecycle);
+                    }
+            });
         }
     }
 }

@@ -1,3 +1,5 @@
+using Interaction.Dialog;
+using VContainer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,6 +13,10 @@ namespace Core.Dialogue.Vulcanus
     [RequireComponent(typeof(UIDocument))]
     public class VulcanusDialogueUIDocumentPresenter : ManagedUIScreen, IDialoguePresenter, IDialogueAdvanceHandler
     {
+        [Inject] private TypewriterSoundResolver _typewriterSoundResolver;
+
+        [Inject] private CharacterManager _characterManager;
+
         [Header("Layout")]
         [SerializeField] private UIDocument document;
         [SerializeField] private VisualTreeAsset layoutAsset;
@@ -68,7 +74,7 @@ namespace Core.Dialogue.Vulcanus
             FocusOverlay();
             _isTyping = true;
             _revealRequested = false;
-            var sound = Interaction.Dialog.TypewriterSoundResolver.ResolveTypewriterSound(node.Speaker, defaultTypewriterSound);
+            var sound = _typewriterSoundResolver.ResolveTypewriterSound(node.Speaker, defaultTypewriterSound);
             var revealed = 0;
             var elapsed = 0f;
             while (revealed < localizedText.Length && !_revealRequested && charactersPerSecond > 0f)
@@ -295,7 +301,7 @@ namespace Core.Dialogue.Vulcanus
 
         private void UpdatePlacement()
         {
-            var heroPosition = CharacterManager.Instance.MainCharacter.transform.position;
+            var heroPosition = _characterManager.MainCharacter.transform.position;
             var viewportPosition = UnityEngine.Camera.main.WorldToViewportPoint(heroPosition);
             _anchor.EnableInClassList("is-top", viewportPosition.y < 0.5f);
         }

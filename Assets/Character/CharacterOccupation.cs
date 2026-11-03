@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Core.Location;
 using DG.Tweening;
@@ -11,6 +12,8 @@ namespace Character
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class CharacterOccupation : MonoBehaviour, ILocationLifecycle
     {
+        [Inject] private LevelManager _levelManager;
+
         public enum OccupationPhase { Empty, Entering, Occupied, Exiting }
 
         public InteractionSlot CurrentSlot { get; private set; }
@@ -34,15 +37,14 @@ namespace Character
         private void OnEnable()
         {
             _character.OnConditionStateChanged += OnConditionChanged;
-            LevelManager.Instance.RegisterLifecycle(this);
+            _levelManager.RegisterLifecycle(this);
         }
 
         private void OnDisable()
         {
             _character.OnConditionStateChanged -= OnConditionChanged;
             ReleaseImmediately();
-            // The systems scene can already be tearing down.
-            if (LevelManager.Instance) LevelManager.Instance.UnregisterLifecycle(this);
+            _levelManager.UnregisterLifecycle(this);
         }
 
         private void OnConditionChanged(ConditionState condition)

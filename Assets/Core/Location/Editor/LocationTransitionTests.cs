@@ -20,9 +20,9 @@ namespace Core.Location.Editor
     }
 
     [Category("LocationTransitions")]
-    public sealed class LocationTransitionTests
+    public sealed class LocationTransitionTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private LevelManager _level;
         private MainCharacter _player, _other;
         private LocationData _location;
@@ -30,31 +30,27 @@ namespace Core.Location.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Location transitions");
-            _level = _fixture.RegisterSingleton<LevelManager>();
-            _fixture.RegisterSingleton<CharacterManager>();
-            _fixture.RegisterSingleton<MapManager>();
-            _fixture.RegisterSingleton<UrGUIManager>();
-            _other = _fixture.CreateCharacter("Other actor");
-            _player = _fixture.CreateCharacter("Player");
-            _location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+
+            _level = Game.Get<LevelManager>();
+
+            _other = Game.CreateCharacter("Other actor");
+            _player = Game.CreateCharacter("Player");
+            _location = Game.Asset<LocationData>();
             _location.id = "test:location";
-            typeof(LevelManager).GetProperty(nameof(LevelManager.CurrentLocationData)).SetValue(_level, _location);
+            Game.Location = _location;
             SetReady(true);
         }
-
-        [TearDown] public void TearDown() => _fixture.Dispose();
 
         [Test]
         public void ContactRequiresPlayerAndReadyLocationButExplicitCommandsAllowOtherActors()
         {
             // Physics contact only happens on active actors; parent lookups exclude inactive hierarchies.
-            _fixture.Root.SetActive(true);
+            Game.Root.SetActive(true);
             _player.transform.parent.gameObject.SetActive(true);
             _other.transform.parent.gameObject.SetActive(true);
             var root = new GameObject("Contact probe", typeof(BoxCollider2D));
-            root.transform.SetParent(_fixture.Root.transform);
-            var probe = root.AddComponent<ContactInteractionProbe>();
+            root.transform.SetParent(Game.Root.transform);
+            var probe = Game.InjectObject(root.AddComponent<ContactInteractionProbe>());
             probe.Contact(_other.GetComponent<Collider2D>());
             Assert.That(probe.Activations, Is.Zero);
             probe.TriggerInteraction(_other);
@@ -74,8 +70,8 @@ namespace Core.Location.Editor
         public void LocationLinksRejectExplicitNonPlayerCommands()
         {
             var root = new GameObject("Link", typeof(BoxCollider2D));
-            root.transform.SetParent(_fixture.Root.transform);
-            var link = root.AddComponent<LocationLink>();
+            root.transform.SetParent(Game.Root.transform);
+            var link = Game.InjectObject(root.AddComponent<LocationLink>());
             // A missing target would otherwise throw: non-player commands must never reach routing.
             Assert.That(typeof(LocationLink).GetMethod("Interact", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(link, new object[] { _other }), Is.False);
@@ -105,7 +101,7 @@ namespace Core.Location.Editor
         [Test]
         public void ExplicitMissingEntryDoesNotUseDefaultSpawn()
         {
-            var root = _fixture.Own(new GameObject("Default spawn"));
+            var root = Game.Own(new GameObject("Default spawn"));
             root.AddComponent<SpawnPoint>();
             var originalPosition = _player.transform.position;
             var method = typeof(LevelManager).GetMethod("PlaceCharacterAtSpawn", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -120,7 +116,7 @@ namespace Core.Location.Editor
         [TestCase("Default")]
         public void InitialFallbackAndExplicitMatchingSpawnStillPlacePlayer(string entryKey)
         {
-            var root = _fixture.Own(new GameObject("Default spawn"));
+            var root = Game.Own(new GameObject("Default spawn"));
             root.transform.position = new Vector3(123, 456, 0);
             root.AddComponent<SpawnPoint>();
             typeof(LevelManager).GetMethod("PlaceCharacterAtSpawn", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -129,6 +125,6 @@ namespace Core.Location.Editor
             Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
         }
 
-        private void SetReady(bool value) => typeof(LevelManager).GetProperty(nameof(LevelManager.SceneReady)).SetValue(_level, value);
+        private void SetReady(bool value) => Game.Ready = value;
     }
 }

@@ -12,8 +12,9 @@ using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    public sealed class CharacterImporterTests
+    public sealed class CharacterImporterTests : Core.Common.Editor.GameTest
     {
+
         private const string SchemaFolder = "Assets/Vulcan/0204project/schemas/";
         private static CharacterDefinition Parse(string json, bool npc) =>
             CharacterImporter.Parse(json, SchemaFolder + (npc ? "npc" : "character") + ".schema.json", "character-test.json");
@@ -102,11 +103,11 @@ namespace Core.Tile.Editor.Vulcanus
         [Test]
         public void ExistingCharacterAndPlayerReferencesComeFromVulcanusSources()
         {
-            var character = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/characters/gagaa.character.json");
+            var character = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/characters/my_test_char.character.json");
             var player = AssetDatabase.LoadAssetAtPath<CharacterDefinition>("Assets/Vulcan/0204project/characters/player.character.json");
-            Assert.That(CharacterCatalog.Require("base:gagaa"), Is.SameAs(character));
-            Assert.That(character.Icon, Is.EqualTo("GiAbstract041"));
-            Assert.That(CharacterCatalog.Require("base:player"), Is.SameAs(player));
+            Assert.That(Game.Get<CharacterCatalog>().Require(character.CharacterId), Is.SameAs(character));
+            Assert.That(character.Icon, Is.EqualTo("GiPerson"));
+            Assert.That(Game.Get<CharacterCatalog>().Require("base:player"), Is.SameAs(player));
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
             Assert.That(prefab.GetComponent<GameCharacter>().Definition, Is.SameAs(player));
             Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab")
@@ -119,7 +120,7 @@ namespace Core.Tile.Editor.Vulcanus
             var folder = "Assets/__UnmappedCharacter_" + Guid.NewGuid().ToString("N");
             AssetDatabase.CreateFolder("Assets", Path.GetFileName(folder));
             var path = folder + "/visitor.character.json";
-            var catalog = CatalogResources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
+            var catalog = Resources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
             try
             {
                 File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:unmapped-visitor\",\"name\":\"Unmapped Visitor\",\"icon\":\"VisitorIcon\"}");
@@ -143,7 +144,7 @@ namespace Core.Tile.Editor.Vulcanus
             string folder = "Assets/__CharacterImportTests_" + Guid.NewGuid().ToString("N");
             AssetDatabase.CreateFolder("Assets", folder.Substring("Assets/".Length));
             string path = folder + "/visitor.character.json";
-            var catalog = CatalogResources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
+            var catalog = Resources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
             try
             {
                 File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:visitor\",\"name\":\"Visitor\",\"icon\":\"🧑\",\"emotions\":[]}");

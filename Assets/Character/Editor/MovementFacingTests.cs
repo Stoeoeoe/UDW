@@ -12,9 +12,9 @@ using UnityEngine.InputSystem.LowLevel;
 namespace Character.Editor
 {
     /// <summary>Exercises real movement input when physics has stopped the body or still carries old velocity.</summary>
-    public sealed class MovementFacingTests
+    public sealed class MovementFacingTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private MovementAbility _movement;
         private Keyboard _keyboard;
@@ -27,21 +27,21 @@ namespace Character.Editor
             // Unity's input test runtime processes player actions in Edit Mode and restores the real devices afterward.
             _inputRuntime = Activator.CreateInstance(_inputRuntimeType);
             _inputRuntimeType.GetMethod("Setup").Invoke(_inputRuntime, null);
-            _fixture = new GameTestFixture("Movement facing");
-            _fixture.Root.SetActive(true);
-            var input = UIScreenPauseTests.CreateScreenServices(_fixture);
+
+            Game.Root.SetActive(true);
+            var input = UIScreenPauseTests.CreateScreenServices(Game);
             _keyboard = InputSystem.AddDevice<Keyboard>();
             input.Actions.devices = new InputDevice[] { _keyboard };
             var scheme = input.Actions.FindControlScheme("Keyboard&Mouse").Value;
             input.Actions.bindingMask = InputBinding.MaskByGroup(scheme.bindingGroup);
-            _character = _fixture.CreateCharacter();
+            _character = Game.CreateCharacter();
             _movement = _character.GetComponentsInChildren<MovementAbility>(true).Single();
         }
 
         [TearDown]
         public void TearDown()
         {
-            _fixture.Dispose();
+
             InputSystem.RemoveDevice(_keyboard);
             _inputRuntimeType.GetMethod("TearDown").Invoke(_inputRuntime, null);
         }
@@ -177,7 +177,7 @@ namespace Character.Editor
 
         private Controller2D CreateActiveController()
         {
-            var go = _fixture.Own(new GameObject("Movement ownership physics"));
+            var go = Game.Own(new GameObject("Movement ownership physics"));
             var controller = go.AddComponent<Controller2D>();
             GameTestFixture.Invoke(controller, "Awake");
             controller.GetComponent<Rigidbody2D>().gravityScale = 0;
@@ -212,7 +212,7 @@ namespace Character.Editor
         {
             InputSystem.QueueStateEvent(_keyboard, new KeyboardState(key));
             InputSystem.Update();
-            Assert.That(Input.InputManager.Instance.Move.sqrMagnitude, Is.GreaterThan(0.1f), "The fixture must deliver movement through the authored input map.");
+            Assert.That(Game.Get<Input.InputManager>().Move.sqrMagnitude, Is.GreaterThan(0.1f), "The fixture must deliver movement through the authored input map.");
             _movement.Tick();
         }
     }

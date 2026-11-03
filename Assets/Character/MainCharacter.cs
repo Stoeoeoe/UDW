@@ -1,3 +1,4 @@
+using VContainer;
 using Core;
 using Core.Events;
 using Core.TimeAndWeather;
@@ -12,6 +13,10 @@ namespace Character
     public class MainCharacter : GameCharacter, IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>,
         IEventListener<OvernightRestCompleted>, IEventListener<StaminaDepletedEvent>
     {
+        [Inject] private CharacterManager _characterManager;
+        [Inject] private PlayerStateManager _playerStateManager;
+        [Inject] private UrTimeManager _urTimeManager;
+
         [SerializeField] private CharacterAnimation passOutAnimation;
         public CharacterAnimation PassOutAnimation => passOutAnimation;
 
@@ -36,10 +41,10 @@ namespace Character
 
         protected override void Start()
         {
-            CharacterManager.Instance.RegisterMainCharacter(this);
+            _characterManager.RegisterMainCharacter(this);
             base.Start();
         }
-        protected override void InitializeCharacterState() => PlayerStateManager.Instance.InitializeCharacter(this);
+        protected override void InitializeCharacterState() => _playerStateManager.InitializeCharacter(this);
 
         public override void ValidateConfiguration()
         {
@@ -96,7 +101,7 @@ namespace Character
         public void OnEvent(StaminaDepletedEvent change)
         {
             if (change.Character == this && ConditionState != ConditionState.Dead)
-                UrTimeManager.Instance.EndDay(DayEndReason.PassedOut);
+                _urTimeManager.EndDay(DayEndReason.PassedOut);
         }
 
         /// <summary>Restores health and replaces last night's stamina surplus with this night's recovery.</summary>

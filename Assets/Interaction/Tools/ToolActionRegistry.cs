@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using Character;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Interaction.Tools
 {
@@ -13,6 +15,7 @@ namespace Interaction.Tools
     /// </summary>
     public class ToolActionRegistry : MonoBehaviour
     {
+        [Inject] private IObjectResolver _resolver;
         [AssetList] 
         [SerializeField] private List<ToolAction> toolActionPrefabs;
         
@@ -26,7 +29,7 @@ namespace Interaction.Tools
             ValidateConfiguration();
             foreach (var prefab in toolActionPrefabs)
             {
-                var toolAction = Instantiate(prefab, transform, false);
+                var toolAction = _resolver.Instantiate(prefab, transform, false);
                 var id = toolAction.ToolData.ItemId;
                 
                 toolAction.Initialize(owner);

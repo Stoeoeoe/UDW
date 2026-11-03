@@ -13,17 +13,18 @@ namespace Core.Scripting
         private const int InstructionsPerSlice = 1000;
         private const int MaxSlices = 128;
 
-        private readonly LuaBindingRegistry _bindings = new(DefaultModules.Select(module => module.Create()).ToArray());
+        private readonly LuaBindingRegistry _bindings;
         private readonly Dictionary<string, DynValue> _conditions = new(StringComparer.Ordinal);
         private Script _conditionScript;
         private readonly CutsceneVariables _variables;
-        public VulcanusLuaEngine(CutsceneVariables variables = null) => _variables = variables;
+        public VulcanusLuaEngine(LuaBindingRegistry bindings, CutsceneVariables variables = null)
+        { _bindings = bindings; _variables = variables; }
 
-        private static readonly (Type Type, Func<object> Create)[] DefaultModules = DiscoverModules();
+        internal static readonly (Type Type, Func<object> Create)[] DefaultModules = DiscoverModules();
 
         private static (Type Type, Func<object> Create)[] DiscoverModules()
         {
-            var sceneModules = CutsceneBindings.ActionModules(null, null).Select(module => module.Type);
+            var sceneModules = CutsceneBindings.ActionModules(null, null, null).Select(module => module.Type);
             // Only shipped APIs live in this assembly; editor fixtures are in a separate assembly.
             return typeof(LuaModuleAttribute).Assembly.GetTypes()
                 .Where(type => type.IsDefined(typeof(LuaModuleAttribute), false))
@@ -33,8 +34,9 @@ namespace Core.Scripting
         }
 
         internal static (Type Type, Func<object> Create)[] Modules(VulcanusDialogueRunner dialogueRunner,
-            Action<MapActorLuaApi> bindActors) => DefaultModules
-            .Concat(CutsceneBindings.ActionModules(dialogueRunner, bindActors)).ToArray();
+            Action<MapActorLuaApi> bindActors, LuaRuntime runtime) => DefaultModules
+            .Select(module => (module.Type, (Func<object>)(() => runtime.Inject(module.Create()))))
+            .Concat(CutsceneBindings.ActionModules(dialogueRunner, bindActors, runtime)).ToArray();
 
         // Infer the exported type from the factory rather than declaring it separately.
         internal static (Type Type, Func<object> Create) Module<T>(Func<T> create) where T : class =>
@@ -46,7 +48,7 @@ namespace Core.Scripting
         /// <summary>Inspects shipped API signatures and authored values without constructing scene APIs.</summary>
         public static LuaBindingRegistry InspectBindings() => LuaBindingRegistry.InspectTypes(
             // Only inspect factory types. Export has no live state or scene dependencies.
-            Modules(null, null).Select(module => module.Type).ToArray());
+            Modules(null, null, null).Select(module => module.Type).ToArray());
 
         public static LuaExecutionSession StartSession(LuaBindingRegistry actions, string chunk, string source,
             string context = "cutscene", string phase = "sequence", CutsceneVariables variables = null) =>

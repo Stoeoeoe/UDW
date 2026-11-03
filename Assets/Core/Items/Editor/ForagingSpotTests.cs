@@ -14,9 +14,9 @@ using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 
 namespace Core.Items.Editor
 {
-    public sealed class ForagingSpotTests
+    public sealed class ForagingSpotTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private WorldObjectSpawner _spawner;
         private LocationData _location;
         private ForagingSpot _spot;
@@ -25,19 +25,15 @@ namespace Core.Items.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Forage spot state");
-            _fixture.AddSingleton<GameStateManager>();
-            GameState.Time.initialized = true;
-            GameState.Time.daysSinceStart = 1;
-            GameState.Time.dayOfSeason = 1;
-            GameState.Time.hour = 6;
-            var level = _fixture.RegisterSingleton<LevelManager>();
-            _location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+
+            Game.State.Time.initialized = true;
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Time.dayOfSeason = 1;
+            Game.State.Time.hour = 6;
+            _location = Game.Asset<LocationData>();
             _location.id = "test:forage";
-            typeof(LevelManager).GetProperty(nameof(LevelManager.CurrentLocationData)).SetValue(level, _location);
-            var catalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>("Assets/Content/SpawnableCatalog.asset");
-            _spawner = _fixture.AddSingleton<WorldObjectSpawner>(spawner => typeof(WorldObjectSpawner)
-                .GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(spawner, catalog));
+            Game.Location = _location;
+            _spawner = Game.Start<WorldObjectSpawner>();
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/ForagingSpot.prefab").GetComponent<ForagingSpot>();
             _spot = (ForagingSpot)_spawner.Spawn(prefab, new Vector3(5, 5, 0));
@@ -47,8 +43,6 @@ namespace Core.Items.Editor
             Set("forage", list);
             Set("dailySpawnChance", 1f);
         }
-
-        [TearDown] public void TearDown() => _fixture.Dispose();
 
         [Test]
         public void CollectionCannotRerollTodayButRefillsOnTheNextDay()
@@ -60,7 +54,7 @@ namespace Core.Items.Editor
             _spawner.Despawn(first);
             _spot.Refresh(1);
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(1));
-            GameState.Time.daysSinceStart = 2;
+            Game.State.Time.daysSinceStart = 2;
             _spot.Refresh(2);
             Assert.That(state.forageId, Is.Not.EqualTo(first));
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(2));
@@ -72,7 +66,7 @@ namespace Core.Items.Editor
             _spot.Refresh(1);
             var state = (ForagingSpotState)_spot.State;
             var forageId = state.forageId;
-            GameState.Time.daysSinceStart = 2;
+            Game.State.Time.daysSinceStart = 2;
             _spot.Refresh(2);
             Assert.That(state.forageId, Is.EqualTo(forageId));
             _spawner.OnLocationLeave(_location);
@@ -91,7 +85,7 @@ namespace Core.Items.Editor
             Set("dailySpawnChance", 1f);
             _spot.Refresh(1);
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(1));
-            GameState.Time.daysSinceStart = 5;
+            Game.State.Time.daysSinceStart = 5;
             _spot.Refresh(5); // Catch up only the current day, rather than accumulating missed rolls.
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(2));
             Assert.That(((ForagingSpotState)_spot.State).lastProcessedDay, Is.EqualTo(5));
@@ -121,7 +115,7 @@ namespace Core.Items.Editor
         [Test]
         public void UnregisteredItemFailsBeforeGameplay()
         {
-            var item = _fixture.Own(ScriptableObject.CreateInstance<ForageableItem>());
+            var item = Game.Asset<ForageableItem>();
             var data = new SerializedObject(item);
             data.FindProperty("_itemId").stringValue = "test:unregistered-forage";
             data.ApplyModifiedPropertiesWithoutUndo();
@@ -131,7 +125,7 @@ namespace Core.Items.Editor
         [Test]
         public void SpotStateRoundTripsThroughTheLiveSaveRoot()
         {
-            GameState.Time.daysSinceStart = 3;
+            Game.State.Time.daysSinceStart = 3;
             _spot.Refresh(3);
             var original = (ForagingSpotState)_spot.State;
             var save = new GameSaveData();
@@ -141,7 +135,7 @@ namespace Core.Items.Editor
             save.time.dayOfSeason = 3;
             save.time.hour = 6;
             save.world.Set(_location.id, "spot", original);
-            save.Validate();
+            save.Validate(Game.Get<Character.CharacterCatalog>(), Game.Get<Core.Inventory.ItemCatalog>());
             var bytes = SerializationUtility.SerializeValue(save, DataFormat.Binary);
             var restored = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.Binary);
             Assert.That(restored.world.TryGet(_location.id, "spot", out ForagingSpotState state), Is.True);
@@ -158,17 +152,17 @@ namespace Core.Items.Editor
             var oldId = spotState.forageId;
             var pickup = _spawner.SpawnedObjects.Single(s => s.PersistentId == oldId);
             var deadline = ((ForagePickupState)pickup.State).expiresOnDay;
-            GameState.Time.daysSinceStart = deadline;
+            Game.State.Time.daysSinceStart = deadline;
             Set("dailySpawnChance", 0f);
             _spot.Refresh(deadline);
             Assert.That(spotState.forageId, Is.Null);
-            Assert.That(GameState.World.TryGet(_location.id, oldId, out SpawnedObjectState _), Is.False);
+            Assert.That(Game.State.World.TryGet(_location.id, oldId, out SpawnedObjectState _), Is.False);
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(1));
             Set("dailySpawnChance", 1f);
             _spot.Refresh(deadline);
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(1)); // An empty roll is still that day's only roll.
-            GameState.Time.daysSinceStart++;
-            _spot.Refresh(GameState.Time.daysSinceStart);
+            Game.State.Time.daysSinceStart++;
+            _spot.Refresh(Game.State.Time.daysSinceStart);
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(2));
         }
 
@@ -179,12 +173,12 @@ namespace Core.Items.Editor
             var spotState = (ForagingSpotState)_spot.State;
             var first = spotState.forageId;
             var old = _spawner.SpawnedObjects.Single(s => s.PersistentId == first);
-            GameState.Time.daysSinceStart = ((ForagePickupState)old.State).expiresOnDay;
-            _spot.Refresh(GameState.Time.daysSinceStart);
+            Game.State.Time.daysSinceStart = ((ForagePickupState)old.State).expiresOnDay;
+            _spot.Refresh(Game.State.Time.daysSinceStart);
             Assert.That(spotState.forageId, Is.Not.EqualTo(first));
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(2));
             var fresh = _spawner.SpawnedObjects.Single(s => s.PersistentId == spotState.forageId);
-            Assert.That(((ForagePickupState)fresh.State).expiresOnDay, Is.GreaterThan(GameState.Time.daysSinceStart));
+            Assert.That(((ForagePickupState)fresh.State).expiresOnDay, Is.GreaterThan(Game.State.Time.daysSinceStart));
         }
 
         [Test]
@@ -194,12 +188,12 @@ namespace Core.Items.Editor
             var id = pickup.PersistentId;
             var deadline = ((ForagePickupState)pickup.State).expiresOnDay;
             _spawner.OnLocationLeave(_location);
-            GameState.Time.daysSinceStart = deadline;
+            Game.State.Time.daysSinceStart = deadline;
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
             pickup = (ForagePickup)_spawner.SpawnedObjects.Single(s => s.PersistentId == id);
             Assert.That(((ForagePickupState)pickup.State).expiresOnDay, Is.EqualTo(deadline));
             GameTestFixture.Invoke(pickup, "OnEnable");
-            Assert.That(GameState.World.TryGet(_location.id, id, out SpawnedObjectState _), Is.False);
+            Assert.That(Game.State.World.TryGet(_location.id, id, out SpawnedObjectState _), Is.False);
         }
 
         [Test]
@@ -217,11 +211,9 @@ namespace Core.Items.Editor
         [Test]
         public void PerItemLifetimeMustBePositive()
         {
-            var item = _fixture.Own(ScriptableObject.CreateInstance<ForageableItem>());
-            var data = new SerializedObject(item);
-            data.FindProperty("_itemId").stringValue = "test:forage";
-            data.FindProperty("groundLifetimeDays").intValue = 0;
-            data.ApplyModifiedPropertiesWithoutUndo();
+            var item = Game.Asset<ForageableItem>();
+            typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, "test:forage");
+            typeof(ForageableItem).GetField("groundLifetimeDays", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, 0);
             Assert.That(item.ValidateConfiguration().Any(e => e.Setting == "groundLifetimeDays"), Is.True);
         }
 

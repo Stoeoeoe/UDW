@@ -1,3 +1,5 @@
+using Core.Scripting;
+using VContainer;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -24,7 +26,7 @@ namespace Core.Scripting.Editor
                 EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
-            while (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
                 yield return null;
@@ -51,10 +53,10 @@ namespace Core.Scripting.Editor
             var actor = MainCharacter.CurrentMainCharacter;
             try
             {
-                var characters = MapActorLuaApi.BindCurrentMap();
+                var characters = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>().CreateActors();
                 Assert.That(() => characters.ValidateEmote("player", "fixture:unknown"), Throws.InvalidOperationException);
                 LogAssert.Expect(LogType.Warning, new Regex("Emote 'fixture:emote'.*has no animation"));
-                using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters),
+                using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() },
                     "Characters.Emote('player', 'fixture:emote')", "fixture:emote");
                 session.Tick(0);
                 var callout = actor.Graphics.Find("Emote callout").gameObject;
@@ -83,7 +85,7 @@ namespace Core.Scripting.Editor
                 yield return null;
                 Assert.That(cancelledCallout == null, Is.True);
 
-                using var overridden = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters),
+                using var overridden = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() },
                     "Characters.Emote('player', 'fixture:emote', 0.25, 0)", "fixture:emote-override");
                 overridden.Tick(0);
                 overridden.Tick(0.125f);

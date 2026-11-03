@@ -17,29 +17,19 @@ using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class PlayAnimationActionTests
+    public sealed class PlayAnimationActionTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _actor;
         private CharacterAnimation _animation;
 
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Scripted animation");
-            _fixture.AddSingleton<GameStateManager>();
-            _fixture.AddSingleton<CharacterManager>();
-            _fixture.AddSingleton<Core.PlayerStateManager>();
-            _fixture.RegisterSingleton<LevelManager>();
-            GameState.Time.daysSinceStart = 1;
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            _actor = _fixture.CreateCharacter();
-            _actor.EnsureRuntimeInitialized();
-            _actor.Graphics.gameObject.SetActive(true);
-            GameTestFixture.Invoke(_actor.Animator, "Awake");
-            GameTestFixture.Invoke(_actor.GetComponentInChildren<NamedAnimancerComponent>(true), "Awake");
-            _actor.transform.parent.gameObject.SetActive(true);
-            _fixture.Root.SetActive(true);
+
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            _actor = Game.CreateAnimatedCharacter();
             _animation = CreateAnimation("test:gesture");
         }
 
@@ -47,14 +37,14 @@ namespace Core.Scripting.Editor
         public void TearDown()
         {
             if (_actor) _actor.Animator.EndInteractionAnimation();
-            _fixture.Dispose();
+
         }
 
         [Test]
         public void SessionWaitsForNativeCompletionAndRetainsTheCutscenesControlClaim()
         {
             var api = new PlaybackApi(_actor, _animation);
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api),
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api),
                 "Test.Play(); Test.Finish()", "animation-fixture");
             // CutsceneRunner holds this claim across all actions in the sequence.
             _actor.SetControlBlocked(session, true);
@@ -117,7 +107,7 @@ namespace Core.Scripting.Editor
         public void CancellingAnUnfinishedHeldAnimationReleasesItsPose()
         {
             var api = new PlaybackApi(_actor, _animation, true);
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Test.Play(); Test.Finish()", "cancel-held-animation");
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api), "Test.Play(); Test.Finish()", "cancel-held-animation");
             session.Tick(0);
             session.Cancel();
             Assert.That(CurrentState(), Is.Null);
@@ -146,7 +136,7 @@ namespace Core.Scripting.Editor
         public void CancellingAnAwaitStopsPlaybackWithoutResumingLua()
         {
             var api = new PlaybackApi(_actor, _animation);
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Test.Play(); Test.Finish()", "cancel-animation");
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api), "Test.Play(); Test.Finish()", "cancel-animation");
             session.Tick(0);
             var state = CurrentState();
             session.Cancel();
@@ -161,7 +151,7 @@ namespace Core.Scripting.Editor
         public void ReplacementFailsTheAwaitWithoutStoppingTheReplacement()
         {
             var api = new PlaybackApi(_actor, _animation);
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Test.Play(); Test.Finish()", "interrupted-animation");
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api), "Test.Play(); Test.Finish()", "interrupted-animation");
             session.Tick(0);
             // Reusing the exact clip also reuses its Animancer state; handle identity must still distinguish owners.
             var replacement = _actor.Animator.PlayOneShot(_animation);
@@ -197,7 +187,7 @@ namespace Core.Scripting.Editor
         public void DisablingTheAnimatorInterruptsTheAwait()
         {
             var api = new PlaybackApi(_actor, _animation);
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Test.Play(); Test.Finish()", "disabled-animation");
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api), "Test.Play(); Test.Finish()", "disabled-animation");
             session.Tick(0);
             _actor.Animator.enabled = false;
             GameTestFixture.Invoke(_actor.Animator, "OnDisable");
@@ -225,13 +215,13 @@ namespace Core.Scripting.Editor
         [Test]
         public void ChoicesIncludeOnlyEnabledFiniteSinglesInStableIdOrder()
         {
-            var catalog = _fixture.Own(ScriptableObject.CreateInstance<CharacterAnimationCatalog>());
+            var catalog = Game.Asset<CharacterAnimationCatalog>();
             var other = CreateAnimation("test:another");
             var loop = CreateAnimation("test:loop");
             var settings = AnimationUtility.GetAnimationClipSettings(loop.Clip);
             settings.loopTime = true;
             AnimationUtility.SetAnimationClipSettings(loop.Clip, settings);
-            var set = _fixture.Own(ScriptableObject.CreateInstance<CharacterAnimationSet>());
+            var set = Game.Asset<CharacterAnimationSet>();
             Set(set, "animationId", "test:set");
             Set(set, "baseAnimation", _animation);
             catalog.Synchronize(new CharacterAnimationDefinition[] { _animation, loop, set, other, _actor.PassOutAnimation });
@@ -248,15 +238,15 @@ namespace Core.Scripting.Editor
         [Test]
         public void CatalogResolvesTheAuthoredIdAndRejectsMissingIds()
         {
-            Assert.That(CharacterAnimationCatalog.RequireOneShot("base:pass-out"), Is.SameAs(_actor.PassOutAnimation));
-            Assert.That(() => CharacterAnimationCatalog.RequireOneShot("test:missing"), Throws.InvalidOperationException.With.Message.Contains("not registered and enabled"));
+            Assert.That(Game.Get<CharacterAnimationCatalog>().RequireOneShot("base:pass-out"), Is.SameAs(_actor.PassOutAnimation));
+            Assert.That(() => Game.Get<CharacterAnimationCatalog>().RequireOneShot("test:missing"), Throws.InvalidOperationException.With.Message.Contains("not registered and enabled"));
         }
 
         private CharacterAnimation CreateAnimation(string id)
         {
-            var clip = _fixture.Own(new AnimationClip());
+            var clip = Game.Own(new AnimationClip());
             AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.z"), AnimationCurve.Linear(0, 1, 1, 2));
-            var animation = _fixture.Own(ScriptableObject.CreateInstance<CharacterAnimation>());
+            var animation = Game.Asset<CharacterAnimation>();
             animation.name = id;
             Set(animation, "animationId", id);
             Set(animation, "clip", clip);
@@ -380,9 +370,9 @@ namespace Core.Scripting.Editor
         [TestCase(true)]
         public void EmotePlaysItsOptionalSoundOnceIncludingWhenTheAnimationIsMissing(bool missingAnimation)
         {
-            var manager = _fixture.AddSingleton<AudioTestSoundManager>();
-            var sound = _fixture.Own(ScriptableObject.CreateInstance<SoundDefinition>());
-            var clip = _fixture.Own(AudioClip.Create("Emote sound", 4410, 1, 44100, false));
+            var manager = Game.Start<AudioTestSoundManager>();
+            var sound = Game.Asset<SoundDefinition>();
+            var clip = Game.Own(AudioClip.Create("Emote sound", 4410, 1, 44100, false));
             Set(sound, "soundId", "test:emote-sound");
             Set(sound, "clip", clip);
             var emote = CreateEmote();
@@ -411,7 +401,7 @@ namespace Core.Scripting.Editor
         public void InvalidOptionalSoundFailsAtTheConfigurationBoundary()
         {
             var emote = CreateEmote();
-            var sound = _fixture.Own(ScriptableObject.CreateInstance<SoundDefinition>());
+            var sound = Game.Asset<SoundDefinition>();
             Set(sound, "soundId", "test:emote-sound");
             Set(emote, "sound", sound);
             Assert.That(emote.ValidateConfiguration().Any(error => error.Setting == "sound.clip"), Is.True);
@@ -457,7 +447,7 @@ namespace Core.Scripting.Editor
 
         private EmoteDefinition CreateEmote()
         {
-            var emote = _fixture.Own(ScriptableObject.CreateInstance<EmoteDefinition>());
+            var emote = Game.Asset<EmoteDefinition>();
             Set(emote, "emoteId", "test:reaction");
             Set(emote, "duration", 1f);
             Set(emote, "animation", _animation);

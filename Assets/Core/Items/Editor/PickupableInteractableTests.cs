@@ -12,9 +12,9 @@ using UnityEngine;
 
 namespace Core.Items.Editor
 {
-    public sealed class PickupableInteractableTests
+    public sealed class PickupableInteractableTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private PickupableInteractable _pickup;
         private ItemDefinition _item;
@@ -22,38 +22,30 @@ namespace Core.Items.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Foraging boundaries");
-            _fixture.AddSingleton<GameStateManager>();
-            GameState.Time.initialized = true;
-            GameState.Time.daysSinceStart = 1;
-            GameState.Time.dayOfSeason = 1;
-            GameState.Time.hour = 6;
-            _fixture.AddSingleton<ItemManager>(manager =>
-            {
-                typeof(ItemManager).GetField("defaultPickupSound", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(manager, AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Core/Items/PickUpItem.wav"));
-            });
-            var level = _fixture.RegisterSingleton<LevelManager>();
-            var location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+
+            Game.State.Time.initialized = true;
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Time.dayOfSeason = 1;
+            Game.State.Time.hour = 6;
+            var level = Game.Get<LevelManager>();
+            var location = Game.Asset<LocationData>();
             location.id = "test:pickup";
-            typeof(LevelManager).GetProperty(nameof(LevelManager.CurrentLocationData)).SetValue(level, location);
-            _character = _fixture.CreateCharacter();
+            Game.Location = location;
+            _character = Game.CreateCharacter();
             _item = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Resources/Items/HarvestItem/RavenFlowerProduce.asset");
             var catalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>("Assets/Content/SpawnableCatalog.asset");
-            var spawner = _fixture.AddSingleton<WorldObjectSpawner>(owner => typeof(WorldObjectSpawner)
+            var spawner = Game.Start<WorldObjectSpawner>(owner => typeof(WorldObjectSpawner)
                 .GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(owner, catalog));
             spawner.gameObject.SetActive(true);
             spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/ForageRavenFlower.prefab");
             _pickup = spawner.Spawn(prefab.GetComponent<SpawnedObject>(), Vector3.zero).GetComponent<PickupableInteractable>();
             GameTestFixture.Invoke(_pickup, "Awake");
-            _fixture.Root.SetActive(true);
+            Game.Root.SetActive(true);
             // The fixture deliberately keeps its character inactive, outside the location lifecycle.
             _pickup.transform.position = _character.ToolInteractionAnchor.position + Vector3.down;
             _character.Orientation.ForceDirection(Vector2.down);
         }
-
-        [TearDown] public void TearDown() => _fixture.Dispose();
 
         [Test]
         public void AuthoredForageAndPresentationPassPreGameplayValidation()
@@ -91,7 +83,7 @@ namespace Core.Items.Editor
         public void ExpiredForageCannotBePickedUp()
         {
             var state = (ForagePickupState)_pickup.GetComponent<ForagePickup>().State;
-            GameState.Time.daysSinceStart = state.expiresOnDay;
+            Game.State.Time.daysSinceStart = state.expiresOnDay;
             Assert.That(_pickup.CanPickUp(_character), Is.False);
         }
 

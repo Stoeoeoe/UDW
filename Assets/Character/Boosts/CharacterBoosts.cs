@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,8 @@ namespace Character
     [DisallowMultipleComponent]
     public sealed class CharacterBoosts : MonoBehaviour, IEventListener<GameTimeChangedEvent>
     {
+        [Inject] private GameState _gameState;
+
         private CharacterAttributes _attributes;
         private CharacterBoostState _state;
         private readonly Dictionary<string, ActiveAttributeBoost> _applied = new(StringComparer.Ordinal);
@@ -23,7 +26,7 @@ namespace Character
         {
             Unbind();
             _state = state;
-            var now = GameState.Time.TotalMinutes;
+            var now = _gameState.Time.TotalMinutes;
             foreach (var entry in state.Active.ToArray())
             {
                 if (entry.Value.ExpiresAtMinute <= now) { state.Active.Remove(entry.Key); continue; }
@@ -39,7 +42,7 @@ namespace Character
         /// <summary>Captures validated authored bonuses. An active source refreshes its duration without stacking or replacing its values.</summary>
         public void Apply(string source, int durationMinutes, IReadOnlyList<AttributeBonus> bonuses)
         {
-            var now = GameState.Time.TotalMinutes;
+            var now = _gameState.Time.TotalMinutes;
             Expire(now);
             if (_state.Active.TryGetValue(source, out var active))
             {

@@ -1,3 +1,7 @@
+using Core.Context;
+using Core.Music;
+using Core.Scripting;
+using VContainer;
 using System;
 using System.Collections;
 using System.Reflection;
@@ -32,6 +36,8 @@ namespace Core.Scripting.Editor
         private UIDocument _document;
         private VulcanusDialogueDatabase _database;
         private VulcanusDialogueAsset _talk, _end, _error;
+        private CutsceneDefinition _npcMovement;
+        private CutsceneDefinition NpcMovement => _npcMovement ??= CreateNpcMovementDefinition();
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -40,7 +46,7 @@ namespace Core.Scripting.Editor
                 EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
-            while (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The map must finish initialization.");
                 yield return null;
@@ -99,34 +105,34 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator CutsceneOwnsInputClockAndSavesUntilTerminalCommit()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             Assert.That(service, Is.Not.Null, "The authored Systems prefab must include the cutscene runner.");
             var definition = CreateCutscene("fixture:terminal", true, "fixture_intro_done", "fixture:end");
             try
             {
                 Assert.That(service.TryStart(definition, out var run), Is.True);
                 Assert.That(service.TryStart(definition, out _), Is.False, "A busy start cannot replace or queue the active run.");
-                Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
-                Assert.That(Core.Context.PlayerInteractionContext.Instance.CurrentSnapshot.WorldInteractionBlocked, Is.True);
-                Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.False);
-                Assert.That(Input.InputManager.Instance.Actions.FindActionMap("Global").enabled, Is.False);
-                Assert.That(Input.InputManager.Instance.Actions.FindActionMap("UI").enabled, Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().IsGameClockPaused, Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<PlayerInteractionContext>().CurrentSnapshot.WorldInteractionBlocked, Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().PlayerControls.enabled, Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().Actions.FindActionMap("Global").enabled, Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().Actions.FindActionMap("UI").enabled, Is.True);
                 Assert.That(Time.timeScale, Is.EqualTo(1f), "Calendar pause must not freeze physics.");
-                Assert.That(() => GameState.Save("cutscene_staging_rejected"), Throws.InvalidOperationException);
+                Assert.That(() => VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameStateManager>().Save("cutscene_staging_rejected"), Throws.InvalidOperationException);
                 var deadline = Time.realtimeSinceStartup + 5;
                 while (service.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(run.IsRunning, Is.False);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:terminal"), Is.True);
-                Assert.That(GameState.Story.Has("fixture_intro_done"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains("fixture:terminal"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_intro_done"), Is.True);
                 Assert.That(service.TryStart(definition, out _), Is.False, "Completion is tracked by the cutscene ID.");
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
-                Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().PlayerControls.enabled, Is.True);
                 AssertClosed();
                 var slot = "cutscene_test_" + Guid.NewGuid().ToString("N");
                 try
                 {
-                    GameState.Save(slot);
-                    Assert.That(GameSaveService.TryLoad(slot, out var saved), Is.True);
+                    VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameStateManager>().Save(slot);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameSaveService>().TryLoad(slot, out var saved), Is.True);
                     Assert.That(saved.story.CompletedCutscenes.Contains("fixture:terminal"), Is.True);
                 }
                 finally { System.IO.File.Delete(GameSaveService.GetSavePath(slot)); }
@@ -137,7 +143,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator CutsceneCancellationAndSkipSettleBeforeCallbacksAndIgnoreOldHandles()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             Assert.That(service, Is.Not.Null);
             var cancelled = CreateCutscene("fixture:cancel", true, "fixture_cancelled", "fixture:talk");
             var skipped = CreateCutscene("fixture:skip", true, "fixture_skipped", "fixture:talk");
@@ -148,8 +154,8 @@ namespace Core.Scripting.Editor
                 Assert.That(_runner.IsDialogueActive, Is.True);
                 old.Cancel(); old.Dispose();
                 Assert.That(old.IsRunning, Is.False);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:cancel"), Is.False);
-                Assert.That(GameState.Story.Has("fixture_cancelled"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains("fixture:cancel"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_cancelled"), Is.False);
                 AssertClosed();
                 Assert.That(service.TryStart(skipped, out var run), Is.True);
                 old.Cancel();
@@ -160,9 +166,9 @@ namespace Core.Scripting.Editor
                 {
                     finished++;
                     Assert.That(service.IsRunning, Is.False);
-                    Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:skip"), Is.True);
-                    Assert.That(GameState.Story.Has("fixture_skipped"), Is.True);
-                    Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains("fixture:skip"), Is.True);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_skipped"), Is.True);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().IsGameClockPaused, Is.False);
                     terminal.Cancel();
                 };
                 service.Finished += observer;
@@ -182,7 +188,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator PlayerSkipRequiresConfirmationAndCancelKeepsTheCutsceneRunning()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
             var definition = CreateCutscene("fixture:confirmed-skip", true, "fixture_confirmed_skip", "fixture:talk");
             var document = prompt.GetComponent<UIDocument>();
@@ -227,7 +233,7 @@ namespace Core.Scripting.Editor
                 Assert.That(run.Skipped, Is.True);
                 Assert.That(run.IsRunning, Is.False);
                 Assert.That(prompt.IsOpen, Is.False);
-                Assert.That(GameState.Story.Has("fixture_confirmed_skip"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_confirmed_skip"), Is.True);
             }
             finally { service.Cancel(); Object.Destroy(definition); }
         }
@@ -235,7 +241,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator SkipPromptRespectsUnskippableRunsAndClosesOnCancellation()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
             var locked = CreateCutscene("fixture:locked-skip", false, "fixture_locked_skip", "fixture:talk");
             var skippable = CreateCutscene("fixture:cancel-prompt", true, "fixture_cancel_prompt", "fixture:talk");
@@ -252,7 +258,7 @@ namespace Core.Scripting.Editor
                 Assert.That(prompt.IsOpen, Is.False);
                 Assert.That(second.Skipped, Is.False);
                 Assert.That(Time.timeScale, Is.EqualTo(1f));
-                Assert.That(GameState.Story.Has("fixture_cancel_prompt"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_cancel_prompt"), Is.False);
             }
             finally { service.Cancel(); Object.Destroy(locked); Object.Destroy(skippable); }
         }
@@ -260,12 +266,12 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator SkipPromptFreezesTimedPlaybackUntilDismissed()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
             var sequence = JArray.Parse("[{ 'id':'wait', 'action':'cutscene.wait', 'arguments':{ 'seconds':0.2 } }, { 'id':'talk', 'action':'dialogue.play', 'arguments':{ 'dialogue':'fixture:end' } }]");
             var lua = CutsceneSequenceCompiler.Compile(sequence, "fixture:paused-skip", out var steps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure("fixture:paused-skip", MapManager.Instance.CurrentMap.MapId, lua, steps, true,
+            definition.Configure("fixture:paused-skip", VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.MapId, lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "GameState.Story.Set('fixture_paused_skip', true)", "", Array.Empty<CutsceneStep>()),
                 "", Array.Empty<CutsceneStep>(), new CutsceneTransition(enabled: false));
             try
@@ -278,7 +284,7 @@ namespace Core.Scripting.Editor
                 Assert.That(Time.timeScale, Is.Zero);
                 Assert.That(run.IsRunning, Is.True);
                 Assert.That(service.CurrentStepId, Is.EqualTo(step));
-                Assert.That(GameState.Story.Has("fixture_paused_skip"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_paused_skip"), Is.False);
                 using (var cancel = NavigationCancelEvent.GetPooled())
                     prompt.GetComponent<UIDocument>().rootVisualElement.Q("skipConfirmation").SendEvent(cancel);
                 Assert.That(Time.timeScale, Is.EqualTo(1f));
@@ -286,7 +292,7 @@ namespace Core.Scripting.Editor
                 while (run.IsRunning && Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(run.IsRunning, Is.False);
                 Assert.That(run.Skipped, Is.False);
-                Assert.That(GameState.Story.Has("fixture_paused_skip"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_paused_skip"), Is.True);
             }
             finally { service.Cancel(); Object.Destroy(definition); }
         }
@@ -294,12 +300,12 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator ConfirmedSkipKeepsTimeFrozenUntilExitReveal()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var prompt = Object.FindFirstObjectByType<CutsceneSkipConfirmation>();
             var sequence = JArray.Parse("[{ 'id':'wait', 'action':'cutscene.wait', 'arguments':{ 'seconds':60 } }]");
             var lua = CutsceneSequenceCompiler.Compile(sequence, "fixture:skip-exit-pause", out var steps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure("fixture:skip-exit-pause", MapManager.Instance.CurrentMap.MapId, lua, steps, true,
+            definition.Configure("fixture:skip-exit-pause", VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.MapId, lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "GameState.Story.Set('fixture_skip_exit_pause', true)", "", Array.Empty<CutsceneStep>()),
                 "", Array.Empty<CutsceneStep>(), new CutsceneTransition());
             try
@@ -313,14 +319,14 @@ namespace Core.Scripting.Editor
                 yield return null;
                 Submit(prompt.GetComponent<UIDocument>().rootVisualElement.Q<Button>("confirmSkip"));
                 deadline = Time.realtimeSinceStartup + 10;
-                while (!GameState.Story.Has("fixture_skip_exit_pause") && Time.realtimeSinceStartup < deadline)
+                while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_skip_exit_pause") && Time.realtimeSinceStartup < deadline)
                 {
                     Assert.That(Time.timeScale, Is.Zero, "Confirmation must never release time during exit cover.");
                     yield return null;
                 }
                 Assert.That(run.Skipped, Is.True);
                 Assert.That(prompt.IsOpen, Is.False);
-                Assert.That(GameState.Story.Has("fixture_skip_exit_pause"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture_skip_exit_pause"), Is.True);
                 Assert.That(run.IsRunning, Is.True, "Completion commits before the exit reveal releases control.");
                 Assert.That(Time.timeScale, Is.EqualTo(1f));
             }
@@ -345,7 +351,7 @@ namespace Core.Scripting.Editor
                 ["arguments"] = new JObject(step.Arguments.Select(argument => new JProperty(argument.Name, argument.Value))) }));
             var compiled = CutsceneSequenceCompiler.Compile(sequence, id, out var importedSteps);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, compiled, importedSteps, skip,
+            definition.Configure(id, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.MapId, compiled, importedSteps, skip,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.Set('{completionFlag}', true)", "", Array.Empty<CutsceneStep>()),
                 "", Array.Empty<CutsceneStep>(), new CutsceneTransition(enabled: false));
             return definition;
@@ -354,7 +360,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator StructuredPhasesRunBeforeStartedAndOnCompletionOrSkipButRestoreOnCancel()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var character = MainCharacter.CurrentMainCharacter;
             var started = 0;
             Action<CutsceneRun> observer = run =>
@@ -384,10 +390,10 @@ namespace Core.Scripting.Editor
                             Assert.That(run.IsRunning, Is.False);
                         }
                         Assert.That(character.Orientation.FacingDirection, Is.EqualTo(terminal == "cancel" ? Vector2.up : Vector2.left));
-                        Assert.That(GameState.Story.Has(id), Is.EqualTo(terminal != "cancel"));
-                        Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.EqualTo(terminal != "cancel"));
+                        Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has(id), Is.EqualTo(terminal != "cancel"));
+                        Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(id), Is.EqualTo(terminal != "cancel"));
                         Assert.That(character.IsControlBlocked, Is.False);
-                        Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+                        Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().IsGameClockPaused, Is.False);
                     }
                     finally { service.Cancel(); Object.Destroy(definition); }
                 }
@@ -399,7 +405,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator SetupFailureRestoresStagingAndBadCompletionReferencesFailBeforeSetup()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var character = MainCharacter.CurrentMainCharacter;
             character.Orientation.ForceDirection(Vector2.up);
             var failed = CreatePhaseDefinition("fixture:setup-failure", 60);
@@ -417,9 +423,9 @@ namespace Core.Scripting.Editor
                 Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
                 Assert.That(character.IsControlBlocked, Is.False);
                 Assert.That(service.IsRunning, Is.False);
-                Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().IsGameClockPaused, Is.False);
                 Assert.That(notifications, Is.Zero);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains(failed.CutsceneId), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(failed.CutsceneId), Is.False);
                 Assert.That(() => service.TryStart(invalid, out _), Throws.InvalidOperationException
                     .With.Message.Contains("completion").And.Message.Contains("finish").And.Message.Contains("missing-character"));
                 Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
@@ -441,7 +447,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator TransitionsCoverSetupAndCompletionAndHoldInputThroughExit()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var player = MainCharacter.CurrentMainCharacter;
             foreach (var terminal in new[] { "complete", "skip", "cancel" })
             {
@@ -454,13 +460,13 @@ namespace Core.Scripting.Editor
                     var originalFacing = player.Orientation.FacingDirection;
                     Assert.That(service.TryStart(definition, out var run), Is.True);
                     Assert.That(player.IsControlBlocked, Is.True);
-                    Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.False);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().PlayerControls.enabled, Is.False);
                     Assert.That(player.Orientation.FacingDirection, Is.EqualTo(originalFacing), "Setup must wait for the entrance to reach black.");
                     Assert.That(service.CurrentStepId, Is.Null, "The sequence must wait for the entrance cover.");
                     if (terminal == "cancel")
                     {
                         run.Cancel();
-                        Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.False);
+                        Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(id), Is.False);
                     }
                     else
                     {
@@ -470,16 +476,16 @@ namespace Core.Scripting.Editor
                         while (run.IsRunning && Time.realtimeSinceStartup < deadline)
                         {
                             Assert.That(player.IsControlBlocked, Is.True);
-                            Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.False);
-                            if (GameState.Story.CompletedCutscenes.Contains(id)) sawCompletedWhileCovered = true;
+                            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().PlayerControls.enabled, Is.False);
+                            if (VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(id)) sawCompletedWhileCovered = true;
                             yield return null;
                         }
                         Assert.That(sawCompletedWhileCovered, Is.True, "Completion applies before the exit reveal releases input.");
-                        Assert.That(GameState.Story.Has(id), Is.True);
+                        Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has(id), Is.True);
                     }
                     Assert.That(run.IsRunning, Is.False);
                     Assert.That(player.IsControlBlocked, Is.False);
-                    Assert.That(Input.InputManager.Instance.PlayerControls.enabled, Is.True);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<Input.InputManager>().PlayerControls.enabled, Is.True);
                 }
                 finally { service.Cancel(); Object.Destroy(definition); }
             }
@@ -488,7 +494,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator SetupAndStartedWaitUntilTheEntranceHasFadedToBlack()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var definition = CreatePresentedPhaseDefinition("fixture:entrance-timing");
             var player = MainCharacter.CurrentMainCharacter;
             var originalFacing = player.Orientation.FacingDirection;
@@ -526,7 +532,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator SkipFadesToBlackBeforeDisposingTheActiveActionAndApplyingCompletion()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var definition = CreatePresentedPhaseDefinition("fixture:skip-cover-timing");
             var player = MainCharacter.CurrentMainCharacter;
             var group = Object.FindFirstObjectByType<ScreenFader>().GetComponent<CanvasGroup>();
@@ -554,10 +560,10 @@ namespace Core.Scripting.Editor
                 yield return null;
                 Assert.That(group.alpha, Is.EqualTo(1));
                 Assert.That(session.IsRunning, Is.True, "The skipped action remains owned through the exit hold.");
-                Assert.That(GameState.Story.Has(definition.CutsceneId), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has(definition.CutsceneId), Is.False);
                 cover.Complete();
-                while (!GameState.Story.Has(definition.CutsceneId) && Time.realtimeSinceStartup < deadline) yield return null;
-                Assert.That(GameState.Story.Has(definition.CutsceneId), Is.True);
+                while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has(definition.CutsceneId) && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has(definition.CutsceneId), Is.True);
                 Assert.That(session.IsRunning, Is.False);
                 Assert.That(player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
                 Assert.That(run.IsRunning, Is.True, "Input stays claimed through the exit reveal.");
@@ -580,7 +586,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator CancellingPresentationSettlesImmediatelyAndCannotAdvanceAReplacementRun()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var player = MainCharacter.CurrentMainCharacter;
             var transition = typeof(CutsceneRunner).GetField("_transition", BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var stage in new[] { "entrance", "started-listener", "entrance-reveal", "sequence", "exit-cover", "exit-reveal" })
@@ -622,8 +628,8 @@ namespace Core.Scripting.Editor
                     }
                     if (stage == "exit-reveal")
                     {
-                        while (!GameState.Story.CompletedCutscenes.Contains(id) && Time.realtimeSinceStartup < deadline) yield return null;
-                        Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.True);
+                        while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(id) && Time.realtimeSinceStartup < deadline) yield return null;
+                        Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(id), Is.True);
                     }
 
                     old.Cancel();
@@ -631,7 +637,7 @@ namespace Core.Scripting.Editor
                     Assert.That(service.IsRunning, Is.False);
                     Assert.That(player.IsControlBlocked, Is.False);
                     Assert.That(Time.timeScale, Is.EqualTo(1f));
-                    Assert.That(GameState.Story.CompletedCutscenes.Contains(id), Is.EqualTo(stage == "exit-reveal"));
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(id), Is.EqualTo(stage == "exit-reveal"));
                     Assert.That(player.Orientation.FacingDirection,
                         Is.EqualTo(stage == "exit-reveal" ? Vector2.left : originalFacing));
 
@@ -642,7 +648,7 @@ namespace Core.Scripting.Editor
                     Assert.That(service.ActiveRun, Is.SameAs(next));
                     Assert.That(next.IsRunning, Is.True);
                     Assert.That(player.IsControlBlocked, Is.True);
-                    Assert.That(GameState.Story.CompletedCutscenes.Contains(replacement.CutsceneId), Is.False);
+                    Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(replacement.CutsceneId), Is.False);
                 }
                 finally
                 {
@@ -657,30 +663,42 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator MusicOverrideReleasesOnCompletionSkipCancellationAndExplicitRelease()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var catalog = Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName);
-            var director = Core.Music.MusicDirector.Instance;
-            using var environment = director.Requests.Request(catalog.Get("base:music-prototype-courtyard"), "calm");
+            var director = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MusicDirector>();
+            var cues = catalog.EnabledDefinitions.ToArray();
+            Assert.That(cues.Length, Is.GreaterThanOrEqualTo(2));
+            var environmentCue = cues[0];
+            var overrideCue = cues[1];
+            var updatedPreset = environmentCue.presets.Last().id;
+            var previousCount = director.Requests.Count;
+            using var environment = director.Requests.Request(environmentCue, environmentCue.presets[0].id);
             foreach (var terminal in new[] { "complete", "skip", "cancel", "release" })
             {
                 var id = "fixture:music-" + terminal;
                 var definition = CreatePhaseDefinition(id, terminal == "complete" ? 0.05 : 60);
-                var setup = CutsceneSequenceCompiler.Compile(JArray.Parse("[{ 'id':'music', 'action':'music.override', 'arguments': { 'cue':'base:music-prototype-temple', 'preset':'intense', 'quantization':'Immediate', 'fadeSeconds':0.05 } }]"), id, out var setupSteps, "setup");
+                var setup = CutsceneSequenceCompiler.Compile(new JArray(new JObject { ["id"] = "music", ["action"] = "music.override",
+                    ["arguments"] = new JObject { ["cue"] = overrideCue.id, ["preset"] = overrideCue.presets[0].id, ["quantization"] = "Immediate", ["fadeSeconds"] = 0.05 } }), id, out var setupSteps, "setup");
                 definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
                     definition.OnComplete, setup, setupSteps, new CutsceneTransition(enabled: false));
                 try
                 {
                     Assert.That(service.TryStart(definition, out var run), Is.True);
-                    Assert.That(director.Requests.Winner.Cue.id, Is.EqualTo("base:music-prototype-temple"));
-                    environment.Update(catalog.Get("base:music-prototype-courtyard"), "active");
+                    Assert.That(director.Requests.Winner.Cue, Is.SameAs(overrideCue));
+                    environment.Update(environmentCue, updatedPreset);
                     if (terminal == "skip") Assert.That(run.Skip(), Is.True);
                     else if (terminal == "cancel") run.Cancel();
-                    else if (terminal == "release") new MusicLuaApi(catalog).Release();
+                    else if (terminal == "release")
+                    {
+                        var api = new MusicLuaApi(catalog);
+                        VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Inject(api);
+                        api.Release();
+                    }
                     var deadline = Time.realtimeSinceStartupAsDouble + 5;
                     while (terminal == "complete" && run.IsRunning && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
                     Assert.That(director.Requests.Winner, Is.SameAs(environment));
-                    Assert.That(director.Requests.Winner.Preset, Is.EqualTo("active"));
-                    Assert.That(director.Requests.Count, Is.EqualTo(1));
+                    Assert.That(director.Requests.Winner.Preset, Is.EqualTo(updatedPreset));
+                    Assert.That(director.Requests.Count, Is.EqualTo(previousCount + 1));
                 }
                 finally { service.Cancel(); Object.Destroy(definition); }
             }
@@ -702,7 +720,7 @@ namespace Core.Scripting.Editor
             var completion = CutsceneSequenceCompiler.Compile(new JArray(Turn("finish", completionActor, "West")), id,
                 out var completionSteps, "completion", ids);
             var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
-            definition.Configure(id, MapManager.Instance.CurrentMap.MapId, sequence, steps, true,
+            definition.Configure(id, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.MapId, sequence, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), $"GameState.Story.Set('{id}', true)", completion, completionSteps), setup, setupSteps,
                 new CutsceneTransition(enabled: false));
             return definition;
@@ -711,9 +729,9 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator PlacingSpawnedActorsSynchronizesPhysicsAndSavedRecordsAndRestoresOnCancel()
         {
-            var service = CutsceneRunner.Instance;
-            var map = MapManager.Instance.CurrentMap;
-            var spawn = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
+            var map = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap;
+            var spawn = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
             var character = spawn.GetComponentInChildren<GameCharacter>();
             character.Orientation.ForceDirection(Vector2.right);
             foreach (var terminal in new[] { "cancel", "skip", "complete" })
@@ -762,7 +780,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator DialogueChoicePersistsImmediatelyWhileCompletionActionsWait()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var dialogue = CreateDialogue("fixture:decision-dialogue",
                 new VulcanusDialogueLineNode("entry", "", "", "May I enter?", "", "choice"),
                 new VulcanusDialogueChoiceNode("choice", new[] { new VulcanusDialogueChoiceOption("yes", "Show invitation", "", "", "answer") }),
@@ -783,34 +801,44 @@ namespace Core.Scripting.Editor
                     key.target = _document.rootVisualElement.Q("dialogue-overlay");
                     ((VisualElement)key.target).SendEvent(key);
                 }
-                for (var frame = 0; frame < 20 && !GameState.Story.Has("fixture:dialogue-choice"); frame++)
+                for (var frame = 0; frame < 20 && !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture:dialogue-choice"); frame++)
                     yield return null;
-                Assert.That(GameState.Story.Has("fixture:dialogue-choice"), Is.True);
-                Assert.That(GameState.Story.Has("fixture:completion"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture:dialogue-choice"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture:completion"), Is.False);
                 run.Cancel();
-                Assert.That(GameState.Story.Has("fixture:dialogue-choice"), Is.True);
-                Assert.That(GameState.Story.Has("fixture:completion"), Is.False);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture:dialogue-choice"), Is.True);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.Has("fixture:completion"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
             }
             finally { service.Cancel(); Object.Destroy(definition); Object.Destroy(dialogue); }
         }
 
         [UnityTest]
-        public IEnumerator AuthoredPrototypeMovesExistingNpcFacesPlayerAndCommitsOnlyAfterGoodbye()
+        public IEnumerator NpcMovesFacesPlayerAndCommitsOnlyAfterGoodbye()
         {
-            var service = CutsceneRunner.Instance;
-            var spawn = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
+            var spawn = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
             var character = spawn.GetComponent<GameCharacter>();
-            var anchor = MapManager.Instance.CurrentMap.GetComponentsInChildren<VulcanusMapAnchor>(true)
+            var anchor = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.GetComponentsInChildren<VulcanusMapAnchor>(true)
                 .Single(value => value.AnchorId == "prototype-meeting");
-            Assert.That(service.TryStart("base:cutscene-prototype", out var run), Is.True);
+            Assert.That(service.TryStart(NpcMovement, out var run), Is.True);
+            Vector3? committedPosition = null;
+            Vector3? committedSavedPosition = null;
+            Vector3? committedFeet = null;
+            service.Finished += finished =>
+            {
+                if (finished != run) return;
+                committedPosition = spawn.transform.position;
+                committedSavedPosition = spawn.State.position;
+                committedFeet = character.Graphics.position;
+            };
             var deadline = Time.realtimeSinceStartup + 15;
             while (run.IsRunning && !_runner.IsDialogueActive && Time.realtimeSinceStartup < deadline)
                 yield return null;
-            Assert.That(_runner.CurrentDialogueId, Is.EqualTo("prototype_greeting"));
+            Assert.That(_runner.CurrentDialogueId, Is.EqualTo("fixture:talk"));
             Assert.That(Vector2.Distance(character.GetComponent<Rigidbody2D>().position, anchor.transform.position), Is.LessThanOrEqualTo(0.04f));
             Assert.That(character.Orientation.FacingDirection.x, Is.GreaterThan(0));
-            Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.False);
             Assert.That(_runner.TryAdvanceActiveDialogue(), Is.True);
             for (var frame = 0; frame < 20 && _runner.ActiveContext.CurrentNode is not VulcanusDialogueChoiceNode; frame++) yield return null;
             using (var key = KeyDownEvent.GetPooled('\0', KeyCode.Alpha1, EventModifiers.None))
@@ -820,20 +848,20 @@ namespace Core.Scripting.Editor
             }
             for (var frame = 0; frame < 20 && service.IsRunning; frame++) yield return null;
             Assert.That(run.IsRunning, Is.False);
-            Assert.That(spawn.transform.position, Is.EqualTo(anchor.transform.position));
-            Assert.That(spawn.State.position, Is.EqualTo(spawn.transform.position));
-            Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.True);
+            Assert.That(Vector3.Distance(committedFeet.Value, anchor.transform.position), Is.LessThan(0.001f));
+            Assert.That(committedSavedPosition, Is.EqualTo(committedPosition));
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
             Assert.That(character.Controller.IsMovementOwned, Is.False);
             Assert.That(character.IsControlBlocked, Is.False);
             AssertClosed();
             var slot = "cutscene_npc_" + Guid.NewGuid().ToString("N");
             try
             {
-                GameState.Save(slot);
-                Assert.That(GameSaveService.TryLoad(slot, out var saved), Is.True);
-                Assert.That(saved.world.TryGet<SpawnedObjectState>(LevelManager.Instance.CurrentLocationData.id, spawn.PersistentId, out var placement), Is.True);
-                Assert.That(placement.position, Is.EqualTo(anchor.transform.position));
-                Assert.That(saved.story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.True);
+                VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameStateManager>().Save(slot);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameSaveService>().TryLoad(slot, out var saved), Is.True);
+                Assert.That(saved.world.TryGet<SpawnedObjectState>(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().CurrentLocationData.id, spawn.PersistentId, out var placement), Is.True);
+                Assert.That(placement.position, Is.EqualTo(spawn.transform.position));
+                Assert.That(saved.story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
             }
             finally { System.IO.File.Delete(GameSaveService.GetSavePath(slot)); }
         }
@@ -841,27 +869,27 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator CancellingNpcMovementRestoresPlacementWhileSkippingCommitsThePreparedEndpoint()
         {
-            var service = CutsceneRunner.Instance;
-            var spawn = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
+            var spawn = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
             var character = spawn.GetComponent<GameCharacter>();
             var original = spawn.transform.position;
-            Assert.That(service.TryStart("base:cutscene-prototype", out var cancelled), Is.True);
+            Assert.That(service.TryStart(NpcMovement, out var cancelled), Is.True);
             yield return null;
             Assert.That(character.Controller.IsMovementOwned, Is.True);
             cancelled.Cancel();
             Assert.That(cancelled.IsRunning, Is.False);
             Assert.That(spawn.transform.position, Is.EqualTo(original));
             Assert.That(spawn.State.position, Is.EqualTo(original));
-            Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.False);
             Assert.That(character.Controller.IsMovementOwned, Is.False);
             Assert.That(character.Controller.CurrentVelocity, Is.EqualTo(Vector2.zero));
-            Assert.That(service.TryStart("base:cutscene-prototype", out var skipped), Is.True);
+            Assert.That(service.TryStart(NpcMovement, out var skipped), Is.True);
             yield return null;
             Assert.That(skipped.Skip(), Is.True);
             Assert.That(skipped.Skipped, Is.True);
             Assert.That(spawn.transform.position, Is.Not.EqualTo(original));
             Assert.That(spawn.State.position, Is.EqualTo(spawn.transform.position));
-            Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.True);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
             Assert.That(character.IsControlBlocked, Is.False);
             AssertClosed();
         }
@@ -869,10 +897,16 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator RestoringThePlayerInsideTheTriggerDoesNotRestartACancelledCutscene()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var player = MainCharacter.CurrentMainCharacter;
             var body = player.GetComponent<Rigidbody2D>();
             var original = body.position;
+            void PlacePlayer(Vector2 position)
+            {
+                player.transform.position = position;
+                body.position = position;
+                Physics2D.SyncTransforms();
+            }
             var definition = CreatePhaseDefinition("fixture:visit", 60);
             var catalog = ScriptableObject.CreateInstance<CutsceneCatalog>();
             catalog.Synchronize(new[] { definition });
@@ -885,6 +919,7 @@ namespace Core.Scripting.Editor
             area.isTrigger = true;
             area.size = Vector2.one * 2f;
             owner.AddComponent<CutsceneTrigger>().Configure(definition.CutsceneId);
+            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Inject(owner.GetComponent<CutsceneTrigger>());
             var starts = 0;
             Action<CutsceneRun> onStart = _ => starts++;
             service.Started += onStart;
@@ -893,8 +928,7 @@ namespace Core.Scripting.Editor
                 owner.SetActive(true);
                 yield return new WaitForFixedUpdate();
                 Assert.That(starts, Is.EqualTo(1));
-                body.position = original + Vector2.right * 4f;
-                Physics2D.SyncTransforms();
+                PlacePlayer(original + Vector2.right * 4f);
                 yield return new WaitForFixedUpdate();
                 yield return null;
                 service.Cancel(); // The setup's player binding restores the captured position.
@@ -902,15 +936,16 @@ namespace Core.Scripting.Editor
                 for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
                 Assert.That(starts, Is.EqualTo(1), "Restoration must not count as another player visit.");
                 Assert.That(service.IsRunning, Is.False);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
 
-                body.position = original + Vector2.right * 4f;
-                Physics2D.SyncTransforms();
-                yield return new WaitForFixedUpdate();
-                body.position = original;
-                Physics2D.SyncTransforms();
+                PlacePlayer(original + Vector2.right * 4f);
                 for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
-                Assert.That(starts, Is.EqualTo(2), "A later genuine visit can retry the cancelled scene.");
+                var exitColliders = ((System.Collections.Generic.HashSet<Collider2D>)typeof(CutsceneTrigger)
+                    .GetField("_playerColliders", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(owner.GetComponent<CutsceneTrigger>())).Count;
+                var exitOverlap = area.Distance(player.GetComponent<Collider2D>()).isOverlapped;
+                PlacePlayer(original);
+                for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
+                Assert.That(starts, Is.EqualTo(2), $"A later genuine visit can retry the cancelled scene. Exit colliders={exitColliders}, overlap={exitOverlap}, blocked={player.IsControlBlocked}, position={body.position}, expected={original}.");
             }
             finally
             {
@@ -926,7 +961,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator InitialOverlapDeduplicatesPlayerCollidersAndBusyTriggersNeverQueue()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var definition = CreateCutscene("fixture:trigger", false, "completed", "fixture:talk");
             var catalog = ScriptableObject.CreateInstance<CutsceneCatalog>();
             catalog.Synchronize(new[] { definition });
@@ -940,6 +975,7 @@ namespace Core.Scripting.Editor
             area.size = Vector2.one * 2;
             var trigger = owner.AddComponent<CutsceneTrigger>();
             trigger.Configure(definition.CutsceneId);
+            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Inject(trigger);
             var duplicate = MainCharacter.CurrentMainCharacter.gameObject.AddComponent<BoxCollider2D>();
             try
             {
@@ -976,7 +1012,7 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator DisablingTheCutsceneOwnerClosesItsDialogueWithoutCompleting()
         {
-            var service = CutsceneRunner.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
             var definition = CreateCutscene("fixture:disable", true, "fixture_disabled", "fixture:talk");
             try
             {
@@ -985,7 +1021,7 @@ namespace Core.Scripting.Editor
                 Assert.That(_runner.IsDialogueActive, Is.True);
                 service.enabled = false;
                 Assert.That(run.IsRunning, Is.False);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains("fixture:disable"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains("fixture:disable"), Is.False);
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
                 AssertClosed();
             }
@@ -995,9 +1031,9 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator ObstructedMovementReportsTheAuthoredStepAndReleasesAllClaims()
         {
-            var service = CutsceneRunner.Instance;
-            var character = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
-            var anchor = MapManager.Instance.CurrentMap.GetComponentsInChildren<VulcanusMapAnchor>(true)
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
+            var character = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var anchor = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.GetComponentsInChildren<VulcanusMapAnchor>(true)
                 .Single(value => value.AnchorId == "prototype-meeting");
             var obstacle = new GameObject("Cutscene obstruction fixture");
             var footprint = character.GetComponentsInChildren<Collider2D>().Single(value => !value.isTrigger);
@@ -1008,7 +1044,7 @@ namespace Core.Scripting.Editor
             Physics2D.SyncTransforms();
             try
             {
-                Assert.That(service.TryStart("base:cutscene-prototype", out var run), Is.True);
+                Assert.That(service.TryStart(NpcMovement, out var run), Is.True);
                 var update = typeof(CutsceneRunner).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic);
                 update.Invoke(service, null); // Starts the movement action.
                 var error = Assert.Throws<TargetInvocationException>(() => update.Invoke(service, null));
@@ -1017,7 +1053,7 @@ namespace Core.Scripting.Editor
                 Assert.That(character.GetComponent<GameCharacter>().IsControlBlocked, Is.False);
                 Assert.That(character.GetComponent<GameCharacter>().Controller.IsMovementOwned, Is.False);
                 Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
-                Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.False);
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.False);
                 AssertClosed();
                 yield return null;
             }
@@ -1027,10 +1063,10 @@ namespace Core.Scripting.Editor
         [UnityTest]
         public IEnumerator LocationChangeCancelsBeforeCapturingTransientNpcPlacement()
         {
-            var service = CutsceneRunner.Instance;
-            var level = LevelManager.Instance;
+            var service = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>();
+            var level = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>();
             var originalMap = level.CurrentLocationData;
-            var spawn = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var spawn = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
             var original = spawn.transform.position;
             Assert.That(service.TryStart("base:cutscene-prototype", out var run), Is.True);
             yield return null;
@@ -1040,10 +1076,10 @@ namespace Core.Scripting.Editor
             var deadline = Time.realtimeSinceStartup + 15;
             while (!level.SceneReady && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(level.SceneReady, Is.True);
-            Assert.That(GameState.Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().Story.CompletedCutscenes.Contains("base:cutscene-prototype"), Is.False);
             Assert.That(MainCharacter.CurrentMainCharacter.IsControlBlocked, Is.False);
             AssertClosed();
-            var restored = WorldObjectSpawner.Instance.SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
+            var restored = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects.Single(value => value.PersistentId == "cutscene-prototype-host-01");
             Assert.That(Vector3.Distance(restored.transform.position, original), Is.LessThan(0.001f));
             Assert.That(Vector3.Distance(restored.State.position, original), Is.LessThan(0.001f));
         }
@@ -1073,7 +1109,7 @@ namespace Core.Scripting.Editor
         public IEnumerator CutsceneBindingChecksLaterReferencesBeforeStartingEarlierActions()
         {
             var player = MainCharacter.CurrentMainCharacter;
-            var map = MapManager.Instance.CurrentMap;
+            var map = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap;
             var anchor = map.GetComponentsInChildren<VulcanusMapAnchor>(true).First();
             var position = player.GetComponent<Rigidbody2D>().position;
             var facing = player.Orientation.FacingDirection;
@@ -1082,7 +1118,7 @@ namespace Core.Scripting.Editor
             {
                 var walk = Step("walk", "characters.moveTo", ("character", "player"), ("destination", anchor.AnchorId));
                 ConfigureDefinition(definition, map.MapId, walk, Step("talk", "dialogue.play", ("dialogue", "missing-dialogue")));
-                var error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner));
+                var error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>()));
                 Assert.That(error.Message, Does.Contain("fixture:binding").And.Contain("step 'talk'").And.Contain("missing-dialogue"));
 
                 foreach (var invalid in new[]
@@ -1093,23 +1129,23 @@ namespace Core.Scripting.Editor
                 })
                 {
                     ConfigureDefinition(definition, map.MapId, invalid);
-                    error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner));
+                    error = Assert.Throws<InvalidOperationException>(() => CutsceneBindings.BindCurrentMap(definition, _runner, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>()));
                     Assert.That(error.Message, Does.Contain($"step '{invalid.Id}'"));
                 }
 
                 var talk = Step("talk", "dialogue.play", ("dialogue", "fixture:talk"));
                 ConfigureDefinition(definition, "another-map", walk, talk);
-                Assert.That(() => CutsceneBindings.BindCurrentMap(definition, _runner),
+                Assert.That(() => CutsceneBindings.BindCurrentMap(definition, _runner, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>()),
                     Throws.InvalidOperationException.With.Message.Contains("another-map"));
 
                 ConfigureDefinition(definition, map.MapId, walk, talk);
-                var bindings = CutsceneBindings.BindCurrentMap(definition, _runner);
+                var bindings = CutsceneBindings.BindCurrentMap(definition, _runner, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>());
                 Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EquivalentTo(new[] { "Characters", "Dialogue" }));
                 ConfigureDefinition(definition, map.MapId, talk);
-                bindings = CutsceneBindings.BindCurrentMap(definition, _runner);
+                bindings = CutsceneBindings.BindCurrentMap(definition, _runner, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>());
                 Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Dialogue" }));
                 ConfigureDefinition(definition, map.MapId, walk);
-                bindings = CutsceneBindings.BindCurrentMap(definition, null);
+                bindings = CutsceneBindings.BindCurrentMap(definition, null, VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>());
                 Assert.That(bindings.Describe().modules.Select(module => module.path), Is.EqualTo(new[] { "Characters" }));
                 Assert.That(player.Controller.IsMovementOwned, Is.False);
                 Assert.That(player.GetComponent<Rigidbody2D>().position, Is.EqualTo(position));
@@ -1139,22 +1175,40 @@ namespace Core.Scripting.Editor
         private void AssertClosed()
         {
             Assert.That(_runner.IsDialogueActive, Is.False);
-            Assert.That(UrGUIManager.HasOpenScreens, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
-            Assert.That(UrGUIManager.IsCharacterPaused(MainCharacter.CurrentMainCharacter), Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().HasOpenScreens, Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().IsGameClockPaused, Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<UrGUIManager>().IsCharacterPaused(MainCharacter.CurrentMainCharacter), Is.False);
         }
 
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<CutsceneRunner>().Cancel();
             Object.Destroy(_root);
             yield return null;
-            foreach (var asset in new Object[] { _database, _talk, _end, _error }) Object.Destroy(asset);
+            foreach (var asset in new Object[] { _database, _talk, _end, _error, _npcMovement }) Object.Destroy(asset);
+            _npcMovement = null;
             yield return new ExitPlayMode();
         }
 
         private static LuaExecutionSession Start(DialogueLuaApi api, string lua) =>
-            VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "fixture:dialogue");
+            VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() }, lua, "fixture:dialogue");
+
+        private static CutsceneDefinition CreateNpcMovementDefinition()
+        {
+            const string actor = "cutscene-prototype-host-01";
+            const string anchor = "prototype-meeting";
+            var sequence = new JArray(
+                new JObject { ["id"] = "approach", ["action"] = "characters.moveTo", ["arguments"] = new JObject { ["character"] = actor, ["destination"] = anchor } },
+                new JObject { ["id"] = "face", ["action"] = "characters.face", ["arguments"] = new JObject { ["character"] = actor, ["target"] = "player" } },
+                new JObject { ["id"] = "talk", ["action"] = "dialogue.play", ["arguments"] = new JObject { ["dialogue"] = "fixture:talk" } });
+            var lua = CutsceneSequenceCompiler.Compile(sequence, "fixture:npc-movement", out var steps);
+            var definition = ScriptableObject.CreateInstance<CutsceneDefinition>();
+            definition.Configure("fixture:npc-movement", VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap.MapId,
+                lua, steps, true, new CutsceneCompletion(new[] { new CutsceneCharacterPlacement(actor, anchor, null) }, "", "", Array.Empty<CutsceneStep>()),
+                "", Array.Empty<CutsceneStep>(), new CutsceneTransition(enabled: false));
+            return definition;
+        }
 
         private static VulcanusDialogueAsset CreateDialogue(string id, params VulcanusDialogueNode[] nodes)
         {

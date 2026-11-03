@@ -13,19 +13,17 @@ using TileData = Core.Tile.TileData;
 
 namespace Character.Editor
 {
-    public sealed class CharacterCompositionTests
+    public sealed class CharacterCompositionTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
 
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Character composition");
-            _character = _fixture.CreateCharacter();
-        }
 
-        [TearDown] public void TearDown() => _fixture.Dispose();
+            _character = Game.CreateCharacter();
+        }
 
         [Test]
         public void AuthoredPrefabSatisfiesCompositionContract()
@@ -75,7 +73,7 @@ namespace Character.Editor
         [Test]
         public void CharacterSelectionFollowsLoadoutWithoutSelectionEventCopies()
         {
-            var tool = _fixture.Own(ScriptableObject.CreateInstance<ToolData>());
+            var tool = Game.Asset<ToolData>();
             typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(tool, "test:selection");
             _character.MainInventory.AddItem(tool, 1);
             _character.Loadout.SelectItem(0);
@@ -120,15 +118,15 @@ namespace Character.Editor
         [Test]
         public void StationaryEntryPlacementAndForcedFacingUseTheCurrentMap()
         {
-            _fixture.Root.SetActive(true); // Grid needs an active hierarchy to initialize its cell conversion.
-            var map = _fixture.RegisterSingleton<MapManager>();
+            Game.Root.SetActive(true); // Grid needs an active hierarchy to initialize its cell conversion.
+            var map = Game.Get<MapManager>();
             var grid = new GameObject("Grid", typeof(Grid));
-            grid.transform.SetParent(_fixture.Root.transform);
+            grid.transform.SetParent(Game.Root.transform);
             var tileRoot = new GameObject("Tiles", typeof(Tilemap));
             tileRoot.transform.SetParent(grid.transform);
             var tilemap = tileRoot.GetComponent<Tilemap>();
             var tiles = new Dictionary<Vector2Int, TileData>();
-            var terrain = _fixture.Own(ScriptableObject.CreateInstance<Core.Tile.TerrainData>());
+            var terrain = Game.Asset<Core.Tile.TerrainData>();
             for (var x = -3; x <= 3; x++)
                 for (var y = -3; y <= 3; y++)
                     tiles.Add(new Vector2Int(x, y), new TileData(null, x, y, terrain, tilemap.GetCellCenterWorld(new Vector3Int(x, y, 0))));

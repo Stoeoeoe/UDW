@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections.Generic;
 using Character;
@@ -31,6 +32,8 @@ namespace Core.Shops
     /// <summary>Vendor stock and transactions. May live on an NPC or an independent shop object.</summary>
     public sealed class Shop : MonoBehaviour, IEventListener<NewDayEvent>
     {
+        [Inject] private GameState _gameState;
+
         [NamespacedId, SerializeField] private string shopId;
         [SerializeField] private ShopDefinition definition;
 
@@ -43,8 +46,8 @@ namespace Core.Shops
             {
                 if (!definition || string.IsNullOrWhiteSpace(shopId))
                     throw new InvalidOperationException("Assign a shop definition and a unique permanent shop ID.");
-                if (!GameState.World.TryGet(shopId, out ShopState state))
-                    GameState.World.Set(shopId, state = new ShopState());
+                if (!_gameState.World.TryGet(shopId, out ShopState state))
+                    _gameState.World.Set(shopId, state = new ShopState());
                 return state;
             }
         }
@@ -87,7 +90,7 @@ namespace Core.Shops
 
         public IReadOnlyList<ShopEntry> GetOfferings()
         {
-            RefreshStock(GameState.Time.daysSinceStart);
+            RefreshStock(_gameState.Time.daysSinceStart);
             var state = State;
             var result = new List<ShopEntry>();
             foreach (var offering in definition.Offerings)
@@ -105,7 +108,7 @@ namespace Core.Shops
         public ShopTradeResult Buy(string offeringId, Wallet wallet, SlotInventory inventory, int quantity = 1)
         {
             if (quantity <= 0) return ShopTradeResult.InvalidQuantity;
-            RefreshStock(GameState.Time.daysSinceStart);
+            RefreshStock(_gameState.Time.daysSinceStart);
             ShopOffering offering = null;
             foreach (var candidate in definition.Offerings)
                 if (candidate.id == offeringId) { offering = candidate; break; }
@@ -131,7 +134,7 @@ namespace Core.Shops
                 UnitPrice = price, TotalPrice = (int)total,
                 BalanceBefore = previous, BalanceAfter = wallet.Balance,
                 StockBefore = stockBefore, StockAfter = stock.quantity,
-                GameMinute = GameState.Time.TotalMinutes
+                GameMinute = _gameState.Time.TotalMinutes
             };
             PublishTrade(wallet, previous, inventory);
             EventBus<ShopPurchaseEvent>.Raise(purchase);
@@ -161,7 +164,7 @@ namespace Core.Shops
                 UnitPrice = price, TotalPrice = (int)total,
                 BalanceBefore = previous, BalanceAfter = wallet.Balance,
                 SlotQuantityBefore = stack.Quantity, SlotQuantityAfter = stack.Quantity - quantity,
-                GameMinute = GameState.Time.TotalMinutes
+                GameMinute = _gameState.Time.TotalMinutes
             };
             PublishTrade(wallet, previous, inventory);
             EventBus<ShopSaleEvent>.Raise(sale);

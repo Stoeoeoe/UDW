@@ -1,3 +1,4 @@
+using VContainer;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,8 @@ namespace Interaction.Tools
     /// </summary>
     public abstract class ToolAction : AbstractAction
     {
+        [Inject] protected MapManager _mapManager;
+
         [PropertyOrder(-10)]
         [Header("Tool Settings")]
         [field: SerializeField] public ToolData ToolData { get; private set; }
@@ -78,7 +81,7 @@ namespace Interaction.Tools
         /// </summary>
         private List<TileData> ComputeAffectedTiles(PlayerInteractionContextSnapshot snapshot = null)
         {
-            return MapManager.Instance
+            return _mapManager
                 .GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration)
                 .Where(CanBeUsedOnTile)
                 .ToList();

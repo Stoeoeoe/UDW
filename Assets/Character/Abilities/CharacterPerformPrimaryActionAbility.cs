@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Core.Context;
 using Core.Events;
@@ -11,8 +12,10 @@ namespace Character.Abilities
 {
     public class CharacterPerformPrimaryActionAbility : CharacterAbility
     {
+        [Inject] private Input.InputManager _inputManager;
+
         public ActionExecutor ActionExecutor { get; private set; }
-        private PlayerInteractionContext _context;
+        [Inject] private PlayerInteractionContext _context;
         private bool _suppressPrimaryUntilRelease;
 
         protected override void Awake()
@@ -20,23 +23,14 @@ namespace Character.Abilities
             base.Awake();
             ActionExecutor = new ActionExecutor(
                 Character,
-                () => PlayerInteractionContext.Instance.CurrentSnapshot
+                () => _context.CurrentSnapshot
             );
-            BindContext();
-        }
-
-        private void BindContext()
-        {
-            var context = PlayerInteractionContext.Instance;
-            if (_context == context) return;
-            if (_context) _context.OnContextChanged -= HandleContextChanged;
-            _context = context;
-            if (_context) _context.OnContextChanged += HandleContextChanged;
+            _context.OnContextChanged += HandleContextChanged;
         }
 
         private void OnDestroy()
         {
-            if (_context) _context.OnContextChanged -= HandleContextChanged;
+            _context.OnContextChanged -= HandleContextChanged;
         }
 
         private void OnDisable() => ActionExecutor?.InterruptCurrentAction();
@@ -50,10 +44,8 @@ namespace Character.Abilities
 
         public override void Tick()
         {
-            BindContext();
-            if (!_context) return;
             var snapshot = _context.CurrentSnapshot;
-            var input = InputManager.Instance;
+            var input = _inputManager;
             if (!snapshot.CanInteractWithWorld)
             {
                 if (ActionExecutor.State == ActionExecutionState.Preparing) InterruptAction();

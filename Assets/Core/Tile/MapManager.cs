@@ -15,12 +15,20 @@ using Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core.Tile
 {
-    public class MapManager : Singleton<MapManager>,
+    public class MapManager : Core.GameManager,
         IEventListener<SowPlantEvent>, IEventListener<FarmlandDriedEvent>
     {
+        [Inject] private IObjectResolver _resolver;
+        [Inject] private GameState _gameState;
+
+        [Inject] private PlantManager _plantManager;
+        [Inject] private LocationContext _locationContext;
+
         [SerializeField] private TerrainData[] tileDataTypes;
         [SerializeField] RuleTile plowedFarmlandTile;
         [SerializeField] RuleTile irrigatedFarmlandTile;
@@ -98,14 +106,16 @@ namespace Core.Tile
             sortingGroup.sortingOrder = 1;
         }
 
-        protected void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             this.Subscribe<SowPlantEvent>();
             this.Subscribe<FarmlandDriedEvent>();
         }
 
-        protected void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             this.Unsubscribe<SowPlantEvent>();
             this.Unsubscribe<FarmlandDriedEvent>();
         }
@@ -176,7 +186,7 @@ namespace Core.Tile
                 if (!actingCharacter || !collider.transform.IsChildOf(actingCharacter.transform))
                     return true;
 
-            if (PlantManager.Instance.HasPlantAtCurrentMap(tileData.Coordinates))
+            if (_plantManager.HasPlantAtCurrentMap(tileData.Coordinates))
                 return true;
 
             // TODO: Also check for other items placed on the tile...
@@ -304,20 +314,20 @@ namespace Core.Tile
 
         private void UpdateFarmlandState(Vector2Int coords, bool? plowed = null, bool? irrigated = null)
         {
-            var locationId = LevelManager.Instance.CurrentLocationData?.id;
+            var locationId = _locationContext.Location?.id;
             if (locationId == null) return;
 
             var objectId = FarmlandObjectId(coords);
-            if (!GameState.World.TryGet<FarmlandState>(locationId, objectId, out var state))
+            if (!_gameState.World.TryGet<FarmlandState>(locationId, objectId, out var state))
                 state = new FarmlandState();
 
             if (plowed.HasValue) state.plowed = plowed.Value;
             if (irrigated.HasValue) state.irrigated = irrigated.Value;
 
             if (!state.plowed && !state.irrigated)
-                GameState.World.Remove(locationId, objectId);
+                _gameState.World.Remove(locationId, objectId);
             else
-                GameState.World.Set(locationId, objectId, state);
+                _gameState.World.Set(locationId, objectId, state);
         }
 
         internal static string FarmlandObjectId(Vector2Int coords) =>
@@ -377,7 +387,7 @@ namespace Core.Tile
 
         public void OnEvent(SowPlantEvent sowPlantEvent)
         {
-            if (sowPlantEvent.LocationId != LevelManager.Instance.CurrentLocationData?.id) return;
+            if (sowPlantEvent.LocationId != _locationContext.Location?.id) return;
 
             var tileData = GetTileDataAtCoordinates(sowPlantEvent.Position);
             if (tileData == null)
@@ -388,12 +398,12 @@ namespace Core.Tile
 
         public void OnEvent(FarmlandDriedEvent e)
         {
-            if (e.LocationId != LevelManager.Instance.CurrentLocationData?.id) return;
+            if (e.LocationId != _locationContext.Location?.id) return;
             // WorldState also permits farmland records that do not identify a map cell.
             if (!e.ObjectId.StartsWith(FarmlandObjectPrefix, StringComparison.Ordinal)) return;
             var position = ParseFarmlandObjectId(e.ObjectId);
             // A prior callback may already have watered the tile for the new day.
-            if (GameState.World.TryGet<FarmlandState>(e.LocationId, e.ObjectId, out var state)
+            if (_gameState.World.TryGet<FarmlandState>(e.LocationId, e.ObjectId, out var state)
                 && state.irrigated) return;
             GetTileDataAtCoordinates(position)?.DryOut();
             SetTileAt(_irrigatedTilemap, position, null);
@@ -557,10 +567,10 @@ namespace Core.Tile
 
         private void RestorePlants()
         {
-            var locationId = LevelManager.Instance.CurrentLocationData?.id;
+            var locationId = _locationContext.Location?.id;
             if (locationId == null) return;
 
-            foreach (var (pos, state) in PlantManager.Instance.GetPlantStatesInLocation(locationId))
+            foreach (var (pos, state) in _plantManager.GetPlantStatesInLocation(locationId))
             {
                 var tileData = GetTileDataAtCoordinates(pos);
                 if (tileData == null) continue;
@@ -570,7 +580,7 @@ namespace Core.Tile
 
         private void SpawnPlantInstance(string plantId, Vector2Int pos, TileData tileData)
         {
-            var manager = PlantManager.Instance;
+            var manager = _plantManager;
             if (!manager.TryGetPlantData(plantId, out var plantData)) return;
 
             var go = new GameObject(plantData.label + "_" + plantId);
@@ -578,8 +588,10 @@ namespace Core.Tile
             go.transform.SetParent(_plantParentGameObject.transform);
             go.transform.position = tileData.WorldPosition;
 
-            var locationId = LevelManager.Instance.CurrentLocationData.id;
-            go.AddComponent<FarmablePlant>().Bind(locationId, pos, plantData, manager.GetPlantState(locationId, pos));
+            var locationId = _locationContext.Location.id;
+            var crop = go.AddComponent<FarmablePlant>();
+            _resolver.InjectGameObject(go);
+            crop.Bind(locationId, pos, plantData, manager.GetPlantState(locationId, pos));
             go.SetActive(true);
         }
 
@@ -589,10 +601,10 @@ namespace Core.Tile
 
         private void RestoreFarmlandState()
         {
-            var locationId = LevelManager.Instance.CurrentLocationData?.id;
+            var locationId = _locationContext.Location?.id;
             if (locationId == null) return;
 
-            foreach (var pair in GameState.World.GetStates<FarmlandState>(locationId))
+            foreach (var pair in _gameState.World.GetStates<FarmlandState>(locationId))
             {
                 var coords = ParseFarmlandObjectId(pair.Key);
                 var state = pair.Value;

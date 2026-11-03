@@ -11,9 +11,9 @@ using UnityEngine;
 namespace Character.Editor
 {
     /// <summary>Checks boost stacking, expiry, consumables and resource restoration using inline bonuses, saved snapshots and the game clock.</summary>
-    public sealed class CharacterBoostTests : IEventListener<Interaction.Tools.Stamina.StaminaChangedEvent>
+    public sealed class CharacterBoostTests : Core.Common.Editor.GameTest, IEventListener<Interaction.Tools.Stamina.StaminaChangedEvent>
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private CharacterBoosts _boosts;
         private CharacterBoostState _state;
@@ -23,13 +23,12 @@ namespace Character.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Character boosts");
-            _fixture.AddSingleton<GameStateManager>();
-            GameState.Time.initialized = true;
-            GameState.Time.daysSinceStart = 1;
-            GameState.Time.dayOfSeason = 1;
-            GameState.Time.hour = 6;
-            _character = _fixture.CreateCharacter();
+
+            Game.State.Time.initialized = true;
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Time.dayOfSeason = 1;
+            Game.State.Time.hour = 6;
+            _character = Game.CreateCharacter();
             _boosts = _character.Boosts;
             _rested = Definition("test:rested", CharacterAttributeType.MaxStamina, 0.25f, 120);
             _snack = Definition("test:snack", CharacterAttributeType.MaxStamina, 0.1f, 30);
@@ -44,7 +43,7 @@ namespace Character.Editor
         public void TearDown()
         {
             EventBus<Interaction.Tools.Stamina.StaminaChangedEvent>.Unsubscribe(this);
-            _fixture.Dispose();
+
         }
 
         [Test]
@@ -53,7 +52,7 @@ namespace Character.Editor
             _rested.Apply(_character);
             Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(125));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100));
-            Assert.That(_state.Active[Source(_rested)].ExpiresAtMinute, Is.EqualTo(GameState.Time.TotalMinutes + 120));
+            Assert.That(_state.Active[Source(_rested)].ExpiresAtMinute, Is.EqualTo(Game.State.Time.TotalMinutes + 120));
             Assert.That(_boosts.IsActive(Source(_rested)), Is.True);
         }
 
@@ -65,7 +64,7 @@ namespace Character.Editor
             Advance(40);
             _staminaChanges = 0;
             _rested.Apply(_character);
-            Assert.That(_state.Active[Source(_rested)].ExpiresAtMinute, Is.EqualTo(GameState.Time.TotalMinutes + 120));
+            Assert.That(_state.Active[Source(_rested)].ExpiresAtMinute, Is.EqualTo(Game.State.Time.TotalMinutes + 120));
             Assert.That(_state.Active.Count, Is.EqualTo(1));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(125));
             Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(125));
@@ -131,27 +130,27 @@ namespace Character.Editor
         [Test]
         public void PlayerRestoreAndRebindingApplyBoostsBeforeClampingSavedResources()
         {
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            GameState.Player.Boosts.Active[Source(_rested)] = Snapshot(_rested, GameState.Time.TotalMinutes + 120);
-            GameState.Player.Boosts.Active[Source(_vitality)] = Snapshot(_vitality, GameState.Time.TotalMinutes + 60);
-            GameState.Player.Health = new HealthState { Initialized = true, Current = 140 };
-            GameState.Player.Stamina = new StaminaState { Initialized = true, Current = 120 };
-            var manager = _fixture.AddSingleton<Core.PlayerStateManager>();
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            Game.State.Player.Boosts.Active[Source(_rested)] = Snapshot(_rested, Game.State.Time.TotalMinutes + 120);
+            Game.State.Player.Boosts.Active[Source(_vitality)] = Snapshot(_vitality, Game.State.Time.TotalMinutes + 60);
+            Game.State.Player.Health = new HealthState { Initialized = true, Current = 140 };
+            Game.State.Player.Stamina = new StaminaState { Initialized = true, Current = 120 };
+            var manager = Game.Get<Core.PlayerStateManager>();
             manager.InitializeCharacter(_character);
             Assert.That(_character.Health.CurrentHealth, Is.EqualTo(140));
             Assert.That(_character.Health.MaxHealth, Is.EqualTo(150));
             Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(120));
             Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(125));
             manager.InitializeCharacter(_character);
-            Assert.That(GameState.Player.Health.Current, Is.EqualTo(140));
-            Assert.That(GameState.Player.Stamina.Current, Is.EqualTo(120));
+            Assert.That(Game.State.Player.Health.Current, Is.EqualTo(140));
+            Assert.That(Game.State.Player.Stamina.Current, Is.EqualTo(120));
         }
 
         [Test]
         public void ExpiredSavedBoostsAreRemovedDuringRestore()
         {
             var saved = new CharacterBoostState();
-            saved.Active[Source(_rested)] = Snapshot(_rested, GameState.Time.TotalMinutes);
+            saved.Active[Source(_rested)] = Snapshot(_rested, Game.State.Time.TotalMinutes);
             _boosts.Initialize(saved);
             Assert.That(saved.Active, Is.Empty);
             Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(100));
@@ -161,7 +160,7 @@ namespace Character.Editor
         public void RestoreUsesCapturedValuesWithoutAnItemOrCatalogLookup()
         {
             var saved = new CharacterBoostState();
-            saved.Active["item:removed-mod:tonic"] = Snapshot(_rested, GameState.Time.TotalMinutes + 60);
+            saved.Active["item:removed-mod:tonic"] = Snapshot(_rested, Game.State.Time.TotalMinutes + 60);
             Set(_rested.Boosts[0], "percent", 0.9f);
             _boosts.Initialize(saved);
             Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(125));
@@ -185,7 +184,7 @@ namespace Character.Editor
         [Test]
         public void ConsumingABoostItemUsesTheNormalInventoryAction()
         {
-            var item = _fixture.Own(ScriptableObject.CreateInstance<AttributeBoostConsumableItem>());
+            var item = Game.Asset<AttributeBoostConsumableItem>();
             typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, "test:tonic");
             Set(item, "boosts", new[] { _rested.Boosts[0] });
             item.RequireValidConfiguration();
@@ -204,8 +203,7 @@ namespace Character.Editor
             var stamina = new StaminaState { Initialized = true, Current = 125 };
             _character.Stamina.Initialize(stamina);
             var saved = _state;
-            _fixture.Dispose();
-            _fixture = new GameTestFixture("Disposed boost check");
+            DisposeGame();
             GameTimeChangedEvent.Trigger(long.MaxValue);
             Assert.That(saved.Active.Count, Is.EqualTo(1));
             Assert.That(stamina.Current, Is.EqualTo(125));
@@ -226,7 +224,7 @@ namespace Character.Editor
 
         private AttributeBoostConsumableItem Definition(string id, CharacterAttributeType attribute, float percent, int minutes)
         {
-            var definition = _fixture.Own(ScriptableObject.CreateInstance<AttributeBoostConsumableItem>());
+            var definition = Game.Asset<AttributeBoostConsumableItem>();
             var bonus = new AttributeBonus();
             Set(bonus, "attribute", attribute);
             Set(bonus, "percent", percent);
@@ -248,12 +246,12 @@ namespace Character.Editor
             } }
         };
 
-        private static void Advance(int minutes)
+        private void Advance(int minutes)
         {
-            var total = GameState.Time.TotalMinutes + minutes;
-            GameState.Time.daysSinceStart = (int)(total / 1440) + 1;
-            GameState.Time.hour = (int)(total % 1440 / 60);
-            GameState.Time.minute = (int)(total % 60);
+            var total = Game.State.Time.TotalMinutes + minutes;
+            Game.State.Time.daysSinceStart = (int)(total / 1440) + 1;
+            Game.State.Time.hour = (int)(total % 1440 / 60);
+            Game.State.Time.minute = (int)(total % 60);
             GameTimeChangedEvent.Trigger(total);
         }
 

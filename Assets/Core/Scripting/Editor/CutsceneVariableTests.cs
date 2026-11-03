@@ -1,3 +1,4 @@
+using Core.Scripting;
 using System;
 using System.Linq;
 using MoonSharp.Interpreter;
@@ -6,8 +7,9 @@ using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneVariableTests
+    public sealed class CutsceneVariableTests : Core.Common.Editor.GameTest
     {
+
         private static CutsceneVariableDefinition[] Definitions() => new[] {
             new CutsceneVariableDefinition("delay", "number", "0"),
             new CutsceneVariableDefinition("success", "boolean", "false"),
@@ -20,7 +22,7 @@ namespace Core.Scripting.Editor
                 "{id:'lua',action:'cutscene.runLua',arguments:{code:'Cutscene.Variables.delay = Cutscene.Variables.delay + 0.25'}}," +
                 "{id:'wait',action:'cutscene.wait',arguments:{},argumentVariables:{seconds:'delay'}}]");
             var compiled = CutsceneSequenceCompiler.Compile(source, "variables", out var steps, variables: Definitions());
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi()));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi()));
             var variables = new CutsceneVariables(Definitions());
             using var run = VulcanusLuaEngine.StartSession(bindings, compiled, "variables", variables: variables);
             run.Tick(0);
@@ -40,7 +42,7 @@ namespace Core.Scripting.Editor
             var variables = new CutsceneVariables(Definitions());
             var lua = "local success, amount = Results." + (awaited ? "Later" : "Now") + "(); " +
                 "__cutsceneAssign({'success','amount'}, success, amount)";
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "outputs", variables: variables);
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(api), lua, "outputs", variables: variables);
             run.Tick(0);
             if (awaited)
             {
@@ -51,7 +53,7 @@ namespace Core.Scripting.Editor
             Assert.That(run.IsRunning, Is.False);
             Assert.That(variables.Get("success", new Script()).Boolean, Is.True);
             Assert.That(variables.Get("amount", new Script()).Number, Is.EqualTo(7));
-            var outputs = new LuaBindingRegistry(api).Describe().modules.Single().methods.Single(method => method.name == "Later").outputs;
+            var outputs = Game.Bind(api).Describe().modules.Single().methods.Single(method => method.name == "Later").outputs;
             Assert.That(outputs.Select(output => output.type), Is.EqualTo(new[] { "boolean", "number" }));
         }
 
@@ -61,12 +63,12 @@ namespace Core.Scripting.Editor
             var variables = new CutsceneVariables(Definitions());
             Assert.That(() => variables.Assign(new[] { "amount", "success" }, new[] { DynValue.NewNumber(8), DynValue.NewString("wrong") }), Throws.InvalidOperationException);
             Assert.That(variables.Get("amount", new Script()).Number, Is.EqualTo(1));
-            using var replacement = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(), "Cutscene.Variables = {}", "bad-namespace", variables: variables);
+            using var replacement = VulcanusLuaEngine.StartSession(Game.Bind(), "Cutscene.Variables = {}", "bad-namespace", variables: variables);
             Assert.That(() => replacement.Tick(0), Throws.InvalidOperationException.With.Message.Contains("namespace"));
             var text = new CutsceneVariables(new[] { new CutsceneVariableDefinition("timestamp", "string", "\"2026-10-28T20:00:00Z\"") });
             Assert.That(text.Get("timestamp", new Script()).String, Is.EqualTo("2026-10-28T20:00:00Z"));
             Assert.That(() => variables.Set("missing", DynValue.NewNumber(1)), Throws.InvalidOperationException);
-            var conditions = new VulcanusLuaEngine(variables);
+            var conditions = Game.Lua.CreateEngine(variables);
             Assert.That(conditions.EvaluateCondition("Cutscene.Variables.amount == 1"), Is.True);
             Assert.That(() => conditions.EvaluateCondition("(function() Cutscene.Variables.amount = 9; return true end)()"), Throws.Exception);
             Assert.That(variables.Get("amount", new Script()).Number, Is.EqualTo(1));
@@ -77,7 +79,7 @@ namespace Core.Scripting.Editor
         {
             var api = new ResultApi();
             var variables = new CutsceneVariables(Definitions());
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api),
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(api),
                 "local success, amount = Results.Later(); __cutsceneAssign({'success','amount'}, success, amount)", "cancelled-results", variables: variables);
             run.Tick(0);
             run.Cancel();
@@ -93,7 +95,7 @@ namespace Core.Scripting.Editor
             var variables = new CutsceneVariables(new[] { new CutsceneVariableDefinition("delay", "number", "-1") });
             var source = JArray.Parse("[{id:'wait',action:'cutscene.wait',arguments:{},argumentVariables:{seconds:'delay'}}]");
             var lua = CutsceneSequenceCompiler.Compile(source, "dynamic-validation", out _, variables: new[] { new CutsceneVariableDefinition("delay", "number", "-1") });
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi()), lua, "dynamic-validation", variables: variables);
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(new CutsceneLuaApi()), lua, "dynamic-validation", variables: variables);
             Assert.That(() => run.Tick(0), Throws.InvalidOperationException.With.Message.Contains("nonnegative"));
             Assert.That(run.IsRunning, Is.False);
         }

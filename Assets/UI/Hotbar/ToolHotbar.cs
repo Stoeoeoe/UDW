@@ -1,3 +1,4 @@
+using VContainer;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
@@ -18,6 +19,10 @@ namespace UI.Hotbar
     /// </summary>
     public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, IEventListener<ItemSelectedEvent>, ILocationLifecycle
     {
+        [Inject] private UrGUIManager _urGUIManager;
+
+        [Inject] private LevelManager _levelManager;
+
         [Header("Inventory Binding")] [Tooltip("The name of the inventory to display in the hotbar")]
         public string TargetInventoryName = "MainInventory";
 
@@ -170,7 +175,7 @@ namespace UI.Hotbar
         /// </summary>
         public virtual void OnSlotActionTriggered(int slotIndex)
         {
-            if (UrGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
+            if (_urGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
             if (slotIndex < 0 || slotIndex >= _hotbarSlots.Count)
             {
                 return;
@@ -247,8 +252,8 @@ namespace UI.Hotbar
         /// </summary>
         protected virtual void Update()
         {
-            if (SlotContainer) SlotContainer.gameObject.SetActive(!UrGUIManager.HasOpenScreens);
-            if (UrGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
+            if (SlotContainer) SlotContainer.gameObject.SetActive(!_urGUIManager.HasOpenScreens);
+            if (_urGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
             if (!_initialized) InitializeHotbar();
             if (!_initialized) return;
 
@@ -299,7 +304,7 @@ namespace UI.Hotbar
 
             this.Subscribe<InventoryChangedEvent>();
             this.Subscribe<ItemSelectedEvent>();
-            LevelManager.Instance?.RegisterLifecycle(this);
+            _levelManager.RegisterLifecycle(this);
         }
 
         protected virtual void OnDisable()
@@ -313,7 +318,7 @@ namespace UI.Hotbar
 
             this.Unsubscribe<InventoryChangedEvent>();
             this.Unsubscribe<ItemSelectedEvent>();
-            LevelManager.Instance?.UnregisterLifecycle(this);
+            _levelManager.UnregisterLifecycle(this);
         }
 
         public void OnLocationEnter(LocationData location)

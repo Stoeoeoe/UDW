@@ -8,9 +8,9 @@ using NUnit.Framework;
 namespace Character.Editor
 {
     /// <summary>Checks health bounds, death, attribute changes and live-state binding through the authored character fixture.</summary>
-    public sealed class CharacterHealthTests : IEventListener<HealthChangedEvent>
+    public sealed class CharacterHealthTests : Core.Common.Editor.GameTest, IEventListener<HealthChangedEvent>
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private CharacterHealth _health;
         private HealthState _state;
@@ -19,8 +19,8 @@ namespace Character.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Character health");
-            _character = _fixture.CreateCharacter();
+
+            _character = Game.CreateCharacter();
             _health = _character.Health;
             _state = new HealthState();
             _health.Initialize(_state);
@@ -32,7 +32,7 @@ namespace Character.Editor
         public void TearDown()
         {
             EventBus<HealthChangedEvent>.Unsubscribe(this);
-            _fixture.Dispose();
+
         }
 
         [Test]
@@ -139,14 +139,14 @@ namespace Character.Editor
         [Test]
         public void PlayerInitializationBindsTheSaveRootAndPreservesHealthOnRebinding()
         {
-            _fixture.AddSingleton<GameStateManager>();
-            GameState.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            GameState.Player.Health = new HealthState { Initialized = true, Current = 37 };
-            var player = _fixture.AddSingleton<Core.PlayerStateManager>();
+
+            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
+            Game.State.Player.Health = new HealthState { Initialized = true, Current = 37 };
+            var player = Game.Get<Core.PlayerStateManager>();
             player.InitializeCharacter(_character);
             Assert.That(_health.CurrentHealth, Is.EqualTo(37));
             _health.TakeDamage(7);
-            Assert.That(GameState.Player.Health.Current, Is.EqualTo(30));
+            Assert.That(Game.State.Player.Health.Current, Is.EqualTo(30));
             player.InitializeCharacter(_character);
             Assert.That(_health.CurrentHealth, Is.EqualTo(30));
         }

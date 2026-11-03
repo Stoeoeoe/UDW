@@ -9,13 +9,16 @@ namespace Core.Divinity
     /// <summary>Changes saved scores and projects threshold boons onto the current player character.</summary>
     public sealed class DivineFavourManager : IDisposable, IEventListener<NewDayEvent>
     {
+        private readonly DeityDefinitions _deityDefinitions;
+
         private readonly DivineFavourState _state;
         private Dictionary<string, BoonDefinition> _activeBoons = new(StringComparer.Ordinal);
         private GameCharacter _character;
 
-        public DivineFavourManager(DivineFavourState state)
+        public DivineFavourManager(DivineFavourState state, DeityDefinitions definitions)
         {
             _state = state ?? throw new ArgumentNullException(nameof(state));
+            _deityDefinitions = definitions;
             EventBus<NewDayEvent>.Subscribe(this);
         }
 
@@ -24,7 +27,7 @@ namespace Core.Divinity
         /// <summary>Accepts positive or negative changes. Returns the resulting score.</summary>
         public int AddFavour(string deityId, int points)
         {
-            DeityDefinitions.Get(deityId);
+            _deityDefinitions.Get(deityId);
             var previous = GetFavour(deityId);
             var current = previous + points;
             if (previous == current) return current;
@@ -57,7 +60,7 @@ namespace Core.Divinity
             var changed = new List<DivineFavourChangedEvent>();
             foreach (var pair in previous)
             {
-                if (!DeityDefinitions.TryGet(pair.Key, out var deity)) continue;
+                if (!_deityDefinitions.TryGet(pair.Key, out var deity)) continue;
                 var decay = (long)deity.DailyDecay * days;
                 var score = pair.Value > 0
                     ? (int)Math.Max(0, pair.Value - decay)
@@ -97,7 +100,7 @@ namespace Core.Divinity
             foreach (var pair in _state.Scores)
             {
                 // Keep unknown mod IDs in saves even when their definitions are unavailable.
-                if (!DeityDefinitions.TryGet(pair.Key, out var deity)) continue;
+                if (!_deityDefinitions.TryGet(pair.Key, out var deity)) continue;
                 for (var levelIndex = 0; levelIndex < deity.Levels.Count; levelIndex++)
                 {
                     var level = deity.Levels[levelIndex];

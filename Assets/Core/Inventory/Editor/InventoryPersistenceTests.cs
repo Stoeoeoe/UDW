@@ -21,8 +21,9 @@ namespace Core.Inventory.Editor
         public void PlaceOne(int slot) => PlaceOneItem(slot);
     }
 
-    public sealed class InventoryPersistenceTests : IEventListener<InventoryChangedEvent>
+    public sealed class InventoryPersistenceTests : Core.Common.Editor.GameTest, IEventListener<InventoryChangedEvent>
     {
+
         private GameObject _root;
         private SlotInventory _inventory;
         private InventoryTestItem _item;
@@ -34,16 +35,12 @@ namespace Core.Inventory.Editor
         [SetUp]
         public void SetUp()
         {
-            _root = new GameObject("Inventory tests");
-            _root.SetActive(false);
-            _inventory = _root.AddComponent<SlotInventory>();
-            typeof(SlotInventory).GetField("_numberOfSlots", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_inventory, 2);
-            typeof(SlotInventory).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_inventory, null);
-            _item = ScriptableObject.CreateInstance<InventoryTestItem>();
+            _item = Game.Asset<InventoryTestItem>();
             typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_item, "test:grain");
-            _state = new InventoryState();
-            _inventory.Bind(_state, id => id == _item.ItemId ? _item : null);
+            _state = new InventoryState { Slots = new InventorySlotState[2] };
+            _inventory = Game.Inventory(_state, id => id == _item.ItemId ? _item : null);
+            _root = _inventory.gameObject;
             _events = 0;
             _checkMarker = false;
             _expectedTotal = null;
@@ -54,8 +51,6 @@ namespace Core.Inventory.Editor
         public void TearDown()
         {
             EventBus<InventoryChangedEvent>.Unsubscribe(this);
-            Object.DestroyImmediate(_root);
-            Object.DestroyImmediate(_item);
         }
 
         public void OnEvent(InventoryChangedEvent change)
@@ -115,7 +110,7 @@ namespace Core.Inventory.Editor
         [Test]
         public void DragDropCallbacksSeeCommittedSlotsAndHeldStack()
         {
-            var display = _root.AddComponent<InventoryDragTestDisplay>();
+            var display = Game.InjectObject(_root.AddComponent<InventoryDragTestDisplay>());
             display.Inventory = _inventory;
             _inventory.AddItem(_item, 4);
             _expectedTotal = 4;
@@ -152,7 +147,7 @@ namespace Core.Inventory.Editor
             var snapshot = _inventory.GetSnapshot();
             snapshot[0] = ItemStack.Empty;
             Assert.That(_state.Slots[0].Quantity, Is.EqualTo(2));
-            var other = _root.AddComponent<SlotInventory>();
+            var other = Game.InjectObject(_root.AddComponent<SlotInventory>());
             other.Bind(_state, id => _item);
             other.RemoveItemAt(0);
             Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));

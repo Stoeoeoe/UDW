@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,15 +19,20 @@ namespace Core.Scripting
 {
     /// <summary>Owns one live-world cutscene, including staging, terminal commit and cleanup.</summary>
     [DefaultExecutionOrder(300)]
-    public sealed class CutsceneRunner : Singleton<CutsceneRunner>, IEventListener<DayTransitionStarted>
+    public sealed class CutsceneRunner : Core.GameManager, IEventListener<DayTransitionStarted>
     {
-        private CutsceneCatalog _catalog;
+        [Inject] private LuaRuntime _luaRuntime;
+        [Inject] private GameState _gameState;
+
+        [Inject] private Input.InputManager _inputManager;
+
+        [Inject] private CutsceneCatalog _catalog;
         [SerializeField] private CutsceneSkipConfirmation skipConfirmation;
         [SerializeField] private TimeScaleController timeScaleController;
         [ShowInInspector, ReadOnly] private CutscenePresentationSettings _presentation;
-        private readonly VulcanusLuaEngine _completionActions = new();
-        private LevelManager _level;
-        private UrGUIManager _gui;
+        private VulcanusLuaEngine _completionActions;
+        [Inject] private LevelManager _level;
+        [Inject] private UrGUIManager _gui;
         private MainCharacter _player;
         private Tween _transition;
         private CancellationTokenSource _playbackCancellation;
@@ -40,7 +46,7 @@ namespace Core.Scripting
 
         protected override void OnAwake()
         {
-            _catalog = CatalogResources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName);
+            _completionActions = _luaRuntime.CreateEngine();
             _presentation = Resources.Load<CutscenePresentationSettings>(CutscenePresentationSettings.ResourceName);
             if (!_presentation) throw new InvalidOperationException("Cutscenes require Resources/CutscenePresentation settings.");
             _presentation.RequireValidConfiguration();
@@ -48,17 +54,19 @@ namespace Core.Scripting
             if (!timeScaleController) throw new InvalidOperationException("CutsceneRunner requires the time scale controller.");
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
-            _level = LevelManager.Instance;
-            _gui = UrGUIManager.Instance;
+            base.OnEnable();
+
+
             _level.LocationLeaving += Cancel;
             _gui.TransitionInterrupted += Cancel;
             this.Subscribe<DayTransitionStarted>();
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             Cancel();
             _level.LocationLeaving -= Cancel;
             _gui.TransitionInterrupted -= Cancel;
@@ -74,14 +82,14 @@ namespace Core.Scripting
         {
             if (!definition) throw new ArgumentNullException(nameof(definition));
             run = null;
-            if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || UrGUIManager.HasOpenScreens) return false;
-            if (GameState.Story.CompletedCutscenes.Contains(definition.CutsceneId)) return false;
+            if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || _gui.HasOpenScreens) return false;
+            if (_gameState.Story.CompletedCutscenes.Contains(definition.CutsceneId)) return false;
             var player = MainCharacter.CurrentMainCharacter;
             if (!player || !player.IsRuntimeInitialized) throw new InvalidOperationException("Cutscenes require the initialized player.");
             if (player.IsControlBlocked || player.Controller.IsMovementOwned) return false;
 
             // Resolve everything before acquiring control. A bad reference cannot leave half a scene staged.
-            var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance,
+            var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance, _luaRuntime,
                 out var characters);
             var placements = CutscenePlacement.Prepare(definition, bindings, characters);
             if (placements.Any(placement => placement.Character.IsControlBlocked || placement.Character.Controller.IsMovementOwned)) return false;
@@ -129,7 +137,7 @@ namespace Core.Scripting
             if (run == null) return;
             try
             {
-                if (Input.InputManager.Instance.SkipCutscenePressed) RequestSkip();
+                if (_inputManager.SkipCutscenePressed) RequestSkip();
                 if (skipConfirmation.IsOpen) return;
                 _transition.Play();
                 if (!_sequenceReady || _finishRequested) return;
@@ -246,7 +254,7 @@ namespace Core.Scripting
                 {
                     ExecuteImmediate(run, run.Definition.OnComplete.Lua, run.Definition.OnComplete.Steps, "completion");
                     _completionActions.Execute(run.Definition.OnComplete.Actions);
-                    GameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
+                    _gameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
                 }
                 return completed;
             }

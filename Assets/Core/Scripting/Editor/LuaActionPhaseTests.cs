@@ -6,6 +6,7 @@ namespace Core.Scripting.Editor
 {
     public sealed class LuaActionPhaseTests
     {
+
         [Test]
         public void CurrentActionsDeclarePhasesIndependentlyOfExecutionContexts()
         {

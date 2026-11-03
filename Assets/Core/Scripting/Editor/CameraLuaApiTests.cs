@@ -10,8 +10,9 @@ using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CameraLuaApiTests
+    public sealed class CameraLuaApiTests : Core.Common.Editor.GameTest
     {
+
         private GameObject _root;
         private CameraManager _manager;
         private CinemachineCamera _camera;
@@ -19,17 +20,14 @@ namespace Core.Scripting.Editor
         [SetUp]
         public void SetUp()
         {
-            _root = new GameObject("Camera shake fixture");
-            _root.SetActive(false);
-            _manager = _root.AddComponent<CameraManager>();
+            _manager = Game.Create<CameraManager>();
+            _root = _manager.gameObject;
             var child = new GameObject("Follow camera");
             child.transform.SetParent(_root.transform);
             _camera = child.AddComponent<CinemachineCamera>();
             _camera.Follow = _root.transform;
             typeof(CameraManager).GetField("playerFollowVCam", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_manager, _camera);
         }
-
-        [TearDown] public void TearDown() => Object.DestroyImmediate(_root);
 
         private void Advance(float seconds) => typeof(CameraManager).GetMethod("AdvanceShake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_manager, new object[] { seconds });
 
@@ -78,7 +76,7 @@ namespace Core.Scripting.Editor
             var source = JArray.Parse("[{ 'id':'rumble', 'action':'camera.shake', 'arguments': { 'durationSeconds':0.5, 'strength':0.1 } }]");
             var lua = CutsceneSequenceCompiler.Compile(source, "Camera fixture", out var steps);
             var api = new CameraLuaApi(_manager);
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CameraLuaApi), () => api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(CameraLuaApi), () => api));
             using var run = VulcanusLuaEngine.StartSession(bindings, lua, "Camera fixture");
             run.Tick(0);
             Assert.That(run.IsRunning, Is.False);
@@ -149,7 +147,7 @@ namespace Core.Scripting.Editor
             var source = JArray.Parse("[{ 'id':'flash', 'action':'camera.flash', 'arguments': {} }]");
             var lua = CutsceneSequenceCompiler.Compile(source, "Flash fixture", out var steps);
             var api = new CameraLuaApi(_manager);
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CameraLuaApi), () => api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(CameraLuaApi), () => api));
             using var run = VulcanusLuaEngine.StartSession(bindings, lua, "Flash fixture");
             run.Tick(0);
             Assert.That(run.IsRunning, Is.False);

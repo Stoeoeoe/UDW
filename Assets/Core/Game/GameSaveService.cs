@@ -6,12 +6,17 @@ using UnityEngine;
 namespace Core.Game
 {
     /// <summary>Reads and writes the versioned game-state root in Unity's persistent data folder.</summary>
-    public static class GameSaveService
+    public sealed class GameSaveService
     {
-        public static void Save(string slot, GameSaveData data)
+        private readonly Character.CharacterCatalog _characters;
+        private readonly Inventory.ItemCatalog _items;
+        public GameSaveService(Character.CharacterCatalog characters, Inventory.ItemCatalog items)
+        { _characters = characters; _items = items; }
+
+        public void Save(string slot, GameSaveData data)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
-            data.Validate();
+            data.Validate(_characters, _items);
 
             // Save data must not depend on scene or asset instance references.
             var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var unityObjects);
@@ -29,7 +34,7 @@ namespace Core.Game
                 File.Move(temporaryPath, path);
         }
 
-        public static bool TryLoad(string slot, out GameSaveData data)
+        public bool TryLoad(string slot, out GameSaveData data)
         {
             var path = GetSavePath(slot);
             if (!File.Exists(path))
@@ -40,7 +45,7 @@ namespace Core.Game
 
             data = SerializationUtility.DeserializeValue<GameSaveData>(File.ReadAllBytes(path), DataFormat.JSON);
             if (data == null) throw new FormatException("The save file is empty or invalid.");
-            data.Validate();
+            data.Validate(_characters, _items);
             return true;
         }
 

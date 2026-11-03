@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Character;
 using UnityEngine;
@@ -19,6 +20,7 @@ namespace UI.Shared
         private VisualElement _lastFocused;
         private bool _overlayWasEnabled, _overlayWasFocusable;
         private Action _hide;
+        [Inject] private UrGUIManager _gui;
         private UrGUIManager _manager;
         private VisualElement _inputOverlay;
 
@@ -66,7 +68,7 @@ namespace UI.Shared
             if (show == null) throw new ArgumentNullException(nameof(show));
             if (hide == null) throw new ArgumentNullException(nameof(hide));
 
-            var manager = UrGUIManager.Instance;
+            var manager = _gui;
             _manager = manager;
             _hide = hide;
             try { _manager.Open(this, show, HandleClosed, pauseMode ?? pauseWhileOpen, character); }
@@ -121,7 +123,7 @@ namespace UI.Shared
             OnInputActiveChanged(active);
         }
         protected virtual void OnInputActiveChanged(bool active) { }
-        protected void PlayUISound(UISoundCue cue) => UrGUIManager.Instance?.PlaySound(cue, this);
+        protected void PlayUISound(UISoundCue cue) => _gui.PlaySound(cue, this);
         protected virtual void OnDisable() => CloseScreen(false);
     }
 }

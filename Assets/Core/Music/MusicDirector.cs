@@ -6,15 +6,8 @@ using UnityEngine.Audio;
 namespace Core.Music
 {
     [DefaultExecutionOrder(100)]
-    public sealed class MusicDirector : Singleton<MusicDirector>
+    public sealed class MusicDirector : Core.GameManager
     {
-        // SystemRoot exists by the end of scene Awake; requests begin in Start.
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AttachToSystemRoot()
-        {
-            if (!Instance) SystemRoot.Instance.gameObject.AddComponent<MusicDirector>();
-        }
-
         public readonly MusicRequestResolver Requests = new();
         private MusicPlaybackEngine _playback;
         private double _lead;

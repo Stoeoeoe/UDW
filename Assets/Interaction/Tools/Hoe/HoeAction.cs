@@ -10,11 +10,12 @@ namespace Interaction.Tools.Hoe
     /// </summary>
     public class HoeAction : ToolAction
     {
+
         public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             await ForEachAffectedTile(snapshot, cancellation, tile =>
             {
-                MapManager.Instance.PlowTile(tile);
+                _mapManager.PlowTile(tile);
             });
         }
 
@@ -26,7 +27,7 @@ namespace Interaction.Tools.Hoe
         public override bool CanBeUsedOnTile(TileData tile)
         {
             return tile != null && tile.IsFarmable && tile.FarmlandData is not { IsPlowed: true } &&
-                !tile.PlacedObject && !MapManager.Instance.IsTileOccupied(tile, Character);
+                !tile.PlacedObject && !_mapManager.IsTileOccupied(tile, Character);
         }
     }
 }

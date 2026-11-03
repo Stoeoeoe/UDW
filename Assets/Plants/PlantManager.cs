@@ -20,12 +20,27 @@ namespace Plants
     /// Coordinates saved crops across all locations: daily updates, sowing and harvesting.
     /// PlantState owns growth rules; FarmablePlant presents the state in the loaded map.
     /// </summary>
-    public class PlantManager : Singleton<PlantManager>,
+    public sealed class PlantManager : IDisposable,
         IEventListener<NewDayEvent>
     {
+        private readonly ItemManager _items;
+        private readonly GameState _gameState;
+        private readonly LocationContext _locationContext;
+
         private const string PlantObjectPrefix = "plant:";
 
-        private PlantCatalog _catalog;
+        private readonly PlantCatalog _catalog;
+
+        public PlantManager(GameState state, PlantCatalog catalog, LocationContext location, ItemManager items)
+        {
+            _gameState = state;
+            _catalog = catalog;
+            _locationContext = location;
+            _items = items;
+            this.Subscribe<NewDayEvent>();
+        }
+
+        public void Dispose() => this.Unsubscribe<NewDayEvent>();
 
         /// <summary>Looks up an enabled plant definition in the shared catalog.</summary>
         public bool TryGetPlantData(string id, out PlantData data)
@@ -33,16 +48,6 @@ namespace Plants
             data = _catalog.Get(id);
             return data;
         }
-
-        protected override void Awake()
-        {
-            base.Awake();
-            _catalog = CatalogResources.Load<PlantCatalog>(PlantCatalog.ResourceName);
-            if (!_catalog) throw new InvalidOperationException("The default PlantCatalog is missing. Refresh catalogs in the editor.");
-        }
-
-        protected void OnEnable() => this.Subscribe<NewDayEvent>();
-        protected void OnDisable() => this.Unsubscribe<NewDayEvent>();
 
         /// <summary>Advances saved crops, consumes irrigation and then publishes the daily changes.</summary>
         public void OnEvent(NewDayEvent e)
@@ -62,7 +67,7 @@ namespace Plants
             List<PlantConditionChangedEvent> conditionEvents, List<PlantRemovedEvent> removalEvents)
         {
             // Snapshot the entries because wilted-crop removal changes that store during iteration.
-            foreach (var entry in GameState.World.GetStates<PlantState>().ToArray())
+            foreach (var entry in _gameState.World.GetStates<PlantState>().ToArray())
             {
                 var state = entry.State;
                 if (!TryGetPlantData(state.plantID, out var data)) continue;
@@ -72,25 +77,25 @@ namespace Plants
                 var previousStage = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting);
                 var previousCondition = state.condition;
 
-                state.AdvanceDay(definition: data, currentSeason: GameState.Time.season, wasWatered: wasWatered);
+                state.AdvanceDay(definition: data, currentSeason: _gameState.Time.season, wasWatered: wasWatered);
                 if (RemoveExpiredCrop(entry, position, data, removalEvents)) continue;
 
                 RecordCropChanges(entry, position, data, previousStage, previousCondition, growthEvents, conditionEvents);
             }
         }
 
-        private static bool IsFarmlandIrrigated(string locationId, Vector2Int position) =>
-            GameState.World.TryGet<FarmlandState>(locationId ?? WorldState.Global,
+        private bool IsFarmlandIrrigated(string locationId, Vector2Int position) =>
+            _gameState.World.TryGet<FarmlandState>(locationId ?? WorldState.Global,
                 MapManager.FarmlandObjectId(position), out var land) && land.plowed && land.irrigated;
 
-        private static bool RemoveExpiredCrop(WorldStateEntry<PlantState> entry, Vector2Int position,
+        private bool RemoveExpiredCrop(WorldStateEntry<PlantState> entry, Vector2Int position,
             PlantData data, List<PlantRemovedEvent> removalEvents)
         {
             var state = entry.State;
             if (state.condition != PlantCondition.Wilted || state.daysSinceWilted < data.DaysWiltedUntilRemoval)
                 return false;
 
-            GameState.World.Remove(entry.LocationId ?? WorldState.Global, entry.ObjectId);
+            _gameState.World.Remove(entry.LocationId ?? WorldState.Global, entry.ObjectId);
             removalEvents.Add(new PlantRemovedEvent { LocationId = entry.LocationId, Position = position, State = state });
             return true;
         }
@@ -114,15 +119,15 @@ namespace Plants
                 });
         }
 
-        private static void DryFarmland(List<FarmlandDriedEvent> dryEvents)
+        private void DryFarmland(List<FarmlandDriedEvent> dryEvents)
         {
-            foreach (var entry in GameState.World.GetStates<FarmlandState>().ToArray())
+            foreach (var entry in _gameState.World.GetStates<FarmlandState>().ToArray())
             {
                 if (!entry.State.irrigated) continue;
                 entry.State.irrigated = false;
                 // Empty/unplowed records need no saved override once dry.
                 if (!entry.State.plowed)
-                    GameState.World.Remove(entry.LocationId ?? WorldState.Global, entry.ObjectId);
+                    _gameState.World.Remove(entry.LocationId ?? WorldState.Global, entry.ObjectId);
                 dryEvents.Add(new FarmlandDriedEvent
                 {
                     LocationId = entry.LocationId, ObjectId = entry.ObjectId
@@ -143,14 +148,14 @@ namespace Plants
         /// <summary>Enumerates live saved crops for rebuilding a location's plant views.</summary>
         public IEnumerable<KeyValuePair<Vector2Int, PlantState>> GetPlantStatesInLocation(string locationId)
         {
-            foreach (var pair in GameState.World.GetStates<PlantState>(locationId))
+            foreach (var pair in _gameState.World.GetStates<PlantState>(locationId))
                 yield return new KeyValuePair<Vector2Int, PlantState>(ParsePlantObjectId(pair.Key), pair.Value);
         }
 
         /// <summary>Returns the live saved crop at a tile, or null when the tile has no crop.</summary>
         public PlantState GetPlantState(string locationId, Vector2Int position)
         {
-            return GameState.World.TryGet<PlantState>(locationId, PlantObjectId(position), out var state)
+            return _gameState.World.TryGet<PlantState>(locationId, PlantObjectId(position), out var state)
                 ? state
                 : null;
         }
@@ -168,7 +173,7 @@ namespace Plants
         {
             var state = GetPlantState(locationId, position);
             if (state == null || state.condition != PlantCondition.Wilted) return false;
-            GameState.World.Remove(locationId, PlantObjectId(position));
+            _gameState.World.Remove(locationId, PlantObjectId(position));
             EventBus<PlantRemovedEvent>.Raise(new PlantRemovedEvent { LocationId = locationId, Position = position, State = state });
             return true;
         }
@@ -200,7 +205,7 @@ namespace Plants
             var state = GetPlantState(locationId, position);
             TryGetPlantData(state.plantID, out var data);
             var quantity = data.RollHarvestQuantity();
-            drop = ItemManager.PrepareDrop(data.HarvestItem, quantity, worldPosition);
+            drop = _items.PrepareDrop(data.HarvestItem, quantity, worldPosition);
             var harvest = CommitHarvest(locationId, position, state, data, quantity);
             // Activate only after updating the crop; drop activation can invoke gameplay callbacks.
             drop.gameObject.SetActive(true);
@@ -213,7 +218,7 @@ namespace Plants
             // Single-harvest crops disappear; regrowing crops return to the configured stage.
             // Return the event without publishing it so the caller can finish delivering the yield first.
             var removed = data.RegrowthStageIndex < 0;
-            if (removed) GameState.World.Remove(locationId, PlantObjectId(position));
+            if (removed) _gameState.World.Remove(locationId, PlantObjectId(position));
             else state.daysPassedSincePlanting = data.GrowthStages[data.RegrowthStageIndex].DaysToReachStage;
             return new PlantHarvestedEvent
             {
@@ -226,7 +231,7 @@ namespace Plants
         /// <summary>Sows directly on the current map without consuming a seed; occupied crop tiles are unchanged.</summary>
         public void SowPlantOnCurrentMap(Vector2Int position, string plantId)
         {
-            string locationId = LevelManager.Instance.CurrentLocationData.id;
+            string locationId = _locationContext.Location.id;
             SowPlantOnMap(locationId, position, plantId);
         }
 
@@ -242,7 +247,7 @@ namespace Plants
             var remaining = stack.Quantity > 1 ? new ItemStack(seed, stack.Quantity - 1) : ItemStack.Empty;
             inventory.Storage.SetSlot(slotIndex, remaining);
             // Both live states are complete before a listener can move inventory or start a transition.
-            GameState.World.Set(locationId, PlantObjectId(tile.Coordinates), new PlantState(seed.plantData.plantId));
+            _gameState.World.Set(locationId, PlantObjectId(tile.Coordinates), new PlantState(seed.plantData.plantId));
             var sow = new SowPlantEvent { Position = tile.Coordinates, PlantId = seed.plantData.plantId, LocationId = locationId };
             EventBus<SowPlantEvent>.Raise(sow);
             InventoryChangedEvent.Trigger(inventory);
@@ -252,22 +257,22 @@ namespace Plants
         private void SowPlantOnMap(string locationId, Vector2Int position, string plantId)
         {
             var objectId = PlantObjectId(position);
-            if (GameState.World.TryGet<PlantState>(locationId, objectId, out _)) return;
+            if (_gameState.World.TryGet<PlantState>(locationId, objectId, out _)) return;
 
-            GameState.World.Set(locationId, objectId, new PlantState(plantId));
+            _gameState.World.Set(locationId, objectId, new PlantState(plantId));
             SowPlantEvent.Trigger(position, plantId, locationId);
         }
 
         /// <summary>Checks for a saved crop at the tile, including wilted crops.</summary>
         public bool HasPlantAt(string locationId, Vector2Int position)
         {
-            return GameState.World.TryGet<PlantState>(locationId, PlantObjectId(position), out _);
+            return _gameState.World.TryGet<PlantState>(locationId, PlantObjectId(position), out _);
         }
 
         /// <summary>Checks for a saved crop at the tile in the current location.</summary>
         public bool HasPlantAtCurrentMap(Vector2Int position)
         {
-            string locationId = LevelManager.Instance.CurrentLocationData.id;
+            string locationId = _locationContext.Location.id;
             return HasPlantAt(locationId, position);
         }
 

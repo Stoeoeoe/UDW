@@ -1,3 +1,5 @@
+using Core.Tile;
+using VContainer;
 using System.Collections.Generic;
 using Core.Context;
 using MoreMountains.Tools;
@@ -8,8 +10,11 @@ namespace Core.Tile.Overlay
     /// <summary>
     /// Manages tile overlays. Attach overlays as children and assign the tilemap in inspector.
     /// </summary>
-    public class TileOverlayManager : Singleton<TileOverlayManager>
+    public class TileOverlayManager : Core.GameManager
     {
+        [Inject] private PlayerInteractionContext _playerInteractionContext;
+        [Inject] private MapManager _mapManager;
+
         [SerializeField] private int defaultRadius = 3;
 
         private readonly List<AbstractOverlay> _overlays = new();
@@ -31,18 +36,12 @@ namespace Core.Tile.Overlay
 
         private void Start()
         {
-            if (PlayerInteractionContext.Instance != null)
-            {
-                PlayerInteractionContext.Instance.OnContextChanged += OnContextChanged;
-            }
+            _playerInteractionContext.OnContextChanged += OnContextChanged;
         }
 
         private void OnDestroy()
         {
-            if (PlayerInteractionContext.Instance != null)
-            {
-                PlayerInteractionContext.Instance.OnContextChanged -= OnContextChanged;
-            }
+            _playerInteractionContext.OnContextChanged -= OnContextChanged;
         }
 
         private void OnContextChanged(PlayerInteractionContextSnapshot snapshot)
@@ -103,7 +102,7 @@ namespace Core.Tile.Overlay
                 for (int dy = -defaultRadius; dy <= defaultRadius; dy++)
                 {
                     var coords = new Vector2Int(cursorTile.Coordinates.x + dx, cursorTile.Coordinates.y + dy);
-                    var tile = MapManager.Instance.GetTileDataAtCoordinates(coords);
+                    var tile = _mapManager.GetTileDataAtCoordinates(coords);
                     if (tile != null)
                         yield return tile;
                 }
@@ -112,7 +111,7 @@ namespace Core.Tile.Overlay
 
         private void SetTile(OverlayTileResult result)
         {
-            var overlayTilemap = MapManager.Instance.OverlayTilemap; 
+            var overlayTilemap = _mapManager.OverlayTilemap;
             if (!overlayTilemap) return;
 
             var cellPos = new Vector3Int(result.Coordinates.x, result.Coordinates.y, 0);
@@ -122,7 +121,7 @@ namespace Core.Tile.Overlay
 
         private void ClearOverlay()
         {
-            var overlayTilemap = MapManager.Instance.OverlayTilemap; 
+            var overlayTilemap = _mapManager.OverlayTilemap;
             if (!overlayTilemap) return;
 
             foreach (var pos in _activeTilePositions)

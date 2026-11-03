@@ -17,9 +17,9 @@ using UnityEngine.Rendering;
 namespace Core.TimeAndWeather.Editor
 {
     /// <summary>Checks seasonal weather selection, load refresh and presentation notifications against the real clock.</summary>
-    public sealed class WeatherManagerTests : IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>, IEventListener<GameTimeChangedEvent>
+    public sealed class WeatherManagerTests : Core.Common.Editor.GameTest, IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>, IEventListener<GameTimeChangedEvent>
     {
-        private GameTestFixture _fixture;
+
         private UrTimeManager _clock;
         private WeatherManager _weather;
         private Volume _volume;
@@ -38,15 +38,15 @@ namespace Core.TimeAndWeather.Editor
         {
             _previousWaterRain = WaterInteraction.Rain;
             _previousIndoorCover = Shader.GetGlobalFloat("_IndoorWeatherCover");
-            _fixture = new GameTestFixture("Weather tests");
-            _fixture.Root.SetActive(true);
-            _fixture.AddSingleton<GameStateManager>();
-            _sound = _fixture.RegisterSingleton<WeatherSoundManagerProbe>();
+
+            Game.Root.SetActive(true);
+
+            _sound = Game.RegisterManager<WeatherSoundManagerProbe>();
             var volumeObject = new GameObject("Weather volume");
-            volumeObject.transform.SetParent(_fixture.Root.transform);
+            volumeObject.transform.SetParent(Game.Root.transform);
             _volume = volumeObject.AddComponent<Volume>();
-            _defaultProfile = _fixture.Own(ScriptableObject.CreateInstance<VolumeProfile>());
-            _weather = _fixture.AddSingleton<WeatherManager>(manager =>
+            _defaultProfile = Game.Asset<VolumeProfile>();
+            _weather = Game.Start<WeatherManager>(manager =>
             {
                 Set(manager, "postProcessingVolume", _volume);
                 Set(manager, "defaultVolumeProfile", _defaultProfile);
@@ -55,7 +55,7 @@ namespace Core.TimeAndWeather.Editor
             _spring = CreateSeason(Core.TimeAndWeather.Season.Spring, Color.green);
             _spring.weatherData.GetRandomItem().waterRainIntensity = 0.35f;
             _summer = CreateSeason(Core.TimeAndWeather.Season.Summer, Color.yellow);
-            _clock = _fixture.AddSingleton<UrTimeManager>(clock => Set(clock, "seasons", new[] { _spring, _summer }));
+            _clock = Game.Start<UrTimeManager>(clock => Set(clock, "seasons", new[] { _spring, _summer }));
             _notifications.Clear();
             _dailyWeather = null;
             EventBus<WeatherUpdateEvent>.Subscribe(this);
@@ -72,7 +72,7 @@ namespace Core.TimeAndWeather.Editor
             EventBus<DayLightUpdateEvent>.Unsubscribe(this);
             EventBus<NewDayEvent>.Unsubscribe(this);
             EventBus<GameTimeChangedEvent>.Unsubscribe(this);
-            _fixture.Dispose();
+
             WaterInteraction.Rain = _previousWaterRain;
             Shader.SetGlobalFloat("_IndoorWeatherCover", _previousIndoorCover);
         }
@@ -91,12 +91,12 @@ namespace Core.TimeAndWeather.Editor
         [Test]
         public void LuaTimeQueriesAreDetachedReadOnlyAndReadTheCurrentSaveRoot()
         {
-            var engine = new VulcanusLuaEngine();
+            var engine = Game.Lua.CreateEngine();
             Assert.That(() => engine.EvaluateCondition("Time.GetCurrent().hour == 6"), Throws.Exception);
             _clock.Start();
             Assert.That(engine.EvaluateCondition("Time.GetCurrent().season == 'Spring' and Time.GetCurrent().dayOfSeason == 5"), Is.True);
             engine.Execute("local now = Time.GetCurrent(); now.hour = 22");
-            Assert.That(GameState.Time.hour, Is.EqualTo(6));
+            Assert.That(Game.State.Time.hour, Is.EqualTo(6));
             Assert.That(() => engine.EvaluateCondition("Time.SetTime(18, 30)"), Throws.Exception);
             var replacement = new GameSaveData();
             replacement.time.initialized = true;
@@ -104,8 +104,8 @@ namespace Core.TimeAndWeather.Editor
             replacement.time.daysSinceStart = 3;
             replacement.time.season = Core.TimeAndWeather.Season.Spring;
             replacement.time.dayOfSeason = 7;
-            typeof(GameStateManager).GetField("_data", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(GameStateManager.Instance, replacement);
+            typeof(GameState).GetMethod("Restore", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(Game.State, new object[] { replacement });
             Assert.That(engine.EvaluateCondition("Time.GetCurrent().hour == 15 and Time.GetCurrent().totalMinutes == 3780"), Is.True);
         }
 
@@ -115,22 +115,22 @@ namespace Core.TimeAndWeather.Editor
         public void LuaTimeActionsAdvanceTheClockAndDailySystemsInEveryPhase(string phase)
         {
             _clock.Start();
-            GameState.Time.hour = 20;
-            GameState.Time.dayOfSeason = 14;
-            GameState.Time.secondsTowardNextMinute = 3;
+            Game.State.Time.hour = 20;
+            Game.State.Time.dayOfSeason = 14;
+            Game.State.Time.secondsTowardNextMinute = 3;
             var source = JArray.Parse("[{ 'id':'tomorrow', 'action':'time.startNewDay', 'arguments':{} }, { 'id':'evening', 'action':'time.setTime', 'arguments':{ 'hour':18, 'minute':30 } }]");
             var lua = CutsceneSequenceCompiler.Compile(source, "Time fixture", out var steps);
-            var api = new TimeLuaApi();
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(TimeLuaApi), () => api));
+            var api = Game.Inject(new TimeLuaApi());
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(TimeLuaApi), () => api));
             using var session = VulcanusLuaEngine.StartSession(bindings, lua, "Time fixture", phase: phase);
             session.Tick(0);
             Assert.That(session.IsRunning, Is.False);
-            Assert.That(GameState.Time.daysSinceStart, Is.EqualTo(2));
-            Assert.That(GameState.Time.dayOfSeason, Is.EqualTo(1));
-            Assert.That(GameState.Time.season, Is.EqualTo(Core.TimeAndWeather.Season.Summer));
-            Assert.That(GameState.Time.hour, Is.EqualTo(18));
-            Assert.That(GameState.Time.minute, Is.EqualTo(30));
-            Assert.That(GameState.Time.secondsTowardNextMinute, Is.Zero);
+            Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(2));
+            Assert.That(Game.State.Time.dayOfSeason, Is.EqualTo(1));
+            Assert.That(Game.State.Time.season, Is.EqualTo(Core.TimeAndWeather.Season.Summer));
+            Assert.That(Game.State.Time.hour, Is.EqualTo(18));
+            Assert.That(Game.State.Time.minute, Is.EqualTo(30));
+            Assert.That(Game.State.Time.secondsTowardNextMinute, Is.Zero);
             Assert.That(_dailyWeather, Is.SameAs(_summer.weatherData.GetRandomItem()));
             Assert.That(_clockNotifications, Is.EqualTo(new long[] { 1800, 2550 }));
             Assert.That(_daylight, Is.EqualTo(Color.yellow));
@@ -149,21 +149,22 @@ namespace Core.TimeAndWeather.Editor
         public void LuaTimeRejectsInvalidClockInputsWithoutChangingState(double hour, double minute)
         {
             _clock.Start();
-            var previous = GameState.Time.TotalMinutes;
-            Assert.That(() => new TimeLuaApi().SetTime(hour, minute), Throws.TypeOf<System.ArgumentOutOfRangeException>());
-            Assert.That(GameState.Time.TotalMinutes, Is.EqualTo(previous));
+            var previous = Game.State.Time.TotalMinutes;
+            var api = Game.Inject(new TimeLuaApi());
+            Assert.That(() => api.SetTime(hour, minute), Throws.TypeOf<System.ArgumentOutOfRangeException>());
+            Assert.That(Game.State.Time.TotalMinutes, Is.EqualTo(previous));
             Assert.That(_clockNotifications, Is.Empty);
         }
 
         [Test]
         public void LuaTimeRejectsUninitializedAndTransitioningClocksAndNeverRewinds()
         {
-            var api = new TimeLuaApi();
+            var api = Game.Inject(new TimeLuaApi());
             Assert.That(() => api.StartNewDay(), Throws.InvalidOperationException);
             _clock.Start();
-            new VulcanusLuaEngine().Execute("Time.SetTime(18, 30)");
+            Game.Lua.CreateEngine().Execute("Time.SetTime(18, 30)");
             Assert.That(() => api.SetTime(18, 29), Throws.InvalidOperationException);
-            var previous = GameState.Time.TotalMinutes;
+            var previous = Game.State.Time.TotalMinutes;
             Set(_clock, "_dayTransitionRoutine", new object[0].GetEnumerator());
             try
             {
@@ -172,7 +173,7 @@ namespace Core.TimeAndWeather.Editor
             }
             finally { Set(_clock, "_dayTransitionRoutine", null); }
             api.SetTime(18, 30);
-            Assert.That(GameState.Time.TotalMinutes, Is.EqualTo(previous));
+            Assert.That(Game.State.Time.TotalMinutes, Is.EqualTo(previous));
             Assert.That(_clockNotifications, Has.Count.EqualTo(1));
         }
 
@@ -184,17 +185,17 @@ namespace Core.TimeAndWeather.Editor
             _clock.Start();
             var selected = _summer.weatherData.GetRandomItem();
             selected.id = "test:dry";
-            var catalog = _fixture.Own(ScriptableObject.CreateInstance<WeatherCatalog>());
+            var catalog = Game.Asset<WeatherCatalog>();
             catalog.Synchronize(new[] { selected });
             var api = new WeatherLuaApi(_weather, catalog);
-            var minutes = GameState.Time.TotalMinutes;
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api),
+            var minutes = Game.State.Time.TotalMinutes;
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(api),
                 "Weather.SetWeather('test:dry')", "Weather fixture", phase: phase);
             session.Tick(0);
             Assert.That(session.IsRunning, Is.False);
             Assert.That(_weather.CurrentWeather, Is.SameAs(selected));
             Assert.That(WaterInteraction.Rain, Is.Zero);
-            Assert.That(GameState.Time.TotalMinutes, Is.EqualTo(minutes));
+            Assert.That(Game.State.Time.TotalMinutes, Is.EqualTo(minutes));
             _clock.StartNewDay();
             Assert.That(_weather.CurrentWeather, Is.SameAs(_spring.weatherData.GetRandomItem()),
                 "The next normal daily roll replaces scripted weather.");
@@ -207,22 +208,22 @@ namespace Core.TimeAndWeather.Editor
             var previous = _weather.CurrentWeather;
             var selected = _summer.weatherData.GetRandomItem();
             selected.id = "test:dry";
-            var catalog = _fixture.Own(ScriptableObject.CreateInstance<WeatherCatalog>());
+            var catalog = Game.Asset<WeatherCatalog>();
             catalog.Synchronize(new[] { selected });
             var api = new WeatherLuaApi(_weather, catalog);
             CutsceneSequenceCompiler.Compile(JArray.Parse(
                 "[{ 'id':'weather', 'action':'weather.setWeather', 'arguments':{ 'weather':'test:dry' } }]"),
                 "Weather fixture", out var steps);
             var factories = new[] { (typeof(WeatherLuaApi), (System.Func<object>)(() => api)) };
-            CutsceneBindings.BindSequence(steps, "cutscene", factories);
+            Game.BindSequence(steps, "cutscene", factories);
             Assert.That(_weather.CurrentWeather, Is.SameAs(previous));
             Assert.That(() => api.ValidateWeather("unknown"), Throws.InvalidOperationException);
             catalog.SetEnabled(selected, false);
-            Assert.That(() => CutsceneBindings.BindSequence(steps, "cutscene", factories),
+            Assert.That(() => Game.BindSequence(steps, "cutscene", factories),
                 Throws.InvalidOperationException.With.Message.Contains("not registered and enabled"));
             catalog.SetEnabled(selected, true);
             selected.waterRainIntensity = float.NaN;
-            Assert.That(() => CutsceneBindings.BindSequence(steps, "cutscene", factories),
+            Assert.That(() => Game.BindSequence(steps, "cutscene", factories),
                 Throws.InvalidOperationException.With.Message.Contains("Rain splash intensity"));
             Assert.That(_weather.CurrentWeather, Is.SameAs(previous));
             Assert.That(() => new WeatherLuaApi(null, catalog), Throws.InvalidOperationException);
@@ -233,10 +234,10 @@ namespace Core.TimeAndWeather.Editor
         public void SeasonRolloverSelectsWeatherBeforePublishingTheNewDay()
         {
             _clock.Start();
-            GameState.Time.dayOfSeason = 14;
+            Game.State.Time.dayOfSeason = 14;
             _clock.StartNewDay();
             Assert.That(_clock.CurrentSeason, Is.SameAs(_summer));
-            Assert.That(GameState.Time.dayOfSeason, Is.EqualTo(1));
+            Assert.That(Game.State.Time.dayOfSeason, Is.EqualTo(1));
             Assert.That(_dailyWeather, Is.SameAs(_summer.weatherData.GetRandomItem()));
             Assert.That(_daylight, Is.EqualTo(Color.yellow));
             Assert.That(WaterInteraction.Rain, Is.Zero);
@@ -246,14 +247,14 @@ namespace Core.TimeAndWeather.Editor
         public void ApplyingSavedTimeUsesTheRestoredSeasonWithoutStartingANewDay()
         {
             _clock.Start();
-            GameState.Time.season = Core.TimeAndWeather.Season.Summer;
-            GameState.Time.dayOfSeason = 7;
-            GameState.Time.hour = 15;
-            var minutes = GameState.Time.TotalMinutes;
+            Game.State.Time.season = Core.TimeAndWeather.Season.Summer;
+            Game.State.Time.dayOfSeason = 7;
+            Game.State.Time.hour = 15;
+            var minutes = Game.State.Time.TotalMinutes;
             _clock.ApplySavedTime();
             Assert.That(_clock.CurrentSeason, Is.SameAs(_summer));
             Assert.That(_weather.CurrentWeather, Is.SameAs(_summer.weatherData.GetRandomItem()));
-            Assert.That(GameState.Time.TotalMinutes, Is.EqualTo(minutes));
+            Assert.That(Game.State.Time.TotalMinutes, Is.EqualTo(minutes));
             Assert.That(WaterInteraction.Rain, Is.Zero);
             Assert.That(_dailyWeather, Is.Null);
         }
@@ -282,7 +283,7 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             var previous = _weather.CurrentWeather;
-            var invalid = _fixture.Own(ScriptableObject.CreateInstance<WeatherData>());
+            var invalid = Game.Asset<WeatherData>();
             invalid.waterRainIntensity = intensity;
             Assert.That(invalid.ValidateConfiguration()[0].Setting, Is.EqualTo(nameof(WeatherData.waterRainIntensity)));
             Assert.Throws<System.ArgumentException>(() => _weather.SetWeather(invalid));
@@ -294,8 +295,8 @@ namespace Core.TimeAndWeather.Editor
         public void WeatherOverridesPresentationAndPlainWeatherRestoresSeasonDefaults()
         {
             _clock.Start();
-            var custom = _fixture.Own(ScriptableObject.CreateInstance<WeatherData>());
-            custom.postProcessingProfile = _fixture.Own(ScriptableObject.CreateInstance<VolumeProfile>());
+            var custom = Game.Asset<WeatherData>();
+            custom.postProcessingProfile = Game.Asset<VolumeProfile>();
             custom.overrideDaylightColor = true;
             custom.daylightColorGradient = CreateGradient(Color.blue);
             CompleteWeather(custom);
@@ -339,8 +340,8 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             var rainy = _weather.CurrentWeather;
-            rainy.outdoorAmbience = _fixture.Own(AudioClip.Create("Outdoor rain", 100, 1, 44100, false));
-            rainy.indoorAmbience = _fixture.Own(AudioClip.Create("Muffled rain", 100, 1, 44100, false));
+            rainy.outdoorAmbience = Game.Own(AudioClip.Create("Outdoor rain", 100, 1, 44100, false));
+            rainy.indoorAmbience = Game.Own(AudioClip.Create("Muffled rain", 100, 1, 44100, false));
             var outdoors = Location(Core.Common.LocationType.Outdoor);
             var room = Location(Core.Common.LocationType.Indoor);
             _weather.OnLocationEnter(outdoors);
@@ -372,7 +373,7 @@ namespace Core.TimeAndWeather.Editor
         public void MissingIndoorClipMeansSilenceAndDoesNotReuseOutdoorRain()
         {
             _clock.Start();
-            _weather.CurrentWeather.outdoorAmbience = _fixture.Own(AudioClip.Create("Rain", 100, 1, 44100, false));
+            _weather.CurrentWeather.outdoorAmbience = Game.Own(AudioClip.Create("Rain", 100, 1, 44100, false));
             _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
             _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
             Assert.That(_sound.Plays, Is.EqualTo(1));
@@ -384,7 +385,7 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             var rainy = _weather.CurrentWeather;
-            rainy.outdoorAmbience = rainy.indoorAmbience = _fixture.Own(AudioClip.Create("Rain", 44100, 1, 44100, false));
+            rainy.outdoorAmbience = rainy.indoorAmbience = Game.Own(AudioClip.Create("Rain", 44100, 1, 44100, false));
             rainy.ambienceVolume = 0.8f;
             rainy.indoorAmbienceVolumeMultiplier = 0.6f;
             rainy.indoorAmbienceLowPass = true;
@@ -427,7 +428,7 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             var previous = _weather.CurrentWeather;
-            var invalid = _fixture.Own(ScriptableObject.CreateInstance<WeatherData>());
+            var invalid = Game.Asset<WeatherData>();
             invalid.indoorAmbienceVolumeMultiplier = volume;
             invalid.indoorAmbienceCutoffFrequency = cutoff;
             Assert.Throws<System.ArgumentException>(() => _weather.SetWeather(invalid));
@@ -436,7 +437,7 @@ namespace Core.TimeAndWeather.Editor
 
         private LocationData Location(Core.Common.LocationType type)
         {
-            var location = _fixture.Own(ScriptableObject.CreateInstance<LocationData>());
+            var location = Game.Asset<LocationData>();
             location.id = type == Core.Common.LocationType.Indoor ? "test:room" : "test:outside";
             location.locationType = type;
             return location;
@@ -445,7 +446,7 @@ namespace Core.TimeAndWeather.Editor
         public void OnEvent(WeatherUpdateEvent change) => _notifications.Add(change.WeatherData);
         public void OnEvent(DayLightUpdateEvent change) => _daylight = change.Color;
         public void OnEvent(NewDayEvent change) => _dailyWeather = _weather.CurrentWeather;
-        public void OnEvent(GameTimeChangedEvent change) => _clockNotifications.Add(GameState.Time.TotalMinutes);
+        public void OnEvent(GameTimeChangedEvent change) => _clockNotifications.Add(Game.State.Time.TotalMinutes);
 
         private IEnumerator Apply(WeatherData weather) => (IEnumerator)typeof(WeatherManager)
             .GetMethod("ApplyWeather", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_weather, new object[] { weather });
@@ -459,11 +460,11 @@ namespace Core.TimeAndWeather.Editor
 
         private SeasonData CreateSeason(Core.TimeAndWeather.Season season, Color color)
         {
-            var data = _fixture.Own(ScriptableObject.CreateInstance<SeasonData>());
+            var data = Game.Asset<SeasonData>();
             data.season = season;
             data.daylightColorGradient = CreateGradient(color);
             data.weatherData = new Util.WeightedList<WeatherData>();
-            data.weatherData.Add(_fixture.Own(ScriptableObject.CreateInstance<WeatherData>()));
+            data.weatherData.Add(Game.Asset<WeatherData>());
             return data;
         }
 

@@ -14,34 +14,34 @@ namespace Core.Scripting
     {
         // Export reads these factory types without invoking them. Playback supplies the live dependencies.
         internal static (Type Type, Func<object> Create)[] ActionModules(VulcanusDialogueRunner dialogueRunner,
-            Action<MapActorLuaApi> bindActors) => new[]
+            Action<MapActorLuaApi> bindActors, LuaRuntime runtime) => new[]
         {
             VulcanusLuaEngine.Module(() =>
             {
-                var characters = MapActorLuaApi.BindCurrentMap();
+                var characters = runtime.CreateActors();
                 bindActors(characters);
                 return characters;
             }),
             VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
-            VulcanusLuaEngine.Module(AudioLuaApi.BindCurrentMap),
-            VulcanusLuaEngine.Module(WeatherLuaApi.BindCurrentWeather),
-            VulcanusLuaEngine.Module(MusicLuaApi.BindCurrentMusic),
-            VulcanusLuaEngine.Module(CameraLuaApi.BindCurrentCamera)
+            VulcanusLuaEngine.Module(() => runtime.CreateAudio()),
+            VulcanusLuaEngine.Module(() => runtime.CreateWeather()),
+            VulcanusLuaEngine.Module(() => runtime.CreateMusic()),
+            VulcanusLuaEngine.Module(() => runtime.CreateCamera())
         };
 
         public static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
-            VulcanusDialogueRunner dialogueRunner) =>
-            BindCurrentMap(definition, dialogueRunner, out _);
+            VulcanusDialogueRunner dialogueRunner, LuaRuntime runtime) =>
+            BindCurrentMap(definition, dialogueRunner, runtime, out _);
 
         internal static LuaBindingRegistry BindCurrentMap(CutsceneDefinition definition,
-            VulcanusDialogueRunner dialogueRunner, out MapActorLuaApi characters)
+            VulcanusDialogueRunner dialogueRunner, LuaRuntime runtime, out MapActorLuaApi characters)
         {
             if (!definition) throw new ArgumentNullException(nameof(definition));
-            if (!LevelManager.Instance.SceneReady)
+            if (!runtime.Level.SceneReady)
                 throw new InvalidOperationException("Bind a cutscene after the location is SceneReady.");
-            if (!MapManager.Instance.CurrentMap)
+            if (!runtime.Maps.CurrentMap)
                 throw new InvalidOperationException("Cutscene binding requires the initialized map.");
-            var map = MapManager.Instance.CurrentMap;
+            var map = runtime.Maps.CurrentMap;
             if (!StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, map.MapId))
                 throw new InvalidOperationException($"Cutscene '{definition.CutsceneId}' belongs to map '{definition.MapId}', not the current map '{map.MapId}'.");
 
@@ -51,10 +51,11 @@ namespace Core.Scripting
                 var steps = definition.OnStart.Select(step => ("setup", step))
                     .Concat(definition.Steps.Select(step => ("sequence", step)))
                     .Concat(definition.OnComplete.Steps.Select(step => ("completion", step)));
-                var bindings = BindSteps(steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, characters => actorApi = characters));
+                var bindings = BindSteps(steps, "cutscene", VulcanusLuaEngine.Modules(dialogueRunner, characters => actorApi = characters, runtime));
+                bindings.Runtime = runtime;
                 // An endpoint can reference a character even when no sequence action moves it.
                 if (definition.OnComplete.CharacterPlacements.Count > 0)
-                    actorApi ??= MapActorLuaApi.BindCurrentMap();
+                    actorApi ??= runtime.CreateActors();
                 characters = actorApi;
                 return bindings;
             }

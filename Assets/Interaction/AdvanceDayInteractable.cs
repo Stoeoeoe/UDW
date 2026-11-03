@@ -12,7 +12,7 @@ namespace Interaction
     {
         protected override bool Interact(GameCharacter instigator)
         {
-            UrTimeManager.Instance.EndDay();
+            _urTimeManager.EndDay();
             return true;
         }
     }

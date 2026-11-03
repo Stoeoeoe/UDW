@@ -1,3 +1,4 @@
+using VContainer;
 using Core;
 using Core.Context;
 using Core.Events;
@@ -9,8 +10,12 @@ using UnityEngine.InputSystem;
 
 namespace Interaction.Pointer
 {
-    public class PointerManager : Singleton<PointerManager>, ILocationLifecycle
+    public class PointerManager : Core.GameManager, ILocationLifecycle
     {
+        [Inject] private PlayerInteractionContext _playerInteractionContext;
+        [Inject] private LocationContext _locationContext;
+        [Inject] private MapManager _mapManager;
+
         public PointerMode CurrentPointerMode { get; private set; } = PointerMode.Default;
 
         [SerializeField] protected Texture2D defaultCursor;
@@ -38,19 +43,19 @@ namespace Interaction.Pointer
             Cursor.lockState = CursorLockMode.Confined;
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
-            PlayerInteractionContext.Instance.OnContextChanged += HandleContextChange;
-            LevelManager.Instance?.RegisterLifecycle(this);
+            base.OnEnable();
+            _playerInteractionContext.OnContextChanged += HandleContextChange;
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
-            PlayerInteractionContext.Instance.OnContextChanged -= HandleContextChange;
+            _playerInteractionContext.OnContextChanged -= HandleContextChange;
             Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
-            LevelManager.Instance?.UnregisterLifecycle(this);
+            base.OnDisable();
         }
 
         public void OnLocationEnter(LocationData location)
@@ -156,8 +161,8 @@ namespace Interaction.Pointer
 
         private void Update()
         {
-            if (PlayerInteractionContext.Instance.CurrentSnapshot.WorldInteractionBlocked) return;
-            if (LevelManager.Instance == null || !LevelManager.Instance.SceneReady || Camera.main == null) return;
+            if (_playerInteractionContext.CurrentSnapshot.WorldInteractionBlocked) return;
+            if (!_locationContext.SceneReady || Camera.main == null) return;
 
             var mouseScreenPos = Mouse.current.position.ReadValue();
 
@@ -184,7 +189,7 @@ namespace Interaction.Pointer
 
             var worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
-            var tileData = MapManager.Instance.GetTileDataAtWorldPosition(worldPos);
+            var tileData = _mapManager.GetTileDataAtWorldPosition(worldPos);
             if (tileData != CurrentTileDataUnderPointer)
             {
                 CurrentTileDataUnderPointer = tileData;

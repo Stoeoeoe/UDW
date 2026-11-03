@@ -62,6 +62,7 @@ namespace Core.Tile.Editor.Vulcanus
             try
             {
                 var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
+                mapRoot.AddComponent<Core.GameSceneScope>();
                 mapComponent.Configure(mapId, mapName, width, height, tileSize);
                 ImportMusic(ctx, mapRoot, dto.Metadata, mapId);
 

@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,14 +45,14 @@ namespace Interaction.Tools.WateringJar.Editor
             EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
-            while (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The playable map must finish initialization.");
                 yield return null;
             }
             _root = new GameObject("Water jug fixture");
             _root.SetActive(false);
-            _map = MapManager.Instance;
+            _map = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>();
             foreach (var field in new[] { "_terrainTilemap", "_irrigatedTilemap", "irrigatedFarmlandTile", "_tileDataCache", "_terrainDataByType" })
                 _originalMapFields[field] = typeof(MapManager).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_map);
             _character = MainCharacter.CurrentMainCharacter;

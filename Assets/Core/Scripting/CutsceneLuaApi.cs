@@ -1,3 +1,5 @@
+using VContainer;
+using Preserve = UnityEngine.Scripting.PreserveAttribute;
 using System;
 using MoonSharp.Interpreter;
 using UnityEngine.Scripting;
@@ -7,6 +9,7 @@ namespace Core.Scripting
     [LuaModule("Cutscene")]
     public sealed class CutsceneLuaApi
     {
+        [Inject] private LuaRuntime _runtime;
         internal CutsceneVariables Variables;
         [LuaAction("cutscene.runLua", "Run Lua", "Scripting",
             "Run a Lua script immediately using the scripting API. Timed actions remain separate steps.",
@@ -15,7 +18,7 @@ namespace Core.Scripting
         public void RunLua([LuaCode] string code)
         {
             ValidateLua(code);
-            new VulcanusLuaEngine(Variables).Execute(code);
+            _runtime.CreateEngine(Variables).Execute(code);
         }
 
         [Preserve]

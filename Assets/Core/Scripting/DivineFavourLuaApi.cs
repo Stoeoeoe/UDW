@@ -1,3 +1,5 @@
+using VContainer;
+using Preserve = UnityEngine.Scripting.PreserveAttribute;
 using System;
 using Core.Divinity;
 using UnityEngine.Scripting;
@@ -7,17 +9,20 @@ namespace Core.Scripting
     [LuaModule("DivineFavour")]
     public sealed class DivineFavourLuaApi
     {
+        [Inject] private DeityDefinitions _deityDefinitions;
+        [Inject] private DivineFavour _divineFavour;
+
         [LuaCall]
         public int GetFavour([LuaResource("deity")] string deityId)
         {
-            DeityDefinitions.Get(deityId);
-            return DivineFavour.GetFavour(deityId);
+            _deityDefinitions.Get(deityId);
+            return _divineFavour.GetFavour(deityId);
         }
 
         [Preserve]
         public void ValidateAddFavour(string deityId, double points)
         {
-            DeityDefinitions.Get(deityId);
+            _deityDefinitions.Get(deityId);
             if (!double.IsFinite(points) || points != Math.Truncate(points) || points < int.MinValue || points > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(points), "Favour points must be a whole number in the Int32 range.");
         }
@@ -29,7 +34,7 @@ namespace Core.Scripting
         public int AddFavour([LuaResource("deity")] string deityId, double points)
         {
             ValidateAddFavour(deityId, points);
-            return DivineFavour.AddFavour(deityId, (int)points);
+            return _divineFavour.AddFavour(deityId, (int)points);
         }
     }
 }

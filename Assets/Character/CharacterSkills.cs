@@ -20,11 +20,11 @@ namespace Character
 
         public bool HasUnlocked(SkillDefinition skill) => GetLevel(skill) > 0;
 
-        public bool TryLevelUp(SkillDefinition skill) => TryLevelUp(skill.SkillId);
+        public bool TryLevelUp(string skillId, SkillDefinitions definitions) => TryLevelUp(definitions.Get(skillId));
 
-        public bool TryLevelUp(string skillId)
+        public bool TryLevelUp(SkillDefinition definition)
         {
-            var definition = SkillDefinitions.Get(skillId);
+            var skillId = definition.SkillId;
             var currentLevel = GetLevel(skillId);
             if (currentLevel >= definition.MaxLevel) return false;
 
@@ -61,13 +61,13 @@ namespace Character
         private void ApplyLevel(string skillId, int level)
         {
             if (_character)
-                SkillDefinitions.Get(skillId).GetLevelDefinition(level).Grant.Apply(_character, Source(skillId, level));
+                _character.SkillDefinitions.Get(skillId).GetLevelDefinition(level).Grant.Apply(_character, Source(skillId, level));
         }
 
         private void RemoveLevel(string skillId, int level)
         {
             if (_character)
-                SkillDefinitions.Get(skillId).GetLevelDefinition(level).Grant.Remove(_character, Source(skillId, level));
+                _character.SkillDefinitions.Get(skillId).GetLevelDefinition(level).Grant.Remove(_character, Source(skillId, level));
         }
 
         private static string Source(string skillId, int level) => $"skill:{skillId}:{level}";

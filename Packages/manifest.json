@@ -54,14 +54,16 @@
     "com.unity.modules.vehicles": "1.0.0",
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
+    "com.unity.modules.xr": "1.0.0",
+    "jp.hadashikick.vcontainer": "1.19.0"
   },
   "scopedRegistries": [
     {
       "name": "package.openupm.com",
       "url": "https://package.openupm.com",
       "scopes": [
-        "com.eflatun.scenereference"
+        "com.eflatun.scenereference",
+        "jp.hadashikick.vcontainer"
       ]
     }
   ]

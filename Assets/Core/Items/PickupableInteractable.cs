@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections;
 using Character;
@@ -12,6 +13,8 @@ namespace Core.Items
     /// <summary>A forage stack collected deliberately, rather than by the dropped-item magnet.</summary>
     public sealed class PickupableInteractable : AbstractInteractable, IEventListener<InventoryChangedEvent>
     {
+        [Inject] private ItemManager _itemManager;
+
         [SerializeField] private ForageableItem item;
         [SerializeField, Min(1)] private int quantity = 1;
         [SerializeField] private CharacterAnimation pickupAnimation;
@@ -87,7 +90,7 @@ namespace Core.Items
                     if (_playback.IsInterrupted) yield break;
                     yield return null;
                 }
-                ItemManager.Instance.PlayPickupSound(item.PickupSound);
+                _itemManager.PlayPickupSound(item.PickupSound);
                 for (float elapsed = 0; elapsed < liftDuration; elapsed += Time.deltaTime)
                 {
                     if (_playback.IsInterrupted) yield break;

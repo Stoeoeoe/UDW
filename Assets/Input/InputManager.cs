@@ -15,7 +15,7 @@ namespace Input
     /// </summary>
     [RequireComponent(typeof(PlayerInput))]
     [DefaultExecutionOrder(100)]
-    public class InputManager : Singleton<InputManager>, ILocationLifecycle,
+    public class InputManager : Core.GameManager, ILocationLifecycle,
         IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
     {
         private PlayerInput _player;
@@ -75,16 +75,18 @@ namespace Input
                 throw new ArgumentException("A modal screen cannot use gameplay or global input.", nameof(name));
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             BindActions();
             this.Subscribe<DayTransitionStarted>();
             this.Subscribe<DayTransitionFinished>();
             ApplyMaps();
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             this.Unsubscribe<DayTransitionStarted>();
             this.Unsubscribe<DayTransitionFinished>();
             SetContextBlocked(InputBlockContext.DayTransition, false);

@@ -15,9 +15,9 @@ using UnityEngine.TestTools;
 namespace Core.Dialogue.Vulcanus.Editor
 {
     /// <summary>Exercises dialogue input through the authored UI map, including closing and restoring gameplay controls.</summary>
-    public sealed class DialogueInputTests
+    public sealed class DialogueInputTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private Input.InputManager _input;
         private UrGUIManager _gui;
         private MainCharacter _character;
@@ -32,12 +32,12 @@ namespace Core.Dialogue.Vulcanus.Editor
         public void SetUp()
         {
             Assert.That(VulcanusDialogueRunner.Instance, Is.Null);
-            _fixture = new GameTestFixture("Dialogue input");
-            _fixture.Root.SetActive(true);
-            _input = UIScreenPauseTests.CreateScreenServices(_fixture);
-            _gui = _fixture.AddSingleton<UrGUIManager>(gui => gui.gameObject.SetActive(true));
-            _character = _fixture.CreateCharacter();
-            CharacterManager.Instance.RegisterMainCharacter(_character);
+
+            Game.Root.SetActive(true);
+            _input = UIScreenPauseTests.CreateScreenServices(Game);
+            _gui = Game.Start<UrGUIManager>(gui => gui.gameObject.SetActive(true));
+            _character = Game.CreateCharacter();
+            Game.Get<CharacterManager>().RegisterMainCharacter(_character);
             foreach (var sceneCamera in UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsSortMode.None))
             {
                 if (!sceneCamera.CompareTag("MainCamera")) continue;
@@ -45,30 +45,29 @@ namespace Core.Dialogue.Vulcanus.Editor
                 sceneCamera.tag = "Untagged";
             }
             var cameraRoot = new GameObject("Dialogue camera");
-            cameraRoot.transform.SetParent(_fixture.Root.transform);
+            cameraRoot.transform.SetParent(Game.Root.transform);
             cameraRoot.tag = "MainCamera";
             var camera = cameraRoot.AddComponent<UnityEngine.Camera>();
             camera.orthographic = true;
             camera.orthographicSize = 5f;
             camera.transform.position = new Vector3(0f, 0f, -10f);
-            _fixture.AddSingleton<DataManager>();
             var root = new GameObject("Dialogue");
             root.SetActive(false);
-            root.transform.SetParent(_fixture.Root.transform);
+            root.transform.SetParent(Game.Root.transform);
             _document = root.AddComponent<UIDocument>();
-            _document.panelSettings = _fixture.Own(UnityEngine.Object.Instantiate(
-                AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset")));
+            _document.panelSettings = Game.Own(Game.InjectObject(UnityEngine.Object.Instantiate(
+                AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset"))));
             var layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uxml");
             _document.visualTreeAsset = layout;
-            _presenter = root.AddComponent<VulcanusDialogueUIDocumentPresenter>();
+            _presenter = Game.InjectObject(root.AddComponent<VulcanusDialogueUIDocumentPresenter>());
             Set(_presenter, "document", _document);
             Set(_presenter, "layoutAsset", layout);
             Set(_presenter, "styleSheet", AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uss"));
             Set(_presenter, "charactersPerSecond", 0f);
             root.SetActive(true);
             GameTestFixture.Invoke(_presenter, "OnEnable");
-            _runner = root.AddComponent<VulcanusDialogueRunner>();
-            _database = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueDatabase>());
+            _runner = Game.InjectObject(root.AddComponent<VulcanusDialogueRunner>());
+            _database = Game.Asset<VulcanusDialogueDatabase>();
             _database.Configure(null, Array.Empty<VulcanusDialogueAsset>());
             Set(_runner, "database", _database);
             Set(_runner, "presenter", _presenter);
@@ -83,7 +82,7 @@ namespace Core.Dialogue.Vulcanus.Editor
                 GameTestFixture.Invoke(_runner, "OnDisable");
                 GameTestFixture.Invoke(_runner, "OnDestroy");
             }
-            _fixture.Dispose();
+
             foreach (var sceneCamera in _sceneMainCameras)
                 sceneCamera.tag = "MainCamera";
             _sceneMainCameras.Clear();
@@ -92,7 +91,7 @@ namespace Core.Dialogue.Vulcanus.Editor
 
         private void Start(bool choice = false, string speaker = "")
         {
-            var dialogue = _fixture.Own(ScriptableObject.CreateInstance<VulcanusDialogueAsset>());
+            var dialogue = Game.Asset<VulcanusDialogueAsset>();
             VulcanusDialogueNode entry = choice
                 ? new VulcanusDialogueChoiceNode("entry", new[] { new VulcanusDialogueChoiceOption("yes", "Yes", "", "", "end") })
                 : new VulcanusDialogueLineNode("entry", speaker, "", "A line of dialogue.", "", "end");
@@ -181,8 +180,8 @@ namespace Core.Dialogue.Vulcanus.Editor
         {
             var owner = new GameObject("Invalid dialogue setup");
             owner.SetActive(false);
-            owner.transform.SetParent(_fixture.Root.transform);
-            var runner = owner.AddComponent<VulcanusDialogueRunner>();
+            owner.transform.SetParent(Game.Root.transform);
+            var runner = Game.InjectObject(owner.AddComponent<VulcanusDialogueRunner>());
             Set(runner, "database", _database);
             Set(runner, "presenter", _presenter);
             Set(runner, invalidField, invalidField == "maxStepsPerRun" ? 0 : null);
@@ -305,7 +304,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         public void CoveredDialogueDoesNotConsumeAnotherScreensCancel()
         {
             Start();
-            var screen = _fixture.Root.AddComponent<PauseTestScreen>();
+            var screen = Game.InjectObject(Game.Root.AddComponent<PauseTestScreen>());
             screen.Open(_character);
             SetKey(KeyCode.Escape);
             Assert.That(_runner.IsDialogueActive, Is.True);
@@ -331,8 +330,8 @@ namespace Core.Dialogue.Vulcanus.Editor
         {
             Assert.That(_runner.IsDialogueActive, Is.True);
             Assert.That(Read<bool>(_presenter, choice ? "_waitingForChoice" : "_waitingForAdvance"), Is.True);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.True);
-            Assert.That(UrGUIManager.IsCharacterPaused(_character), Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.True);
+            Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(_character), Is.True);
             Assert.That(_input.PlayerControls.enabled, Is.False);
             Assert.That(Overlay.style.display.value, Is.EqualTo(DisplayStyle.Flex));
         }
@@ -341,9 +340,9 @@ namespace Core.Dialogue.Vulcanus.Editor
         {
             Assert.That(_runner.IsDialogueActive, Is.False);
             Assert.That(_runner.ActiveContext, Is.Null);
-            Assert.That(UrGUIManager.HasOpenScreens, Is.False);
-            Assert.That(UrGUIManager.IsGameClockPaused, Is.False);
-            Assert.That(UrGUIManager.IsCharacterPaused(_character), Is.False);
+            Assert.That(Game.Get<UrGUIManager>().HasOpenScreens, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
+            Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(_character), Is.False);
             Assert.That(_input.PlayerControls.enabled, Is.True);
             Assert.That(Overlay.style.display.value, Is.EqualTo(DisplayStyle.None));
         }

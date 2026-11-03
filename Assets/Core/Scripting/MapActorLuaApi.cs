@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,14 @@ namespace Core.Scripting
     [LuaModule("Characters")]
     public sealed class MapActorLuaApi
     {
+        [Inject] private CharacterCatalog _characterCatalog;
+        [Inject] private CharacterAnimationCatalog _characterAnimationCatalog;
+        [Inject] private EmoteCatalog _emoteCatalog;
+
+        [Inject] private WorldObjectSpawner _worldObjectSpawner;
+        [Inject] private LevelManager _levelManager;
+        [Inject] private MapManager _mapManager;
+
         private readonly VulcanusImportedMap _map;
         private readonly Dictionary<string, GameCharacter> _actors = new(StringComparer.Ordinal);
         private readonly Dictionary<string, VulcanusMapAnchor> _anchors = new(StringComparer.OrdinalIgnoreCase);
@@ -37,7 +46,7 @@ namespace Core.Scripting
         {
             foreach (var spawn in _createdActors)
                 if (keep) spawn.SavePosition();
-                else WorldObjectSpawner.Instance.Despawn(spawn.PersistentId);
+                else _worldObjectSpawner.Despawn(spawn.PersistentId);
             _createdActors.Clear();
         }
 
@@ -47,8 +56,8 @@ namespace Core.Scripting
             RequireCurrentMap();
             if (string.IsNullOrWhiteSpace(character) || _actors.ContainsKey(character) || _run == null && _plannedActors.ContainsKey(character))
                 throw new InvalidOperationException($"Spawn character name '{character}' must be nonempty and unique in this cutscene/map.");
-            CharacterCatalog.Require(definition);
-            var prefabs = ActorSpawnDefinitions.Find(WorldObjectSpawner.Instance.RegisteredPrefabs);
+            _characterCatalog.Require(definition);
+            var prefabs = ActorSpawnDefinitions.Find(_worldObjectSpawner.RegisteredPrefabs, _characterCatalog);
             if (!prefabs.TryGetValue(definition, out var prefab))
                 throw new InvalidOperationException($"Character '{definition}' has no registered spawnable NPC prefab.");
             position.ToWorld(_map);
@@ -67,24 +76,24 @@ namespace Core.Scripting
             var template = prefab.GetComponentInChildren<GameCharacter>(true);
             if (template.CharacterId != definition) throw new InvalidOperationException("Spawn must use its prevalidated character definition.");
             var point = position.ToWorld(_map);
-            var instance = WorldObjectSpawner.Instance.Spawn(prefab, point - (template.Graphics.position - prefab.transform.position));
+            var instance = _worldObjectSpawner.Spawn(prefab, point - (template.Graphics.position - prefab.transform.position));
             _createdActors.Add(instance); // Cleanup also owns failures during character initialization below.
             var spawnedCharacter = instance.GetComponentInChildren<GameCharacter>(true);
-            LevelManager.Instance.RegisterLifecycle(spawnedCharacter);
+            _levelManager.RegisterLifecycle(spawnedCharacter);
             AddActor(character, spawnedCharacter);
             Place(character, position);
             _run.AddSpawnedActor(this, character);
         }
 
         /// <summary>Finds the characters and anchors in the loaded map and remembers their IDs.</summary>
-        public static MapActorLuaApi BindCurrentMap()
+        internal static MapActorLuaApi BindCurrentMap(LevelManager level, MapManager maps, WorldObjectSpawner spawner)
         {
-            if (!LevelManager.Instance.SceneReady)
+            if (!level.SceneReady)
                 throw new InvalidOperationException("Bind character actions after the location is SceneReady.");
-            if (!MapManager.Instance.CurrentMap)
+            if (!maps.CurrentMap)
                 throw new InvalidOperationException("Character actions require the initialized Vulcanus map.");
-            return new MapActorLuaApi(MapManager.Instance.CurrentMap, MainCharacter.CurrentMainCharacter,
-                WorldObjectSpawner.Instance.SpawnedObjects);
+            return new MapActorLuaApi(maps.CurrentMap, MainCharacter.CurrentMainCharacter,
+                spawner.SpawnedObjects);
         }
 
         private MapActorLuaApi(VulcanusImportedMap map, GameCharacter player,
@@ -253,7 +262,7 @@ namespace Core.Scripting
         public void ValidatePlayAnimation(string character, string animation, bool holdLastFrame = false)
         {
             RequireCurrentMap();
-            RequireKnownActor(character).Animator.ValidateOneShot(CharacterAnimationCatalog.RequireOneShot(animation));
+            RequireKnownActor(character).Animator.ValidateOneShot(_characterAnimationCatalog.RequireOneShot(animation));
         }
 
         [LuaAction("characters.playAnimation", "Play animation", "Animation", "Play a finite animation and wait for completion. Hold last frame keeps the final pose until another animation starts or movement resumes.",
@@ -263,7 +272,7 @@ namespace Core.Scripting
             [LuaResource("animation")] string animation, bool holdLastFrame = false)
         {
             RequireCurrentMap();
-            return new PlayAnimationAction(ResolveActor(character), CharacterAnimationCatalog.RequireOneShot(animation), holdLastFrame);
+            return new PlayAnimationAction(ResolveActor(character), _characterAnimationCatalog.RequireOneShot(animation), holdLastFrame);
         }
 
         [UnityEngine.Scripting.Preserve]
@@ -271,7 +280,7 @@ namespace Core.Scripting
         {
             RequireCurrentMap();
             RequireKnownActor(character);
-            EmoteCatalog.Require(emote);
+            _emoteCatalog.Require(emote);
             EmoteAction.ValidateDuration(durationSeconds);
             CutsceneLuaApi.ValidateWait(pauseAfterSeconds);
         }
@@ -283,13 +292,13 @@ namespace Core.Scripting
             [LuaResource("emote")] string emote, double durationSeconds = 0, double pauseAfterSeconds = 1)
         {
             RequireCurrentMap();
-            return new EmoteAction(ResolveActor(character), EmoteCatalog.Require(emote), durationSeconds, pauseAfterSeconds);
+            return new EmoteAction(ResolveActor(character), _emoteCatalog.Require(emote), durationSeconds, pauseAfterSeconds);
         }
 
         private void RequireCurrentMap()
         {
             // These lookups are for one map. Don't use them while changing maps.
-            if (!LevelManager.Instance.SceneReady || MapManager.Instance.CurrentMap != _map)
+            if (!_levelManager.SceneReady || _mapManager.CurrentMap != _map)
                 throw new InvalidOperationException("Character bindings no longer belong to the ready current map.");
         }
 

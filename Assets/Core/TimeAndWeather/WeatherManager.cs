@@ -1,6 +1,8 @@
+using VContainer;
 using System.Collections;
 using Core.Common;
 using Core.Location;
+using Core.TimeAndWeather.Seasons;
 using Core.Tile.Water;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
@@ -12,8 +14,11 @@ namespace Core.TimeAndWeather
     /// <summary>Selects seasonal weather and owns its effects, post-processing and daylight presentation.</summary>
     // Bind the initial location before UrTimeManager.Start rolls its first weather.
     [DefaultExecutionOrder(-800)]
-    public sealed class WeatherManager : Singleton<WeatherManager>, ILocationLifecycle
+    public sealed class WeatherManager : Core.GameManager, ILocationLifecycle
     {
+        private SeasonData _season;
+        private float _dayProgress;
+
         [SerializeField] private VolumeProfile defaultVolumeProfile;
         [SerializeField] private Volume postProcessingVolume;
 
@@ -37,9 +42,6 @@ namespace Core.TimeAndWeather
             _effectsRoot.SetParent(transform, false);
         }
 
-        private void Start() => LevelManager.Instance.RegisterLifecycle(this);
-        private void OnEnable() => LevelManager.Instance?.RegisterLifecycle(this);
-
         public void OnLocationEnter(LocationData location)
         {
             _location = location;
@@ -50,9 +52,17 @@ namespace Core.TimeAndWeather
         public void OnLocationLeave(LocationData location) { }
 
         /// <summary>Rolls the current season's weather at startup, after load and before daily simulation updates.</summary>
-        internal void RefreshConditions()
+        internal void RefreshConditions(SeasonData season, float dayProgress)
         {
-            SetWeather(UrTimeManager.Instance.CurrentSeason.weatherData.GetRandomItem());
+            _season = season;
+            _dayProgress = dayProgress;
+            SetWeather(season.weatherData.GetRandomItem());
+            RefreshDaylight();
+        }
+
+        internal void UpdateDaylight(float dayProgress)
+        {
+            _dayProgress = dayProgress;
             RefreshDaylight();
         }
 
@@ -149,17 +159,16 @@ namespace Core.TimeAndWeather
         /// <summary>Samples the active weather override or the current season's daylight gradient.</summary>
         internal void RefreshDaylight()
         {
-            var clock = UrTimeManager.Instance;
             var gradient = IsIndoor ? CurrentWeather.indoorDaylightColorGradient : CurrentWeather.overrideDaylightColor
-                ? CurrentWeather.daylightColorGradient : clock.CurrentSeason.daylightColorGradient;
-            DayLightUpdateEvent.Trigger(gradient.Evaluate(clock.DayProgress));
+                ? CurrentWeather.daylightColorGradient : _season.daylightColorGradient;
+            DayLightUpdateEvent.Trigger(gradient.Evaluate(_dayProgress));
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
             ++_weatherUpdateVersion;
             StopAllCoroutines();
-            LevelManager.Instance?.UnregisterLifecycle(this);
+            base.OnDisable();
             StopAmbience();
             if (_effectsRoot) StopEffects();
             Shader.SetGlobalFloat(IndoorWeatherCover, 0);

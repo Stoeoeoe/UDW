@@ -1,3 +1,4 @@
+using VContainer;
 using System.Threading;
 using Character;
 using Core.Context;
@@ -8,6 +9,8 @@ namespace Interaction.Tools.Hammer
 {
     public class HammerAction : ToolAction
     {
+        [Inject] private SkillDefinitions _skillDefinitions;
+
         private const string DefaultRepairSkillId = "base:hammer_mastery";
 
         [SerializeField, Min(0)] private int baseRepairAmount = 1;
@@ -19,7 +22,7 @@ namespace Interaction.Tools.Hammer
             {
                 var skill = repairSkill != null
                     ? repairSkill
-                    : SkillDefinitions.Get(DefaultRepairSkillId);
+                    : _skillDefinitions.Get(DefaultRepairSkillId);
                 var skillLevel = Character.Skills.GetLevel(skill);
                 var bonus = skill.GetValueAtLevel(skillLevel);
                 var repairAmount = Mathf.Max(0, Mathf.RoundToInt(baseRepairAmount + bonus));

@@ -1,3 +1,5 @@
+using Core.Scripting;
+using VContainer;
 using System.Collections;
 using System.Linq;
 using Character;
@@ -23,7 +25,7 @@ namespace Core.Scripting.Editor
             EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var readyDeadline = Time.realtimeSinceStartup + 15f;
-            while (!LevelManager.Instance || !LevelManager.Instance.SceneReady)
+            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(readyDeadline), "The playable map must finish initialization.");
                 yield return null;
@@ -84,9 +86,9 @@ namespace Core.Scripting.Editor
         public IEnumerator ActorBindingResolvesAnchorWorldPositionsAndRejectsInvalidIds()
         {
             var character = MainCharacter.CurrentMainCharacter;
-            var map = MapManager.Instance.CurrentMap;
+            var map = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>().CurrentMap;
             var authoredAnchor = map.GetComponentsInChildren<VulcanusMapAnchor>(true).First();
-            var api = MapActorLuaApi.BindCurrentMap();
+            var api = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>().CreateActors();
             api.ValidateMoveTo("player", authoredAnchor.AnchorId);
             Assert.That(() => api.ValidateMoveTo("missing-character", authoredAnchor.AnchorId), Throws.InvalidOperationException);
             Assert.That(() => api.ValidateMoveTo("player", "missing-anchor"), Throws.InvalidOperationException);
@@ -97,7 +99,7 @@ namespace Core.Scripting.Editor
             Assert.That(() => api.Face("player", "player"), Throws.InvalidOperationException);
             Assert.That(character.Controller.IsMovementOwned, Is.False, "Reference validation must not start movement.");
             foreach (var placement in map.PersistentEntities)
-                Assert.That(WorldObjectSpawner.Instance.SpawnedObjects, Has.No.Member(placement.template));
+                Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<WorldObjectSpawner>().SpawnedObjects, Has.No.Member(placement.template));
 
             var holder = new GameObject("Test anchor group");
             holder.transform.SetParent(map.transform, false);
@@ -108,8 +110,8 @@ namespace Core.Scripting.Editor
             anchor.transform.SetParent(holder.transform, false);
             anchor.transform.position = target;
             anchor.Configure("test:meeting", "Meeting", Vector2.down, System.Array.Empty<string>());
-            api = MapActorLuaApi.BindCurrentMap();
-            var registry = new LuaBindingRegistry(api);
+            api = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>().CreateActors();
+            var registry = new LuaBindingRegistry(api) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() };
             var method = registry.Describe().modules.Single().methods.Single(value => value.name == "MoveTo");
             Assert.That(method.action.id, Is.EqualTo("characters.moveTo"));
             Assert.That(method.action.execution, Is.EqualTo("awaitable"));
@@ -135,10 +137,10 @@ namespace Core.Scripting.Editor
             var duplicate = new GameObject("Duplicate anchor").AddComponent<VulcanusMapAnchor>();
             duplicate.transform.SetParent(holder.transform, false);
             duplicate.Configure("test:meeting", "Duplicate", Vector2.zero, System.Array.Empty<string>());
-            Assert.That(() => MapActorLuaApi.BindCurrentMap(), Throws.InvalidOperationException);
+            Assert.That(() => VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>().CreateActors(), Throws.InvalidOperationException);
             Object.DestroyImmediate(duplicate.gameObject);
             anchor.Configure("", "Missing ID", Vector2.zero, System.Array.Empty<string>());
-            Assert.That(() => MapActorLuaApi.BindCurrentMap(), Throws.InvalidOperationException);
+            Assert.That(() => VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>().CreateActors(), Throws.InvalidOperationException);
             Object.DestroyImmediate(holder);
         }
 
@@ -199,7 +201,7 @@ namespace Core.Scripting.Editor
         }
 
         private static LuaExecutionSession Start(MovementApi api) => VulcanusLuaEngine.StartSession(
-            new LuaBindingRegistry(api), "Test.Move(); Test.MarkArrived()", "MoveToActionPlayTests");
+            new LuaBindingRegistry(api) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() }, "Test.Move(); Test.MarkArrived()", "MoveToActionPlayTests");
 
         private static void AssertReleased(GameCharacter character)
         {

@@ -1,3 +1,5 @@
+using UI.Shared;
+using VContainer;
 using System;
 using System.Collections.Generic;
 using Character.Abilities;
@@ -20,6 +22,13 @@ namespace Character
     [RequireComponent(typeof(CharacterBoosts))]
     public class GameCharacter : MonoBehaviour, ILocationLifecycle
     {
+        [Inject] internal SkillDefinitions SkillDefinitions { get; private set; }
+        [Inject] private UrGUIManager _urGUIManager;
+        [Inject] private CharacterCatalog _characterCatalog;
+
+        [Inject] private LevelManager _levelManager;
+        [Inject] private MapManager _mapManager;
+
         [SerializeField] private CharacterDefinition definition;
         public CharacterDefinition Definition => definition;
         public string CharacterId => definition.CharacterId;
@@ -67,7 +76,7 @@ namespace Character
         public event Action<MovementState> OnMovementStateChanged;
         public event Action<ConditionState> OnConditionStateChanged;
         public bool IsControlBlocked => IsConditionOrControlBlocked || Occupation.IsOccupied;
-        public bool IsConditionOrControlBlocked => ConditionState != ConditionState.Normal || _controlBlocks.Count > 0 || UI.Shared.UrGUIManager.IsCharacterPaused(this);
+        public bool IsConditionOrControlBlocked => ConditionState != ConditionState.Normal || _controlBlocks.Count > 0 || _urGUIManager.IsCharacterPaused(this);
         public bool IsRuntimeInitialized { get; private set; }
         private bool _locationEntered;
         private readonly HashSet<object> _controlBlocks = new();
@@ -93,7 +102,7 @@ namespace Character
         }
 
         // Registration may immediately enter a location. All child Awake methods must have completed first.
-        protected virtual void Start() => LevelManager.Instance.RegisterLifecycle(this);
+        protected virtual void Start() => _levelManager.RegisterLifecycle(this);
 
         public virtual void ValidateConfiguration()
         {
@@ -128,13 +137,13 @@ namespace Character
             // Initialization can fail before equipment is bound; teardown must still release completed bindings.
             if (_equipmentEffects != null) _equipmentEffects.Dispose();
             Skills.UnbindCharacter(this);
-            if (LevelManager.Instance) LevelManager.Instance.UnregisterLifecycle(this);
+            _levelManager.UnregisterLifecycle(this);
         }
 
         public void EnsureRuntimeInitialized()
         {
             if (IsRuntimeInitialized) return;
-            if (CharacterCatalog.Require(CharacterId) != definition)
+            if (_characterCatalog.Require(CharacterId) != definition)
                 throw new InvalidOperationException($"Character '{name}' must use its registered character definition.");
             MainInventory.EnsureInitialized();
             toolActionRegistry.Initialize(this);
@@ -203,7 +212,7 @@ namespace Character
         public void OnLocationEnter(LocationData location)
         {
             EnsureRuntimeInitialized();
-            Tiles.EnterLocation(MapManager.Instance);
+            Tiles.EnterLocation(_mapManager);
             characterGraphicsGo.SetActive(true);
             animator.OnLocationEnter(location);
             foreach (var ability in _abilities) ability.OnLocationEnter(location);

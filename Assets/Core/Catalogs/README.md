@@ -38,9 +38,13 @@ an editor error, preserves the old list, and blocks a build. Validation belongs
 at this authoring boundary, not in each runtime lookup. Catalogs are authoring
 data, not player save state. Refresh also runs before entering Play Mode.
 
-`CatalogResources` caches individual catalog loads and resets between play
-sessions (including when domain reload is disabled). Skills/deities retain their
-mod `Register` APIs, but their dictionaries contain only mod-added definitions;
+`SystemRoot` discovers `[DefaultCatalog]` declarations through reflection, loads
+each required Resources asset once while building the VContainer scope, and
+registers it by its concrete type. Consumers inject the catalog they need; there
+is no static catalog cache or central catalog list. Editor import/export code
+loads authored assets directly and does not need a running scope.
+Skills/deities retain their instance `Register` APIs, but their session-scoped
+dictionaries contain only mod-added definitions;
 built-ins resolve directly through the catalog's single ID index. PlantManager
 also reads its catalog instead of maintaining a copy. Spawnable enumeration does
 not allocate a new array; its spawner still tracks registered prefabs for mods.

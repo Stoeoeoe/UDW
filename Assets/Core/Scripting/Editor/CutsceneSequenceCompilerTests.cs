@@ -7,8 +7,9 @@ using UnityEngine;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneSequenceCompilerTests
+    public sealed class CutsceneSequenceCompilerTests : Core.Common.Editor.GameTest
     {
+
         [Test]
         public void ParallelTracksStartTogetherRunSequentiallyAndJoinTheSlowestTrack()
         {
@@ -16,7 +17,7 @@ namespace Core.Scripting.Editor
                 new JArray(ProbeStep("left-one", 0.25), ProbeStep("left-two", 0.75)), new JArray(ProbeStep("right", 2))), ProbeStep("after", 3));
             var lua = CutsceneSequenceCompiler.Compile(source, "parallel-fixture", out var steps);
             var api = new ParallelProbeApi();
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(ParallelProbeApi), () => api));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(ParallelProbeApi), () => api));
             using var run = VulcanusLuaEngine.StartSession(bindings, lua, "parallel-fixture");
             run.Tick(99); // Time from before actions started must not advance them.
             Assert.That(api.Started, Is.EqualTo(new[] { "left-one", "right" }));
@@ -41,7 +42,7 @@ namespace Core.Scripting.Editor
             var lua = CutsceneSequenceCompiler.Compile(new JArray(Parallel(
                 new JArray(ProbeStep("right", 2)), new JArray(ProbeStep(fail ? "fail" : "left-two", fail ? 0.5 : 0.75))), ProbeStep("after", 3)), "parallel-cleanup");
             var api = new ParallelProbeApi();
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "parallel-cleanup");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(api), lua, "parallel-cleanup");
             run.Tick(0);
             if (fail)
                 Assert.That(() => run.Tick(0.1f), Throws.InvalidOperationException.With.Message
@@ -77,7 +78,7 @@ namespace Core.Scripting.Editor
             var lua = CutsceneSequenceCompiler.Compile(new JArray(Parallel(
                 new JArray(ProbeStep("started", 2)), new JArray(ProbeStep("start-failure", 4)))), "parallel-start-failure");
             var api = new ParallelProbeApi();
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "parallel-start-failure");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(api), lua, "parallel-start-failure");
             Assert.That(() => run.Tick(0), Throws.InvalidOperationException.With.Message.Contains("track 2").And.Message.Contains("start-failure"));
             Assert.That(api.Actions.Single().Disposals, Is.EqualTo(1));
             Assert.That(run.IsRunning, Is.False);
@@ -129,9 +130,9 @@ namespace Core.Scripting.Editor
         {
             var arguments = JObject.Parse(json);
             var sequence = new JArray(Step("walk", action, arguments));
-            Assert.That(CutsceneSequenceCompiler.Compile(sequence, "walking"), Does.EndWith(", true);\n"));
+            Assert.That(CutsceneSequenceCompiler.Compile(sequence, "walking"), Does.EndWith(", true, false);\n"));
             arguments["immediateAcceleration"] = false;
-            Assert.That(CutsceneSequenceCompiler.Compile(sequence, "walking"), Does.EndWith(", false);\n"));
+            Assert.That(CutsceneSequenceCompiler.Compile(sequence, "walking"), Does.EndWith(", false, false);\n"));
             arguments["immediateAcceleration"] = "false";
             Assert.That(() => CutsceneSequenceCompiler.Compile(sequence, "walking"), Throws.TypeOf<FormatException>());
         }
@@ -146,7 +147,7 @@ namespace Core.Scripting.Editor
             var compiled = CutsceneSequenceCompiler.Compile(new JArray(branch,
                 Step("continue", "dialogue.play", new JObject { ["dialogue"] = "continue" })), "fixture:branch", out var steps);
             var capture = new CaptureDialogue();
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CaptureDialogue), () => capture));
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(CaptureDialogue), () => capture));
             using var run = VulcanusLuaEngine.StartSession(bindings, compiled, "fixture:branch");
             run.Tick(0);
             Assert.That(capture.References, Is.EqualTo(new[] { expected, "continue" }));
@@ -162,14 +163,14 @@ namespace Core.Scripting.Editor
             var compiled = CutsceneSequenceCompiler.Compile(new JArray(Branch("true",
                 new JArray(Step("wait", "cutscene.wait", new JObject { ["seconds"] = 0.5 })), new JArray()),
                 Step("continue", "dialogue.play", new JObject { ["dialogue"] = "continue" })), "fixture:await");
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi(), capture), compiled, "fixture:await");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(new CutsceneLuaApi(), capture), compiled, "fixture:await");
             run.Tick(0);
             Assert.That(run.CurrentStepId, Is.EqualTo("wait"));
             Assert.That(capture.References, Is.Empty);
             run.Tick(1);
             Assert.That(capture.References, Is.EqualTo(new[] { "continue" }));
             var empty = CutsceneSequenceCompiler.Compile(new JArray(Branch("false", new JArray(), new JArray())), "fixture:empty");
-            using var emptyRun = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(capture), empty, "fixture:empty");
+            using var emptyRun = VulcanusLuaEngine.StartSession(Game.Bind(capture), empty, "fixture:empty");
             emptyRun.Tick(0);
             Assert.That(emptyRun.IsRunning, Is.False);
         }
@@ -178,7 +179,7 @@ namespace Core.Scripting.Editor
         public void ConditionsCannotCallWritableBindingsAndFailuresKeepTheBranchIdentity()
         {
             var compiled = CutsceneSequenceCompiler.Compile(new JArray(Branch("GameState.Story.Set('bad', true)", new JArray(), new JArray())), "fixture:readonly");
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CaptureDialogue()), compiled, "fixture:readonly");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(new CaptureDialogue()), compiled, "fixture:readonly");
             Assert.That(() => run.Tick(0), Throws.Exception);
             Assert.That(run.CurrentStepId, Is.EqualTo("branch"));
         }
@@ -263,7 +264,7 @@ namespace Core.Scripting.Editor
                 Step("talk", "dialogue.play", new JObject { ["dialogue"] = reference })), "fixture:encoding");
             Assert.That(compiled.Count(character => character == '\n'), Is.EqualTo(1));
             var capture = new CaptureDialogue();
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(capture), compiled, "fixture:encoding");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(capture), compiled, "fixture:encoding");
             run.Tick(0);
             Assert.That(run.IsRunning, Is.False);
             Assert.That(capture.Reference, Is.EqualTo(reference));

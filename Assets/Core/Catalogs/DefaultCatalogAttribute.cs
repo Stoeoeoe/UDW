@@ -2,7 +2,7 @@ using System;
 
 namespace Core.Catalogs
 {
-    /// <summary>Declares the default Resources asset created by editor setup.</summary>
+    /// <summary>Declares the Resources asset created by editor setup and registered by SystemRoot.</summary>
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed class DefaultCatalogAttribute : Attribute
     {

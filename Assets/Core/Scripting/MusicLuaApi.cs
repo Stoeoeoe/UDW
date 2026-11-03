@@ -1,3 +1,5 @@
+using VContainer;
+using Preserve = UnityEngine.Scripting.PreserveAttribute;
 using System;
 using Core.Catalogs;
 using Core.Music;
@@ -8,9 +10,11 @@ namespace Core.Scripting
     [LuaModule("Music")]
     public sealed class MusicLuaApi
     {
+        [Inject] private CutsceneRunner _cutsceneRunner;
+        [Inject] private MusicDirector _musicDirector;
+
         private readonly MusicCatalog _catalog;
         public MusicLuaApi(MusicCatalog catalog) => _catalog = catalog ? catalog : throw new InvalidOperationException("MusicCatalog is required.");
-        internal static MusicLuaApi BindCurrentMusic() => new(CatalogResources.Load<MusicCatalog>(MusicCatalog.ResourceName));
         [Preserve]
         public void ValidateOverride(string cue, string preset, string quantization = "NextBar", double fadeSeconds = 1)
         {
@@ -29,8 +33,8 @@ namespace Core.Scripting
         [LuaPreview(LuaPreviewSpatialState.Described)]
         public void Override([LuaResource("musicCue")] string cue, string preset, string quantization = "NextBar", double fadeSeconds = 1)
         {
-            var run = CutsceneRunner.Instance.ActiveRun ?? throw new InvalidOperationException("Music overrides require a live cutscene run.");
-            var director = MusicDirector.Instance;
+            var run = _cutsceneRunner.ActiveRun ?? throw new InvalidOperationException("Music overrides require a live cutscene run.");
+            var director = _musicDirector;
             var next = director.Requests.Request(RequireCue(cue), preset, 1000, Quantization(quantization), fadeSeconds);
             run.MusicOverride?.Dispose(); run.MusicOverride = next;
         }
@@ -39,7 +43,7 @@ namespace Core.Scripting
         [LuaPreview(LuaPreviewSpatialState.Described)]
         public void Release()
         {
-            var run = CutsceneRunner.Instance.ActiveRun ?? throw new InvalidOperationException("Music release requires a live cutscene run.");
+            var run = _cutsceneRunner.ActiveRun ?? throw new InvalidOperationException("Music release requires a live cutscene run.");
             run.MusicOverride?.Dispose(); run.MusicOverride = null;
         }
     }

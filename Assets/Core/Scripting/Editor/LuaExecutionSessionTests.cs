@@ -5,17 +5,18 @@ using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class LuaExecutionSessionTests
+    public sealed class LuaExecutionSessionTests : Core.Common.Editor.GameTest
     {
+
         [Test]
         public void OptionalBooleanArgumentsUseDefaultsWithoutCoercingOtherValues()
         {
             var api = new BooleanApi();
-            using (var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Flags.Set()", "default flag")) run.Tick(0);
+            using (var run = VulcanusLuaEngine.StartSession(Game.Bind(api), "Flags.Set()", "default flag")) run.Tick(0);
             Assert.That(api.Value, Is.False);
-            using (var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Flags.Set(true)", "enabled flag")) run.Tick(0);
+            using (var run = VulcanusLuaEngine.StartSession(Game.Bind(api), "Flags.Set(true)", "enabled flag")) run.Tick(0);
             Assert.That(api.Value, Is.True);
-            using var invalid = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), "Flags.Set('true')", "invalid flag");
+            using var invalid = VulcanusLuaEngine.StartSession(Game.Bind(api), "Flags.Set('true')", "invalid flag");
             Assert.That(() => invalid.Tick(0), Throws.Exception);
         }
 
@@ -31,7 +32,7 @@ namespace Core.Scripting.Editor
         public void LuaBlocksExecuteOnceAndThenContinueTheSequence()
         {
             var api = new TestApi();
-            var bindings = new LuaBindingRegistry(new CutsceneLuaApi(), api);
+            var bindings = Game.Bind(new CutsceneLuaApi(), api);
             using var run = VulcanusLuaEngine.StartSession(bindings,
                 "Cutscene.RunLua('local total = 0; for i = 1, 3 do total = total + i end; assert(total == 6); assert(os == nil and io == nil)'); Test.Finish()",
                 "Lua block test");
@@ -52,11 +53,11 @@ namespace Core.Scripting.Editor
         public void LuaBlockRuntimeFailureStopsTheSequenceAndEndlessCodeHasAnInstructionBudget()
         {
             var api = new TestApi();
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi(), api),
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(new CutsceneLuaApi(), api),
                 "Cutscene.RunLua(\"error('block failed')\"); Test.Finish()", "Lua block failure");
             Assert.That(() => run.Tick(0), Throws.Exception.With.Message.Contains("block failed"));
             Assert.That(api.Finished, Is.False);
-            Assert.That(() => new CutsceneLuaApi().RunLua("while true do end"),
+            Assert.That(() => Game.Inject(new CutsceneLuaApi()).RunLua("while true do end"),
                 Throws.InvalidOperationException.With.Message.Contains("instruction budget"));
         }
 
@@ -126,7 +127,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void ErrorsCarrySourceAndContextRestrictionsAreEnforced()
         {
-            using var run = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new TestApi()), "Test.Finish()", "fixture:step-1", "npcRoutine");
+            using var run = VulcanusLuaEngine.StartSession(Game.Bind(new TestApi()), "Test.Finish()", "fixture:step-1", "npcRoutine");
             Assert.That(() => run.Tick(0.01f),
                 Throws.InvalidOperationException.With.Message.Contains("fixture:step-1"));
         }
@@ -134,7 +135,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void ManifestRequiresExplicitActionOptInAndIsDeterministic()
         {
-            var registry = new LuaBindingRegistry(new TestApi());
+            var registry = Game.Bind(new TestApi());
             var first = registry.Describe();
             Assert.That(first.schemaVersion, Is.EqualTo(2));
             var methods = first.modules[0].methods;
@@ -149,7 +150,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void UnsupportedContextIsRejectedBeforeRunning()
         {
-            Assert.That(() => VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new TestApi()),
+            Assert.That(() => VulcanusLuaEngine.StartSession(Game.Bind(new TestApi()),
                 "Test.Finish()", "fixture", "unknown"), Throws.ArgumentException);
         }
 
@@ -157,7 +158,7 @@ namespace Core.Scripting.Editor
         public void TypeDescriptionsMatchRuntimeDescriptionsWithoutCreatingApiObjects()
         {
             var fromTypes = LuaBindingRegistry.DescribeTypes(typeof(TestApi));
-            var fromObject = new LuaBindingRegistry(new TestApi()).Describe();
+            var fromObject = Game.Bind(new TestApi()).Describe();
             Assert.That(UnityEngine.JsonUtility.ToJson(fromTypes), Is.EqualTo(UnityEngine.JsonUtility.ToJson(fromObject)));
             Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(ConstructorRequiresGameApi)), Throws.Nothing);
         }
@@ -166,7 +167,7 @@ namespace Core.Scripting.Editor
         public void TypeExportUsesTheSameSignatureAndIdentityValidationAsRuntimeBinding()
         {
             Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(InvalidExportApi)), Throws.InvalidOperationException);
-            Assert.That(() => new LuaBindingRegistry(new InvalidExportApi()), Throws.InvalidOperationException);
+            Assert.That(() => Game.Bind(new InvalidExportApi()), Throws.InvalidOperationException);
             Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(TestApi), typeof(TestApi)), Throws.ArgumentException);
             Assert.That(() => LuaBindingRegistry.DescribeTypes(new Type[] { null }), Throws.ArgumentException);
         }
@@ -217,7 +218,7 @@ namespace Core.Scripting.Editor
             {
                 new CutsceneArgument("destination", "square"), new CutsceneArgument("character", "player")
             });
-            var registry = CutsceneBindings.BindSequence(new[] { step }, "cutscene",
+            var registry = Game.BindSequence(new[] { step }, "cutscene",
                 (typeof(ValidationApi), () => api),
                 (typeof(ConstructorRequiresGameApi), () => new ConstructorRequiresGameApi()));
             Assert.That(api.Checked, Is.EqualTo("player:square"));
@@ -235,7 +236,7 @@ namespace Core.Scripting.Editor
             {
                 new CutsceneArgument("character", "missing"), new CutsceneArgument("destination", "square")
             });
-            Assert.That(() => CutsceneBindings.BindSequence(new[] { step }, "cutscene",
+            Assert.That(() => Game.BindSequence(new[] { step }, "cutscene",
                 (typeof(ValidationApi), () => new ValidationApi())),
                 Throws.InvalidOperationException.With.Message.Contains("step 'bad-step'").And.Message.Contains("Unknown character"));
         }
@@ -292,8 +293,8 @@ namespace Core.Scripting.Editor
             [LuaCall] public void Move(UnityEngine.Vector2 destination) { }
         }
 
-        private static LuaExecutionSession Start(TestApi api, string lua) =>
-            VulcanusLuaEngine.StartSession(new LuaBindingRegistry(api), lua, "fixture");
+        private LuaExecutionSession Start(TestApi api, string lua) =>
+            VulcanusLuaEngine.StartSession(Game.Bind(api), lua, "fixture");
 
         [LuaModule("Test")]
         private sealed class TestApi

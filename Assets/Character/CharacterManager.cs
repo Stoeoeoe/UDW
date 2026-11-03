@@ -1,7 +1,7 @@
 using Character;
 using Core;
 
-public class CharacterManager : Singleton<CharacterManager>
+public sealed class CharacterManager
 {
     public MainCharacter MainCharacter { get; private set; }
 

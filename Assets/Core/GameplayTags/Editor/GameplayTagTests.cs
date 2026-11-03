@@ -9,8 +9,9 @@ using UnityEngine;
 
 namespace Core.GameplayTags.Editor
 {
-    public sealed class GameplayTagTests
+    public sealed class GameplayTagTests : Core.Common.Editor.GameTest
     {
+
         [Test]
         public void SourcesCanOverlapAndBeReplacedIndependently()
         {
@@ -109,12 +110,12 @@ namespace Core.GameplayTags.Editor
             bonuses.GetArrayElementAtIndex(0).FindPropertyRelative("attribute").intValue = (int)CharacterAttributeType.PhysicalDefense;
             bonuses.GetArrayElementAtIndex(0).FindPropertyRelative("flat").floatValue = 2;
             serialized.ApplyModifiedPropertiesWithoutUndo();
-            SkillDefinitions.Register(definition);
+            Game.Get<SkillDefinitions>().Register(definition);
 
             var skills = new CharacterSkills();
             var gameObject = new GameObject("Skill grant test character");
             gameObject.SetActive(false);
-            var character = gameObject.AddComponent<GameCharacter>();
+            var character = Game.InjectObject(gameObject.AddComponent<GameCharacter>());
             var tags = character.Tags;
             typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(skills, new object[] { character });
@@ -123,7 +124,7 @@ namespace Core.GameplayTags.Editor
             EventBus<SkillLevelChangedEvent>.Subscribe(observer);
             try
             {
-                Assert.That(skills.TryLevelUp(skillId), Is.True);
+                Assert.That(skills.TryLevelUp(Game.Get<SkillDefinitions>().Get(skillId)), Is.True);
                 Assert.That(observer.SawUpgradeWithTag, Is.True);
                 Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(2));
 

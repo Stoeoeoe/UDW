@@ -43,11 +43,13 @@ the existing story module exposes this reader and writer:
 [LuaModule("GameState.Story")]
 public sealed class StoryLuaApi
 {
+    [Inject] private GameState _state;
+
     [LuaCall]
-    public bool Has(string key) => GameState.Story.Has(key);
+    public bool Has(string key) => _state.Story.Has(key);
 
     [LuaCall(writesState: true)]
-    public void Set(string key, StoryValue value) => GameState.Story.SetValue(key, value);
+    public void Set(string key, StoryValue value) => _state.Story.SetValue(key, value);
 }
 ```
 
@@ -58,6 +60,13 @@ a parameterless constructor unless they are scene-bound. Scene-bound modules
 (actors, dialogue, audio, weather and camera) use factories in
 `CutsceneBindings.ActionModules`; binding constructs only modules used by steps.
 Inspecting signatures/exporting metadata must not require live scene services.
+
+Inject `LuaRuntime` to create an engine or bind a session. It injects each new
+module using the current scope; modules keep the stable `GameState` service and
+read its properties on every call, so loading a save replaces the root without
+leaving stale snapshots. `LuaBindingRegistry.Runtime` supplies the same factory
+to session expressions and Run Lua chunks. Metadata discovery does not build
+these runtime modules.
 
 `LuaBindingRegistry` validates signatures and converts supported values. Use
 existing APIs as examples for primitive values, `StoryValue`, `MapPosition` and

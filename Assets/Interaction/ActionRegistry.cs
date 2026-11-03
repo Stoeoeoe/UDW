@@ -5,11 +5,14 @@ using Character;
 using Core.Context;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Interaction
 {
     public class ActionRegistry : MonoBehaviour
     {
+        [Inject] private IObjectResolver _resolver;
         
         [AssetList] [SerializeField] private List<PrimaryAction> actionPrefabs;
         
@@ -26,7 +29,7 @@ namespace Interaction
             
             foreach (var prefab in actionPrefabs)
             {
-                var action = Instantiate(prefab, transform, false);
+                var action = _resolver.Instantiate(prefab, transform, false);
                 action.Initialize(owner);
                 _actions[action.InteractionMode] = action;
             }

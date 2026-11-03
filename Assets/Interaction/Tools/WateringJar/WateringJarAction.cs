@@ -14,6 +14,7 @@ namespace Interaction.Tools.WateringJar
     /// </summary>
     public class WateringJarAction : ToolAction
     {
+
         [SerializeField] private MMFeedbacks refillFeedback;
         [SerializeField, Min(0.01f)] private float refillDuration = 0.8f;
 
@@ -60,7 +61,7 @@ namespace Interaction.Tools.WateringJar
             foreach (var tile in affectedTiles)
             {
                 if (!Water.TryConsume(ToolData.chargePerUsage)) return;
-                MapManager.Instance.IrrigateTile(tile);
+                _mapManager.IrrigateTile(tile);
                 cancellation.ThrowIfCancellationRequested();
                 if (affectedTiles.Count > 1) await Awaitable.WaitForSecondsAsync(0.2f, cancellation);
             }

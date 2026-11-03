@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Character;
 using Core.Events;
@@ -11,6 +12,8 @@ namespace UI.Containers
     [RequireComponent(typeof(UIDocument))]
     public sealed class ContainerScreen : ManagedUIScreen, IEventListener<InventoryChangedEvent>
     {
+        [Inject] private CharacterCatalog _characterCatalog;
+
         private static ContainerScreen _instance;
         public static ContainerScreen Instance => _instance
             ? _instance : throw new InvalidOperationException("The required ContainerScreen is missing from SystemRoot.");
@@ -84,7 +87,7 @@ namespace UI.Containers
             _character = character;
             _container.Changed += RequestRefresh;
             _title.text = container.DisplayName;
-            _owner.text = "Belongs to " + CharacterCatalog.Require(container.Storage.State.OwnerCharacterId).DisplayName;
+            _owner.text = "Belongs to " + _characterCatalog.Require(container.Storage.State.OwnerCharacterId).DisplayName;
             _message.text = "";
             Refresh();
             OpenScreen(character);

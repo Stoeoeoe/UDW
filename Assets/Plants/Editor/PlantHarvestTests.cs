@@ -1,3 +1,4 @@
+using Plants;
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections.Generic;
@@ -19,10 +20,10 @@ using Object = UnityEngine.Object;
 namespace Plants.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class PlantHarvestTests : IEventListener<PlantHarvestedEvent>, IEventListener<InventoryChangedEvent>, IEventListener<PlantRemovedEvent>
+    public sealed class PlantHarvestTests : Core.Common.Editor.GameTest, IEventListener<PlantHarvestedEvent>, IEventListener<InventoryChangedEvent>, IEventListener<PlantRemovedEvent>
     {
         private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private PlantManager _plants;
         private PlantCatalog _catalog;
         private PlantData _data;
@@ -41,35 +42,29 @@ namespace Plants.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new Core.Common.Editor.GameTestFixture();
-            _fixture.AddSingleton<GameStateManager>();
-            _fixture.AddSingleton<PlantManager>();
+
             _harvestEvents = _inventoryEvents = 0;
             _removalEvents = 0;
             _onNotification = null;
-            _root = _fixture.Root;
-            _plants = PlantManager.Instance;
-            _data = ScriptableObject.CreateInstance<PlantData>();
+            _root = Game.Root;
+            _data = Game.Asset<PlantData>();
             TestConfiguration.Set(_data, "plantId", "test:crop");
             var stages = PlantDataTests.Stages(0, 2, 5);
-            _sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero);
+            _sprite = Game.Own(Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero));
             foreach (var stage in stages) Set(stage, "_representation", new SpriteOrPrefab { sprite = _sprite });
             Set(stages[2], "_isHarvestable", true);
             Set(_data, "growthStages", stages);
-            _item = ScriptableObject.CreateInstance<InventoryTestItem>();
+            _item = Game.Asset<InventoryTestItem>();
             Set(_item, "_itemId", "test:produce", typeof(ItemDefinition));
             Set(_data, "_harvestItem", _item);
             Set(_data, "_minHarvestQuantity", 3);
             Set(_data, "_maxHarvestQuantity", 3);
-            _catalog = ScriptableObject.CreateInstance<PlantCatalog>();
-            _catalog.Synchronize(new Object[] { _data });
-            typeof(PlantManager).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(PlantManager.Instance, _catalog);
-            _inventory = _root.AddComponent<SlotInventory>();
-            GameState.Player.Inventory.Slots = new InventorySlotState[2];
-            _inventory.Bind(GameState.Player.Inventory, id => id == _item.ItemId ? _item : null);
+            _catalog = Game.Catalog<PlantCatalog>(_data);
+            _plants = Game.Get<PlantManager>();
+            Game.State.Player.Inventory.Slots = new InventorySlotState[2];
+            _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _item.ItemId ? _item : null);
             _crop = new PlantState(_data.plantId) { daysPassedSincePlanting = 8 };
-            GameState.World.Set("farm", "plant:1,2", _crop);
+            Game.State.World.Set("farm", "plant:1,2", _crop);
             EventBus<PlantHarvestedEvent>.Subscribe(this);
             EventBus<InventoryChangedEvent>.Subscribe(this);
             EventBus<PlantRemovedEvent>.Subscribe(this);
@@ -81,11 +76,7 @@ namespace Plants.Editor
             EventBus<PlantHarvestedEvent>.Unsubscribe(this);
             EventBus<InventoryChangedEvent>.Unsubscribe(this);
             EventBus<PlantRemovedEvent>.Unsubscribe(this);
-            _fixture?.Dispose();
-            Object.DestroyImmediate(_catalog);
-            Object.DestroyImmediate(_data);
-            Object.DestroyImmediate(_item);
-            Object.DestroyImmediate(_sprite);
+
             foreach (var drop in _drops) if (drop) Object.DestroyImmediate(drop.gameObject);
             _drops.Clear();
         }
@@ -95,8 +86,8 @@ namespace Plants.Editor
         {
             Set(_data, "_harvestMethod", method);
             var other = new PlantState(_data.plantId) { daysPassedSincePlanting = 8 };
-            GameState.World.Set("village", "plant:1,2", other);
-            GameState.World.Set("farm", "farmland:1,2", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set("village", "plant:1,2", other);
+            Game.State.World.Set("farm", "farmland:1,2", new FarmlandState { plowed = true, irrigated = true });
             _onNotification = () =>
             {
                 Assert.That(_plants.HasPlantAt("farm", new Vector2Int(1, 2)), Is.False);
@@ -105,7 +96,7 @@ namespace Plants.Editor
             };
             Assert.That(Harvest(method), Is.True);
             Assert.That(_plants.GetPlantState("village", new Vector2Int(1, 2)), Is.SameAs(other));
-            Assert.That(GameState.World.TryGet("farm", "farmland:1,2", out FarmlandState land), Is.True);
+            Assert.That(Game.State.World.TryGet("farm", "farmland:1,2", out FarmlandState land), Is.True);
             Assert.That(land.plowed && land.irrigated, Is.True);
             Assert.That(_harvestEvents, Is.EqualTo(1));
             Assert.That(_inventoryEvents, Is.EqualTo(1));
@@ -117,8 +108,8 @@ namespace Plants.Editor
         {
             Set(_data, "_harvestMethod", HarvestMethod.Scythe);
             Set(_data, "_regrowthStageIndex", regrowthStage);
-            GameState.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var before = GameState.Player.Inventory.Slots;
+            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            var before = Game.State.Player.Inventory.Slots;
             var point = new Vector3(7, -3, 0);
             Assert.That(_plants.TryHarvestWithScythe("farm", new Vector2Int(1, 2), point, out var drop), Is.True);
             _drops.Add(drop);
@@ -131,7 +122,7 @@ namespace Plants.Editor
             typeof(WorldItem).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(drop, null);
             Assert.That(drop.transform.childCount, Is.EqualTo(1));
             Assert.That(drop.GetComponents<UnityEngine.Rendering.SortingGroup>(), Has.Length.EqualTo(1));
-            Assert.That(GameState.Player.Inventory.Slots, Is.SameAs(before));
+            Assert.That(Game.State.Player.Inventory.Slots, Is.SameAs(before));
             Assert.That(_plants.HasPlantAt("farm", new Vector2Int(1, 2)), Is.EqualTo(regrowthStage >= 0));
             if (regrowthStage >= 0) Assert.That(_crop.daysPassedSincePlanting, Is.EqualTo(2));
             Assert.That(_plants.TryHarvestWithScythe("farm", new Vector2Int(1, 2), point, out _), Is.False);
@@ -165,7 +156,7 @@ namespace Plants.Editor
             Assert.That(_plants.GetPlantState("farm", new Vector2Int(1, 2)), Is.SameAs(_crop));
             for (var day = 0; day < 3; day++)
             {
-                GameState.World.Set("farm", "farmland:1,2", new FarmlandState { plowed = true, irrigated = true });
+                Game.State.World.Set("farm", "farmland:1,2", new FarmlandState { plowed = true, irrigated = true });
                 _plants.OnEvent(new NewDayEvent());
             }
             Assert.That(_crop.daysPassedSincePlanting, Is.EqualTo(5));
@@ -187,15 +178,15 @@ namespace Plants.Editor
                 case "wrong-method": Set(_data, "_harvestMethod", HarvestMethod.Scythe); break;
                 case "disabled": _catalog.SetEnabled(_data, false); break;
                 case "full-inventory":
-                    GameState.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+                    Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
                     break;
             }
-            var slots = GameState.Player.Inventory.Slots;
+            var slots = Game.State.Player.Inventory.Slots;
             var days = _crop.daysPassedSincePlanting;
             Assert.That(Harvest(HarvestMethod.Picking), Is.False);
             Assert.That(_plants.GetPlantState("farm", new Vector2Int(1, 2)), Is.SameAs(_crop));
             Assert.That(_crop.daysPassedSincePlanting, Is.EqualTo(days));
-            Assert.That(GameState.Player.Inventory.Slots, Is.SameAs(slots));
+            Assert.That(Game.State.Player.Inventory.Slots, Is.SameAs(slots));
             Assert.That(_harvestEvents + _inventoryEvents, Is.Zero);
         }
 
@@ -205,7 +196,7 @@ namespace Plants.Editor
             Set(_data, "_regrowthStageIndex", 1);
             Assert.That(Harvest(HarvestMethod.Picking), Is.True);
             var save = new GameSaveData();
-            save.player.Inventory.Slots = GameState.Player.Inventory.Slots;
+            save.player.Inventory.Slots = Game.State.Player.Inventory.Slots;
             save.world.Set("farm", "plant:1,2", _crop);
             var bytes = SerializationUtility.SerializeValue(save, DataFormat.Binary);
             var restored = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.Binary);
@@ -223,7 +214,7 @@ namespace Plants.Editor
             root.SetActive(false);
             try
             {
-                var view = root.AddComponent<FarmablePlant>();
+                var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 var picking = root.GetComponent<PlantHarvestInteractable>();
                 Assert.That(picking.CanInteract, Is.True);
@@ -252,7 +243,7 @@ namespace Plants.Editor
         {
             var root = new GameObject("Bound crop");
             root.SetActive(false);
-            var view = root.AddComponent<FarmablePlant>();
+            var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
             view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
             view.OnEvent(new PlantHarvestedEvent { LocationId = "farm", Position = new Vector2Int(1, 2),
                 Removed = true, State = new PlantState(_data.plantId) });
@@ -271,15 +262,15 @@ namespace Plants.Editor
         {
             Set(_data, "_harvestMethod", method);
             _crop.condition = PlantCondition.Wilted;
-            GameState.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var slots = GameState.Player.Inventory.Slots;
-            var actor = _root.AddComponent<Character.GameCharacter>();
+            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            var slots = Game.State.Player.Inventory.Slots;
+            var actor = Game.InjectObject(_root.AddComponent<Character.GameCharacter>());
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Wilted crop");
             root.SetActive(false);
             try
             {
-                var view = root.AddComponent<FarmablePlant>();
+                var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 var picking = root.GetComponent<PlantHarvestInteractable>();
                 Assert.That(picking.CanInteract, Is.True);
@@ -287,7 +278,7 @@ namespace Plants.Editor
                 Assert.That(_plants.HasPlantAt("farm", new Vector2Int(1, 2)), Is.False);
                 Assert.That(picking.CanInteract, Is.False);
                 Assert.That(_plants.TryClearWilted("farm", new Vector2Int(1, 2)), Is.False);
-                Assert.That(GameState.Player.Inventory.Slots, Is.SameAs(slots));
+                Assert.That(Game.State.Player.Inventory.Slots, Is.SameAs(slots));
                 Assert.That(_harvestEvents + _inventoryEvents, Is.Zero);
                 Assert.That(_removalEvents, Is.EqualTo(1));
                 view.OnEvent(_lastRemoval);
@@ -317,14 +308,14 @@ namespace Plants.Editor
         [Test]
         public void AFullInventoryRestoresTheVisibilityOfADropThatAlreadyStartedFading()
         {
-            GameState.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var actor = _root.AddComponent<Character.GameCharacter>();
+            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            var actor = Game.InjectObject(_root.AddComponent<Character.GameCharacter>());
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Fading drop");
             root.SetActive(false);
             try
             {
-                var drop = root.AddComponent<WorldItem>();
+                var drop = Game.InjectObject(root.AddComponent<WorldItem>());
                 drop.Initialize(_item, 3);
                 Set(drop, "_character", actor);
                 Set(drop, "_isFading", true);
@@ -354,7 +345,7 @@ namespace Plants.Editor
             FarmablePlant view = null;
             try
             {
-                view = root.AddComponent<FarmablePlant>();
+                view = Game.InjectObject(root.AddComponent<FarmablePlant>());
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 // Subscribe the view without activating scene components in this EditMode fixture.
                 EventBus<PlantRemovedEvent>.Subscribe(view);
@@ -425,14 +416,14 @@ namespace Plants.Editor
         {
             Set(_data, "_regrowthStageIndex", 1);
             if (fullInventory)
-                GameState.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var actor = _root.AddComponent<Character.GameCharacter>();
+                Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            var actor = Game.InjectObject(_root.AddComponent<Character.GameCharacter>());
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Bound crop");
             root.SetActive(false);
             try
             {
-                var view = root.AddComponent<FarmablePlant>();
+                var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 root.GetComponent<PlantHarvestInteractable>().TriggerInteraction(actor);
                 Assert.That(_harvestEvents, Is.EqualTo(fullInventory ? 0 : 1));

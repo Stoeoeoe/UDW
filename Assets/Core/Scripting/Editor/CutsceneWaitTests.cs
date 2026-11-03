@@ -6,13 +6,14 @@ using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneWaitTests
+    public sealed class CutsceneWaitTests : Core.Common.Editor.GameTest
     {
+
         [Test]
         public void WaitResumesAfterAccumulatedGameplaySeconds()
         {
             var observer = new Observer();
-            using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi(), observer),
+            using var session = VulcanusLuaEngine.StartSession(Game.Bind(new CutsceneLuaApi(), observer),
                 "Cutscene.Wait(0.5); Observer.Finish()", "wait-fixture");
             session.Tick(10); // Starts the action; elapsed time before it started does not count.
             session.Tick(0.25f);
@@ -27,7 +28,7 @@ namespace Core.Scripting.Editor
         public void ZeroWaitYieldsAndCancellationStopsTheRemainingSequence()
         {
             var observer = new Observer();
-            using (var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi(), observer),
+            using (var session = VulcanusLuaEngine.StartSession(Game.Bind(new CutsceneLuaApi(), observer),
                        "Cutscene.Wait(0); Observer.Finish()", "zero-wait"))
             {
                 session.Tick(0);
@@ -36,7 +37,7 @@ namespace Core.Scripting.Editor
                 Assert.That(observer.Finished, Is.True);
             }
             observer.Finished = false;
-            using var cancelled = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(new CutsceneLuaApi(), observer),
+            using var cancelled = VulcanusLuaEngine.StartSession(Game.Bind(new CutsceneLuaApi(), observer),
                 "Cutscene.Wait(1); Observer.Finish()", "cancelled-wait");
             cancelled.Tick(0);
             cancelled.Cancel();
@@ -64,7 +65,7 @@ namespace Core.Scripting.Editor
                 var lua = CutsceneSequenceCompiler.Compile(Sequence(new JValue(0.5)), "wait.json", out var steps);
                 Assert.That(lua, Is.EqualTo("Cutscene.Wait(0.5);\n"));
                 Assert.That(steps.Single().Arguments.Single().Value, Is.EqualTo("0.5"));
-                var bindings = CutsceneBindings.BindSequence(steps, "cutscene",
+                var bindings = Game.BindSequence(steps, "cutscene",
                     (typeof(CutsceneLuaApi), () => new CutsceneLuaApi()));
                 using var session = VulcanusLuaEngine.StartSession(bindings, lua, "imported-wait");
                 session.Tick(0);
@@ -92,14 +93,14 @@ namespace Core.Scripting.Editor
         public void BindingRejectsInvalidDurationBeforePlayback()
         {
             var steps = new[] { new CutsceneStep("pause", "cutscene.wait", new[] { new CutsceneArgument("seconds", "-1") }) };
-            Assert.That(() => CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())),
+            Assert.That(() => Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())),
                 Throws.InvalidOperationException.With.Message.Contains("step 'pause'").And.Message.Contains("nonnegative"));
         }
 
         [Test]
         public void ExportsAwaitableNumericActionWithKnownUnchangedSpatialState()
         {
-            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Cutscene").methods.Single();
+            var method = VulcanusLuaEngine.DescribeBindings().modules.Single(module => module.path == "Cutscene").methods.Single(method => method.name == "Wait");
             Assert.That(method.action.id, Is.EqualTo("cutscene.wait"));
             Assert.That(method.action.execution, Is.EqualTo("awaitable"));
             Assert.That(method.action.contexts, Is.EqualTo(new[] { "cutscene" }));

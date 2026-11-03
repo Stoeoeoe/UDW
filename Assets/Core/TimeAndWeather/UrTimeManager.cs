@@ -1,3 +1,4 @@
+using VContainer;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,15 @@ using UI.Shared;
 namespace Core.TimeAndWeather
 {
     /// <summary>Advances the game calendar and coordinates the ordered overnight transition.</summary>
-    public class UrTimeManager : Singleton<UrTimeManager>
+    public class UrTimeManager : Core.GameManager
     {
+        [Inject] private GameState _gameState;
+
+        [Inject] private WeatherManager _weatherManager;
+        [Inject] private LevelManager _levelManager;
+        [Inject] private CharacterManager _characterManager;
+        [Inject] private UrGUIManager _urGUIManager;
+
         [Header("Time Settings")] [SerializeField]
         protected Season startingSeason = Season.Spring;
 
@@ -38,19 +46,19 @@ namespace Core.TimeAndWeather
             startOfDay, numberOfDaysInSeason, seasons.Select(data => data.season).ToArray());
 
         public long GetNextBoundaryMinute(GameTimeBoundary boundary) =>
-            Calendar.GetNextBoundaryMinute(GameState.Time, boundary);
+            Calendar.GetNextBoundaryMinute(_gameState.Time, boundary);
 
         /// <summary>The current season's authored conditions, in the configured calendar order.</summary>
         public SeasonData CurrentSeason => _currentSeason;
 
         /// <summary>Progress from morning to bedtime, used to sample the daylight gradient.</summary>
-        public float DayProgress => (float)(GameState.Time.hour - startOfDay) / (endOfDay - startOfDay);
+        public float DayProgress => (float)(_gameState.Time.hour - startOfDay) / (endOfDay - startOfDay);
 
         public UrTime CurrentTime
         {
             get
             {
-                var time = GameState.Time;
+                var time = _gameState.Time;
                 return new UrTime(time.season, time.dayOfSeason, time.hour, time.minute);
             }
         }
@@ -59,7 +67,7 @@ namespace Core.TimeAndWeather
         {
             _seasonDataDict = seasons.ToDictionary(d => d.season);
 
-            var time = GameState.Time;
+            var time = _gameState.Time;
             if (time.initialized)
             {
                 _currentSeason = _seasonDataDict[time.season];
@@ -76,7 +84,7 @@ namespace Core.TimeAndWeather
                 time.initialized = true;
             }
 
-            WeatherManager.Instance.RefreshConditions();
+            _weatherManager.RefreshConditions(_currentSeason, DayProgress);
             _started = true;
         }
 
@@ -102,14 +110,14 @@ namespace Core.TimeAndWeather
         public void SetTimeOfDay(int hour, int minute)
         {
             ValidateTimeOfDay(hour, minute);
-            var time = GameState.Time;
+            var time = _gameState.Time;
             if (hour * 60 + minute < time.hour * 60 + time.minute)
                 throw new System.InvalidOperationException("The game clock cannot rewind. Start a new day before selecting an earlier time.");
             var previousMinute = time.TotalMinutes;
             time.hour = hour;
             time.minute = minute;
             time.secondsTowardNextMinute = 0f;
-            WeatherManager.Instance.RefreshDaylight();
+            _weatherManager.UpdateDaylight(DayProgress);
             if (time.TotalMinutes != previousMinute)
                 GameTimeChangedEvent.Trigger(time.TotalMinutes);
         }
@@ -118,16 +126,16 @@ namespace Core.TimeAndWeather
         public void ApplySavedTime()
         {
             if (!_started) return; // Start will read the restored state instead.
-            _currentSeason = _seasonDataDict[GameState.Time.season];
-            WeatherManager.Instance.RefreshConditions();
+            _currentSeason = _seasonDataDict[_gameState.Time.season];
+            _weatherManager.RefreshConditions(_currentSeason, DayProgress);
         }
 
         protected void Update()
         {
             // Modal screens pause the calendar without changing gameplay time-scale requests.
-            if (_dayTransitionRoutine != null || UrGUIManager.IsGameClockPaused) return;
+            if (_dayTransitionRoutine != null || _urGUIManager.IsGameClockPaused) return;
 
-            var time = GameState.Time;
+            var time = _gameState.Time;
             var previousMinute = time.TotalMinutes;
             float deltaTime = Time.deltaTime;
             time.secondsTowardNextMinute += deltaTime;
@@ -147,7 +155,7 @@ namespace Core.TimeAndWeather
                 int hoursToAdd = time.minute / 60;
                 time.minute %= 60;
                 time.hour += hoursToAdd;
-                WeatherManager.Instance.RefreshDaylight();
+                _weatherManager.UpdateDaylight(DayProgress);
             }
 
             if (time.hour >= endOfDay)
@@ -162,17 +170,17 @@ namespace Core.TimeAndWeather
         /// <summary>Fades through the next morning, stopping the clock and player controls during the transition.</summary>
         public void EndDay(DayEndReason reason = DayEndReason.Sleep)
         {
-            if (_dayTransitionRoutine != null || !LevelManager.Instance.SceneReady) return;
-            var character = CharacterManager.Instance.MainCharacter;
+            if (_dayTransitionRoutine != null || !_levelManager.SceneReady) return;
+            var character = _characterManager.MainCharacter;
             if (!character)
                 throw new System.InvalidOperationException("Ending the day requires a registered main character.");
-            _dayTransitionRoutine = TransitionToNextDay(character, reason, GameState.Time.hour);
+            _dayTransitionRoutine = TransitionToNextDay(character, reason, _gameState.Time.hour);
             StartCoroutine(_dayTransitionRoutine);
         }
 
         private IEnumerator TransitionToNextDay(Character.MainCharacter character, DayEndReason reason, int bedtimeHour)
         {
-            var gui = UrGUIManager.Instance;
+            var gui = _urGUIManager;
             try
             {
                 gui.TransitionInterrupted += CancelDayTransition;
@@ -184,7 +192,7 @@ namespace Core.TimeAndWeather
                     yield return gui.CoverScene(character.transform);
                 }
                 finally { character.Animator.EndInteractionAnimation(); }
-                yield return LevelManager.Instance.ReturnHome(character);
+                yield return _levelManager.ReturnHome(character);
                 // NewDayEvent listeners run only after the screen is completely covered.
                 StartNewDay();
                 // Recovery follows clock-driven expirations and only occurs once the overnight advance succeeds.
@@ -217,7 +225,7 @@ namespace Core.TimeAndWeather
         /// <summary>Advances the calendar and daily systems immediately; normal bedtime uses EndDay.</summary>
         public void StartNewDay()
         {
-            var time = GameState.Time;
+            var time = _gameState.Time;
             time.daysSinceStart++;
             time.hour = startOfDay;
             time.minute = 0;
@@ -233,7 +241,7 @@ namespace Core.TimeAndWeather
             }
 
             // Daily listeners must see the new weather, regardless of their event subscription order.
-            WeatherManager.Instance.RefreshConditions();
+            _weatherManager.RefreshConditions(_currentSeason, DayProgress);
             NewDayEvent.Trigger(time.daysSinceStart);
             GameTimeChangedEvent.Trigger(time.TotalMinutes);
             Debug.Log($"Starting {time.season} day {time.dayOfSeason} at {time.hour:00}:{time.minute:00} (game day {time.daysSinceStart}).");
@@ -241,13 +249,13 @@ namespace Core.TimeAndWeather
 
         public void StartSeason(Season season)
         {
-            var time = GameState.Time;
+            var time = _gameState.Time;
             time.dayOfSeason = 0;
             time.season = season;
             _currentSeason = _seasonDataDict[season];
             SeasonStartEvent.Trigger(_currentSeason);
         }
 
-        private void OnDisable() => CancelDayTransition();
+        protected override void OnDisable() { base.OnDisable(); CancelDayTransition(); }
     }
 }

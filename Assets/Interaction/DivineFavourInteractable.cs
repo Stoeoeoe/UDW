@@ -1,3 +1,4 @@
+using VContainer;
 using Character;
 using Core.Divinity;
 using UnityEngine;
@@ -7,6 +8,8 @@ namespace Interaction
     /// <summary>Grants favour for a selected deity when used.</summary>
     public sealed class DivineFavourInteractable : AbstractInteractable
     {
+        [Inject] private DivineFavour _divineFavour;
+
         [SerializeField] private DeityDefinition deity;
         [Min(1)] [SerializeField] private int favourPoints = 1;
 
@@ -20,7 +23,7 @@ namespace Interaction
 
         protected override bool Interact(GameCharacter instigator)
         {
-            DivineFavour.AddFavour(deity.Id, favourPoints);
+            _divineFavour.AddFavour(deity.Id, favourPoints);
             return true;
         }
     }

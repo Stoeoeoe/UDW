@@ -13,31 +13,27 @@ using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 namespace Core.Inventory.Editor
 {
     [Category("InventoryManagement")]
-    public sealed class InventoryManagementTests
+    public sealed class InventoryManagementTests : Core.Common.Editor.ServiceTest
     {
-        private GameObject _root;
+
         private SlotInventory _bag;
         private InventoryState _state;
         private InventoryConfiguration _config;
-        private readonly List<Object> _assets = new();
         private InventoryTestItem _grain;
 
         [SetUp] public void SetUp()
         {
-            _root = new GameObject("Bag transactions"); _root.SetActive(false);
-            _bag = _root.AddComponent<SlotInventory>();
-            _config = ScriptableObject.CreateInstance<InventoryConfiguration>(); _assets.Add(_config);
+            _bag = Game.Create<SlotInventory>();
+            _config = Game.Asset<InventoryConfiguration>();
             TestConfiguration.Set(_config, "Columns", 2); TestConfiguration.Set(_config, "StartingRows", 1);
             TestConfiguration.Set(_config, "Upgrades", new[] { new InventoryConfiguration.Upgrade { Rows = 2, Price = 10 } });
             _bag.Configuration = _config;
             _state = new InventoryState(); _bag.Bind(_state);
             _grain = Item<InventoryTestItem>("test:grain", 99);
         }
-        [TearDown] public void TearDown()
-        { Object.DestroyImmediate(_root); foreach (var asset in _assets) Object.DestroyImmediate(asset); _assets.Clear(); }
         private T Item<T>(string id, int max) where T : ItemDefinition
         {
-            var item = ScriptableObject.CreateInstance<T>(); _assets.Add(item);
+            var item = Game.Asset<T>();
             typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, id);
             typeof(ItemDefinition).GetField("_maxStackSize", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, max);
             return item;
@@ -78,7 +74,7 @@ namespace Core.Inventory.Editor
         }
         [Test] public void EquipmentTransfersOwnershipAndRejectsFullBagUnequip()
         {
-            var slot = ScriptableObject.CreateInstance<EquipmentSlotDefinition>(); _assets.Add(slot); TestConfiguration.Set(slot, "Id", "test:head");
+            var slot = Game.Asset<EquipmentSlotDefinition>(); TestConfiguration.Set(slot, "Id", "test:head");
             TestConfiguration.Set(_config, "EquipmentSlots", new[] { slot });
             var hat = Item<WornEquipmentItem>("test:hat", 1); TestConfiguration.Set(hat, "AllowedSlots", new[] { slot });
             _bag.AddItem(hat, 1);
@@ -172,7 +168,7 @@ namespace Core.Inventory.Editor
         }
         [Test] public void DraggingGearIntoASlotPreservesOwnershipAndModifiersDoNotReapplyOnRefresh()
         {
-            var slot = ScriptableObject.CreateInstance<EquipmentSlotDefinition>(); _assets.Add(slot); TestConfiguration.Set(slot, "Id", "test:head");
+            var slot = Game.Asset<EquipmentSlotDefinition>(); TestConfiguration.Set(slot, "Id", "test:head");
             TestConfiguration.Set(_config, "EquipmentSlots", new[] { slot });
             var hat = Item<WornEquipmentItem>("test:hat", 1); TestConfiguration.Set(hat, "AllowedSlots", new[] { slot });
             TestConfiguration.Set(hat, "Modifiers", new[] { new WornEquipmentItem.Modifier { Attribute = CharacterAttributeType.WalkSpeed, Flat = 1 } });
@@ -199,7 +195,6 @@ namespace Core.Inventory.Editor
             Assert.That(_bag.GetSlot(2).Quantity, Is.EqualTo(2));
             Assert.That(_bag.GetSlot(3).IsEmpty, Is.True);
         }
-
 
     }
 }

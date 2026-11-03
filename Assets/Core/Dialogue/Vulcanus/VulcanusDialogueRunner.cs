@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -26,7 +27,8 @@ namespace Core.Dialogue.Vulcanus
         // entering Play Mode without scene reload. Only RunDialogue may create this live state.
         [NonSerialized] private VulcanusDialogueExecutionContext _activeContext;
         [NonSerialized] private Action _onCompleted;
-        private readonly VulcanusLuaDialogueScriptEngine _scriptEngine = new(new VulcanusLuaEngine());
+        [Inject] private LuaRuntime _lua;
+        private VulcanusLuaDialogueScriptEngine _scriptEngine;
 
         private IDialogueContextResolver _contextResolver;
         private IDialoguePresenter _presenter;
@@ -42,6 +44,7 @@ namespace Core.Dialogue.Vulcanus
 
         private void Awake()
         {
+            _scriptEngine = new VulcanusLuaDialogueScriptEngine(_lua.CreateEngine());
             if (database == null) throw new InvalidOperationException("Dialogue runner requires its database.");
             if (maxStepsPerRun < 1) throw new InvalidOperationException("Dialogue maxStepsPerRun must be positive.");
             _presenter = ResolveInterface<IDialoguePresenter>(presenter)

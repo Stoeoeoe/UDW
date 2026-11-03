@@ -9,8 +9,9 @@ using Core.Game;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneGraphCompilerTests
+    public sealed class CutsceneGraphCompilerTests : Core.Common.Editor.GameTest
     {
+
         private static JObject Node(string id, string kind) => new() { ["id"] = id, ["kind"] = kind, ["position"] = new JObject { ["x"] = 0, ["y"] = 0 } };
         private static JObject Edge(string from, string to, string sourcePin = "next", string targetPin = "in", string kind = "execution") => new()
         { ["id"] = from + sourcePin + to + targetPin, ["source"] = from, ["sourcePin"] = sourcePin, ["target"] = to, ["targetPin"] = targetPin, ["kind"] = kind };
@@ -33,8 +34,8 @@ namespace Core.Scripting.Editor
             graph["edges"] = new JArray(Edge("entry", "lua"), Edge("lua", "wait"), Edge("wait", "exit"), Edge("lua", "wait", "duration", "seconds", "data"));
             var code = Compile(graph, out var steps);
             Assert.That(code, Does.Not.Contain("Cutscene.Variables[\"__graph_input_"));
-            var api = new CutsceneLuaApi();
-            var bindings = CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => api));
+            var api = Game.Inject(new CutsceneLuaApi());
+            var bindings = Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => api));
             using var run = VulcanusLuaEngine.StartSession(bindings, code, "graph-test");
             run.Tick(0); Assert.That(run.IsRunning, Is.True);
             run.Tick(0.5f); Assert.That(run.IsRunning, Is.False);
@@ -69,13 +70,13 @@ namespace Core.Scripting.Editor
             var graph = Graph(pure, Wait("wait", 99));
             graph["edges"] = new JArray(Edge("entry", "wait"), Edge("wait", "exit"), Edge("pure", "wait", "value", "seconds", "data"));
             var code = Compile(graph, out var steps);
-            using var run = VulcanusLuaEngine.StartSession(CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "pure-test");
+            using var run = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "pure-test");
             run.Tick(0); run.Tick(0.25f); Assert.That(run.IsRunning, Is.False);
             pure["expression"] = "(function() Cutscene.Variables.delay = 4; return 0 end)()";
             var definitions = new[] { new CutsceneVariableDefinition("delay", "number", "0") };
             var variables = new CutsceneVariables(definitions);
             var invalid = CutsceneGraphCompiler.Compile(graph, "read-only-test", "sequence", new HashSet<string>(), definitions, out steps);
-            using var failure = VulcanusLuaEngine.StartSession(CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), invalid, "read-only-test", variables: variables);
+            using var failure = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), invalid, "read-only-test", variables: variables);
             Assert.That(() => failure.Tick(0), Throws.InvalidOperationException.With.Message.Contains("cannot write cutscene variables"));
             Assert.That(variables.Get("delay", new Script()).Number, Is.Zero);
         }
@@ -97,7 +98,7 @@ namespace Core.Scripting.Editor
             {
                 var graph = Graph(Lua(code), Wait("wait", 0)); graph["edges"] = new JArray(Edge("entry", "lua"), Edge("lua", "wait"), Edge("wait", "exit"));
                 var compiled = Compile(graph, out var steps);
-                using var run = VulcanusLuaEngine.StartSession(CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), compiled, "outputs-test");
+                using var run = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), compiled, "outputs-test");
                 Assert.That(() => run.Tick(0), Throws.InvalidOperationException);
             }
         }
@@ -114,16 +115,14 @@ namespace Core.Scripting.Editor
         [Test]
         public void ExistingReadOnlyFunctionPinsSupplyABranchCondition()
         {
-            using var fixture = new GameTestFixture("Graph read-only calls");
-            fixture.AddSingleton<GameStateManager>();
-            new StoryLuaApi().Set("invited", StoryValueJson.Parse("true"));
+            Game.Inject(new StoryLuaApi()).Set("invited", StoryValueJson.Parse("true"));
             var read = Node("read", "function"); read["method"] = "GameState.Story.Has"; read["arguments"] = new JObject { ["key"] = "invited" };
             var branch = Node("branch", "branch"); branch["pair"] = "join"; branch["arguments"] = new JObject { ["condition"] = false };
             var join = Node("join", "join"); join["pair"] = "branch";
             var graph = Graph(read, branch, join, Wait("yes", 0.25), Wait("no", 99));
             graph["edges"] = new JArray(Edge("entry", "branch"), Edge("read", "branch", "result", "condition", "data"), Edge("branch", "yes", "then"), Edge("branch", "no", "else"), Edge("yes", "join", "next", "track-0"), Edge("no", "join", "next", "track-1"), Edge("join", "exit"));
             var code = Compile(graph, out var steps);
-            using var run = VulcanusLuaEngine.StartSession(CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "function-graph");
+            using var run = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "function-graph");
             run.Tick(0); run.Tick(0.25f); Assert.That(run.IsRunning, Is.False);
         }
 
@@ -135,7 +134,7 @@ namespace Core.Scripting.Editor
             var graph = Graph(fork, join, Wait("left", 0.25), Wait("right", 0.5), Wait("after", 0.25));
             graph["edges"] = new JArray(Edge("entry", "fork"), Edge("fork", "left", "track-0"), Edge("fork", "right", "track-1"), Edge("left", "join", "next", "track-0"), Edge("right", "join", "next", "track-1"), Edge("join", "after"), Edge("after", "exit"));
             var code = Compile(graph, out var steps);
-            using var run = VulcanusLuaEngine.StartSession(CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "parallel-graph");
+            using var run = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "parallel-graph");
             run.Tick(0); run.Tick(0.25f); Assert.That(run.CurrentStepId, Is.EqualTo("fork"));
             run.Tick(0.25f); Assert.That(run.CurrentStepId, Is.EqualTo("after"));
             run.Tick(0.25f); Assert.That(run.IsRunning, Is.False);
@@ -149,7 +148,7 @@ namespace Core.Scripting.Editor
             var definitions = new[] { new CutsceneVariableDefinition("duration", "number", "0") };
             var variables = new CutsceneVariables(definitions);
             var code = CutsceneGraphCompiler.Compile(graph, "stored-graph-results", "sequence", new HashSet<string>(), definitions, out var steps);
-            using var run = VulcanusLuaEngine.StartSession(CutsceneBindings.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "stored-graph-results", variables: variables);
+            using var run = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "stored-graph-results", variables: variables);
             run.Tick(0); Assert.That(variables.Get("duration", new MoonSharp.Interpreter.Script()).Number, Is.EqualTo(0.5));
         }
 

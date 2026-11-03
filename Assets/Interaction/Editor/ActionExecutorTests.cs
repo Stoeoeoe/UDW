@@ -9,9 +9,9 @@ using UnityEngine;
 
 namespace Interaction.Editor
 {
-    public sealed class ActionExecutorTests
+    public sealed class ActionExecutorTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private MainCharacter _character;
         private LifecycleTestAction _action;
         private ActionExecutor _executor;
@@ -20,9 +20,9 @@ namespace Interaction.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Action lifecycle");
-            _character = _fixture.CreateCharacter();
-            _action = _fixture.Root.AddComponent<LifecycleTestAction>();
+
+            _character = Game.CreateCharacter();
+            _action = Game.Root.AddComponent<LifecycleTestAction>();
             _action.Initialize(_character);
             _snapshot = PlayerInteractionContextSnapshot.Empty() with { SceneReady = true, Character = _character };
             _executor = new ActionExecutor(_character, () => _snapshot);
@@ -32,7 +32,7 @@ namespace Interaction.Editor
         public void TearDown()
         {
             _executor.InterruptCurrentAction();
-            _fixture.Dispose();
+
         }
 
         [TestCase(true, true, true, 1)]

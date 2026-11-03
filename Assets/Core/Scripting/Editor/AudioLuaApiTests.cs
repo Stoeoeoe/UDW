@@ -12,6 +12,7 @@ namespace Core.Scripting.Editor
 {
     public sealed class AudioLuaApiTests
     {
+
         private GameObject _root;
         private AudioTestSoundManager _manager;
         private SoundCatalog _catalog;

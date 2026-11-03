@@ -1,3 +1,5 @@
+using Core.Location;
+using VContainer;
 using System.Threading;
 using System;
 using Character;
@@ -11,6 +13,10 @@ namespace Plants
     /// <summary>Plants the player's selected seed on an available plowed tile within sowing range.</summary>
     public class PlantSeedAction : PrimaryAction
     {
+        [Inject] private PlantManager _plantManager;
+        [Inject] private LevelManager _levelManager;
+        [Inject] private MapManager _mapManager;
+
         public const string AnimationAction = "Seed";
         [SerializeField] public int sowRange = 2;
         private bool _playingSeedAnimation;
@@ -25,7 +31,7 @@ namespace Plants
                 throw new InvalidOperationException("Planting requires an available Seed animation.");
             _playingSeedAnimation = true;
             var character = snapshot.Character as MainCharacter;
-            PlantManager.Instance.TrySowCarriedSeed(Core.Location.LevelManager.Instance.CurrentLocationData.id,
+            _plantManager.TrySowCarriedSeed(_levelManager.CurrentLocationData.id,
                 snapshot.CurrentTileDataUnderPointer, character!.MainInventory, character.CurrentSelectedSlotIndex);
             return Completed();
         }
@@ -58,8 +64,8 @@ namespace Plants
                    targetTile.FarmlandData != null &&
                    targetTile.FarmlandData.IsPlowed &&
                    !targetTile.PlacedObject &&
-                   !MapManager.Instance.IsTileOccupied(targetTile) &&
-                   !PlantManager.Instance.HasPlantAtCurrentMap(targetTile.Coordinates);
+                   !_mapManager.IsTileOccupied(targetTile) &&
+                   !_plantManager.HasPlantAtCurrentMap(targetTile.Coordinates);
         }
 
         public override Vector2 GetActionExecutionLocation(PlayerInteractionContextSnapshot snapshot)

@@ -17,7 +17,7 @@ namespace Core.Game
         public GameTimeState time = new();
         public WorldState world = new();
 
-        public void Validate()
+        public void Validate(Character.CharacterCatalog characters, Inventory.ItemCatalog items)
         {
             if (schemaVersion != CurrentVersion)
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
@@ -86,7 +86,7 @@ namespace Core.Game
                     if (string.IsNullOrWhiteSpace(obj.Key) || obj.Value == null)
                         throw new FormatException("The save contains an invalid world object.");
                     if (obj.Value is Inventory.ContainerState container)
-                        Core.Inventory.ContainerStorage.ValidateState(container, Character.CharacterCatalog.Require, Inventory.ItemCatalog.Find);
+                        Core.Inventory.ContainerStorage.ValidateState(container, characters.Require, items.Find);
                     if (obj.Value is Items.ForagingSpotState forageSpot) forageSpot.Validate();
                     if (obj.Value is Items.ForagePickupState foragePickup) foragePickup.Validate();
                 }

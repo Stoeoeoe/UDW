@@ -11,9 +11,9 @@ using UnityEngine.UIElements;
 
 namespace UI.Shared.Editor
 {
-    public sealed class HudCutsceneFadeTests
+    public sealed class HudCutsceneFadeTests : Core.Common.Editor.GameTest
     {
-        private GameTestFixture _fixture;
+
         private UrGUIManager _gui;
         private VisualElement _hud;
         private CanvasGroup _hotbar;
@@ -21,22 +21,22 @@ namespace UI.Shared.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new GameTestFixture("Cutscene HUD fades");
-            _fixture.Root.SetActive(true);
-            UIScreenPauseTests.CreateScreenServices(_fixture);
-            _fixture.AddSingleton<PlayerInteractionContext>();
-            _gui = _fixture.RegisterSingleton<UrGUIManager>();
+
+            Game.Root.SetActive(true);
+            UIScreenPauseTests.CreateScreenServices(Game);
+            Game.Start<PlayerInteractionContext>();
+            _gui = Game.Get<UrGUIManager>();
             _gui.gameObject.SetActive(true);
             var document = _gui.GetComponent<UIDocument>();
             document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
             var panel = new GameObject("Fader", typeof(RectTransform), typeof(CanvasGroup), typeof(UnityEngine.UI.Image), typeof(ScreenFader));
-            panel.transform.SetParent(_fixture.Root.transform, false);
+            panel.transform.SetParent(Game.Root.transform, false);
             var fader = panel.GetComponent<ScreenFader>();
             GameTestFixture.Invoke(fader, "Awake");
             typeof(UrGUIManager).GetField("screenFader", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_gui, fader);
             var hotbar = new GameObject("Hotbar", typeof(CanvasGroup));
-            hotbar.transform.SetParent(_fixture.Root.transform, false);
+            hotbar.transform.SetParent(Game.Root.transform, false);
             _hotbar = hotbar.GetComponent<CanvasGroup>();
             typeof(UrGUIManager).GetField("toolHud", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_gui, _hotbar);
             GameTestFixture.Invoke(_gui, "Start");
@@ -47,7 +47,7 @@ namespace UI.Shared.Editor
         public void TearDown()
         {
             GameTestFixture.Invoke(_gui, "OnDisable");
-            _fixture.Dispose();
+
         }
 
         [Test]
@@ -122,6 +122,6 @@ namespace UI.Shared.Editor
 
         private Tween Fade => (Tween)typeof(UrGUIManager).GetField("_hudTween", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_gui);
         private void SetActive(bool active, float seconds = 1f) => typeof(UrGUIManager)
-            .GetMethod("SetCutsceneActive", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_gui, new object[] { active, seconds });
+            .GetMethod("SetCutsceneActive", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(_gui, new object[] { active, seconds });
     }
 }

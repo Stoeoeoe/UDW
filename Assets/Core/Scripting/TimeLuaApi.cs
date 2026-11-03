@@ -1,3 +1,5 @@
+using VContainer;
+using Preserve = UnityEngine.Scripting.PreserveAttribute;
 using System;
 using Core.Game;
 using Core.TimeAndWeather;
@@ -19,11 +21,15 @@ namespace Core.Scripting
     [LuaModule("Time")]
     public sealed class TimeLuaApi
     {
+        [Inject] private GameState _gameState;
+
+        [Inject] private UrTimeManager _urTimeManager;
+
         // Resolve live state on every call: loading replaces the save root.
         [LuaCall]
         public TimeLuaView GetCurrent()
         {
-            var time = GameState.Time;
+            var time = _gameState.Time;
             if (!time.initialized)
                 throw new InvalidOperationException("Time queries require the initialized game calendar.");
             return new TimeLuaView
@@ -67,7 +73,6 @@ namespace Core.Scripting
         }
 
         // This is the Lua boundary; default modules are also inspected without a live scene.
-        private static UrTimeManager Clock => UrTimeManager.Instance
-            ? UrTimeManager.Instance : throw new InvalidOperationException("Time actions require the initialized UrTimeManager.");
+        private UrTimeManager Clock => _urTimeManager;
     }
 }

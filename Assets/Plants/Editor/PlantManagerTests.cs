@@ -1,3 +1,4 @@
+using Plants;
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections.Generic;
@@ -15,11 +16,9 @@ using Object = UnityEngine.Object;
 namespace Plants.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class PlantManagerTests : IEventListener<PlantGrowthEvent>, IEventListener<SowPlantEvent>,
+    public sealed class PlantManagerTests : Core.Common.Editor.ServiceTest, IEventListener<PlantGrowthEvent>, IEventListener<SowPlantEvent>,
         IEventListener<PlantConditionChangedEvent>, IEventListener<FarmlandDriedEvent>
     {
-        private GameObject _root;
-        private Core.Common.Editor.GameTestFixture _fixture;
         private PlantManager _plants;
         private PlantCatalog _catalog;
         private PlantData _data;
@@ -32,24 +31,18 @@ namespace Plants.Editor
         [SetUp]
         public void SetUp()
         {
-            _fixture = new Core.Common.Editor.GameTestFixture();
-            _fixture.AddSingleton<GameStateManager>();
-            _fixture.AddSingleton<PlantManager>();
+
             _growth.Clear();
             _sown.Clear();
             _conditionChanges.Clear();
             _dried.Clear();
             _onGrowth = null;
-            _root = _fixture.Root;
-            _plants = PlantManager.Instance;
-            _data = ScriptableObject.CreateInstance<PlantData>();
+            _data = Game.Asset<PlantData>();
             TestConfiguration.Set(_data, "plantId", "test:crop");
             typeof(PlantData).GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, PlantDataTests.Stages(0, 2, 5));
-            _catalog = ScriptableObject.CreateInstance<PlantCatalog>();
-            _catalog.Synchronize(new Object[] { _data });
-            typeof(PlantManager).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(PlantManager.Instance, _catalog);
+            _catalog = Game.Catalog<PlantCatalog>(_data);
+            _plants = Game.Get<PlantManager>();
             EventBus<PlantGrowthEvent>.Subscribe(this);
             EventBus<SowPlantEvent>.Subscribe(this);
             EventBus<PlantConditionChangedEvent>.Subscribe(this);
@@ -63,9 +56,7 @@ namespace Plants.Editor
             EventBus<SowPlantEvent>.Unsubscribe(this);
             EventBus<PlantConditionChangedEvent>.Unsubscribe(this);
             EventBus<FarmlandDriedEvent>.Unsubscribe(this);
-            _fixture?.Dispose();
-            Object.DestroyImmediate(_catalog);
-            Object.DestroyImmediate(_data);
+
         }
 
         [Test]
@@ -100,7 +91,7 @@ namespace Plants.Editor
             typeof(PlantData).GetField("_daysWiltedUntilRemoval", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, threshold);
             var crop = new PlantState(_data.plantId) { condition = PlantCondition.Wilted };
-            GameState.World.Set("unloaded", "plant:1,2", crop);
+            Game.State.World.Set("unloaded", "plant:1,2", crop);
             for (var day = 1; day <= threshold; day++)
             {
                 _plants.OnEvent(new NewDayEvent());
@@ -113,7 +104,7 @@ namespace Plants.Editor
         public void TheDayACropWiltsDoesNotCountTowardsItsRemovalDelay()
         {
             var crop = new PlantState(_data.plantId) { consecutiveDaysWithoutWater = 4 };
-            GameState.World.Set("farm", "plant:1,2", crop);
+            Game.State.World.Set("farm", "plant:1,2", crop);
             _plants.OnEvent(new NewDayEvent());
             Assert.That(crop.condition, Is.EqualTo(PlantCondition.Wilted));
             Assert.That(crop.daysSinceWilted, Is.Zero);
@@ -130,7 +121,7 @@ namespace Plants.Editor
             {
                 Assert.That(_plants.GetPlantState(e.LocationId, e.Position).daysPassedSincePlanting,
                     Is.EqualTo(2), "State must be committed before the callback.");
-                Assert.That(GameState.World.GetStates<FarmlandState>().All(entry => !entry.State.irrigated), Is.True);
+                Assert.That(Game.State.World.GetStates<FarmlandState>().All(entry => !entry.State.irrigated), Is.True);
             };
             _plants.OnEvent(new NewDayEvent { Day = 10 });
             Assert.That(seed.daysPassedSincePlanting, Is.EqualTo(1));
@@ -146,7 +137,7 @@ namespace Plants.Editor
         public void MissingAndDisabledDefinitionsKeepTheirSavedAgeAndOccupancy()
         {
             var unknown = new PlantState("missing:crop") { daysPassedSincePlanting = 4 };
-            GameState.World.Set("farm", "plant:1,1", unknown);
+            Game.State.World.Set("farm", "plant:1,1", unknown);
             var disabled = Store("farm", "plant:2,2", 1);
             _catalog.SetEnabled(_data, false);
             _plants.OnEvent(new NewDayEvent());
@@ -156,7 +147,7 @@ namespace Plants.Editor
             Assert.That(_growth, Is.Empty);
             Assert.That(_plants.TryGetPlantData(_data.plantId, out _), Is.False);
             _catalog.SetEnabled(_data, true);
-            GameState.World.Set("farm", "farmland:2,2", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set("farm", "farmland:2,2", new FarmlandState { plowed = true, irrigated = true });
             _plants.OnEvent(new NewDayEvent());
             Assert.That(disabled.daysPassedSincePlanting, Is.EqualTo(2));
             Assert.That(_growth.Count, Is.EqualTo(1));
@@ -170,12 +161,12 @@ namespace Plants.Editor
             Store("village", "plant:3,3", 1);
             _onGrowth = e =>
             {
-                GameState.World.Remove(e.LocationId, $"plant:{e.Position.x},{e.Position.y}");
+                Game.State.World.Remove(e.LocationId, $"plant:{e.Position.x},{e.Position.y}");
                 Sow("new-location", Vector2Int.zero, _data.plantId);
             };
             Assert.DoesNotThrow(() => _plants.OnEvent(new NewDayEvent()));
             Assert.That(_growth.Count, Is.EqualTo(3));
-            Assert.That(GameState.World.GetStates<PlantState>().Count(), Is.EqualTo(1));
+            Assert.That(Game.State.World.GetStates<PlantState>().Count(), Is.EqualTo(1));
             Assert.That(_plants.GetPlantState("new-location", Vector2Int.zero).daysPassedSincePlanting, Is.Zero,
                 "Crops added during a callback must wait until the following day.");
         }
@@ -195,12 +186,12 @@ namespace Plants.Editor
             var bytes = SerializationUtility.SerializeValue(root, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
-            typeof(GameStateManager).GetField("_data", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(GameStateManager.Instance, loaded);
+            typeof(GameState).GetMethod("Restore", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(Game.State, new object[] { loaded });
             var position = new Vector2Int(-1, 2);
             Assert.That(_plants.GetPlantState("farm", position).daysPassedSincePlanting, Is.EqualTo(4));
             Assert.That(_plants.GetPlantState("village", position).plantID, Is.EqualTo("missing:crop"));
-            Assert.That(GameState.World.TryGet("farm", "farmland:-1,2", out FarmlandState land), Is.True);
+            Assert.That(Game.State.World.TryGet("farm", "farmland:-1,2", out FarmlandState land), Is.True);
             Assert.That(land.plowed && land.irrigated, Is.True);
             var wilted = _plants.GetPlantState("farm", new Vector2Int(3, 4));
             Assert.That(wilted.condition, Is.EqualTo(PlantCondition.Wilted));
@@ -245,7 +236,7 @@ namespace Plants.Editor
             Assert.That(_conditionChanges[0].Position, Is.EqualTo(new Vector2Int(-3, 4)));
             Assert.That(_conditionChanges[0].PreviousCondition, Is.EqualTo(PlantCondition.Healthy));
             Assert.That(_conditionChanges[0].Condition, Is.EqualTo(PlantCondition.Wilted));
-            GameState.World.Set("village", "farmland:-3,4", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set("village", "farmland:-3,4", new FarmlandState { plowed = true, irrigated = true });
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.condition, Is.EqualTo(PlantCondition.Wilted));
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
@@ -259,7 +250,7 @@ namespace Plants.Editor
             var plant = Store("farm", "plant:1,1", 0, false);
             _plants.OnEvent(new NewDayEvent());
             _plants.OnEvent(new NewDayEvent());
-            GameState.World.Set("farm", "farmland:1,1", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set("farm", "farmland:1,1", new FarmlandState { plowed = true, irrigated = true });
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
             Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
@@ -273,13 +264,13 @@ namespace Plants.Editor
         {
             Store("farm", "plant:1,1", 0);
             Store("village", "plant:2,2", 0);
-            GameState.World.Set("village", "plant:2,2", new PlantState("missing:crop"));
-            GameState.World.Set("empty-map", "farmland:9,9", new FarmlandState { plowed = true, irrigated = true });
-            GameState.World.Set("empty-map", "farmland:8,8", new FarmlandState { irrigated = true });
+            Game.State.World.Set("village", "plant:2,2", new PlantState("missing:crop"));
+            Game.State.World.Set("empty-map", "farmland:9,9", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set("empty-map", "farmland:8,8", new FarmlandState { irrigated = true });
             _plants.OnEvent(new NewDayEvent());
-            Assert.That(GameState.World.GetStates<FarmlandState>().All(entry => !entry.State.irrigated), Is.True);
+            Assert.That(Game.State.World.GetStates<FarmlandState>().All(entry => !entry.State.irrigated), Is.True);
             Assert.That(_dried.Count, Is.EqualTo(4));
-            Assert.That(GameState.World.GetStates<FarmlandState>().All(entry => entry.State.plowed), Is.True);
+            Assert.That(Game.State.World.GetStates<FarmlandState>().All(entry => entry.State.plowed), Is.True);
             Assert.That(_plants.GetPlantState("village", new Vector2Int(2, 2)).consecutiveDaysWithoutWater, Is.Zero);
             _plants.OnEvent(new NewDayEvent());
             Assert.That(_dried.Count, Is.EqualTo(4), "Already dry plots do not publish another dry event.");
@@ -289,11 +280,11 @@ namespace Plants.Editor
         public void GrowthCallbacksCanWaterForTheNewDayWithoutBeingDriedAgain()
         {
             var plant = Store("farm", "plant:1,1", 1);
-            _onGrowth = e => GameState.World.Set("farm", "farmland:1,1",
+            _onGrowth = e => Game.State.World.Set("farm", "farmland:1,1",
                 new FarmlandState { plowed = true, irrigated = true });
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(2));
-            Assert.That(GameState.World.TryGet("farm", "farmland:1,1", out FarmlandState land), Is.True);
+            Assert.That(Game.State.World.TryGet("farm", "farmland:1,1", out FarmlandState land), Is.True);
             Assert.That(land.irrigated, Is.True);
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(3));
@@ -303,9 +294,9 @@ namespace Plants.Editor
         private PlantState Store(string location, string id, int age, bool irrigated = true)
         {
             var state = new PlantState(_data.plantId) { daysPassedSincePlanting = age };
-            GameState.World.Set(location, id, state);
+            Game.State.World.Set(location, id, state);
             if (irrigated)
-                GameState.World.Set(location, id.Replace("plant:", "farmland:"),
+                Game.State.World.Set(location, id.Replace("plant:", "farmland:"),
                     new FarmlandState { plowed = true, irrigated = true });
             return state;
         }
@@ -319,21 +310,21 @@ namespace Plants.Editor
         {
             typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, new[] { Season.Spring });
-            GameState.Time.season = Season.Winter;
+            Game.State.Time.season = Season.Winter;
             Sow("unloaded-farm", Vector2Int.zero, _data.plantId);
             var plant = _plants.GetPlantState("unloaded-farm", Vector2Int.zero);
             plant.daysPassedSincePlanting = 1;
             plant.consecutiveDaysWithoutWater = 4;
-            GameState.World.Set("unloaded-farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set("unloaded-farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
             Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
             Assert.That(plant.condition, Is.EqualTo(PlantCondition.Healthy));
             Assert.That(_plants.HasPlantAt("unloaded-farm", Vector2Int.zero), Is.True);
             Assert.That(_growth, Is.Empty);
-            Assert.That(GameState.World.TryGet("unloaded-farm", "farmland:0,0", out FarmlandState land), Is.True);
+            Assert.That(Game.State.World.TryGet("unloaded-farm", "farmland:0,0", out FarmlandState land), Is.True);
             Assert.That(land.irrigated, Is.False);
-            GameState.Time.season = Season.Spring;
+            Game.State.Time.season = Season.Spring;
             land.irrigated = true;
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(2));
@@ -345,10 +336,10 @@ namespace Plants.Editor
         {
             typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_data, new[] { Season.Spring });
-            GameState.Time.season = Season.Winter;
+            Game.State.Time.season = Season.Winter;
             var plant = Store("farm", "plant:0,0", 1);
             plant.consecutiveDaysWithoutWater = 4;
-            GameState.World.TryGet("farm", "farmland:0,0", out FarmlandState land);
+            Game.State.World.TryGet("farm", "farmland:0,0", out FarmlandState land);
             land.irrigated = false;
             _plants.OnEvent(new NewDayEvent());
             Assert.That(plant.condition, Is.EqualTo(PlantCondition.Wilted));
@@ -365,8 +356,7 @@ namespace Plants.Editor
                 TestConfiguration.Set(seed, "plantData", _data);
                 typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
                     .SetValue(seed, "test:seed");
-                var inventory = _root.AddComponent<Core.Inventory.SlotInventory>();
-                inventory.Bind(new Core.Inventory.InventoryState { Slots = new Core.Inventory.InventorySlotState[2] });
+                var inventory = Game.Inventory(2);
                 inventory.SetSlot(1, new Core.Inventory.ItemStack(seed, 2));
                 var tile = new TileData(null, 0, 0, null, Vector3.zero, true);
                 Assert.That(_plants.TrySowCarriedSeed("farm", tile, inventory, 1), Is.False);

@@ -14,17 +14,27 @@ using UI.Shared;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core.Location
 {
     /// <summary>
     /// Handles scene loading, fading, and player spawning.
-    /// Persistent singleton - survives all scene loads. References to scene-specific objects (lights etc.)
+    /// Owned by the persistent SystemRoot. References to scene-specific objects (lights etc.)
     /// are re-acquired each time a new scene loads.
     /// </summary>
     [DefaultExecutionOrder(-1000)]
-    public class LevelManager : Singleton<LevelManager>, IEventListener<DayLightUpdateEvent>
+    public class LevelManager : Core.GameManager, IEventListener<DayLightUpdateEvent>
     {
+        [Inject] private LocationContext _locationContext;
+        [Inject] private IObjectResolver _resolver;
+        [Inject] private GameState _gameState;
+
+        [Inject] private MapManager _mapManager;
+        [Inject] private UrGUIManager _urGUIManager;
+        [Inject] private CharacterManager _characterManager;
+
         [Header("Initial transition preview")]
         [SerializeField] private string _initialEntryKey;
         [SerializeField] private Vector2 _initialFacingDirection;
@@ -37,15 +47,15 @@ namespace Core.Location
 
         // - Public state ------------------------------------------------------------
 
-        public LocationData CurrentLocationData { get; private set; }
+        public LocationData CurrentLocationData { get => _locationContext.Location; private set => _locationContext.Location = value; }
         public Light2D CurrentGlobalLight { get; private set; }
-        public bool SceneReady { get; private set; }
+        public bool SceneReady { get => _locationContext.SceneReady; private set => _locationContext.SceneReady = value; }
         public event Action<LocationData> LocationReady;
         public event Action LocationLeaving;
 
         // - Location lookup ---------------------------------------------------------
 
-        private LocationCatalog _locations;
+        [Inject] private LocationCatalog _locations;
         Dictionary<string, LocationData> _locationByScenePath = new(StringComparer.OrdinalIgnoreCase);
 
         // - Lifecycle callbacks ---------------------------------------------------
@@ -57,14 +67,12 @@ namespace Core.Location
         protected override void OnAwake()
         {
             base.OnAwake();
-            _locations = CatalogResources.Load<LocationCatalog>(LocationCatalog.ResourceName);
-            if (!_locations) throw new InvalidOperationException("LevelManager requires the generated LocationCatalog.");
             _locationByScenePath = Core.Catalogs.IdIndex.FirstWins(_locations.EnabledDefinitions,
                 location => location ? location.ScenePath : null, StringComparer.OrdinalIgnoreCase);
         }
 
-        void OnEnable() => this.Subscribe();
-        void OnDisable() => this.Unsubscribe();
+        protected override void OnEnable() { base.OnEnable(); this.Subscribe(); }
+        protected override void OnDisable() { base.OnDisable(); this.Unsubscribe(); }
 
         IEnumerator Start()
         {
@@ -101,7 +109,7 @@ namespace Core.Location
             SceneReady = false;
 
             // Initialize map data (direct call, must happen before character is placed)
-            MapManager.Instance.InitializeForLocation(locationData);
+            _mapManager.InitializeForLocation(locationData);
 
             // Spawn and place character
             var character = SpawnOrFindPlayer();
@@ -118,7 +126,7 @@ namespace Core.Location
 
             // Custom placement runs after location listeners restore persistent objects, including the home bed.
             placeCharacter?.Invoke(character);
-            if (reveal) yield return UrGUIManager.Instance.RevealScene(character.transform);
+            if (reveal) yield return _urGUIManager.RevealScene(character.transform);
             
             SceneReady = true;
             LocationReady?.Invoke(locationData);
@@ -140,7 +148,7 @@ namespace Core.Location
         /// <summary>Returns to the saved home behind an already-covered screen, awaiting location initialization and bed placement.</summary>
         public IEnumerator ReturnHome(MainCharacter character)
         {
-            var home = GameState.Player.Home;
+            var home = _gameState.Player.Home;
             if (CurrentLocationData.id == home.LocationId)
                 PlaceAtHome(character, home.BedId);
             else
@@ -229,7 +237,7 @@ namespace Core.Location
                 // Cancel staging before any listener captures departing world-object positions.
                 LocationLeaving?.Invoke();
                 character.SetControlBlocked(this, true);
-                if (!covered) yield return UrGUIManager.Instance.CoverScene(character.transform);
+                if (!covered) yield return _urGUIManager.CoverScene(character.transform);
 
                 // Notify all lifecycle components before unloading the old scene
                 _locationEntered = false;
@@ -270,12 +278,12 @@ namespace Core.Location
 
         MainCharacter SpawnOrFindPlayer()
         {
-            var character = CharacterManager.Instance.MainCharacter;
+            var character = _characterManager.MainCharacter;
             if (!character)
             {
                 character = FindFirstObjectByType<MainCharacter>();
                 if (!character)
-                    character = Instantiate(_mainCharacterPrefab);
+                    character = _resolver.Instantiate(_mainCharacterPrefab);
             }
 
             return character;
@@ -316,7 +324,7 @@ namespace Core.Location
             if (string.IsNullOrWhiteSpace(entryKey))
                 return false;
 
-            return MapManager.Instance != null && MapManager.Instance.TryPlaceCharacterAtEntry(character, entryKey, facingDirection);
+            return _mapManager.TryPlaceCharacterAtEntry(character, entryKey, facingDirection);
         }
 
         static Vector2 ResolveFacingDirection(Vector2 facingDirection) =>

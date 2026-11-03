@@ -17,9 +17,6 @@ namespace Core.Scripting
             _weather = weather ? weather : throw new InvalidOperationException("The required WeatherCatalog is missing.");
         }
 
-        internal static WeatherLuaApi BindCurrentWeather() => new(WeatherManager.Instance,
-            CatalogResources.Load<WeatherCatalog>(WeatherCatalog.ResourceName));
-
         private WeatherData RequireWeather(string weather)
         {
             var definition = _weather.Get(weather);

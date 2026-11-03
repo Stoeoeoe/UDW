@@ -1,3 +1,4 @@
+using VContainer;
 using System.Collections;
 using System.Reflection;
 using Core.Game;
@@ -21,7 +22,7 @@ namespace Core.Spawning.Editor
         private GameObject _systems;
         private GameObject _holder;
         private LocationData _location;
-        private SpawnableCatalog _catalog;
+        private WorldObjectSpawner _spawner;
 
         [UnitySetUp]
         public IEnumerator EnterIsolatedPlayMode()
@@ -35,14 +36,19 @@ namespace Core.Spawning.Editor
             _changedEnvironment = true;
             EditorSettings.enterPlayModeOptionsEnabled = true;
             EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload;
-            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            // Supply the isolated services before the bootstrap can load the full gameplay prefab.
-            _systems = new GameObject("Spawn depletion systems");
-            // Location registration is required; this test enters its location explicitly, without the UI or Start routine.
-            _systems.AddComponent<LevelManager>().enabled = false;
-            _systems.AddComponent<UI.Shared.UrGUIManager>().enabled = false;
-            _systems.AddComponent<SystemRoot>();
+            EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode(false);
+            var root = VContainer.Unity.LifetimeScope.Find<SystemRoot>();
+            _systems = root.gameObject;
+            var level = root.Container.Resolve<LevelManager>();
+            var deadline = Time.realtimeSinceStartupAsDouble + 15;
+            while (!level.SceneReady)
+            {
+                Assert.That(Time.realtimeSinceStartupAsDouble, Is.LessThan(deadline));
+                yield return null;
+            }
+            _spawner = root.Container.Resolve<WorldObjectSpawner>();
+            _spawner.OnLocationLeave(level.CurrentLocationData);
         }
 
         [UnityTearDown]
@@ -52,7 +58,6 @@ namespace Core.Spawning.Editor
             if (_systems) Object.Destroy(_systems);
             if (_holder) Object.Destroy(_holder);
             if (_location) Object.Destroy(_location);
-            if (_catalog) Object.Destroy(_catalog);
             if (Application.isPlaying) yield return new ExitPlayMode();
             EditorSettings.enterPlayModeOptionsEnabled = _optionsEnabled;
             EditorSettings.enterPlayModeOptions = _options;
@@ -65,9 +70,7 @@ namespace Core.Spawning.Editor
         public IEnumerator ExhaustedObjectsRemoveTheirRecordOnFreshSpawnAndLocationReentry()
         {
             var systems = _systems;
-            systems.SetActive(false);
-            Assert.That(systems.GetComponent<GameStateManager>(), Is.SameAs(GameStateManager.Instance));
-            var spawner = systems.AddComponent<WorldObjectSpawner>();
+            var spawner = _spawner;
             var holder = _holder = new GameObject("Inactive prefab holder");
             holder.SetActive(false);
             var prefabObject = new GameObject("Exhausted chest");
@@ -81,38 +84,34 @@ namespace Core.Spawning.Editor
                 .SetValue(interactable, false);
             typeof(AbstractInteractable).GetField("DestroyWhenUsedUp", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(interactable, true);
-            _catalog = ScriptableObject.CreateInstance<SpawnableCatalog>();
-            _catalog.Synchronize(new[] { prefab });
-            typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Instance)
-                .SetValue(spawner, _catalog);
-            systems.SetActive(true);
+            spawner.Register(prefab);
             var location = _location = ScriptableObject.CreateInstance<LocationData>();
             location.id = "test:location";
-            spawner.OnLocationEnter(location);
+            spawner.EnterLocation(location, System.Array.Empty<AuthoredSpawnPlacement>());
             var fresh = spawner.Spawn(prefab, Vector3.zero,
                 new SpawnedObjectState { interaction = new InteractableState { uses = 1 } });
-            Assert.That(GameState.World.TryGet(location.id, fresh.PersistentId, out SpawnedObjectState _), Is.False);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.TryGet(location.id, fresh.PersistentId, out SpawnedObjectState _), Is.False);
             yield return null; // Deferred Destroy completes.
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);
 
             spawner.OnLocationLeave(location);
-            GameState.World.Set(location.id, "restored", new SpawnedObjectState
+            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.Set(location.id, "restored", new SpawnedObjectState
             {
                 prefabId = prefab.PrefabId, interaction = new InteractableState { uses = 1 }
             });
-            spawner.OnLocationEnter(location);
-            Assert.That(GameState.World.TryGet(location.id, "restored", out SpawnedObjectState _), Is.False);
+            spawner.EnterLocation(location, System.Array.Empty<AuthoredSpawnPlacement>());
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.TryGet(location.id, "restored", out SpawnedObjectState _), Is.False);
             yield return null;
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);
             spawner.OnLocationLeave(location);
-            GameState.World.Set(location.id, "authored-exhausted", new SpawnedObjectState
+            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.Set(location.id, "authored-exhausted", new SpawnedObjectState
             {
                 prefabId = prefab.PrefabId, authored = true,
                 interaction = new InteractableState { uses = 1 }
             });
             var placements = new[] { new AuthoredSpawnPlacement { id = "authored-exhausted", template = prefab } };
             spawner.EnterLocation(location, placements);
-            Assert.That(GameState.World.TryGet(location.id, "authored-exhausted", out SpawnedObjectState removed), Is.True);
+            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.TryGet(location.id, "authored-exhausted", out SpawnedObjectState removed), Is.True);
             Assert.That(removed.removed, Is.True);
             yield return null;
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);

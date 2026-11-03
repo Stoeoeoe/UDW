@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Core.Location
 {
     /// <summary>
-    /// Portal/door to another location. Calls LevelManager.Instance.LoadLocation.
+    /// Portal/door to another location. Routes through the injected LevelManager.
     /// Door requires a button press. Open activates on player contact.
     /// </summary>
     public class LocationLink : ILocationLink
@@ -42,12 +42,7 @@ namespace Core.Location
         protected override bool Interact(GameCharacter instigator)
         {
             if (instigator != MainCharacter.CurrentMainCharacter) return false;
-            var levelManager = LevelManager.Instance;
-            if (!levelManager)
-            {
-                Debug.LogWarning($"[LocationLink] {gameObject.name} has no LevelManager available.");
-                return false;
-            }
+            var levelManager = _levelManager;
 
             var entryKey = targetEntryKey;
             if (string.IsNullOrWhiteSpace(entryKey))

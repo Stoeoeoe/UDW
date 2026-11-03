@@ -1,3 +1,4 @@
+using VContainer;
 using System;
 using Core.Events;
 using Core.Game;
@@ -26,6 +27,10 @@ namespace Core.Items
     /// <summary>An invisible saved marker that rolls one forage pickup per day while empty.</summary>
     public sealed class ForagingSpot : SpawnedObject, IEventListener<NewDayEvent>
     {
+        [Inject] private GameState _gameState;
+
+        [Inject] private LevelManager _levelManager;
+
         [SerializeField, Range(0f, 1f)] private float dailySpawnChance = 0.6f;
         [SerializeField] private WeightedList<ForagePickup> forage = new();
 
@@ -34,21 +39,20 @@ namespace Core.Items
 
         private ForagingSpotState _state;
         private string _locationId;
-        private WorldObjectSpawner _spawner;
+        [Inject] private WorldObjectSpawner _spawner;
 
-        public override SpawnedObjectState CreateState() => new ForagingSpotState();
+        public override SpawnedObjectState CreateState(int currentDay) => new ForagingSpotState();
 
         protected override void OnStateBound()
         {
             _state = (ForagingSpotState)State;
-            _spawner = WorldObjectSpawner.Instance;
-            _locationId = LevelManager.Instance.CurrentLocationData.id;
+            _locationId = _levelManager.CurrentLocationData.id;
         }
 
         private void OnEnable()
         {
             EventBus<NewDayEvent>.Subscribe(this);
-            Refresh(GameState.Time.daysSinceStart);
+            Refresh(_gameState.Time.daysSinceStart);
         }
 
         private void OnDisable() => EventBus<NewDayEvent>.Unsubscribe(this);
@@ -63,7 +67,7 @@ namespace Core.Items
             _state.lastProcessedDay = day;
 
             if (_state.forageId != null &&
-                GameState.World.TryGet(_locationId, _state.forageId, out SpawnedObjectState existing))
+                _gameState.World.TryGet(_locationId, _state.forageId, out SpawnedObjectState existing))
             {
                 var pickupState = (ForagePickupState)existing;
                 if (!pickupState.IsExpired(day)) return;

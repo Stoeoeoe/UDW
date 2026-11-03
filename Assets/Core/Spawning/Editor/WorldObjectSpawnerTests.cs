@@ -1,3 +1,4 @@
+using Core.Spawning;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -12,10 +13,10 @@ using Object = UnityEngine.Object;
 
 namespace Core.Spawning.Editor
 {
-    public sealed class WorldObjectSpawnerTests
+    public sealed class WorldObjectSpawnerTests : Core.Common.Editor.GameTest
     {
         private GameObject _systems;
-        private Core.Common.Editor.GameTestFixture _fixture;
+
         private GameObject _prefab;
         private WorldObjectSpawner _spawner;
         private SpawnedObject _prefabComponent;
@@ -26,11 +27,9 @@ namespace Core.Spawning.Editor
         [SetUp]
         public void SetUp()
         {
-            Assert.That(GameStateManager.Instance, Is.Null, "Run these isolated EditMode tests outside a game session.");
-            Assert.That(WorldObjectSpawner.Instance, Is.Null);
-            _fixture = new Core.Common.Editor.GameTestFixture("Spawner test systems");
-            _systems = _fixture.Root;
-            _fixture.AddSingleton<GameStateManager>();
+
+            _systems = Game.Root;
+
             _prefabHolder = new GameObject("Inactive prefab holder");
             _prefabHolder.SetActive(false);
             _prefab = new GameObject("Chest prefab");
@@ -40,19 +39,19 @@ namespace Core.Spawning.Editor
                 .SetValue(_prefabComponent, "base:test-chest");
             _catalog = ScriptableObject.CreateInstance<SpawnableCatalog>();
             _catalog.Synchronize(new[] { _prefabComponent });
-            _spawner = _fixture.AddSingleton<WorldObjectSpawner>(spawner =>
+            _spawner = Game.Start<WorldObjectSpawner>(spawner =>
                 typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.NonPublic | BindingFlags.Instance)
                     .SetValue(spawner, _catalog));
             _location = ScriptableObject.CreateInstance<LocationData>();
             _location.id = "farm";
-            _spawner.OnLocationEnter(_location);
+            _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
         }
 
         [TearDown]
         public void TearDown()
         {
             if (_spawner) _spawner.OnLocationLeave(_location);
-            _fixture?.Dispose();
+
             Object.DestroyImmediate(_prefab);
             Object.DestroyImmediate(_prefabHolder);
             Object.DestroyImmediate(_location);
@@ -70,10 +69,10 @@ namespace Core.Spawning.Editor
             var id = first.PersistentId;
             var item = UnityEditor.AssetDatabase.LoadAssetAtPath<Core.Inventory.ItemDefinition>("Assets/Resources/Items/Tools/HoeToolData.asset");
             Assert.That(first.Storage.Inventory.AddItem(item, 1), Is.True);
-            Assert.That(GameState.World.TryGet(_location.id, id, out Core.Inventory.ContainerState saved), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, id, out Core.Inventory.ContainerState saved), Is.True);
             Assert.That(saved.OwnerCharacterId, Is.EqualTo("base:player"));
             _spawner.OnLocationLeave(_location);
-            _spawner.OnLocationEnter(_location);
+            _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
             var restored = _systems.GetComponentsInChildren<Core.Inventory.PersistentContainer>(true).Single();
             Assert.That(restored.PersistentId, Is.EqualTo(id));
             Assert.That(restored.Storage.State, Is.SameAs(saved));
@@ -87,20 +86,20 @@ namespace Core.Spawning.Editor
             var first = _spawner.Spawn(_prefabComponent, new Vector3(4, 7, 0));
             var id = first.PersistentId;
             Assert.That(Guid.TryParseExact(id, "N", out _), Is.True);
-            Assert.That(GameState.World.TryGet(_location.id, id, out SpawnedObjectState state), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, id, out SpawnedObjectState state), Is.True);
             Assert.That(state, Is.SameAs(first.State));
             state.interaction.uses = 2;
             first.transform.position = new Vector3(8, 9, 0);
 
             _spawner.OnLocationLeave(_location);
             Assert.That(state.position, Is.EqualTo(new Vector3(8, 9, 0)));
-            _spawner.OnLocationEnter(_location);
+            _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
             var restored = _systems.GetComponentsInChildren<SpawnedObject>(true)
                 .Single(instance => instance.PersistentId == id && instance.gameObject.activeSelf);
             Assert.That(restored.State, Is.SameAs(state));
             Assert.That(restored.State.interaction.uses, Is.EqualTo(2));
             Assert.That(restored.transform.position, Is.EqualTo(state.position));
-            Assert.That(GameState.World.GetStates<SpawnedObjectState>().Count(), Is.EqualTo(1));
+            Assert.That(Game.State.World.GetStates<SpawnedObjectState>().Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -126,7 +125,7 @@ namespace Core.Spawning.Editor
             Assert.That(restored.transform.position, Is.EqualTo(new Vector3(7, 8, 0)));
             Assert.That(Quaternion.Angle(restored.transform.rotation, Quaternion.Euler(0, 0, 75)), Is.LessThan(0.01f));
             Assert.That(restored.State.interaction.uses, Is.EqualTo(4));
-            Assert.That(GameState.World.GetStates<SpawnedObjectState>(_location.id).Count(), Is.EqualTo(1));
+            Assert.That(Game.State.World.GetStates<SpawnedObjectState>(_location.id).Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -136,7 +135,7 @@ namespace Core.Spawning.Editor
             var placements = new[] { new AuthoredSpawnPlacement { id = "chest", template = _prefabComponent } };
             _spawner.EnterLocation(_location, placements);
             _systems.GetComponentsInChildren<SpawnedObject>(true).Single().Remove();
-            Assert.That(GameState.World.TryGet(_location.id, "chest", out SpawnedObjectState state), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, "chest", out SpawnedObjectState state), Is.True);
             Assert.That(state.removed, Is.True);
             _spawner.OnLocationLeave(_location);
             _spawner.EnterLocation(_location, placements);
@@ -153,14 +152,14 @@ namespace Core.Spawning.Editor
             _spawner.OnLocationLeave(_location);
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
             Assert.That(_systems.GetComponentsInChildren<SpawnedObject>(true).Single().PersistentId, Is.EqualTo(generatedId));
-            Assert.That(GameState.World.TryGet(_location.id, "chest", out SpawnedObjectState _), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, "chest", out SpawnedObjectState _), Is.True);
         }
 
         [Test]
         public void SpawnedInteractableWritesIntoItsEntityRecord()
         {
             _prefab.AddComponent<BoxCollider2D>().isTrigger = true;
-            var template = _prefab.AddComponent<TestInteractable>();
+            var template = Game.InjectObject(_prefab.AddComponent<TestInteractable>());
             typeof(AbstractInteractable).GetField("UnlimitedActivations", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(template, false);
             var spawned = _spawner.Spawn(_prefabComponent, Vector3.zero);
@@ -168,11 +167,11 @@ namespace Core.Spawning.Editor
             Assert.That(interaction.PersistentId, Is.EqualTo(spawned.PersistentId));
             Assert.That(interaction.CanInteract, Is.True);
             var boundState = spawned.State.interaction;
-            var instigator = _systems.AddComponent<Character.GameCharacter>();
+            var instigator = Game.InjectObject(_systems.AddComponent<Character.GameCharacter>());
             interaction.TriggerInteraction(instigator);
             Assert.That(spawned.State.interaction.uses, Is.EqualTo(1));
             Assert.That(interaction.CanInteract, Is.False);
-            Assert.That(GameState.World.TryGet(_location.id, spawned.PersistentId, out SpawnedObjectState saved), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, spawned.PersistentId, out SpawnedObjectState saved), Is.True);
             Assert.That(saved, Is.SameAs(spawned.State));
             Assert.That(saved.interaction, Is.SameAs(boundState));
         }
@@ -185,8 +184,8 @@ namespace Core.Spawning.Editor
             Assert.That(first.PersistentId, Is.Not.EqualTo(second.PersistentId));
             var id = first.PersistentId;
             Assert.That(_spawner.Despawn(id), Is.True);
-            Assert.That(GameState.World.TryGet(_location.id, id, out SpawnedObjectState _), Is.False);
-            Assert.That(GameState.World.GetStates<SpawnedObjectState>().Count(), Is.EqualTo(1));
+            Assert.That(Game.State.World.TryGet(_location.id, id, out SpawnedObjectState _), Is.False);
+            Assert.That(Game.State.World.GetStates<SpawnedObjectState>().Count(), Is.EqualTo(1));
         }
 
         [Test]
@@ -205,7 +204,7 @@ namespace Core.Spawning.Editor
             typeof(SpawnedObject).GetField("prefabId", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(prefab, "base:unregistered");
             Assert.Throws<InvalidOperationException>(() => _spawner.Spawn(prefab, Vector3.zero));
-            Assert.That(GameState.World.GetStates<SpawnedObjectState>().Count(), Is.Zero);
+            Assert.That(Game.State.World.GetStates<SpawnedObjectState>().Count(), Is.Zero);
         }
 
         [Test]
@@ -227,12 +226,12 @@ namespace Core.Spawning.Editor
             var existing = _spawner.Spawn(_prefabComponent, Vector3.one);
             var id = existing.PersistentId;
             _spawner.OnLocationLeave(_location);
-            GameState.World.Set(_location.id, "missing", new SpawnedObjectState { prefabId = "base:missing" });
+            Game.State.World.Set(_location.id, "missing", new SpawnedObjectState { prefabId = "base:missing" });
             LogAssert.Expect(LogType.Exception, new Regex("No spawnable registered for 'base:missing'"));
-            Assert.DoesNotThrow(() => _spawner.OnLocationEnter(_location));
+            Assert.DoesNotThrow(() => _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>()));
             Assert.That(_systems.GetComponentsInChildren<SpawnedObject>(true)
                 .Single().PersistentId, Is.EqualTo(id));
-            Assert.That(GameState.World.TryGet(_location.id, "missing", out SpawnedObjectState _), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, "missing", out SpawnedObjectState _), Is.True);
         }
 
     }

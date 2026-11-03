@@ -6,7 +6,7 @@ namespace Character.Abilities
 {
     /// <summary>
     /// Base class for all character abilities. 
-    /// Gets refs from parent GameCharacter on Awake. Input is read from InputManager.Instance.
+    /// Gets refs from parent GameCharacter on Awake. Input-aware abilities inject InputManager.
     /// </summary>
     public abstract class CharacterAbility : MonoBehaviour, ILocationLifecycle
     {
