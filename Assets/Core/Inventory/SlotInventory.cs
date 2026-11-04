@@ -11,18 +11,15 @@ namespace Core.Inventory
         [Inject] private ItemCatalog _itemCatalog;
 
         [SerializeField] string _inventoryName;
-        [SerializeField] string _playerID = "Player1";
         [SerializeField] int _numberOfSlots = 15;
         [SerializeField] private InventoryConfiguration configuration;
         private InventoryState _state;
         private InventoryStorage _storage;
-        private static readonly Dictionary<(string, string), SlotInventory> _registry = new();
 
         public InventoryConfiguration Configuration { get => configuration; set => configuration = value; }
         public int Columns => configuration ? configuration.Columns : _numberOfSlots;
         private int InitialCapacity => configuration ? checked(configuration.Columns * configuration.StartingRows) : _numberOfSlots;
         public string InventoryName => _inventoryName;
-        public string PlayerID => _playerID;
         public bool IsInitialized => _storage != null;
         internal InventoryStorage Storage => _storage ?? throw new InvalidOperationException("Inventory must be initialized before use.");
         public int Capacity => Storage.Capacity;
@@ -48,7 +45,6 @@ namespace Core.Inventory
         private void Awake()
         {
             EnsureInitialized();
-            _registry[(_inventoryName, _playerID)] = this;
         }
         public void EnsureInitialized()
         {
@@ -57,12 +53,6 @@ namespace Core.Inventory
         private void OnDestroy()
         {
             Loadout?.Unbind();
-            _registry.Remove((_inventoryName, _playerID));
-        }
-        public static SlotInventory FindInventory(string inventoryName, string playerID)
-        {
-            _registry.TryGetValue((inventoryName, playerID), out var inventory);
-            return inventory;
         }
         public void Bind(InventoryState state, Func<string, ItemDefinition> resolve = null)
         {

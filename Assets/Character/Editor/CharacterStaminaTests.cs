@@ -6,6 +6,7 @@ using Core.Events;
 using Core.Game;
 using Interaction.Tools.Stamina;
 using NUnit.Framework;
+using static Core.Common.Editor.Reflect;
 
 namespace Character.Editor
 {
@@ -84,7 +85,7 @@ namespace Character.Editor
         [Test]
         public void ConfiguredStartingAmountIsAppliedOnceAndSavedZeroStaysExhausted()
         {
-            typeof(Stamina).GetField("startingStamina", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_stamina, 60);
+            Set(_stamina, "startingStamina", 60);
             var fresh = new StaminaState();
             _stamina.Initialize(fresh);
             Assert.That(fresh.Initialized, Is.True);

@@ -1,8 +1,6 @@
-using VContainer;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 using Core.Scripting;
 using UnityEngine;
 using Character;
@@ -10,29 +8,28 @@ using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
-    public class VulcanusDialogueRunner : MonoBehaviour
+    /// <summary>
+    /// Walks an authored dialogue graph and hands each line and choice to the presenter. It is a plain session service:
+    /// the presenter, catalog and Lua runtime are injected, and the flow is an awaitable that stopping cancels.
+    /// </summary>
+    public sealed class VulcanusDialogueRunner : IDisposable
     {
-        public static VulcanusDialogueRunner Instance { get; private set; }
+        private const int MaxStepsPerRun = 256;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetSession() => Instance = null;
+        private readonly DialogueCatalog _catalog;
+        private readonly IDialoguePresenter _presenter;
+        private readonly VulcanusLuaDialogueScriptEngine _scriptEngine;
+        private CancellationTokenSource _cancellation;
+        private VulcanusDialogueExecutionContext _activeContext;
+        private Action _onCompleted;
 
-        [SerializeField] private VulcanusDialogueDatabase database;
-        [SerializeField] private int maxStepsPerRun = 256;
-        [SerializeField] private UnityEngine.Object contextResolver;
-        [SerializeField] private UnityEngine.Object presenter;
-
-        [NonSerialized] private Coroutine _activeDialogueRoutine;
-        // Inline serialization recreates a null Serializable context as an empty object when
-        // entering Play Mode without scene reload. Only RunDialogue may create this live state.
-        [NonSerialized] private VulcanusDialogueExecutionContext _activeContext;
-        [NonSerialized] private Action _onCompleted;
-        [Inject] private LuaRuntime _lua;
-        private VulcanusLuaDialogueScriptEngine _scriptEngine;
-
-        private IDialogueContextResolver _contextResolver;
-        private IDialoguePresenter _presenter;
-        private IDialogueAdvanceHandler _advanceHandler;
+        public VulcanusDialogueRunner(DialogueCatalog catalog, IDialoguePresenter presenter, LuaRuntime lua)
+        {
+            _catalog = catalog;
+            _presenter = presenter;
+            _scriptEngine = new VulcanusLuaDialogueScriptEngine(lua.CreateEngine());
+            _presenter.Dismissed += StopDialogue;
+        }
 
         public VulcanusDialogueExecutionContext ActiveContext => _activeContext;
         public string CurrentDialogueId => _activeContext?.CurrentDialogue?.DialogueId;
@@ -42,27 +39,11 @@ namespace Core.Dialogue.Vulcanus
 
         public bool IsDialogueActive => _activeContext != null;
 
-        private void Awake()
+        public void Dispose()
         {
-            _scriptEngine = new VulcanusLuaDialogueScriptEngine(_lua.CreateEngine());
-            if (database == null) throw new InvalidOperationException("Dialogue runner requires its database.");
-            if (maxStepsPerRun < 1) throw new InvalidOperationException("Dialogue maxStepsPerRun must be positive.");
-            _presenter = ResolveInterface<IDialoguePresenter>(presenter)
-                ?? throw new InvalidOperationException("Dialogue runner requires its presenter.");
-            _contextResolver = ResolveInterface<IDialogueContextResolver>(contextResolver);
-            _advanceHandler = _presenter as IDialogueAdvanceHandler;
-            if (Instance != null && Instance != this)
-                throw new InvalidOperationException("Only one dialogue runner may be active.");
-            Instance = this;
+            _presenter.Dismissed -= StopDialogue;
+            StopDialogue();
         }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-                Instance = null;
-        }
-
-        private void OnDisable() => StopDialogue();
 
         /// <summary>Calls onCompleted after the dialogue reaches the end of its flow.</summary>
         public bool StartDialogue(string dialogueId, GameCharacter instigator = null, ScreenPauseMode? pauseWhileOpen = null,
@@ -73,9 +54,7 @@ namespace Core.Dialogue.Vulcanus
                 throw new InvalidOperationException("Finish the current dialogue before starting another.");
 
             _onCompleted = onCompleted;
-            var routine = StartCoroutine(RunDialogue(dialogue, startNode, instigator, pauseWhileOpen));
-            // A dialogue with only an End node can finish before StartCoroutine returns.
-            _activeDialogueRoutine = IsDialogueActive ? routine : null;
+            Run(dialogue, startNode, instigator, pauseWhileOpen);
             return true;
         }
 
@@ -103,40 +82,45 @@ namespace Core.Dialogue.Vulcanus
 
         private (VulcanusDialogueAsset Dialogue, VulcanusDialogueNode StartNode) ResolveDialogue(string dialogueId)
         {
-            if (!database.TryGetDialogue(dialogueId, out var dialogue))
-                throw new InvalidOperationException($"Dialogue '{dialogueId}' was not found in the assigned database.");
+            var dialogue = _catalog.Get(dialogueId)
+                ?? throw new InvalidOperationException($"Dialogue '{dialogueId}' was not found in the dialogue catalog.");
             if (!dialogue.TryGetNode(dialogue.StartNodeId, out var startNode))
                 throw new InvalidOperationException($"Dialogue '{dialogueId}' has no valid start node.");
             return (dialogue, startNode);
         }
 
-        // Called only when the runner or its managed screen is torn down.
-        internal void StopDialogue()
+        /// <summary>Cancels the running flow and closes the presenter. Safe to call when nothing is running.</summary>
+        public void StopDialogue()
         {
-            if (IsDialogueActive)
-            {
-                if (_activeDialogueRoutine != null) StopCoroutine(_activeDialogueRoutine);
-                CloseDialogue();
-            }
+            var context = _activeContext;
+            if (context == null) return;
+            // Cancelling may unwind the flow immediately; its cleanup closes the dialogue exactly once.
+            _cancellation?.Cancel();
+            CloseDialogue(context);
         }
 
-        public bool TryAdvanceActiveDialogue()
-        {
-            if (!IsDialogueActive)
-                return false;
+        public bool TryAdvanceActiveDialogue() =>
+            IsDialogueActive && _presenter is IDialogueAdvanceHandler handler && handler.TryAdvanceDialogue();
 
-            return _advanceHandler != null && _advanceHandler.TryAdvanceDialogue();
+        // Entry point of the flow: presenters and Lua failures are logged, and cancellation is an expected way to end.
+        private async void Run(VulcanusDialogueAsset dialogue, VulcanusDialogueNode startNode, GameCharacter instigator,
+            ScreenPauseMode? pauseWhileOpen)
+        {
+            try { await RunDialogue(dialogue, startNode, instigator, pauseWhileOpen); }
+            catch (OperationCanceledException) { }
+            catch (Exception error) { Debug.LogException(error); }
         }
 
-        private IEnumerator RunDialogue(VulcanusDialogueAsset startingDialogue, VulcanusDialogueNode currentNode,
+        private async Awaitable RunDialogue(VulcanusDialogueAsset startingDialogue, VulcanusDialogueNode currentNode,
             GameCharacter instigator, ScreenPauseMode? pauseWhileOpen)
         {
-            _activeContext = new VulcanusDialogueExecutionContext
+            using var cancellation = new CancellationTokenSource();
+            var token = cancellation.Token;
+            _cancellation = cancellation;
+            var context = _activeContext = new VulcanusDialogueExecutionContext
             {
-                Database = database,
-                Project = startingDialogue.Project != null ? startingDialogue.Project : database.Project,
+                Project = startingDialogue.Project,
                 CurrentDialogue = startingDialogue,
-                Self = ResolveSelf(startingDialogue),
                 StepsExecuted = 0,
                 Instigator = instigator,
                 PauseWhileOpen = pauseWhileOpen
@@ -145,55 +129,54 @@ namespace Core.Dialogue.Vulcanus
             var completed = false;
             try
             {
-                _presenter.OnDialogueStarted(_activeContext);
+                _presenter.OnDialogueStarted(context);
                 while (currentNode != null)
                 {
-                    _activeContext.CurrentNode = currentNode;
-                    _activeContext.StepsExecuted++;
-                    if (_activeContext.StepsExecuted > maxStepsPerRun)
+                    context.CurrentNode = currentNode;
+                    context.StepsExecuted++;
+                    if (context.StepsExecuted > MaxStepsPerRun)
                     {
-                        Debug.LogError($"Dialogue '{_activeContext.CurrentDialogue.DialogueId}' exceeded {maxStepsPerRun} steps.");
-                        yield break;
+                        Debug.LogError($"Dialogue '{context.CurrentDialogue.DialogueId}' exceeded {MaxStepsPerRun} steps.");
+                        return;
                     }
 
                     if (!currentNode.IsExecutable)
                     {
-                        _activeContext.CurrentDialogue.TryGetExecutableNodeAfter(currentNode.Id, out currentNode);
+                        context.CurrentDialogue.TryGetExecutableNodeAfter(currentNode.Id, out currentNode);
                         continue;
                     }
 
                     switch (currentNode)
                     {
                         case VulcanusDialogueLineNode line:
-                            var text = _activeContext.CurrentDialogue.ResolveLocalizedText(line.MsgKey, line.Text);
-                            yield return _presenter.PresentLine(line, text, _activeContext);
-                            if (!TryResolveLocalNode(_activeContext.CurrentDialogue, line.Next, out currentNode)) yield break;
+                            var text = context.CurrentDialogue.ResolveLocalizedText(line.MsgKey, line.Text);
+                            await _presenter.PresentLine(line, text, context, token);
+                            if (!TryResolveLocalNode(context.CurrentDialogue, line.Next, out currentNode)) return;
                             break;
 
                         case VulcanusDialogueChoiceNode choice:
-                            if (!TryBuildVisibleOptions(choice, out var options)) yield break;
+                            if (!TryBuildVisibleOptions(choice, context, out var options)) return;
                             if (options.Count == 0)
                             {
                                 Debug.LogError($"Choice '{choice.Id}' has zero visible options.");
-                                yield break;
+                                return;
                             }
-                            VulcanusDialogueChoiceOption selected = null;
-                            yield return _presenter.PresentChoice(choice, options, _activeContext, option => selected = option);
+                            var selected = await _presenter.PresentChoice(choice, options, context, token);
                             if (selected == null)
                             {
                                 Debug.LogError($"No option was selected for choice '{choice.Id}'.");
-                                yield break;
+                                return;
                             }
-                            if (!TryResolveLocalNode(_activeContext.CurrentDialogue, selected.TargetNodeId, out currentNode)) yield break;
+                            if (!TryResolveLocalNode(context.CurrentDialogue, selected.TargetNodeId, out currentNode)) return;
                             break;
 
                         case VulcanusDialogueActionNode action:
-                            if (!RunAction(action)) yield break;
-                            if (!TryResolveLocalNode(_activeContext.CurrentDialogue, action.Next, out currentNode)) yield break;
+                            if (!RunAction(action, context)) return;
+                            if (!TryResolveLocalNode(context.CurrentDialogue, action.Next, out currentNode)) return;
                             break;
 
                         case VulcanusDialogueJumpNode jump:
-                            if (!RunJump(jump, out currentNode)) yield break;
+                            if (!RunJump(jump, context, out currentNode)) return;
                             break;
 
                         case VulcanusDialogueEndNode:
@@ -202,32 +185,34 @@ namespace Core.Dialogue.Vulcanus
 
                         default:
                             Debug.LogError($"Unsupported dialogue node type '{currentNode.GetType().Name}'.");
-                            yield break;
+                            return;
                     }
                 }
                 completed = true;
             }
             finally
             {
+                if (_cancellation == cancellation) _cancellation = null;
                 // Only reaching the end of the flow calls the completion callback.
-                if (completed) FinishDialogue();
-                else CloseDialogue();
+                if (completed) FinishDialogue(context);
+                else CloseDialogue(context);
             }
         }
 
-        private bool RunAction(VulcanusDialogueActionNode actionNode)
+        private bool RunAction(VulcanusDialogueActionNode actionNode, VulcanusDialogueExecutionContext context)
         {
             if (string.IsNullOrWhiteSpace(actionNode.Lua))
                 return true;
 
-            if (_scriptEngine.ExecuteAction(actionNode.Lua, _activeContext))
+            if (_scriptEngine.ExecuteAction(actionNode.Lua, context))
                 return true;
 
             Debug.LogError($"[VulcanusDialogueRunner] Action node '{actionNode.Id}' failed.");
             return false;
         }
 
-        private bool RunJump(VulcanusDialogueJumpNode jump, out VulcanusDialogueNode nextNode)
+        private bool RunJump(VulcanusDialogueJumpNode jump, VulcanusDialogueExecutionContext context,
+            out VulcanusDialogueNode nextNode)
         {
             nextNode = null;
             if (string.IsNullOrWhiteSpace(jump.TargetNodeId))
@@ -236,21 +221,22 @@ namespace Core.Dialogue.Vulcanus
                 return false;
             }
             if (string.IsNullOrWhiteSpace(jump.TargetDialogueId))
-                return TryResolveLocalNode(_activeContext.CurrentDialogue, jump.TargetNodeId, out nextNode);
+                return TryResolveLocalNode(context.CurrentDialogue, jump.TargetNodeId, out nextNode);
 
-            if (!database.TryGetDialogue(jump.TargetDialogueId, out var targetDialogue))
+            var targetDialogue = _catalog.Get(jump.TargetDialogueId);
+            if (!targetDialogue)
             {
                 Debug.LogError($"Jump '{jump.Id}' references unknown dialogue '{jump.TargetDialogueId}'.");
                 return false;
             }
             if (!TryResolveLocalNode(targetDialogue, jump.TargetNodeId, out nextNode)) return false;
-            _activeContext.CurrentDialogue = targetDialogue;
-            _activeContext.Project = targetDialogue.Project != null ? targetDialogue.Project : _activeContext.Project;
-            _activeContext.Self = ResolveSelf(targetDialogue);
+            context.CurrentDialogue = targetDialogue;
+            context.Project = targetDialogue.Project != null ? targetDialogue.Project : context.Project;
             return true;
         }
 
-        private bool TryBuildVisibleOptions(VulcanusDialogueChoiceNode choice, out List<VulcanusDialogueChoiceOption> visibleOptions)
+        private bool TryBuildVisibleOptions(VulcanusDialogueChoiceNode choice, VulcanusDialogueExecutionContext context,
+            out List<VulcanusDialogueChoiceOption> visibleOptions)
         {
             visibleOptions = new List<VulcanusDialogueChoiceOption>();
             foreach (var option in choice.Options)
@@ -265,25 +251,10 @@ namespace Core.Dialogue.Vulcanus
                     visibleOptions.Add(option);
                     continue;
                 }
-                if (!_scriptEngine.EvaluateCondition(option.Condition, _activeContext, out var isVisible)) return false;
+                if (!_scriptEngine.EvaluateCondition(option.Condition, context, out var isVisible)) return false;
                 if (isVisible) visibleOptions.Add(option);
             }
             return true;
-        }
-
-        private object ResolveSelf(VulcanusDialogueAsset dialogue)
-        {
-            var project = dialogue.Project != null ? dialogue.Project : database.Project;
-            // A resolver is optional for dialogues that have no self context.
-            return _contextResolver?.ResolveSelf(project, dialogue);
-        }
-
-        private T ResolveInterface<T>(UnityEngine.Object configuredObject) where T : class
-        {
-            if (configuredObject != null)
-                return configuredObject as T
-                    ?? throw new InvalidOperationException($"Dialogue reference must implement {typeof(T).Name}.");
-            return GetComponents<MonoBehaviour>().OfType<T>().FirstOrDefault();
         }
 
         private static bool TryResolveLocalNode(VulcanusDialogueAsset dialogue, string nodeId, out VulcanusDialogueNode node)
@@ -296,18 +267,18 @@ namespace Core.Dialogue.Vulcanus
             return false;
         }
 
-        private void FinishDialogue()
+        private void FinishDialogue(VulcanusDialogueExecutionContext context)
         {
+            if (_activeContext != context) return; // The dialogue was stopped, and another may already be running.
             var completed = _onCompleted;
-            CloseDialogue();
+            CloseDialogue(context);
             completed?.Invoke();
         }
 
-        private void CloseDialogue()
+        // A stopped flow resumes later to run this cleanup, so it must not close a newer dialogue.
+        private void CloseDialogue(VulcanusDialogueExecutionContext context)
         {
-            if (!IsDialogueActive) return;
-            var context = _activeContext;
-            _activeDialogueRoutine = null;
+            if (_activeContext != context) return;
             _activeContext = null;
             _onCompleted = null;
             _presenter.OnDialogueFinished(context);

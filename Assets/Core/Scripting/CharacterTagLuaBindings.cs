@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using VContainer;
 using Character;
 using Core.GameplayTags;
 
@@ -9,6 +10,7 @@ namespace Core.Scripting
     [LuaModule("Player.Tags")]
     internal sealed class CharacterTagLuaApi
     {
+        [Inject] private CharacterManager _characters;
         private readonly Dictionary<string, TagQuery> _queries = new(StringComparer.Ordinal);
 
         [LuaCall]
@@ -29,7 +31,7 @@ namespace Core.Scripting
             return query.Matches(CurrentTags());
         }
 
-        private static TagSet CurrentTags() => MainCharacter.CurrentMainCharacter?.Tags ??
+        private TagSet CurrentTags() => _characters.MainCharacter?.Tags ??
             throw new InvalidOperationException("The player character is not available for Lua tag queries.");
     }
 }

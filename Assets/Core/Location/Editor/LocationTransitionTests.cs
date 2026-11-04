@@ -8,6 +8,7 @@ using Interaction;
 using NUnit.Framework;
 using UI.Shared;
 using UnityEngine;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Location.Editor
 {
@@ -34,7 +35,7 @@ namespace Core.Location.Editor
             _level = Game.Get<LevelManager>();
 
             _other = Game.CreateCharacter("Other actor");
-            _player = Game.CreateCharacter("Player");
+            _player = Game.CreatePlayer();
             _location = Game.Asset<LocationData>();
             _location.id = "test:location";
             Game.Location = _location;
@@ -50,7 +51,7 @@ namespace Core.Location.Editor
             _other.transform.parent.gameObject.SetActive(true);
             var root = new GameObject("Contact probe", typeof(BoxCollider2D));
             root.transform.SetParent(Game.Root.transform);
-            var probe = Game.InjectObject(root.AddComponent<ContactInteractionProbe>());
+            var probe = Game.Add<ContactInteractionProbe>(root);
             probe.Contact(_other.GetComponent<Collider2D>());
             Assert.That(probe.Activations, Is.Zero);
             probe.TriggerInteraction(_other);
@@ -59,7 +60,7 @@ namespace Core.Location.Editor
             probe.Contact(_player.GetComponent<Collider2D>());
             Assert.That(probe.Activations, Is.EqualTo(1));
             SetReady(true);
-            Assert.That(MainCharacter.CurrentMainCharacter, Is.SameAs(_player));
+            Assert.That(Game.Characters.MainCharacter, Is.SameAs(_player));
             Assert.That(_player.GetComponent<Collider2D>().GetComponentInParent<GameCharacter>(), Is.SameAs(_player));
             Assert.That(probe.CanInteract, Is.True);
             probe.Contact(_player.GetComponent<Collider2D>());
@@ -71,17 +72,15 @@ namespace Core.Location.Editor
         {
             var root = new GameObject("Link", typeof(BoxCollider2D));
             root.transform.SetParent(Game.Root.transform);
-            var link = Game.InjectObject(root.AddComponent<LocationLink>());
+            var link = Game.Add<LocationLink>(root);
             // A missing target would otherwise throw: non-player commands must never reach routing.
-            Assert.That(typeof(LocationLink).GetMethod("Interact", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(link, new object[] { _other }), Is.False);
+            Assert.That(Call(link, "Interact", _other), Is.False);
         }
 
         [Test]
         public void CoveringLocationRejectsDuplicateLoadsAndLocalTeleports()
         {
-            var routine = (IEnumerator)typeof(LevelManager).GetMethod("LoadRoutine", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_level, new object[] { _location.ScenePath, _location, "entry", Vector2.down, false, null });
+            var routine = (IEnumerator)Call(_level, "LoadRoutine", _location.ScenePath, _location, "entry", Vector2.down, false, null);
             try
             {
                 Assert.That(routine.MoveNext(), Is.True); // Await the cover before touching scenes.
@@ -94,7 +93,7 @@ namespace Core.Location.Editor
             Assert.That(_player.IsConditionOrControlBlocked, Is.False);
             SetReady(true);
             // A ready notification alone cannot release the transition's ownership during its final callbacks.
-            typeof(LevelManager).GetField("_transitionInProgress", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_level, true);
+            Set(_level, "_transitionInProgress", true);
             Assert.That(_level.LoadLocation(_location, "entry", Vector2.down), Is.False);
         }
 
@@ -119,8 +118,7 @@ namespace Core.Location.Editor
             var root = Game.Own(new GameObject("Default spawn"));
             root.transform.position = new Vector3(123, 456, 0);
             root.AddComponent<SpawnPoint>();
-            typeof(LevelManager).GetMethod("PlaceCharacterAtSpawn", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_level, new object[] { _player, entryKey, Vector2.left });
+            Call(_level, "PlaceCharacterAtSpawn", _player, entryKey, Vector2.left);
             Assert.That(_player.transform.position, Is.EqualTo(root.transform.position));
             Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
         }

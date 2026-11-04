@@ -16,6 +16,7 @@ using NUnit.Framework;
 using Sirenix.Serialization;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
@@ -119,7 +120,7 @@ namespace Plants.Editor
             Assert.That(drop.gameObject.activeSelf, Is.True);
             Assert.That(drop.GetComponents<UnityEngine.Rendering.SortingGroup>(), Has.Length.EqualTo(1));
             // An inactive configured drop's first Awake must not duplicate its visual or sorting.
-            typeof(WorldItem).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(drop, null);
+            Call(drop, "Awake");
             Assert.That(drop.transform.childCount, Is.EqualTo(1));
             Assert.That(drop.GetComponents<UnityEngine.Rendering.SortingGroup>(), Has.Length.EqualTo(1));
             Assert.That(Game.State.Player.Inventory.Slots, Is.SameAs(before));
@@ -214,7 +215,7 @@ namespace Plants.Editor
             root.SetActive(false);
             try
             {
-                var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
+                var view = Game.Add<FarmablePlant>(root);
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 var picking = root.GetComponent<PlantHarvestInteractable>();
                 Assert.That(picking.CanInteract, Is.True);
@@ -243,7 +244,7 @@ namespace Plants.Editor
         {
             var root = new GameObject("Bound crop");
             root.SetActive(false);
-            var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
+            var view = Game.Add<FarmablePlant>(root);
             view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
             view.OnEvent(new PlantHarvestedEvent { LocationId = "farm", Position = new Vector2Int(1, 2),
                 Removed = true, State = new PlantState(_data.plantId) });
@@ -264,13 +265,13 @@ namespace Plants.Editor
             _crop.condition = PlantCondition.Wilted;
             Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
             var slots = Game.State.Player.Inventory.Slots;
-            var actor = Game.InjectObject(_root.AddComponent<Character.GameCharacter>());
+            var actor = Game.Add<Character.GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Wilted crop");
             root.SetActive(false);
             try
             {
-                var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
+                var view = Game.Add<FarmablePlant>(root);
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 var picking = root.GetComponent<PlantHarvestInteractable>();
                 Assert.That(picking.CanInteract, Is.True);
@@ -309,19 +310,19 @@ namespace Plants.Editor
         public void AFullInventoryRestoresTheVisibilityOfADropThatAlreadyStartedFading()
         {
             Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var actor = Game.InjectObject(_root.AddComponent<Character.GameCharacter>());
+            var actor = Game.Add<Character.GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Fading drop");
             root.SetActive(false);
             try
             {
-                var drop = Game.InjectObject(root.AddComponent<WorldItem>());
+                var drop = Game.Add<WorldItem>(root);
                 drop.Initialize(_item, 3);
                 Set(drop, "_character", actor);
                 Set(drop, "_isFading", true);
                 var renderer = root.GetComponentInChildren<SpriteRenderer>(true);
                 renderer.color = new Color(1, 1, 1, 0);
-                typeof(WorldItem).GetMethod("TryPickup", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(drop, null);
+                Call(drop, "TryPickup");
                 Assert.That(renderer.color.a, Is.EqualTo(1));
                 Assert.That(root, Is.Not.Null);
                 Assert.That(drop.Quantity, Is.EqualTo(3));
@@ -345,7 +346,7 @@ namespace Plants.Editor
             FarmablePlant view = null;
             try
             {
-                view = Game.InjectObject(root.AddComponent<FarmablePlant>());
+                view = Game.Add<FarmablePlant>(root);
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 // Subscribe the view without activating scene components in this EditMode fixture.
                 EventBus<PlantRemovedEvent>.Subscribe(view);
@@ -417,13 +418,13 @@ namespace Plants.Editor
             Set(_data, "_regrowthStageIndex", 1);
             if (fullInventory)
                 Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var actor = Game.InjectObject(_root.AddComponent<Character.GameCharacter>());
+            var actor = Game.Add<Character.GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Bound crop");
             root.SetActive(false);
             try
             {
-                var view = Game.InjectObject(root.AddComponent<FarmablePlant>());
+                var view = Game.Add<FarmablePlant>(root);
                 view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
                 root.GetComponent<PlantHarvestInteractable>().TriggerInteraction(actor);
                 Assert.That(_harvestEvents, Is.EqualTo(fullInventory ? 0 : 1));
@@ -448,7 +449,5 @@ namespace Plants.Editor
             _inventoryEvents++;
             _onNotification?.Invoke();
         }
-        private static void Set(object target, string name, object value, Type type = null) =>
-            (type ?? target.GetType()).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 }

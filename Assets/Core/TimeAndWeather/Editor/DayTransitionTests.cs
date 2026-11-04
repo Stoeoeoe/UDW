@@ -18,6 +18,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.TimeAndWeather.Editor
 {
@@ -25,7 +26,8 @@ namespace Core.TimeAndWeather.Editor
     public sealed class DayTransitionTests : Core.Common.Editor.GameTest, IEventListener<NewDayEvent>
     {
 
-        private UrTimeManager _clock;
+        private GameClock _clock;
+        private OvernightTransition _overnight;
         private Input.InputManager _input;
         private MainCharacter _character;
         private CanvasGroup _canvas;
@@ -47,7 +49,7 @@ namespace Core.TimeAndWeather.Editor
 
             var bedObject = Child("Home bed");
             bedObject.AddComponent<BoxCollider2D>();
-            var bed = Game.InjectObject(bedObject.AddComponent<Bed>());
+            var bed = Game.Add<Bed>(bedObject);
             var bedSlot = bed.GetComponent<InteractionSlot>();
             var wakePoint = Child("Wake point").transform;
             wakePoint.position = new Vector3(3, 2, 0);
@@ -76,12 +78,9 @@ namespace Core.TimeAndWeather.Editor
             fader.ShowSceneImmediately();
             _canvas = fader.GetComponent<CanvasGroup>();
 
-            var clock = Game.Start<UrTimeManager>(time =>
-            {
-                time.gameObject.SetActive(true);
-                Set(time, "secondsPerInGameMinute", 10f);
-            });
-            _clock = clock;
+            _overnight = Game.Start<OvernightTransition>(overnight => overnight.gameObject.SetActive(true));
+            _clock = Game.Clock;
+            _clock.Start();
 
             Set(gui, "screenFader", fader);
             Set(gui, "toolHud", Child("Hotbar").AddComponent<CanvasGroup>());
@@ -89,19 +88,6 @@ namespace Core.TimeAndWeather.Editor
             document.panelSettings = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
             GameTestFixture.Invoke(gui, "Start");
-            var weather = Game.Asset<WeatherData>();
-            var season = Game.Asset<SeasonData>();
-            season.daylightColorGradient = new Gradient();
-            season.weatherData = new Util.WeightedList<WeatherData>();
-            season.weatherData.Add(weather);
-            Game.Start<WeatherManager>(manager =>
-            {
-                Set(manager, "postProcessingVolume", Child("Weather volume").AddComponent<Volume>());
-                Set(manager, "defaultVolumeProfile", Game.Asset<VolumeProfile>());
-                manager.gameObject.SetActive(true);
-            });
-            Set(clock, "seasons", new[] { season });
-            clock.Start();
             Game.State.Time.daysSinceStart = 5;
             Game.State.Time.dayOfSeason = 5;
             Game.State.Time.hour = 23;
@@ -174,10 +160,10 @@ namespace Core.TimeAndWeather.Editor
         [Test]
         public void MissingMainCharacterFailsBeforeRecordingATransition()
         {
-            Set(_clock, "_dayTransitionRoutine", null);
+            Set(_overnight, "_routine", null);
             Game.Get<CharacterManager>().RegisterMainCharacter(null);
 
-            Assert.Throws<InvalidOperationException>(() => _clock.EndDay());
+            Assert.Throws<InvalidOperationException>(() => _overnight.EndDay());
             AssertClockResumes();
             Assert.That(_input.Actions.enabled, Is.True);
             Assert.That(_newDays, Is.Zero);
@@ -190,7 +176,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_input.Actions.enabled, Is.False);
             Assert.That(_character.IsControlBlocked, Is.True);
             Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(5));
-            _clock.EndDay(); // A second bedtime request must not start another transition.
+            _overnight.EndDay(); // A second bedtime request must not start another transition.
 
             DOTween.Complete(_canvas, true);
             Assert.That(NextYield(), Is.TypeOf<WaitForSecondsRealtime>());
@@ -215,7 +201,7 @@ namespace Core.TimeAndWeather.Editor
             _character.Health.TakeDamage(30);
             _character.Stamina.ConsumeStamina(40);
             NextYield();
-            GameTestFixture.Invoke(_clock, "OnDisable");
+            GameTestFixture.Invoke(_overnight, "OnDisable");
             Assert.That(_input.Actions.enabled, Is.True);
             Assert.That(_character.ConditionState, Is.EqualTo(ConditionState.Normal));
             Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(5));
@@ -281,15 +267,15 @@ namespace Core.TimeAndWeather.Editor
         [TestCase(150)]
         public void ExhaustionStartsCollapseThenWakesAtHomeWithThePassOutPenalty(int amount)
         {
-            Set(_clock, "_dayTransitionRoutine", null);
+            Set(_overnight, "_routine", null);
             _character.Health.TakeDamage(30);
             var position = _character.transform.position;
             var graphics = _character.Graphics;
             var rotation = graphics.localRotation;
             _character.Stamina.ConsumeStamina(amount);
-            _routine = (IEnumerator)typeof(UrTimeManager).GetField("_dayTransitionRoutine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_clock);
+            _routine = RunningSequence();
             Assert.That(_routine, Is.Not.Null, "The depletion event must start the forced-night sequence.");
-            _clock.StopCoroutine(_routine);
+            _overnight.StopCoroutine(_routine);
             _steps.Clear();
             _steps.Push(_routine);
             // AnimancerState is Unity's animation wait; resume the outer iterator after completing the clip.
@@ -335,7 +321,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(graphics.GetComponent<SpriteRenderer>().sprite, Is.Not.SameAs(originalSprite));
             Assert.That(graphics.localRotation, Is.EqualTo(rotation));
             var fallenSprite = graphics.GetComponent<SpriteRenderer>().sprite;
-            _clock.CancelDayTransition();
+            _overnight.Cancel();
             Assert.That(state.IsPlaying, Is.False);
             Assert.That(graphics.localPosition, Is.EqualTo(position));
             Assert.That(graphics.localRotation, Is.EqualTo(rotation));
@@ -350,14 +336,17 @@ namespace Core.TimeAndWeather.Editor
         [Test]
         public void OtherCharactersAndDeadPlayersDoNotStartAnExhaustionTransition()
         {
-            Set(_clock, "_dayTransitionRoutine", null);
+            Set(_overnight, "_routine", null);
             var other = Game.CreateCharacter("Other character");
             other.Stamina.ConsumeStamina(100);
-            Assert.That(typeof(UrTimeManager).GetField("_dayTransitionRoutine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_clock), Is.Null);
+            Assert.That(_overnight.IsRunning, Is.False);
             _character.SetConditionState(ConditionState.Dead);
             _character.Stamina.ConsumeStamina(100);
-            Assert.That(typeof(UrTimeManager).GetField("_dayTransitionRoutine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_clock), Is.Null);
+            Assert.That(_overnight.IsRunning, Is.False);
         }
+
+        private IEnumerator RunningSequence() =>
+            (IEnumerator)typeof(OvernightTransition).GetField("_routine", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_overnight);
 
         private AnimancerState CollapseState() => (AnimancerState)typeof(UrCharacterAnimator)
             .GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_character.Animator);
@@ -374,12 +363,40 @@ namespace Core.TimeAndWeather.Editor
         {
             Game.State.Time.hour = hour;
             Game.State.Time.minute = minute;
-            _routine = (IEnumerator)typeof(UrTimeManager).GetMethod("TransitionToNextDay", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_clock, new object[] { _character, reason, hour });
+            _routine = (IEnumerator)Call(_overnight, "Run", _character, reason, hour);
             // EndDay normally captures bedtime and stores this before starting Unity's scheduler.
-            Set(_clock, "_dayTransitionRoutine", _routine);
+            Set(_overnight, "_routine", _routine);
             _steps.Clear();
             _steps.Push(_routine);
+        }
+
+        [Test]
+        public void PassingBedtimeStartsOnePassOutTransitionAndHoldsTheClock()
+        {
+            Set(_overnight, "_routine", null);
+            Game.State.Time.hour = 22;
+            Game.State.Time.minute = 50;
+
+            _clock.Advance(Game.Get<ClockSettings>().secondsPerInGameMinute);
+
+            Assert.That(_overnight.IsRunning, Is.True);
+            Assert.That(_clock.IsOvernight, Is.True);
+            var sequence = RunningSequence();
+            _clock.Advance(1000f);
+            Assert.That(RunningSequence(), Is.SameAs(sequence), "A running night must not be restarted.");
+            Assert.That(_character.IsControlBlocked, Is.True);
+            _routine = sequence;
+            _overnight.StopCoroutine(sequence);
+        }
+
+        [Test]
+        public void TheClockResumesWhenTheSequenceEndsEvenWhenItIsCancelled()
+        {
+            NextYield();
+            Assert.That(_clock.IsOvernight, Is.True);
+            _overnight.Cancel();
+            Assert.That(_clock.IsOvernight, Is.False);
+            Assert.That(_overnight.IsRunning, Is.False);
         }
 
         [Test]
@@ -387,7 +404,7 @@ namespace Core.TimeAndWeather.Editor
         {
             NextYield();
             Game.State.Time.secondsTowardNextMinute = 1000f;
-            GameTestFixture.Invoke(_clock, "Update");
+            _clock.Advance(1000f);
             Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(5));
             Assert.That(Game.State.Time.hour, Is.EqualTo(23));
             Assert.That(Game.State.Time.secondsTowardNextMinute, Is.EqualTo(1000f));
@@ -450,8 +467,8 @@ namespace Core.TimeAndWeather.Editor
         {
             Game.State.Time.hour = 6;
             Game.State.Time.minute = 0;
-            Game.State.Time.secondsTowardNextMinute = 10f;
-            GameTestFixture.Invoke(_clock, "Update");
+            Game.State.Time.secondsTowardNextMinute = Game.Get<ClockSettings>().secondsPerInGameMinute;
+            _clock.Advance(0f);
             Assert.That(Game.State.Time.minute, Is.EqualTo(10));
         }
 
@@ -500,7 +517,5 @@ namespace Core.TimeAndWeather.Editor
             return child;
         }
 
-        private static void Set(object target, string name, object value, Type owner = null) =>
-            (owner ?? target.GetType()).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 }

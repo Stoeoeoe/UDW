@@ -6,6 +6,7 @@ using Core.Game;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
@@ -46,8 +47,7 @@ namespace Plants.Editor
             foreach (var stage in stages)
                 stage.GetType().GetField("_representation", BindingFlags.Instance | BindingFlags.NonPublic)
                     .SetValue(stage, new SpriteOrPrefab { sprite = _sprite });
-            typeof(PlantData).GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, stages);
+            Set(_data, "growthStages", stages);
             _catalog = Game.Catalog<PlantCatalog>(_data);
             _view = Game.Create<FarmablePlant>();
             _root = _view.gameObject;
@@ -91,8 +91,7 @@ namespace Plants.Editor
             var prefab = new GameObject("Wilted crop");
             prefab.transform.SetParent(_root.transform, false);
             prefab.AddComponent<SpriteRenderer>().color = Color.red;
-            typeof(PlantData).GetField("_wiltedRepresentation", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, new SpriteOrPrefab { type = SpriteOrPrefab.SpriteOrPrefabType.Prefab, prefab = prefab });
+            Set(_data, "_wiltedRepresentation", new SpriteOrPrefab { type = SpriteOrPrefab.SpriteOrPrefabType.Prefab, prefab = prefab });
             BindView(0, PlantCondition.Wilted);
             Assert.That(_root.transform.childCount, Is.EqualTo(2));
             Assert.That(_root.transform.GetChild(1).GetComponent<SpriteRenderer>().color, Is.EqualTo(Color.red));

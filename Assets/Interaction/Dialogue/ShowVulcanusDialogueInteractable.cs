@@ -4,6 +4,7 @@ using Core.Dialogue.Vulcanus;
 using Interaction.Dialog;
 using UnityEngine;
 using UI.Shared;
+using VContainer;
 
 namespace Interaction.Dialogue
 {
@@ -11,9 +12,8 @@ namespace Interaction.Dialogue
     {
         [SerializeField] private string dialogueId;
         [SerializeField] private DialogueOptions options = new();
-        [SerializeField] private VulcanusDialogueRunner dialogueRunner;
+        [Inject] private VulcanusDialogueRunner _dialogue;
         [SerializeField] private Transform dialogueTarget;
-        [SerializeField] private bool autoFindRunner = true;
         [SerializeField] private bool emitLifecycleEvents = true;
 
         private Coroutine _activeMonitor;
@@ -29,13 +29,7 @@ namespace Interaction.Dialogue
                 return false;
             }
 
-            var runner = ResolveRunner();
-            if (runner == null)
-            {
-                Debug.LogError($"[ShowVulcanusDialogueInteractable] No VulcanusDialogueRunner could be found for '{dialogueId}'.");
-                return false;
-            }
-
+            var runner = _dialogue;
             if (runner.IsDialogueActive)
                 return false;
 
@@ -55,20 +49,6 @@ namespace Interaction.Dialogue
 
             _activeMonitor = StartCoroutine(MonitorDialogue(runner));
             return true;
-        }
-
-        private VulcanusDialogueRunner ResolveRunner()
-        {
-            if (dialogueRunner != null)
-                return dialogueRunner;
-
-            if (!autoFindRunner)
-                return null;
-
-            dialogueRunner = VulcanusDialogueRunner.Instance != null
-                ? VulcanusDialogueRunner.Instance
-                : FindFirstObjectByType<VulcanusDialogueRunner>();
-            return dialogueRunner;
         }
 
         private IEnumerator MonitorDialogue(VulcanusDialogueRunner runner)

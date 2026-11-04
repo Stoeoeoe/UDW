@@ -262,7 +262,7 @@ namespace Core.Divinity.Editor
             var gameObject = new GameObject("Favour test character");
             gameObject.SetActive(false);
             _objects.Add(gameObject);
-            return Game.InjectObject(gameObject.AddComponent<GameCharacter>());
+            return Game.Add<GameCharacter>(gameObject);
         }
 
         private BoonDefinition CreateBoon(CharacterAttributeType attribute, float flat)

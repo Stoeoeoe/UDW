@@ -28,8 +28,8 @@ namespace UI.Shared.Editor
             _input = UIScreenPauseTests.CreateScreenServices(Game,
                 actions => actions.AddActionMap("Inspection").AddAction("Inspect", InputActionType.Button));
             _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            _first = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
-            _second = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
+            _first = Game.Add<PauseTestScreen>(_root);
+            _second = Game.Add<PauseTestScreen>(_root);
             _first.PauseWhileOpen = _second.PauseWhileOpen = ScreenPauseMode.None;
         }
 

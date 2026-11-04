@@ -1,8 +1,8 @@
 using Interaction.Dialog;
 using VContainer;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UI.Shared;
@@ -41,11 +41,15 @@ namespace Core.Dialogue.Vulcanus
         private bool _isBuilt;
         private VisualElement _boundRoot;
         private bool _isTyping;
-        private bool _revealRequested;
         private bool _waitingForAdvance;
         private bool _waitingForChoice;
+        private string _lineText = string.Empty;
         private VulcanusDialogueChoiceOption _selectedOption;
+        private AwaitableCompletionSource _advance;
+        private AwaitableCompletionSource<VulcanusDialogueChoiceOption> _choice;
         private readonly List<VulcanusDialogueChoiceOption> _visibleOptions = new();
+
+        public event Action Dismissed;
 
         public void OnDialogueStarted(VulcanusDialogueExecutionContext context)
         {
@@ -59,48 +63,57 @@ namespace Core.Dialogue.Vulcanus
             SetContinueVisible(false);
         }
 
-        public IEnumerator PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context)
+        public async Awaitable PresentLine(VulcanusDialogueLineNode node, string localizedText,
+            VulcanusDialogueExecutionContext context, CancellationToken cancellation)
         {
             EnsureBuilt();
             UpdatePlacement();
             OpenScreen(context.Instigator, context.PauseWhileOpen);
             SetSpeaker(node.Speaker, node.Emotion);
             SetBody(string.Empty);
-            //SetHint("Click, Enter or Space to continue");
             ClearChoices();
             SetContinueVisible(true);
 
+            var advance = _advance = new AwaitableCompletionSource();
             _waitingForAdvance = true;
             FocusOverlay();
+            _lineText = localizedText;
             _isTyping = true;
-            _revealRequested = false;
-            var sound = _typewriterSoundResolver.ResolveTypewriterSound(node.Speaker, defaultTypewriterSound);
+            await Type(node.Speaker, cancellation);
+            await DialogueWait.For(advance, cancellation);
+        }
+
+        // The first continue press reveals the rest of the line at once by ending the typing state.
+        private async Awaitable Type(string speaker, CancellationToken cancellation)
+        {
+            var text = _lineText;
+            var sound = _typewriterSoundResolver.ResolveTypewriterSound(speaker, defaultTypewriterSound);
             var revealed = 0;
             var elapsed = 0f;
-            while (revealed < localizedText.Length && !_revealRequested && charactersPerSecond > 0f)
+            while (_isTyping && revealed < text.Length && charactersPerSecond > 0f)
             {
-                if (!ReceivesInput || Time.timeScale == 0f) { yield return null; continue; }
+                if (!ReceivesInput || Time.timeScale == 0f) { await Awaitable.NextFrameAsync(cancellation); continue; }
                 elapsed += Time.unscaledDeltaTime * charactersPerSecond;
-                while (elapsed >= 1f && revealed < localizedText.Length)
+                while (elapsed >= 1f && revealed < text.Length)
                 {
                     elapsed -= 1f;
-                    var character = localizedText[revealed++];
+                    var character = text[revealed++];
                     if (sound && sound.audioClips.Length > 0 && !char.IsWhiteSpace(character))
                         MoreMountains.Tools.MMSoundManager.Current.PlaySound(
                             sound.audioClips[UnityEngine.Random.Range(0, sound.audioClips.Length)],
                             MoreMountains.Tools.MMSoundManager.MMSoundManagerTracks.Sfx, Vector3.zero,
                             pitch: UnityEngine.Random.Range(sound.pitchMin, sound.pitchMax));
                 }
-                SetBody(localizedText.Substring(0, revealed));
-                yield return null;
+                SetBody(text.Substring(0, revealed));
+                await Awaitable.NextFrameAsync(cancellation);
             }
-            SetBody(localizedText);
+            SetBody(text);
             _isTyping = false;
-            yield return new WaitUntil(() => !_waitingForAdvance);
         }
 
-        public IEnumerator PresentChoice(VulcanusDialogueChoiceNode node, IReadOnlyList<VulcanusDialogueChoiceOption> options,
-            VulcanusDialogueExecutionContext context, Action<VulcanusDialogueChoiceOption> onSelected)
+        public async Awaitable<VulcanusDialogueChoiceOption> PresentChoice(VulcanusDialogueChoiceNode node,
+            IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context,
+            CancellationToken cancellation)
         {
             EnsureBuilt();
             UpdatePlacement();
@@ -110,22 +123,22 @@ namespace Core.Dialogue.Vulcanus
             SetHint("Click a choice or press 1-9");
             SetContinueVisible(false);
 
+            var choice = _choice = new AwaitableCompletionSource<VulcanusDialogueChoiceOption>();
             _waitingForChoice = true;
             _selectedOption = null;
             RebuildChoices(options, context);
             _choiceContainer[0].Focus();
-            yield return new WaitUntil(() => !_waitingForChoice);
-
-            onSelected?.Invoke(_selectedOption);
+            return await DialogueWait.For(choice, cancellation);
         }
 
         public void OnDialogueFinished(VulcanusDialogueExecutionContext context)
         {
             _isTyping = false;
-            _revealRequested = false;
             _waitingForAdvance = false;
             _waitingForChoice = false;
             _selectedOption = null;
+            _advance = null;
+            _choice = null;
             ClearChoices();
             SetBody(string.Empty);
             SetHint(string.Empty);
@@ -252,8 +265,14 @@ namespace Core.Dialogue.Vulcanus
         {
             if (!_waitingForAdvance || !ReceivesInput) return;
             PlayUISound(UISoundCue.Click);
-            if (_isTyping) _revealRequested = true;
-            else _waitingForAdvance = false;
+            if (_isTyping)
+            {
+                _isTyping = false;
+                SetBody(_lineText);
+                return;
+            }
+            _waitingForAdvance = false;
+            _advance.TrySetResult();
         }
 
         private void SelectOption(VulcanusDialogueChoiceOption option)
@@ -262,9 +281,10 @@ namespace Core.Dialogue.Vulcanus
             PlayUISound(UISoundCue.Click);
             _selectedOption = option;
             _waitingForChoice = false;
+            _choice.TrySetResult(option);
         }
 
-        protected override void OnScreenClosed() => VulcanusDialogueRunner.Instance.StopDialogue();
+        protected override void OnScreenClosed() => Dismissed?.Invoke();
 
         private void RebuildChoices(IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context)
         {

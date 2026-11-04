@@ -15,17 +15,17 @@ namespace Core.Game
         private readonly CutsceneRunner _cutsceneRunner;
         private readonly WorldObjectSpawner _worldObjectSpawner;
         private readonly LocationContext _location;
-        private readonly UrTimeManager _urTimeManager;
+        private readonly GameClock _clock;
 
         public GameStateManager(GameState state, GameSaveService saves, CutsceneRunner cutsceneRunner,
-            WorldObjectSpawner worldObjectSpawner, LocationContext location, UrTimeManager time)
+            WorldObjectSpawner worldObjectSpawner, LocationContext location, GameClock clock)
         {
             _state = state;
             _saves = saves;
             _cutsceneRunner = cutsceneRunner;
             _worldObjectSpawner = worldObjectSpawner;
             _location = location;
-            _urTimeManager = time;
+            _clock = clock;
         }
 
         // Identifies the authored world baseline used by the current save format.
@@ -58,7 +58,7 @@ namespace Core.Game
 
             // The deserialized root is the live state; there is no second field-by-field restore path.
             _state.Restore(data);
-            _urTimeManager.ApplySavedTime();
+            _clock.ApplySavedTime();
             return true;
         }
     }

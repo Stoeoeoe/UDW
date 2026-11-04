@@ -4,12 +4,14 @@ The shared `ScreenFader` on `Assets/Resources/SystemRoot.prefab` supports Opacit
 Mosaic and Iris. Choose the effect before entering Play Mode. Beds and location
 changes use the same configuration, duration and easing.
 
-`UrTimeManager.EndDay` owns the overnight sequence: publish
+`OvernightTransition.EndDay` owns the overnight sequence: publish
 `DayTransitionStarted`, await the GUI cover, advance the day, await the GUI reveal,
 then publish `DayTransitionFinished` even on cancellation. Crop and shop updates
 continue to listen to `NewDayEvent` while the screen is covered. Input and the
 character subscribe to the transition events and manage their own state.
-`UrTimeManager` configures the overnight blackout duration and optional jingle.
+`OvernightTransition` configures the overnight blackout duration and optional jingle.
+`GameClock` stays paused for its whole duration, including cancellation, and requests
+the pass-out night when the playable day ends.
 `UrGUIManager.CoverScene` and `RevealScene` provide the shared presentation API
 for both overnight and location transitions. Reveal can play a supplied cue and
 hold the cover before fading in; location transitions use neither option.

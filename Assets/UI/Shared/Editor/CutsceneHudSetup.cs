@@ -12,7 +12,7 @@ namespace UI.Shared.Editor
         static CutsceneHudSetup() => EditorApplication.playModeStateChanged += state =>
         {
             if (state != PlayModeStateChange.ExitingEditMode) return;
-            var errors = Validate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab"));
+            var errors = Validate(AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath));
             if (errors.Count == 0) return;
             EditorApplication.isPlaying = false;
             Debug.LogError(string.Join("\n", errors));
@@ -36,7 +36,7 @@ namespace UI.Shared.Editor
         [MenuItem("Tools/UI/Set Up Cutscene HUD Fade")]
         public static void Configure()
         {
-            const string path = "Assets/Resources/SystemRoot.prefab";
+            const string path = Core.SystemRoot.PrefabPath;
             var root = PrefabUtility.LoadPrefabContents(path);
             try
             {

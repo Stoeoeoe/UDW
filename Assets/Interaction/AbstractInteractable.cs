@@ -20,7 +20,8 @@ namespace Interaction
         [Inject] private GameState _gameState;
 
         [Inject] private PlayerInteractionContext _playerInteractionContext;
-        [Inject] protected UrTimeManager _urTimeManager;
+        [Inject] protected CharacterManager _characterManager;
+        [Inject] protected GameClock _clock;
         [Inject] protected LevelManager _levelManager;
 
         [Header("Interaction")]
@@ -149,7 +150,7 @@ namespace Interaction
 
         public virtual void TriggerInteraction(GameCharacter instigator)
         {
-            if (instigator == MainCharacter.CurrentMainCharacter &&
+            if (instigator == _characterManager.MainCharacter &&
                 _playerInteractionContext.CurrentSnapshot.WorldInteractionBlocked) return;
             if (!CanInteract || !Interact(instigator))
             {
@@ -206,7 +207,7 @@ namespace Interaction
             state.availableAtMinute = cooldownMode switch
             {
                 InteractionCooldownMode.InGameHours => _gameState.Time.TotalMinutes + (long)inGameHourCooldown * 60,
-                InteractionCooldownMode.UntilTime => _urTimeManager.GetNextBoundaryMinute(cooldownBoundary),
+                InteractionCooldownMode.UntilTime => _clock.GetNextBoundaryMinute(cooldownBoundary),
                 _ => 0
             };
         }
@@ -269,7 +270,7 @@ namespace Interaction
         protected virtual void OnTriggerEnter2D(Collider2D other)
         {
             var character = other.GetComponentInParent<GameCharacter>();
-            if (!character || character != MainCharacter.CurrentMainCharacter) return;
+            if (!character || character != _characterManager.MainCharacter) return;
             OnCharacterEntered(character);
             if (!RequiresButtonPress && _levelManager.SceneReady) TriggerInteraction(character);
         }
@@ -277,7 +278,7 @@ namespace Interaction
         protected virtual void OnTriggerExit2D(Collider2D other)
         {
             var character = other.GetComponentInParent<GameCharacter>();
-            if (character && character == MainCharacter.CurrentMainCharacter) OnCharacterExited(character);
+            if (character && character == _characterManager.MainCharacter) OnCharacterExited(character);
         }
 
         protected virtual void OnCharacterEntered(GameCharacter character) => EnterFeedback?.PlayFeedbacks();

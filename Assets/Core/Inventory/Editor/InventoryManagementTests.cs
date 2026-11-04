@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using SerializationUtility = Sirenix.Serialization.SerializationUtility;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Inventory.Editor
 {
@@ -34,8 +35,8 @@ namespace Core.Inventory.Editor
         private T Item<T>(string id, int max) where T : ItemDefinition
         {
             var item = Game.Asset<T>();
-            typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, id);
-            typeof(ItemDefinition).GetField("_maxStackSize", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, max);
+            Set(item, "_itemId", id);
+            Set(item, "_maxStackSize", max);
             return item;
         }
         [Test] public void SplitMergeAndCancelConserveQuantities()
@@ -160,7 +161,7 @@ namespace Core.Inventory.Editor
         }
         [Test] public void RuntimePrefabsHaveSharedConfigurationAndCompleteUIBindings()
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
             Assert.That(UI.Shared.Editor.UIInputValidation.Check(root.GetComponentInChildren<UnityEngine.InputSystem.UI.InputSystemUIInputModule>(true)), Is.Empty);
             var character = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
             foreach (var inventory in character.GetComponentsInChildren<SlotInventory>(true))

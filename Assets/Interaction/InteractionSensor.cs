@@ -52,7 +52,7 @@ namespace Interaction
         private void Start()
         {
             _owner.Orientation.OnFacingDirectionChanged += RotateSensors;
-            RotateSensors(MainCharacter.CurrentMainCharacter.Orientation.FacingDirection);
+            RotateSensors(_owner.Orientation.FacingDirection);
         }
 
         private void RotateSensors(Vector2 characterOrientation)

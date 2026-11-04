@@ -6,6 +6,7 @@ using Items.Plants;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
@@ -110,12 +111,11 @@ namespace Plants.Editor
 
         private void SetQuantityRange(int min, int max)
         {
-            typeof(PlantData).GetField("_minHarvestQuantity", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_data, min);
-            typeof(PlantData).GetField("_maxHarvestQuantity", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_data, max);
+            Set(_data, "_minHarvestQuantity", min);
+            Set(_data, "_maxHarvestQuantity", max);
         }
 
-        private void SetStages(List<GrowthStage> stages) => typeof(PlantData)
-            .GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_data, stages);
+        private void SetStages(List<GrowthStage> stages) => Set(_data, "growthStages", stages);
 
         internal static List<GrowthStage> Stages(params int[] days)
         {
@@ -127,8 +127,7 @@ namespace Plants.Editor
         private static GrowthStage Stage(int day)
         {
             var stage = new GrowthStage();
-            typeof(GrowthStage).GetField("_daysToReachStage", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(stage, day);
+            Set(stage, "_daysToReachStage", day);
             return stage;
         }
     }

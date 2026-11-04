@@ -21,6 +21,7 @@ namespace Core.Camera
     public class CameraManager : Core.GameManager, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
     {
         [Inject] private MapManager _mapManager;
+        [Inject] private CharacterManager _characterManager;
 
         [Tooltip("The required virtual camera used to follow the player.")] [SerializeField]
         private CinemachineCamera playerFollowVCam;
@@ -181,7 +182,7 @@ namespace Core.Camera
             playerFollowVCam.Priority = playerFollowPriority;
 
             // In case the player already exists (e.g. persistent character, re-loaded scene)
-            var existing = MainCharacter.CurrentMainCharacter;
+            var existing = _characterManager.MainCharacter;
             if (existing != null)
                 FollowTarget(existing.transform);
         }
@@ -284,7 +285,7 @@ namespace Core.Camera
             }
             
             // Also follow character
-            var character = MainCharacter.CurrentMainCharacter;
+            var character = _characterManager.MainCharacter;
             if (character)
             {
                 FollowTarget(character.transform);

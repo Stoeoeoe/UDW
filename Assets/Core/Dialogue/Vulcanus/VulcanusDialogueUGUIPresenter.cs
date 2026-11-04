@@ -2,6 +2,7 @@ using VContainer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Interaction.Dialog;
 using MoreMountains.Tools;
 using TMPro;
@@ -46,10 +47,14 @@ namespace Core.Dialogue.Vulcanus
         private bool _waitingForChoice;
         private bool _isTyping;
         private VulcanusDialogueChoiceOption _selectedOption;
+        private AwaitableCompletionSource _advance;
+        private AwaitableCompletionSource<VulcanusDialogueChoiceOption> _choice;
         private readonly List<VulcanusDialogueUGUIChoiceView> _spawnedChoices = new();
         private Coroutine _typewriterCoroutine;
         private string _currentLineText = string.Empty;
         private TypewriterSound _currentTypewriterSound;
+
+        public event Action Dismissed;
 
         public void OnDialogueStarted(VulcanusDialogueExecutionContext context)
         {
@@ -62,7 +67,8 @@ namespace Core.Dialogue.Vulcanus
             ClearChoices();
         }
 
-        public IEnumerator PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context)
+        public async Awaitable PresentLine(VulcanusDialogueLineNode node, string localizedText,
+            VulcanusDialogueExecutionContext context, CancellationToken cancellation)
         {
             EnsureWired();
             OpenScreen(() => Show(true), () => Show(false), context.Instigator, context.PauseWhileOpen);
@@ -71,12 +77,14 @@ namespace Core.Dialogue.Vulcanus
             ClearChoices();
             StartTypewriter(localizedText, node.Speaker);
 
+            var advance = _advance = new AwaitableCompletionSource();
             _waitingForAdvance = true;
-            yield return new WaitUntil(() => !_waitingForAdvance);
+            await DialogueWait.For(advance, cancellation);
         }
 
-        public IEnumerator PresentChoice(VulcanusDialogueChoiceNode node, IReadOnlyList<VulcanusDialogueChoiceOption> options,
-            VulcanusDialogueExecutionContext context, Action<VulcanusDialogueChoiceOption> onSelected)
+        public async Awaitable<VulcanusDialogueChoiceOption> PresentChoice(VulcanusDialogueChoiceNode node,
+            IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context,
+            CancellationToken cancellation)
         {
             EnsureWired();
             OpenScreen(() => Show(true), () => Show(false), context.Instigator, context.PauseWhileOpen);
@@ -84,14 +92,13 @@ namespace Core.Dialogue.Vulcanus
             SetSpeakerPortraitStub(null, null);
             SetBody(string.Empty);
             _selectedOption = null;
+            var choice = _choice = new AwaitableCompletionSource<VulcanusDialogueChoiceOption>();
             _waitingForChoice = true;
             StopTypewriter(resetText: false);
 
             RebuildChoices(options, context);
             FocusFirstChoice();
-            yield return new WaitUntil(() => !_waitingForChoice);
-
-            onSelected?.Invoke(_selectedOption);
+            return await DialogueWait.For(choice, cancellation);
         }
 
         public void OnDialogueFinished(VulcanusDialogueExecutionContext context)
@@ -99,6 +106,8 @@ namespace Core.Dialogue.Vulcanus
             _waitingForAdvance = false;
             _waitingForChoice = false;
             _selectedOption = null;
+            _advance = null;
+            _choice = null;
             StopTypewriter(resetText: true);
             ClearChoices();
             SetSpeaker(null, null);
@@ -106,6 +115,8 @@ namespace Core.Dialogue.Vulcanus
             SetBody(string.Empty);
             CloseScreen();
         }
+
+        protected override void OnScreenClosed() => Dismissed?.Invoke();
 
         public bool TryAdvanceDialogue()
         {
@@ -166,6 +177,7 @@ namespace Core.Dialogue.Vulcanus
             PlayUISound(UISoundCue.Click);
             _selectedOption = option;
             _waitingForChoice = false;
+            _choice.TrySetResult(option);
         }
 
         private void RebuildChoices(IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context)
@@ -254,6 +266,7 @@ namespace Core.Dialogue.Vulcanus
             if (!_waitingForAdvance || !ReceivesInput) return;
             PlayUISound(UISoundCue.Click);
             _waitingForAdvance = false;
+            _advance.TrySetResult();
         }
 
         private void StartTypewriter(string text, string speakerId)

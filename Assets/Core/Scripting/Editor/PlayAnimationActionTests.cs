@@ -14,6 +14,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
@@ -461,17 +462,6 @@ namespace Core.Scripting.Editor
             animancer.Evaluate(seconds);
         }
 
-        private static void Set(object target, string name, object value)
-        {
-            for (var type = target.GetType(); type != null; type = type.BaseType)
-            {
-                var field = type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (field == null) continue;
-                field.SetValue(target, value);
-                return;
-            }
-            throw new MissingFieldException(name);
-        }
 
         [LuaModule("Test")]
         private sealed class PlaybackApi

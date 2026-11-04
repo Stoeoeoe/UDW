@@ -12,6 +12,7 @@ using Core.TimeAndWeather;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace UI.Shared.Editor
 {
@@ -67,8 +68,8 @@ namespace UI.Shared.Editor
             _root.SetActive(true);
             CreateScreenServices(Game);
             _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            _first = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
-            _second = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
+            _first = Game.Add<PauseTestScreen>(_root);
+            _second = Game.Add<PauseTestScreen>(_root);
             _character = Game.CreateCharacter();
         }
 
@@ -263,7 +264,7 @@ namespace UI.Shared.Editor
         public void DisablingTheScreenReleasesItsRequests()
         {
             _first.Open(_character);
-            typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_first, null);
+            Call(_first, "OnDisable");
             Assert.That(_first.Visible, Is.False);
             Assert.That(_character.IsControlBlocked, Is.False);
             Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
@@ -298,15 +299,14 @@ namespace UI.Shared.Editor
         {
             var controller = _character.gameObject.AddComponent<Controller2D>();
             var body = _character.GetComponent<Rigidbody2D>();
-            typeof(Controller2D).GetField("_rb", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(controller, body);
+            Set(controller, "_rb", body);
             typeof(GameCharacter).GetField("<Controller>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_character, controller);
             body.linearVelocity = Vector2.right * 4;
             _first.Open(_character, ScreenPauseMode.Character);
             Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
-            var movement = Game.InjectObject(_character.gameObject.AddComponent<Character.Abilities.MovementAbility>());
-            typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(movement, _character);
+            var movement = Game.Add<Character.Abilities.MovementAbility>(_character.gameObject);
+            Set(movement, "Character", _character);
             body.linearVelocity = Vector2.right;
             movement.Tick();
             Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
@@ -320,7 +320,7 @@ namespace UI.Shared.Editor
         public void NonPausingMenusBlockWorldContextImmediatelyUntilTheLastScreenCloses()
         {
 
-            var context = Game.Start<PlayerInteractionContext>();
+            var context = Game.Get<PlayerInteractionContext>();
             _first.Open(_character, ScreenPauseMode.None);
             _second.Open(_character, ScreenPauseMode.None);
             Assert.That(context.CurrentSnapshot.WorldInteractionBlocked, Is.True);
@@ -336,8 +336,7 @@ namespace UI.Shared.Editor
         public void OpeningAMenuDuringPreparationPreventsExecutionAndReleasesTheActionFreeze()
         {
             var controller = _character.gameObject.AddComponent<Controller2D>();
-            typeof(Controller2D).GetField("_rb", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(controller, _character.GetComponent<Rigidbody2D>());
+            Set(controller, "_rb", _character.GetComponent<Rigidbody2D>());
             typeof(GameCharacter).GetField("<Controller>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(_character, controller);
             var snapshot = PlayerInteractionContextSnapshot.Empty() with { SceneReady = true, Character = _character };
@@ -358,18 +357,19 @@ namespace UI.Shared.Editor
         public void TheCalendarResumesWhileANonPausingScreenRemainsOpen()
         {
 
-            var clock = Game.Start<UrTimeManager>(time => typeof(UrTimeManager)
-                .GetField("secondsPerInGameMinute", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(time, 10f));
+            var clock = Game.Clock;
+            clock.Start();
+            var step = Game.Get<Core.TimeAndWeather.ClockSettings>().secondsPerInGameMinute;
             Game.State.Time.hour = 6;
             Game.State.Time.minute = 0;
-            Game.State.Time.secondsTowardNextMinute = 10;
+            Game.State.Time.secondsTowardNextMinute = step;
             _first.Open(_character, ScreenPauseMode.GameClock);
             _second.Open(_character, ScreenPauseMode.None);
-            Invoke(clock, "Update");
+            clock.Advance(0f);
             Assert.That(Game.State.Time.minute, Is.Zero);
-            Assert.That(Game.State.Time.secondsTowardNextMinute, Is.EqualTo(10));
+            Assert.That(Game.State.Time.secondsTowardNextMinute, Is.EqualTo(step));
             _first.Close();
-            Invoke(clock, "Update");
+            clock.Advance(0f);
             Assert.That(Game.State.Time.minute, Is.GreaterThan(0));
             Assert.That(_second.Visible, Is.True);
 

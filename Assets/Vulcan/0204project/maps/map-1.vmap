@@ -26,7 +26,7 @@
         [
           50,
           144,
-          50,
+          144,
           50,
           305,
           304,
@@ -59,9 +59,9 @@
         ],
         [
           114,
-          144,
           50,
-          112,
+          50,
+          50,
           337,
           338,
           338,
@@ -4258,7 +4258,7 @@
         "id": "anchor-1776461296590",
         "name": "Arrival from house",
         "position": [
-          32,
+          16,
           48
         ],
         "facing": [
@@ -4317,8 +4317,8 @@
         "type": "cutscene",
         "shape": "rectangle",
         "position": [
-          96,
-          32
+          192,
+          0
         ],
         "size": [
           32,
@@ -4332,8 +4332,8 @@
         "type": "cutscene",
         "shape": "rectangle",
         "position": [
-          64,
-          176
+          128,
+          0
         ],
         "size": [
           32,
@@ -4349,11 +4349,11 @@
         "shape": "rectangle",
         "position": [
           0,
-          32
+          0
         ],
         "size": [
-          32,
-          32
+          1,
+          96
         ],
         "tags": [],
         "label": "Go to house"

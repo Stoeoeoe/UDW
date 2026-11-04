@@ -17,17 +17,12 @@ namespace UI.Hotbar
     /// Toolbelt shortcuts reference carried tools independently of bag slot positions
     /// and provides quick-use functionality via input actions or mouse clicks
     /// </summary>
-    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, IEventListener<ItemSelectedEvent>, ILocationLifecycle
+    public class ToolHotbar : MonoBehaviour, IEventListener<InventoryChangedEvent>, IEventListener<ItemSelectedEvent>, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
     {
         [Inject] private UrGUIManager _urGUIManager;
 
         [Inject] private LevelManager _levelManager;
-
-        [Header("Inventory Binding")] [Tooltip("The name of the inventory to display in the hotbar")]
-        public string TargetInventoryName = "MainInventory";
-
-        [Tooltip("The player ID to match for inventory lookup")]
-        public string PlayerId = "Player1";
+        [Inject] private CharacterManager _characters;
 
         [Header("Hotbar Configuration")] [Tooltip("Number of hotbar slots to display")] [Range(1, 10)]
         public int HotbarSize = 5;
@@ -54,25 +49,13 @@ namespace UI.Hotbar
         public int CurrentSelectedIndex = 0;
 
         // Protected properties
-        protected SlotInventory _targetInventory;
         protected List<HotbarSlot> _hotbarSlots = new List<HotbarSlot>();
         protected bool _initialized = false;
 
         /// <summary>
         /// Gets the target inventory by name and player ID
         /// </summary>
-        public virtual SlotInventory TargetInventory
-        {
-            get
-            {
-                if (_targetInventory == null)
-                {
-                    _targetInventory = SlotInventory.FindInventory(TargetInventoryName, PlayerId);
-                }
-
-                return _targetInventory;
-            }
-        }
+        public virtual SlotInventory TargetInventory => _characters.MainCharacter ? _characters.MainCharacter.MainInventory : null;
 
         private void Awake() { }
 
@@ -170,12 +153,21 @@ namespace UI.Hotbar
             SetSelectedSlot(TargetInventory.Loadout.ActiveToolbeltSlot);
         }
 
+        private bool IsPlayerActing
+        {
+            get
+            {
+                var player = _characters.MainCharacter;
+                return player && player.PerformPrimaryAction.ActionExecutor is { IsIdle: false };
+            }
+        }
+
         /// <summary>
         /// Called when a slot action input is triggered
         /// </summary>
         public virtual void OnSlotActionTriggered(int slotIndex)
         {
-            if (_urGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
+            if (_urGUIManager.HasOpenScreens || IsPlayerActing) return;
             if (slotIndex < 0 || slotIndex >= _hotbarSlots.Count)
             {
                 return;
@@ -253,7 +245,7 @@ namespace UI.Hotbar
         protected virtual void Update()
         {
             if (SlotContainer) SlotContainer.gameObject.SetActive(!_urGUIManager.HasOpenScreens);
-            if (_urGUIManager.HasOpenScreens || MainCharacter.CurrentMainCharacter?.GetComponent<Character.Abilities.CharacterPerformPrimaryActionAbility>()?.ActionExecutor is { IsIdle: false }) return;
+            if (_urGUIManager.HasOpenScreens || IsPlayerActing) return;
             if (!_initialized) InitializeHotbar();
             if (!_initialized) return;
 
@@ -284,11 +276,15 @@ namespace UI.Hotbar
 
         public virtual void OnEvent(InventoryChangedEvent e)
         {
-            if (e.InventoryRef?.InventoryName != TargetInventoryName ||
-                e.InventoryRef?.PlayerID != PlayerId)
-                return;
+            // Only the player's inventory drives the hotbar; an NPC's inventory events are not its business.
+            if (!e.InventoryRef || e.InventoryRef != TargetInventory) return;
 
-            _targetInventory = e.InventoryRef;
+            InitializeHotbar();
+            RefreshAllSlots();
+        }
+
+        public void OnEvent(MainCharacterChangedEvent change)
+        {
             InitializeHotbar();
             RefreshAllSlots();
         }
@@ -304,6 +300,7 @@ namespace UI.Hotbar
 
             this.Subscribe<InventoryChangedEvent>();
             this.Subscribe<ItemSelectedEvent>();
+            this.Subscribe<MainCharacterChangedEvent>();
             _levelManager.RegisterLifecycle(this);
         }
 
@@ -318,12 +315,12 @@ namespace UI.Hotbar
 
             this.Unsubscribe<InventoryChangedEvent>();
             this.Unsubscribe<ItemSelectedEvent>();
+            this.Unsubscribe<MainCharacterChangedEvent>();
             _levelManager.UnregisterLifecycle(this);
         }
 
         public void OnLocationEnter(LocationData location)
         {
-            _targetInventory = null;
             InitializeHotbar();
             RefreshAllSlots();
         }

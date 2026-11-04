@@ -78,7 +78,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void PlayerTagsUseTheLiveCharacterAndCacheParsedQueries()
         {
-            var first = Game.CreateCharacter().Tags;
+            var first = Game.CreatePlayer().Tags;
             first.SetSourceTags("boon", new[] { "State.Blessed.Mercury" });
             var lua = Game.Lua.CreateEngine();
 
@@ -87,7 +87,7 @@ namespace Core.Dialogue.Vulcanus.Editor
             const string query = "Player.Tags.Matches('all(State.Blessed, none(State.Cursed))')";
             Assert.That(lua.EvaluateCondition(query), Is.True);
 
-            var second = Game.CreateCharacter().Tags;
+            var second = Game.CreatePlayer().Tags;
             second.SetSourceTags("condition", new[] { "State.Cursed" });
             Assert.That(lua.EvaluateCondition(query), Is.False, "Compiled Lua and tag queries must read the current character tags.");
             Assert.That(lua.EvaluateCondition("Player.Tags.Has('State.Cursed')"), Is.True);

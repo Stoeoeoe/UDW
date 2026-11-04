@@ -1,3 +1,4 @@
+using Core.Common.Editor;
 using VContainer;
 using System.Collections;
 using System.Reflection;
@@ -90,28 +91,28 @@ namespace Core.Spawning.Editor
             spawner.EnterLocation(location, System.Array.Empty<AuthoredSpawnPlacement>());
             var fresh = spawner.Spawn(prefab, Vector3.zero,
                 new SpawnedObjectState { interaction = new InteractableState { uses = 1 } });
-            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.TryGet(location.id, fresh.PersistentId, out SpawnedObjectState _), Is.False);
+            Assert.That(LiveGame.Get<GameState>().World.TryGet(location.id, fresh.PersistentId, out SpawnedObjectState _), Is.False);
             yield return null; // Deferred Destroy completes.
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);
 
             spawner.OnLocationLeave(location);
-            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.Set(location.id, "restored", new SpawnedObjectState
+            LiveGame.Get<GameState>().World.Set(location.id, "restored", new SpawnedObjectState
             {
                 prefabId = prefab.PrefabId, interaction = new InteractableState { uses = 1 }
             });
             spawner.EnterLocation(location, System.Array.Empty<AuthoredSpawnPlacement>());
-            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.TryGet(location.id, "restored", out SpawnedObjectState _), Is.False);
+            Assert.That(LiveGame.Get<GameState>().World.TryGet(location.id, "restored", out SpawnedObjectState _), Is.False);
             yield return null;
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);
             spawner.OnLocationLeave(location);
-            VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.Set(location.id, "authored-exhausted", new SpawnedObjectState
+            LiveGame.Get<GameState>().World.Set(location.id, "authored-exhausted", new SpawnedObjectState
             {
                 prefabId = prefab.PrefabId, authored = true,
                 interaction = new InteractableState { uses = 1 }
             });
             var placements = new[] { new AuthoredSpawnPlacement { id = "authored-exhausted", template = prefab } };
             spawner.EnterLocation(location, placements);
-            Assert.That(VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<GameState>().World.TryGet(location.id, "authored-exhausted", out SpawnedObjectState removed), Is.True);
+            Assert.That(LiveGame.Get<GameState>().World.TryGet(location.id, "authored-exhausted", out SpawnedObjectState removed), Is.True);
             Assert.That(removed.removed, Is.True);
             yield return null;
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);

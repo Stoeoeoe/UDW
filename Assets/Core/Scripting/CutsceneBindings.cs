@@ -22,7 +22,7 @@ namespace Core.Scripting
                 bindActors(characters);
                 return characters;
             }),
-            VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, MainCharacter.CurrentMainCharacter)),
+            VulcanusLuaEngine.Module(() => new DialogueLuaApi(dialogueRunner, runtime.Characters.MainCharacter)),
             VulcanusLuaEngine.Module(() => runtime.CreateAudio()),
             VulcanusLuaEngine.Module(() => runtime.CreateWeather()),
             VulcanusLuaEngine.Module(() => runtime.CreateMusic()),

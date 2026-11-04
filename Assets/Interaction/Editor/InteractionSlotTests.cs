@@ -16,6 +16,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Interaction.Editor
 {
@@ -68,14 +69,7 @@ namespace Interaction.Editor
 
         private MainCharacter CreateCharacter()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
-            var root = Game.InjectObject(Object.Instantiate(prefab, Game.Root.transform));
-            var character = root.GetComponent<MainCharacter>();
-            GameTestFixture.Invoke(root.GetComponent<Controller2D>(), "Awake");
-            GameTestFixture.Invoke(character, "Awake");
-            character.Graphics.gameObject.SetActive(true); // These presentation tests do not enter a full location.
-            GameTestFixture.Invoke(character.Animator, "Awake");
-            GameTestFixture.Invoke(character.Occupation, "Awake");
+            var character = Game.CreateAnimatedCharacter();
             GameTestFixture.Invoke(character.Occupation, "OnEnable");
             return character;
         }
@@ -111,12 +105,10 @@ namespace Interaction.Editor
         public void NormalSeatInteractionUpdatesAvailabilityAndRejectsAnAlreadySeatedCharacter()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/BenchPrototype.prefab");
-            var bench = Game.InjectObject(Object.Instantiate(prefab, Game.Root.transform));
+            var bench = Game.Instantiate(prefab);
             var seat = bench.GetComponent<SeatInteractable>();
             var slot = bench.GetComponentInChildren<InteractionSlot>();
-            GameTestFixture.Invoke(slot, "Awake");
-            GameTestFixture.Invoke(seat, "Awake");
-            GameTestFixture.Invoke(seat, "OnEnable");
+            Game.Wake(slot, seat);
             Set(seat, "ActivationFeedback", _entry);
 
             Assert.That(seat.CanInteract, Is.True);
@@ -140,21 +132,18 @@ namespace Interaction.Editor
 
             Game.State.Time.initialized = true;
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/BenchPrototype.prefab");
-            var bench = Game.InjectObject(Object.Instantiate(prefab, Game.Root.transform));
+            var bench = Game.Instantiate(prefab);
             var seat = bench.GetComponent<SeatInteractable>();
             var slot = bench.GetComponentInChildren<InteractionSlot>();
             var id = Guid.NewGuid().ToString("N");
-            typeof(AbstractInteractable).GetField("persistentId", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(seat, id);
+            Set(seat, "persistentId", id);
             Set(seat, "UnlimitedActivations", false);
             Set(seat, "MaxNumberOfActivations", 2);
             Set(seat, "cooldownMode", InteractionCooldownMode.InGameHours);
             Set(seat, "inGameHourCooldown", 1);
             Set(seat, "ActivationFeedback", _entry);
             Set(seat, "DeniedFeedback", _exit);
-            GameTestFixture.Invoke(slot, "Awake");
-            GameTestFixture.Invoke(seat, "Awake");
-            GameTestFixture.Invoke(seat, "OnEnable");
+            Game.Wake(slot, seat);
 
             // The target is ready, but this character already occupies a different slot.
             _character.Occupation.TryEnter(_slot);
@@ -202,7 +191,7 @@ namespace Interaction.Editor
                         AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions"))));
                     manager.gameObject.SetActive(true);
                 });
-                var context = Game.Start<PlayerInteractionContext>();
+                var context = Game.Get<PlayerInteractionContext>();
                 GameTestFixture.Invoke(_character.GetAbility<CharacterOccupationAbility>(), "Awake");
                 var keyboard = InputSystem.AddDevice<Keyboard>();
                 try
@@ -278,7 +267,7 @@ namespace Interaction.Editor
             Assert.That(_character.Occupation.TryExit(), Is.False);
             Assert.That(_entry.Plays, Is.EqualTo(1));
             Assert.That(_exit.Plays, Is.Zero);
-            var another = Game.InjectObject(Object.Instantiate(_slot, Game.Root.transform));
+            var another = Game.Instantiate(_slot);
             Assert.That(_character.Occupation.TryEnter(another), Is.False);
             Object.DestroyImmediate(another);
         }
@@ -610,8 +599,7 @@ namespace Interaction.Editor
         {
             var animator = _character.Animator;
             var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
-            GameTestFixture.Invoke(playback, "Awake");
-            GameTestFixture.Invoke(playback, "OnEnable");
+            Game.Wake(playback);
             _character.Orientation.ForceDirection(Vector2.right);
             _character.SetMovementState(MovementState.Walking);
             GameTestFixture.Invoke(animator, "RefreshAnimation");
@@ -643,8 +631,7 @@ namespace Interaction.Editor
         {
             var tool = AssetDatabase.LoadAssetAtPath<Interaction.Tools.ToolData>(path);
             var expected = _character.Animator.AnimationLibrary.GetDirectional(action, new Vector2(x, y));
-            typeof(UrCharacterAnimator).GetMethod("PlayToolUseAnimation", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_character.Animator, new object[] { new Vector2(x, y), tool });
+            Call(_character.Animator, "PlayToolUseAnimation", new Vector2(x, y), tool);
             var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
             Assert.That(playback.Layers[0].CurrentState.Clip, Is.SameAs(expected));
             Assert.That(tool.actionDuration, Is.EqualTo(expected.length).Within(0.0001f));
@@ -741,7 +728,7 @@ namespace Interaction.Editor
         }
 
         private static void SetAnimationId(CharacterAnimationDefinition animation, string id) =>
-            typeof(CharacterAnimationDefinition).GetField("animationId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(animation, id);
+            Set(animation, "animationId", id);
 
         private static T Read<T>(object owner, string field) =>
             (T)owner.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(owner);
@@ -753,7 +740,5 @@ namespace Interaction.Editor
             (Tween)typeof(CharacterOccupation).GetField("_hop", BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(character.Occupation);
 
-        private static void Set(object owner, string field, object value) =>
-            owner.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(owner, value);
     }
 }

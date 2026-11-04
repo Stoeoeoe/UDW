@@ -1,3 +1,4 @@
+using Core.Common.Editor;
 using Core.Location;
 using VContainer;
 using System;
@@ -35,16 +36,15 @@ namespace Core.Music.Editor
             yield return new EnterPlayMode();
             Application.runInBackground = true;
             var deadline = Time.realtimeSinceStartupAsDouble + 15;
-            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
+            while (!LiveGame.Get<LevelManager>() || !LiveGame.Get<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartupAsDouble, Is.LessThan(deadline));
                 yield return null;
             }
             _root = new GameObject("Music playback fixture");
             var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>("Assets/TopDownEngine/ThirdParty/MoreMountains/MMTools/Core/MMAudio/MMSoundManager/Settings/MMSoundManagerAudioMixer.mixer");
-            _first = AssetDatabase.LoadAssetAtPath<MusicCue>(MusicPrototypeAssets.Folder + "/Courtyard.asset");
-            _second = AssetDatabase.LoadAssetAtPath<MusicCue>(MusicPrototypeAssets.Folder + "/Temple.asset");
-            Assert.That(_first, Is.Not.Null); Assert.That(_second, Is.Not.Null);
+            _first = MusicTestCues.Create("test:courtyard", 120, new[] { 130.8128, 164.8138, 195.9977, 261.6256 });
+            _second = MusicTestCues.Create("test:temple", 100, new[] { 146.8324, 174.6141, 220d, 293.6648 });
             _engine = new MusicPlaybackEngine(_root.transform, mixer.FindMatchingGroups("Music").Single());
             _resolver = new MusicRequestResolver();
             _request = _resolver.Request(_first, "calm", quantization: MusicQuantization.Immediate, fadeSeconds: 0);
@@ -55,6 +55,7 @@ namespace Core.Music.Editor
             AudioListener.pause = false; Time.timeScale = 1;
             _request?.Dispose(); _engine?.Dispose();
             if (_root) Object.Destroy(_root);
+            MusicTestCues.Destroy(_first); MusicTestCues.Destroy(_second);
             yield return new ExitPlayMode();
             if (_scenes != null && _scenes.Length > 0 && _scenes.All(scene => !string.IsNullOrEmpty(scene.path)) &&
                 !_scenes.Select(scene => scene.path).SequenceEqual(EditorSceneManager.GetSceneManagerSetup().Select(scene => scene.path)))

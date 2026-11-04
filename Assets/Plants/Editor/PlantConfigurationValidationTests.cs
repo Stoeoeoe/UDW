@@ -12,6 +12,7 @@ using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
@@ -193,8 +194,7 @@ namespace Plants.Editor
             Set(_plant, "_daysWiltedUntilRemoval", 0);
             var error = _plant.ValidateConfiguration().Single();
             LogAssert.Expect(LogType.Error, error.ToString());
-            typeof(ValidatedScriptableObject).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_plant, null);
+            Call(_plant, "OnValidate");
             Assert.That(_plant.DaysWiltedUntilRemoval, Is.Zero);
         }
 
@@ -239,16 +239,5 @@ namespace Plants.Editor
             return stage;
         }
 
-        private static void Set(object target, string field, object value) => Field(target, field).SetValue(target, value);
-        private static object Get(object target, string field) => Field(target, field).GetValue(target);
-        private static FieldInfo Field(object target, string field)
-        {
-            for (var type = target.GetType(); type != null; type = type.BaseType)
-            {
-                var found = type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                if (found != null) return found;
-            }
-            throw new ArgumentException(field);
-        }
     }
 }

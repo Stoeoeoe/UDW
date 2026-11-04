@@ -17,6 +17,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace UI.Shared.Editor
 {
@@ -44,10 +45,8 @@ namespace UI.Shared.Editor
             _root.SetActive(true);
             UIScreenPauseTests.CreateScreenServices(Game);
             _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            var inventoryRoot = new GameObject("Test inventory");
-            inventoryRoot.transform.SetParent(_root.transform);
-            inventoryRoot.SetActive(false);
-            _inventory = Game.InjectObject(inventoryRoot.AddComponent<SlotInventory>());
+            // Inventory screens and the hotbar show the registered player's inventory.
+            _inventory = Game.CreatePlayer().MainInventory;
             _inventory.Bind(new InventoryState { Slots = new InventorySlotState[2] });
             _tool = ScriptableObject.CreateInstance<ToolData>();
             Set(typeof(ItemDefinition), _tool, "_itemId", "test:tool");
@@ -65,17 +64,9 @@ namespace UI.Shared.Editor
             if (_screenRoot)
             {
                 var screen = _screenRoot.GetComponent<ManagedUIScreen>();
-                if (screen) typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(screen, null);
+                if (screen) Call(screen, "OnDisable");
             }
             _manager?.CloseAll();
-            var dialogueRunner = _root.GetComponentInChildren<VulcanusDialogueRunner>(true);
-            if (dialogueRunner)
-            {
-                UIScreenPauseTests.Invoke(dialogueRunner, "OnDisable");
-                UIScreenPauseTests.Invoke(dialogueRunner, "OnDestroy");
-            }
-
             Object.DestroyImmediate(_tool);
         }
 
@@ -172,10 +163,7 @@ namespace UI.Shared.Editor
             _inventory.SetSlot(1, new ItemStack(_tool, 4));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);
             var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
-            var bar = Game.InjectObject(owner.AddComponent<UI.Hotbar.ToolHotbar>());
-            bar.TargetInventoryName = _inventory.InventoryName;
-            bar.PlayerId = _inventory.PlayerID;
-            Set(typeof(UI.Hotbar.ToolHotbar), bar, "_targetInventory", _inventory);
+            var bar = Game.Add<UI.Hotbar.ToolHotbar>(owner);
             bar.SlotContainer = owner.transform;
             bar.SlotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Hotbar/ToolHotbarSlot.prefab");
             UIScreenPauseTests.Invoke(bar, "Start");
@@ -201,6 +189,33 @@ namespace UI.Shared.Editor
                 _inventory.SetSlot(1, ItemStack.Empty);
                 Assert.That(slot.ChargeTrack.gameObject.activeSelf, Is.False);
                 Assert.That(slot.QuantityText.enabled, Is.False);
+            }
+            finally { UIScreenPauseTests.Invoke(bar, "OnDisable"); }
+        }
+
+        [Test]
+        public void AnotherCharactersInventoryNeverReplacesThePlayersOnTheHotbar()
+        {
+            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
+            _inventory.SetSlot(0, new ItemStack(_tool, 3));
+            _inventory.Loadout.AssignToolbeltSlot(0, 0);
+            var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
+            var bar = Game.Add<UI.Hotbar.ToolHotbar>(owner);
+            bar.SlotContainer = owner.transform;
+            bar.SlotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Hotbar/ToolHotbarSlot.prefab");
+            UIScreenPauseTests.Invoke(bar, "Start");
+            UIScreenPauseTests.Invoke(bar, "OnEnable");
+            try
+            {
+                // An NPC carries an inventory with the same name; its changes are not the player's.
+                var npc = Game.CreateCharacter("NPC");
+                npc.MainInventory.Bind(new InventoryState { Slots = new InventorySlotState[2] });
+                Assert.That(bar.TargetInventory, Is.SameAs(_inventory));
+                var slot = owner.transform.GetChild(0).GetComponent<UI.Hotbar.HotbarSlot>();
+                Assert.That(slot.QuantityText.text, Is.EqualTo("3"));
+
+                Object.DestroyImmediate(npc.MainInventory);
+                Assert.That(bar.TargetInventory, Is.SameAs(_inventory), "Destroying an NPC must not unregister the player's inventory.");
             }
             finally { UIScreenPauseTests.Invoke(bar, "OnDisable"); }
         }
@@ -349,7 +364,7 @@ namespace UI.Shared.Editor
             button.Focus();
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
             var overlay = _document.rootVisualElement.Q("menuOverlay");
-            var popup = Game.InjectObject(_screenRoot.AddComponent<PauseTestScreen>());
+            var popup = Game.Add<PauseTestScreen>(_screenRoot);
             popup.OpenElement(overlay);
             Assert.That(firstDocument.rootVisualElement.Q("menuOverlay").enabledSelf, Is.False);
             popup.Close();
@@ -367,7 +382,7 @@ namespace UI.Shared.Editor
             button.Focus();
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
             var overlay = _document.rootVisualElement.Q("menuOverlay");
-            var popup = Game.InjectObject(_screenRoot.AddComponent<PauseTestScreen>());
+            var popup = Game.Add<PauseTestScreen>(_screenRoot);
             popup.OpenElement(overlay);
             overlay.Add(button);
             popup.Close();
@@ -385,7 +400,7 @@ namespace UI.Shared.Editor
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
             var secondDocument = _document;
             secondDocument.sortingOrder = 0;
-            var second = Game.InjectObject(_screenRoot.AddComponent<PauseTestScreen>());
+            var second = Game.Add<PauseTestScreen>(_screenRoot);
             second.OpenElement(secondDocument.rootVisualElement.Q("menuOverlay"));
             Assert.That(secondDocument.sortingOrder, Is.GreaterThan(firstDocument.sortingOrder));
             Submit(firstDocument.rootVisualElement.Q<Button>("useButton"));
@@ -435,7 +450,7 @@ namespace UI.Shared.Editor
         public void ShopReactivationUsesTheNewTreesCloseButton()
         {
             CreateDocument("Assets/UI/Shop/ShopScreen.uxml");
-            var presenter = Game.InjectObject(_screenRoot.AddComponent<ShopUIDocumentPresenter>());
+            var presenter = Game.Add<ShopUIDocumentPresenter>(_screenRoot);
             UIScreenPauseTests.Invoke(presenter, "Awake");
             UIScreenPauseTests.Invoke(presenter, "OnEnable");
             var oldRoot = _document.rootVisualElement;
@@ -458,8 +473,7 @@ namespace UI.Shared.Editor
         private UrInventoryUIDocumentPresenter CreateInventoryScreen()
         {
             CreateDocument("Assets/UI/InventoryScreen/InventoryScreen.uxml");
-            var presenter = Game.InjectObject(_screenRoot.AddComponent<UrInventoryUIDocumentPresenter>());
-            Set(typeof(InventoryScreenView), presenter, "_targetInventory", _inventory);
+            var presenter = Game.Add<UrInventoryUIDocumentPresenter>(_screenRoot);
             Assert.That(presenter, Is.Not.InstanceOf<UrInventoryDisplay>());
             Assert.That(_screenRoot.GetComponent<CanvasGroup>(), Is.Null);
             UIScreenPauseTests.Invoke(presenter, "Awake");
@@ -544,11 +558,10 @@ namespace UI.Shared.Editor
             holder.transform.SetParent(_root.transform);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab");
             var chest = Game.InjectObject(Object.Instantiate(prefab, holder.transform)).GetComponent<PersistentContainer>();
-            typeof(Core.Spawning.SpawnedObject).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(chest, new object[] { null, "test-chest", chest.CreateState(Game.State.Time.daysSinceStart) });
+            Call(chest, "Bind", null, "test-chest", chest.CreateState(Game.State.Time.daysSinceStart));
             holder.SetActive(true);
             CreateDocument("Assets/UI/Containers/ContainerScreen.uxml");
-            var screen = Game.InjectObject(_screenRoot.AddComponent<UI.Containers.ContainerScreen>());
+            var screen = Game.Add<UI.Containers.ContainerScreen>(_screenRoot);
             Set(typeof(UI.Containers.ContainerScreen), screen, "document", _document);
             UIScreenPauseTests.Invoke(screen, "Awake");
             screen.Open(chest, character);
@@ -570,19 +583,11 @@ namespace UI.Shared.Editor
         [Test]
         public void DialogueUsesTheScreenPolicyOrAnOpeningOverrideAfterReactivation()
         {
-            var runnerRoot = new GameObject("Dialogue runner");
-            runnerRoot.transform.SetParent(_root.transform);
-            var runner = Game.InjectObject(runnerRoot.AddComponent<VulcanusDialogueRunner>());
             CreateDocument(AssetDatabase.GUIDToAssetPath("63af131c2305b2949b9a347cc475d06a"));
-            var presenter = Game.InjectObject(_screenRoot.AddComponent<VulcanusDialogueUIDocumentPresenter>());
+            var presenter = Game.Add<VulcanusDialogueUIDocumentPresenter>(_screenRoot);
             Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "layoutAsset", _document.visualTreeAsset);
             Set(typeof(VulcanusDialogueUIDocumentPresenter), presenter, "styleSheet",
                 AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uss"));
-            var database = Game.Asset<VulcanusDialogueDatabase>();
-            database.Configure(null, System.Array.Empty<VulcanusDialogueAsset>());
-            Set(typeof(VulcanusDialogueRunner), runner, "database", database);
-            Set(typeof(VulcanusDialogueRunner), runner, "presenter", presenter);
-            UIScreenPauseTests.Invoke(runner, "Awake");
             UIScreenPauseTests.Invoke(presenter, "Awake");
             presenter.PauseWhileOpen = ScreenPauseMode.None;
             var context = new VulcanusDialogueExecutionContext();
@@ -590,7 +595,7 @@ namespace UI.Shared.Editor
             Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             presenter.OnDialogueFinished(context);
             var oldRoot = _document.rootVisualElement;
-            typeof(ManagedUIScreen).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(presenter, null);
+            Call(presenter, "OnDisable");
             _screenRoot.SetActive(false);
             _screenRoot.SetActive(true);
             UIScreenPauseTests.Invoke(presenter, "OnEnable");
@@ -608,8 +613,7 @@ namespace UI.Shared.Editor
             _screenRoot = new GameObject("Test screen");
             _screenRoot.transform.SetParent(_root.transform);
             _document = _screenRoot.AddComponent<UIDocument>();
-            var panelPath = AssetDatabase.GUIDToAssetPath("354d3ceb169652343b4d5165d106bca7");
-            _document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(panelPath);
+            _document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
             Assert.That(_document.panelSettings, Is.Not.Null);
             _document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(layout);
             Assert.That(_document.visualTreeAsset, Is.Not.Null);
@@ -626,11 +630,9 @@ namespace UI.Shared.Editor
             target.SendEvent(evt);
             // A submitted command is followed by the same refresh pass as a runtime frame.
             foreach (var presenter in Object.FindObjectsByType<UrInventoryUIDocumentPresenter>(FindObjectsSortMode.None))
-                typeof(InventoryScreenView).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(presenter, null);
+                Call(presenter, "LateUpdate");
         }
 
-        private static void Set(System.Type type, object target, string field, object value) =>
-            type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
 
         public void OnEvent(ItemSelectedEvent selection)
         {

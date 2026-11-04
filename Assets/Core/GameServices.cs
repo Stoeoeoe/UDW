@@ -7,29 +7,38 @@ using Core.Divinity;
 using Core.Game;
 using Core.Items;
 using Core.Location;
+using Core.TimeAndWeather;
+using Core.Context;
 using Plants;
 using UnityEngine;
 using VContainer;
+using VContainer.Unity;
 
 namespace Core
 {
     /// <summary>Game-session services. Construction and disposal belong to the container, not scene callbacks.</summary>
     public static class GameServices
     {
-        public static void Register(IContainerBuilder builder, PlayerSettings player, ItemSettings items)
+        public static void Register(IContainerBuilder builder, PlayerSettings player, ItemSettings items, ClockSettings clock)
         {
             if (!builder.Exists(typeof(PlayerSettings))) builder.RegisterInstance(player);
             if (!builder.Exists(typeof(ItemSettings))) builder.RegisterInstance(items);
+            if (!builder.Exists(typeof(ClockSettings))) builder.RegisterInstance(clock);
             builder.Register<GameState>(Lifetime.Singleton);
             builder.Register<LocationContext>(Lifetime.Singleton);
             builder.Register<CharacterManager>(Lifetime.Singleton);
             builder.Register<PlayerStateManager>(Lifetime.Singleton);
+            // Frame callbacks are declared as interfaces; the scope's entry-point dispatcher drives them.
+            builder.Register<GameClock>(Lifetime.Singleton).AsSelf().As<IStartable>().As<ITickable>();
+            builder.Register<PlayerInteractionContext>(Lifetime.Singleton).AsSelf().As<ILateTickable>();
             builder.Register<ItemManager>(Lifetime.Singleton);
             builder.Register<PlantManager>(Lifetime.Singleton);
+            builder.Register<Spawning.WorldObjectSpawner>(Lifetime.Singleton);
             builder.Register<GameStateManager>(Lifetime.Singleton);
             builder.Register<GameSaveService>(Lifetime.Singleton);
             builder.Register<Scripting.LuaRuntime>(Lifetime.Singleton);
             builder.Register<Interaction.Dialog.TypewriterSoundResolver>(Lifetime.Singleton);
+            builder.Register<Dialogue.Vulcanus.VulcanusDialogueRunner>(Lifetime.Singleton);
             builder.Register<DivineFavour>(Lifetime.Singleton);
             builder.Register<SkillDefinitions>(Lifetime.Singleton);
             builder.Register<DeityDefinitions>(Lifetime.Singleton);

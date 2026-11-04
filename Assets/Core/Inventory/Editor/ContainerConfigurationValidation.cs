@@ -43,13 +43,9 @@ namespace Core.Inventory.Editor
         {
             foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[]{"Assets/Content/Spawnables"}))
                 Check(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid)));
-            var systems = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
+            var systems = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
             if (!systems || systems.GetComponentsInChildren<ContainerScreen>(true).Length != 1)
                 throw new InvalidOperationException("SystemRoot requires exactly one configured container screen.");
-            var spawners = systems.GetComponentsInChildren<WorldObjectSpawner>(true);
-            if (spawners.Length != 1 || !spawners[0].enabled || !spawners[0].gameObject.activeSelf
-                || !new SerializedObject(spawners[0]).FindProperty("catalog").objectReferenceValue)
-                throw new InvalidOperationException("SystemRoot requires exactly one enabled WorldObjectSpawner with its catalog assigned.");
             Check(systems);
         }
 

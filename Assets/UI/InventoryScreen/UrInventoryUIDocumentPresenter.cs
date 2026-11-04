@@ -53,7 +53,7 @@ namespace UI.InventoryScreen
         }
         protected override void OnEnable() { EnsureBindings(); base.OnEnable(); this.Subscribe<WalletChangedEvent>(); }
         protected override void OnDisable() { this.Unsubscribe<WalletChangedEvent>(); base.OnDisable(); }
-        public void OnEvent(WalletChangedEvent e) { if (e.Wallet == MainCharacter.CurrentMainCharacter?.Wallet) RequestRefresh(); }
+        public void OnEvent(WalletChangedEvent e) { if (e.Wallet == _characters.MainCharacter?.Wallet) RequestRefresh(); }
         private void Update()
         {
             if (_inputManager.OpenInventoryPressed &&
@@ -217,7 +217,7 @@ namespace UI.InventoryScreen
                     AddLabel(cell, TargetInventory.Loadout.ActiveHandItem ? "In hand" : "Empty hand", "inventory-hand-marker");
             }
             _capacity.text = $"Bag ? {content.Length} slots";
-            var wallet = MainCharacter.CurrentMainCharacter?.Wallet;
+            var wallet = _characters.MainCharacter?.Wallet;
             _money.text = wallet != null ? $"Money: {wallet.Balance}" : string.Empty;
             var sort = _boundRoot.Q<Button>("sortButton");
             sort.style.display = DisplayStyle.Flex;
@@ -300,7 +300,7 @@ namespace UI.InventoryScreen
             _useButton.text = wearable ? "Wear" : food ? "Eat" : stack.Item is Plants.SeedItem ? "Plant…" : inHand ? "In hand" : "Use";
             _useButton.style.display = !inHand && (handItem || wearable || food) ? DisplayStyle.Flex : DisplayStyle.None;
             _useButton.SetEnabled(!IsHoldingItem && !inHand && (handItem || wearable ||
-                stack.Item is ConsumableItem consumable && consumable.CanConsume(MainCharacter.CurrentMainCharacter)));
+                stack.Item is ConsumableItem consumable && consumable.CanConsume(_characters.MainCharacter)));
             _beltButton.style.display = stack.Item is Interaction.Tools.ToolData ? DisplayStyle.Flex : DisplayStyle.None;
             _beltButton.SetEnabled(!IsHoldingItem);
             _dropButton.style.display = stack.Item && !stack.Item.PreventDropping ? DisplayStyle.Flex : DisplayStyle.None;
@@ -329,7 +329,7 @@ namespace UI.InventoryScreen
         private void OnUseButtonClicked()
         {
             if (!ReceivesInput || IsHoldingItem || !_useButton.enabledSelf) return;
-            if (Selected.Item is ConsumableItem) { HideContext(); Feedback(TargetInventory.Actions.TryConsume(_selectedSlotIndex, MainCharacter.CurrentMainCharacter)); return; }
+            if (Selected.Item is ConsumableItem) { HideContext(); Feedback(TargetInventory.Actions.TryConsume(_selectedSlotIndex, _characters.MainCharacter)); return; }
             if (Selected.Item is WornEquipmentItem wearable)
             {
                 _equipmentSlotId = wearable.AllowedSlots.FirstOrDefault()?.Id;
@@ -380,7 +380,7 @@ namespace UI.InventoryScreen
             {
                 var current = Selected;
                 if (index != _selectedSlotIndex || current.Item != stack.Item || current.Quantity != stack.Quantity) { HideContext(); return; }
-                var character = MainCharacter.CurrentMainCharacter;
+                var character = _characters.MainCharacter;
                 HideContext(); Feedback(_itemManager.TryDrop(TargetInventory, index, character.transform.position));
             }, "confirmDropButton");
             AddPromptButton("Keep in bag", HideContext, "cancelPromptButton").Focus();

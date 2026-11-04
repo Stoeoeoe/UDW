@@ -1,4 +1,5 @@
-﻿using System;
+﻿using VContainer;
+using System;
 using Character;
 using UnityEngine.Scripting;
 
@@ -7,12 +8,14 @@ namespace Core.Scripting
     [LuaModule("Wallet")]
     public class CurrencyLuaApi
     {
+        [Inject] private CharacterManager _characters;
+
         [LuaCall(true)]
         [Preserve]
         public bool AddMoney(double money)
         {
             // TODO: Check if rounding is ok?
-            return MainCharacter.CurrentMainCharacter.Wallet.TryAdd((int)money);
+            return _characters.MainCharacter.Wallet.TryAdd((int)money);
         }
 
         [LuaCall(true)]
@@ -20,7 +23,7 @@ namespace Core.Scripting
         public bool RemoveMoney(double money)
         {
             // TODO: Check if rounding is ok?
-            return MainCharacter.CurrentMainCharacter.Wallet.TrySpend((int)money);
+            return _characters.MainCharacter.Wallet.TrySpend((int)money);
         }
 
         [Preserve]

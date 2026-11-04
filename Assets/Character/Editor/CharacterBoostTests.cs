@@ -7,6 +7,7 @@ using Core.Items;
 using Core.TimeAndWeather;
 using NUnit.Framework;
 using UnityEngine;
+using static Core.Common.Editor.Reflect;
 
 namespace Character.Editor
 {
@@ -185,7 +186,7 @@ namespace Character.Editor
         public void ConsumingABoostItemUsesTheNormalInventoryAction()
         {
             var item = Game.Asset<AttributeBoostConsumableItem>();
-            typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, "test:tonic");
+            Set(item, "_itemId", "test:tonic");
             Set(item, "boosts", new[] { _rested.Boosts[0] });
             item.RequireValidConfiguration();
             _character.MainInventory.AddItem(item, 1);
@@ -228,7 +229,7 @@ namespace Character.Editor
             var bonus = new AttributeBonus();
             Set(bonus, "attribute", attribute);
             Set(bonus, "percent", percent);
-            typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(definition, id);
+            Set(definition, "_itemId", id);
             Set(definition, "boostDurationMinutes", minutes);
             Set(definition, "boosts", new[] { bonus });
             definition.RequireValidConfiguration();
@@ -255,7 +256,5 @@ namespace Character.Editor
             GameTimeChangedEvent.Trigger(total);
         }
 
-        private static void Set(object target, string field, object value) => target.GetType()
-            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 }

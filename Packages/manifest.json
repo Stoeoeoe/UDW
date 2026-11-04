@@ -14,7 +14,7 @@
     "com.unity.memoryprofiler": "1.2.0",
     "com.unity.multiplayer.center": "2.1.0",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
-    "com.unity.pipeline": "0.8.0-exp.1",
+    "com.unity.pipeline": "0.10.0-exp.1",
     "com.unity.postprocessing": "3.5.4",
     "com.unity.render-pipelines.universal": "17.6.0",
     "com.unity.ugui": "2.6.0",

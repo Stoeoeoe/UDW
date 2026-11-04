@@ -13,6 +13,7 @@ using NUnit.Framework;
 using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.TimeAndWeather.Editor
 {
@@ -20,7 +21,7 @@ namespace Core.TimeAndWeather.Editor
     public sealed class WeatherManagerTests : Core.Common.Editor.GameTest, IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>, IEventListener<GameTimeChangedEvent>
     {
 
-        private UrTimeManager _clock;
+        private GameClock _clock;
         private WeatherManager _weather;
         private Volume _volume;
         private VolumeProfile _defaultProfile;
@@ -41,6 +42,10 @@ namespace Core.TimeAndWeather.Editor
 
             Game.Root.SetActive(true);
 
+            _spring = CreateSeason(Core.TimeAndWeather.Season.Spring, Color.green);
+            _spring.weatherData.GetRandomItem().waterRainIntensity = 0.35f;
+            _summer = CreateSeason(Core.TimeAndWeather.Season.Summer, Color.yellow);
+            Game.Use(new ClockSettings { seasons = new[] { _spring, _summer } });
             _sound = Game.RegisterManager<WeatherSoundManagerProbe>();
             var volumeObject = new GameObject("Weather volume");
             volumeObject.transform.SetParent(Game.Root.transform);
@@ -52,10 +57,7 @@ namespace Core.TimeAndWeather.Editor
                 Set(manager, "defaultVolumeProfile", _defaultProfile);
                 manager.gameObject.SetActive(true);
             });
-            _spring = CreateSeason(Core.TimeAndWeather.Season.Spring, Color.green);
-            _spring.weatherData.GetRandomItem().waterRainIntensity = 0.35f;
-            _summer = CreateSeason(Core.TimeAndWeather.Season.Summer, Color.yellow);
-            _clock = Game.Start<UrTimeManager>(clock => Set(clock, "seasons", new[] { _spring, _summer }));
+            _clock = Game.Clock;
             _notifications.Clear();
             _dailyWeather = null;
             EventBus<WeatherUpdateEvent>.Subscribe(this);
@@ -88,27 +90,6 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(WaterInteraction.Rain, Is.EqualTo(0.35f));
         }
 
-        [Test]
-        public void LuaTimeQueriesAreDetachedReadOnlyAndReadTheCurrentSaveRoot()
-        {
-            var engine = Game.Lua.CreateEngine();
-            Assert.That(() => engine.EvaluateCondition("Time.GetCurrent().hour == 6"), Throws.Exception);
-            _clock.Start();
-            Assert.That(engine.EvaluateCondition("Time.GetCurrent().season == 'Spring' and Time.GetCurrent().dayOfSeason == 5"), Is.True);
-            engine.Execute("local now = Time.GetCurrent(); now.hour = 22");
-            Assert.That(Game.State.Time.hour, Is.EqualTo(6));
-            Assert.That(() => engine.EvaluateCondition("Time.SetTime(18, 30)"), Throws.Exception);
-            var replacement = new GameSaveData();
-            replacement.time.initialized = true;
-            replacement.time.hour = 15;
-            replacement.time.daysSinceStart = 3;
-            replacement.time.season = Core.TimeAndWeather.Season.Spring;
-            replacement.time.dayOfSeason = 7;
-            typeof(GameState).GetMethod("Restore", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(Game.State, new object[] { replacement });
-            Assert.That(engine.EvaluateCondition("Time.GetCurrent().hour == 15 and Time.GetCurrent().totalMinutes == 3780"), Is.True);
-        }
-
         [TestCase("setup")]
         [TestCase("sequence")]
         [TestCase("completion")]
@@ -134,47 +115,6 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_dailyWeather, Is.SameAs(_summer.weatherData.GetRandomItem()));
             Assert.That(_clockNotifications, Is.EqualTo(new long[] { 1800, 2550 }));
             Assert.That(_daylight, Is.EqualTo(Color.yellow));
-        }
-
-        [TestCase(-1, 0)]
-        [TestCase(24, 0)]
-        [TestCase(18.5, 0)]
-        [TestCase(18, 60)]
-        [TestCase(18, -1)]
-        [TestCase(18, 0.5)]
-        [TestCase(double.NaN, 0)]
-        [TestCase(18, double.PositiveInfinity)]
-        [TestCase(5, 59)]
-        [TestCase(23, 0)]
-        public void LuaTimeRejectsInvalidClockInputsWithoutChangingState(double hour, double minute)
-        {
-            _clock.Start();
-            var previous = Game.State.Time.TotalMinutes;
-            var api = Game.Inject(new TimeLuaApi());
-            Assert.That(() => api.SetTime(hour, minute), Throws.TypeOf<System.ArgumentOutOfRangeException>());
-            Assert.That(Game.State.Time.TotalMinutes, Is.EqualTo(previous));
-            Assert.That(_clockNotifications, Is.Empty);
-        }
-
-        [Test]
-        public void LuaTimeRejectsUninitializedAndTransitioningClocksAndNeverRewinds()
-        {
-            var api = Game.Inject(new TimeLuaApi());
-            Assert.That(() => api.StartNewDay(), Throws.InvalidOperationException);
-            _clock.Start();
-            Game.Lua.CreateEngine().Execute("Time.SetTime(18, 30)");
-            Assert.That(() => api.SetTime(18, 29), Throws.InvalidOperationException);
-            var previous = Game.State.Time.TotalMinutes;
-            Set(_clock, "_dayTransitionRoutine", new object[0].GetEnumerator());
-            try
-            {
-                Assert.That(() => api.SetTime(19, 0), Throws.InvalidOperationException);
-                Assert.That(() => api.StartNewDay(), Throws.InvalidOperationException);
-            }
-            finally { Set(_clock, "_dayTransitionRoutine", null); }
-            api.SetTime(18, 30);
-            Assert.That(Game.State.Time.TotalMinutes, Is.EqualTo(previous));
-            Assert.That(_clockNotifications, Has.Count.EqualTo(1));
         }
 
         [TestCase("setup")]
@@ -448,8 +388,7 @@ namespace Core.TimeAndWeather.Editor
         public void OnEvent(NewDayEvent change) => _dailyWeather = _weather.CurrentWeather;
         public void OnEvent(GameTimeChangedEvent change) => _clockNotifications.Add(Game.State.Time.TotalMinutes);
 
-        private IEnumerator Apply(WeatherData weather) => (IEnumerator)typeof(WeatherManager)
-            .GetMethod("ApplyWeather", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_weather, new object[] { weather });
+        private IEnumerator Apply(WeatherData weather) => (IEnumerator)Call(_weather, "ApplyWeather", weather);
 
         private void CompleteWeather(WeatherData weather)
         {
@@ -473,8 +412,6 @@ namespace Core.TimeAndWeather.Editor
             colorKeys = new[] { new GradientColorKey(color, 0), new GradientColorKey(color, 1) }
         };
 
-        private static void Set(object target, string field, object value) => target.GetType()
-            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 
     public sealed class WeatherSoundManagerProbe : MMSoundManager

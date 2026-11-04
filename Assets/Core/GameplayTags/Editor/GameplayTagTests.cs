@@ -6,6 +6,7 @@ using Core.Events;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.GameplayTags.Editor
 {
@@ -115,10 +116,9 @@ namespace Core.GameplayTags.Editor
             var skills = new CharacterSkills();
             var gameObject = new GameObject("Skill grant test character");
             gameObject.SetActive(false);
-            var character = Game.InjectObject(gameObject.AddComponent<GameCharacter>());
+            var character = Game.Add<GameCharacter>(gameObject);
             var tags = character.Tags;
-            typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(skills, new object[] { character });
+            Call(skills, "BindCharacter", character);
 
             var observer = new SkillTagObserver(skills, character);
             EventBus<SkillLevelChangedEvent>.Subscribe(observer);
@@ -129,26 +129,22 @@ namespace Core.GameplayTags.Editor
                 Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(2));
 
                 tags.SetSourceTags("boon:mercury", new[] { "State.Inspired" });
-                typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(skills, new object[] { character });
+                Call(skills, "UnbindCharacter", character);
                 Assert.That(tags.Has("State.Trained"), Is.False);
                 Assert.That(tags.Has("State.Inspired"), Is.True);
                 Assert.That(character.Attributes.PhysicalDefense, Is.Zero);
-                typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(skills, new object[] { character });
+                Call(skills, "BindCharacter", character);
                 Assert.That(tags.Has("State.Trained"), Is.True);
                 Assert.That(character.Attributes.PhysicalDefense, Is.EqualTo(2));
 
-                typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(skills, new object[] { Array.Empty<KeyValuePair<string, int>>() });
+                Call(skills, "RestoreLevels", Array.Empty<KeyValuePair<string, int>>());
                 Assert.That(observer.SawResetWithoutTag, Is.True);
                 Assert.That(character.Attributes.PhysicalDefense, Is.Zero);
             }
             finally
             {
                 EventBus<SkillLevelChangedEvent>.Unsubscribe(observer);
-                typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(skills, new object[] { character });
+                Call(skills, "UnbindCharacter", character);
                 UnityEngine.Object.DestroyImmediate(gameObject);
                 UnityEngine.Object.DestroyImmediate(definition);
             }

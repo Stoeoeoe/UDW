@@ -10,6 +10,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using TileData = Core.Tile.TileData;
+using static Core.Common.Editor.Reflect;
 
 namespace Character.Editor
 {
@@ -74,7 +75,7 @@ namespace Character.Editor
         public void CharacterSelectionFollowsLoadoutWithoutSelectionEventCopies()
         {
             var tool = Game.Asset<ToolData>();
-            typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(tool, "test:selection");
+            Set(tool, "_itemId", "test:selection");
             _character.MainInventory.AddItem(tool, 1);
             _character.Loadout.SelectItem(0);
             _character.MainInventory.MoveItem(0, 2);
@@ -145,7 +146,5 @@ namespace Character.Editor
             Assert.That(_character.Tiles.Current, Is.Null);
         }
 
-        private static void Set(object target, string name, object value) =>
-            target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 }

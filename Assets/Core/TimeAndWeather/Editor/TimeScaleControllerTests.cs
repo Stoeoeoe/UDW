@@ -6,6 +6,7 @@ using MoreMountains.Tools;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.TimeAndWeather.Editor
 {
@@ -175,7 +176,6 @@ namespace Core.TimeAndWeather.Editor
                 MMTimeScaleLerpModes.Duration, Linear, duration, true, Linear, duration);
 
         private void Advance(float deltaTime) =>
-            typeof(TimeScaleController).GetMethod("Advance", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_controller, new object[] { deltaTime });
+            Call(_controller, "Advance", deltaTime);
     }
 }

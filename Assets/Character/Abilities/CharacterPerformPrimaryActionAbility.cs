@@ -14,7 +14,7 @@ namespace Character.Abilities
     {
         [Inject] private Input.InputManager _inputManager;
 
-        public ActionExecutor ActionExecutor { get; private set; }
+        public ActionExecutor ActionExecutor { get; internal set; }
         [Inject] private PlayerInteractionContext _context;
         private bool _suppressPrimaryUntilRelease;
 

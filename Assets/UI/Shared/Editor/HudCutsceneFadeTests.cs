@@ -8,6 +8,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Core.Common.Editor.Reflect;
 
 namespace UI.Shared.Editor
 {
@@ -24,7 +25,7 @@ namespace UI.Shared.Editor
 
             Game.Root.SetActive(true);
             UIScreenPauseTests.CreateScreenServices(Game);
-            Game.Start<PlayerInteractionContext>();
+            Game.Get<PlayerInteractionContext>();
             _gui = Game.Get<UrGUIManager>();
             _gui.gameObject.SetActive(true);
             var document = _gui.GetComponent<UIDocument>();
@@ -34,11 +35,11 @@ namespace UI.Shared.Editor
             panel.transform.SetParent(Game.Root.transform, false);
             var fader = panel.GetComponent<ScreenFader>();
             GameTestFixture.Invoke(fader, "Awake");
-            typeof(UrGUIManager).GetField("screenFader", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_gui, fader);
+            Set(_gui, "screenFader", fader);
             var hotbar = new GameObject("Hotbar", typeof(CanvasGroup));
             hotbar.transform.SetParent(Game.Root.transform, false);
             _hotbar = hotbar.GetComponent<CanvasGroup>();
-            typeof(UrGUIManager).GetField("toolHud", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_gui, _hotbar);
+            Set(_gui, "toolHud", _hotbar);
             GameTestFixture.Invoke(_gui, "Start");
             _hud = document.rootVisualElement.Q("gameHud");
         }
@@ -109,14 +110,14 @@ namespace UI.Shared.Editor
         [Test]
         public void MissingHotbarFailsAtInitialization()
         {
-            typeof(UrGUIManager).GetField("toolHud", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_gui, null);
+            Set(_gui, "toolHud", null);
             Assert.That(() => GameTestFixture.Invoke(_gui, "Start"), Throws.TypeOf<InvalidOperationException>().With.Message.Contains("hotbar"));
         }
 
         [Test]
         public void AuthoredSystemsIncludeBothHudTargets()
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
             Assert.That(CutsceneHudSetup.Validate(root), Is.Empty);
         }
 

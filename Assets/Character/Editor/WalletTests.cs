@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using Core.Events;
 using NUnit.Framework;
+using static Core.Common.Editor.Reflect;
 
 namespace Character.Editor
 {
@@ -79,8 +80,7 @@ namespace Character.Editor
         public void BindingUsesTheLiveSavedStateWithoutCopyingTheBalance()
         {
             var state = new WalletState();
-            typeof(Wallet).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_wallet, new object[] { state });
+            Call(_wallet, "Bind", state);
             _wallet.Add(42);
             Assert.That(state.Balance, Is.EqualTo(42));
             Assert.That(_wallet.TrySpend(2), Is.True);

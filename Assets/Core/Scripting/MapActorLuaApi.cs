@@ -86,13 +86,13 @@ namespace Core.Scripting
         }
 
         /// <summary>Finds the characters and anchors in the loaded map and remembers their IDs.</summary>
-        internal static MapActorLuaApi BindCurrentMap(LevelManager level, MapManager maps, WorldObjectSpawner spawner)
+        internal static MapActorLuaApi BindCurrentMap(LevelManager level, MapManager maps, WorldObjectSpawner spawner, GameCharacter player)
         {
             if (!level.SceneReady)
                 throw new InvalidOperationException("Bind character actions after the location is SceneReady.");
             if (!maps.CurrentMap)
                 throw new InvalidOperationException("Character actions require the initialized Vulcanus map.");
-            return new MapActorLuaApi(maps.CurrentMap, MainCharacter.CurrentMainCharacter,
+            return new MapActorLuaApi(maps.CurrentMap, player,
                 spawner.SpawnedObjects);
         }
 

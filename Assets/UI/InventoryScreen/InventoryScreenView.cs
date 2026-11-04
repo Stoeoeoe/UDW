@@ -1,3 +1,4 @@
+using VContainer;
 using Core.Equipment;
 using Core.Events;
 using Core.Inventory;
@@ -9,14 +10,12 @@ namespace UI.InventoryScreen
     public abstract class InventoryScreenView : ManagedUIScreen,
         IEventListener<InventoryChangedEvent>, IEventListener<ItemSelectedEvent>
     {
-        public string TargetInventoryName = "MainInventory";
-        public string PlayerId = "Player1";
-        protected SlotInventory _targetInventory;
+        [Inject] protected CharacterManager _characters;
         protected int _selectedSlotIndex = -1;
         private bool _refreshPending;
 
-        public virtual SlotInventory TargetInventory => _targetInventory
-            ? _targetInventory : _targetInventory = SlotInventory.FindInventory(TargetInventoryName, PlayerId);
+        /// <summary>The registered player's main inventory; other characters' inventories are never shown here.</summary>
+        public virtual SlotInventory TargetInventory => _characters.MainCharacter ? _characters.MainCharacter.MainInventory : null;
         protected ItemStack _heldStack => TargetInventory ? TargetInventory.HeldStack : ItemStack.Empty;
         public bool IsOpen => IsManagedOpen;
         public bool IsHoldingItem => _heldStack.IsOccupied;

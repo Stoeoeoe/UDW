@@ -26,7 +26,7 @@ namespace Core.Catalogs.Editor
             var created = DefaultCatalogAssets.CreateMissingCatalogs(_folder);
             Assert.That(created.OfType<ItemCatalog>().Single(), Is.Not.Null);
             Assert.That(created.OfType<Character.Animations.EmoteCatalog>().Single(), Is.Not.Null);
-            Assert.That(created.OfType<Core.Spawning.SpawnableCatalog>(), Is.Empty, "Explicitly assigned catalogs have no default asset.");
+            Assert.That(created.OfType<Core.Spawning.SpawnableCatalog>().Single(), Is.Not.Null);
             Assert.That(DefaultCatalogAssets.CreateMissingCatalogs(_folder), Is.Empty);
             foreach (var catalog in created)
                 Assert.That(AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(catalog)), Is.SameAs(catalog));

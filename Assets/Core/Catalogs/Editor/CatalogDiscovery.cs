@@ -57,8 +57,6 @@ namespace Core.Catalogs.Editor
                 foreach (var catalog in FindCatalogs())
                     try { Refresh(catalog); }
                     catch (Exception exception) { Debug.LogError(exception.Message, catalog); }
-                try { Core.Dialogue.Vulcanus.Editor.DialogueDatabaseDiscovery.RefreshAll(); }
-                catch (Exception exception) { Debug.LogError(exception.Message); }
             };
         }
 
@@ -87,7 +85,6 @@ namespace Core.Catalogs.Editor
         {
             DefaultCatalogAssets.CreateMissingCatalogs();
             foreach (var catalog in FindCatalogs()) Refresh(catalog);
-            Core.Dialogue.Vulcanus.Editor.DialogueDatabaseDiscovery.RefreshAll();
         }
     }
 

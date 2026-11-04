@@ -12,10 +12,11 @@ using UnityEngine.Rendering;
 namespace Core.TimeAndWeather
 {
     /// <summary>Selects seasonal weather and owns its effects, post-processing and daylight presentation.</summary>
-    // Bind the initial location before UrTimeManager.Start rolls its first weather.
+    // Bind the initial location before GameClock.Start rolls its first weather.
     [DefaultExecutionOrder(-800)]
     public sealed class WeatherManager : Core.GameManager, ILocationLifecycle
     {
+        [Inject] private GameClock _clock;
         private SeasonData _season;
         private float _dayProgress;
 
@@ -42,6 +43,13 @@ namespace Core.TimeAndWeather
             _effectsRoot.SetParent(transform, false);
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            _clock.ConditionsRefreshed += RefreshConditions;
+            _clock.DaylightAdvanced += UpdateDaylight;
+        }
+
         public void OnLocationEnter(LocationData location)
         {
             _location = location;
@@ -52,7 +60,7 @@ namespace Core.TimeAndWeather
         public void OnLocationLeave(LocationData location) { }
 
         /// <summary>Rolls the current season's weather at startup, after load and before daily simulation updates.</summary>
-        internal void RefreshConditions(SeasonData season, float dayProgress)
+        private void RefreshConditions(SeasonData season, float dayProgress)
         {
             _season = season;
             _dayProgress = dayProgress;
@@ -60,7 +68,7 @@ namespace Core.TimeAndWeather
             RefreshDaylight();
         }
 
-        internal void UpdateDaylight(float dayProgress)
+        private void UpdateDaylight(float dayProgress)
         {
             _dayProgress = dayProgress;
             RefreshDaylight();
@@ -166,6 +174,8 @@ namespace Core.TimeAndWeather
 
         protected override void OnDisable()
         {
+            _clock.ConditionsRefreshed -= RefreshConditions;
+            _clock.DaylightAdvanced -= UpdateDaylight;
             ++_weatherUpdateVersion;
             StopAllCoroutines();
             base.OnDisable();

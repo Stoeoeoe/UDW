@@ -11,6 +11,7 @@ using NUnit.Framework;
 using Sirenix.Serialization;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Shops.Editor
 {
@@ -60,14 +61,14 @@ namespace Core.Shops.Editor
             _never = new ShopOffering { id = "never", item = _item, restock = ShopRestockMode.Never, minStock = 3, maxStock = 3 };
             _definition = ScriptableObject.CreateInstance<ShopDefinition>();
             Set(_definition, "offerings", new[] { _daily, _never });
-            _shop = Game.InjectObject(_root.AddComponent<Shop>());
+            _shop = Game.Add<Shop>(_root);
             Set(_shop, "shopId", "test:vendor");
             Set(_shop, "definition", _definition);
-            Invoke(_shop, "OnEnable");
-            _inventory = Game.InjectObject(_root.AddComponent<SlotInventory>());
+            Call(_shop, "OnEnable");
+            _inventory = Game.Add<SlotInventory>(_root);
             Set(_inventory, "_inventoryName", "ShopTestInventory");
             Set(_inventory, "_numberOfSlots", 1);
-            Invoke(_inventory, "Awake");
+            Call(_inventory, "Awake");
             _wallet = new Wallet();
             _wallet.Add(100);
             EventBus<ShopPurchaseEvent>.Subscribe(this);
@@ -82,7 +83,7 @@ namespace Core.Shops.Editor
             EventBus<ShopPurchaseEvent>.Unsubscribe(this);
             EventBus<ShopSaleEvent>.Unsubscribe(this);
             EventBus<ShopRestockedEvent>.Unsubscribe(this);
-            if (_shop) Invoke(_shop, "OnDisable");
+            if (_shop) Call(_shop, "OnDisable");
 
             Object.DestroyImmediate(_definition);
             Object.DestroyImmediate(_item);
@@ -94,8 +95,7 @@ namespace Core.Shops.Editor
         {
             _inventory.Bind(Game.State.Player.Inventory, id => id == _item.ItemId ? _item : null);
             _inventory.ApplyStartingLoadout(Array.Empty<ItemDefinition>());
-            typeof(Wallet).GetMethod("Bind", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_wallet, new object[] { Game.State.Player.Wallet });
+            Call(_wallet, "Bind", Game.State.Player.Wallet);
             _wallet.Add(100);
             Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
@@ -145,8 +145,8 @@ namespace Core.Shops.Editor
             Game.State.World.Set(_shop.Id, restored);
             var before = UnityEngine.Random.state;
             _shop.GetOfferings();
-            Invoke(_shop, "OnDisable");
-            Invoke(_shop, "OnEnable");
+            Call(_shop, "OnDisable");
+            Call(_shop, "OnEnable");
             _shop.GetOfferings();
             Assert.That(restored.offerings["daily"].quantity, Is.EqualTo(quantity));
             Assert.That(restored.offerings["daily"].available, Is.EqualTo(available));
@@ -159,7 +159,7 @@ namespace Core.Shops.Editor
             _daily.dailyAppearanceChance = 0;
             Assert.That(_shop.GetOfferings().Select(row => row.OfferingId), Is.EqualTo(new[] { "never" }));
             Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.Unavailable));
-            Invoke(_shop, "OnDisable");
+            Call(_shop, "OnDisable");
             _daily.dailyAppearanceChance = 1;
             Game.State.Time.daysSinceStart = 12;
             Assert.That(_shop.GetOfferings()[0].OfferingId, Is.EqualTo("daily"));
@@ -300,7 +300,7 @@ namespace Core.Shops.Editor
         [Test]
         public void VendorsSharingADefinitionKeepSeparateStockAndReorderingKeepsOfferingIdentity()
         {
-            var other = Game.InjectObject(_root.AddComponent<Shop>());
+            var other = Game.Add<Shop>(_root);
             Set(other, "shopId", "test:other-vendor");
             Set(other, "definition", _definition);
             _shop.GetOfferings();
@@ -340,19 +340,5 @@ namespace Core.Shops.Editor
             Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
         }
 
-        private static void Set(object target, string field, object value)
-        {
-            for (var type = target.GetType(); type != null; type = type.BaseType)
-            {
-                var info = type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic);
-                if (info == null) continue;
-                info.SetValue(target, value);
-                return;
-            }
-            throw new MissingFieldException(field);
-        }
-
-        private static void Invoke(object target, string method) => target.GetType()
-            .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, null);
     }
 }

@@ -1,26 +1,40 @@
-using VContainer;
 using System;
-using Character;
 using Core.Dialogue.Vulcanus;
+using Core.Events;
 using Core.Location;
 using Core.TimeAndWeather;
-using Core.Events;
 using Core.Tile;
 using Interaction;
 using Interaction.Pointer;
 using UI.Shared;
+using VContainer.Unity;
 
 namespace Core.Context
 {
-    public class PlayerInteractionContext : Core.GameManager,
-        ILocationLifecycle, IEventListener<PointerInteractableChangedEvent>, IEventListener<TileDataUnderPointerChangedEvent>
+    /// <summary>Builds the registered player's interaction snapshot once per frame and when screen state changes.</summary>
+    public sealed class PlayerInteractionContext : ILateTickable, IDisposable,
+        IEventListener<PointerInteractableChangedEvent>, IEventListener<TileDataUnderPointerChangedEvent>
     {
-        [Inject] private UrGUIManager _urGUIManager;
-
-        [Inject] private LocationContext _locationContext;
-        [Inject] private UrTimeManager _urTimeManager;
+        private readonly UrGUIManager _gui;
+        private readonly LocationContext _location;
+        private readonly CharacterManager _characters;
+        private readonly GameClock _clock;
+        private readonly VulcanusDialogueRunner _dialogue;
         private AbstractInteractable _hoveredInteractable;
         private TileData _hoveredTile;
+
+        public PlayerInteractionContext(UrGUIManager gui, LocationContext location, CharacterManager characters, GameClock clock,
+            VulcanusDialogueRunner dialogue)
+        {
+            _gui = gui;
+            _location = location;
+            _characters = characters;
+            _clock = clock;
+            _dialogue = dialogue;
+            this.Subscribe<PointerInteractableChangedEvent>();
+            this.Subscribe<TileDataUnderPointerChangedEvent>();
+            _gui.InteractionStateChanged += Refresh;
+        }
 
         public PlayerInteractionContextSnapshot CurrentSnapshot { get; private set; } =
             PlayerInteractionContextSnapshot.Empty();
@@ -28,39 +42,28 @@ namespace Core.Context
         public event Action<PlayerInteractionContextSnapshot> OnContextChanged;
         public event Action<InteractionMode> OnModeChanged;
 
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-            this.Subscribe<PointerInteractableChangedEvent>();
-            this.Subscribe<TileDataUnderPointerChangedEvent>();
-            _urGUIManager.InteractionStateChanged += Refresh;
-        }
-        protected override void OnDisable()
-        {
-            _urGUIManager.InteractionStateChanged -= Refresh;
-            this.Unsubscribe<PointerInteractableChangedEvent>();
-            this.Unsubscribe<TileDataUnderPointerChangedEvent>();
-            base.OnDisable();
-        }
         public void OnEvent(PointerInteractableChangedEvent change) => _hoveredInteractable = change.Interactable;
         public void OnEvent(TileDataUnderPointerChangedEvent change) => _hoveredTile = change.TileData;
 
-        public void OnLocationEnter(LocationData location) => this.enabled = true;
-        public void OnLocationLeave(LocationData location) { }
+        public void LateTick() => Refresh();
 
-        private void Start() => UpdateContextSnapshot();
-
-        public void Refresh() => UpdateContextSnapshot();
-
-        private void UpdateContextSnapshot()
+        public void Dispose()
         {
-            var character = MainCharacter.CurrentMainCharacter;
-            // e.g. during scene transitions, the character reference may be null. In that case, reset to an empty snapshot
-            // instead of null so listeners can handle the cleared state safely.
+            _gui.InteractionStateChanged -= Refresh;
+            this.Unsubscribe<PointerInteractableChangedEvent>();
+            this.Unsubscribe<TileDataUnderPointerChangedEvent>();
+        }
+
+        /// <summary>Rebuilds the snapshot now, notifying listeners only when it differs from the previous one.</summary>
+        public void Refresh()
+        {
+            var character = _characters.MainCharacter;
+            // During scene transitions there is no registered player. Reset to an empty snapshot rather than null
+            // so listeners can handle the cleared state safely.
             var snapshot = !character
-                ? PlayerInteractionContextSnapshot.Empty() with { WorldInteractionBlocked = _urGUIManager.IsWorldInteractionBlocked }
+                ? PlayerInteractionContextSnapshot.Empty() with { WorldInteractionBlocked = _gui.IsWorldInteractionBlocked }
                 : PlayerInteractionContextSnapshot.Create(
-                    _locationContext.SceneReady,
+                    _location.SceneReady,
                     character,
                     character.CurrentInteractable,
                     _hoveredTile,
@@ -70,9 +73,9 @@ namespace Core.Context
                     character.CurrentlyHeldItem,
                     character.ConditionState,
                     character.MovementState,
-                    ResolveCurrentConversation(),
-                    _urTimeManager.CurrentTime,
-                    _urGUIManager.IsWorldInteractionBlocked
+                    _dialogue.CurrentDialogueId,
+                    _clock.CurrentTime,
+                    _gui.IsWorldInteractionBlocked
                 );
 
             if (CurrentSnapshot == snapshot)
@@ -81,23 +84,9 @@ namespace Core.Context
             var modeChanged = snapshot.Mode != CurrentSnapshot.Mode;
             CurrentSnapshot = snapshot;
             if (modeChanged)
-            {
                 OnModeChanged?.Invoke(snapshot.Mode);
-            }
 
             OnContextChanged?.Invoke(CurrentSnapshot);
-        }
-
-        private void LateUpdate()
-        {
-            UpdateContextSnapshot();
-        }
-
-        private static string ResolveCurrentConversation()
-        {
-            return VulcanusDialogueRunner.Instance != null
-                ? VulcanusDialogueRunner.Instance.CurrentDialogueId
-                : null;
         }
     }
 }

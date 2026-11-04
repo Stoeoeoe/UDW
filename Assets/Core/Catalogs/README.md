@@ -17,8 +17,8 @@ Resources authoring folders, and spawnables search `Assets/Content/Spawnables`.
 catalog assets when absent and returns only those it created. Existing assets
 and enabled selections are not overwritten. **Tools > Catalogs > Create Missing
 Catalogs** reports the result and schedules discovery separately. The same API
-is used by automatic initialization. Spawnables keep their explicitly assigned
-catalog asset; there is no inventory-specific catalog builder.
+is used by automatic initialization. The spawnable catalog is a default
+Resources catalog like the others; there is no inventory-specific catalog builder.
 
 Open **Tools > Catalogs > Browse** to select a catalog, search entries, inspect definitions,
 toggle Enabled, or refresh discovery. Existing choices are preserved by asset
@@ -76,9 +76,9 @@ older artifact. Map/actor/dialogue references are bound before playback.
 ## Specialized catalogs
 
 Do not force relationship data into the flat definition base. Vulcanus world
-catalogs retain map/location/prefab bindings, and dialogue databases retain their
-project association. Both now share `IdIndex.FirstWins`, explicitly selecting
-case-insensitive comparison and preserving their existing first-binding-wins
+catalogs retain map/location/prefab bindings. Dialogues use the discovered
+`DialogueCatalog` with case-insensitive IDs; each dialogue asset records its own project. The
+world catalogs share `IdIndex.FirstWins`, preserving their first-binding-wins
 policy. The helper deliberately does not validate definitions.
 
 `CatalogAssetDiscovery.Find(folder, type)` is a separate editor-only helper for

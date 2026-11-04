@@ -16,6 +16,7 @@ using Plants;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Tile.Editor
 {
@@ -250,9 +251,8 @@ namespace Core.Tile.Editor
         {
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
             Set(_map, "_terrainDataByType", new Dictionary<TerrainType, TerrainData>());
-            var error = Assert.Throws<TargetInvocationException>(BuildCache);
-            Assert.That(error.InnerException, Is.TypeOf<System.InvalidOperationException>());
-            Assert.That(error.InnerException.Message, Does.Contain("Grass"));
+            var error = Assert.Throws<System.InvalidOperationException>(BuildCache);
+            Assert.That(error.Message, Does.Contain("Grass"));
         }
 
         [Test]
@@ -430,7 +430,7 @@ namespace Core.Tile.Editor
             Game.State.World.Set(_location.id, "farmland:-2,3", new FarmlandState { plowed = true, irrigated = true });
             Game.State.World.Set(_location.id, "farmland:99,99", new FarmlandState { plowed = true });
             Game.State.World.Set("other:farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
-            Invoke(_map, "RestoreFarmlandState");
+            Call(_map, "RestoreFarmlandState");
             var tile = _map.GetTileDataAtCoordinates(new Vector2Int(-2, 3));
             Assert.That(tile.FarmlandData.IsPlowed && tile.FarmlandData.IsIrrigated, Is.True);
             Assert.That(_plowed.GetTile(new Vector3Int(-2, 3)), Is.SameAs(_plowedTile));
@@ -446,7 +446,7 @@ namespace Core.Tile.Editor
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
             BuildCache();
             Game.State.World.Set(_location.id, "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
-            Invoke(_map, "RestoreFarmlandState");
+            Call(_map, "RestoreFarmlandState");
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData, Is.Null);
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.Null);
             Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.Null);
@@ -458,7 +458,7 @@ namespace Core.Tile.Editor
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
             BuildCache();
             Game.State.World.Set(_location.id, "farmland:0,0", new FarmlandState { irrigated = true });
-            Invoke(_map, "RestoreFarmlandState");
+            Call(_map, "RestoreFarmlandState");
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData.IsIrrigated, Is.False);
             Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.Null);
         }
@@ -484,8 +484,7 @@ namespace Core.Tile.Editor
             var data = Asset<PlantData>();
             TestConfiguration.Set(data, "plantId", "test:crop");
             var produce = Asset<ProduceItem>();
-            typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(produce, "test:produce");
+            Set(produce, "_itemId", "test:produce");
             Set(data, "_harvestItem", produce);
             var seedStage = new global::Items.Plants.GrowthStage();
             Set(seedStage, "_representation", new Core.Common.SpriteOrPrefab
@@ -563,10 +562,6 @@ namespace Core.Tile.Editor
             return asset;
         }
 
-        private void BuildCache() => Invoke(_map, "BuildTileDataCache");
-        private static void Invoke(object target, string name) => target.GetType()
-            .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, null);
-        private static void Set(object target, string name, object value) => target.GetType()
-            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
+        private void BuildCache() => Call(_map, "BuildTileDataCache");
     }
 }

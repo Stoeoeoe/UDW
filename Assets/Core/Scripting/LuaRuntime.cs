@@ -20,13 +20,14 @@ namespace Core.Scripting
         public LuaRuntime(IObjectResolver container) => _container = container;
         internal LevelManager Level => _container.Resolve<LevelManager>();
         internal MapManager Maps => _container.Resolve<MapManager>();
+        internal CharacterManager Characters => _container.Resolve<CharacterManager>();
 
         internal T Inject<T>(T api) where T : class { _container.Inject(api); return api; }
 
         public VulcanusLuaEngine CreateEngine(CutsceneVariables variables = null) => new(
             new LuaBindingRegistry(VulcanusLuaEngine.DefaultModules.Select(module => Inject(module.Create())).ToArray()) { Runtime = this }, variables);
 
-        public MapActorLuaApi CreateActors() => Inject(MapActorLuaApi.BindCurrentMap(Level, Maps, _container.Resolve<WorldObjectSpawner>()));
+        public MapActorLuaApi CreateActors() => Inject(MapActorLuaApi.BindCurrentMap(Level, Maps, _container.Resolve<WorldObjectSpawner>(), Characters.MainCharacter));
         internal AudioLuaApi CreateAudio() => new(MMSoundManager.Current, Maps.CurrentMap, _container.Resolve<SoundCatalog>());
         internal WeatherLuaApi CreateWeather() => new(_container.Resolve<WeatherManager>(), _container.Resolve<WeatherCatalog>());
         internal CameraLuaApi CreateCamera() => new(_container.Resolve<CameraManager>());

@@ -16,6 +16,7 @@ namespace Core.Scripting
         private Collider2D _area;
         [Inject] private LevelManager _level;
         [Inject] private CutsceneRunner _runner;
+        [Inject] private CharacterManager _characters;
         private readonly HashSet<Collider2D> _playerColliders = new();
         private bool _attempted;
         private bool _leftDuringCutscene;
@@ -70,9 +71,9 @@ namespace Core.Scripting
                 if (IsPlayer(collider)) _playerColliders.Add(collider);
         }
 
-        private static bool IsPlayer(Collider2D collider) =>
-            !collider.isTrigger && MainCharacter.CurrentMainCharacter &&
-            collider.GetComponentInParent<MainCharacter>() == MainCharacter.CurrentMainCharacter;
+        private bool IsPlayer(Collider2D collider) =>
+            !collider.isTrigger && _characters.MainCharacter &&
+            collider.GetComponentInParent<MainCharacter>() == _characters.MainCharacter;
 
         private void OnTriggerEnter2D(Collider2D collider)
         {

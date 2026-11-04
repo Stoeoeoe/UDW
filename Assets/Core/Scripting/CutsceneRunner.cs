@@ -22,6 +22,8 @@ namespace Core.Scripting
     public sealed class CutsceneRunner : Core.GameManager, IEventListener<DayTransitionStarted>
     {
         [Inject] private LuaRuntime _luaRuntime;
+        [Inject] private CharacterManager _characters;
+        [Inject] private VulcanusDialogueRunner _dialogue;
         [Inject] private GameState _gameState;
 
         [Inject] private Input.InputManager _inputManager;
@@ -84,12 +86,12 @@ namespace Core.Scripting
             run = null;
             if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || _gui.HasOpenScreens) return false;
             if (_gameState.Story.CompletedCutscenes.Contains(definition.CutsceneId)) return false;
-            var player = MainCharacter.CurrentMainCharacter;
+            var player = _characters.MainCharacter;
             if (!player || !player.IsRuntimeInitialized) throw new InvalidOperationException("Cutscenes require the initialized player.");
             if (player.IsControlBlocked || player.Controller.IsMovementOwned) return false;
 
             // Resolve everything before acquiring control. A bad reference cannot leave half a scene staged.
-            var bindings = CutsceneBindings.BindCurrentMap(definition, VulcanusDialogueRunner.Instance, _luaRuntime,
+            var bindings = CutsceneBindings.BindCurrentMap(definition, _dialogue, _luaRuntime,
                 out var characters);
             var placements = CutscenePlacement.Prepare(definition, bindings, characters);
             if (placements.Any(placement => placement.Character.IsControlBlocked || placement.Character.Controller.IsMovementOwned)) return false;

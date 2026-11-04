@@ -21,6 +21,7 @@ using UnityEngine.TestTools;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 using LocationType = Core.Common.LocationType;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Tile.Editor
 {
@@ -123,12 +124,6 @@ namespace Core.Tile.Editor
         [TearDown]
         public void TearDown()
         {
-            if (_musicFixturePath != null)
-            {
-                AssetDatabase.DeleteAsset(Path.GetDirectoryName(_musicFixturePath));
-                _musicFixturePath = null;
-                CatalogDiscovery.Refresh(Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
-            }
             foreach (var view in _views) if (view) Object.DestroyImmediate(view);
             _views.Clear();
             if (_scenePath != null)
@@ -145,6 +140,13 @@ namespace Core.Tile.Editor
                 Assert.That(Path.GetFullPath(Absolute(_root)), Does.StartWith(Path.GetFullPath(Application.dataPath) + Path.DirectorySeparatorChar));
                 Assert.That(Path.GetFileName(_root), Does.StartWith("__MapImportTests_"));
                 AssetDatabase.DeleteAsset(_root);
+            }
+            // The imported maps depend on the cue, so they are removed first; otherwise they reimport against a missing cue.
+            if (_musicFixturePath != null)
+            {
+                AssetDatabase.DeleteAsset(Path.GetDirectoryName(_musicFixturePath));
+                _musicFixturePath = null;
+                CatalogDiscovery.Refresh(Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
             }
         }
 
@@ -444,19 +446,16 @@ namespace Core.Tile.Editor
             Assert.That(loadedScene.Invoke(null, new object[] { scene.name }), Is.EqualTo(scene));
             root.SetActive(false);
             _views.Add(root);
-            var manager = Game.InjectObject(root.AddComponent<LevelManager>());
-            typeof(LevelManager).GetField("_locationByScenePath", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(manager, new Dictionary<string, LocationData>(StringComparer.OrdinalIgnoreCase) { [location.scenePath] = location });
-            var resolved = typeof(LevelManager).GetMethod("GetLocationForScene", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(manager, new object[] { scene });
+            var manager = Game.Add<LevelManager>(root);
+            Set(manager, "_locationByScenePath", new Dictionary<string, LocationData>(StringComparer.OrdinalIgnoreCase) { [location.scenePath] = location });
+            var resolved = Call(manager, "GetLocationForScene", scene);
             Assert.That(resolved, Is.SameAs(location));
-            Assert.That(typeof(LevelManager).GetMethod("ResolveInitialLocation", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(manager, null), Is.SameAs(location));
+            Assert.That(Call(manager, "ResolveInitialLocation"), Is.SameAs(location));
 
             var listenerRoot = new GameObject("Inactive location listener");
             listenerRoot.SetActive(false);
             _views.Add(listenerRoot);
-            var listener = Game.InjectObject(listenerRoot.AddComponent<WorldObjectSpawner>());
+            var listener = Game.Add<LocationListenerProbe>(listenerRoot);
             SceneManager.MoveGameObjectToScene(listenerRoot, scene);
             var canReceive = typeof(LevelManager).GetMethod("CanReceiveLocation", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(canReceive.Invoke(manager, new object[] { listener, location }), Is.EqualTo(true));
@@ -534,8 +533,8 @@ namespace Core.Tile.Editor
             var owner = new GameObject("Location lookup");
             owner.SetActive(false);
             _views.Add(owner);
-            var manager = Game.InjectObject(owner.AddComponent<LevelManager>());
-            typeof(LevelManager).GetField("_locations", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(manager, catalog);
+            var manager = Game.Add<LevelManager>(owner);
+            Set(manager, "_locations", catalog);
             Assert.That(manager.GetLocationDataById("TEST:MAP"), Is.SameAs(ImportedLocation()));
 
             _mapJson["id"] = "test:renamed";
@@ -670,5 +669,11 @@ namespace Core.Tile.Editor
         }
 
         private static string Absolute(string path) => VulcanusImportHelpers.ToAbsolutePath(path);
+
+        private sealed class LocationListenerProbe : MonoBehaviour, Core.Location.ILocationLifecycle
+        {
+            public void OnLocationEnter(Core.Location.LocationData location) { }
+            public void OnLocationLeave(Core.Location.LocationData location) { }
+        }
     }
 }

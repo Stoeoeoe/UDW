@@ -112,7 +112,7 @@ namespace Core.Location
             _mapManager.InitializeForLocation(locationData);
 
             // Spawn and place character
-            var character = SpawnOrFindPlayer();
+            var character = GetOrSpawnPlayer();
             if (placeCharacter == null) PlaceCharacterAtSpawn(character, entryKey, facingDirection);
 
             // Ensure character runtime initialization
@@ -169,7 +169,7 @@ namespace Core.Location
             if (string.IsNullOrWhiteSpace(entryKey))
                 return false;
 
-            var character = SpawnOrFindPlayer();
+            var character = GetOrSpawnPlayer();
             if (!character)
                 return false;
 
@@ -231,7 +231,7 @@ namespace Core.Location
                 throw new InvalidOperationException("Cannot load a location while the current location is not ready or a transition is running.");
             _transitionInProgress = true;
             SceneReady = false;
-            var character = MainCharacter.CurrentMainCharacter;
+            var character = _characterManager.MainCharacter;
             try
             {
                 // Cancel staging before any listener captures departing world-object positions.
@@ -276,16 +276,13 @@ namespace Core.Location
 
         // - Spawn -------------------------------------------------------------------
 
-        MainCharacter SpawnOrFindPlayer()
+        /// <summary>The player is spawned once from the prefab and registered immediately, before location listeners run.</summary>
+        MainCharacter GetOrSpawnPlayer()
         {
             var character = _characterManager.MainCharacter;
-            if (!character)
-            {
-                character = FindFirstObjectByType<MainCharacter>();
-                if (!character)
-                    character = _resolver.Instantiate(_mainCharacterPrefab);
-            }
-
+            if (character) return character;
+            character = _resolver.Instantiate(_mainCharacterPrefab);
+            _characterManager.RegisterMainCharacter(character);
             return character;
         }
 

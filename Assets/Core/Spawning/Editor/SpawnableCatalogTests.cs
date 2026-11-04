@@ -5,6 +5,7 @@ using Core.Catalogs.Editor;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Spawning.Editor
 {
@@ -53,8 +54,7 @@ namespace Core.Spawning.Editor
             var root = new GameObject("Test prefab");
             root.transform.SetParent(_holder.transform);
             var prefab = root.AddComponent<SpawnedObject>();
-            typeof(SpawnedObject).GetField("prefabId", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(prefab, id);
+            Set(prefab, "prefabId", id);
             return prefab;
         }
 

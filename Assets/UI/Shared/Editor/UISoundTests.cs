@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Audio;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace UI.Shared.Editor
 {
@@ -35,7 +36,7 @@ namespace UI.Shared.Editor
             _root.SetActive(true);
             UIScreenPauseTests.CreateScreenServices(Game);
             _manager = Game.Start<UrGUIManager>(manager => manager.gameObject.SetActive(true));
-            _screen = Game.InjectObject(_root.AddComponent<PauseTestScreen>());
+            _screen = Game.Add<PauseTestScreen>(_root);
             _clip = AudioClip.Create("UI cue", 32, 1, 44100, false);
             _assets.Add(_clip);
             MMSoundManagerSoundPlayEvent.Register(Capture);
@@ -60,7 +61,7 @@ namespace UI.Shared.Editor
         private UISoundProfile Profile(params UISoundProfile.Sound[] entries)
         {
             var profile = ScriptableObject.CreateInstance<UISoundProfile>();
-            typeof(UISoundProfile).GetField("sounds", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(profile, entries);
+            Set(profile, "sounds", entries);
             _assets.Add(profile);
             return profile;
         }

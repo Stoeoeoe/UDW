@@ -9,6 +9,7 @@ namespace Core.Context
     public class PlayerInteractionContextDebugView : MonoBehaviour
     {
         [Inject] private PlayerInteractionContext _playerInteractionContext;
+        [Inject] private CharacterManager _characters;
 
         private bool _visible;
 
@@ -65,8 +66,9 @@ namespace Core.Context
             }
             
             // Action state
-            DrawRow("CurrentAction", MainCharacter.CurrentMainCharacter.PerformPrimaryAction.ActionExecutor.CurrentAction?.ActionName);
-            DrawRow("ActionState", MainCharacter.CurrentMainCharacter.PerformPrimaryAction.ActionExecutor.State);
+            var executor = _characters.MainCharacter.PerformPrimaryAction.ActionExecutor;
+            DrawRow("CurrentAction", executor.CurrentAction?.ActionName);
+            DrawRow("ActionState", executor.State);
 
             GUILayout.EndArea();
         }

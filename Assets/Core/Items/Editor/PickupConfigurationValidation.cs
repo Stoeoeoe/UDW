@@ -25,7 +25,7 @@ namespace Core.Items.Editor
                         !float.IsFinite(entry.weight) || entry.weight < 0f) ||
                     !float.IsFinite(entries.Sum(entry => entry.weight)) || entries.Sum(entry => entry.weight) <= 0f)
                     throw new InvalidOperationException($"Foraging spot '{spot.name}' needs forage items with nonnegative weights and a positive finite total.");
-                var catalog = AssetDatabase.LoadAssetAtPath<Core.Spawning.SpawnableCatalog>("Assets/Content/SpawnableCatalog.asset");
+                var catalog = AssetDatabase.LoadAssetAtPath<Core.Spawning.SpawnableCatalog>("Assets/Resources/SpawnableCatalog.asset");
                 foreach (var entry in entries)
                     if (!catalog.Prefabs.Contains(entry.item))
                         throw new InvalidOperationException($"Foraging spot '{spot.name}' references unregistered forage '{entry.item.name}'.");
@@ -47,7 +47,7 @@ namespace Core.Items.Editor
             item.RequireValidConfiguration();
             if (Resources.Load<ItemCatalog>(ItemCatalog.ResourceName).Find(item.ItemId) != item)
                 throw new InvalidOperationException($"Forage '{item.name}' must be enabled in the item catalog.");
-            AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab")
+            AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath)
                 .GetComponent<Core.SystemRoot>().Items.RequirePickupSound(item.PickupSound);
         }
 

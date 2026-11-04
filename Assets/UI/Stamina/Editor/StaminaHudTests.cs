@@ -13,6 +13,7 @@ using UnityEngine.UIElements;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using static Core.Common.Editor.Reflect;
 
 namespace UI.Stamina.Editor
 {
@@ -41,7 +42,7 @@ namespace UI.Stamina.Editor
             Set(_tool, "_showTileHighlighterOnPrepare", false);
             var template = new GameObject("Test tool action");
             template.transform.SetParent(Game.Root.transform);
-            var action = Game.InjectObject(template.AddComponent<StaminaTestToolAction>());
+            var action = Game.Add<StaminaTestToolAction>(template);
             typeof(ToolAction).GetProperty(nameof(ToolAction.ToolData)).SetValue(action, _tool);
             Set(_character.ToolActionRegistry, "toolActionPrefabs", new List<ToolAction> { action });
             _character.EnsureRuntimeInitialized();
@@ -61,7 +62,7 @@ namespace UI.Stamina.Editor
             var document = hud.AddComponent<UIDocument>();
             document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
-            _presenter = Game.InjectObject(hud.AddComponent<StaminaHudPresenter>());
+            _presenter = Game.Add<StaminaHudPresenter>(hud);
             hud.SetActive(true);
             GameTestFixture.Invoke(_presenter, "OnEnable");
             _meter = document.rootVisualElement.Q<ProgressBar>("staminaMeter");
@@ -203,8 +204,6 @@ namespace UI.Stamina.Editor
             _character.Tiles.EnterLocation(map);
         }
 
-        private static void Set(object target, string field, object value) => target.GetType()
-            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 
     /// <summary>A deterministic tool effect so the test exercises resource spending without changing terrain.</summary>

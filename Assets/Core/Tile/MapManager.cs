@@ -222,11 +222,6 @@ namespace Core.Tile
         public Vector2Int GetCurrentTileCoordinates(GameCharacter character) =>
             WorldToTileCoordinates(character.ToolInteractionAnchor.position);
 
-        public Vector2Int GetCurrentMainCharacterTileCoordinates()
-        {
-            return GetCurrentTileCoordinates(MainCharacter.CurrentMainCharacter);
-        }
-
         public Vector2Int GetInteractionOriginTile(GameCharacter character) =>
             GetInteractionOriginTile(character.ToolInteractionAnchor.position, character.Orientation.FacingDirection);
 

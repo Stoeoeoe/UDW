@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System.Reflection;
 using Core.TimeAndWeather;
 using UnityEngine;
+using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
@@ -38,8 +39,7 @@ namespace Plants.Editor
         public void DryDaysNeverGrowAndWiltExactlyOnTheThreshold(int threshold)
         {
             var state = new PlantState("test:crop") { daysPassedSincePlanting = 2 };
-            typeof(PlantData).GetField("_daysWithoutWaterUntilWilt", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_definition, threshold);
+            Set(_definition, "_daysWithoutWaterUntilWilt", threshold);
             for (var day = 1; day <= threshold; day++)
             {
                 state.AdvanceDay(_definition, Season.Spring, wasWatered: false);

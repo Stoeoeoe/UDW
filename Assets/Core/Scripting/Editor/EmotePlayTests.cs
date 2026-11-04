@@ -1,3 +1,4 @@
+using Core.Common.Editor;
 using Core.Scripting;
 using VContainer;
 using System.Collections;
@@ -13,6 +14,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
@@ -26,7 +28,7 @@ namespace Core.Scripting.Editor
                 EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
-            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
+            while (!LiveGame.Get<LevelManager>() || !LiveGame.Get<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline));
                 yield return null;
@@ -50,13 +52,13 @@ namespace Core.Scripting.Editor
             var catalog = Resources.Load<EmoteCatalog>(EmoteCatalog.ResourceName);
             var previous = catalog.Entries.Select(entry => entry.Definition).ToArray();
             catalog.Synchronize(previous.Append(emote));
-            var actor = MainCharacter.CurrentMainCharacter;
+            var actor = LiveGame.Player;
             try
             {
-                var characters = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>().CreateActors();
+                var characters = LiveGame.Get<LuaRuntime>().CreateActors();
                 Assert.That(() => characters.ValidateEmote("player", "fixture:unknown"), Throws.InvalidOperationException);
                 LogAssert.Expect(LogType.Warning, new Regex("Emote 'fixture:emote'.*has no animation"));
-                using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() },
+                using var session = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters) { Runtime = LiveGame.Get<LuaRuntime>() },
                     "Characters.Emote('player', 'fixture:emote')", "fixture:emote");
                 session.Tick(0);
                 var callout = actor.Graphics.Find("Emote callout").gameObject;
@@ -85,7 +87,7 @@ namespace Core.Scripting.Editor
                 yield return null;
                 Assert.That(cancelledCallout == null, Is.True);
 
-                using var overridden = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters) { Runtime = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LuaRuntime>() },
+                using var overridden = VulcanusLuaEngine.StartSession(new LuaBindingRegistry(characters) { Runtime = LiveGame.Get<LuaRuntime>() },
                     "Characters.Emote('player', 'fixture:emote', 0.25, 0)", "fixture:emote-override");
                 overridden.Tick(0);
                 overridden.Tick(0.125f);
@@ -106,16 +108,5 @@ namespace Core.Scripting.Editor
         [UnityTearDown]
         public IEnumerator TearDown() { yield return new ExitPlayMode(); }
 
-        private static void Set(object target, string name, object value)
-        {
-            for (var type = target.GetType(); type != null; type = type.BaseType)
-            {
-                var field = type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (field == null) continue;
-                field.SetValue(target, value);
-                return;
-            }
-            throw new System.MissingFieldException(name);
-        }
     }
 }

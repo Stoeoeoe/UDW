@@ -1,10 +1,12 @@
 using Character;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Tile
 {
     public class TileDebugger : MonoBehaviour
     {
+        [Inject] private CharacterManager _characters;
         [SerializeField] private bool showCurrentTileInfos = true;
 
         [SerializeField] private int fontSize = 14;
@@ -17,9 +19,10 @@ namespace Core.Tile
         private void OnGUI()
         {
             if (!showCurrentTileInfos) return;
-            if (!MainCharacter.CurrentMainCharacter) return;
+            var player = _characters.MainCharacter;
+            if (!player) return;
 
-            var currentTile = MainCharacter.CurrentMainCharacter.Tiles.Current;
+            var currentTile = player.Tiles.Current;
 
             // Prepare rect anchored to top-right
             var rect = new Rect(Screen.width - labelWidth - rightPadding, topPadding, labelWidth, labelHeight);

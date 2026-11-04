@@ -23,6 +23,7 @@ namespace UI.Shared
     {
         [Inject] private Input.InputManager _inputManager;
         [Inject] private CharacterManager _characterManager;
+        [Inject] private GameClock _clock;
 
         private MainCharacter _mainCharacter;
         // Saved with each open screen so its callbacks and original sorting order can be restored.
@@ -36,9 +37,8 @@ namespace UI.Shared
         }
 
         private readonly Dictionary<ManagedUIScreen, OpenScreenState> _openScreens = new();
-        // Counts let multiple open screens own a pause independently.
+        // Counts let multiple open screens own a character pause independently; clock pauses are owned per screen.
         private readonly Dictionary<GameCharacter, int> _characterPauses = new();
-        private int _clockPauses;
         [NonSerialized] private bool _cutsceneActive;
         // The last screen in the list is the only one that receives input.
         private readonly List<ManagedUIScreen> _screenOrder = new();
@@ -64,13 +64,15 @@ namespace UI.Shared
         /// <summary>Whether any managed screen is open.</summary>
         public bool HasOpenScreens => _openScreens.Count > 0;
 
-        /// <summary>Whether an open screen currently pauses the game clock.</summary>
-        public bool IsGameClockPaused => _clockPauses > 0 || _cutsceneActive;
+        /// <summary>Whether an open screen or cutscene currently pauses the game clock.</summary>
+        public bool IsGameClockPaused => _clock.IsPaused;
         public bool IsWorldInteractionBlocked => HasOpenScreens || _cutsceneActive;
 
         internal void SetCutsceneActive(bool active, float hudFadeSeconds)
         {
             _cutsceneActive = active;
+            if (active) _clock.Pause(this);
+            else _clock.Resume(this);
             _hudTween?.Kill();
             _hudTween = null;
             toolHud.interactable = toolHud.blocksRaycasts = !active;
@@ -219,7 +221,7 @@ namespace UI.Shared
             // Character-pausing screens default to the main character when no target is supplied.
             var state = new OpenScreenState { Hide = hide, PauseMode = pauseMode,
                 Character = (pauseMode & ScreenPauseMode.Character) == 0 ? null :
-                    character ? character : MainCharacter.CurrentMainCharacter };
+                    character ? character : _characterManager.MainCharacter };
             state.Document = screen.GetComponent<UIDocument>();
             state.OriginalSortingOrder = wasOpen ? previous.OriginalSortingOrder : state.Document ? state.Document.sortingOrder : 0;
 
@@ -311,7 +313,7 @@ namespace UI.Shared
 
         private void AddPause(OpenScreenState state)
         {
-            if ((state.PauseMode & ScreenPauseMode.GameClock) != 0) _clockPauses++;
+            if ((state.PauseMode & ScreenPauseMode.GameClock) != 0) _clock.Pause(state);
             if ((state.PauseMode & ScreenPauseMode.Character) == 0 || !state.Character) return;
             _characterPauses.TryGetValue(state.Character, out var count);
             _characterPauses[state.Character] = count + 1;
@@ -321,7 +323,7 @@ namespace UI.Shared
 
         private void RemovePause(OpenScreenState state)
         {
-            if ((state.PauseMode & ScreenPauseMode.GameClock) != 0) _clockPauses--;
+            if ((state.PauseMode & ScreenPauseMode.GameClock) != 0) _clock.Resume(state);
             if ((state.PauseMode & ScreenPauseMode.Character) == 0 || ReferenceEquals(state.Character, null)) return;
             if (!_characterPauses.TryGetValue(state.Character, out var count)) return;
             if (count == 1) _characterPauses.Remove(state.Character);
@@ -335,7 +337,7 @@ namespace UI.Shared
             _openScreens.Clear();
             _screenOrder.Clear();
             _characterPauses.Clear();
-            _clockPauses = 0;
+            foreach (var state in screens) _clock.Resume(state);
             _inputManager.SetScreenMap(null);
             InteractionStateChanged?.Invoke();
             foreach (var state in screens)

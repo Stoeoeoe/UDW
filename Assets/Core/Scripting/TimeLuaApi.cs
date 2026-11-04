@@ -23,7 +23,7 @@ namespace Core.Scripting
     {
         [Inject] private GameState _gameState;
 
-        [Inject] private UrTimeManager _urTimeManager;
+        [Inject] private GameClock _clock;
 
         // Resolve live state on every call: loading replaces the save root.
         [LuaCall]
@@ -73,6 +73,6 @@ namespace Core.Scripting
         }
 
         // This is the Lua boundary; default modules are also inspected without a live scene.
-        private UrTimeManager Clock => _urTimeManager;
+        private GameClock Clock => _clock;
     }
 }

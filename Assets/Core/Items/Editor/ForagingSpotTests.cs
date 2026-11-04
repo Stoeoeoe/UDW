@@ -11,6 +11,7 @@ using UnityEditor;
 using UnityEngine;
 using Util;
 using SerializationUtility = Sirenix.Serialization.SerializationUtility;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Items.Editor
 {
@@ -33,7 +34,7 @@ namespace Core.Items.Editor
             _location = Game.Asset<LocationData>();
             _location.id = "test:forage";
             Game.Location = _location;
-            _spawner = Game.Start<WorldObjectSpawner>();
+            _spawner = Game.Get<WorldObjectSpawner>();
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/ForagingSpot.prefab").GetComponent<ForagingSpot>();
             _spot = (ForagingSpot)_spawner.Spawn(prefab, new Vector3(5, 5, 0));
@@ -212,8 +213,8 @@ namespace Core.Items.Editor
         public void PerItemLifetimeMustBePositive()
         {
             var item = Game.Asset<ForageableItem>();
-            typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, "test:forage");
-            typeof(ForageableItem).GetField("groundLifetimeDays", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(item, 0);
+            Reflect.Set(item, "_itemId", "test:forage");
+            Reflect.Set(item, "groundLifetimeDays", 0);
             Assert.That(item.ValidateConfiguration().Any(e => e.Setting == "groundLifetimeDays"), Is.True);
         }
 
@@ -243,7 +244,6 @@ namespace Core.Items.Editor
             finally { UnityEngine.Random.state = randomState; }
         }
 
-        private void Set(string field, object value) => typeof(ForagingSpot)
-            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_spot, value);
+        private void Set(string field, object value) => Reflect.Set(_spot, field, value);
     }
 }

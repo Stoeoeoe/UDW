@@ -22,6 +22,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using TerrainData = Core.Tile.TerrainData;
 using TileData = Core.Tile.TileData;
+using static Core.Common.Editor.Reflect;
 
 namespace Interaction.Tools.WateringJar.Editor
 {
@@ -45,17 +46,17 @@ namespace Interaction.Tools.WateringJar.Editor
             EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
-            while (!VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>() || !VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<LevelManager>().SceneReady)
+            while (!LiveGame.Get<LevelManager>() || !LiveGame.Get<LevelManager>().SceneReady)
             {
                 Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The playable map must finish initialization.");
                 yield return null;
             }
             _root = new GameObject("Water jug fixture");
             _root.SetActive(false);
-            _map = VContainer.Unity.LifetimeScope.Find<Core.SystemRoot>().Container.Resolve<MapManager>();
+            _map = LiveGame.Get<MapManager>();
             foreach (var field in new[] { "_terrainTilemap", "_irrigatedTilemap", "irrigatedFarmlandTile", "_tileDataCache", "_terrainDataByType" })
                 _originalMapFields[field] = typeof(MapManager).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_map);
-            _character = MainCharacter.CurrentMainCharacter;
+            _character = LiveGame.Player;
             _character.MainInventory.Bind(new InventoryState());
             // Keep the real services and player, with isolated terrain to control the tested tool targets.
             _gridRoot = new GameObject("Grid", typeof(Grid));
@@ -386,8 +387,7 @@ namespace Interaction.Tools.WateringJar.Editor
                 layer.transform.SetParent(terrain.transform.parent, false);
                 layer.GetComponent<Tilemap>().SetTile(cell, water);
             }
-            typeof(MapManager).GetMethod("BuildTileDataCache", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(_map, null);
+            Call(_map, "BuildTileDataCache");
 
             _jug.Water.Current = 0;
             Assert.That(_jug.IsRefilling, Is.True);
@@ -435,8 +435,5 @@ namespace Interaction.Tools.WateringJar.Editor
             return tile;
         }
 
-        private static void Set(object target, string field, object value) => Set(target.GetType(), target, field, value);
-        private static void Set(Type type, object target, string field, object value) =>
-            type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(target, value);
     }
 }

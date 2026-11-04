@@ -13,8 +13,8 @@ namespace Core.Scripting
 
         public DialogueLuaApi(VulcanusDialogueRunner runner, GameCharacter player)
         {
-            if (!runner || !runner.isActiveAndEnabled)
-                throw new InvalidOperationException("Dialogue actions require an active dialogue runner.");
+            if (runner == null)
+                throw new InvalidOperationException("Dialogue actions require the dialogue runner.");
             if (!player || !player.IsRuntimeInitialized)
                 throw new InvalidOperationException("Dialogue actions require the initialized player.");
             _runner = runner;
@@ -45,14 +45,14 @@ namespace Core.Scripting
 
             public void Tick(float deltaTime)
             {
-                if (!_completed && (!_runner || !_runner.IsDialogueActive))
+                if (!_completed && !_runner.IsDialogueActive)
                     throw new InvalidOperationException("Dialogue stopped before reaching the end of its flow. See dialogue diagnostics.");
             }
 
             public void Dispose()
             {
                 // Stopping the surrounding Lua session must also close its dialogue UI.
-                if (!_completed && _runner) _runner.StopDialogue();
+                if (!_completed) _runner.StopDialogue();
             }
         }
     }

@@ -1,3 +1,4 @@
+using VContainer;
 using Character;
 using Core.TimeAndWeather;
 using MoreMountains.Tools;
@@ -10,9 +11,11 @@ namespace Interaction
     /// </summary>
     public class AdvanceDayInteractable : AbstractInteractable
     {
+        [Inject] private OvernightTransition _overnight;
+
         protected override bool Interact(GameCharacter instigator)
         {
-            _urTimeManager.EndDay();
+            _overnight.EndDay();
             return true;
         }
     }

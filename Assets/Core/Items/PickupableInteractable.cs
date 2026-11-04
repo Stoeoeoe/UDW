@@ -36,7 +36,7 @@ namespace Core.Items
         public override bool RequiresButtonPress => true;
 
         // LevelManager initializes the player before materializing location objects.
-        public override bool CanInteract => base.CanInteract && CanPickUp(MainCharacter.CurrentMainCharacter);
+        public override bool CanInteract => base.CanInteract && CanPickUp(_characterManager.MainCharacter);
 
         public bool CanPickUp(GameCharacter character)
         {

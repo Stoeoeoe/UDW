@@ -33,10 +33,7 @@ namespace Core.Items.Editor
             Game.Location = location;
             _character = Game.CreateCharacter();
             _item = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Resources/Items/HarvestItem/RavenFlowerProduce.asset");
-            var catalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>("Assets/Content/SpawnableCatalog.asset");
-            var spawner = Game.Start<WorldObjectSpawner>(owner => typeof(WorldObjectSpawner)
-                .GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(owner, catalog));
-            spawner.gameObject.SetActive(true);
+            var spawner = Game.Get<WorldObjectSpawner>();
             spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/ForageRavenFlower.prefab");
             _pickup = spawner.Spawn(prefab.GetComponent<SpawnedObject>(), Vector3.zero).GetComponent<PickupableInteractable>();

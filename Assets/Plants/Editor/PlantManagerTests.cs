@@ -12,6 +12,7 @@ using NUnit.Framework;
 using Sirenix.Serialization;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
@@ -39,8 +40,7 @@ namespace Plants.Editor
             _onGrowth = null;
             _data = Game.Asset<PlantData>();
             TestConfiguration.Set(_data, "plantId", "test:crop");
-            typeof(PlantData).GetField("growthStages", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, PlantDataTests.Stages(0, 2, 5));
+            Set(_data, "growthStages", PlantDataTests.Stages(0, 2, 5));
             _catalog = Game.Catalog<PlantCatalog>(_data);
             _plants = Game.Get<PlantManager>();
             EventBus<PlantGrowthEvent>.Subscribe(this);
@@ -88,8 +88,7 @@ namespace Plants.Editor
         [TestCase(5)]
         public void WiltedCropsExpireAfterTheConfiguredNumberOfFurtherDaysInUnloadedLocations(int threshold)
         {
-            typeof(PlantData).GetField("_daysWiltedUntilRemoval", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, threshold);
+            Set(_data, "_daysWiltedUntilRemoval", threshold);
             var crop = new PlantState(_data.plantId) { condition = PlantCondition.Wilted };
             Game.State.World.Set("unloaded", "plant:1,2", crop);
             for (var day = 1; day <= threshold; day++)
@@ -186,8 +185,7 @@ namespace Plants.Editor
             var bytes = SerializationUtility.SerializeValue(root, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
-            typeof(GameState).GetMethod("Restore", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(Game.State, new object[] { loaded });
+            Call(Game.State, "Restore", loaded);
             var position = new Vector2Int(-1, 2);
             Assert.That(_plants.GetPlantState("farm", position).daysPassedSincePlanting, Is.EqualTo(4));
             Assert.That(_plants.GetPlantState("village", position).plantID, Is.EqualTo("missing:crop"));
@@ -223,8 +221,7 @@ namespace Plants.Editor
         [TestCase(5)]
         public void WiltUsesTheCropThresholdAndIsAnnouncedExactlyOnce(int threshold)
         {
-            typeof(PlantData).GetField("_daysWithoutWaterUntilWilt", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, threshold);
+            Set(_data, "_daysWithoutWaterUntilWilt", threshold);
             var plant = Store("village", "plant:-3,4", 1, false);
             for (var day = 1; day <= threshold; day++)
             {
@@ -301,15 +298,12 @@ namespace Plants.Editor
             return state;
         }
 
-        private void Sow(string location, Vector2Int position, string id) => typeof(PlantManager)
-            .GetMethod("SowPlantOnMap", BindingFlags.Instance | BindingFlags.NonPublic)
-            .Invoke(_plants, new object[] { location, position, id });
+        private void Sow(string location, Vector2Int position, string id) => Call(_plants, "SowPlantOnMap", location, position, id);
 
         [Test]
         public void OutOfSeasonPlantsStayPlantedAndResumeGrowthAfterTheSeasonChanges()
         {
-            typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, new[] { Season.Spring });
+            Set(_data, "growingSeasons", new[] { Season.Spring });
             Game.State.Time.season = Season.Winter;
             Sow("unloaded-farm", Vector2Int.zero, _data.plantId);
             var plant = _plants.GetPlantState("unloaded-farm", Vector2Int.zero);
@@ -334,8 +328,7 @@ namespace Plants.Editor
         [Test]
         public void OutOfSeasonDryCropsStillWilt()
         {
-            typeof(PlantData).GetField("growingSeasons", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_data, new[] { Season.Spring });
+            Set(_data, "growingSeasons", new[] { Season.Spring });
             Game.State.Time.season = Season.Winter;
             var plant = Store("farm", "plant:0,0", 1);
             plant.consecutiveDaysWithoutWater = 4;
@@ -354,8 +347,7 @@ namespace Plants.Editor
             try
             {
                 TestConfiguration.Set(seed, "plantData", _data);
-                typeof(Core.Inventory.ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(seed, "test:seed");
+                Set(seed, "_itemId", "test:seed");
                 var inventory = Game.Inventory(2);
                 inventory.SetSlot(1, new Core.Inventory.ItemStack(seed, 2));
                 var tile = new TileData(null, 0, 0, null, Vector3.zero, true);

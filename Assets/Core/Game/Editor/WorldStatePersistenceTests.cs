@@ -15,6 +15,7 @@ using NUnit.Framework;
 using Plants;
 using Sirenix.Serialization;
 using UnityEngine;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Game.Editor
 {
@@ -238,12 +239,10 @@ namespace Core.Game.Editor
                 new InventorySlotState("base:hammer", 1), default,
                 new InventorySlotState("missing-mod:item", 7)
             };
-            typeof(WalletState).GetMethod("SetBalance", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(data.player.Wallet, new object[] { 1234L });
+            Call(data.player.Wallet, "SetBalance", 1234L);
             typeof(CharacterSkills).GetMethod("RestoreLevels", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(data.player.Skills, new object[] { new[] { new KeyValuePair<string, int>("hammer-mastery", 3) } });
-            typeof(DivineFavourState).GetMethod("SetFavour", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(data.player.Favour, new object[] { "mars", 12 });
+            Call(data.player.Favour, "SetFavour", "mars", 12);
             data.story.Set("met-blacksmith", true);
             data.story.Set("story:false", false);
             data.story.Set("story:string", "Ada");
@@ -399,9 +398,8 @@ namespace Core.Game.Editor
             data.time.dayOfSeason = 1;
             var gameObject = new GameObject("Save test character");
             gameObject.SetActive(false);
-            var character = Game.InjectObject(gameObject.AddComponent<GameCharacter>());
-            typeof(CharacterSkills).GetMethod("BindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(data.player.Skills, new object[] { character });
+            var character = Game.Add<GameCharacter>(gameObject);
+            Call(data.player.Skills, "BindCharacter", character);
             try
             {
                 Game.Get<GameSaveService>().Save(slot, data);
@@ -410,8 +408,7 @@ namespace Core.Game.Editor
             }
             finally
             {
-                typeof(CharacterSkills).GetMethod("UnbindCharacter", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(data.player.Skills, new object[] { character });
+                Call(data.player.Skills, "UnbindCharacter", character);
                 UnityEngine.Object.DestroyImmediate(gameObject);
                 File.Delete(path);
                 File.Delete(path + ".tmp");

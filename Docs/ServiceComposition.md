@@ -12,8 +12,23 @@ have Unity lifecycle callbacks. VContainer owns their lifetimes and disposes
 crop/favour subscriptions when the session ends. The root resolves those
 subscriptions before the first overnight transition.
 
-Player loadout/home settings and item magnet/drop/sound settings are serialized
-groups on the single root Inspector. They are injected into services, not
+Per-frame services declare VContainer's interfaces instead of owning a
+GameObject. `GameClock` (calendar progression, `IStartable`/`ITickable`) and
+`PlayerInteractionContext` (interaction snapshots, `ILateTickable`) are
+registered in `GameServices` and driven by the scope's entry-point dispatcher.
+The clock reports changes through its events and `EventBus` notifications;
+weather reacts to it, not the other way round. `OvernightTransition` is the
+Unity component that plays the overnight fade, movement and audio, and it holds
+the clock while it runs. The registered player is `CharacterManager.MainCharacter`;
+consumers inject it rather than searching the scene. `LevelManager` spawns the player
+from its prefab and registers it immediately. `VulcanusDialogueRunner` is a plain
+service: it walks the dialogue graph as a cancellable awaitable, reads dialogues from the
+discovered `DialogueCatalog`, and talks to the on-screen dialogue through `IDialoguePresenter`,
+which `SystemRoot` registers from the root prefab. The screen reports `Dismissed` rather than
+calling the runner, so the two never depend on each other. There are no static instances.
+
+Player loadout/home settings, item magnet/drop/sound settings and calendar rules
+(`ClockSettings`) are serialized groups on the single root Inspector. They are injected into services, not
 stored on manager GameObjects. Required home and drop configuration is checked
 when the services are constructed.
 

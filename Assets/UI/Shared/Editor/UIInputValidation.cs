@@ -30,7 +30,7 @@ namespace UI.Shared.Editor
         }
         public void OnPreprocessBuild(BuildReport report)
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
             var module = root ? root.GetComponentInChildren<InputSystemUIInputModule>(true) : null;
             if (!module) throw new BuildFailedException("SystemRoot is missing its UI input module.");
             var errors = Check(module);

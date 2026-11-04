@@ -23,6 +23,7 @@ namespace Core.Common.Editor
         private readonly List<Action<IContainerBuilder>> _overrides = new();
         private readonly List<Object> _assets = new();
         private readonly List<Character.GameCharacter> _characters = new();
+        private readonly List<IDisposable> _disposables = new();
         private IObjectResolver _container;
         private readonly string _name;
         private readonly bool _sceneServices;
@@ -40,17 +41,17 @@ namespace Core.Common.Editor
         }
         public Game.GameState State => Get<Game.GameState>();
         public Scripting.LuaRuntime Lua => Get<Scripting.LuaRuntime>();
+        public TimeAndWeather.GameClock Clock => Get<TimeAndWeather.GameClock>();
+        public CharacterManager Characters => Get<CharacterManager>();
         public LocationData Location
         {
             get => Get<LocationContext>().Location;
-            set => typeof(LocationContext).GetProperty(nameof(LocationContext.Location))
-                .SetValue(Get<LocationContext>(), value);
+            set => Get<LocationContext>().Location = value;
         }
         public bool Ready
         {
             get => Get<LocationContext>().SceneReady;
-            set => typeof(LocationContext).GetProperty(nameof(LocationContext.SceneReady))
-                .SetValue(Get<LocationContext>(), value);
+            set => Get<LocationContext>().SceneReady = value;
         }
         private IObjectResolver Container => _container ?? Build();
         public Scripting.LuaBindingRegistry Bind(params object[] modules)
@@ -100,7 +101,7 @@ namespace Core.Common.Editor
 
         private IObjectResolver Build()
         {
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/SystemRoot.prefab");
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
             var builder = new ContainerBuilder();
             try
             {
@@ -116,7 +117,7 @@ namespace Core.Common.Editor
                 else
                 {
                     var configuration = prefab.GetComponent<SystemRoot>();
-                    GameServices.Register(builder, configuration.Player, configuration.Items);
+                    GameServices.Register(builder, configuration.Player, configuration.Items, configuration.Clock);
                 }
                 _container = builder.Build();
                 return _container;
@@ -164,6 +165,16 @@ namespace Core.Common.Editor
             return component;
         }
 
+        /// <summary>Builds a spawner over exactly these prefabs instead of the authored catalog; it is disposed with the fixture.</summary>
+        public Spawning.WorldObjectSpawner CreateSpawner(params Spawning.SpawnedObject[] prefabs)
+        {
+            var catalog = Asset<Spawning.SpawnableCatalog>();
+            catalog.Synchronize(prefabs);
+            var spawner = new Spawning.WorldObjectSpawner(Get<IObjectResolver>(), State, Get<Tile.MapManager>(), catalog);
+            _disposables.Add(spawner);
+            return spawner;
+        }
+
         /// <summary>Owns a temporary asset until managers have been shut down.</summary>
         public T Own<T>(T asset) where T : Object { _assets.Add(asset); return asset; }
         public T Asset<T>() where T : ScriptableObject => Own(ScriptableObject.CreateInstance<T>());
@@ -173,6 +184,14 @@ namespace Core.Common.Editor
             var owner = new GameObject(typeof(T).Name);
             owner.SetActive(false);
             owner.transform.SetParent(Root.transform, false);
+            var component = owner.AddComponent<T>();
+            Container.InjectGameObject(owner);
+            return component;
+        }
+
+        /// <summary>Adds an injected component to a test-owned object.</summary>
+        public T Add<T>(GameObject owner) where T : Component
+        {
             var component = owner.AddComponent<T>();
             Container.InjectGameObject(owner);
             return component;
@@ -204,15 +223,21 @@ namespace Core.Common.Editor
             // Inactive parents are excluded by abilities' normal Awake lookup. Bind this isolated fixture explicitly.
             var primary = character.PerformPrimaryAction;
             foreach (var ability in character.GetComponentsInChildren<Character.Abilities.CharacterAbility>(true))
-                typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(ability, character);
-            typeof(Character.Abilities.CharacterPerformPrimaryActionAbility).GetProperty("ActionExecutor")
-                .SetValue(primary, new Interaction.ActionExecutor(character, () => Get<Core.Context.PlayerInteractionContext>().CurrentSnapshot));
+                Reflect.Set(ability, "Character", character);
+            primary.ActionExecutor = new Interaction.ActionExecutor(character, () => Get<Core.Context.PlayerInteractionContext>().CurrentSnapshot);
             character.Health.Initialize(new Character.HealthState());
             character.Stamina.Initialize(new Character.StaminaState());
             Invoke(character.Occupation, "Awake");
             _characters.Add(character);
             return character;
+        }
+
+        /// <summary>Creates a character and registers it as the session's player, as MainCharacter does when it starts.</summary>
+        public Character.MainCharacter CreatePlayer(string name = "Player")
+        {
+            var player = CreateCharacter(name);
+            Characters.RegisterMainCharacter(player);
+            return player;
         }
 
         public Character.MainCharacter CreateAnimatedCharacter()
@@ -232,6 +257,23 @@ namespace Core.Common.Editor
         {
             var body = character.GetComponent<BoxCollider2D>();
             character.transform.position += point - body.transform.TransformPoint(body.offset);
+        }
+
+        /// <summary>Runs Awake then OnEnable, where declared, on each component. EditMode does not do this for objects built in a test.</summary>
+        public void Wake(params Component[] components)
+        {
+            foreach (var component in components)
+            {
+                InvokeOptional(component, "Awake");
+                InvokeOptional(component, "OnEnable");
+            }
+        }
+
+        /// <summary>Wakes every component of an object, parents first, as Unity would on activation.</summary>
+        public GameObject Wake(GameObject owner)
+        {
+            Wake(owner.GetComponentsInChildren<MonoBehaviour>(true));
+            return owner;
         }
 
         /// <summary>Runs a lifecycle callback explicitly when EditMode does not invoke it.</summary>
@@ -281,6 +323,7 @@ namespace Core.Common.Editor
                 InvokeOptional(_services[i], "OnDisable");
                 InvokeOptional(_services[i], "OnDestroy");
             }
+            for (var i = _disposables.Count - 1; i >= 0; i--) _disposables[i].Dispose();
             foreach (var singleton in _vendorSingletons) singleton.SetValue(null, null);
             _container?.Dispose();
             if (_root) Object.DestroyImmediate(_root);

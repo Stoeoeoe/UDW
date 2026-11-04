@@ -953,13 +953,22 @@
       "id": "tile_0_6"
     },
     "193": {
-      "id": "tile_1_6"
+      "id": "tile_1_6",
+      "collision": {
+        "type": "full"
+      }
     },
     "194": {
-      "id": "tile_2_6"
+      "id": "tile_2_6",
+      "collision": {
+        "type": "full"
+      }
     },
     "195": {
-      "id": "tile_3_6"
+      "id": "tile_3_6",
+      "collision": {
+        "type": "full"
+      }
     },
     "196": {
       "id": "tile_4_6"
@@ -1180,10 +1189,16 @@
       "id": "tile_0_7"
     },
     "225": {
-      "id": "tile_1_7"
+      "id": "tile_1_7",
+      "collision": {
+        "type": "full"
+      }
     },
     "226": {
-      "id": "tile_2_7"
+      "id": "tile_2_7",
+      "collision": {
+        "type": "full"
+      }
     },
     "227": {
       "id": "tile_3_7"
@@ -3656,19 +3671,34 @@
       "id": "tile_13_29"
     },
     "942": {
-      "id": "tile_14_29"
+      "id": "tile_14_29",
+      "collision": {
+        "type": "full"
+      }
     },
     "943": {
-      "id": "tile_15_29"
+      "id": "tile_15_29",
+      "collision": {
+        "type": "full"
+      }
     },
     "944": {
-      "id": "tile_16_29"
+      "id": "tile_16_29",
+      "collision": {
+        "type": "full"
+      }
     },
     "945": {
-      "id": "tile_17_29"
+      "id": "tile_17_29",
+      "collision": {
+        "type": "full"
+      }
     },
     "946": {
-      "id": "tile_18_29"
+      "id": "tile_18_29",
+      "collision": {
+        "type": "full"
+      }
     },
     "947": {
       "id": "tile_19_29"
@@ -3752,19 +3782,34 @@
       "id": "tile_13_30"
     },
     "974": {
-      "id": "tile_14_30"
+      "id": "tile_14_30",
+      "collision": {
+        "type": "full"
+      }
     },
     "975": {
-      "id": "tile_15_30"
+      "id": "tile_15_30",
+      "collision": {
+        "type": "full"
+      }
     },
     "976": {
-      "id": "tile_16_30"
+      "id": "tile_16_30",
+      "collision": {
+        "type": "full"
+      }
     },
     "977": {
-      "id": "tile_17_30"
+      "id": "tile_17_30",
+      "collision": {
+        "type": "full"
+      }
     },
     "978": {
-      "id": "tile_18_30"
+      "id": "tile_18_30",
+      "collision": {
+        "type": "full"
+      }
     },
     "979": {
       "id": "tile_19_30"
@@ -3848,13 +3893,22 @@
       "id": "tile_13_31"
     },
     "1006": {
-      "id": "tile_14_31"
+      "id": "tile_14_31",
+      "collision": {
+        "type": "full"
+      }
     },
     "1007": {
-      "id": "tile_15_31"
+      "id": "tile_15_31",
+      "collision": {
+        "type": "full"
+      }
     },
     "1008": {
-      "id": "tile_16_31"
+      "id": "tile_16_31",
+      "collision": {
+        "type": "full"
+      }
     },
     "1009": {
       "id": "tile_17_31"

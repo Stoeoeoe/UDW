@@ -15,35 +15,14 @@ namespace Character
     {
         [Inject] private CharacterManager _characterManager;
         [Inject] private PlayerStateManager _playerStateManager;
-        [Inject] private UrTimeManager _urTimeManager;
+        [Inject] private OvernightTransition _overnight;
 
         [SerializeField] private CharacterAnimation passOutAnimation;
         public CharacterAnimation PassOutAnimation => passOutAnimation;
 
-        private static MainCharacter _currentMainCharacter;
-        public static MainCharacter CurrentMainCharacter
-        {
-            get
-            {
-                if (!_currentMainCharacter) _currentMainCharacter = FindFirstObjectByType<MainCharacter>();
-                return _currentMainCharacter;
-            }
-        }
-
         public int CurrentSelectedSlotIndex => Loadout.ActiveHandInventoryIndex;
         private readonly object _dayTransitionBlock = new();
 
-        protected override void Awake()
-        {
-            _currentMainCharacter = this;
-            base.Awake();
-        }
-
-        protected override void Start()
-        {
-            _characterManager.RegisterMainCharacter(this);
-            base.Start();
-        }
         protected override void InitializeCharacterState() => _playerStateManager.InitializeCharacter(this);
 
         public override void ValidateConfiguration()
@@ -79,7 +58,7 @@ namespace Character
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            if (_currentMainCharacter == this) _currentMainCharacter = null;
+            _characterManager.UnregisterMainCharacter(this);
         }
 
         public void OnEvent(DayTransitionStarted change)
@@ -101,7 +80,7 @@ namespace Character
         public void OnEvent(StaminaDepletedEvent change)
         {
             if (change.Character == this && ConditionState != ConditionState.Dead)
-                _urTimeManager.EndDay(DayEndReason.PassedOut);
+                _overnight.EndDay(DayEndReason.PassedOut);
         }
 
         /// <summary>Restores health and replaces last night's stamina surplus with this night's recovery.</summary>

@@ -41,7 +41,7 @@ namespace Core.Location
 
         protected override bool Interact(GameCharacter instigator)
         {
-            if (instigator != MainCharacter.CurrentMainCharacter) return false;
+            if (instigator != _characterManager.MainCharacter) return false;
             var levelManager = _levelManager;
 
             var entryKey = targetEntryKey;

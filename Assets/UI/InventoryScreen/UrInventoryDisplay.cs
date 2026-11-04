@@ -103,7 +103,7 @@ namespace UI.InventoryScreen
             if (_initialized) return;
             if (TargetInventory == null)
             {
-                Debug.LogWarning($"UrInventoryDisplay: Could not find inventory '{TargetInventoryName}' for player '{PlayerId}'");
+                Debug.LogWarning("UrInventoryDisplay: There is no registered player inventory to show.");
                 return;
             }
 

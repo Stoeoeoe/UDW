@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
@@ -26,10 +27,10 @@ namespace Core.Scripting.Editor
             child.transform.SetParent(_root.transform);
             _camera = child.AddComponent<CinemachineCamera>();
             _camera.Follow = _root.transform;
-            typeof(CameraManager).GetField("playerFollowVCam", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_manager, _camera);
+            Set(_manager, "playerFollowVCam", _camera);
         }
 
-        private void Advance(float seconds) => typeof(CameraManager).GetMethod("AdvanceShake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_manager, new object[] { seconds });
+        private void Advance(float seconds) => Call(_manager, "AdvanceShake", seconds);
 
         private Vector3 Correction(CinemachineCamera camera)
         {
@@ -97,13 +98,12 @@ namespace Core.Scripting.Editor
             Assert.That(() => CameraLuaApi.ValidateShake(1, double.NaN), Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => CameraLuaApi.ValidateShake(double.PositiveInfinity, 1), Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => new CameraLuaApi(null), Throws.InvalidOperationException);
-            typeof(CameraManager).GetField("playerFollowVCam", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_manager, null);
+            Set(_manager, "playerFollowVCam", null);
             Assert.That(() => new CameraLuaApi(_manager), Throws.InvalidOperationException);
         }
 
         private UnityEngine.UI.Image FlashImage => _root.GetComponentInChildren<UnityEngine.UI.Image>(true);
-        private void AdvanceFlash(float seconds) => typeof(CameraManager)
-            .GetMethod("AdvanceFlash", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_manager, new object[] { seconds });
+        private void AdvanceFlash(float seconds) => Call(_manager, "AdvanceFlash", seconds);
 
         [Test]
         public void FlashFadesHoldsAndClearsWithQuadraticEasingAndStretchedPhases()

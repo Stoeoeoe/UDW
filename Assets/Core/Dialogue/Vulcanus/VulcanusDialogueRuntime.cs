@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Core.Tile.Vulcanus;
 using UnityEngine;
 using Character;
@@ -8,17 +8,20 @@ using UI.Shared;
 
 namespace Core.Dialogue.Vulcanus
 {
-    public interface IDialogueContextResolver
-    {
-        object ResolveSelf(VulcanusProject project, VulcanusDialogueAsset dialogue);
-    }
-
+    /// <summary>
+    /// Presents dialogue to the player. Presentation methods complete when the player has finished with the node and
+    /// throw <see cref="OperationCanceledException"/> when the runner stops the dialogue.
+    /// </summary>
     public interface IDialoguePresenter
     {
+        /// <summary>Raised when the player or the game closes the dialogue screen, ending any running dialogue.</summary>
+        event Action Dismissed;
         void OnDialogueStarted(VulcanusDialogueExecutionContext context);
-        IEnumerator PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context);
-        IEnumerator PresentChoice(VulcanusDialogueChoiceNode node, IReadOnlyList<VulcanusDialogueChoiceOption> options,
-            VulcanusDialogueExecutionContext context, Action<VulcanusDialogueChoiceOption> onSelected);
+        Awaitable PresentLine(VulcanusDialogueLineNode node, string localizedText, VulcanusDialogueExecutionContext context,
+            CancellationToken cancellation);
+        Awaitable<VulcanusDialogueChoiceOption> PresentChoice(VulcanusDialogueChoiceNode node,
+            IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context,
+            CancellationToken cancellation);
         void OnDialogueFinished(VulcanusDialogueExecutionContext context);
     }
 
@@ -27,14 +30,11 @@ namespace Core.Dialogue.Vulcanus
         bool TryAdvanceDialogue();
     }
 
-    [Serializable]
     public class VulcanusDialogueExecutionContext
     {
-        public VulcanusDialogueDatabase Database { get; internal set; }
         public VulcanusProject Project { get; internal set; }
         public VulcanusDialogueAsset CurrentDialogue { get; internal set; }
         public VulcanusDialogueNode CurrentNode { get; internal set; }
-        public object Self { get; internal set; }
         public int StepsExecuted { get; internal set; }
         public GameCharacter Instigator { get; internal set; }
         public ScreenPauseMode? PauseWhileOpen { get; internal set; }

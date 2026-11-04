@@ -6,9 +6,9 @@ assigns a volume to every stem. Cues with the same theme ID are arrangements of
 one timeline: identical audio stems keep playing, while different stems fade in
 and out at the current position. Their tempo, meter and loop length must match.
 Unrelated themes crossfade as separate songs. `MusicCatalog` uses the
-shared enabled-definition discovery pipeline and namespaced cue IDs. The two
-`base:music-prototype-*` cues are offline generated audio fixtures, not final music.
-Recreate missing fixtures with **Tools > Music > Create prototype cues**.
+shared enabled-definition discovery pipeline and namespaced cue IDs. Playback tests
+synthesize their own short cues in memory (`MusicTestCues`), so no fixture assets exist
+and test audio never enters the catalog.
 
 Add `MusicEnvironment` to a location scene and assign a cue and preset. It submits
 a request after scene services initialize and releases it on disable/unload.

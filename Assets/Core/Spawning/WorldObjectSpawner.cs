@@ -11,15 +11,12 @@ using VContainer.Unity;
 namespace Core.Spawning
 {
     /// <summary>Creates saved entities and materializes their views for the current location.</summary>
-    [DefaultExecutionOrder(-900)]
-    public sealed class WorldObjectSpawner : Core.GameManager, ILocationLifecycle
+    public sealed class WorldObjectSpawner : ILocationLifecycle, IDisposable
     {
-        [Inject] private IObjectResolver _resolver;
-        [Inject] private GameState _gameState;
-
-        [Inject] private MapManager _mapManager;
-
-        [SerializeField] private SpawnableCatalog catalog;
+        private readonly IObjectResolver _resolver;
+        private readonly GameState _gameState;
+        private readonly MapManager _mapManager;
+        private readonly GameObject _root;
         private readonly Dictionary<string, SpawnedObject> _prefabs = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SpawnedObject> _instances = new(StringComparer.Ordinal);
         private readonly Dictionary<string, AuthoredSpawnPlacement> _placements = new(StringComparer.Ordinal);
@@ -31,20 +28,25 @@ namespace Core.Spawning
         public IReadOnlyCollection<SpawnedObject> SpawnedObjects => _instances.Values;
         public IReadOnlyCollection<SpawnedObject> RegisteredPrefabs => _prefabs.Values;
 
-        protected override void OnAwake()
+        public WorldObjectSpawner(IObjectResolver resolver, GameState gameState, MapManager mapManager, SpawnableCatalog catalog)
         {
-            if (!catalog) throw new InvalidOperationException("WorldObjectSpawner requires a SpawnableCatalog.");
+            _resolver = resolver;
+            _gameState = gameState;
+            _mapManager = mapManager;
+            // Spawned views live under one root that outlasts location scenes, like the session itself.
+            _root = new GameObject("World objects");
+            if (Application.isPlaying) UnityEngine.Object.DontDestroyOnLoad(_root);
             var staging = new GameObject("Spawn staging");
             staging.SetActive(false);
-            staging.transform.SetParent(transform, false);
+            staging.transform.SetParent(_root.transform, false);
             _stagingRoot = staging.transform;
             foreach (var prefab in catalog.Prefabs) Register(prefab);
         }
 
-        protected override void OnDisable()
+        public void Dispose()
         {
-            base.OnDisable();
             ClearViews();
+            DestroyView(_root);
         }
 
         /// <summary>Register additional content, for example from a mod, before spawning or restoring it.</summary>
@@ -95,7 +97,7 @@ namespace Core.Spawning
             ClearViews();
             _locationId = location.id;
             _locationRoot = new GameObject("Spawned objects").transform;
-            _locationRoot.SetParent(transform, false);
+            _locationRoot.SetParent(_root.transform, false);
             foreach (var placement in placements)
             {
                 try
@@ -109,7 +111,7 @@ namespace Core.Spawning
                     state.authored = true;
                     _gameState.World.Set(_locationId, placement.id, state);
                 }
-                catch (Exception exception) { Debug.LogException(exception, this); }
+                catch (Exception exception) { Debug.LogException(exception); }
             }
             foreach (var pair in _gameState.World.GetStates<SpawnedObjectState>(_locationId).ToArray())
             {
@@ -117,7 +119,7 @@ namespace Core.Spawning
                 if (!_gameState.World.TryGet(_locationId, pair.Key, out SpawnedObjectState _)) continue;
                 if (pair.Value.removed || pair.Value.authored && !_placements.ContainsKey(pair.Key)) continue;
                 try { Materialize(pair.Key, pair.Value); }
-                catch (Exception exception) { Debug.LogException(exception, this); }
+                catch (Exception exception) { Debug.LogException(exception); }
             }
         }
 
@@ -162,8 +164,8 @@ namespace Core.Spawning
 
         private static void DestroyView(GameObject view)
         {
-            if (Application.isPlaying) Destroy(view);
-            else DestroyImmediate(view);
+            if (Application.isPlaying) UnityEngine.Object.Destroy(view);
+            else UnityEngine.Object.DestroyImmediate(view);
         }
     }
 }

@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Sirenix.Serialization;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Inventory.Editor
 {
@@ -36,8 +37,7 @@ namespace Core.Inventory.Editor
         public void SetUp()
         {
             _item = Game.Asset<InventoryTestItem>();
-            typeof(ItemDefinition).GetField("_itemId", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_item, "test:grain");
+            Set(_item, "_itemId", "test:grain");
             _state = new InventoryState { Slots = new InventorySlotState[2] };
             _inventory = Game.Inventory(_state, id => id == _item.ItemId ? _item : null);
             _root = _inventory.gameObject;
@@ -82,8 +82,7 @@ namespace Core.Inventory.Editor
         [Test]
         public void OverflowAndInvalidLoadoutsDoNotPartiallyAddOrMarkInitialized()
         {
-            typeof(ItemDefinition).GetField("_maxStackSize", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(_item, 1);
+            Set(_item, "_maxStackSize", 1);
             Assert.That(_inventory.ApplyStartingLoadout(new[] { _item, _item, _item }), Is.False);
             Assert.Throws<ArgumentNullException>(() => _inventory.ApplyStartingLoadout(new ItemDefinition[] { _item, null }));
             Assert.That(_state.StartingLoadoutApplied, Is.False);
@@ -110,7 +109,7 @@ namespace Core.Inventory.Editor
         [Test]
         public void DragDropCallbacksSeeCommittedSlotsAndHeldStack()
         {
-            var display = Game.InjectObject(_root.AddComponent<InventoryDragTestDisplay>());
+            var display = Game.Add<InventoryDragTestDisplay>(_root);
             display.Inventory = _inventory;
             _inventory.AddItem(_item, 4);
             _expectedTotal = 4;
@@ -147,7 +146,7 @@ namespace Core.Inventory.Editor
             var snapshot = _inventory.GetSnapshot();
             snapshot[0] = ItemStack.Empty;
             Assert.That(_state.Slots[0].Quantity, Is.EqualTo(2));
-            var other = Game.InjectObject(_root.AddComponent<SlotInventory>());
+            var other = Game.Add<SlotInventory>(_root);
             other.Bind(_state, id => _item);
             other.RemoveItemAt(0);
             Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));

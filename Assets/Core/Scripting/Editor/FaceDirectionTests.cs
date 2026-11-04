@@ -1,3 +1,4 @@
+using VContainer;
 using Core.Context;
 using System;
 using System.Linq;
@@ -17,6 +18,7 @@ using UnityEngine.Scripting;
 using UnityEngine.Tilemaps;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
@@ -52,7 +54,7 @@ namespace Core.Scripting.Editor
             }
             map.SetTilemaps(Layer("Terrain"), Layer("Farmland"), Layer("Plowed"), Layer("Irrigated"), Layer("Overlay"));
             map.SetTerrainCells(Array.Empty<VulcanusImportedMap.TerrainCell>());
-            typeof(MapManager).GetField("_currentMap", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(maps, map);
+            Set(maps, "_currentMap", map);
             Game.Ready = true;
             Game.Root.SetActive(true);
             _api = (MapActorLuaApi)typeof(MapActorLuaApi).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
@@ -524,10 +526,8 @@ namespace Core.Scripting.Editor
         public void SpawnPreflightDeclaresRolesWithoutCreatingWorldObjects()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/CutscenePrototypeHost.prefab").GetComponent<SpawnedObject>();
-            var catalog = Game.Asset<SpawnableCatalog>();
-            catalog.Synchronize(new[] { prefab });
-            var spawner = Game.Start<WorldObjectSpawner>(value =>
-                typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(value, catalog));
+            var spawner = Game.Get<WorldObjectSpawner>();
+            Assert.That(spawner.RegisteredPrefabs, Has.Member(prefab));
             _api.ValidateSpawn("guest", PrototypeCharacterId, new MapPosition(168, 104));
             _api.ValidateFaceDirection("guest", "North");
             _api.ValidateFace("player", "guest");
@@ -570,19 +570,18 @@ namespace Core.Scripting.Editor
                 "Assets/Content/Spawnables/CutscenePrototypeHost.prefab"), holder.transform));
             Object.DestroyImmediate(template.GetComponent<SpawnedObject>());
             var prefab = template.AddComponent<EditModeSpawnedActor>();
-            typeof(SpawnedObject).GetField("prefabId", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(prefab, "base:cutscene-prototype-host");
-            var catalog = Game.Asset<SpawnableCatalog>();
-            catalog.Synchronize(new SpawnedObject[] { prefab });
-            var spawner = Game.Start<WorldObjectSpawner>(value =>
-                typeof(WorldObjectSpawner).GetField("catalog", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(value, catalog));
-            spawner.gameObject.SetActive(true);
+            Set(prefab, "prefabId", "base:cutscene-prototype-host");
+            var spawner = Game.CreateSpawner(prefab);
+            var useStandIn = (Action)(() => Set(_api, "_worldObjectSpawner", spawner));
+            useStandIn(); // The API plans spawns against the authored spawner unless it is replaced.
             var location = Game.Asset<LocationData>();
             location.id = "test:characters";
             spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             var point = new MapPosition(168, 104);
             _api.ValidateSpawn("guest", PrototypeCharacterId, point);
             var bindings = Game.Bind(_api);
+            // Binding injects the authored spawner; this actor spawns the EditMode-safe stand-in instead.
+            useStandIn();
             var lua = CutsceneSequenceCompiler.Compile(new JArray(new JObject { ["id"] = "turn", ["action"] = "characters.faceDirection",
                 ["arguments"] = new JObject { ["character"] = "guest", ["direction"] = "East" } }), "spawn.json", out var steps);
             var definition = Game.Asset<CutsceneDefinition>();
@@ -594,7 +593,7 @@ namespace Core.Scripting.Editor
             var placementType = typeof(CutsceneRun).Assembly.GetType("Core.Scripting.CutscenePlacement");
             var run = (CutsceneRun)typeof(CutsceneRun).GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single()
                 .Invoke(new object[] { owner, definition, sequence, Array.CreateInstance(placementType, 0), bindings, _api, variables });
-            typeof(MapActorLuaApi).GetMethod("BeginRun", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { run });
+            Call(_api, "BeginRun", run);
             using (var setup = VulcanusLuaEngine.StartSession(bindings,
                 "Characters.Spawn('guest', '" + PrototypeCharacterId + "', { x = 168, y = 104 })", "spawn.json:setup", phase: "setup"))
             {
@@ -615,7 +614,7 @@ namespace Core.Scripting.Editor
             // These callbacks were invoked explicitly in OnStateBound, so release their EditMode bindings explicitly too.
             GameTestFixture.Invoke(character.PerformPrimaryAction, "OnDestroy");
             GameTestFixture.Invoke(character, "OnDestroy");
-            typeof(MapActorLuaApi).GetMethod("FinishSpawns", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_api, new object[] { keep });
+            Call(_api, "FinishSpawns", keep);
             Assert.That(Game.State.World.TryGet(location.id, id, out SpawnedObjectState _), Is.EqualTo(keep));
             Assert.That(spawner.SpawnedObjects.Count, Is.EqualTo(keep ? 1 : 0));
         }
@@ -665,7 +664,7 @@ namespace Core.Scripting.Editor
     // EditMode does not run Awake on instantiated characters. Establish the same required bindings before Spawn returns.
     public sealed class EditModeSpawnedActor : SpawnedObject
     {
-        [VContainer.Inject] private PlayerInteractionContext _context;
+        [Inject] private PlayerInteractionContext _context;
 
         protected override void OnStateBound()
         {
@@ -674,10 +673,8 @@ namespace Core.Scripting.Editor
             character.MainInventory.EnsureInitialized();
             GameTestFixture.Invoke(character, "Awake");
             foreach (var ability in character.GetComponentsInChildren<Character.Abilities.CharacterAbility>(true))
-                typeof(Character.Abilities.CharacterAbility).GetField("Character", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(ability, character);
-            typeof(Character.Abilities.CharacterPerformPrimaryActionAbility).GetProperty("ActionExecutor")
-                .SetValue(character.PerformPrimaryAction, new Interaction.ActionExecutor(character,
-                    () => _context.CurrentSnapshot));
+                Set(ability, "Character", character);
+            character.PerformPrimaryAction.ActionExecutor = new Interaction.ActionExecutor(character, () => _context.CurrentSnapshot);
             GameTestFixture.Invoke(character.Occupation, "Awake");
             character.EnsureRuntimeInitialized();
         }
