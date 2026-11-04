@@ -172,8 +172,7 @@ namespace Core.Tile.Editor.Vulcanus
                     foreach (var offset in Neighbours)
                     {
                         var next = cell + offset;
-                        if (!cells.TryGetValue(next, out var nextSprite)) continue;
-                        cells.Remove(next);
+                        if (!cells.Remove(next, out var nextSprite)) continue;
                         pending.Enqueue((next, nextSprite));
                     }
                 }

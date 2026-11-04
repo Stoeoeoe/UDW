@@ -57,7 +57,7 @@ namespace Core.Scripting.Editor
                 if (n.Properties().Any(p => !new[] { "id", "kind", "position", "comment" }.Concat(fields).Contains(p.Name))) throw Invalid($"{n["id"]}: fields do not match node kind.");
                 if ((n["comment"] != null || Kind(n) == "comment") && n["comment"]?.Type != JTokenType.String)
                     throw Invalid($"{n["id"]}: comment must be text.");
-                if (n["arguments"] is JObject a && a.Properties().Any(p => !_signatures[Text(n, "id")].Inputs.Any(i => i.name == p.Name))) throw Invalid($"{n["id"]}: unknown argument.");
+                if (n["arguments"] is JObject a && a.Properties().Any(p => _signatures[Text(n, "id")].Inputs.All(i => i.name != p.Name))) throw Invalid($"{n["id"]}: unknown argument.");
                 var destinations = n["step"]?["resultVariables"] ?? n["resultVariables"];
                 if (destinations is JArray results) ValidateDestinations(Text(n, "id"), results);
                 if (n["step"]?["argumentVariables"] is JObject links)
@@ -258,7 +258,7 @@ namespace Core.Scripting.Editor
                     if (!_inputs.ContainsKey(id + "/" + input.name)) continue;
                     if ((string)step["action"] == "cutscene.setVariable" && input.name == "name") throw Invalid("Set Variable destination must be literal.");
                     var sourceNode = Node(Text(_inputs[id + "/" + input.name], "source"));
-                    if (Kind(sourceNode) == "position" && !_inputs.Values.Any(e => (string)e["target"] == Text(sourceNode, "id")))
+                    if (Kind(sourceNode) == "position" && _inputs.Values.All(e => (string)e["target"] != Text(sourceNode, "id")))
                     {
                         // Literal Make Position inputs remain authored literals for map binding validation.
                         ((JObject)step["arguments"])[input.name] = sourceNode["arguments"].DeepClone();

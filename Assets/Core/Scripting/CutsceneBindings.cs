@@ -118,7 +118,7 @@ namespace Core.Scripting
                     // Imported literal arguments already match this signature.
                     var arguments = method.Parameters.Select(parameter =>
                     {
-                        if (parameter.IsOptional && !step.Arguments.Any(argument => argument.Name == parameter.Name))
+                        if (parameter.IsOptional && step.Arguments.All(argument => argument.Name != parameter.Name))
                             return parameter.DefaultValue;
                         var argument = step.Arguments.Single(argument => argument.Name == parameter.Name);
                         if (parameter.ParameterType == typeof(string)) return (object)argument.Value;

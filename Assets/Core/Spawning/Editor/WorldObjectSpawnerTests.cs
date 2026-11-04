@@ -91,7 +91,7 @@ namespace Core.Spawning.Editor
             _spawner.OnLocationLeave(_location);
             Assert.That(state.position, Is.EqualTo(new Vector3(8, 9, 0)));
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
-            var restored = _spawner.SpawnedObjects.OfType<SpawnedObject>()
+            var restored = _spawner.SpawnedObjects
                 .Single(instance => instance.PersistentId == id && instance.gameObject.activeSelf);
             Assert.That(restored.State, Is.SameAs(state));
             Assert.That(restored.State.interaction.uses, Is.EqualTo(2));
@@ -107,7 +107,7 @@ namespace Core.Spawning.Editor
             _prefab.transform.rotation = Quaternion.Euler(0, 0, 30);
             var placements = new[] { new AuthoredSpawnPlacement { id = "map-chest-1", template = _prefabComponent } };
             _spawner.EnterLocation(_location, placements);
-            var view = _spawner.SpawnedObjects.OfType<SpawnedObject>().Single();
+            var view = _spawner.SpawnedObjects.Single();
             Assert.That(view.PersistentId, Is.EqualTo("map-chest-1"));
             Assert.That(view.State.authored, Is.True);
             Assert.That(view.transform.position, Is.EqualTo(_prefab.transform.position));
@@ -117,7 +117,7 @@ namespace Core.Spawning.Editor
             _spawner.OnLocationLeave(_location);
             _prefab.transform.position = Vector3.zero; // An authored map update must not reset saved state.
             _spawner.EnterLocation(_location, placements);
-            var restored = _spawner.SpawnedObjects.OfType<SpawnedObject>().Single();
+            var restored = _spawner.SpawnedObjects.Single();
             Assert.That(restored.PersistentId, Is.EqualTo("map-chest-1"));
             Assert.That(restored.transform.position, Is.EqualTo(new Vector3(7, 8, 0)));
             Assert.That(Quaternion.Angle(restored.transform.rotation, Quaternion.Euler(0, 0, 75)), Is.LessThan(0.01f));
@@ -131,12 +131,12 @@ namespace Core.Spawning.Editor
             _spawner.OnLocationLeave(_location);
             var placements = new[] { new AuthoredSpawnPlacement { id = "chest", template = _prefabComponent } };
             _spawner.EnterLocation(_location, placements);
-            _spawner.SpawnedObjects.OfType<SpawnedObject>().Single().Remove();
+            _spawner.SpawnedObjects.Single().Remove();
             Assert.That(Game.State.World.TryGet(_location.id, "chest", out SpawnedObjectState state), Is.True);
             Assert.That(state.removed, Is.True);
             _spawner.OnLocationLeave(_location);
             _spawner.EnterLocation(_location, placements);
-            Assert.That(_spawner.SpawnedObjects.OfType<SpawnedObject>(), Is.Empty);
+            Assert.That(_spawner.SpawnedObjects, Is.Empty);
         }
 
         [Test]
@@ -148,7 +148,7 @@ namespace Core.Spawning.Editor
             var generatedId = _spawner.Spawn(_prefabComponent, Vector3.one).PersistentId;
             _spawner.OnLocationLeave(_location);
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
-            Assert.That(_spawner.SpawnedObjects.OfType<SpawnedObject>().Single().PersistentId, Is.EqualTo(generatedId));
+            Assert.That(_spawner.SpawnedObjects.Single().PersistentId, Is.EqualTo(generatedId));
             Assert.That(Game.State.World.TryGet(_location.id, "chest", out SpawnedObjectState _), Is.True);
         }
 
@@ -225,7 +225,7 @@ namespace Core.Spawning.Editor
             Game.State.World.Set(_location.id, "missing", new SpawnedObjectState { prefabId = "base:missing" });
             LogAssert.Expect(LogType.Exception, new Regex("No spawnable registered for 'base:missing'"));
             Assert.DoesNotThrow(() => _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>()));
-            Assert.That(_spawner.SpawnedObjects.OfType<SpawnedObject>()
+            Assert.That(_spawner.SpawnedObjects
                 .Single().PersistentId, Is.EqualTo(id));
             Assert.That(Game.State.World.TryGet(_location.id, "missing", out SpawnedObjectState _), Is.True);
         }

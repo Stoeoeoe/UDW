@@ -123,7 +123,7 @@ namespace Core.Tile.Editor.Vulcanus
             // Only discovered rows have a source GUID. Deleted/moved-out sources disappear;
             // manual rows remain unless the same prefab is now discovered under another ID.
             result.AddRange(existing.Values.Where(binding => binding != null && string.IsNullOrEmpty(binding.SourceAssetGuid) &&
-                (!binding.MapPrefab || !result.Any(row => row.MapPrefab == binding.MapPrefab))));
+                (!binding.MapPrefab || result.All(row => row.MapPrefab != binding.MapPrefab))));
             result.Sort((a, b) => string.Compare(a.MapId, b.MapId, StringComparison.OrdinalIgnoreCase));
             return result.ToArray();
         }

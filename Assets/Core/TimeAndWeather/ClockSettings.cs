@@ -22,7 +22,7 @@ namespace Core.TimeAndWeather
                 throw new InvalidOperationException("Clock settings require every season in calendar order.");
             if (seasons.Select(season => season.season).Distinct().Count() != seasons.Length)
                 throw new InvalidOperationException("Clock settings contain a season more than once.");
-            if (!seasons.Any(season => season.season == startingSeason))
+            if (seasons.All(season => season.season != startingSeason))
                 throw new InvalidOperationException($"Starting season '{startingSeason}' has no season data.");
             if (startOfDay < 0 || endOfDay > 24 || startOfDay >= endOfDay)
                 throw new InvalidOperationException("The playable day must start before it ends, within 0-24 hours.");

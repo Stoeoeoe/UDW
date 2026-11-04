@@ -595,7 +595,7 @@ namespace Core.Tile.Editor
             Assert.That(_catalog.MapBindings.Single(row => row.MapId == "test:map").SourceAssetGuid, Is.EqualTo(guid));
             Assert.That(VulcanusWorldCatalogDiscovery.Refresh(_catalog), Is.False);
             Assert.That(AssetDatabase.DeleteAsset(_mapPath), Is.True);
-            yield return AwaitCatalog(() => !_catalog.MapBindings.Any(row => row.MapId == "test:map"));
+            yield return AwaitCatalog(() => _catalog.MapBindings.All(row => row.MapId != "test:map"));
             Assert.That(_catalog.MapBindings.Single().LocationData, Is.SameAs(_target));
         }
 
@@ -614,7 +614,7 @@ namespace Core.Tile.Editor
             var movedPath = _root + "/nested/" + Path.GetFileName(_mapPath);
             Assert.That(AssetDatabase.MoveAsset(_mapPath, movedPath), Is.Empty);
             _mapPath = movedPath;
-            yield return AwaitCatalog(() => !_catalog.MapBindings.Any(row => row.MapId == "test:map"));
+            yield return AwaitCatalog(() => _catalog.MapBindings.All(row => row.MapId != "test:map"));
             Assert.That(_catalog.MapBindings.Single().LocationData, Is.SameAs(_target));
         }
 
