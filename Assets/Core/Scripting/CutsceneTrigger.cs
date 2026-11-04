@@ -1,9 +1,9 @@
-using VContainer;
 using System;
 using System.Collections.Generic;
 using Character;
 using Core.Location;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Scripting
 {

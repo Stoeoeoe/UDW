@@ -1,11 +1,11 @@
-using VContainer;
+using System;
+using Character.Animations;
 using Core;
 using Core.Events;
 using Core.TimeAndWeather;
-using Character.Animations;
-using UnityEngine;
 using Interaction.Tools.Stamina;
-using System;
+using UnityEngine;
+using VContainer;
 
 namespace Character
 {

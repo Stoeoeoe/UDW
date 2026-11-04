@@ -1,8 +1,7 @@
-using VContainer;
-using Core;
 using Core.Inventory;
+using MoreMountains.Tools;
 using UnityEngine;
-using UnityEngine.Audio;
+using VContainer;
 
 namespace Core.Items
 {
@@ -65,7 +64,7 @@ namespace Core.Items
             if (!clip) return;
 
             float pitch = Random.Range(_settings.pitchMin, _settings.pitchMax);
-            MoreMountains.Tools.MMSfxEvent.Trigger(clip, _settings.audioMixerGroup, _settings.volume, pitch);
+            MMSfxEvent.Trigger(clip, _settings.audioMixerGroup, _settings.volume, pitch);
         }
 
         public void RequirePickupSound(AudioClip overrideClip) => _settings.RequirePickupSound(overrideClip);

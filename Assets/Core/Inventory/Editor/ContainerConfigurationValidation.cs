@@ -1,9 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Character;
 using Core.Tile.Vulcanus;
-using Core.Spawning;
 using Interaction;
 using UI.Containers;
 using UnityEditor;
@@ -43,7 +40,7 @@ namespace Core.Inventory.Editor
         {
             foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[]{"Assets/Content/Spawnables"}))
                 Check(AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid)));
-            var systems = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
+            var systems = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
             if (!systems || systems.GetComponentsInChildren<ContainerScreen>(true).Length != 1)
                 throw new InvalidOperationException("SystemRoot requires exactly one configured container screen.");
             Check(systems);

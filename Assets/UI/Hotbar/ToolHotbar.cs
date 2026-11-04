@@ -1,4 +1,3 @@
-using VContainer;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
@@ -6,10 +5,10 @@ using Core.Equipment;
 using Core.Events;
 using Core.Inventory;
 using Core.Location;
-using Items;
+using UI.Shared;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UI.Shared;
+using VContainer;
 
 namespace UI.Hotbar
 {

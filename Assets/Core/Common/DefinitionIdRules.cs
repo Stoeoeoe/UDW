@@ -1,5 +1,3 @@
-using System;
-
 namespace Core.Common
 {
     /// <summary>Small shared predicates for definition IDs; each definition chooses its own policy.</summary>

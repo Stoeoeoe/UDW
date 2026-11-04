@@ -1,10 +1,10 @@
-using VContainer;
 using System;
 using Core.Events;
 using Core.Game;
 using Core.TimeAndWeather;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
 
 namespace UI.Clock
 {

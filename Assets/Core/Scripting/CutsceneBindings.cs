@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Character;
 using Core.Dialogue.Vulcanus;
-using Core.Location;
-using Core.Tile;
+using Core.Game;
 
 namespace Core.Scripting
 {
@@ -126,7 +124,7 @@ namespace Core.Scripting
                         if (parameter.ParameterType == typeof(string)) return (object)argument.Value;
                         if (parameter.ParameterType == typeof(double)) return double.Parse(argument.Value, CultureInfo.InvariantCulture);
                         if (parameter.ParameterType == typeof(bool)) return bool.Parse(argument.Value);
-                        if (parameter.ParameterType == typeof(Core.Game.StoryValue)) return StoryValueJson.Parse(argument.Value);
+                        if (parameter.ParameterType == typeof(StoryValue)) return StoryValueJson.Parse(argument.Value);
                         if (parameter.ParameterType == typeof(MapPosition)) return argument.Position;
                         if (parameter.ParameterType == typeof(MapPosition?)) return argument.IsNull ? null : (object)argument.Position;
                         if (parameter.ParameterType == typeof(MapPath)) return argument.Path;

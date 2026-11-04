@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
+using Character;
+using Character.Animations;
 using Core.Inventory;
+using Core.Spawning;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -25,7 +28,7 @@ namespace Core.Items.Editor
                         !float.IsFinite(entry.weight) || entry.weight < 0f) ||
                     !float.IsFinite(entries.Sum(entry => entry.weight)) || entries.Sum(entry => entry.weight) <= 0f)
                     throw new InvalidOperationException($"Foraging spot '{spot.name}' needs forage items with nonnegative weights and a positive finite total.");
-                var catalog = AssetDatabase.LoadAssetAtPath<Core.Spawning.SpawnableCatalog>("Assets/Resources/SpawnableCatalog.asset");
+                var catalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>("Assets/Resources/SpawnableCatalog.asset");
                 foreach (var entry in entries)
                     if (!catalog.Prefabs.Contains(entry.item))
                         throw new InvalidOperationException($"Foraging spot '{spot.name}' references unregistered forage '{entry.item.name}'.");
@@ -36,9 +39,9 @@ namespace Core.Items.Editor
                 var data = new SerializedObject(pickup);
                 if (data.FindProperty("quantity").intValue <= 0)
                     throw new InvalidOperationException($"Pickup '{pickup.name}' needs positive quantity.");
-                var animation = (Character.Animations.CharacterAnimation)data.FindProperty("pickupAnimation").objectReferenceValue;
+                var animation = (CharacterAnimation)data.FindProperty("pickupAnimation").objectReferenceValue;
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab")
-                    .GetComponent<Character.GameCharacter>().Animator.ValidateOneShot(animation);
+                    .GetComponent<GameCharacter>().Animator.ValidateOneShot(animation);
             }
         }
 
@@ -47,8 +50,8 @@ namespace Core.Items.Editor
             item.RequireValidConfiguration();
             if (Resources.Load<ItemCatalog>(ItemCatalog.ResourceName).Find(item.ItemId) != item)
                 throw new InvalidOperationException($"Forage '{item.name}' must be enabled in the item catalog.");
-            AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath)
-                .GetComponent<Core.SystemRoot>().Items.RequirePickupSound(item.PickupSound);
+            AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath)
+                .GetComponent<SystemRoot>().Items.RequirePickupSound(item.PickupSound);
         }
 
         public static void CheckPrefabs()

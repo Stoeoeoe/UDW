@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using Character;
+using Core.Inventory;
 using Sirenix.Serialization;
 using UnityEngine;
 
@@ -8,9 +10,9 @@ namespace Core.Game
     /// <summary>Reads and writes the versioned game-state root in Unity's persistent data folder.</summary>
     public sealed class GameSaveService
     {
-        private readonly Character.CharacterCatalog _characters;
-        private readonly Inventory.ItemCatalog _items;
-        public GameSaveService(Character.CharacterCatalog characters, Inventory.ItemCatalog items)
+        private readonly CharacterCatalog _characters;
+        private readonly ItemCatalog _items;
+        public GameSaveService(CharacterCatalog characters, ItemCatalog items)
         { _characters = characters; _items = items; }
 
         public void Save(string slot, GameSaveData data)

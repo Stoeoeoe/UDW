@@ -1,14 +1,13 @@
-using VContainer;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
 using Character;
 using Character.Animations;
 using Core.Location;
 using Core.Spawning;
 using Core.Tile;
 using Core.Tile.Vulcanus;
+using UnityEngine;
+using VContainer;
 
 namespace Core.Scripting
 {
@@ -252,7 +251,7 @@ namespace Core.Scripting
             placedCharacter.Controller.Stop();
             // CharacterGraphics' authored sprite pivot is the feet/ground origin, not the Rigidbody's origin.
             root.position += point - placedCharacter.Graphics.position;
-            placedCharacter.GetComponent<UnityEngine.Rigidbody2D>().position = placedCharacter.transform.position;
+            placedCharacter.GetComponent<Rigidbody2D>().position = placedCharacter.transform.position;
             placedCharacter.SetMovementState(MovementState.Idle);
             placedCharacter.Tiles.OnPlaced();
             if (spawn) spawn.SavePosition();
@@ -311,7 +310,7 @@ namespace Core.Scripting
             return character;
         }
 
-        internal UnityEngine.Vector3 ResolvePosition(MapPosition position) => position.ToWorld(_map);
+        internal Vector3 ResolvePosition(MapPosition position) => position.ToWorld(_map);
 
         internal VulcanusMapAnchor ResolveAnchor(string id)
         {

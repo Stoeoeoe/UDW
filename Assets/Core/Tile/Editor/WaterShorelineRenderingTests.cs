@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Tilemaps;
 using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor
@@ -46,11 +47,11 @@ namespace Core.Tile.Editor
                 profile.shoreWavesEnabled = false;
                 var origin = new Vector3(10.03125f, -3.15625f, 0);
                 root.transform.position = origin;
-                root.AddComponent<UnityEngine.Grid>();
+                root.AddComponent<Grid>();
                 var body = root.AddComponent<WaterBody>();
                 body.Configure(profile, 16, shoreline);
                 var properties = new MaterialPropertyBlock();
-                root.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().GetPropertyBlock(properties);
+                root.GetComponent<TilemapRenderer>().GetPropertyBlock(properties);
                 properties.SetTexture("_MainTex", Texture2D.whiteTexture);
                 properties.SetColor("_RendererColor", Color.white);
                 properties.SetColor("unity_SpriteColor", Color.white);

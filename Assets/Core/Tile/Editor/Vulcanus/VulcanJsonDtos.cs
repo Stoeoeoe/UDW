@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Core.Tile.Editor.Vulcanus
 {
@@ -28,7 +29,7 @@ namespace Core.Tile.Editor.Vulcanus
         // Fully-qualified CLR type name for the ItemDefinition-derived class.
         [JsonProperty("className")] public string ClassName { get; set; }
         // Optional property schema (kept as extension data) describing class-specific fields.
-        [JsonExtensionData] public Dictionary<string, Newtonsoft.Json.Linq.JToken> Extra { get; set; } = new();
+        [JsonExtensionData] public Dictionary<string, JToken> Extra { get; set; } = new();
     }
 
     internal class ItemDto
@@ -42,7 +43,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("pickupSound")] public string PickupSound { get; set; }
         [JsonProperty("classId")] public string ClassId { get; set; }
         // Arbitrary typed properties for the class; persisted into the ItemDefinition instance when possible.
-        [JsonProperty("classProperties")] public Dictionary<string, Newtonsoft.Json.Linq.JToken> ClassProperties { get; set; } = new();
+        [JsonProperty("classProperties")] public Dictionary<string, JToken> ClassProperties { get; set; } = new();
     }
 
     internal class TerrainTypeDto
@@ -131,7 +132,7 @@ namespace Core.Tile.Editor.Vulcanus
     {
         [JsonProperty("key")] public string Key { get; set; }
         // Kept as raw token so importer can decide how to persist it.
-        [JsonProperty("value")] public Newtonsoft.Json.Linq.JToken Value { get; set; }
+        [JsonProperty("value")] public JToken Value { get; set; }
     }
 
     internal class PropertyDefinitionDto
@@ -139,7 +140,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("key")] public string Key { get; set; }
         [JsonProperty("label")] public string Label { get; set; }
         [JsonProperty("type")] public string Type { get; set; }
-        [JsonProperty("defaultValue")] public Newtonsoft.Json.Linq.JToken DefaultValue { get; set; }
+        [JsonProperty("defaultValue")] public JToken DefaultValue { get; set; }
         [JsonProperty("required")] public bool Required { get; set; }
     }
 
@@ -172,7 +173,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("ambience")] public string Ambience { get; set; }
 
         // Catch-all for project-defined locationMetadataDefinitions keys
-        [JsonExtensionData] public Dictionary<string, Newtonsoft.Json.Linq.JToken> Extra { get; set; } = new();
+        [JsonExtensionData] public Dictionary<string, JToken> Extra { get; set; } = new();
     }
 
     internal class SpatialPrimitivesDto
@@ -233,9 +234,9 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("definitionId")] public string DefinitionId { get; set; }
 
         // Tile layers: either a 2-D array (dense) or a sparse object.
-        [JsonProperty("data")] public Newtonsoft.Json.Linq.JToken Data { get; set; }
+        [JsonProperty("data")] public JToken Data { get; set; }
 
-        [JsonProperty("terrainData")] public Newtonsoft.Json.Linq.JArray TerrainData { get; set; }
+        [JsonProperty("terrainData")] public JArray TerrainData { get; set; }
         [JsonProperty("terrainPalette")] public List<string> TerrainPalette { get; set; }
 
         [JsonProperty("entities")] public List<EntityInstanceDto> Entities { get; set; } = new();
@@ -292,7 +293,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("rotation")] public float Rotation { get; set; }
 
         // Kept as raw token — reflected into MonoBehaviour fields by VulcanusEntityInitializer.
-        [JsonProperty("properties")] public Newtonsoft.Json.Linq.JToken Properties { get; set; }
+        [JsonProperty("properties")] public JToken Properties { get; set; }
         [JsonProperty("tags")] public List<string> Tags { get; set; } = new();
         [JsonProperty("timeScope")] public TimeScopeDto TimeScope { get; set; }
     }

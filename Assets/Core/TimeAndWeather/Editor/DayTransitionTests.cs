@@ -1,34 +1,36 @@
-using Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Character;
 using Animancer;
+using Character;
+using Character.Animations;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
 using Core.Location;
-using Interaction;
 using DG.Tweening;
+using Input;
+using Interaction;
 using NUnit.Framework;
 using UI.Shared;
+using UI.Shared.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.TimeAndWeather.Editor
 {
     /// <summary>Verifies the blackout boundary and input/character restoration without waiting for real-time fades.</summary>
-    public sealed class DayTransitionTests : Core.Common.Editor.GameTest, IEventListener<NewDayEvent>
+    public sealed class DayTransitionTests : GameTest, IEventListener<NewDayEvent>
     {
 
         private GameClock _clock;
         private OvernightTransition _overnight;
-        private Input.InputManager _input;
+        private InputManager _input;
         private MainCharacter _character;
         private CanvasGroup _canvas;
         private IEnumerator _routine;
@@ -54,11 +56,11 @@ namespace Core.TimeAndWeather.Editor
             var wakePoint = Child("Wake point").transform;
             wakePoint.position = new Vector3(3, 2, 0);
             Set(bedSlot, "exitPoint", wakePoint);
-            Set(bedSlot, "occupiedAnimation", AssetDatabase.LoadAssetAtPath<Character.Animations.CharacterAnimationDefinition>("Assets/Interaction/PrototypeSittingAnimation.asset"));
+            Set(bedSlot, "occupiedAnimation", AssetDatabase.LoadAssetAtPath<CharacterAnimationDefinition>("Assets/Interaction/PrototypeSittingAnimation.asset"));
             GameTestFixture.Invoke(bedSlot, "Awake");
             GameTestFixture.Invoke(bed, "Awake");
             Game.State.Player.Home = new PlayerHomeState(homeLocation.id, bed.PersistentId);
-            _input = Game.Start<Input.InputManager>(input =>
+            _input = Game.Start<InputManager>(input =>
             {
                 input.GetComponent<PlayerInput>().actions = Game.Own(Game.InjectObject(Object.Instantiate(
                     AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions"))));
@@ -84,9 +86,9 @@ namespace Core.TimeAndWeather.Editor
 
             Set(gui, "screenFader", fader);
             Set(gui, "toolHud", Child("Hotbar").AddComponent<CanvasGroup>());
-            var document = gui.GetComponent<UnityEngine.UIElements.UIDocument>();
-            document.panelSettings = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
-            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
+            var document = gui.GetComponent<UIDocument>();
+            document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
             GameTestFixture.Invoke(gui, "Start");
             Game.State.Time.daysSinceStart = 5;
             Game.State.Time.dayOfSeason = 5;
@@ -443,7 +445,7 @@ namespace Core.TimeAndWeather.Editor
         [Test]
         public void StartingTheTransitionClosesMenusAndReleasesTheirPauses()
         {
-            var screen = Game.InjectObject(Child("Open menu").AddComponent<UI.Shared.Editor.PauseTestScreen>());
+            var screen = Game.InjectObject(Child("Open menu").AddComponent<PauseTestScreen>());
             Assert.That(screen.Open(_character, ScreenPauseMode.CharacterAndClock), Is.True);
             NextYield();
             Assert.That(screen.Visible, Is.False);

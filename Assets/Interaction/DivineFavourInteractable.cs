@@ -1,7 +1,8 @@
-using VContainer;
 using Character;
 using Core.Divinity;
+using Core.TimeAndWeather;
 using UnityEngine;
+using VContainer;
 
 namespace Interaction
 {
@@ -18,7 +19,7 @@ namespace Interaction
         private void Reset()
         {
             cooldownMode = InteractionCooldownMode.UntilTime;
-            cooldownBoundary = Core.TimeAndWeather.GameTimeBoundary.NextDay;
+            cooldownBoundary = GameTimeBoundary.NextDay;
         }
 
         protected override bool Interact(GameCharacter instigator)

@@ -17,7 +17,7 @@ namespace Plants
         public PlantState(string plantID)
         {
             this.plantID = plantID;
-            this.daysPassedSincePlanting = 0;
+            daysPassedSincePlanting = 0;
         }
 
         /// <summary>Growth days count watered days. Wilting is terminal until the crop is removed.</summary>

@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.IO;
 using Character;
-using Core.Catalogs;
 using Core.Catalogs.Editor;
+using Core.Common.Editor;
+using Core.Inventory;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -12,7 +14,7 @@ using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    public sealed class CharacterImporterTests : Core.Common.Editor.GameTest
+    public sealed class CharacterImporterTests : GameTest
     {
 
         private const string SchemaFolder = "Assets/Vulcan/0204project/schemas/";
@@ -47,7 +49,7 @@ namespace Core.Tile.Editor.Vulcanus
         [TestCase("gagaa\n")]
         public void IdsMustMatchTheVulcanusSchema(string id)
         {
-            var json = new Newtonsoft.Json.Linq.JObject { ["id"] = id, ["name"] = "Gagaa", ["icon"] = "🐗" };
+            var json = new JObject { ["id"] = id, ["name"] = "Gagaa", ["icon"] = "🐗" };
             Assert.Throws<FormatException>(() => Parse(json.ToString(), true));
         }
 
@@ -70,7 +72,7 @@ namespace Core.Tile.Editor.Vulcanus
         [TestCase(false, "icon")]
         public void SchemaRejectsWhitespaceAndReportsSourceAndProperty(bool npc, string property)
         {
-            var json = new Newtonsoft.Json.Linq.JObject {
+            var json = new JObject {
                 ["id"] = "base:test", ["name"] = "Test", ["icon"] = "GiAbstract041", [property] = " \t\n"
             };
             var error = Assert.Throws<FormatException>(() => Parse(json.ToString(), npc));
@@ -87,7 +89,7 @@ namespace Core.Tile.Editor.Vulcanus
         {
             string path = Path.Combine("Temp", "character-schema-" + Guid.NewGuid().ToString("N") + ".json");
             const string json = "{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\"}";
-            var schema = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(SchemaFolder + "character.schema.json"));
+            var schema = JObject.Parse(File.ReadAllText(SchemaFolder + "character.schema.json"));
             try
             {
                 File.WriteAllText(path, schema.ToString());
@@ -111,7 +113,7 @@ namespace Core.Tile.Editor.Vulcanus
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
             Assert.That(prefab.GetComponent<GameCharacter>().Definition, Is.SameAs(player));
             Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab")
-                .GetComponent<Core.Inventory.PersistentContainer>().Owner, Is.SameAs(player));
+                .GetComponent<PersistentContainer>().Owner, Is.SameAs(player));
         }
 
         [Test]

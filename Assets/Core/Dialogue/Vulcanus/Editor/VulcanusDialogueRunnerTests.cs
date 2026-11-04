@@ -7,6 +7,7 @@ using Core.Common.Editor;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Core.Dialogue.Vulcanus.Editor
 {
@@ -30,7 +31,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         private VulcanusDialogueRunner Runner()
         {
             Game.Use<IDialoguePresenter>(_presenter);
-            Game.Catalog<DialogueCatalog>(_dialogues.ToArray<UnityEngine.Object>());
+            Game.Catalog<DialogueCatalog>(_dialogues.ToArray<Object>());
             return _runner = Game.Get<VulcanusDialogueRunner>();
         }
 

@@ -3,10 +3,8 @@ using System.Collections;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
-using Core.Tile;
 using Interaction;
 using NUnit.Framework;
-using UI.Shared;
 using UnityEngine;
 using static Core.Common.Editor.Reflect;
 
@@ -21,7 +19,7 @@ namespace Core.Location.Editor
     }
 
     [Category("LocationTransitions")]
-    public sealed class LocationTransitionTests : Core.Common.Editor.GameTest
+    public sealed class LocationTransitionTests : GameTest
     {
 
         private LevelManager _level;

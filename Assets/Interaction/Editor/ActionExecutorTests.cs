@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Interaction.Editor
 {
-    public sealed class ActionExecutorTests : Core.Common.Editor.GameTest
+    public sealed class ActionExecutorTests : GameTest
     {
 
         private MainCharacter _character;

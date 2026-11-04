@@ -1,5 +1,5 @@
-using VContainer;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Music
 {

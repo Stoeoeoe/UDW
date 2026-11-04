@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Items.Plants;
 using Core.Common;
-using Core.TimeAndWeather;
 using Core.Inventory;
-using UnityEngine;
+using Core.TimeAndWeather;
+using Items.Plants;
 using MoreMountains.Feedbacks;
+using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Plants
 {
@@ -83,7 +84,7 @@ namespace Plants
 
         public int RollHarvestQuantity()
         {
-            return UnityEngine.Random.Range(MinHarvestQuantity, MaxHarvestQuantity + 1);
+            return Random.Range(MinHarvestQuantity, MaxHarvestQuantity + 1);
         }
 
         public bool TryGetHarvestStage(int growthDays, HarvestMethod method, out int stageIndex)

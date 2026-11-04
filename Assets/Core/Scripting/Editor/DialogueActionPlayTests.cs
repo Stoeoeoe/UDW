@@ -1,28 +1,28 @@
-using Core.Common.Editor;
-using Core.Context;
-using Core.Music;
-using Core.Scripting;
-using VContainer;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Linq;
 using Character;
-using Core.Game;
-using Core.Catalogs;
-using Core.Spawning;
+using Core.Common.Editor;
+using Core.Context;
 using Core.Dialogue.Vulcanus;
+using Core.Game;
 using Core.Location;
+using Core.Music;
+using Core.Spawning;
 using Core.Tile;
 using Core.Tile.Vulcanus;
 using DG.Tweening;
+using Input;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UI.Shared;
-using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
@@ -37,7 +37,7 @@ namespace Core.Scripting.Editor
         private VulcanusDialogueRunner _runner;
         private UIDocument _document;
         private DialogueCatalog _catalog;
-        private UnityEngine.Object[] _authoredDialogues;
+        private Object[] _authoredDialogues;
         private VulcanusDialogueAsset _talk, _end, _error;
         private CutsceneDefinition _npcMovement;
         private CutsceneDefinition NpcMovement => _npcMovement ??= CreateNpcMovementDefinition();
@@ -45,7 +45,7 @@ namespace Core.Scripting.Editor
         [UnitySetUp]
         public IEnumerator SetUp()
         {
-            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
+            if (SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
                 EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;
@@ -118,9 +118,9 @@ namespace Core.Scripting.Editor
                 Assert.That(service.TryStart(definition, out _), Is.False, "A busy start cannot replace or queue the active run.");
                 Assert.That(LiveGame.Get<UrGUIManager>().IsGameClockPaused, Is.True);
                 Assert.That(LiveGame.Get<PlayerInteractionContext>().CurrentSnapshot.WorldInteractionBlocked, Is.True);
-                Assert.That(LiveGame.Get<Input.InputManager>().PlayerControls.enabled, Is.False);
-                Assert.That(LiveGame.Get<Input.InputManager>().Actions.FindActionMap("Global").enabled, Is.False);
-                Assert.That(LiveGame.Get<Input.InputManager>().Actions.FindActionMap("UI").enabled, Is.True);
+                Assert.That(LiveGame.Get<InputManager>().PlayerControls.enabled, Is.False);
+                Assert.That(LiveGame.Get<InputManager>().Actions.FindActionMap("Global").enabled, Is.False);
+                Assert.That(LiveGame.Get<InputManager>().Actions.FindActionMap("UI").enabled, Is.True);
                 Assert.That(Time.timeScale, Is.EqualTo(1f), "Calendar pause must not freeze physics.");
                 Assert.That(() => LiveGame.Get<GameStateManager>().Save("cutscene_staging_rejected"), Throws.InvalidOperationException);
                 var deadline = Time.realtimeSinceStartup + 5;
@@ -130,7 +130,7 @@ namespace Core.Scripting.Editor
                 Assert.That(LiveGame.Get<GameState>().Story.Has("fixture_intro_done"), Is.True);
                 Assert.That(service.TryStart(definition, out _), Is.False, "Completion is tracked by the cutscene ID.");
                 Assert.That(LiveGame.Player.IsControlBlocked, Is.False);
-                Assert.That(LiveGame.Get<Input.InputManager>().PlayerControls.enabled, Is.True);
+                Assert.That(LiveGame.Get<InputManager>().PlayerControls.enabled, Is.True);
                 AssertClosed();
                 var slot = "cutscene_test_" + Guid.NewGuid().ToString("N");
                 try
@@ -139,7 +139,7 @@ namespace Core.Scripting.Editor
                     Assert.That(LiveGame.Get<GameSaveService>().TryLoad(slot, out var saved), Is.True);
                     Assert.That(saved.story.CompletedCutscenes.Contains("fixture:terminal"), Is.True);
                 }
-                finally { System.IO.File.Delete(GameSaveService.GetSavePath(slot)); }
+                finally { File.Delete(GameSaveService.GetSavePath(slot)); }
             }
             finally { service.Cancel(); Object.Destroy(definition); }
         }
@@ -463,7 +463,7 @@ namespace Core.Scripting.Editor
                     var originalFacing = player.Orientation.FacingDirection;
                     Assert.That(service.TryStart(definition, out var run), Is.True);
                     Assert.That(player.IsControlBlocked, Is.True);
-                    Assert.That(LiveGame.Get<Input.InputManager>().PlayerControls.enabled, Is.False);
+                    Assert.That(LiveGame.Get<InputManager>().PlayerControls.enabled, Is.False);
                     Assert.That(player.Orientation.FacingDirection, Is.EqualTo(originalFacing), "Setup must wait for the entrance to reach black.");
                     Assert.That(service.CurrentStepId, Is.Null, "The sequence must wait for the entrance cover.");
                     if (terminal == "cancel")
@@ -479,7 +479,7 @@ namespace Core.Scripting.Editor
                         while (run.IsRunning && Time.realtimeSinceStartup < deadline)
                         {
                             Assert.That(player.IsControlBlocked, Is.True);
-                            Assert.That(LiveGame.Get<Input.InputManager>().PlayerControls.enabled, Is.False);
+                            Assert.That(LiveGame.Get<InputManager>().PlayerControls.enabled, Is.False);
                             if (LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(id)) sawCompletedWhileCovered = true;
                             yield return null;
                         }
@@ -488,7 +488,7 @@ namespace Core.Scripting.Editor
                     }
                     Assert.That(run.IsRunning, Is.False);
                     Assert.That(player.IsControlBlocked, Is.False);
-                    Assert.That(LiveGame.Get<Input.InputManager>().PlayerControls.enabled, Is.True);
+                    Assert.That(LiveGame.Get<InputManager>().PlayerControls.enabled, Is.True);
                 }
                 finally { service.Cancel(); Object.Destroy(definition); }
             }
@@ -667,7 +667,7 @@ namespace Core.Scripting.Editor
         public IEnumerator MusicOverrideReleasesOnCompletionSkipCancellationAndExplicitRelease()
         {
             var service = LiveGame.Get<CutsceneRunner>();
-            var catalog = Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName);
+            var catalog = Resources.Load<MusicCatalog>(MusicCatalog.ResourceName);
             var director = LiveGame.Get<MusicDirector>();
             var cues = catalog.EnabledDefinitions.ToArray();
             Assert.That(cues.Length, Is.GreaterThanOrEqualTo(2));
@@ -714,7 +714,7 @@ namespace Core.Scripting.Editor
                 ["id"] = stepId, ["action"] = "characters.faceDirection",
                 ["arguments"] = new JObject { ["character"] = character, ["direction"] = direction }
             };
-            var ids = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
             var setup = CutsceneSequenceCompiler.Compile(new JArray(Turn("stage", "player", "East")), id, out var setupSteps, "setup", ids);
             var sequence = CutsceneSequenceCompiler.Compile(new JArray(new JObject
             {
@@ -745,7 +745,7 @@ namespace Core.Scripting.Editor
                     ["id"] = step, ["action"] = "characters.place",
                     ["arguments"] = new JObject { ["character"] = spawn.PersistentId, ["position"] = new JObject { ["x"] = x, ["y"] = 104 } }
                 };
-                var ids = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                var ids = new HashSet<string>(StringComparer.Ordinal);
                 var setup = CutsceneSequenceCompiler.Compile(new JArray(Place("stage", 168)), id, out var setupSteps, "setup", ids);
                 var sequence = CutsceneSequenceCompiler.Compile(new JArray(new JObject
                 {
@@ -866,7 +866,7 @@ namespace Core.Scripting.Editor
                 Assert.That(placement.position, Is.EqualTo(spawn.transform.position));
                 Assert.That(saved.story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
             }
-            finally { System.IO.File.Delete(GameSaveService.GetSavePath(slot)); }
+            finally { File.Delete(GameSaveService.GetSavePath(slot)); }
         }
 
         [UnityTest]
@@ -943,7 +943,7 @@ namespace Core.Scripting.Editor
 
                 PlacePlayer(original + Vector2.right * 4f);
                 for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
-                var exitColliders = ((System.Collections.Generic.HashSet<Collider2D>)typeof(CutsceneTrigger)
+                var exitColliders = ((HashSet<Collider2D>)typeof(CutsceneTrigger)
                     .GetField("_playerColliders", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(owner.GetComponent<CutsceneTrigger>())).Count;
                 var exitOverlap = area.Distance(player.GetComponent<Collider2D>()).isOverlapped;
                 PlacePlayer(original);

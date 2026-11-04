@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Character
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Characters")]
-    [DefaultCatalog(CharacterCatalog.ResourceName)]
+    [DefaultCatalog(ResourceName)]
     public sealed class CharacterCatalog : DefinitionCatalog<CharacterDefinition>
     {
         public const string ResourceName = "CharacterCatalog";

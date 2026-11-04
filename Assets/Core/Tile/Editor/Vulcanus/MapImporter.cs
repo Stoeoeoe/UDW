@@ -1,17 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Catalogs;
 using Core.Location;
 using Core.Music;
 using Core.Spawning;
 using Core.Spawning.Editor;
 using Core.Tile.Vulcanus;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
+using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
 {
@@ -62,7 +65,7 @@ namespace Core.Tile.Editor.Vulcanus
             try
             {
                 var mapComponent = mapRoot.AddComponent<VulcanusImportedMap>();
-                mapRoot.AddComponent<Core.GameSceneScope>();
+                mapRoot.AddComponent<GameSceneScope>();
                 mapComponent.Configure(mapId, mapName, width, height, tileSize);
                 ImportMusic(ctx, mapRoot, dto.Metadata, mapId);
 
@@ -159,7 +162,7 @@ namespace Core.Tile.Editor.Vulcanus
             }
             catch
             {
-                UnityEngine.Object.DestroyImmediate(mapRoot);
+                Object.DestroyImmediate(mapRoot);
                 throw;
             }
         }
@@ -349,7 +352,7 @@ namespace Core.Tile.Editor.Vulcanus
                 label = dto.Label ?? string.Empty,
                 pixelPosition = new Vector2(px, py),
                 rotationDegrees = dto.Rotation,
-                propertiesJson = Newtonsoft.Json.JsonConvert.SerializeObject(dto.Properties ?? new JObject())
+                propertiesJson = JsonConvert.SerializeObject(dto.Properties ?? new JObject())
             };
 
             var ts = Mathf.Max(1, tileSize);
@@ -426,7 +429,7 @@ namespace Core.Tile.Editor.Vulcanus
             var group = new GameObject(layer.Name);
             group.transform.SetParent(mapRoot, false);
 
-            var tilesetById = Core.Catalogs.IdIndex.FirstWins(tilesetsByIndex,
+            var tilesetById = IdIndex.FirstWins(tilesetsByIndex,
                 tileset => tileset ? tileset.TilesetId : null, StringComparer.OrdinalIgnoreCase);
             foreach (var inst in layer.ObjectInstances)
             {
@@ -435,7 +438,7 @@ namespace Core.Tile.Editor.Vulcanus
                 if (!tileset.TryGetObjectDefinition(inst.ObjectDefinitionId, out var def) || !def.prefab)
                     throw new InvalidOperationException($"Object '{inst.Id}' requires imported prefab '{inst.ObjectDefinitionId}' from tileset '{inst.TilesetId}'. Reimport the tileset.");
 
-                var instance = UnityEngine.Object.Instantiate(def.prefab, group.transform);
+                var instance = Object.Instantiate(def.prefab, group.transform);
                 instance.name = $"{def.id}_{inst.Id}";
                 instance.transform.localPosition = new Vector3(
                     inst.X / (float)tileSize + def.widthTiles * 0.5f,

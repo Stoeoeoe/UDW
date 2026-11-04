@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using MoonSharp.Interpreter;
 
@@ -225,7 +226,7 @@ namespace Core.Scripting
         private sealed class ParallelAction : ILuaAction
         {
             private readonly Track[] _tracks;
-            private readonly System.Collections.Generic.Dictionary<string, Track> _claims = new(StringComparer.Ordinal);
+            private readonly Dictionary<string, Track> _claims = new(StringComparer.Ordinal);
             public ParallelAction(Track[] tracks) { _tracks = tracks; foreach (var track in tracks) track.Group = this; }
             public void Claim(Track track, LuaBindingRegistry.Method method, object[] values)
             {

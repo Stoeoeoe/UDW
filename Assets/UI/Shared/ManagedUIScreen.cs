@@ -1,8 +1,8 @@
-using VContainer;
 using System;
 using Character;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
 
 namespace UI.Shared
 {

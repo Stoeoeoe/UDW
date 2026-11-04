@@ -1,8 +1,9 @@
+using Core.Common.Editor;
 using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class LuaPhaseExecutionTests : Core.Common.Editor.GameTest
+    public sealed class LuaPhaseExecutionTests : GameTest
     {
 
         [TestCase("setup", "Stage")]

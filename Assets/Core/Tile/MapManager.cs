@@ -20,7 +20,7 @@ using VContainer.Unity;
 
 namespace Core.Tile
 {
-    public class MapManager : Core.GameManager,
+    public class MapManager : GameManager,
         IEventListener<SowPlantEvent>, IEventListener<FarmlandDriedEvent>
     {
         [Inject] private IObjectResolver _resolver;

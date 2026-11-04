@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Core.Tile.Vulcanus;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
@@ -36,7 +37,7 @@ namespace Core.Tile.Editor.Vulcanus
                 key = d.Key,
                 label = d.Label,
                 type = d.Type,
-                defaultValue = d.DefaultValue?.ToString(Newtonsoft.Json.Formatting.None),
+                defaultValue = d.DefaultValue?.ToString(Formatting.None),
                 required = d.Required
             }).ToArray() ?? Array.Empty<VulcanusProject.PropertyDefinition>();
 
@@ -47,7 +48,7 @@ namespace Core.Tile.Editor.Vulcanus
                 description = d.Description,
             }).ToArray() ?? Array.Empty<VulcanusProject.DialogueTypeDefinition>();
 
-            var warnings = new System.Collections.Generic.List<string>();
+            var warnings = new List<string>();
 
             var project = ScriptableObject.CreateInstance<VulcanusProject>();
             project.name = VulcanusImportHelpers.GetBaseName(ctx.assetPath);

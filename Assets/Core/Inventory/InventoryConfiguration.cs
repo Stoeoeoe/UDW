@@ -1,5 +1,5 @@
-using Core.Common;
 using System;
+using Core.Common;
 using Core.Equipment;
 using UnityEngine;
 

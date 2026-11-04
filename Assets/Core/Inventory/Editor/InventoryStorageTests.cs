@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Core.Common.Editor;
 using NUnit.Framework;
 using UnityEngine;
@@ -31,7 +32,7 @@ namespace Core.Inventory.Editor
 
         private void Commit(ItemStack[] content) =>
             ((Action<ItemStack[]>)typeof(InventoryStorage).GetMethod("CommitContent",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                BindingFlags.Instance | BindingFlags.NonPublic)
                 .CreateDelegate(typeof(Action<ItemStack[]>), _storage))(content);
 
         [Test]

@@ -1,8 +1,9 @@
 using System;
 using System.Linq;
-using System.Reflection;
+using Character;
 using Core.Common.Editor;
 using Core.Game;
+using Core.Inventory;
 using Core.Location;
 using Core.Spawning;
 using NUnit.Framework;
@@ -10,12 +11,12 @@ using Sirenix.Serialization;
 using UnityEditor;
 using UnityEngine;
 using Util;
+using Random = UnityEngine.Random;
 using SerializationUtility = Sirenix.Serialization.SerializationUtility;
-using static Core.Common.Editor.Reflect;
 
 namespace Core.Items.Editor
 {
-    public sealed class ForagingSpotTests : Core.Common.Editor.GameTest
+    public sealed class ForagingSpotTests : GameTest
     {
 
         private WorldObjectSpawner _spawner;
@@ -136,7 +137,7 @@ namespace Core.Items.Editor
             save.time.dayOfSeason = 3;
             save.time.hour = 6;
             save.world.Set(_location.id, "spot", original);
-            save.Validate(Game.Get<Character.CharacterCatalog>(), Game.Get<Core.Inventory.ItemCatalog>());
+            save.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>());
             var bytes = SerializationUtility.SerializeValue(save, DataFormat.Binary);
             var restored = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.Binary);
             Assert.That(restored.world.TryGet(_location.id, "spot", out ForagingSpotState state), Is.True);
@@ -235,13 +236,13 @@ namespace Core.Items.Editor
             list.Add("excluded first", 0);
             list.Add("fig", 1);
             list.Add("excluded last", 0);
-            var randomState = UnityEngine.Random.state;
+            var randomState = Random.state;
             try
             {
-                UnityEngine.Random.InitState(1234);
+                Random.InitState(1234);
                 for (var i = 0; i < 100; i++) Assert.That(list.GetRandomItem(), Is.EqualTo("fig"));
             }
-            finally { UnityEngine.Random.state = randomState; }
+            finally { Random.state = randomState; }
         }
 
         private void Set(string field, object value) => Reflect.Set(_spot, field, value);

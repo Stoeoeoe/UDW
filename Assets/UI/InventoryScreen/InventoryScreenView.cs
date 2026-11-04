@@ -1,9 +1,8 @@
-using VContainer;
 using Core.Equipment;
 using Core.Events;
 using Core.Inventory;
 using UI.Shared;
-using UnityEngine;
+using VContainer;
 
 namespace UI.InventoryScreen
 {

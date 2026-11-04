@@ -1,16 +1,15 @@
-using VContainer;
 using Core;
 using Core.Context;
-using Core.Events;
 using Core.Location;
 using Core.Tile;
 using Interaction.Dialogue;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using VContainer;
 
 namespace Interaction.Pointer
 {
-    public class PointerManager : Core.GameManager, ILocationLifecycle
+    public class PointerManager : GameManager, ILocationLifecycle
     {
         [Inject] private PlayerInteractionContext _playerInteractionContext;
         [Inject] private LocationContext _locationContext;
@@ -52,7 +51,7 @@ namespace Interaction.Pointer
         protected override void OnDisable()
         {
             _playerInteractionContext.OnContextChanged -= HandleContextChange;
-            Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
             base.OnDisable();
@@ -60,7 +59,7 @@ namespace Interaction.Pointer
 
         public void OnLocationEnter(LocationData location)
         {
-            this.enabled = true;
+            enabled = true;
         }
 
         public void OnLocationLeave(LocationData location)
@@ -153,7 +152,7 @@ namespace Interaction.Pointer
                     break;
             }
 
-            Cursor.SetCursor(cursorTexture, cursorHotspot, UnityEngine.CursorMode.Auto);
+            Cursor.SetCursor(cursorTexture, cursorHotspot, CursorMode.Auto);
             Cursor.visible = true;
             _appliedPointerMode = pointerMode;
             _hasAppliedCursor = true;
@@ -173,7 +172,7 @@ namespace Interaction.Pointer
             {
                 if (_isMouseOverGameView)
                 {
-                    Cursor.SetCursor(null, Vector2.zero, UnityEngine.CursorMode.Auto);
+                    Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
                     _isMouseOverGameView = false;
                     _suppressCustomCursor = true;
                 }

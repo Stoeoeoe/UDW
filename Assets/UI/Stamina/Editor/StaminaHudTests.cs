@@ -1,24 +1,27 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
 using Character;
 using Core.Common.Editor;
 using Core.Context;
 using Core.Game;
+using Core.Tile;
 using Interaction;
 using Interaction.Tools;
-using UnityEngine.UIElements;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Tilemaps;
+using UnityEngine.UIElements;
 using static Core.Common.Editor.Reflect;
+using InteractionMode = Core.Context.InteractionMode;
+using TerrainData = Core.Tile.TerrainData;
+using TileData = Core.Tile.TileData;
 
 namespace UI.Stamina.Editor
 {
     /// <summary>Checks real tool dispatch and the authored stamina bar against the same live player resource.</summary>
-    public sealed class StaminaHudTests : Core.Common.Editor.GameTest
+    public sealed class StaminaHudTests : GameTest
     {
 
         private MainCharacter _character;
@@ -166,7 +169,7 @@ namespace UI.Stamina.Editor
         {
             var snapshot = PlayerInteractionContextSnapshot.Empty() with
             {
-                SceneReady = true, Character = _character, CurrentTool = _tool, CurrentlyHeldItem = _tool, Mode = Core.Context.InteractionMode.Tool
+                SceneReady = true, Character = _character, CurrentTool = _tool, CurrentlyHeldItem = _tool, Mode = InteractionMode.Tool
             };
             var executor = new ActionExecutor(_character, () => snapshot);
             var run = executor.RunAsync(_useTool, skipPrepare: skipPreparation);
@@ -187,16 +190,16 @@ namespace UI.Stamina.Editor
 
         private void BuildToolMap()
         {
-            var map = Game.Get<Core.Tile.MapManager>();
+            var map = Game.Get<MapManager>();
             var grid = new GameObject("Tool map", typeof(Grid));
             grid.transform.SetParent(Game.Root.transform);
-            var tiles = new GameObject("Terrain", typeof(UnityEngine.Tilemaps.Tilemap));
+            var tiles = new GameObject("Terrain", typeof(Tilemap));
             tiles.transform.SetParent(grid.transform);
-            var tilemap = tiles.GetComponent<UnityEngine.Tilemaps.Tilemap>();
-            var terrain = Game.Asset<Core.Tile.TerrainData>();
-            var cache = new Dictionary<Vector2Int, Core.Tile.TileData>();
+            var tilemap = tiles.GetComponent<Tilemap>();
+            var terrain = Game.Asset<TerrainData>();
+            var cache = new Dictionary<Vector2Int, TileData>();
             for (var y = -1; y <= 1; y++)
-                cache.Add(new Vector2Int(0, y), new Core.Tile.TileData(null, 0, y, terrain,
+                cache.Add(new Vector2Int(0, y), new TileData(null, 0, y, terrain,
                     tilemap.GetCellCenterWorld(new Vector3Int(0, y, 0))));
             Set(map, "_terrainTilemap", tilemap);
             Set(map, "_tileDataCache", cache);

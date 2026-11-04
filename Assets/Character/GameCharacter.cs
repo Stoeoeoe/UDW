@@ -1,10 +1,8 @@
-using UI.Shared;
-using VContainer;
 using System;
 using System.Collections.Generic;
 using Character.Abilities;
-using Core.Inventory;
 using Core.GameplayTags;
+using Core.Inventory;
 using Core.Location;
 using Core.Tile;
 using Core.Tile.TileHighlight;
@@ -12,7 +10,9 @@ using Interaction;
 using Interaction.Tools;
 using Interaction.Tools.Stamina;
 using Items;
+using UI.Shared;
 using UnityEngine;
+using VContainer;
 
 namespace Character
 {

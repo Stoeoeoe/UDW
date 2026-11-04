@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using Character.Abilities;
 using Core.Common.Editor;
+using Input;
 using NUnit.Framework;
 using UI.Shared.Editor;
 using UnityEngine;
@@ -12,7 +13,7 @@ using UnityEngine.InputSystem.LowLevel;
 namespace Character.Editor
 {
     /// <summary>Exercises real movement input when physics has stopped the body or still carries old velocity.</summary>
-    public sealed class MovementFacingTests : Core.Common.Editor.GameTest
+    public sealed class MovementFacingTests : GameTest
     {
 
         private MainCharacter _character;
@@ -212,7 +213,7 @@ namespace Character.Editor
         {
             InputSystem.QueueStateEvent(_keyboard, new KeyboardState(key));
             InputSystem.Update();
-            Assert.That(Game.Get<Input.InputManager>().Move.sqrMagnitude, Is.GreaterThan(0.1f), "The fixture must deliver movement through the authored input map.");
+            Assert.That(Game.Get<InputManager>().Move.sqrMagnitude, Is.GreaterThan(0.1f), "The fixture must deliver movement through the authored input map.");
             _movement.Tick();
         }
     }

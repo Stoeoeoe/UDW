@@ -1,6 +1,7 @@
 using System.Reflection;
 using NUnit.Framework;
 using Unity.Cinemachine;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using Object = UnityEngine.Object;
@@ -78,7 +79,7 @@ namespace Core.Camera.Editor
         [Test]
         public void SystemCameraUsesTheFullViewportForFreeAspect()
         {
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
             var pixels = prefab.GetComponentInChildren<PixelPerfectCamera>(true);
             Assert.That(pixels.cropFrame, Is.EqualTo(PixelPerfectCamera.CropFrame.None));
             Assert.That(pixels.GetComponent<UnityEngine.Camera>().rect, Is.EqualTo(new Rect(0, 0, 1, 1)));

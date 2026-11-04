@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Core.Tile.Vulcanus;
+using Newtonsoft.Json;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
@@ -16,7 +17,7 @@ namespace Core.Tile.Editor.Vulcanus
                 key = definition.Key,
                 label = definition.Label,
                 type = definition.Type,
-                defaultValue = definition.DefaultValue?.ToString(Newtonsoft.Json.Formatting.None),
+                defaultValue = definition.DefaultValue?.ToString(Formatting.None),
                 required = definition.Required
             }).ToArray() ?? Array.Empty<VulcanEntityDefinition.PropertyDefinition>();
 

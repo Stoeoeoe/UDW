@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Globalization;
-using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Common
 {
@@ -33,7 +33,7 @@ namespace Core.Common
         {
             public RequiredAttribute(string message = null) : base(message) { }
             internal override string GetError(object value) =>
-                value == null || (value is UnityEngine.Object obj && !obj) ? "Assign a value." : null;
+                value == null || (value is Object obj && !obj) ? "Assign a value." : null;
         }
 
         public sealed class NotEmptyAttribute : RuleAttribute
@@ -155,7 +155,7 @@ namespace Core.Common
             internal override string GetError(object value)
             {
                 // Reference presence is a separate Required rule.
-                if (value == null || (value is UnityEngine.Object obj && !obj)) return null;
+                if (value == null || (value is Object obj && !obj)) return null;
                 if (!AttributeConfigurationValidation.TryReadMember(value, Member, out var memberValue, out var error)) return error;
                 var memberError = new NotEmptyAttribute().GetError(memberValue);
                 return memberError == null ? null : $"Referenced member '{Member}': {memberError}";

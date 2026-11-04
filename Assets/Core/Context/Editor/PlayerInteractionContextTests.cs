@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Core.Common.Editor;
+using Core.TimeAndWeather;
 using NUnit.Framework;
 using VContainer.Unity;
 
@@ -94,7 +95,7 @@ namespace Core.Context.Editor
             _context.LateTick();
             Assert.That(_context.CurrentSnapshot.CurrentTime, Is.EqualTo(clock.CurrentTime));
 
-            clock.Advance(Game.Get<TimeAndWeather.ClockSettings>().secondsPerInGameMinute);
+            clock.Advance(Game.Get<ClockSettings>().secondsPerInGameMinute);
             _context.LateTick();
 
             Assert.That(_context.CurrentSnapshot.CurrentTime.Minute, Is.EqualTo(10));

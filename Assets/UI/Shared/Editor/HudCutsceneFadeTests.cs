@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Core;
 using Core.Common.Editor;
 using Core.Context;
 using Core.Location;
@@ -9,10 +10,11 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static Core.Common.Editor.Reflect;
+using Image = UnityEngine.UI.Image;
 
 namespace UI.Shared.Editor
 {
-    public sealed class HudCutsceneFadeTests : Core.Common.Editor.GameTest
+    public sealed class HudCutsceneFadeTests : GameTest
     {
 
         private UrGUIManager _gui;
@@ -31,7 +33,7 @@ namespace UI.Shared.Editor
             var document = _gui.GetComponent<UIDocument>();
             document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset");
             document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Hud/GameHud.uxml");
-            var panel = new GameObject("Fader", typeof(RectTransform), typeof(CanvasGroup), typeof(UnityEngine.UI.Image), typeof(ScreenFader));
+            var panel = new GameObject("Fader", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(ScreenFader));
             panel.transform.SetParent(Game.Root.transform, false);
             var fader = panel.GetComponent<ScreenFader>();
             GameTestFixture.Invoke(fader, "Awake");
@@ -117,7 +119,7 @@ namespace UI.Shared.Editor
         [Test]
         public void AuthoredSystemsIncludeBothHudTargets()
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
             Assert.That(CutsceneHudSetup.Validate(root), Is.Empty);
         }
 

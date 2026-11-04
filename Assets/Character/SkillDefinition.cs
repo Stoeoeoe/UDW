@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Core.Common;
 using Core.GameplayTags;
 using UnityEngine;
@@ -31,7 +32,7 @@ namespace Character
         public string DisplayName => _displayName;
         public string Description => _description;
         public Sprite Icon => _icon;
-        public System.Collections.Generic.IReadOnlyList<SkillLevelDefinition> Levels => levels;
+        public IReadOnlyList<SkillLevelDefinition> Levels => levels;
         public int MaxLevel => levels.Length - 1;
 
         public SkillLevelDefinition GetLevelDefinition(int level)

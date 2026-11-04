@@ -1,3 +1,4 @@
+using System;
 using Core.Location;
 using Core.Tile;
 using UnityEngine;
@@ -17,7 +18,7 @@ namespace Character.Abilities
         protected virtual void Awake()
         {
             Character = GetComponentInParent<GameCharacter>();
-            if (!Character) throw new System.InvalidOperationException("Character abilities require a parent character.");
+            if (!Character) throw new InvalidOperationException("Character abilities require a parent character.");
         }
 
         protected virtual bool AbilityAuthorized => !Character.IsControlBlocked;

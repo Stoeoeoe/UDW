@@ -1,6 +1,7 @@
 using Core.Game;
 using Core.TimeAndWeather;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Core.Common.Editor
 {
@@ -28,7 +29,7 @@ namespace Core.Common.Editor
 
             Assert.That(game.Clock, Is.SameAs(game.Get<GameClock>()));
             Assert.That(game.Characters.MainCharacter, Is.Null);
-            Assert.That(game.Root.GetComponentsInChildren<UnityEngine.Component>(true), Has.Length.EqualTo(1),
+            Assert.That(game.Root.GetComponentsInChildren<Component>(true), Has.Length.EqualTo(1),
                 "Only the root transform exists: services need no GameObjects.");
         }
 

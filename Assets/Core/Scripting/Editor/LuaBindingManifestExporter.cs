@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
 {
@@ -74,7 +75,7 @@ namespace Core.Scripting.Editor
         {
             var metadata = catalog.GetType().GetCustomAttribute<LuaResourceAttribute>();
             var member = catalog.DefinitionType.GetMember(metadata.DescriptionMember, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
-            Func<UnityEngine.Object, string> description = member switch
+            Func<Object, string> description = member switch
             {
                 PropertyInfo property when property.PropertyType == typeof(string) => definition => (string)property.GetValue(definition),
                 FieldInfo field when field.FieldType == typeof(string) => definition => (string)field.GetValue(definition),

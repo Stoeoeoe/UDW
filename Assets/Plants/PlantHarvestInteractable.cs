@@ -1,8 +1,8 @@
-using VContainer;
 using Character;
 using Core.Inventory;
 using Interaction;
 using UnityEngine;
+using VContainer;
 
 namespace Plants
 {

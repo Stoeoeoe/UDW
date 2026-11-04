@@ -5,7 +5,7 @@ namespace Core.Inventory
 {
     /// <summary>Explicit asset references for resolving saved IDs, populated by the editor.</summary>
     [CreateAssetMenu(menuName = "Game/Catalogs/Items")]
-    [DefaultCatalog(ItemCatalog.ResourceName)]
+    [DefaultCatalog(ResourceName)]
     public sealed class ItemCatalog : DefinitionCatalog<ItemDefinition>
     {
         public const string ResourceName = "ItemCatalog";

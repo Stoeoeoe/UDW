@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Core.Spawning;
 using UnityEngine;
@@ -7,7 +8,7 @@ namespace Core.Tile.Vulcanus
 {
     public class VulcanusImportedMap : MonoBehaviour
     {
-        [System.Serializable]
+        [Serializable]
         public struct TerrainCell
         {
             public int x;
@@ -31,7 +32,7 @@ namespace Core.Tile.Vulcanus
 
         [Header("Terrain")]
         [SerializeField] private TerrainCell[] terrainCells;
-        [SerializeField] private AuthoredSpawnPlacement[] persistentEntities = System.Array.Empty<AuthoredSpawnPlacement>();
+        [SerializeField] private AuthoredSpawnPlacement[] persistentEntities = Array.Empty<AuthoredSpawnPlacement>();
 
         private Dictionary<Vector2Int, TerrainType> _terrainByCoord;
 

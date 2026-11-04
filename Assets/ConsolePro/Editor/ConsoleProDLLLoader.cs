@@ -8,10 +8,11 @@
 // -------------------------------------------------------------
 
 #if UNITY_EDITOR
-using UnityEngine;
-using UnityEditor;
+using System;
 using System.IO;
 using System.Linq;
+using UnityEditor;
+using UnityEngine;
 
 namespace FlyingWormConsole3
 {
@@ -44,7 +45,7 @@ namespace FlyingWormConsole3
 			foreach (string assetPath in allDllPaths)
 			{
 				string folderName = Path.GetFileName(Path.GetDirectoryName(assetPath));
-				if (System.Array.IndexOf(ValidFolders, folderName) < 0)
+				if (Array.IndexOf(ValidFolders, folderName) < 0)
 				{
 					Debug.Log($"#Console Pro# Found legacy DLL not in version folder, deleting: {assetPath}");
 					AssetDatabase.DeleteAsset(assetPath);
@@ -59,7 +60,7 @@ namespace FlyingWormConsole3
 			}
 
 			string[] dllPaths = dllGuids.Select(guid => AssetDatabase.GUIDToAssetPath(guid))
-				.Where(path => path.EndsWith(DLLName) && System.Array.IndexOf(ValidFolders, Path.GetFileName(Path.GetDirectoryName(path))) >= 0)
+				.Where(path => path.EndsWith(DLLName) && Array.IndexOf(ValidFolders, Path.GetFileName(Path.GetDirectoryName(path))) >= 0)
 				.ToArray();
 
 			if (dllPaths.Length == 0)

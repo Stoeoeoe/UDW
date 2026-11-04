@@ -1,4 +1,5 @@
 using System;
+using Core.TimeAndWeather;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -7,7 +8,7 @@ namespace UI.Shared
     [RequireComponent(typeof(UIDocument))]
     public sealed class CutsceneSkipConfirmation : ManagedUIScreen
     {
-        [SerializeField] private Core.TimeAndWeather.TimeScaleController timeScaleController;
+        [SerializeField] private TimeScaleController timeScaleController;
         private VisualElement _root;
         private Button _keepWatching;
         private Action _confirmed;

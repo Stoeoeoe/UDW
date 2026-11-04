@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Core.Music;
+using Newtonsoft.Json;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
@@ -29,7 +31,7 @@ namespace Core.Tile.Editor.Vulcanus
                     var map = VulcanusImportHelpers.LoadDto<MapDto>(assetPath);
                     if (!string.IsNullOrEmpty(map.Metadata?.MusicCue))
                     {
-                        dependencies.Add($"Assets/Resources/{Music.MusicCatalog.ResourceName}.asset");
+                        dependencies.Add($"Assets/Resources/{MusicCatalog.ResourceName}.asset");
                         var musicSource = "Assets/Content/Music/" + map.Metadata.MusicCue.Replace(':', '/') + "/cue.apollocue";
                         if (File.Exists(VulcanusImportHelpers.ToAbsolutePath(musicSource))) dependencies.Add(musicSource);
                     }
@@ -50,7 +52,7 @@ namespace Core.Tile.Editor.Vulcanus
                     if (path != null) dependencies.Add(path);
                 }
             }
-            catch (Exception ex) when (ex is Newtonsoft.Json.JsonException || ex is IOException || ex is InvalidOperationException)
+            catch (Exception ex) when (ex is JsonException || ex is IOException || ex is InvalidOperationException)
             {
                 // OnImportAsset reports malformed or missing required content with its source path.
             }

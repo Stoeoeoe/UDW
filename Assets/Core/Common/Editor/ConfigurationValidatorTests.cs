@@ -1,4 +1,3 @@
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +8,10 @@ using Core.Equipment;
 using Core.Inventory;
 using Core.Items;
 using Core.Shops;
+using Core.Tile.Editor.Vulcanus;
 using Interaction.Dialog;
 using Interaction.Tools;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Plants;
 using Tools;
@@ -19,12 +20,13 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.TestTools;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using Object = UnityEngine.Object;
 
 namespace Core.Common.Editor
 {
     [Category("ConfigurationValidation")]
-    public sealed class ConfigurationValidatorTests : Core.Common.Editor.GameTest
+    public sealed class ConfigurationValidatorTests : GameTest
     {
 
         private readonly List<Object> _objects = new();
@@ -67,10 +69,10 @@ namespace Core.Common.Editor
         public void ItemImportPopulatesInheritedAndSubtypeFieldsThroughReadOnlyGetters()
         {
             var item = Asset<StaminaConsumableItem>();
-            Assert.That(Core.Tile.Editor.Vulcanus.VulcanusImportHelpers.TrySetMemberValue(
+            Assert.That(VulcanusImportHelpers.TrySetMemberValue(
                 item, "ItemId", "import:food"), Is.True);
-            Assert.That(Core.Tile.Editor.Vulcanus.VulcanusImportHelpers.TryApplyPropertyToObject(
-                item, "StaminaRestored", new Newtonsoft.Json.Linq.JValue(12f)), Is.True);
+            Assert.That(VulcanusImportHelpers.TryApplyPropertyToObject(
+                item, "StaminaRestored", new JValue(12f)), Is.True);
             Assert.That(item.ItemId, Is.EqualTo("import:food"));
             Assert.That(item.StaminaRestored, Is.EqualTo(12f));
             Assert.That(item.ValidateConfiguration(), Is.Empty);

@@ -1,8 +1,13 @@
 using System;
 using System.Linq;
+using Character.Animations;
 using Core.Inventory;
+using Core.Inventory.Editor;
+using Core.Spawning;
 using NUnit.Framework;
+using Plants;
 using UnityEditor;
+using UnityEngine;
 
 namespace Core.Catalogs.Editor
 {
@@ -25,8 +30,8 @@ namespace Core.Catalogs.Editor
         {
             var created = DefaultCatalogAssets.CreateMissingCatalogs(_folder);
             Assert.That(created.OfType<ItemCatalog>().Single(), Is.Not.Null);
-            Assert.That(created.OfType<Character.Animations.EmoteCatalog>().Single(), Is.Not.Null);
-            Assert.That(created.OfType<Core.Spawning.SpawnableCatalog>().Single(), Is.Not.Null);
+            Assert.That(created.OfType<EmoteCatalog>().Single(), Is.Not.Null);
+            Assert.That(created.OfType<SpawnableCatalog>().Single(), Is.Not.Null);
             Assert.That(DefaultCatalogAssets.CreateMissingCatalogs(_folder), Is.Empty);
             foreach (var catalog in created)
                 Assert.That(AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(catalog)), Is.SameAs(catalog));
@@ -36,7 +41,7 @@ namespace Core.Catalogs.Editor
         public void ExistingSelectionsAreNotTouched()
         {
             var catalog = DefaultCatalogAssets.CreateMissingCatalogs(_folder).OfType<ItemCatalog>().Single();
-            var item = UnityEngine.ScriptableObject.CreateInstance<Core.Inventory.Editor.InventoryTestItem>();
+            var item = ScriptableObject.CreateInstance<InventoryTestItem>();
             AssetDatabase.CreateAsset(item, _folder + "/Item.asset");
             catalog.Synchronize(new[] { item });
             catalog.SetEnabled(item, false);
@@ -48,7 +53,7 @@ namespace Core.Catalogs.Editor
         [Test]
         public void AnOccupiedPathIsNotOverwritten()
         {
-            var other = UnityEngine.ScriptableObject.CreateInstance<Plants.PlantCatalog>();
+            var other = ScriptableObject.CreateInstance<PlantCatalog>();
             var path = _folder + "/ItemCatalog.asset";
             AssetDatabase.CreateAsset(other, path);
             Assert.Throws<InvalidOperationException>(() => DefaultCatalogAssets.CreateMissingCatalogs(_folder));

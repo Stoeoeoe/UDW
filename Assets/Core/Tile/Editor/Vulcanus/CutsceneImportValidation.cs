@@ -1,10 +1,9 @@
 using System;
+using Core.Scripting;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-using Core.Scripting;
-using Core.Catalogs;
 
 namespace Core.Tile.Editor.Vulcanus
 {
@@ -49,7 +48,7 @@ namespace Core.Tile.Editor.Vulcanus
                 if (!path.StartsWith("Assets/", StringComparison.Ordinal) ||
                     !path.EndsWith(".runtime.cutscene.json", StringComparison.OrdinalIgnoreCase)) continue;
                 CutsceneImporter.ValidateSource(path);
-                if (!AssetDatabase.LoadAssetAtPath<Core.Scripting.CutsceneDefinition>(path))
+                if (!AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(path))
                     throw new InvalidOperationException($"{path}: requires a successful cutscene import before play/build.");
             }
         }

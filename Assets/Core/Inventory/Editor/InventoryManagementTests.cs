@@ -1,20 +1,22 @@
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
-using System.Collections.Generic;
-using System.Reflection;
 using Character;
+using Core.Common.Editor;
 using Core.Equipment;
+using Interaction.Tools;
 using NUnit.Framework;
+using Plants;
 using Sirenix.Serialization;
+using UI.Shared.Editor;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
+using UnityEngine.InputSystem.UI;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.Inventory.Editor
 {
     [Category("InventoryManagement")]
-    public sealed class InventoryManagementTests : Core.Common.Editor.ServiceTest
+    public sealed class InventoryManagementTests : ServiceTest
     {
 
         private SlotInventory _bag;
@@ -93,7 +95,7 @@ namespace Core.Inventory.Editor
         }
         [Test] public void ToolbeltReferencesFollowToolsAndSurviveSerializationWithoutUsingBagSpace()
         {
-            var tool = Item<Interaction.Tools.ToolData>("test:tool", 1);
+            var tool = Item<ToolData>("test:tool", 1);
             _bag.AddItem(tool, 1);
             var before = _state.Slots;
             Assert.That(_bag.Loadout.AssignToolbeltSlot(0, 9), Is.True, "Belt size does not depend on bag capacity.");
@@ -124,7 +126,7 @@ namespace Core.Inventory.Editor
             Assert.That(_bag.Loadout, Is.SameAs(loadout));
             Assert.That(_bag.Actions, Is.SameAs(actions));
             Assert.That(_bag.Interaction, Is.SameAs(interaction));
-            var tool = Item<Interaction.Tools.ToolData>("test:replacement", 1);
+            var tool = Item<ToolData>("test:replacement", 1);
             _bag.AddItem(tool, 1);
             Assert.That(loadout.AssignToolbeltSlot(0, 0), Is.True);
             Assert.That(loadout.SelectToolbeltSlot(0), Is.True);
@@ -139,7 +141,7 @@ namespace Core.Inventory.Editor
 
         [Test] public void ToolbeltAcceptsOnlyToolsAndClearingNeverRemovesTheOwnedItem()
         {
-            var tool = Item<Interaction.Tools.ToolData>("test:tool", 1);
+            var tool = Item<ToolData>("test:tool", 1);
             _bag.AddItem(_grain, 1); _bag.AddItem(tool, 1);
             Assert.That(_bag.Loadout.AssignToolbeltSlot(0, 0), Is.False);
             Assert.That(_bag.Loadout.AssignToolbeltSlot(1, 0), Is.True);
@@ -152,7 +154,7 @@ namespace Core.Inventory.Editor
         }
         [Test] public void SelectingASeedFromTheBagFollowsItsIdAndDoesNotAssignABeltCell()
         {
-            var seed = Item<Plants.SeedItem>("test:seed", 99);
+            var seed = Item<SeedItem>("test:seed", 99);
             _bag.AddItem(seed, 2); _bag.Loadout.SelectItem(0); _bag.MoveItem(0, 1);
             Assert.That(_bag.Loadout.ActiveHandItem, Is.SameAs(seed));
             Assert.That(_bag.Loadout.ActiveHandInventoryIndex, Is.EqualTo(1));
@@ -161,8 +163,8 @@ namespace Core.Inventory.Editor
         }
         [Test] public void RuntimePrefabsHaveSharedConfigurationAndCompleteUIBindings()
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
-            Assert.That(UI.Shared.Editor.UIInputValidation.Check(root.GetComponentInChildren<UnityEngine.InputSystem.UI.InputSystemUIInputModule>(true)), Is.Empty);
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
+            Assert.That(UIInputValidation.Check(root.GetComponentInChildren<InputSystemUIInputModule>(true)), Is.Empty);
             var character = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
             foreach (var inventory in character.GetComponentsInChildren<SlotInventory>(true))
                 if (inventory.InventoryName == "MainInventory") Assert.That(inventory.Configuration.Columns, Is.EqualTo(10));

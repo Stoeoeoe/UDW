@@ -3,11 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
-using MoreMountains.Tools;
-using NUnit.Framework;
+using Animancer;
+using Character;
+using Character.Abilities;
 using Core.Catalogs;
+using Core.Context;
+using Core.Game;
 using Core.Inventory;
 using Core.Location;
+using Core.Scripting;
+using Core.Spawning;
+using Core.Tile;
+using Core.TimeAndWeather;
+using Interaction;
+using MoreMountains.Tools;
+using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -22,7 +33,7 @@ namespace Core.Common.Editor
         private readonly List<FieldInfo> _vendorSingletons = new();
         private readonly List<Action<IContainerBuilder>> _overrides = new();
         private readonly List<Object> _assets = new();
-        private readonly List<Character.GameCharacter> _characters = new();
+        private readonly List<GameCharacter> _characters = new();
         private readonly List<IDisposable> _disposables = new();
         private IObjectResolver _container;
         private readonly string _name;
@@ -39,9 +50,9 @@ namespace Core.Common.Editor
                 return _root;
             }
         }
-        public Game.GameState State => Get<Game.GameState>();
-        public Scripting.LuaRuntime Lua => Get<Scripting.LuaRuntime>();
-        public TimeAndWeather.GameClock Clock => Get<TimeAndWeather.GameClock>();
+        public GameState State => Get<GameState>();
+        public LuaRuntime Lua => Get<LuaRuntime>();
+        public GameClock Clock => Get<GameClock>();
         public CharacterManager Characters => Get<CharacterManager>();
         public LocationData Location
         {
@@ -54,15 +65,15 @@ namespace Core.Common.Editor
             set => Get<LocationContext>().SceneReady = value;
         }
         private IObjectResolver Container => _container ?? Build();
-        public Scripting.LuaBindingRegistry Bind(params object[] modules)
+        public LuaBindingRegistry Bind(params object[] modules)
         {
             foreach (var module in modules) Container.Inject(module);
-            return new Scripting.LuaBindingRegistry(modules) { Runtime = Lua };
+            return new LuaBindingRegistry(modules) { Runtime = Lua };
         }
-        public Scripting.LuaBindingRegistry BindSequence(IEnumerable<Scripting.CutsceneStep> steps, string context,
+        public LuaBindingRegistry BindSequence(IEnumerable<CutsceneStep> steps, string context,
             params (Type Type, Func<object> Create)[] factories)
         {
-            var bindings = Scripting.CutsceneBindings.BindSequence(steps, context,
+            var bindings = CutsceneBindings.BindSequence(steps, context,
                 factories.Select(factory => (factory.Type, (Func<object>)(() => Inject(factory.Create())))).ToArray());
             bindings.Runtime = Lua;
             return bindings;
@@ -101,7 +112,7 @@ namespace Core.Common.Editor
 
         private IObjectResolver Build()
         {
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
             var builder = new ContainerBuilder();
             try
             {
@@ -166,11 +177,11 @@ namespace Core.Common.Editor
         }
 
         /// <summary>Builds a spawner over exactly these prefabs instead of the authored catalog; it is disposed with the fixture.</summary>
-        public Spawning.WorldObjectSpawner CreateSpawner(params Spawning.SpawnedObject[] prefabs)
+        public WorldObjectSpawner CreateSpawner(params SpawnedObject[] prefabs)
         {
-            var catalog = Asset<Spawning.SpawnableCatalog>();
+            var catalog = Asset<SpawnableCatalog>();
             catalog.Synchronize(prefabs);
-            var spawner = new Spawning.WorldObjectSpawner(Get<IObjectResolver>(), State, Get<Tile.MapManager>(), catalog);
+            var spawner = new WorldObjectSpawner(Get<IObjectResolver>(), State, Get<MapManager>(), catalog);
             _disposables.Add(spawner);
             return spawner;
         }
@@ -210,50 +221,50 @@ namespace Core.Common.Editor
         }
 
         /// <summary>Builds a locally bound character from the authored prefab, without entering a location or binding a player save.</summary>
-        public Character.MainCharacter CreateCharacter(string name = "Test character")
+        public MainCharacter CreateCharacter(string name = "Test character")
         {
             var holder = new GameObject(name);
             holder.SetActive(false);
             holder.transform.SetParent(Root.transform);
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
-            var character = Container.Instantiate(prefab, holder.transform).GetComponent<Character.MainCharacter>();
-            Invoke(character.GetComponent<Character.Controller2D>(), "Awake");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
+            var character = Container.Instantiate(prefab, holder.transform).GetComponent<MainCharacter>();
+            Invoke(character.GetComponent<Controller2D>(), "Awake");
             character.MainInventory.EnsureInitialized();
             Invoke(character, "Awake");
             // Inactive parents are excluded by abilities' normal Awake lookup. Bind this isolated fixture explicitly.
             var primary = character.PerformPrimaryAction;
-            foreach (var ability in character.GetComponentsInChildren<Character.Abilities.CharacterAbility>(true))
+            foreach (var ability in character.GetComponentsInChildren<CharacterAbility>(true))
                 Reflect.Set(ability, "Character", character);
-            primary.ActionExecutor = new Interaction.ActionExecutor(character, () => Get<Core.Context.PlayerInteractionContext>().CurrentSnapshot);
-            character.Health.Initialize(new Character.HealthState());
-            character.Stamina.Initialize(new Character.StaminaState());
+            primary.ActionExecutor = new ActionExecutor(character, () => Get<PlayerInteractionContext>().CurrentSnapshot);
+            character.Health.Initialize(new HealthState());
+            character.Stamina.Initialize(new StaminaState());
             Invoke(character.Occupation, "Awake");
             _characters.Add(character);
             return character;
         }
 
         /// <summary>Creates a character and registers it as the session's player, as MainCharacter does when it starts.</summary>
-        public Character.MainCharacter CreatePlayer(string name = "Player")
+        public MainCharacter CreatePlayer(string name = "Player")
         {
             var player = CreateCharacter(name);
             Characters.RegisterMainCharacter(player);
             return player;
         }
 
-        public Character.MainCharacter CreateAnimatedCharacter()
+        public MainCharacter CreateAnimatedCharacter()
         {
             var character = CreateCharacter();
             character.EnsureRuntimeInitialized();
             character.Graphics.gameObject.SetActive(true);
             Invoke(character.Animator, "Awake");
-            Invoke(character.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true), "Awake");
+            Invoke(character.GetComponentInChildren<NamedAnimancerComponent>(true), "Awake");
             character.transform.parent.gameObject.SetActive(true);
             Root.SetActive(true);
             return character;
         }
 
         /// <summary>Places the authored character's physical footprint at a world point, preserving its child offsets.</summary>
-        public static void PlaceCharacterAtGroundPoint(Character.GameCharacter character, Vector3 point)
+        public static void PlaceCharacterAtGroundPoint(GameCharacter character, Vector3 point)
         {
             var body = character.GetComponent<BoxCollider2D>();
             character.transform.position += point - body.transform.TransformPoint(body.offset);

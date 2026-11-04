@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Character;
 using Core.Common;
 using Items;
@@ -18,7 +19,7 @@ namespace Core.Items
         private AttributeBonus[] boosts;
 
         public int BoostDurationMinutes => boostDurationMinutes;
-        public System.Collections.Generic.IReadOnlyList<AttributeBonus> Boosts => boosts;
+        public IReadOnlyList<AttributeBonus> Boosts => boosts;
         public override bool CanConsume(GameCharacter character) => true;
         public override void Apply(GameCharacter character) => character.Boosts.Apply($"item:{ItemId}", boostDurationMinutes, boosts);
     }

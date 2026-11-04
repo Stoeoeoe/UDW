@@ -1,11 +1,13 @@
-using Interaction.Dialog;
-using VContainer;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Interaction.Dialog;
+using MoreMountains.Tools;
+using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UI.Shared;
+using VContainer;
+using Random = UnityEngine.Random;
 
 namespace Core.Dialogue.Vulcanus
 {
@@ -26,7 +28,7 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private string continueButtonText = "Continue";
         [SerializeField] private string choicePromptText = "Choose a response";
         [SerializeField, Min(0)] private float charactersPerSecond = 48f;
-        [SerializeField] private Interaction.Dialog.TypewriterSound defaultTypewriterSound;
+        [SerializeField] private TypewriterSound defaultTypewriterSound;
 
         private VisualElement _overlay;
         private VisualElement _anchor;
@@ -99,10 +101,10 @@ namespace Core.Dialogue.Vulcanus
                     elapsed -= 1f;
                     var character = text[revealed++];
                     if (sound && sound.audioClips.Length > 0 && !char.IsWhiteSpace(character))
-                        MoreMountains.Tools.MMSoundManager.Current.PlaySound(
-                            sound.audioClips[UnityEngine.Random.Range(0, sound.audioClips.Length)],
-                            MoreMountains.Tools.MMSoundManager.MMSoundManagerTracks.Sfx, Vector3.zero,
-                            pitch: UnityEngine.Random.Range(sound.pitchMin, sound.pitchMax));
+                        MMSoundManager.Current.PlaySound(
+                            sound.audioClips[Random.Range(0, sound.audioClips.Length)],
+                            MMSoundManager.MMSoundManagerTracks.Sfx, Vector3.zero,
+                            pitch: Random.Range(sound.pitchMin, sound.pitchMax));
                 }
                 SetBody(text.Substring(0, revealed));
                 await Awaitable.NextFrameAsync(cancellation);

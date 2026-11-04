@@ -1,12 +1,11 @@
 using System;
 using MoreMountains.Tools;
 using UnityEngine;
-using UnityEngine.Audio;
 
 namespace Core.Music
 {
     [DefaultExecutionOrder(100)]
-    public sealed class MusicDirector : Core.GameManager
+    public sealed class MusicDirector : GameManager
     {
         public readonly MusicRequestResolver Requests = new();
         private MusicPlaybackEngine _playback;

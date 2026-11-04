@@ -1,16 +1,14 @@
-using Core.Scripting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Common.Editor;
-using Core.Game;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class StoryActionTests : Core.Common.Editor.GameTest
+    public sealed class StoryActionTests : GameTest
     {
 
         [TestCase("setup")]

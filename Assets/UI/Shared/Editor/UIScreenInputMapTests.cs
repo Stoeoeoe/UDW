@@ -1,21 +1,22 @@
-using UI.Shared;
 using System;
-using Core.Location;
+using System.Reflection;
+using Core.Common.Editor;
 using Core.TimeAndWeather;
+using Input;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using Object = UnityEngine.Object;
 
 namespace UI.Shared.Editor
 {
     [Category("UIScreen")]
-    public sealed class UIScreenInputMapTests : Core.Common.Editor.GameTest
+    public sealed class UIScreenInputMapTests : GameTest
     {
         private GameObject _root;
 
-        private Input.InputManager _input;
+        private InputManager _input;
         private UrGUIManager _manager;
         private PauseTestScreen _first, _second;
 
@@ -43,11 +44,11 @@ namespace UI.Shared.Editor
         [Test]
         public void ScriptReloadDoesNotSerializeRuntimeActionMapReferences()
         {
-            using var serialized = new UnityEditor.SerializedObject(_input);
+            using var serialized = new SerializedObject(_input);
             // Debug serialization includes private fields, as Unity's script reload does.
-            typeof(UnityEditor.SerializedObject).GetProperty("inspectorMode",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .SetValue(serialized, UnityEditor.InspectorMode.Debug);
+            typeof(SerializedObject).GetProperty("inspectorMode",
+                BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(serialized, InspectorMode.Debug);
 
             foreach (var field in new[] { "_playerControls", "_ui", "_global", "_screenMap" })
                 Assert.That(serialized.FindProperty(field), Is.Null,
@@ -57,13 +58,13 @@ namespace UI.Shared.Editor
         [Test]
         public void EnablingRebindsActionMapsAfterScriptReloadClearsRuntimeReferences()
         {
-            Core.Common.Editor.GameTestFixture.Invoke(_input, "OnDisable");
+            GameTestFixture.Invoke(_input, "OnDisable");
             foreach (var field in new[] { "_playerControls", "_ui", "_global", "_screenMap" })
-                typeof(Input.InputManager).GetField(field,
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                typeof(InputManager).GetField(field,
+                    BindingFlags.Instance | BindingFlags.NonPublic)
                     .SetValue(_input, null);
 
-            Core.Common.Editor.GameTestFixture.Invoke(_input, "OnEnable");
+            GameTestFixture.Invoke(_input, "OnEnable");
 
             Assert.That(_input.PlayerControls, Is.SameAs(_input.Actions.FindActionMap("PlayerControls", true)));
             Assert.That(_input.GetComponent<PlayerInput>().currentActionMap, Is.SameAs(_input.PlayerControls));

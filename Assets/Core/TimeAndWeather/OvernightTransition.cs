@@ -1,10 +1,11 @@
-using VContainer;
 using System;
 using System.Collections;
+using Character;
 using Core.Events;
 using Core.Location;
-using UnityEngine;
 using UI.Shared;
+using UnityEngine;
+using VContainer;
 
 namespace Core.TimeAndWeather
 {
@@ -12,7 +13,7 @@ namespace Core.TimeAndWeather
     /// Plays the overnight sequence: cover the scene, move the player home, advance the calendar behind black and reveal
     /// the morning. Clock progression itself belongs to <see cref="GameClock"/>.
     /// </summary>
-    public sealed class OvernightTransition : Core.GameManager
+    public sealed class OvernightTransition : GameManager
     {
         [Inject] private GameClock _clock;
         [Inject] private LevelManager _levelManager;
@@ -54,7 +55,7 @@ namespace Core.TimeAndWeather
             StartCoroutine(_routine);
         }
 
-        private IEnumerator Run(Character.MainCharacter character, DayEndReason reason, int bedtimeHour)
+        private IEnumerator Run(MainCharacter character, DayEndReason reason, int bedtimeHour)
         {
             var gui = _urGUIManager;
             _clock.BeginOvernight();

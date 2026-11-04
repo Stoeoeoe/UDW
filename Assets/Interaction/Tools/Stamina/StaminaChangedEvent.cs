@@ -1,5 +1,5 @@
-using Core.Events;
 using Character;
+using Core.Events;
 
 namespace Interaction.Tools.Stamina
 {

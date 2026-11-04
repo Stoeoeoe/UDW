@@ -1,7 +1,7 @@
-using VContainer;
 using Input;
 using MoreMountains.Tools;
 using UnityEngine;
+using VContainer;
 
 namespace Character.Abilities
 {
@@ -11,7 +11,7 @@ namespace Character.Abilities
     /// </summary>
     public class MovementAbility : CharacterAbility
     {
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
 
         [Header("Footsteps")]
         [SerializeField] float baseFootstepInterval = 0.4f;

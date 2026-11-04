@@ -1,17 +1,17 @@
 using System;
 using System.Linq;
-using System.Reflection;
 using Core.Camera;
+using Core.Common.Editor;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
-using Object = UnityEngine.Object;
+using UnityEngine.UI;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CameraLuaApiTests : Core.Common.Editor.GameTest
+    public sealed class CameraLuaApiTests : GameTest
     {
 
         private GameObject _root;
@@ -102,7 +102,7 @@ namespace Core.Scripting.Editor
             Assert.That(() => new CameraLuaApi(_manager), Throws.InvalidOperationException);
         }
 
-        private UnityEngine.UI.Image FlashImage => _root.GetComponentInChildren<UnityEngine.UI.Image>(true);
+        private Image FlashImage => _root.GetComponentInChildren<Image>(true);
         private void AdvanceFlash(float seconds) => Call(_manager, "AdvanceFlash", seconds);
 
         [Test]
@@ -133,7 +133,7 @@ namespace Core.Scripting.Editor
             api.Flash();
             AdvanceFlash(0.1f);
             api.Flash("blue", 1, 0, 1, 0);
-            Assert.That(_root.GetComponentsInChildren<UnityEngine.UI.Image>(true), Has.Length.EqualTo(1));
+            Assert.That(_root.GetComponentsInChildren<Image>(true), Has.Length.EqualTo(1));
             Assert.That(FlashImage.color, Is.EqualTo(Color.blue));
             AdvanceFlash(1);
             Assert.That(FlashImage.enabled, Is.False);

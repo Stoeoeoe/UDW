@@ -1,20 +1,20 @@
-using VContainer;
+using System;
 using System.Collections;
 using Core.Common;
 using Core.Location;
-using Core.TimeAndWeather.Seasons;
 using Core.Tile.Water;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
+using VContainer;
 
 namespace Core.TimeAndWeather
 {
     /// <summary>Selects seasonal weather and owns its effects, post-processing and daylight presentation.</summary>
     // Bind the initial location before GameClock.Start rolls its first weather.
     [DefaultExecutionOrder(-800)]
-    public sealed class WeatherManager : Core.GameManager, ILocationLifecycle
+    public sealed class WeatherManager : GameManager, ILocationLifecycle
     {
         [Inject] private GameClock _clock;
         private SeasonData _season;
@@ -38,7 +38,7 @@ namespace Core.TimeAndWeather
         protected override void OnAwake()
         {
             if (!postProcessingVolume || !defaultVolumeProfile)
-                throw new System.InvalidOperationException("WeatherManager requires a volume and default profile.");
+                throw new InvalidOperationException("WeatherManager requires a volume and default profile.");
             _effectsRoot = new GameObject("Weather").transform;
             _effectsRoot.SetParent(transform, false);
         }
@@ -77,10 +77,10 @@ namespace Core.TimeAndWeather
         /// <summary>Changes weather until the next seasonal roll, without advancing the calendar.</summary>
         public void SetWeather(WeatherData weather)
         {
-            if (!weather) throw new System.ArgumentNullException(nameof(weather));
+            if (!weather) throw new ArgumentNullException(nameof(weather));
             weather.RequireValidConfiguration();
             if (!_effectsRoot || !isActiveAndEnabled)
-                throw new System.InvalidOperationException("The weather manager is not initialized and active.");
+                throw new InvalidOperationException("The weather manager is not initialized and active.");
             StartCoroutine(ApplyWeather(weather));
         }
 
@@ -123,7 +123,7 @@ namespace Core.TimeAndWeather
             if (!clip) return;
             _ambienceManager = MMSoundManager.Current;
             if (!_ambienceManager)
-                throw new System.InvalidOperationException("Weather ambience requires the initialized MMSoundManager.");
+                throw new InvalidOperationException("Weather ambience requires the initialized MMSoundManager.");
             var options = MMSoundManagerPlayOptions.Default;
             options.MmSoundManagerTrack = MMSoundManager.MMSoundManagerTracks.Sfx;
             options.Loop = true;

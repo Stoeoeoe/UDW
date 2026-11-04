@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Core.Scripting;
-using UnityEngine;
 using Character;
+using Core.Scripting;
 using UI.Shared;
+using UnityEngine;
 
 namespace Core.Dialogue.Vulcanus
 {

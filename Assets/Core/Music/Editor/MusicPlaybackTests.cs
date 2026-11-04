@@ -1,14 +1,14 @@
-using Core.Common.Editor;
-using Core.Location;
-using VContainer;
 using System;
 using System.Collections;
 using System.Linq;
+using Core.Common.Editor;
+using Core.Location;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
@@ -27,9 +27,9 @@ namespace Core.Music.Editor
         public IEnumerator SetUp()
         {
             _scenes = EditorSceneManager.GetSceneManagerSetup();
-            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
+            if (SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
             {
-                Assert.That(_scenes.All(scene => !UnityEngine.SceneManagement.SceneManager.GetSceneByPath(scene.path).isDirty),
+                Assert.That(_scenes.All(scene => !SceneManager.GetSceneByPath(scene.path).isDirty),
                     Is.True, "Run this fixture from the playable map or with saved scenes.");
                 EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             }

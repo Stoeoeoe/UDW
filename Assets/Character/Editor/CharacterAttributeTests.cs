@@ -1,5 +1,4 @@
 using System;
-using Character;
 using NUnit.Framework;
 
 namespace Character.Editor

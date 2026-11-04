@@ -1,10 +1,9 @@
-using VContainer;
-using Core.Equipment;
 using Core.Inventory;
-using Items;
+using Input;
+using UI.Shared;
 using UnityEngine;
 using UnityEngine.UI;
-using UI.Shared;
+using VContainer;
 
 namespace UI.InventoryScreen
 {
@@ -21,7 +20,7 @@ namespace UI.InventoryScreen
     {
         [Inject] private UrGUIManager _urGUIManager;
 
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
 
         [Header("Slot Configuration")]
         [Tooltip("The prefab to instantiate for each inventory slot")]

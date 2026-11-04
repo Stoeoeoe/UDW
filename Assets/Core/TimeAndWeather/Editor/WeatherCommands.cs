@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Unity.Pipeline.Commands;
 using UnityEditor;
-using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.TimeAndWeather.Editor
 {
@@ -18,7 +18,7 @@ namespace Core.TimeAndWeather.Editor
         [CliCommand("list_weather", "List authored weather IDs and the active Play mode weather", MainThreadRequired = true)]
         public static object ListWeather()
         {
-            var manager = EditorApplication.isPlaying ? UnityEngine.Object.FindFirstObjectByType<WeatherManager>() : null;
+            var manager = EditorApplication.isPlaying ? Object.FindFirstObjectByType<WeatherManager>() : null;
             return new
             {
                 playing = EditorApplication.isPlaying,
@@ -35,7 +35,7 @@ namespace Core.TimeAndWeather.Editor
         {
             if (!EditorApplication.isPlaying)
                 throw new InvalidOperationException("Start the game in Play mode before using set_weather.");
-            var manager = UnityEngine.Object.FindFirstObjectByType<WeatherManager>();
+            var manager = Object.FindFirstObjectByType<WeatherManager>();
             if (!manager) throw new InvalidOperationException("No active WeatherManager was found in the running game.");
             if (string.IsNullOrWhiteSpace(weather)) throw new ArgumentException("Provide a weather ID from list_weather.");
 

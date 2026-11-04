@@ -1,6 +1,5 @@
 using Core.Common;
 using UnityEngine;
-using UnityEngine.Audio;
 
 namespace Core.Inventory
 {

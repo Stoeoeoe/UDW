@@ -1,9 +1,9 @@
-using VContainer;
 using System;
 using Core.Location;
 using DG.Tweening;
 using Interaction;
 using UnityEngine;
+using VContainer;
 
 namespace Character
 {

@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace Core.Tile.Vulcanus
 {
@@ -84,7 +83,7 @@ namespace Core.Tile.Vulcanus
             properties = metaProperties ?? Array.Empty<VulcanusTileProperty>();
             pivotY = Mathf.Max(0.01f, tilePivotY);
             collisionShapes = tileCollisionShapes ?? Array.Empty<CollisionShape>();
-            colliderType = collision == VulcanusCollisionKind.None ? UnityEngine.Tilemaps.Tile.ColliderType.None : UnityEngine.Tilemaps.Tile.ColliderType.Grid;
+            colliderType = collision == VulcanusCollisionKind.None ? ColliderType.None : ColliderType.Grid;
         }
 
         public bool TryGetProperty(string key, out string jsonValue)

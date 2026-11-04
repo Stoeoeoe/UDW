@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Core.Common;
 using Core.Common.Editor;
-using Core.Inventory;
+using Core.TimeAndWeather;
 using Items.Plants;
+using MoreMountains.Feedbacks;
+using MoreMountains.Tools;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Build;
@@ -17,7 +18,7 @@ using static Core.Common.Editor.Reflect;
 namespace Plants.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class PlantConfigurationValidationTests : Core.Common.Editor.GameTest
+    public sealed class PlantConfigurationValidationTests : GameTest
     {
 
         private PlantData _plant;
@@ -49,7 +50,7 @@ namespace Plants.Editor
         [TestCase(1)]
         public void ValidConfigurationAllowsEmptySeasonsAndValidRegrowth(int regrowth)
         {
-            Set(_plant, "growingSeasons", Array.Empty<Core.TimeAndWeather.Season>());
+            Set(_plant, "growingSeasons", Array.Empty<Season>());
             Set(_plant, "_regrowthStageIndex", regrowth);
             Assert.That(_plant.ValidateConfiguration(), Is.Empty);
             Assert.That(_plant.TryGetHarvestStage(5, HarvestMethod.Picking, out _), Is.True);
@@ -97,11 +98,11 @@ namespace Plants.Editor
         [Test]
         public void SuppliedWiltClearingFeedbackMustAutoplayAndOwnCleanup()
         {
-            var feedback = _visual.AddComponent<MoreMountains.Feedbacks.MMF_Player>();
+            var feedback = _visual.AddComponent<MMF_Player>();
             Set(_plant, "_wiltedFeedbackPrefab", feedback);
             Assert.That(_plant.ValidateConfiguration().Any(e => e.Setting == "_wiltedFeedbackPrefab"), Is.True);
             feedback.AutoPlayOnStart = true;
-            var cleanup = _visual.AddComponent<MoreMountains.Tools.MMTimedDestruction>();
+            var cleanup = _visual.AddComponent<MMTimedDestruction>();
             Assert.That(_plant.ValidateConfiguration(), Is.Empty);
             cleanup.TimeBeforeDestruction = 0;
             Assert.That(_plant.ValidateConfiguration().Any(e => e.Setting == "_wiltedFeedbackPrefab"), Is.True);

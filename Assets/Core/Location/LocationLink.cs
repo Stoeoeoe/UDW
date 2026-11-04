@@ -1,7 +1,7 @@
+using System;
 using Character;
 using Core.Tile.Vulcanus;
 using MoreMountains.Tools;
-using System;
 using UnityEngine;
 
 namespace Core.Location

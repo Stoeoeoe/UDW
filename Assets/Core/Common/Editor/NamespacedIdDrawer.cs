@@ -4,6 +4,7 @@ using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Common.Editor
 {
@@ -81,7 +82,7 @@ namespace Core.Common.Editor
             id = colon < 0 ? value : value.Substring(colon + 1);
         }
 
-        internal static void AssignParts(UnityEngine.Object[] targets, string path, string ns, string id)
+        internal static void AssignParts(Object[] targets, string path, string ns, string id)
         {
             foreach (var target in targets)
             {

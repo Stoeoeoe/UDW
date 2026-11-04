@@ -1,6 +1,5 @@
-using UI.Shared;
 using System.Collections.Generic;
-using System.Reflection;
+using Core.Common.Editor;
 using MoreMountains.Tools;
 using NUnit.Framework;
 using UnityEditor;
@@ -12,7 +11,7 @@ using static Core.Common.Editor.Reflect;
 namespace UI.Shared.Editor
 {
     [Category("UIScreen")]
-    public sealed class UISoundTests : Core.Common.Editor.GameTest
+    public sealed class UISoundTests : GameTest
     {
         private GameObject _root;
 

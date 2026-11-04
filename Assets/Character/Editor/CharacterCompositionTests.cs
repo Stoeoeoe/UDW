@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Core.Common.Editor;
-using Core.Inventory;
 using Core.Tile;
 using Interaction.Tools;
 using NUnit.Framework;
+using SensorToolkit;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using TileData = Core.Tile.TileData;
 using static Core.Common.Editor.Reflect;
+using TerrainData = Core.Tile.TerrainData;
 
 namespace Character.Editor
 {
-    public sealed class CharacterCompositionTests : Core.Common.Editor.GameTest
+    public sealed class CharacterCompositionTests : GameTest
     {
 
         private MainCharacter _character;
@@ -47,8 +47,8 @@ namespace Character.Editor
         public void InteractionSensorsPivotAtTheSameGroundPointAsTargeting()
         {
             var ground = _character.ToolInteractionAnchor.position;
-            var facing = _character.GetComponentInChildren<SensorToolkit.TriggerSensor2D>(true);
-            var ambient = _character.GetComponentInChildren<SensorToolkit.RangeSensor2D>(true);
+            var facing = _character.GetComponentInChildren<TriggerSensor2D>(true);
+            var ambient = _character.GetComponentInChildren<RangeSensor2D>(true);
             Assert.That(Vector3.Distance(facing.transform.position, ground), Is.LessThan(0.001f));
             Assert.That(Vector3.Distance(ambient.transform.position, ground), Is.LessThan(0.001f));
             facing.transform.localPosition += Vector3.up;
@@ -127,7 +127,7 @@ namespace Character.Editor
             tileRoot.transform.SetParent(grid.transform);
             var tilemap = tileRoot.GetComponent<Tilemap>();
             var tiles = new Dictionary<Vector2Int, TileData>();
-            var terrain = Game.Asset<Core.Tile.TerrainData>();
+            var terrain = Game.Asset<TerrainData>();
             for (var x = -3; x <= 3; x++)
                 for (var y = -3; y <= 3; y++)
                     tiles.Add(new Vector2Int(x, y), new TileData(null, x, y, terrain, tilemap.GetCellCenterWorld(new Vector3Int(x, y, 0))));

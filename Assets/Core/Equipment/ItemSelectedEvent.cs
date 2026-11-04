@@ -1,6 +1,6 @@
 using Core.Events;
-using Items;
 using Core.Inventory;
+using Items;
 
 namespace Core.Equipment
 {

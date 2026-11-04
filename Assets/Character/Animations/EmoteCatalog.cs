@@ -1,12 +1,13 @@
 using System;
 using Core.Catalogs;
+using Core.Scripting;
 using UnityEngine;
 
 namespace Character.Animations
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Emotes")]
-    [DefaultCatalog(EmoteCatalog.ResourceName)]
-    [Core.Scripting.LuaResource("emote")]
+    [DefaultCatalog(ResourceName)]
+    [LuaResource("emote")]
     public sealed class EmoteCatalog : DefinitionCatalog<EmoteDefinition>
     {
         public const string ResourceName = "EmoteCatalog";

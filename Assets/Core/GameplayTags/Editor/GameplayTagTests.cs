@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Character;
+using Core.Common.Editor;
 using Core.Events;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using static Core.Common.Editor.Reflect;
+using Object = UnityEngine.Object;
 
 namespace Core.GameplayTags.Editor
 {
-    public sealed class GameplayTagTests : Core.Common.Editor.GameTest
+    public sealed class GameplayTagTests : GameTest
     {
 
         [Test]
@@ -90,7 +91,7 @@ namespace Core.GameplayTags.Editor
             }
             finally
             {
-                UnityEngine.Object.DestroyImmediate(catalog);
+                Object.DestroyImmediate(catalog);
             }
         }
 
@@ -145,8 +146,8 @@ namespace Core.GameplayTags.Editor
             {
                 EventBus<SkillLevelChangedEvent>.Unsubscribe(observer);
                 Call(skills, "UnbindCharacter", character);
-                UnityEngine.Object.DestroyImmediate(gameObject);
-                UnityEngine.Object.DestroyImmediate(definition);
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(definition);
             }
         }
 

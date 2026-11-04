@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Core.Location;
+using Core.Scripting;
 using Core.Tile.Vulcan;
 using Core.Tile.Vulcanus;
+using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
 {
@@ -132,10 +135,10 @@ namespace Core.Tile.Editor.Vulcanus
                     throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' requires cutsceneId and cannot also be a location link.");
                 if (!CutsceneImporter.FindSources().TryGetValue(trigger.CutsceneId, out var sourcePath))
                     throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' has no source for '{trigger.CutsceneId}'.");
-                var definition = UnityEditor.AssetDatabase.LoadAssetAtPath<Core.Scripting.CutsceneDefinition>(sourcePath);
+                var definition = AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(sourcePath);
                 if (!definition || !StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, go.GetComponentInParent<VulcanusImportedMap>().MapId))
                     throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' references a failed import or differently mapped cutscene '{trigger.CutsceneId}'.");
-                go.AddComponent<Core.Scripting.CutsceneTrigger>().Configure(trigger.CutsceneId);
+                go.AddComponent<CutsceneTrigger>().Configure(trigger.CutsceneId);
             }
 
             if (link == null)
@@ -324,7 +327,7 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var polygon = go.GetComponent<PolygonCollider2D>();
             if (polygon != null)
-                UnityEngine.Object.DestroyImmediate(polygon);
+                Object.DestroyImmediate(polygon);
 
             var box = go.GetComponent<BoxCollider2D>();
             if (box == null)
@@ -344,7 +347,7 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var box = go.GetComponent<BoxCollider2D>();
             if (box != null)
-                UnityEngine.Object.DestroyImmediate(box);
+                Object.DestroyImmediate(box);
 
             var polygon = go.GetComponent<PolygonCollider2D>();
             if (polygon == null)
@@ -424,7 +427,7 @@ namespace Core.Tile.Editor.Vulcanus
                 if (points == null || points.Count < 3)
                 {
                     Debug.LogWarning($"[VulcanusImporter] Collision '{dto.Id}' is a polygon but has fewer than 3 points.");
-                    UnityEngine.Object.DestroyImmediate(go);
+                    Object.DestroyImmediate(go);
                     return;
                 }
 

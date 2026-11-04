@@ -1,5 +1,6 @@
 using System;
 using UnityEngine.Scripting;
+using Object = UnityEngine.Object;
 
 namespace Core.Scripting
 {
@@ -61,7 +62,7 @@ namespace Core.Scripting
     {
         public string Type { get; }
         /// <summary>Public string field/property on the definition used as the picker label.</summary>
-        public string DescriptionMember { get; set; } = nameof(UnityEngine.Object.name);
+        public string DescriptionMember { get; set; } = nameof(Object.name);
         public LuaResourceAttribute(string type) => Type = type;
     }
 

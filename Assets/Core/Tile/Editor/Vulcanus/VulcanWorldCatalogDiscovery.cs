@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Core.Catalogs;
 using Core.Catalogs.Editor;
 using Core.Location;
 using Core.Tile.Vulcanus;
@@ -98,7 +99,7 @@ namespace Core.Tile.Editor.Vulcanus
             unresolvedMapPrefabs = 0;
             var projectPath = AssetDatabase.GetAssetPath(project);
             var root = Path.GetDirectoryName(VulcanusImportHelpers.ToAbsolutePath(projectPath));
-            var existing = Core.Catalogs.IdIndex.FirstWins(existingBindings, binding => binding?.MapId, StringComparer.OrdinalIgnoreCase);
+            var existing = IdIndex.FirstWins(existingBindings, binding => binding?.MapId, StringComparer.OrdinalIgnoreCase);
             var result = new List<VulcanusWorldCatalog.MapBinding>();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var file in Directory.GetFiles(root, "*.vmap", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))

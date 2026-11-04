@@ -1,9 +1,9 @@
-using VContainer;
 using System;
 using Core.Events;
 using Core.Game;
 using Core.Spawning;
 using Core.TimeAndWeather;
+using VContainer;
 
 namespace Core.Items
 {

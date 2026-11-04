@@ -1,4 +1,3 @@
-using VContainer;
 using System;
 using Character;
 using Core.Events;
@@ -7,6 +6,8 @@ using Core.Tile;
 using DG.Tweening;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
+using VContainer;
 
 namespace Core.Camera
 {
@@ -18,7 +19,7 @@ namespace Core.Camera
     /// Cutscene pattern: call ActivateVCam(cutsceneCam) to push it over the player cam via
     /// priority, then DeactivateVCam when done to hand control back.
     /// </summary>
-    public class CameraManager : Core.GameManager, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
+    public class CameraManager : GameManager, IEventListener<MainCharacterChangedEvent>, ILocationLifecycle
     {
         [Inject] private MapManager _mapManager;
         [Inject] private CharacterManager _characterManager;
@@ -37,7 +38,7 @@ namespace Core.Camera
         [Tooltip("Easing used for both screen flash fades.")]
         [SerializeField] private Ease flashEase = Ease.InOutQuad;
 
-        private UnityEngine.UI.Image _flashImage;
+        private Image _flashImage;
         private Color _flashColor;
         private float _flashDuration, _flashElapsed, _flashInEnd, _flashOutStart;
 
@@ -49,13 +50,13 @@ namespace Core.Camera
             var canvas = overlay.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = short.MaxValue;
-            var panel = new GameObject("Color", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            var panel = new GameObject("Color", typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(overlay.transform, false);
             var rect = (RectTransform)panel.transform;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
-            _flashImage = panel.GetComponent<UnityEngine.UI.Image>();
+            _flashImage = panel.GetComponent<Image>();
             _flashImage.raycastTarget = false;
             _flashImage.enabled = false;
         }

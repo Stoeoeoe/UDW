@@ -1,8 +1,8 @@
-using VContainer;
 using System;
 using Character;
 using Core.Spawning;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Inventory
 {

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Core;
+using UI.Hotbar;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -12,7 +14,7 @@ namespace UI.Shared.Editor
         static CutsceneHudSetup() => EditorApplication.playModeStateChanged += state =>
         {
             if (state != PlayModeStateChange.ExitingEditMode) return;
-            var errors = Validate(AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath));
+            var errors = Validate(AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath));
             if (errors.Count == 0) return;
             EditorApplication.isPlaying = false;
             Debug.LogError(string.Join("\n", errors));
@@ -25,7 +27,7 @@ namespace UI.Shared.Editor
             var manager = root.GetComponent<UrGUIManager>();
             if (!manager) { errors.Add("SystemRoot requires UrGUIManager."); return errors; }
             var group = new SerializedObject(manager).FindProperty("toolHud").objectReferenceValue as CanvasGroup;
-            if (!group || !group.GetComponent<UI.Hotbar.ToolHotbar>())
+            if (!group || !group.GetComponent<ToolHotbar>())
                 errors.Add("UrGUIManager requires the ToolHotbar CanvasGroup. Run Tools > UI > Set Up Cutscene HUD Fade.");
             var document = root.GetComponent<UIDocument>();
             if (!document || !document.visualTreeAsset || document.visualTreeAsset.CloneTree().Q("gameHud") == null)
@@ -36,7 +38,7 @@ namespace UI.Shared.Editor
         [MenuItem("Tools/UI/Set Up Cutscene HUD Fade")]
         public static void Configure()
         {
-            const string path = Core.SystemRoot.PrefabPath;
+            const string path = SystemRoot.PrefabPath;
             var root = PrefabUtility.LoadPrefabContents(path);
             try
             {

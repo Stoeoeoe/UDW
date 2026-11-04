@@ -1,5 +1,6 @@
-using Core.Common;
 using System;
+using System.Collections.Generic;
+using Core.Common;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -25,7 +26,7 @@ namespace UI.Shared
         [SerializeField, Validation.Required("Must not be null; an empty array inherits all cues."), Validation.RequiredElements("Sound entry must not be null."), Validation.Nested]
         private Sound[] sounds = Array.Empty<Sound>();
 
-        public System.Collections.Generic.IReadOnlyList<Sound> Sounds => sounds;
+        public IReadOnlyList<Sound> Sounds => sounds;
 
         public bool TryGet(UISoundCue cue, out Sound sound)
         {

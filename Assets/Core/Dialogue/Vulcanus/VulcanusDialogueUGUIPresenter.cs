@@ -1,4 +1,3 @@
-using VContainer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,10 +5,12 @@ using System.Threading;
 using Interaction.Dialog;
 using MoreMountains.Tools;
 using TMPro;
+using UI.Shared;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UI.Shared;
+using VContainer;
+using Random = UnityEngine.Random;
 
 namespace Core.Dialogue.Vulcanus
 {
@@ -374,11 +375,11 @@ namespace Core.Dialogue.Vulcanus
             if (char.IsWhiteSpace(character))
                 return;
 
-            var clip = _currentTypewriterSound.audioClips[UnityEngine.Random.Range(0, _currentTypewriterSound.audioClips.Length)];
+            var clip = _currentTypewriterSound.audioClips[Random.Range(0, _currentTypewriterSound.audioClips.Length)];
             if (MMSoundManager.Current == null)
                 return;
 
-            var pitch = UnityEngine.Random.Range(_currentTypewriterSound.pitchMin, _currentTypewriterSound.pitchMax);
+            var pitch = Random.Range(_currentTypewriterSound.pitchMin, _currentTypewriterSound.pitchMax);
             MMSoundManager.Current.PlaySound(
                 clip,
                 MMSoundManager.MMSoundManagerTracks.Sfx,

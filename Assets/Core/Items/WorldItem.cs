@@ -232,9 +232,9 @@ namespace Core.Items
         private void OnDrawGizmos()
         {
             _itemGizmoTexture ??=
-                UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EditorUI/Resources/item_gizmo.png");
+                AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EditorUI/Resources/item_gizmo.png");
             _xGizmoTexture ??=
-                UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EditorUI/Resources/x_gizmo.png");
+                AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EditorUI/Resources/x_gizmo.png");
 
             string label = item != null
                 ? (string.IsNullOrEmpty(item.ItemName) ? item.name : item.ItemName)
@@ -249,7 +249,7 @@ namespace Core.Items
                 }
             };
 
-            UnityEditor.Handles.Label(transform.position, label, centeredStyle);
+            Handles.Label(transform.position, label, centeredStyle);
         }
 #endif
     }

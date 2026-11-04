@@ -1,10 +1,10 @@
-using Core.Divinity;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Character;
+using Core.Common.Editor;
 using Core.Events;
 using Core.TimeAndWeather;
 using NUnit.Framework;
@@ -15,7 +15,7 @@ using Object = UnityEngine.Object;
 
 namespace Core.Divinity.Editor
 {
-    public sealed class DivineFavourTests : Core.Common.Editor.GameTest
+    public sealed class DivineFavourTests : GameTest
     {
 
         private readonly List<Object> _objects = new();

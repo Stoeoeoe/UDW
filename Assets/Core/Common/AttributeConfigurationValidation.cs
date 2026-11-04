@@ -2,10 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Common
 {
@@ -116,7 +118,7 @@ namespace Core.Common
             finally { visiting.Remove(instance); }
         }
 
-        private static bool IsMissing(object value) => value == null || (value is UnityEngine.Object obj && !obj);
+        private static bool IsMissing(object value) => value == null || (value is Object obj && !obj);
 
         internal static bool TryReadMember(object instance, string name, out object value, out string error)
         {
@@ -180,7 +182,7 @@ namespace Core.Common
                 {
                     if (index == 0 && rule.HasFirst && number != rule.First)
                         errors.Add(new ConfigurationError(asset, path, rule.ResolveMessage(
-                            $"First value must be {rule.First.ToString(System.Globalization.CultureInfo.InvariantCulture)}.")));
+                            $"First value must be {rule.First.ToString(CultureInfo.InvariantCulture)}.")));
                     if (hasPrevious && number <= previous)
                         errors.Add(new ConfigurationError(asset, path, rule.ResolveMessage("Values must be strictly increasing.")));
                     previous = number;
@@ -207,7 +209,7 @@ namespace Core.Common
             }
             // Nested is traversal only. Pair it with Required/RequiredElements when null is invalid.
             if (IsMissing(value)) return;
-            if (value is UnityEngine.Object || value is string || value.GetType().IsPrimitive || value is Enum || value is decimal)
+            if (value is Object || value is string || value.GetType().IsPrimitive || value is Enum || value is decimal)
                 errors.Add(new ConfigurationError(asset, setting,
                     rule.ResolveMessage("Nested requires a plain configuration object; use ValidReference for assets.")));
             else CollectMembers(asset, value, setting + ".", errors, visiting, rule.Message);

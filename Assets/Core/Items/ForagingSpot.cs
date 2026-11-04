@@ -1,4 +1,3 @@
-using VContainer;
 using System;
 using Core.Events;
 using Core.Game;
@@ -7,6 +6,8 @@ using Core.Spawning;
 using Core.TimeAndWeather;
 using UnityEngine;
 using Util;
+using VContainer;
+using Random = UnityEngine.Random;
 
 namespace Core.Items
 {
@@ -78,7 +79,7 @@ namespace Core.Items
 
             _state.forageId = null;
             // Random.value can return exactly 1, so 100% must bypass the roll.
-            if (dailySpawnChance < 1f && UnityEngine.Random.value >= dailySpawnChance) return;
+            if (dailySpawnChance < 1f && Random.value >= dailySpawnChance) return;
 
             var spawned = _spawner.Spawn(forage.GetRandomItem(), transform.position);
             _state.forageId = spawned.PersistentId;
@@ -89,7 +90,7 @@ namespace Core.Items
         {
             Gizmos.color = new Color(0.6f, 0.85f, 0.2f);
             Gizmos.DrawWireSphere(transform.position, 0.3f);
-            UnityEditor.Handles.Label(transform.position + Vector3.up * 0.4f, "Foraging spot");
+            Handles.Label(transform.position + Vector3.up * 0.4f, "Foraging spot");
         }
 #endif
     }

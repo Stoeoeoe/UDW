@@ -1,27 +1,28 @@
-using VContainer;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using Character;
 using Core;
-using Core.Context;
 using Core.Events;
 using Core.Location;
 using Core.TimeAndWeather;
 using DG.Tweening;
+using Input;
 using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
+using Random = UnityEngine.Random;
 
 namespace UI.Shared
 {
     /// <summary>Manages modal screen order, pause requests, input routing, shared UI sounds, and screen transitions.</summary>
     [DefaultExecutionOrder(200)]
     [RequireComponent(typeof(UIDocument))]
-    public sealed class UrGUIManager : Core.GameManager, ILocationLifecycle, IEventListener<MainCharacterChangedEvent>,
+    public sealed class UrGUIManager : GameManager, ILocationLifecycle, IEventListener<MainCharacterChangedEvent>,
         IEventListener<DayTransitionStarted>
     {
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
         [Inject] private CharacterManager _characterManager;
         [Inject] private GameClock _clock;
 
@@ -284,8 +285,8 @@ namespace UI.Shared
             if (!(overrides && overrides.TryGet(cue, out sound)) &&
                 !(soundProfile && soundProfile.TryGet(cue, out sound))) return false;
             if (sound.clips == null || sound.clips.Length == 0 || sound.volume <= 0) return false;
-            var clip = sound.clips[UnityEngine.Random.Range(0, sound.clips.Length)];
-            var pitch = UnityEngine.Random.Range(sound.pitchRange.x, sound.pitchRange.y);
+            var clip = sound.clips[Random.Range(0, sound.clips.Length)];
+            var pitch = Random.Range(sound.pitchRange.x, sound.pitchRange.y);
             var options = MMSoundManagerPlayOptions.Default;
             options.MmSoundManagerTrack = MMSoundManager.MMSoundManagerTracks.UI;
             options.AudioGroup = sound.mixerGroup;

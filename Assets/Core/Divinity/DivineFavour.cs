@@ -1,6 +1,6 @@
-using Core.Game;
 using System;
 using Character;
+using Core.Game;
 
 namespace Core.Divinity
 {

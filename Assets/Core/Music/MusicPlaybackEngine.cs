@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
+using Object = UnityEngine.Object;
 
 namespace Core.Music
 {
@@ -177,8 +178,8 @@ namespace Core.Music
             public void Dispose()
             {
                 foreach (var voice in _voices.Values) voice.source.Stop();
-                if (Application.isPlaying) UnityEngine.Object.Destroy(_root);
-                else UnityEngine.Object.DestroyImmediate(_root);
+                if (Application.isPlaying) Object.Destroy(_root);
+                else Object.DestroyImmediate(_root);
             }
         }
     }

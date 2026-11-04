@@ -1,4 +1,3 @@
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections;
 using System.IO;
@@ -9,9 +8,11 @@ using Core.Inventory.Editor;
 using Core.Spawning;
 using Interaction.Dialog;
 using NUnit.Framework;
+using Plants;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
@@ -116,9 +117,9 @@ namespace Core.Catalogs.Editor
         [Test]
         public void PlantDiscoveryIncludesDefinitionsOutsideResources()
         {
-            var plant = ScriptableObject.CreateInstance<Plants.PlantData>();
+            var plant = ScriptableObject.CreateInstance<PlantData>();
             AssetDatabase.CreateAsset(plant, _folder + "/Plant.asset");
-            var catalog = ScriptableObject.CreateInstance<Plants.PlantCatalog>();
+            var catalog = ScriptableObject.CreateInstance<PlantCatalog>();
             try
             {
                 Assert.That(CatalogAssetDiscovery.Find(catalog.Path, catalog.DefinitionType), Does.Contain(plant));

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,7 +17,7 @@ namespace Core.Common
         {
             var errors = ValidateConfiguration();
             if (errors.Count == 0) return;
-            throw new System.ArgumentException(string.Join("\n", errors));
+            throw new ArgumentException(string.Join("\n", errors));
         }
 
 #if UNITY_EDITOR
@@ -59,7 +60,7 @@ namespace Core.Common
         {
             var identity = $"{Asset.name} ({Asset.GetType().Name})";
 #if UNITY_EDITOR
-            var path = UnityEditor.AssetDatabase.GetAssetPath(Asset);
+            var path = AssetDatabase.GetAssetPath(Asset);
             if (!string.IsNullOrEmpty(path)) identity = $"{path} [{identity}]";
 #endif
             return $"{identity}: {Setting}: {Message}";

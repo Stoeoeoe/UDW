@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Character;
+using Core.Music;
 using Core.Spawning;
 using UnityEngine;
 
@@ -22,7 +23,7 @@ namespace Core.Scripting
         internal List<CutscenePlacement> Placements { get; }
         internal MapActorLuaApi Characters { get; }
         internal CutsceneVariables Variables { get; }
-        internal Music.MusicRequestResolver.Handle MusicOverride { get; set; }
+        internal MusicRequestResolver.Handle MusicOverride { get; set; }
 
         internal CutsceneRun(CutsceneRunner owner, CutsceneDefinition definition,
             LuaExecutionSession session, CutscenePlacement[] placements, LuaBindingRegistry bindings, MapActorLuaApi characters, CutsceneVariables variables)

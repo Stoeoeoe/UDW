@@ -2,11 +2,12 @@ using System;
 using System.Collections;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Core.Location
 {
     /// <summary>Shared opacity, mosaic or character-centered iris transitions, using unscaled time.</summary>
-    [RequireComponent(typeof(CanvasGroup), typeof(UnityEngine.UI.Image))]
+    [RequireComponent(typeof(CanvasGroup), typeof(Image))]
     public class ScreenFader : MonoBehaviour
     {
         public enum Effect { Opacity, Mosaic, Iris }
@@ -23,7 +24,7 @@ namespace Core.Location
         [SerializeField] private Texture2D _irisMask;
 
         private CanvasGroup _canvasGroup;
-        private UnityEngine.UI.Image _image;
+        private Image _image;
         private Material _runtimeMaterial, _originalMaterial;
         private Color _originalColor;
         private Tween _fade;
@@ -44,7 +45,7 @@ namespace Core.Location
         private void Awake()
         {
             _canvasGroup = GetComponent<CanvasGroup>();
-            _image = GetComponent<UnityEngine.UI.Image>();
+            _image = GetComponent<Image>();
             _originalMaterial = _image.material;
             _originalColor = _image.color;
             Shader.SetGlobalFloat(WeatherCover, 0f);
@@ -204,10 +205,10 @@ namespace Core.Location
 
         private RectTransform CreatePanel(string panelName)
         {
-            var panel = new GameObject(panelName, typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            var panel = new GameObject(panelName, typeof(RectTransform), typeof(Image));
             panel.layer = gameObject.layer;
             panel.transform.SetParent(transform, false);
-            var image = panel.GetComponent<UnityEngine.UI.Image>();
+            var image = panel.GetComponent<Image>();
             image.color = Color.black;
             image.raycastTarget = false;
             return (RectTransform)panel.transform;

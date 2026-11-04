@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Interaction.Dialog
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Typewriter Sounds")]
-    [DefaultCatalog(TypewriterSoundCatalog.ResourceName)]
+    [DefaultCatalog(ResourceName)]
     public sealed class TypewriterSoundCatalog : DefinitionCatalog<TypewriterSound>
     {
         public const string ResourceName = "TypewriterSoundCatalog";

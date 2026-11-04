@@ -1,28 +1,27 @@
-using VContainer;
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Collections;
-using UnityEngine.TestTools;
-using UnityEditor.SceneManagement;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Character;
-using Core;
 using Core.Common.Editor;
 using Core.Context;
-using Core.Game;
 using Core.Inventory;
 using Core.Location;
 using Core.Tile;
 using Core.Tile.Vulcanus;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 using TerrainData = Core.Tile.TerrainData;
 using TileData = Core.Tile.TileData;
 using static Core.Common.Editor.Reflect;
+using InteractionMode = Core.Context.InteractionMode;
+using Object = UnityEngine.Object;
 
 namespace Interaction.Tools.WateringJar.Editor
 {
@@ -31,7 +30,7 @@ namespace Interaction.Tools.WateringJar.Editor
     public sealed class WateringJarTests
     {
         private GameObject _root;
-        private readonly List<UnityEngine.Object> _assets = new();
+        private readonly List<Object> _assets = new();
         private MainCharacter _character;
         private WateringJarAction _jug;
         private MapManager _map;
@@ -72,7 +71,7 @@ namespace Interaction.Tools.WateringJar.Editor
             _character.Tiles.EnterLocation(_map);
             _front = new Vector2Int(0, 1);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/Tools/WateringJar/WateringJarToolPrefab.prefab");
-            _jug = UnityEngine.Object.Instantiate(prefab, _root.transform).GetComponent<WateringJarAction>();
+            _jug = Object.Instantiate(prefab, _root.transform).GetComponent<WateringJarAction>();
             _jug.Initialize(_character);
         }
 
@@ -84,14 +83,14 @@ namespace Interaction.Tools.WateringJar.Editor
             foreach (var field in _originalMapFields) Set(_map, field.Key, field.Value);
             _originalMapFields.Clear();
             _character.Tiles.EnterLocation(_map);
-            UnityEngine.Object.Destroy(_root);
-            UnityEngine.Object.Destroy(_gridRoot);
-            foreach (var asset in _assets) UnityEngine.Object.Destroy(asset);
+            Object.Destroy(_root);
+            Object.Destroy(_gridRoot);
+            foreach (var asset in _assets) Object.Destroy(asset);
             _assets.Clear();
             yield return new ExitPlayMode();
         }
 
-        private T Own<T>(T asset) where T : UnityEngine.Object { _assets.Add(asset); return asset; }
+        private T Own<T>(T asset) where T : Object { _assets.Add(asset); return asset; }
 
         [Test]
         public void StartsFullAndRebindingPreservesWaterAndUpgrades()
@@ -150,13 +149,13 @@ namespace Interaction.Tools.WateringJar.Editor
             _character.MainInventory.AddItem(tool, 1);
             _character.Loadout.SelectItem(0);
             _jug = (WateringJarAction)_character.ToolActionRegistry.GetToolAction(tool);
-            var wrapper = UnityEngine.Object.Instantiate(
+            var wrapper = Object.Instantiate(
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform)
                 .GetComponent<UseToolAction>();
             wrapper.Initialize(_character);
             var snapshot = PlayerInteractionContextSnapshot.Empty() with
             {
-                SceneReady = true, Character = _character, CurrentTool = tool, CurrentlyHeldItem = tool, Mode = Core.Context.InteractionMode.Tool
+                SceneReady = true, Character = _character, CurrentTool = tool, CurrentlyHeldItem = tool, Mode = InteractionMode.Tool
             };
             var executor = new ActionExecutor(_character, () => snapshot);
             return (executor, wrapper);

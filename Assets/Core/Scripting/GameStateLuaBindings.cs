@@ -1,7 +1,9 @@
-using VContainer;
-using Preserve = UnityEngine.Scripting.PreserveAttribute;
+using System;
+using Character;
 using Core.Game;
 using UnityEngine.Scripting;
+using VContainer;
+using Preserve = UnityEngine.Scripting.PreserveAttribute;
 
 namespace Core.Scripting
 {
@@ -36,7 +38,7 @@ namespace Core.Scripting
         public static void ValidateSet(string key, StoryValue value)
         {
             StoryValue.RequireKey(key);
-            if (value == null) throw new System.ArgumentNullException(nameof(value));
+            if (value == null) throw new ArgumentNullException(nameof(value));
             value.Validate();
         }
     }
@@ -44,7 +46,7 @@ namespace Core.Scripting
     [LuaModule("GameState.Player.Skills")]
     internal sealed class SkillsLuaApi
     {
-        [Inject] private Character.SkillDefinitions _definitions;
+        [Inject] private SkillDefinitions _definitions;
         [Inject] private GameState _gameState;
 
         [LuaCall]

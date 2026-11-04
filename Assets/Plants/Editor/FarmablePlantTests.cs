@@ -1,8 +1,7 @@
-using Plants;
 using System;
 using System.Reflection;
 using Core.Common;
-using Core.Game;
+using Core.Common.Editor;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -25,7 +24,7 @@ namespace Plants.Editor
     }
 
     [Category("FarmingTerrain")]
-    public sealed class FarmablePlantTests : Core.Common.Editor.GameTest
+    public sealed class FarmablePlantTests : GameTest
     {
         private GameObject _root;
         private PlantData _data;
@@ -41,7 +40,7 @@ namespace Plants.Editor
 
             _state = new PlantState("test:crop");
             _data = Game.Asset<PlantData>();
-            Core.Common.Editor.ConfigurationTestData.Set(_data, "plantId", _state.plantID);
+            ConfigurationTestData.Set(_data, "plantId", _state.plantID);
             _sprite = Game.Own(Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero));
             var stages = PlantDataTests.Stages(0, 2);
             foreach (var stage in stages)

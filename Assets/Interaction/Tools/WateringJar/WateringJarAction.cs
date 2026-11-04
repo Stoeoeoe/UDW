@@ -1,5 +1,5 @@
-using System.Threading;
 using System;
+using System.Threading;
 using Character;
 using Core.Context;
 using Core.Inventory;

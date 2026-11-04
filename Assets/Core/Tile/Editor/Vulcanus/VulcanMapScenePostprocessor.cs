@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -25,7 +26,7 @@ namespace Core.Tile.Editor.Vulcanus
             string[] movedFromAssetPaths)
         {
             var mapAssets = importedAssets
-                .Where(p => p.EndsWith(".vmap", System.StringComparison.OrdinalIgnoreCase))
+                .Where(p => p.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
             if (mapAssets.Length == 0)
@@ -60,7 +61,7 @@ namespace Core.Tile.Editor.Vulcanus
                     var instance = (GameObject)PrefabUtility.InstantiatePrefab(mapPrefab, scene);
                     instance.name = mapPrefab.name;
                     if (!EditorSceneManager.SaveScene(scene, scenePath))
-                        throw new System.InvalidOperationException($"Could not save map scene '{scenePath}'.");
+                        throw new InvalidOperationException($"Could not save map scene '{scenePath}'.");
                 }
                 finally { EditorSceneManager.CloseScene(scene, true); }
 

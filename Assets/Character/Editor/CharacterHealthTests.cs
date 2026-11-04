@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
@@ -8,7 +9,7 @@ using NUnit.Framework;
 namespace Character.Editor
 {
     /// <summary>Checks health bounds, death, attribute changes and live-state binding through the authored character fixture.</summary>
-    public sealed class CharacterHealthTests : Core.Common.Editor.GameTest, IEventListener<HealthChangedEvent>
+    public sealed class CharacterHealthTests : GameTest, IEventListener<HealthChangedEvent>
     {
 
         private MainCharacter _character;
@@ -142,7 +143,7 @@ namespace Character.Editor
 
             Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
             Game.State.Player.Health = new HealthState { Initialized = true, Current = 37 };
-            var player = Game.Get<Core.PlayerStateManager>();
+            var player = Game.Get<PlayerStateManager>();
             player.InitializeCharacter(_character);
             Assert.That(_health.CurrentHealth, Is.EqualTo(37));
             _health.TakeDamage(7);

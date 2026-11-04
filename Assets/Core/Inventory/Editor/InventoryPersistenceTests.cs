@@ -1,12 +1,11 @@
 using System;
-using System.Reflection;
 using System.Linq;
+using Core.Common.Editor;
 using Core.Events;
-using UI.InventoryScreen;
 using NUnit.Framework;
 using Sirenix.Serialization;
+using UI.InventoryScreen;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.Inventory.Editor
@@ -22,7 +21,7 @@ namespace Core.Inventory.Editor
         public void PlaceOne(int slot) => PlaceOneItem(slot);
     }
 
-    public sealed class InventoryPersistenceTests : Core.Common.Editor.GameTest, IEventListener<InventoryChangedEvent>
+    public sealed class InventoryPersistenceTests : GameTest, IEventListener<InventoryChangedEvent>
     {
 
         private GameObject _root;

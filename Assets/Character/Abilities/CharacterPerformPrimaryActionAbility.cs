@@ -1,18 +1,17 @@
-using VContainer;
 using System;
 using Core.Context;
-using Core.Events;
 using Core.Location;
 using Input;
 using Interaction;
-using UnityEngine.EventSystems;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using VContainer;
 
 namespace Character.Abilities
 {
     public class CharacterPerformPrimaryActionAbility : CharacterAbility
     {
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
 
         public ActionExecutor ActionExecutor { get; internal set; }
         [Inject] private PlayerInteractionContext _context;

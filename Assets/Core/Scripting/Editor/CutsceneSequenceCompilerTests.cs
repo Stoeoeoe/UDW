@@ -1,13 +1,14 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
+using Core.Common.Editor;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneSequenceCompilerTests : Core.Common.Editor.GameTest
+    public sealed class CutsceneSequenceCompilerTests : GameTest
     {
 
         [Test]

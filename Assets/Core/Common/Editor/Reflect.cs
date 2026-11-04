@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 
 namespace Core.Common.Editor
 {
@@ -27,7 +28,7 @@ namespace Core.Common.Editor
                 var found = type.GetMethod(method, Fields | BindingFlags.Static);
                 if (found == null) continue;
                 try { return found.Invoke(target, arguments); }
-                catch (TargetInvocationException error) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
+                catch (TargetInvocationException error) { ExceptionDispatchInfo.Capture(error.InnerException).Throw(); }
             }
             throw new MissingMethodException(target.GetType().Name, method);
         }

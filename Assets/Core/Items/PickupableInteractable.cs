@@ -1,5 +1,3 @@
-using VContainer;
-using System;
 using System.Collections;
 using Character;
 using Character.Animations;
@@ -7,6 +5,7 @@ using Core.Events;
 using Core.Inventory;
 using Interaction;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Items
 {

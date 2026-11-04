@@ -1,10 +1,10 @@
-using VContainer;
 using System;
 using Character;
 using Core.Events;
 using Interaction.Tools.Stamina;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
 
 namespace UI.Stamina
 {

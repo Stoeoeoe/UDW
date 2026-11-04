@@ -1,6 +1,5 @@
 using System;
 using Core.Common;
-using Core.GameplayTags;
 using UnityEngine;
 
 namespace Character

@@ -1,27 +1,32 @@
-using Core.Tile;
-using System.Threading;
-using System.Threading.Tasks;
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Threading.Tasks;
+using Core.Common;
+using Core.Common.Editor;
+using Core.Context;
 using Core.Game;
-using Core.Events;
 using Core.Location;
-using Core.TimeAndWeather;
 using Core.Tile.Vulcanus;
+using Core.TimeAndWeather;
+using Interaction;
+using Interaction.Tools;
+using Items.Plants;
+using MoreMountains.Tools;
 using NUnit.Framework;
 using Plants;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
+using InteractionMode = Core.Context.InteractionMode;
 
 namespace Core.Tile.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class MapManagerTests : Core.Common.Editor.GameTest
+    public sealed class MapManagerTests : GameTest
     {
         private GameObject _root;
 
@@ -91,7 +96,7 @@ namespace Core.Tile.Editor
         [TestCase(-1, 0, 0.01f, 0.5f)]
         public async Task AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
         {
-            var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/map-1.vmap")
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/map-1.vmap")
                 .GetComponent<VulcanusImportedMap>();
             var sourceCell = new Vector3Int(6, 21, 0);
             _terrain.SetTile(Vector3Int.zero, source.TerrainTilemap.GetTile(sourceCell));
@@ -102,19 +107,19 @@ namespace Core.Tile.Editor
             var soil = _map.GetTileDataAtCoordinates(Vector2Int.zero);
             Assert.That(soil.IsFarmable, Is.True);
 
-            Game.Start<MoreMountains.Tools.MMSoundManager>();
+            Game.Start<MMSoundManager>();
             var character = Game.CreateCharacter();
             var direction = new Vector2Int(dx, dy);
             var anchor = _terrain.CellToWorld(new Vector3Int(-dx, -dy, 0)) + new Vector3(x, y, 0);
-            Core.Common.Editor.GameTestFixture.PlaceCharacterAtGroundPoint(character, anchor);
+            GameTestFixture.PlaceCharacterAtGroundPoint(character, anchor);
             character.Orientation.ForceDirection(direction);
             character.Tiles.EnterLocation(_map);
-            var tool = UnityEditor.AssetDatabase.LoadAssetAtPath<Interaction.Tools.ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset");
+            var tool = AssetDatabase.LoadAssetAtPath<ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset");
             character.MainInventory.AddItem(tool, 1);
             character.Loadout.SelectItem(0);
             character.ToolActionRegistry.Initialize(character);
-            var wrapper = Game.InjectObject(Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform)).GetComponent<Interaction.Tools.UseToolAction>();
+            var wrapper = Game.InjectObject(Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Interaction/Tools/UseToolActionPrefab.prefab"), _root.transform)).GetComponent<UseToolAction>();
             wrapper.Initialize(character);
             _root.SetActive(true);
             character.transform.parent.gameObject.SetActive(true);
@@ -125,12 +130,12 @@ namespace Core.Tile.Editor
                 .Any(collider => collider.transform.IsChildOf(character.transform)), Is.True,
                 "The regression requires the authored character body to overlap the target.");
             Assert.That(_map.IsTileOccupied(soil, character), Is.False);
-            var snapshot = Core.Context.PlayerInteractionContextSnapshot.Empty() with
+            var snapshot = PlayerInteractionContextSnapshot.Empty() with
             {
                 SceneReady = true, Character = character, CurrentTool = tool, CurrentlyHeldItem = tool,
-                Mode = Core.Context.InteractionMode.Tool
+                Mode = InteractionMode.Tool
             };
-            var executor = new Interaction.ActionExecutor(character, () => snapshot);
+            var executor = new ActionExecutor(character, () => snapshot);
             var run = executor.RunAsync(wrapper);
             try
             {
@@ -251,7 +256,7 @@ namespace Core.Tile.Editor
         {
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
             Set(_map, "_terrainDataByType", new Dictionary<TerrainType, TerrainData>());
-            var error = Assert.Throws<System.InvalidOperationException>(BuildCache);
+            var error = Assert.Throws<InvalidOperationException>(BuildCache);
             Assert.That(error.Message, Does.Contain("Grass"));
         }
 
@@ -344,7 +349,7 @@ namespace Core.Tile.Editor
         [Test]
         public void IndoorMapWithEmptyTerrainUsesAuthoredBounds()
         {
-            var source = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/indoor.vmap");
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/indoor.vmap");
             var instance = Game.Own(Game.InjectObject(Object.Instantiate(source)));
             var imported = instance.GetComponent<VulcanusImportedMap>();
             Assert.That(imported.TerrainTilemap.GetUsedTilesCount(), Is.Zero);
@@ -486,10 +491,10 @@ namespace Core.Tile.Editor
             var produce = Asset<ProduceItem>();
             Set(produce, "_itemId", "test:produce");
             Set(data, "_harvestItem", produce);
-            var seedStage = new global::Items.Plants.GrowthStage();
-            Set(seedStage, "_representation", new Core.Common.SpriteOrPrefab
-                { type = Core.Common.SpriteOrPrefab.SpriteOrPrefabType.Prefab, prefab = _gridRoot });
-            Set(data, "growthStages", new List<global::Items.Plants.GrowthStage> { seedStage });
+            var seedStage = new GrowthStage();
+            Set(seedStage, "_representation", new SpriteOrPrefab
+                { type = SpriteOrPrefab.SpriteOrPrefabType.Prefab, prefab = _gridRoot });
+            Set(data, "growthStages", new List<GrowthStage> { seedStage });
             Assert.That(data.ValidateConfiguration(), Is.Empty);
             var catalog = Asset<PlantCatalog>();
             catalog.Synchronize(new Object[] { data });
@@ -550,7 +555,7 @@ namespace Core.Tile.Editor
         private VulcanusTile WaterTile(string value)
         {
             var tile = Tile(TerrainType.Water);
-            Set(tile, "properties", value == null ? System.Array.Empty<VulcanusTile.VulcanusTileProperty>() :
+            Set(tile, "properties", value == null ? Array.Empty<VulcanusTile.VulcanusTileProperty>() :
                 new[] { new VulcanusTile.VulcanusTileProperty { key = "isFreshwater", jsonValue = value } });
             return tile;
         }

@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Core.Dialogue.Vulcanus.Editor
 {
-    public sealed class VulcanusLuaDialogueScriptEngineTests : Core.Common.Editor.GameTest
+    public sealed class VulcanusLuaDialogueScriptEngineTests : GameTest
     {
 
         [Test]

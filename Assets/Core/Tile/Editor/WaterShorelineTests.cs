@@ -4,6 +4,7 @@ using Core.Tile.Editor.Vulcanus;
 using Core.Tile.Water;
 using NUnit.Framework;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Core.Tile.Editor
 {
@@ -14,7 +15,7 @@ namespace Core.Tile.Editor
         public void EuclideanFieldMatchesNearestLandIncludingDiagonalCornersAndNarrowChannels()
         {
             const int width = 19, height = 13, range = 8;
-            var random = new System.Random(734);
+            var random = new Random(734);
             var land = new byte[width * height];
             for (var i = 0; i < land.Length; i++) land[i] = (byte)(random.Next(6) == 0 ? 1 : 0);
             var distances = WaterShorelineBuilder.Distances(land, width, height, range);

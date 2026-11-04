@@ -1,6 +1,4 @@
 ﻿using Core.Events;
-using Interaction.Dialog;
-using UnityEngine;
 
 namespace Interaction.Dialogue
 {

@@ -1,7 +1,7 @@
-using UnityEngine;
 using System.Threading;
 using Core.Context;
 using Core.Items;
+using UnityEngine;
 
 namespace Interaction
 {

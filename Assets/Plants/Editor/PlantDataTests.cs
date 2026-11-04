@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
+using Random = UnityEngine.Random;
 
 namespace Plants.Editor
 {
@@ -92,10 +93,10 @@ namespace Plants.Editor
         public void HarvestQuantityRollIncludesBothEndpointsAndStaysWithinBounds()
         {
             SetQuantityRange(2, 5);
-            var previousRandomState = UnityEngine.Random.state;
+            var previousRandomState = Random.state;
             try
             {
-                UnityEngine.Random.InitState(123);
+                Random.InitState(123);
                 var quantities = new HashSet<int>();
                 for (var i = 0; i < 128; i++)
                 {
@@ -106,7 +107,7 @@ namespace Plants.Editor
                 Assert.That(quantities, Does.Contain(2));
                 Assert.That(quantities, Does.Contain(5));
             }
-            finally { UnityEngine.Random.state = previousRandomState; }
+            finally { Random.state = previousRandomState; }
         }
 
         private void SetQuantityRange(int min, int max)

@@ -1,8 +1,5 @@
-using System;
 using System.Linq;
-using Character;
 using Core.Camera;
-using Core.Dialogue.Vulcanus;
 using Core.Location;
 using Core.Music;
 using Core.Spawning;

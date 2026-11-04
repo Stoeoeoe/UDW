@@ -1,13 +1,15 @@
-using Core.Scripting;
+using System;
+using System.IO;
 using Core.Common.Editor;
 using Core.Divinity;
 using Core.Game;
+using Core.TimeAndWeather;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class DivineFavourLuaApiTests : Core.Common.Editor.GameTest
+    public sealed class DivineFavourLuaApiTests : GameTest
     {
 
         [Test]
@@ -44,13 +46,13 @@ namespace Core.Scripting.Editor
         {
             var favour = Game.Get<DivineFavour>();
             var session = Game.Get<GameStateManager>();
-            Game.Get<Core.PlayerStateManager>().InitializeHome();
+            Game.Get<PlayerStateManager>().InitializeHome();
             Game.State.Time.initialized = true;
             Game.State.Time.daysSinceStart = 1;
             Game.State.Time.dayOfSeason = 1;
             Game.State.Time.hour = 6;
             var original = Game.State.Player.Favour;
-            var slot = "favour_scope_" + System.Guid.NewGuid().ToString("N");
+            var slot = "favour_scope_" + Guid.NewGuid().ToString("N");
             var path = GameSaveService.GetSavePath(slot);
             try
             {
@@ -61,11 +63,11 @@ namespace Core.Scripting.Editor
                 Assert.That(favour.GetFavour("mars"), Is.EqualTo(10));
                 Assert.That(favour.AddFavour("mars", 3), Is.EqualTo(13));
                 var deity = Game.Get<DeityDefinitions>().Get("mars");
-                Core.TimeAndWeather.NewDayEvent.Trigger(2);
-                Assert.That(favour.GetFavour("mars"), Is.EqualTo(System.Math.Max(0, 13 - deity.DailyDecay)));
+                NewDayEvent.Trigger(2);
+                Assert.That(favour.GetFavour("mars"), Is.EqualTo(Math.Max(0, 13 - deity.DailyDecay)));
                 Assert.That(original.GetFavour("mars"), Is.EqualTo(17));
             }
-            finally { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); }
+            finally { if (File.Exists(path)) File.Delete(path); }
         }
 
         [Test]

@@ -1,7 +1,5 @@
-﻿using VContainer;
-using System;
-using Character;
-using UnityEngine.Scripting;
+﻿using System;
+using VContainer;
 
 namespace Core.Scripting
 {

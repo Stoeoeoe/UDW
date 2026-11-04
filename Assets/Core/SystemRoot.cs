@@ -1,4 +1,11 @@
+using System;
+using Core.Dialogue.Vulcanus;
+using Core.Divinity;
+using Core.Items;
 using Core.Location;
+using Core.Spawning;
+using Core.TimeAndWeather;
+using Plants;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -12,11 +19,11 @@ namespace Core
         public const string PrefabPath = "Assets/Resources/SystemRoot.prefab";
 
         [SerializeField] private PlayerSettings player = new();
-        [SerializeField] private Core.Items.ItemSettings items = new();
-        [SerializeField] private Core.TimeAndWeather.ClockSettings clock = new();
+        [SerializeField] private ItemSettings items = new();
+        [SerializeField] private ClockSettings clock = new();
         public PlayerSettings Player => player;
-        public Core.Items.ItemSettings Items => items;
-        public Core.TimeAndWeather.ClockSettings Clock => clock;
+        public ItemSettings Items => items;
+        public ClockSettings Clock => clock;
 
         protected override void Configure(IContainerBuilder builder) => ConfigureServices(builder, gameObject);
 
@@ -25,12 +32,12 @@ namespace Core
             var configuration = root.GetComponent<SystemRoot>();
             GameServices.Register(builder, configuration.player, configuration.items, configuration.clock);
             // The dialogue screen is a presentation component behind the runner's IDialoguePresenter.
-            if (!builder.Exists(typeof(Dialogue.Vulcanus.IDialoguePresenter), true))
+            if (!builder.Exists(typeof(IDialoguePresenter), true))
             {
-                var presenters = root.GetComponentsInChildren<Dialogue.Vulcanus.IDialoguePresenter>(true);
+                var presenters = root.GetComponentsInChildren<IDialoguePresenter>(true);
                 if (presenters.Length != 1)
-                    throw new System.InvalidOperationException("SystemRoot requires exactly one dialogue presenter.");
-                builder.RegisterInstance<Dialogue.Vulcanus.IDialoguePresenter>(presenters[0]);
+                    throw new InvalidOperationException("SystemRoot requires exactly one dialogue presenter.");
+                builder.RegisterInstance<IDialoguePresenter>(presenters[0]);
             }
             // Keep authored component instances and their Inspector configuration. A registration supplied
             // by the composing caller, such as a test double, takes precedence.
@@ -40,12 +47,12 @@ namespace Core
             {
                 container.InjectGameObject(root);
                 // These session subscriptions must exist before the first overnight transition.
-                container.Resolve<Plants.PlantManager>();
-                container.Resolve<Core.Divinity.DivineFavour>();
+                container.Resolve<PlantManager>();
+                container.Resolve<DivineFavour>();
                 container.Resolve<PlayerStateManager>();
                 var level = container.Resolve<LevelManager>();
                 // Persistent entities are restored first, before the managers' own location callbacks.
-                level.RegisterLifecycle(container.Resolve<Spawning.WorldObjectSpawner>());
+                level.RegisterLifecycle(container.Resolve<WorldObjectSpawner>());
                 foreach (var manager in root.GetComponentsInChildren<GameManager>(true))
                     if (manager is ILocationLifecycle lifecycle)
                     {

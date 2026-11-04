@@ -1,12 +1,13 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using Core.Common.Editor;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneWaitTests : Core.Common.Editor.GameTest
+    public sealed class CutsceneWaitTests : GameTest
     {
 
         [Test]

@@ -1,11 +1,14 @@
 using System;
 using System.IO;
 using System.Linq;
+using Core.Common.Editor;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class LuaExecutionSessionTests : Core.Common.Editor.GameTest
+    public sealed class LuaExecutionSessionTests : GameTest
     {
 
         [Test]
@@ -144,7 +147,7 @@ namespace Core.Scripting.Editor
             Assert.That(methods[1].action, Is.Null, "Ordinary LuaCall must not become a visual action.");
             Assert.That(methods[2].action.execution, Is.EqualTo("awaitable"));
             Assert.That(methods[2].returnType, Is.EqualTo("nil"));
-            Assert.That(UnityEngine.JsonUtility.ToJson(first), Is.EqualTo(UnityEngine.JsonUtility.ToJson(registry.Describe())));
+            Assert.That(JsonUtility.ToJson(first), Is.EqualTo(JsonUtility.ToJson(registry.Describe())));
         }
 
         [Test]
@@ -159,7 +162,7 @@ namespace Core.Scripting.Editor
         {
             var fromTypes = LuaBindingRegistry.DescribeTypes(typeof(TestApi));
             var fromObject = Game.Bind(new TestApi()).Describe();
-            Assert.That(UnityEngine.JsonUtility.ToJson(fromTypes), Is.EqualTo(UnityEngine.JsonUtility.ToJson(fromObject)));
+            Assert.That(JsonUtility.ToJson(fromTypes), Is.EqualTo(JsonUtility.ToJson(fromObject)));
             Assert.That(() => LuaBindingRegistry.DescribeTypes(typeof(ConstructorRequiresGameApi)), Throws.Nothing);
         }
 
@@ -201,7 +204,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void IdenticalExportsLeaveTheManifestFileUntouched()
         {
-            var path = Path.Combine(Path.GetDirectoryName(UnityEngine.Application.dataPath), "Generated/Scripting/bindings.json");
+            var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), "Generated/Scripting/bindings.json");
             LuaBindingManifestExporter.Export();
             var content = File.ReadAllText(path);
             var writtenAt = File.GetLastWriteTimeUtc(path);
@@ -256,7 +259,7 @@ namespace Core.Scripting.Editor
             public bool Executed;
             [LuaAction("test.newAction", "New", "Test", "New action", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             public void NewAction([LuaReference("characterRef", "mapCharacter")] string character, string destination) => Executed = true;
-            [UnityEngine.Scripting.Preserve]
+            [Preserve]
             private void Check(string character, string destination)
             {
                 if (character != "player") throw new InvalidOperationException("Unknown character");
@@ -276,7 +279,7 @@ namespace Core.Scripting.Editor
         {
             [LuaAction("test.wrong", "Wrong", "Test", "Wrong signature", "cutscene", Validator = nameof(Check), Phases = new[] { "sequence" })]
             public void Run(string character) { }
-            [UnityEngine.Scripting.Preserve]
+            [Preserve]
             private void Check(int character) { }
         }
 
@@ -290,7 +293,7 @@ namespace Core.Scripting.Editor
         [LuaModule("InvalidExport")]
         private sealed class InvalidExportApi
         {
-            [LuaCall] public void Move(UnityEngine.Vector2 destination) { }
+            [LuaCall] public void Move(Vector2 destination) { }
         }
 
         private LuaExecutionSession Start(TestApi api, string lua) =>

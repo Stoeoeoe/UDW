@@ -1,24 +1,23 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Animancer;
 using Character;
 using Character.Animations;
 using Core.Common.Editor;
 using Core.Game;
-using Core.Location;
+using MoreMountains.Tools;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
-using MoreMountains.Tools;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class PlayAnimationActionTests : Core.Common.Editor.GameTest
+    public sealed class PlayAnimationActionTests : GameTest
     {
 
         private MainCharacter _actor;
@@ -118,7 +117,7 @@ namespace Core.Scripting.Editor
         [Test]
         public void HoldOptionDefaultsOffAndCompilesAsABoolean()
         {
-            var source = Newtonsoft.Json.Linq.JArray.Parse("[{ 'id':'pose', 'action':'characters.playAnimation', 'arguments': { 'character':'player', 'animation':'base:pass-out' } }]");
+            var source = JArray.Parse("[{ 'id':'pose', 'action':'characters.playAnimation', 'arguments': { 'character':'player', 'animation':'base:pass-out' } }]");
             var legacy = CutsceneSequenceCompiler.Compile(source, "animation.json", out var steps);
             Assert.That(legacy, Does.Contain("\"base:pass-out\", false)"));
             Assert.That(steps.Single().Arguments.Single(argument => argument.Name == "holdLastFrame").Value, Is.EqualTo("false"));
@@ -383,7 +382,7 @@ namespace Core.Scripting.Editor
             {
                 Set(_animation, "clip", null);
                 Set(_animation, "memaoAction", "MissingEmoteAnimation");
-                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Emote 'test:reaction'.*has no animation"));
+                LogAssert.Expect(LogType.Warning, new Regex("Emote 'test:reaction'.*has no animation"));
             }
             Assert.That(emote.ValidateConfiguration(), Is.Empty);
             using var action = new EmoteAction(_actor, emote);

@@ -4,7 +4,9 @@ using Character.Animations;
 using Core.Location;
 using Interaction;
 using Interaction.Tools;
+using Plants;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Character
 {
@@ -54,8 +56,8 @@ namespace Character
                 animationLibrary.ValidateAction(toolPrepareAction);
                 animationLibrary.ValidateAction(toolUseAction, oneShot: true);
             }
-            if (character.GetComponentInChildren<Plants.PlantSeedAction>(true))
-                animationLibrary.ValidateAction(Plants.PlantSeedAction.AnimationAction, oneShot: true);
+            if (character.GetComponentInChildren<PlantSeedAction>(true))
+                animationLibrary.ValidateAction(PlantSeedAction.AnimationAction, oneShot: true);
         }
         private void OnDisable()
         {
@@ -80,7 +82,7 @@ namespace Character
             }
             _variationDelay -= Time.deltaTime;
             if (_variationDelay > 0f) return;
-            _interactionState = PlayClip(_interactionSet.SelectVariation(UnityEngine.Random.value)
+            _interactionState = PlayClip(_interactionSet.SelectVariation(Random.value)
                 .ResolveClip(animationLibrary, _interactionFacing));
             _interactionState.Time = 0;
             _playingVariation = true;
@@ -246,7 +248,7 @@ namespace Character
             _interactionState.Time = 0;
             _playingVariation = false;
             if (_interactionSet)
-                _variationDelay = UnityEngine.Random.Range(_interactionSet.VariationDelay.x, _interactionSet.VariationDelay.y);
+                _variationDelay = Random.Range(_interactionSet.VariationDelay.x, _interactionSet.VariationDelay.y);
         }
         private void ClearInteractionAnimation()
         {

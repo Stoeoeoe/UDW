@@ -1,4 +1,5 @@
-﻿using Core.Inventory;
+﻿using Character;
+using Core.Inventory;
 
 namespace Items
 {
@@ -8,8 +9,8 @@ namespace Items
     /// </summary>
     public abstract class ConsumableItem : ItemDefinition
     {
-        public abstract bool CanConsume(Character.GameCharacter character);
+        public abstract bool CanConsume(GameCharacter character);
         // Effects publish only after inventory ownership has been committed.
-        public abstract void Apply(Character.GameCharacter character);
+        public abstract void Apply(GameCharacter character);
     }
 }

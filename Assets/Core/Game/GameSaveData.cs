@@ -1,6 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Character;
+using Core.Inventory;
+using Core.Items;
+using Core.TimeAndWeather;
 
 namespace Core.Game
 {
@@ -17,7 +20,7 @@ namespace Core.Game
         public GameTimeState time = new();
         public WorldState world = new();
 
-        public void Validate(Character.CharacterCatalog characters, Inventory.ItemCatalog items)
+        public void Validate(CharacterCatalog characters, ItemCatalog items)
         {
             if (schemaVersion != CurrentVersion)
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
@@ -46,7 +49,7 @@ namespace Core.Game
                     boost.Value.Bonuses == null || boost.Value.Bonuses.Length == 0)
                     throw new FormatException("The save contains an invalid temporary boost.");
                 foreach (var bonus in boost.Value.Bonuses)
-                    if (!Enum.IsDefined(typeof(Character.CharacterAttributeType), bonus.Attribute) ||
+                    if (!Enum.IsDefined(typeof(CharacterAttributeType), bonus.Attribute) ||
                         float.IsNaN(bonus.Flat) || float.IsInfinity(bonus.Flat) || bonus.Flat < 0 ||
                         float.IsNaN(bonus.Percent) || float.IsInfinity(bonus.Percent) || bonus.Percent < 0)
                         throw new FormatException("The save contains invalid temporary boost values.");
@@ -64,7 +67,7 @@ namespace Core.Game
                         throw new FormatException("The save contains an invalid inventory slot.");
 
             if (!time.initialized || time.daysSinceStart < 1 ||
-                !Enum.IsDefined(typeof(Core.TimeAndWeather.Season), time.season) ||
+                !Enum.IsDefined(typeof(Season), time.season) ||
                 time.dayOfSeason < 1 || time.hour < 0 || time.hour > 23 ||
                 time.minute < 0 || time.minute > 59 ||
                 float.IsNaN(time.secondsTowardNextMinute) || float.IsInfinity(time.secondsTowardNextMinute) ||
@@ -85,10 +88,10 @@ namespace Core.Game
                 {
                     if (string.IsNullOrWhiteSpace(obj.Key) || obj.Value == null)
                         throw new FormatException("The save contains an invalid world object.");
-                    if (obj.Value is Inventory.ContainerState container)
-                        Core.Inventory.ContainerStorage.ValidateState(container, characters.Require, items.Find);
-                    if (obj.Value is Items.ForagingSpotState forageSpot) forageSpot.Validate();
-                    if (obj.Value is Items.ForagePickupState foragePickup) foragePickup.Validate();
+                    if (obj.Value is ContainerState container)
+                        ContainerStorage.ValidateState(container, characters.Require, items.Find);
+                    if (obj.Value is ForagingSpotState forageSpot) forageSpot.Validate();
+                    if (obj.Value is ForagePickupState foragePickup) foragePickup.Validate();
                 }
             }
         }

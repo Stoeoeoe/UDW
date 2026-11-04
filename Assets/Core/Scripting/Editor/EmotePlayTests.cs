@@ -1,17 +1,14 @@
-using Core.Common.Editor;
-using Core.Scripting;
-using VContainer;
 using System.Collections;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
-using Character;
 using Character.Animations;
+using Core.Common.Editor;
 using Core.Location;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
@@ -24,7 +21,7 @@ namespace Core.Scripting.Editor
         [UnitySetUp]
         public IEnumerator SetUp()
         {
-            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
+            if (SceneManager.GetActiveScene().path != "Assets/Scenes/Maps/map-1.unity")
                 EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode();
             var deadline = Time.realtimeSinceStartup + 15f;

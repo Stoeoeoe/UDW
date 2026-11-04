@@ -1,4 +1,5 @@
 using System;
+using Core.Location;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
@@ -8,7 +9,7 @@ namespace Core.Tile.Vulcanus
     {
         public string id;
         public string label;
-        public Core.Location.LocationLinkType linkType;
+        public LocationLinkType linkType;
         public Vector2 sourcePosition; // absolute pixels
         public Vector2 triggerSize; // pixels
         public string targetMapId;

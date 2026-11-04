@@ -4,8 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Core.Location;
+using Character;
 using Core.Catalogs.Editor;
+using Core.Common.Editor;
+using Core.Inventory.Editor;
+using Core.Location;
+using Core.Music;
+using Core.Music.Editor;
 using Core.Spawning;
 using Core.Spawning.Editor;
 using Core.Tile.Editor.Vulcanus;
@@ -16,9 +21,10 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using UnityEngine.Rendering;
+using UnityEngine.Tilemaps;
 using Object = UnityEngine.Object;
 using LocationType = Core.Common.LocationType;
 using static Core.Common.Editor.Reflect;
@@ -26,7 +32,7 @@ using static Core.Common.Editor.Reflect;
 namespace Core.Tile.Editor
 {
     [Category("MapLoading")]
-    public sealed class VulcanusMapImportIntegrationTests : Core.Common.Editor.GameTest
+    public sealed class VulcanusMapImportIntegrationTests : GameTest
     {
 
         private string _root;
@@ -146,7 +152,7 @@ namespace Core.Tile.Editor
             {
                 AssetDatabase.DeleteAsset(Path.GetDirectoryName(_musicFixturePath));
                 _musicFixturePath = null;
-                CatalogDiscovery.Refresh(Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
+                CatalogDiscovery.Refresh(Resources.Load<MusicCatalog>(MusicCatalog.ResourceName));
             }
         }
 
@@ -174,7 +180,7 @@ namespace Core.Tile.Editor
             var fixture = MusicFixture();
             _mapJson["metadata"]["musicCue"] = fixture.id;
             _mapJson["metadata"]["musicPreset"] = "full";
-            var music = ImportMap().GetComponent<Core.Music.MusicEnvironment>();
+            var music = ImportMap().GetComponent<MusicEnvironment>();
             Assert.That(music.cue.id, Is.EqualTo(fixture.id));
             Assert.That(music.preset, Is.EqualTo("full"));
             music.cue.RequireValidConfiguration();
@@ -182,7 +188,7 @@ namespace Core.Tile.Editor
             Assert.That(dependencies, Does.Contain(AssetDatabase.GetAssetPath(fixture)));
             Assert.That(dependencies, Does.Contain("Assets/Resources/MusicCatalog.asset"));
             var cue = music.cue;
-            Assert.That(ImportMap().GetComponent<Core.Music.MusicEnvironment>().cue, Is.SameAs(cue));
+            Assert.That(ImportMap().GetComponent<MusicEnvironment>().cue, Is.SameAs(cue));
         }
 
         [Test]
@@ -200,7 +206,7 @@ namespace Core.Tile.Editor
             Assert.That(bodies.Length, Is.EqualTo(3), "Diagonal contact must not join independent water bodies.");
             Assert.That(bodies.Select(body => body.name), Is.Unique);
             var source = map.TerrainTilemap;
-            Assert.That(source.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>(), Is.Not.Null);
+            Assert.That(source.GetComponent<TilemapCollider2D>(), Is.Not.Null);
             var waterCells = new[] { new Vector3Int(0, 3, 0), new Vector3Int(1, 3, 0), new Vector3Int(3, 3, 0),
                 new Vector3Int(1, 2, 0), new Vector3Int(2, 1, 0) };
             foreach (var cell in waterCells)
@@ -210,7 +216,7 @@ namespace Core.Tile.Editor
                 Assert.That(tile.IsFreshwater, Is.True);
                 Assert.That(source.GetColliderType(cell), Is.EqualTo(UnityEngine.Tilemaps.Tile.ColliderType.Grid));
                 Assert.That(source.GetColor(cell).a, Is.Zero);
-                var surface = bodies.Select(body => body.GetComponent<UnityEngine.Tilemaps.Tilemap>()).Single(layer => layer.HasTile(cell));
+                var surface = bodies.Select(body => body.GetComponent<Tilemap>()).Single(layer => layer.HasTile(cell));
                 Assert.That(surface.GetSprite(cell), Is.SameAs(tile.sprite));
                 Assert.That(surface.GetTile(cell), Is.Not.InstanceOf<VulcanusTile>());
                 Assert.That(surface.GetColliderType(cell), Is.EqualTo(UnityEngine.Tilemaps.Tile.ColliderType.None));
@@ -221,8 +227,8 @@ namespace Core.Tile.Editor
                 body.Validate();
                 Assert.That(body.Profile.name, Is.EqualTo("Lake_1"));
                 Assert.That(body.PixelsPerUnit, Is.EqualTo(16));
-                Assert.That(body.GetComponent<UnityEngine.Tilemaps.Tilemap>().color.a, Is.EqualTo(0.6f));
-                Assert.That(body.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().sortingOrder, Is.EqualTo(5));
+                Assert.That(body.GetComponent<Tilemap>().color.a, Is.EqualTo(0.6f));
+                Assert.That(body.GetComponent<TilemapRenderer>().sortingOrder, Is.EqualTo(5));
                 Assert.That(body.GetComponent<Collider2D>(), Is.Null);
             }
             var names = bodies.Select(body => body.name).ToArray();
@@ -325,7 +331,7 @@ namespace Core.Tile.Editor
                 Assert.That(obj.GetComponent<SpriteRenderer>().sprite, Is.SameAs(definition.sprite));
                 Assert.That(obj.GetComponent<SpriteRenderer>().sortingOrder, Is.EqualTo(7));
                 Assert.That(obj.GetComponent<PolygonCollider2D>(), Is.Not.Null);
-                Assert.That(obj.GetComponent<Character.YSortByPosition>(), Is.Not.Null);
+                Assert.That(obj.GetComponent<YSortByPosition>(), Is.Not.Null);
             }
             Assert.That(AssetDatabase.LoadAllAssetsAtPath(_mapPath).OfType<Texture2D>(), Is.Empty);
         }
@@ -351,12 +357,12 @@ namespace Core.Tile.Editor
             staging.SetActive(false);
             _views.Add(staging);
             var map = Game.InjectObject(Object.Instantiate(ImportMap(), staging.transform));
-            Assert.DoesNotThrow(() => Core.Inventory.Editor.ContainerConfigurationValidation.Check(staging));
+            Assert.DoesNotThrow(() => ContainerConfigurationValidation.Check(staging));
             var template = map.PersistentEntities.Single().template;
             template.transform.parent.gameObject.SetActive(true);
             Assert.That(template.gameObject.activeInHierarchy, Is.False);
             var error = Assert.Throws<InvalidOperationException>(() =>
-                Core.Inventory.Editor.ContainerConfigurationValidation.Check(staging));
+                ContainerConfigurationValidation.Check(staging));
             StringAssert.Contains("crate-1", error.Message);
             StringAssert.Contains("inactive parent", error.Message);
         }
@@ -629,11 +635,11 @@ namespace Core.Tile.Editor
             finally { BindCatalogProject(null); }
         }
 
-        private Core.Music.MusicCue MusicFixture()
+        private MusicCue MusicFixture()
         {
-            var cue = Core.Music.Editor.ApolloCueImporterTests.CreateFixture("map-import-" + Guid.NewGuid().ToString("N"));
+            var cue = ApolloCueImporterTests.CreateFixture("map-import-" + Guid.NewGuid().ToString("N"));
             _musicFixturePath = AssetDatabase.GetAssetPath(cue);
-            CatalogDiscovery.Refresh(Resources.Load<Core.Music.MusicCatalog>(Core.Music.MusicCatalog.ResourceName));
+            CatalogDiscovery.Refresh(Resources.Load<MusicCatalog>(MusicCatalog.ResourceName));
             return cue;
         }
 
@@ -670,10 +676,10 @@ namespace Core.Tile.Editor
 
         private static string Absolute(string path) => VulcanusImportHelpers.ToAbsolutePath(path);
 
-        private sealed class LocationListenerProbe : MonoBehaviour, Core.Location.ILocationLifecycle
+        private sealed class LocationListenerProbe : MonoBehaviour, ILocationLifecycle
         {
-            public void OnLocationEnter(Core.Location.LocationData location) { }
-            public void OnLocationLeave(Core.Location.LocationData location) { }
+            public void OnLocationEnter(LocationData location) { }
+            public void OnLocationLeave(LocationData location) { }
         }
     }
 }

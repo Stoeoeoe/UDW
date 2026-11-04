@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Scripting;
+using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
 {
@@ -43,7 +44,7 @@ namespace Core.Scripting.Editor
                 Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, new[] { catalog, catalog }),
                     Throws.InvalidOperationException.With.Message.Contains("Duplicate Lua resource catalog for type 'sound'"));
             }
-            finally { UnityEngine.Object.DestroyImmediate(catalog); }
+            finally { Object.DestroyImmediate(catalog); }
         }
 
         [Test]

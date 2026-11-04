@@ -3,7 +3,6 @@ using System.Reflection;
 using Character;
 using Core.Common.Editor;
 using Core.Inventory;
-using Core.Game;
 using Core.Location;
 using Core.Spawning;
 using NUnit.Framework;
@@ -12,7 +11,7 @@ using UnityEngine;
 
 namespace Core.Items.Editor
 {
-    public sealed class PickupableInteractableTests : Core.Common.Editor.GameTest
+    public sealed class PickupableInteractableTests : GameTest
     {
 
         private MainCharacter _character;

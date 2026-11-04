@@ -1,12 +1,13 @@
 using System;
 using Core.Catalogs;
+using Core.Scripting;
 using UnityEngine;
 
 namespace Character.Animations
 {
     [CreateAssetMenu(menuName = "Game/Catalogs/Character Animations")]
-    [DefaultCatalog(CharacterAnimationCatalog.ResourceName)]
-    [Core.Scripting.LuaResource("animation")]
+    [DefaultCatalog(ResourceName)]
+    [LuaResource("animation")]
     public sealed class CharacterAnimationCatalog : DefinitionCatalog<CharacterAnimationDefinition>
     {
         public const string ResourceName = "CharacterAnimationCatalog";

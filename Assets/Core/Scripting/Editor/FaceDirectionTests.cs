@@ -1,28 +1,32 @@
-using VContainer;
-using Core.Context;
 using System;
+using System.Collections;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
+using Animancer;
 using Character;
+using Character.Abilities;
 using Core.Common.Editor;
+using Core.Context;
 using Core.Game;
 using Core.Location;
 using Core.Spawning;
 using Core.Tile;
 using Core.Tile.Vulcanus;
+using Interaction;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Scripting;
-using UnityEngine.Tilemaps;
 using UnityEngine.TestTools;
+using UnityEngine.Tilemaps;
+using VContainer;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class FaceDirectionTests : Core.Common.Editor.GameTest
+    public sealed class FaceDirectionTests : GameTest
     {
 
         private MainCharacter _actor;
@@ -88,7 +92,7 @@ namespace Core.Scripting.Editor
 
                 using (var blocked = CharacterNavigation.MoveTo(_actor, destination))
                     Assert.That(blocked.Status, Is.EqualTo(NavigationMoveStatus.Unreachable));
-                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
+                LogAssert.Expect(LogType.Warning, new Regex(
                     "Collision ignored during movement:.*Cinematic test obstacle"));
                 using (var move = CharacterNavigation.MoveTo(_actor, destination, true, true))
                 {
@@ -299,7 +303,7 @@ namespace Core.Scripting.Editor
         {
             _actor.Graphics.gameObject.SetActive(true);
             GameTestFixture.Invoke(_actor.Animator, "Awake");
-            GameTestFixture.Invoke(_actor.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true), "Awake");
+            GameTestFixture.Invoke(_actor.GetComponentInChildren<NamedAnimancerComponent>(true), "Awake");
             _actor.Animator.OnLocationEnter(null);
             var lua = CutsceneSequenceCompiler.Compile(Sequence("North"), "hold-rollback.json", out var steps);
             var definition = Game.Asset<CutsceneDefinition>();
@@ -311,7 +315,7 @@ namespace Core.Scripting.Editor
             var placement = preexisting ? null : PreparePlacement();
             using var action = new PlayAnimationAction(_actor, _actor.PassOutAnimation, true);
             var field = typeof(UrCharacterAnimator).GetField("_interactionState", BindingFlags.Instance | BindingFlags.NonPublic);
-            var state = (Animancer.AnimancerState)field.GetValue(_actor.Animator);
+            var state = (AnimancerState)field.GetValue(_actor.Animator);
             state.Time = state.Length;
             action.Dispose();
             Assert.That(field.GetValue(_actor.Animator), Is.SameAs(state));
@@ -323,7 +327,7 @@ namespace Core.Scripting.Editor
                 return;
             }
             Assert.That(field.GetValue(_actor.Animator), Is.Null);
-            var animancer = _actor.GetComponentInChildren<Animancer.NamedAnimancerComponent>(true);
+            var animancer = _actor.GetComponentInChildren<NamedAnimancerComponent>(true);
             Assert.That(animancer.States.Current.Clip, Is.SameAs(
                 _actor.Animator.AnimationLibrary.GetDirectional("Idle", _actor.Orientation.FacingDirection)));
         }
@@ -393,7 +397,7 @@ namespace Core.Scripting.Editor
                 session.Tick(0);
                 Assert.That(session.IsRunning, Is.False);
                 Assert.That(_actor.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
-                var placements = (System.Collections.ICollection)typeof(CutsceneRun).GetProperty("Placements", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(run);
+                var placements = (ICollection)typeof(CutsceneRun).GetProperty("Placements", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(run);
                 Assert.That(placements.Count, Is.EqualTo(1));
             }
             finally { _actor.SetControlBlocked(run, false); }
@@ -672,9 +676,9 @@ namespace Core.Scripting.Editor
             GameTestFixture.Invoke(character.GetComponent<Controller2D>(), "Awake");
             character.MainInventory.EnsureInitialized();
             GameTestFixture.Invoke(character, "Awake");
-            foreach (var ability in character.GetComponentsInChildren<Character.Abilities.CharacterAbility>(true))
+            foreach (var ability in character.GetComponentsInChildren<CharacterAbility>(true))
                 Set(ability, "Character", character);
-            character.PerformPrimaryAction.ActionExecutor = new Interaction.ActionExecutor(character, () => _context.CurrentSnapshot);
+            character.PerformPrimaryAction.ActionExecutor = new ActionExecutor(character, () => _context.CurrentSnapshot);
             GameTestFixture.Invoke(character.Occupation, "Awake");
             character.EnsureRuntimeInitialized();
         }

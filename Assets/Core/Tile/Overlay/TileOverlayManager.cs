@@ -1,16 +1,14 @@
-using Core.Tile;
-using VContainer;
 using System.Collections.Generic;
 using Core.Context;
-using MoreMountains.Tools;
 using UnityEngine;
+using VContainer;
 
 namespace Core.Tile.Overlay
 {
     /// <summary>
     /// Manages tile overlays. Attach overlays as children and assign the tilemap in inspector.
     /// </summary>
-    public class TileOverlayManager : Core.GameManager
+    public class TileOverlayManager : GameManager
     {
         [Inject] private PlayerInteractionContext _playerInteractionContext;
         [Inject] private MapManager _mapManager;

@@ -1,9 +1,8 @@
-using Core.Common.Editor;
-using Core.Scripting;
-using VContainer;
+using System;
 using System.Collections;
 using System.Linq;
 using Character;
+using Core.Common.Editor;
 using Core.Location;
 using Core.Spawning;
 using Core.Tile;
@@ -12,6 +11,7 @@ using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Core.Scripting.Editor
 {
@@ -110,7 +110,7 @@ namespace Core.Scripting.Editor
             var anchor = new GameObject("Display name is not an ID").AddComponent<VulcanusMapAnchor>();
             anchor.transform.SetParent(holder.transform, false);
             anchor.transform.position = target;
-            anchor.Configure("test:meeting", "Meeting", Vector2.down, System.Array.Empty<string>());
+            anchor.Configure("test:meeting", "Meeting", Vector2.down, Array.Empty<string>());
             api = LiveGame.Get<LuaRuntime>().CreateActors();
             var registry = new LuaBindingRegistry(api) { Runtime = LiveGame.Get<LuaRuntime>() };
             var method = registry.Describe().modules.Single().methods.Single(value => value.name == "MoveTo");
@@ -137,10 +137,10 @@ namespace Core.Scripting.Editor
 
             var duplicate = new GameObject("Duplicate anchor").AddComponent<VulcanusMapAnchor>();
             duplicate.transform.SetParent(holder.transform, false);
-            duplicate.Configure("test:meeting", "Duplicate", Vector2.zero, System.Array.Empty<string>());
+            duplicate.Configure("test:meeting", "Duplicate", Vector2.zero, Array.Empty<string>());
             Assert.That(() => LiveGame.Get<LuaRuntime>().CreateActors(), Throws.InvalidOperationException);
             Object.DestroyImmediate(duplicate.gameObject);
-            anchor.Configure("", "Missing ID", Vector2.zero, System.Array.Empty<string>());
+            anchor.Configure("", "Missing ID", Vector2.zero, Array.Empty<string>());
             Assert.That(() => LiveGame.Get<LuaRuntime>().CreateActors(), Throws.InvalidOperationException);
             Object.DestroyImmediate(holder);
         }
@@ -222,7 +222,7 @@ namespace Core.Scripting.Editor
                 if (collider.Cast(direction, filter, hits, 0.5f) == 0)
                     return character.GetComponent<Rigidbody2D>().position + direction * 0.4f;
             Assert.Fail("The playable fixture requires a clear half-unit path beside the player.");
-            throw new System.InvalidOperationException("No clear test path.");
+            throw new InvalidOperationException("No clear test path.");
         }
 
         [LuaModule("Test")]

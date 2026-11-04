@@ -1,24 +1,25 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+using Core.Common;
 using Core.Common.Editor;
 using Core.Events;
-using Core.Game;
 using Core.Location;
 using Core.Scripting;
 using Core.Scripting.Editor;
 using Core.Tile.Water;
+using MoreMountains.Tools;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
-using MoreMountains.Tools;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Util;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.TimeAndWeather.Editor
 {
     /// <summary>Checks seasonal weather selection, load refresh and presentation notifications against the real clock.</summary>
-    public sealed class WeatherManagerTests : Core.Common.Editor.GameTest, IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>, IEventListener<GameTimeChangedEvent>
+    public sealed class WeatherManagerTests : GameTest, IEventListener<WeatherUpdateEvent>, IEventListener<DayLightUpdateEvent>, IEventListener<NewDayEvent>, IEventListener<GameTimeChangedEvent>
     {
 
         private GameClock _clock;
@@ -42,9 +43,9 @@ namespace Core.TimeAndWeather.Editor
 
             Game.Root.SetActive(true);
 
-            _spring = CreateSeason(Core.TimeAndWeather.Season.Spring, Color.green);
+            _spring = CreateSeason(Season.Spring, Color.green);
             _spring.weatherData.GetRandomItem().waterRainIntensity = 0.35f;
-            _summer = CreateSeason(Core.TimeAndWeather.Season.Summer, Color.yellow);
+            _summer = CreateSeason(Season.Summer, Color.yellow);
             Game.Use(new ClockSettings { seasons = new[] { _spring, _summer } });
             _sound = Game.RegisterManager<WeatherSoundManagerProbe>();
             var volumeObject = new GameObject("Weather volume");
@@ -108,7 +109,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(session.IsRunning, Is.False);
             Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(2));
             Assert.That(Game.State.Time.dayOfSeason, Is.EqualTo(1));
-            Assert.That(Game.State.Time.season, Is.EqualTo(Core.TimeAndWeather.Season.Summer));
+            Assert.That(Game.State.Time.season, Is.EqualTo(Season.Summer));
             Assert.That(Game.State.Time.hour, Is.EqualTo(18));
             Assert.That(Game.State.Time.minute, Is.EqualTo(30));
             Assert.That(Game.State.Time.secondsTowardNextMinute, Is.Zero);
@@ -154,7 +155,7 @@ namespace Core.TimeAndWeather.Editor
             CutsceneSequenceCompiler.Compile(JArray.Parse(
                 "[{ 'id':'weather', 'action':'weather.setWeather', 'arguments':{ 'weather':'test:dry' } }]"),
                 "Weather fixture", out var steps);
-            var factories = new[] { (typeof(WeatherLuaApi), (System.Func<object>)(() => api)) };
+            var factories = new[] { (typeof(WeatherLuaApi), (Func<object>)(() => api)) };
             Game.BindSequence(steps, "cutscene", factories);
             Assert.That(_weather.CurrentWeather, Is.SameAs(previous));
             Assert.That(() => api.ValidateWeather("unknown"), Throws.InvalidOperationException);
@@ -187,7 +188,7 @@ namespace Core.TimeAndWeather.Editor
         public void ApplyingSavedTimeUsesTheRestoredSeasonWithoutStartingANewDay()
         {
             _clock.Start();
-            Game.State.Time.season = Core.TimeAndWeather.Season.Summer;
+            Game.State.Time.season = Season.Summer;
             Game.State.Time.dayOfSeason = 7;
             Game.State.Time.hour = 15;
             var minutes = Game.State.Time.TotalMinutes;
@@ -226,7 +227,7 @@ namespace Core.TimeAndWeather.Editor
             var invalid = Game.Asset<WeatherData>();
             invalid.waterRainIntensity = intensity;
             Assert.That(invalid.ValidateConfiguration()[0].Setting, Is.EqualTo(nameof(WeatherData.waterRainIntensity)));
-            Assert.Throws<System.ArgumentException>(() => _weather.SetWeather(invalid));
+            Assert.Throws<ArgumentException>(() => _weather.SetWeather(invalid));
             Assert.That(_weather.CurrentWeather, Is.SameAs(previous));
             Assert.That(WaterInteraction.Rain, Is.EqualTo(0.35f));
         }
@@ -256,7 +257,7 @@ namespace Core.TimeAndWeather.Editor
             {
                 colorKeys = new[] { new GradientColorKey(Color.gray, 0), new GradientColorKey(Color.blue, 1) }
             };
-            var room = Location(Core.Common.LocationType.Indoor);
+            var room = Location(LocationType.Indoor);
             _weather.OnLocationEnter(room);
             Assert.That(_weather.CurrentWeather, Is.SameAs(rainy));
             Assert.That(WaterInteraction.Rain, Is.Zero);
@@ -269,7 +270,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_daylight, Is.EqualTo(Color.white));
             CompleteWeather(rainy);
             Assert.That(WaterInteraction.Rain, Is.Zero, "Changing weather in a room must not enable rain splashes.");
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            _weather.OnLocationEnter(Location(LocationType.Outdoor));
             Assert.That(Shader.GetGlobalFloat("_IndoorWeatherCover"), Is.Zero);
             Assert.That(WaterInteraction.Rain, Is.EqualTo(0.35f));
             Assert.That(_daylight, Is.EqualTo(Color.green));
@@ -282,8 +283,8 @@ namespace Core.TimeAndWeather.Editor
             var rainy = _weather.CurrentWeather;
             rainy.outdoorAmbience = Game.Own(AudioClip.Create("Outdoor rain", 100, 1, 44100, false));
             rainy.indoorAmbience = Game.Own(AudioClip.Create("Muffled rain", 100, 1, 44100, false));
-            var outdoors = Location(Core.Common.LocationType.Outdoor);
-            var room = Location(Core.Common.LocationType.Indoor);
+            var outdoors = Location(LocationType.Outdoor);
+            var room = Location(LocationType.Indoor);
             _weather.OnLocationEnter(outdoors);
             Assert.That(_sound.LastSource.clip, Is.SameAs(rainy.outdoorAmbience));
             Assert.That(_sound.Options.Loop && _sound.Options.Persistent, Is.True);
@@ -314,8 +315,8 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             _weather.CurrentWeather.outdoorAmbience = Game.Own(AudioClip.Create("Rain", 100, 1, 44100, false));
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
+            _weather.OnLocationEnter(Location(LocationType.Outdoor));
+            _weather.OnLocationEnter(Location(LocationType.Indoor));
             Assert.That(_sound.Plays, Is.EqualTo(1));
             Assert.That(_sound.Frees, Is.EqualTo(1));
         }
@@ -330,20 +331,20 @@ namespace Core.TimeAndWeather.Editor
             rainy.indoorAmbienceVolumeMultiplier = 0.6f;
             rainy.indoorAmbienceLowPass = true;
             rainy.indoorAmbienceCutoffFrequency = 1500;
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            _weather.OnLocationEnter(Location(LocationType.Outdoor));
             var source = _sound.LastSource;
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
+            _weather.OnLocationEnter(Location(LocationType.Indoor));
             var filter = source.GetComponent<AudioLowPassFilter>();
             Assert.That(filter.enabled, Is.True);
             Assert.That(filter.cutoffFrequency, Is.EqualTo(1500).Within(0.01f));
             Assert.That(source.volume, Is.EqualTo(0.48f).Within(0.001f));
             Assert.That(_sound.Plays, Is.EqualTo(1));
             Assert.That(_sound.Frees, Is.Zero);
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Outdoor));
+            _weather.OnLocationEnter(Location(LocationType.Outdoor));
             Assert.That(filter.enabled, Is.False);
             Assert.That(source.volume, Is.EqualTo(0.8f));
             Assert.That(_sound.Plays, Is.EqualTo(1));
-            _weather.OnLocationEnter(Location(Core.Common.LocationType.Indoor));
+            _weather.OnLocationEnter(Location(LocationType.Indoor));
             var dry = _summer.weatherData.GetRandomItem();
             dry.indoorAmbience = rainy.indoorAmbience;
             CompleteWeather(dry);
@@ -351,7 +352,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(source.volume, Is.EqualTo(1f));
             CompleteWeather(rainy);
             Assert.That(filter.enabled, Is.True);
-            var room = Location(Core.Common.LocationType.Indoor);
+            var room = Location(LocationType.Indoor);
             room.muteWeatherAudio = true;
             _weather.OnLocationEnter(room);
             Assert.That(_sound.Frees, Is.EqualTo(1));
@@ -371,14 +372,14 @@ namespace Core.TimeAndWeather.Editor
             var invalid = Game.Asset<WeatherData>();
             invalid.indoorAmbienceVolumeMultiplier = volume;
             invalid.indoorAmbienceCutoffFrequency = cutoff;
-            Assert.Throws<System.ArgumentException>(() => _weather.SetWeather(invalid));
+            Assert.Throws<ArgumentException>(() => _weather.SetWeather(invalid));
             Assert.That(_weather.CurrentWeather, Is.SameAs(previous));
         }
 
-        private LocationData Location(Core.Common.LocationType type)
+        private LocationData Location(LocationType type)
         {
             var location = Game.Asset<LocationData>();
-            location.id = type == Core.Common.LocationType.Indoor ? "test:room" : "test:outside";
+            location.id = type == LocationType.Indoor ? "test:room" : "test:outside";
             location.locationType = type;
             return location;
         }
@@ -397,12 +398,12 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(routine.MoveNext(), Is.False);
         }
 
-        private SeasonData CreateSeason(Core.TimeAndWeather.Season season, Color color)
+        private SeasonData CreateSeason(Season season, Color color)
         {
             var data = Game.Asset<SeasonData>();
             data.season = season;
             data.daylightColorGradient = CreateGradient(color);
-            data.weatherData = new Util.WeightedList<WeatherData>();
+            data.weatherData = new WeightedList<WeatherData>();
             data.weatherData.Add(Game.Asset<WeatherData>());
             return data;
         }

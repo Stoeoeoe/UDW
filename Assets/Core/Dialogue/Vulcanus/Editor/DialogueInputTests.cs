@@ -4,22 +4,24 @@ using System.Collections.Generic;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
+using Input;
 using NUnit.Framework;
-using UnityEditor;
-using UnityEngine.UIElements;
 using UI.Shared;
 using UI.Shared.Editor;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 using static Core.Common.Editor.Reflect;
+using Object = UnityEngine.Object;
 
 namespace Core.Dialogue.Vulcanus.Editor
 {
     /// <summary>Exercises dialogue input through the authored UI map, including closing and restoring gameplay controls.</summary>
-    public sealed class DialogueInputTests : Core.Common.Editor.GameTest
+    public sealed class DialogueInputTests : GameTest
     {
 
-        private Input.InputManager _input;
+        private InputManager _input;
         private UrGUIManager _gui;
         private MainCharacter _character;
         private VulcanusDialogueRunner _runner;
@@ -46,7 +48,7 @@ namespace Core.Dialogue.Vulcanus.Editor
             _gui = Game.Start<UrGUIManager>(gui => gui.gameObject.SetActive(true));
             _character = Game.CreateCharacter();
             Game.Get<CharacterManager>().RegisterMainCharacter(_character);
-            foreach (var sceneCamera in UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsSortMode.None))
+            foreach (var sceneCamera in Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsSortMode.None))
             {
                 if (!sceneCamera.CompareTag("MainCamera")) continue;
                 _sceneMainCameras.Add(sceneCamera);
@@ -59,7 +61,7 @@ namespace Core.Dialogue.Vulcanus.Editor
             camera.orthographic = true;
             camera.orthographicSize = 5f;
             camera.transform.position = new Vector3(0f, 0f, -10f);
-            _document.panelSettings = Game.Own(Game.InjectObject(UnityEngine.Object.Instantiate(
+            _document.panelSettings = Game.Own(Game.InjectObject(Object.Instantiate(
                 AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/UI/InventoryScreen/InventoryPanelSettings.asset"))));
             var layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Dialogue/Vulcanus/VulcanusDialogueRuntime.uxml");
             _document.visualTreeAsset = layout;

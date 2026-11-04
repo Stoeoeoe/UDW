@@ -1,6 +1,6 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using Character;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -24,7 +24,7 @@ namespace Interaction.Tools
         /// <summary>
         /// Initializes all tool actions with the owning character.
         /// </summary>
-        public void Initialize(Character.GameCharacter owner)
+        public void Initialize(GameCharacter owner)
         {
             ValidateConfiguration();
             foreach (var prefab in toolActionPrefabs)

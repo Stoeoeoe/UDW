@@ -1,4 +1,3 @@
-using VContainer;
 using System;
 using System.Collections.Generic;
 using Character;
@@ -8,6 +7,7 @@ using Core.Game;
 using Core.Inventory;
 using Core.TimeAndWeather;
 using UnityEngine;
+using VContainer;
 using Random = UnityEngine.Random;
 
 namespace Core.Shops

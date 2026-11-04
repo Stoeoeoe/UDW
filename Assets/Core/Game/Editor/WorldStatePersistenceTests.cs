@@ -1,14 +1,13 @@
-using Core.Game;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Character;
-using Core.Divinity;
+using Core.Common.Editor;
 using Core.Inventory;
-using Core.Spawning;
 using Core.Shops;
+using Core.Spawning;
 using Core.TimeAndWeather;
 using Interaction;
 using NUnit.Framework;
@@ -16,10 +15,11 @@ using Plants;
 using Sirenix.Serialization;
 using UnityEngine;
 using static Core.Common.Editor.Reflect;
+using Object = UnityEngine.Object;
 
 namespace Core.Game.Editor
 {
-    public sealed class WorldStatePersistenceTests : Core.Common.Editor.GameTest
+    public sealed class WorldStatePersistenceTests : GameTest
     {
 
         [Test]
@@ -409,7 +409,7 @@ namespace Core.Game.Editor
             finally
             {
                 Call(data.player.Skills, "UnbindCharacter", character);
-                UnityEngine.Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(gameObject);
                 File.Delete(path);
                 File.Delete(path + ".tmp");
                 File.Delete(path + ".bak");

@@ -1,7 +1,7 @@
-using Core.Common.Editor;
-using VContainer;
+using System;
 using System.Collections;
 using System.Reflection;
+using Core.Common.Editor;
 using Core.Game;
 using Core.Location;
 using Interaction;
@@ -9,7 +9,11 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
+using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 namespace Core.Spawning.Editor
 {
@@ -29,8 +33,8 @@ namespace Core.Spawning.Editor
         public IEnumerator EnterIsolatedPlayMode()
         {
             _scenes = EditorSceneManager.GetSceneManagerSetup();
-            for (var i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
-                if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i).isDirty)
                     Assert.Ignore("Save scene edits before running the isolated Play Mode regression.");
             _optionsEnabled = EditorSettings.enterPlayModeOptionsEnabled;
             _options = EditorSettings.enterPlayModeOptions;
@@ -39,7 +43,7 @@ namespace Core.Spawning.Editor
             EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload;
             EditorSceneManager.OpenScene("Assets/Scenes/Maps/map-1.unity", OpenSceneMode.Single);
             yield return new EnterPlayMode(false);
-            var root = VContainer.Unity.LifetimeScope.Find<SystemRoot>();
+            var root = LifetimeScope.Find<SystemRoot>();
             _systems = root.gameObject;
             var level = root.Container.Resolve<LevelManager>();
             var deadline = Time.realtimeSinceStartupAsDouble + 15;
@@ -88,7 +92,7 @@ namespace Core.Spawning.Editor
             spawner.Register(prefab);
             var location = _location = ScriptableObject.CreateInstance<LocationData>();
             location.id = "test:location";
-            spawner.EnterLocation(location, System.Array.Empty<AuthoredSpawnPlacement>());
+            spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             var fresh = spawner.Spawn(prefab, Vector3.zero,
                 new SpawnedObjectState { interaction = new InteractableState { uses = 1 } });
             Assert.That(LiveGame.Get<GameState>().World.TryGet(location.id, fresh.PersistentId, out SpawnedObjectState _), Is.False);
@@ -100,7 +104,7 @@ namespace Core.Spawning.Editor
             {
                 prefabId = prefab.PrefabId, interaction = new InteractableState { uses = 1 }
             });
-            spawner.EnterLocation(location, System.Array.Empty<AuthoredSpawnPlacement>());
+            spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             Assert.That(LiveGame.Get<GameState>().World.TryGet(location.id, "restored", out SpawnedObjectState _), Is.False);
             yield return null;
             Assert.That(systems.GetComponentsInChildren<SpawnedObject>(true), Is.Empty);

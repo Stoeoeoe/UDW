@@ -1,4 +1,3 @@
-using VContainer;
 using System;
 using System.Collections;
 using Character;
@@ -10,6 +9,7 @@ using Core.TimeAndWeather;
 using MoreMountains.Feedbacks;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using VContainer;
 
 namespace Interaction
 {
@@ -101,10 +101,10 @@ namespace Interaction
         [Button("Regenerate Persistent UUID")]
         private void RegeneratePersistentId()
         {
-            UnityEditor.Undo.RecordObject(this, "Regenerate interactable UUID");
+            Undo.RecordObject(this, "Regenerate interactable UUID");
             persistentId = CreatePersistentId();
-            UnityEditor.EditorUtility.SetDirty(this);
-            UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(this);
+            EditorUtility.SetDirty(this);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(this);
         }
 #endif
 

@@ -4,6 +4,7 @@ using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
 {
@@ -40,10 +41,10 @@ namespace Core.Catalogs.Editor
         private sealed class EntryView
         {
             private readonly DefinitionCatalog _catalog;
-            private readonly UnityEngine.Object _definition;
+            private readonly Object _definition;
             public EntryView(DefinitionCatalog catalog, CatalogEntry entry) { _catalog = catalog; _definition = entry.Definition; }
             [ShowInInspector, ReadOnly] public string Id => _definition ? _catalog.GetId(_definition) : "Missing asset";
-            [ShowInInspector, ReadOnly, InlineEditor] public UnityEngine.Object Definition => _definition;
+            [ShowInInspector, ReadOnly, InlineEditor] public Object Definition => _definition;
             [ShowInInspector] public bool Enabled
             {
                 get => _catalog.Entries.FirstOrDefault(entry => entry.Definition == _definition)?.Enabled ?? false;

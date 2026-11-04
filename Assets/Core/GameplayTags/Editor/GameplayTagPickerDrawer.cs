@@ -56,7 +56,7 @@ namespace Core.GameplayTags.Editor
             };
         }
 
-        private static void Assign(UnityEngine.Object[] targets, string path, string tag)
+        private static void Assign(Object[] targets, string path, string tag)
         {
             foreach (var target in targets)
             {

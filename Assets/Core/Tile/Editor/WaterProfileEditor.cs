@@ -5,9 +5,10 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor
 {
@@ -58,9 +59,9 @@ namespace Core.Tile.Editor
                 try
                 {
                     ValidateProfiles();
-                    foreach (var body in UnityEngine.Object.FindObjectsByType<WaterBody>(FindObjectsInactive.Include))
+                    foreach (var body in Object.FindObjectsByType<WaterBody>(FindObjectsInactive.Include))
                         body.Validate();
-                    ValidateSources(UnityEngine.Object.FindObjectsByType<WaterReflectionSource>(FindObjectsInactive.Include));
+                    ValidateSources(Object.FindObjectsByType<WaterReflectionSource>(FindObjectsInactive.Include));
                 }
                 catch (InvalidOperationException exception)
                 {

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Core.Inventory;
 using Core.Tile.Vulcanus;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -48,7 +50,7 @@ namespace Core.Tile.Editor.Vulcanus
                         {
                             Id = mapping.classId,
                             ClassName = mapping.className,
-                            Extra = new System.Collections.Generic.Dictionary<string, Newtonsoft.Json.Linq.JToken>()
+                            Extra = new Dictionary<string, JToken>()
                         };
                 }
 

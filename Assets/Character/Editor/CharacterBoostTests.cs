@@ -1,18 +1,17 @@
-using System;
-using System.Reflection;
+using Core;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
 using Core.Items;
 using Core.TimeAndWeather;
+using Interaction.Tools.Stamina;
 using NUnit.Framework;
-using UnityEngine;
 using static Core.Common.Editor.Reflect;
 
 namespace Character.Editor
 {
     /// <summary>Checks boost stacking, expiry, consumables and resource restoration using inline bonuses, saved snapshots and the game clock.</summary>
-    public sealed class CharacterBoostTests : Core.Common.Editor.GameTest, IEventListener<Interaction.Tools.Stamina.StaminaChangedEvent>
+    public sealed class CharacterBoostTests : GameTest, IEventListener<StaminaChangedEvent>
     {
 
         private MainCharacter _character;
@@ -37,13 +36,13 @@ namespace Character.Editor
             _state = new CharacterBoostState();
             _boosts.Initialize(_state);
             _staminaChanges = 0;
-            EventBus<Interaction.Tools.Stamina.StaminaChangedEvent>.Subscribe(this);
+            EventBus<StaminaChangedEvent>.Subscribe(this);
         }
 
         [TearDown]
         public void TearDown()
         {
-            EventBus<Interaction.Tools.Stamina.StaminaChangedEvent>.Unsubscribe(this);
+            EventBus<StaminaChangedEvent>.Unsubscribe(this);
 
         }
 
@@ -136,7 +135,7 @@ namespace Character.Editor
             Game.State.Player.Boosts.Active[Source(_vitality)] = Snapshot(_vitality, Game.State.Time.TotalMinutes + 60);
             Game.State.Player.Health = new HealthState { Initialized = true, Current = 140 };
             Game.State.Player.Stamina = new StaminaState { Initialized = true, Current = 120 };
-            var manager = Game.Get<Core.PlayerStateManager>();
+            var manager = Game.Get<PlayerStateManager>();
             manager.InitializeCharacter(_character);
             Assert.That(_character.Health.CurrentHealth, Is.EqualTo(140));
             Assert.That(_character.Health.MaxHealth, Is.EqualTo(150));
@@ -221,7 +220,7 @@ namespace Character.Editor
             Assert.That(_rested.ValidateConfiguration(), Is.Not.Empty);
         }
 
-        public void OnEvent(Interaction.Tools.Stamina.StaminaChangedEvent change) => ++_staminaChanges;
+        public void OnEvent(StaminaChangedEvent change) => ++_staminaChanges;
 
         private AttributeBoostConsumableItem Definition(string id, CharacterAttributeType attribute, float percent, int minutes)
         {

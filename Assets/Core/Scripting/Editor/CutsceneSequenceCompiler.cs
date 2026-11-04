@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json.Linq;
+using Core.Game;
 using MoonSharp.Interpreter;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Core.Scripting.Editor
 {
@@ -159,18 +161,18 @@ namespace Core.Scripting.Editor
                     {
                         if (authoredValue == null) throw Invalid(location, "Set Variable requires a value.");
                         LuaValues.RequireType(LuaValues.FromJson(authoredValue, new Script(CoreModules.Preset_HardSandbox)), "table");
-                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, authoredValue.ToString(Newtonsoft.Json.Formatting.None));
+                        importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, authoredValue.ToString(Formatting.None));
                         literals[parameterIndex] = JsonLiteral(authoredValue);
                         continue;
                     }
                     if (parameter.type == "boolean|string|number|table")
                     {
                         if (authoredValue == null) throw Invalid(location, $"'{parameter.name}' requires a story value.");
-                        var json = authoredValue.ToString(Newtonsoft.Json.Formatting.None);
+                        var json = authoredValue.ToString(Formatting.None);
                         try { values[parameterIndex] = StoryValueJson.Parse(json); }
                         catch (Exception error) { throw new FormatException($"{location}: {parameter.name}: {error.Message}", error); }
                         importedArguments[parameterIndex] = new CutsceneArgument(parameter.name, json);
-                        literals[parameterIndex] = StoryLiteral(((Core.Game.StoryValue)values[parameterIndex]).GetSnapshot());
+                        literals[parameterIndex] = StoryLiteral(((StoryValue)values[parameterIndex]).GetSnapshot());
                         continue;
                     }
                     if (parameter.type == "boolean")
@@ -280,7 +282,7 @@ namespace Core.Scripting.Editor
                 RejectUnknownFields(variable, new[] { "name", "type", "initialValue", "nullable" }, location);
                 if (variable["initialValue"] == null) throw Invalid(location, "Variable initialValue is required.");
                 return new CutsceneVariableDefinition(RequiredString(variable["name"], location, "name"), RequiredString(variable["type"], location, "type"),
-                    variable["initialValue"].ToString(Newtonsoft.Json.Formatting.None), (bool?)variable["nullable"] ?? false);
+                    variable["initialValue"].ToString(Formatting.None), (bool?)variable["nullable"] ?? false);
             }).ToArray();
             try { _ = new CutsceneVariables(definitions); }
             catch (Exception error) { throw Invalid(location, error.Message); }
@@ -308,7 +310,7 @@ namespace Core.Scripting.Editor
             JArray array => "{" + string.Join(",", array.Select(JsonLiteral)) + "}",
             _ when token.Type == JTokenType.Null => "nil",
             _ when token.Type == JTokenType.String => LuaString((string)token),
-            _ => token.ToString(Newtonsoft.Json.Formatting.None)
+            _ => token.ToString(Formatting.None)
         };
 
         private static string StoryLiteral(object value) => value switch
@@ -316,7 +318,7 @@ namespace Core.Scripting.Editor
             string text => LuaString(text),
             bool boolean => boolean ? "true" : "false",
             double number => number.ToString("R", CultureInfo.InvariantCulture),
-            System.Collections.Generic.Dictionary<string, object> dictionary => "{ " + string.Join(", ", dictionary.Select(pair =>
+            Dictionary<string, object> dictionary => "{ " + string.Join(", ", dictionary.Select(pair =>
                 $"[{LuaString(pair.Key)}] = {StoryLiteral(pair.Value)}")) + " }",
             _ => throw new FormatException("Invalid story action value.")
         };

@@ -3,6 +3,7 @@ using Character;
 using Character.Animations;
 using MoreMountains.Tools;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Core.Scripting
 {
@@ -89,7 +90,7 @@ namespace Core.Scripting
             if (_callout)
             {
                 _callout.SetActive(false);
-                UnityEngine.Object.Destroy(_callout);
+                Object.Destroy(_callout);
                 _callout = null;
             }
         }

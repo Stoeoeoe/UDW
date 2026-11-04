@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using Core.Location;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
@@ -8,7 +6,7 @@ namespace Core.Tile.Vulcanus
     [CreateAssetMenu(fileName = "VulcanusProject", menuName = "Game/Vulcanus/Project")]
     public class VulcanusProject : ScriptableObject
     {
-        [System.Serializable]
+        [Serializable]
         public struct TerrainDefinition
         {
             public string id;
@@ -17,7 +15,7 @@ namespace Core.Tile.Vulcanus
             public TerrainType mappedTerrainType;
         }
 
-        [System.Serializable]
+        [Serializable]
         public struct LayerDefinition
         {
             public string id;
@@ -144,7 +142,7 @@ namespace Core.Tile.Vulcanus
             for (int i = 0; i < terrainTypes.Length; i++)
             {
                 var terrain = terrainTypes[i];
-                if (string.Equals(terrain.id, terrainId, System.StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(terrain.id, terrainId, StringComparison.OrdinalIgnoreCase))
                 {
                     terrainType = terrain.mappedTerrainType;
                     return true;

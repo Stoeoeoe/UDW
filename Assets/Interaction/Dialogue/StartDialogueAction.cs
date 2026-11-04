@@ -1,6 +1,6 @@
-using UnityEngine;
 using System.Threading;
 using Core.Context;
+using UnityEngine;
 
 namespace Interaction.Dialogue
 {
@@ -11,7 +11,7 @@ namespace Interaction.Dialogue
 
         public override Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
-            snapshot.ActionableInteractable?.TriggerInteraction(this.Owner);
+            snapshot.ActionableInteractable?.TriggerInteraction(Owner);
             return Completed();
         }
 

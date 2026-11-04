@@ -1,5 +1,4 @@
 using Character;
-using Core;
 
 /// <summary>The session's registered player. Consumers inject this instead of searching the scene.</summary>
 public sealed class CharacterManager

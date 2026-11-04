@@ -2,8 +2,8 @@ using System.Collections;
 using Character;
 using Core.Dialogue.Vulcanus;
 using Interaction.Dialog;
-using UnityEngine;
 using UI.Shared;
+using UnityEngine;
 using VContainer;
 
 namespace Interaction.Dialogue

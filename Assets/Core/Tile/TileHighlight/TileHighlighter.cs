@@ -12,7 +12,7 @@ namespace Core.Tile.TileHighlight
 
         private void Awake()
         {
-            this.enabled = false;
+            enabled = false;
         }
 
         private void OnDisable()
@@ -25,10 +25,10 @@ namespace Core.Tile.TileHighlight
 
         public void SetTiles(List<TileData> tiles)
         {
-            this._tiles = tiles;
+            _tiles = tiles;
             foreach (var tile in _tiles)
             {
-                var highlight = Instantiate(_tileHighlightPrefab, this.transform, false);
+                var highlight = Instantiate(_tileHighlightPrefab, transform, false);
                 highlight.transform.position = tile.WorldPosition;
                 // highlight.transform.localPosition = Vector3.zero;
                 _highlights.Add(highlight);
@@ -37,12 +37,12 @@ namespace Core.Tile.TileHighlight
 
         public void Hide()
         {
-            this.enabled = false;
+            enabled = false;
         }
 
         public void Show()
         {
-            this.enabled = true;
+            enabled = true;
         }
     }
 }

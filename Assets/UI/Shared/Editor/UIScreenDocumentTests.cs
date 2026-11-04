@@ -1,28 +1,31 @@
-using UI.Shared;
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
-using System.Reflection;
 using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
 using Character;
-using Core.Equipment;
+using Core.Common.Editor;
 using Core.Dialogue.Vulcanus;
+using Core.Equipment;
 using Core.Events;
 using Core.Inventory;
 using Interaction.Tools;
 using MoreMountains.Tools;
 using NUnit.Framework;
+using UI.Containers;
+using UI.Hotbar;
 using UI.InventoryScreen;
 using UI.Shops;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
 namespace UI.Shared.Editor
 {
     [Category("UIScreen")]
-    public sealed class UIScreenDocumentTests : Core.Common.Editor.GameTest, IEventListener<ItemSelectedEvent>
+    public sealed class UIScreenDocumentTests : GameTest, IEventListener<ItemSelectedEvent>
     {
         private GameObject _root;
 
@@ -163,14 +166,14 @@ namespace UI.Shared.Editor
             _inventory.SetSlot(1, new ItemStack(_tool, 4));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);
             var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
-            var bar = Game.Add<UI.Hotbar.ToolHotbar>(owner);
+            var bar = Game.Add<ToolHotbar>(owner);
             bar.SlotContainer = owner.transform;
             bar.SlotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Hotbar/ToolHotbarSlot.prefab");
             UIScreenPauseTests.Invoke(bar, "Start");
             UIScreenPauseTests.Invoke(bar, "OnEnable");
             try
             {
-                var slot = owner.transform.GetChild(0).GetComponent<UI.Hotbar.HotbarSlot>();
+                var slot = owner.transform.GetChild(0).GetComponent<HotbarSlot>();
                 Assert.That(slot.QuantityText.text, Is.EqualTo("7"));
                 Assert.That(slot.ChargeTrack.gameObject.activeSelf, Is.True);
                 Assert.That(slot.ChargeFill.rectTransform.anchorMax.x, Is.EqualTo(1f));
@@ -200,7 +203,7 @@ namespace UI.Shared.Editor
             _inventory.SetSlot(0, new ItemStack(_tool, 3));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);
             var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
-            var bar = Game.Add<UI.Hotbar.ToolHotbar>(owner);
+            var bar = Game.Add<ToolHotbar>(owner);
             bar.SlotContainer = owner.transform;
             bar.SlotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Hotbar/ToolHotbarSlot.prefab");
             UIScreenPauseTests.Invoke(bar, "Start");
@@ -211,7 +214,7 @@ namespace UI.Shared.Editor
                 var npc = Game.CreateCharacter("NPC");
                 npc.MainInventory.Bind(new InventoryState { Slots = new InventorySlotState[2] });
                 Assert.That(bar.TargetInventory, Is.SameAs(_inventory));
-                var slot = owner.transform.GetChild(0).GetComponent<UI.Hotbar.HotbarSlot>();
+                var slot = owner.transform.GetChild(0).GetComponent<HotbarSlot>();
                 Assert.That(slot.QuantityText.text, Is.EqualTo("3"));
 
                 Object.DestroyImmediate(npc.MainInventory);
@@ -275,7 +278,7 @@ namespace UI.Shared.Editor
         {
             _manager.SoundProfile = AssetDatabase.LoadAssetAtPath<UISoundProfile>("Assets/UI/Shared/DefaultUISounds.asset");
             Assert.That(_manager.SoundProfile, Is.Not.Null);
-            var played = new System.Collections.Generic.List<AudioClip>();
+            var played = new List<AudioClip>();
             AudioSource Capture(AudioClip clip, MMSoundManagerPlayOptions options) { played.Add(clip); return null; }
             MMSoundManagerSoundPlayEvent.Register(Capture);
             try
@@ -561,8 +564,8 @@ namespace UI.Shared.Editor
             Call(chest, "Bind", null, "test-chest", chest.CreateState(Game.State.Time.daysSinceStart));
             holder.SetActive(true);
             CreateDocument("Assets/UI/Containers/ContainerScreen.uxml");
-            var screen = Game.Add<UI.Containers.ContainerScreen>(_screenRoot);
-            Set(typeof(UI.Containers.ContainerScreen), screen, "document", _document);
+            var screen = Game.Add<ContainerScreen>(_screenRoot);
+            Set(typeof(ContainerScreen), screen, "document", _document);
             UIScreenPauseTests.Invoke(screen, "Awake");
             screen.Open(chest, character);
             Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(character), Is.True);

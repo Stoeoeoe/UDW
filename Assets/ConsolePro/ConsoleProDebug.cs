@@ -1,5 +1,5 @@
 using UnityEngine;
-using System;
+using Object = UnityEngine.Object;
 #if UNITY_EDITOR
 using System.Reflection;
 #endif
@@ -22,14 +22,14 @@ namespace FlyingWormConsole3
 
 		// Send a log to a specific filter regardless of contents
 		// Ex: ConsoleProDebug.LogToFilter("Hi", "CustomFilter");
-		public static void LogToFilter(string inLog, string inFilterName, UnityEngine.Object inContext = null)
+		public static void LogToFilter(string inLog, string inFilterName, Object inContext = null)
 		{
 			Debug.Log(inLog + "\nCPAPI:{\"cmd\":\"Filter\", \"name\":\"" + inFilterName + "\"}", inContext);
 		}
 
 		// Send a log as a regular log but change its type in ConsolePro
 		// Ex: ConsoleProDebug.LogAsType("Hi", "Error");
-		public static void LogAsType(string inLog, string inTypeName, UnityEngine.Object inContext = null)
+		public static void LogAsType(string inLog, string inTypeName, Object inContext = null)
 		{
 			Debug.Log(inLog + "\nCPAPI:{\"cmd\":\"LogType\", \"name\":\"" + inTypeName + "\"}", inContext);
 		}
@@ -81,7 +81,7 @@ namespace FlyingWormConsole3
 				if (_consoleWindowType == null || !_checkedConsoleWindowType)
 				{
 					_checkedConsoleWindowType = true;
-					Assembly[] assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+					Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 					for (int iAssembly = 0; iAssembly < assemblies.Length; iAssembly++)
 					{
 						Type[] types = assemblies[iAssembly].GetTypes();

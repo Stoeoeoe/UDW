@@ -1,32 +1,32 @@
-using VContainer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Character;
-using Core.Catalogs;
 using Core.Dialogue.Vulcanus;
 using Core.Events;
 using Core.Game;
 using Core.Location;
 using Core.TimeAndWeather;
-using UI.Shared;
-using Sirenix.OdinInspector;
-using UnityEngine;
 using DG.Tweening;
+using Input;
+using Sirenix.OdinInspector;
+using UI.Shared;
+using UnityEngine;
+using VContainer;
 
 namespace Core.Scripting
 {
     /// <summary>Owns one live-world cutscene, including staging, terminal commit and cleanup.</summary>
     [DefaultExecutionOrder(300)]
-    public sealed class CutsceneRunner : Core.GameManager, IEventListener<DayTransitionStarted>
+    public sealed class CutsceneRunner : GameManager, IEventListener<DayTransitionStarted>
     {
         [Inject] private LuaRuntime _luaRuntime;
         [Inject] private CharacterManager _characters;
         [Inject] private VulcanusDialogueRunner _dialogue;
         [Inject] private GameState _gameState;
 
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
 
         [Inject] private CutsceneCatalog _catalog;
         [SerializeField] private CutsceneSkipConfirmation skipConfirmation;

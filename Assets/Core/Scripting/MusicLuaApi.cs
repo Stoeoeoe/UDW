@@ -1,9 +1,8 @@
-using VContainer;
-using Preserve = UnityEngine.Scripting.PreserveAttribute;
 using System;
-using Core.Catalogs;
 using Core.Music;
 using UnityEngine.Scripting;
+using VContainer;
+using Preserve = UnityEngine.Scripting.PreserveAttribute;
 
 namespace Core.Scripting
 {

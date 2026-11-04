@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Core.Common;
+using Core.Music;
 using Core.Spawning;
 using Object = UnityEngine.Object;
 
@@ -23,9 +24,9 @@ namespace Core.Catalogs.Editor
             }
             var duplicate = definitions.GroupBy(catalog.GetId, catalog.IdComparer).FirstOrDefault(group => group.Count() > 1);
             if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key}'.");
-            if (catalog is Core.Music.MusicCatalog)
+            if (catalog is MusicCatalog)
             {
-                foreach (var group in definitions.Cast<Core.Music.MusicCue>().GroupBy(cue => cue.Theme))
+                foreach (var group in definitions.Cast<MusicCue>().GroupBy(cue => cue.Theme))
                 {
                     var first = group.First();
                     foreach (var cue in group.Skip(1))

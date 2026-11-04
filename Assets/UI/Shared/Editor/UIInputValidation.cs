@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using Core;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 
@@ -30,7 +32,7 @@ namespace UI.Shared.Editor
         }
         public void OnPreprocessBuild(BuildReport report)
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>(Core.SystemRoot.PrefabPath);
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
             var module = root ? root.GetComponentInChildren<InputSystemUIInputModule>(true) : null;
             if (!module) throw new BuildFailedException("SystemRoot is missing its UI input module.");
             var errors = Check(module);
@@ -40,7 +42,7 @@ namespace UI.Shared.Editor
         [MenuItem("Tools/UI/Validate Input Wiring")]
         private static void ValidateLoadedScenes()
         {
-            var systems = Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
+            var systems = Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
             if (systems.Length > 1) Debug.LogError("Multiple active EventSystems are present. Keep one shared UI input owner.");
             foreach (var module in Object.FindObjectsByType<InputSystemUIInputModule>(FindObjectsSortMode.None))
                 foreach (var error in Check(module)) Debug.LogError(error, module);

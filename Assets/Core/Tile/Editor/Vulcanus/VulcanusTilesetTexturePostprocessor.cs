@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.U2D.Aseprite;
 using UnityEngine;
@@ -59,7 +60,7 @@ namespace Core.Tile.Editor.Vulcanus
                     var resolved = VulcanusImportHelpers.ResolveAssetReferencePath(tilesetPath, dto.SpriteSheet, projectPath);
                     if (string.Equals(resolved, sheetPath, StringComparison.OrdinalIgnoreCase)) return true;
                 }
-                catch (Exception ex) when (ex is IOException || ex is Newtonsoft.Json.JsonException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is IOException || ex is JsonException || ex is InvalidOperationException)
                 {
                     // Malformed tileset sources are diagnosed by their own importer.
                 }

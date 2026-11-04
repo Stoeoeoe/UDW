@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Character;
+using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
 using Core.Inventory;
@@ -12,12 +13,13 @@ using Sirenix.Serialization;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
+using Random = UnityEngine.Random;
 
 namespace Core.Shops.Editor
 {
     public sealed class ShopTestItem : ItemDefinition { }
 
-    public sealed class ShopTests : Core.Common.Editor.GameTest, IEventListener<WalletChangedEvent>,
+    public sealed class ShopTests : GameTest, IEventListener<WalletChangedEvent>,
         IEventListener<ShopPurchaseEvent>, IEventListener<ShopSaleEvent>, IEventListener<ShopRestockedEvent>
     {
         private GameObject _root;
@@ -30,7 +32,7 @@ namespace Core.Shops.Editor
         private ShopTestItem _item;
         private ShopOffering _daily;
         private ShopOffering _never;
-        private UnityEngine.Random.State _random;
+        private Random.State _random;
         private int _expectedStock;
         private bool _checkTrade;
         private bool _mutateOnWalletChange;
@@ -42,7 +44,7 @@ namespace Core.Shops.Editor
         public void SetUp()
         {
 
-            _random = UnityEngine.Random.state;
+            _random = Random.state;
             _checkTrade = false;
             _mutateOnWalletChange = false;
             _purchases.Clear();
@@ -87,7 +89,7 @@ namespace Core.Shops.Editor
 
             Object.DestroyImmediate(_definition);
             Object.DestroyImmediate(_item);
-            UnityEngine.Random.state = _random;
+            Random.state = _random;
         }
 
         [Test]
@@ -104,11 +106,11 @@ namespace Core.Shops.Editor
             data.time.initialized = true;
             data.time.dayOfSeason = 1;
             data.time.hour = 6;
-            data.Validate(Game.Get<Character.CharacterCatalog>(), Game.Get<Core.Inventory.ItemCatalog>());
+            data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>());
             var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
-            loaded.Validate(Game.Get<Character.CharacterCatalog>(), Game.Get<Core.Inventory.ItemCatalog>());
+            loaded.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>());
             _inventory.Bind(loaded.player.Inventory, id => id == _item.ItemId ? _item : null);
             Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(74));
             Assert.That(_inventory.GetSlot(0).Item, Is.SameAs(_item));
@@ -143,14 +145,14 @@ namespace Core.Shops.Editor
             var bytes = SerializationUtility.SerializeValue(state, DataFormat.JSON);
             var restored = SerializationUtility.DeserializeValue<ShopState>(bytes, DataFormat.JSON);
             Game.State.World.Set(_shop.Id, restored);
-            var before = UnityEngine.Random.state;
+            var before = Random.state;
             _shop.GetOfferings();
             Call(_shop, "OnDisable");
             Call(_shop, "OnEnable");
             _shop.GetOfferings();
             Assert.That(restored.offerings["daily"].quantity, Is.EqualTo(quantity));
             Assert.That(restored.offerings["daily"].available, Is.EqualTo(available));
-            Assert.That(UnityEngine.Random.state, Is.EqualTo(before));
+            Assert.That(Random.state, Is.EqualTo(before));
         }
 
         [Test]

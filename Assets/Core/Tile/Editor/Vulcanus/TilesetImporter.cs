@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Character;
 using Core.Tile.Vulcanus;
 using Core.Tile.Water;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEditor.U2D.Aseprite;
@@ -84,7 +87,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                         if (string.Equals(pi.Key, "waterType", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (pi.Value?.Type != Newtonsoft.Json.Linq.JTokenType.String ||
+                            if (pi.Value?.Type != JTokenType.String ||
                                 string.IsNullOrWhiteSpace(pi.Value.ToObject<string>()))
                                 throw new FormatException($"Tile {i}: waterType must be a non-empty enum string (use 'None' for no water).");
                             waterType = pi.Value.ToObject<string>();
@@ -92,7 +95,7 @@ namespace Core.Tile.Editor.Vulcanus
                         }
 
                         if (string.Equals(pi.Key, "isFreshwater", StringComparison.OrdinalIgnoreCase) &&
-                            pi.Value?.Type != Newtonsoft.Json.Linq.JTokenType.Boolean)
+                            pi.Value?.Type != JTokenType.Boolean)
                             throw new FormatException($"Tile {i}: isFreshwater must be a boolean.");
 
                         var applied = VulcanusImportHelpers.TryApplyPropertyToObject(tile, pi.Key, pi.Value);
@@ -102,7 +105,7 @@ namespace Core.Tile.Editor.Vulcanus
                         {
                             key = pi.Key,
                             jsonValue = pi.Value != null
-                                ? pi.Value.ToString(Newtonsoft.Json.Formatting.None)
+                                ? pi.Value.ToString(Formatting.None)
                                 : null
                         });
                     }
@@ -308,7 +311,7 @@ namespace Core.Tile.Editor.Vulcanus
             var sg = go.AddComponent<SortingGroup>();
             sg.sortingLayerName = "Objects";
 
-            var ySort = go.AddComponent<Character.YSortByPosition>();
+            var ySort = go.AddComponent<YSortByPosition>();
             ySort.Offset = -100;
 
             // Gather all per-tile collision shapes in object-local tile space.

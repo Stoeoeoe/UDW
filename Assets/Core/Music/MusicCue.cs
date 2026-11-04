@@ -75,7 +75,7 @@ namespace Core.Music
                 if (clip.loadType != AudioClipLoadType.DecompressOnLoad || !clip.preloadAudioData)
                     Error("stems", $"Stem '{stem.id}' requires Decompress On Load and Preload Audio Data.");
 #if UNITY_EDITOR
-                var importer = UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(clip)) as UnityEditor.AudioImporter;
+                var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(clip)) as AudioImporter;
                 if (importer != null && importer.loadInBackground)
                     Error("stems", $"Stem '{stem.id}' requires Load In Background disabled for predictable seamless loops.");
 #endif

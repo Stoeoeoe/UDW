@@ -1,18 +1,23 @@
-using UI.Shared;
-using System.Threading;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using Character;
+using Character.Abilities;
+using Core.Common.Editor;
 using Core.Context;
-using Interaction;
-using System.Collections;
-using Core.Game;
 using Core.Location;
 using Core.TimeAndWeather;
+using Input;
+using Interaction;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
+using InteractionMode = Core.Context.InteractionMode;
 
 namespace UI.Shared.Editor
 {
@@ -34,18 +39,18 @@ namespace UI.Shared.Editor
         public bool Open(GameCharacter character, ScreenPauseMode? mode = null) =>
             OpenScreen(() => Visible = true, () => Visible = false, character, mode);
         public void Close() => CloseScreen();
-        public bool OpenElement(UnityEngine.UIElements.VisualElement overlay, GameCharacter character = null, ScreenPauseMode? mode = null)
+        public bool OpenElement(VisualElement overlay, GameCharacter character = null, ScreenPauseMode? mode = null)
         {
             RebindRoot(overlay);
             return OpenScreen(character, mode ?? ScreenPauseMode.None);
         }
-        public void Rebind(UnityEngine.UIElements.VisualElement overlay) => RebindRoot(overlay);
+        public void Rebind(VisualElement overlay) => RebindRoot(overlay);
         public int CloseCount { get; private set; }
         protected override void OnScreenClosed() => CloseCount++;
     }
 
     [Category("UIScreen")]
-    public sealed class UIScreenPauseTests : Core.Common.Editor.GameTest
+    public sealed class UIScreenPauseTests : GameTest
     {
         private GameObject _root;
 
@@ -100,7 +105,7 @@ namespace UI.Shared.Editor
             Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.False);
             Assert.That(Game.Get<UrGUIManager>().IsCharacterPaused(main), Is.False);
             Assert.That(main.ConditionState, Is.EqualTo(ConditionState.Dead));
-            Assert.That(Game.Get<Input.InputManager>().ActiveMapName, Is.EqualTo("PlayerControls"));
+            Assert.That(Game.Get<InputManager>().ActiveMapName, Is.EqualTo("PlayerControls"));
         }
 
         [Test]
@@ -150,20 +155,20 @@ namespace UI.Shared.Editor
         [Test]
         public void ExplicitRebindingPreservesPauseAndCloseHidesTheReplacementRoot()
         {
-            var original = new UnityEngine.UIElements.VisualElement();
-            var replacement = new UnityEngine.UIElements.VisualElement();
+            var original = new VisualElement();
+            var replacement = new VisualElement();
             _first.OpenElement(original, _character, ScreenPauseMode.CharacterAndClock);
             _second.Open(_character, ScreenPauseMode.None);
             _first.Rebind(replacement);
             Assert.That(_manager.IsTopScreen(_second), Is.True);
             Assert.That(_character.IsControlBlocked, Is.True);
             Assert.That(Game.Get<UrGUIManager>().IsGameClockPaused, Is.True);
-            Assert.That(original.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.None));
-            Assert.That(replacement.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.Flex));
+            Assert.That(original.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(replacement.style.display.value, Is.EqualTo(DisplayStyle.Flex));
             Assert.That(replacement.enabledSelf, Is.False);
             _second.Close();
             _first.Close();
-            Assert.That(replacement.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.None));
+            Assert.That(replacement.style.display.value, Is.EqualTo(DisplayStyle.None));
             Assert.That(_first.CloseCount, Is.EqualTo(1));
             Assert.That(_character.IsControlBlocked, Is.False);
         }
@@ -305,7 +310,7 @@ namespace UI.Shared.Editor
             body.linearVelocity = Vector2.right * 4;
             _first.Open(_character, ScreenPauseMode.Character);
             Assert.That(body.linearVelocity, Is.EqualTo(Vector2.zero));
-            var movement = Game.Add<Character.Abilities.MovementAbility>(_character.gameObject);
+            var movement = Game.Add<MovementAbility>(_character.gameObject);
             Set(movement, "Character", _character);
             body.linearVelocity = Vector2.right;
             movement.Tick();
@@ -359,7 +364,7 @@ namespace UI.Shared.Editor
 
             var clock = Game.Clock;
             clock.Start();
-            var step = Game.Get<Core.TimeAndWeather.ClockSettings>().secondsPerInGameMinute;
+            var step = Game.Get<ClockSettings>().secondsPerInGameMinute;
             Game.State.Time.hour = 6;
             Game.State.Time.minute = 0;
             Game.State.Time.secondsTowardNextMinute = step;
@@ -379,7 +384,7 @@ namespace UI.Shared.Editor
         public void LocationRegistrationFollowsManagerEnableAndDisable()
         {
             var level = Game.Get<LevelManager>();
-            var listeners = (System.Collections.Generic.List<ILocationLifecycle>)typeof(LevelManager)
+            var listeners = (List<ILocationLifecycle>)typeof(LevelManager)
                 .GetField("_lifecycleComponents", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(level);
             Assert.That(listeners, Contains.Item(_manager));
             Invoke(_manager, "OnEnable");
@@ -390,13 +395,13 @@ namespace UI.Shared.Editor
             Assert.That(listeners, Contains.Item(_manager));
         }
 
-        internal static Input.InputManager CreateScreenServices(Core.Common.Editor.GameTestFixture fixture,
-            Action<UnityEngine.InputSystem.InputActionAsset> configureActions = null)
+        internal static InputManager CreateScreenServices(GameTestFixture fixture,
+            Action<InputActionAsset> configureActions = null)
         {
-            return fixture.Start<Input.InputManager>(input =>
+            return fixture.Start<InputManager>(input =>
             {
-                var player = input.GetComponent<UnityEngine.InputSystem.PlayerInput>();
-                var authored = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>(
+                var player = input.GetComponent<PlayerInput>();
+                var authored = AssetDatabase.LoadAssetAtPath<InputActionAsset>(
                     "Assets/InputSystem_Actions.inputactions");
                 player.actions = fixture.Own(fixture.InjectObject(Object.Instantiate(authored)));
                 configureActions?.Invoke(player.actions);
@@ -405,6 +410,6 @@ namespace UI.Shared.Editor
             });
         }
 
-        internal static void Invoke(object target, string method) => Core.Common.Editor.GameTestFixture.Invoke(target, method);
+        internal static void Invoke(object target, string method) => GameTestFixture.Invoke(target, method);
     }
 }

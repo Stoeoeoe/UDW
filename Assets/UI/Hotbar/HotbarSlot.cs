@@ -1,3 +1,4 @@
+using System;
 using Core.Inventory;
 using Interaction.Tools;
 using TMPro;
@@ -60,7 +61,7 @@ namespace UI.Hotbar
             _parentHotbar = parentHotbar;
             _slotIndex = slotIndex;
             if (!ChargeTrack || !ChargeFill)
-                throw new System.InvalidOperationException("Hotbar slots require a charge track and fill image.");
+                throw new InvalidOperationException("Hotbar slots require a charge track and fill image.");
             
             // Set up button click listener
             if (SlotButton != null)

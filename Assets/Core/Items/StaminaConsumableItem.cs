@@ -1,5 +1,5 @@
-using Core.Common;
 using Character;
+using Core.Common;
 using Items;
 using UnityEngine;
 

@@ -1,13 +1,12 @@
-using Core.Scripting;
-using System;
 using System.Linq;
+using Core.Common.Editor;
 using MoonSharp.Interpreter;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneVariableTests : Core.Common.Editor.GameTest
+    public sealed class CutsceneVariableTests : GameTest
     {
 
         private static CutsceneVariableDefinition[] Definitions() => new[] {

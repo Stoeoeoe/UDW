@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using Core.Tile.Vulcanus;
@@ -39,15 +40,15 @@ namespace Core.Tile.Editor.Vulcanus
         public static VulcanEntityDefinition[] FindEntityDefinitionsForProject(string projectAssetPath)
         {
             if (string.IsNullOrWhiteSpace(projectAssetPath))
-                return System.Array.Empty<VulcanEntityDefinition>();
+                return Array.Empty<VulcanEntityDefinition>();
 
             var projectRoot = Path.GetDirectoryName(VulcanusImportHelpers.ToAbsolutePath(projectAssetPath));
             if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot))
-                return System.Array.Empty<VulcanEntityDefinition>();
+                return Array.Empty<VulcanEntityDefinition>();
 
             var assetPaths = Directory
                 .GetFiles(projectRoot, "*.entity.json", SearchOption.AllDirectories)
-                .OrderBy(path => path, System.StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .Select(path => VulcanusImportHelpers.TryAbsoluteToAssetPath(path, out var assetPath) ? assetPath : null)
                 .Where(path => !string.IsNullOrWhiteSpace(path));
 

@@ -1,4 +1,3 @@
-using VContainer;
 using System;
 using Character;
 using Core.Events;
@@ -6,6 +5,7 @@ using Core.Inventory;
 using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
 
 namespace UI.Containers
 {

@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using VContainer;
-using Character;
 using Core.GameplayTags;
+using VContainer;
 
 namespace Core.Scripting
 {

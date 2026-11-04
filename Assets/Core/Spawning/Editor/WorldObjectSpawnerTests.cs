@@ -1,12 +1,14 @@
-using Core.Spawning;
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Core.Game;
+using Character;
+using Core.Common.Editor;
+using Core.Inventory;
 using Core.Location;
 using Interaction;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
@@ -14,7 +16,7 @@ using static Core.Common.Editor.Reflect;
 
 namespace Core.Spawning.Editor
 {
-    public sealed class WorldObjectSpawnerTests : Core.Common.Editor.GameTest
+    public sealed class WorldObjectSpawnerTests : GameTest
     {
         private GameObject _systems;
 
@@ -56,19 +58,19 @@ namespace Core.Spawning.Editor
         [Test]
         public void AuthoredChestPrefabKeepsItsOwnerAndContentsAcrossLocationReentry()
         {
-            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab")
-                .GetComponent<Core.Inventory.PersistentContainer>();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Content/Spawnables/Chest.prefab")
+                .GetComponent<PersistentContainer>();
             Assert.That(prefab, Is.Not.Null);
             _spawner.Register(prefab);
-            var first = (Core.Inventory.PersistentContainer)_spawner.Spawn(prefab, new Vector3(4, 7, 0));
+            var first = (PersistentContainer)_spawner.Spawn(prefab, new Vector3(4, 7, 0));
             var id = first.PersistentId;
-            var item = UnityEditor.AssetDatabase.LoadAssetAtPath<Core.Inventory.ItemDefinition>("Assets/Resources/Items/Tools/HoeToolData.asset");
+            var item = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Resources/Items/Tools/HoeToolData.asset");
             Assert.That(first.Storage.Inventory.AddItem(item, 1), Is.True);
-            Assert.That(Game.State.World.TryGet(_location.id, id, out Core.Inventory.ContainerState saved), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.id, id, out ContainerState saved), Is.True);
             Assert.That(saved.OwnerCharacterId, Is.EqualTo("base:player"));
             _spawner.OnLocationLeave(_location);
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
-            var restored = _spawner.SpawnedObjects.OfType<Core.Inventory.PersistentContainer>().Single();
+            var restored = _spawner.SpawnedObjects.OfType<PersistentContainer>().Single();
             Assert.That(restored.PersistentId, Is.EqualTo(id));
             Assert.That(restored.Storage.State, Is.SameAs(saved));
             Assert.That(restored.Storage.Inventory.GetSlot(0).Item, Is.SameAs(item));
@@ -161,7 +163,7 @@ namespace Core.Spawning.Editor
             Assert.That(interaction.PersistentId, Is.EqualTo(spawned.PersistentId));
             Assert.That(interaction.CanInteract, Is.True);
             var boundState = spawned.State.interaction;
-            var instigator = Game.Add<Character.GameCharacter>(_systems);
+            var instigator = Game.Add<GameCharacter>(_systems);
             interaction.TriggerInteraction(instigator);
             Assert.That(spawned.State.interaction.uses, Is.EqualTo(1));
             Assert.That(interaction.CanInteract, Is.False);

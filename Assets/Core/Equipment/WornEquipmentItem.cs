@@ -1,6 +1,6 @@
-using Core.Common;
 using System;
 using Character;
+using Core.Common;
 using Core.Inventory;
 using UnityEngine;
 

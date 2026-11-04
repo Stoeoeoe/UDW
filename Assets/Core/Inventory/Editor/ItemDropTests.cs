@@ -1,16 +1,15 @@
 using System.Reflection;
+using Core.Common.Editor;
 using Core.Items;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace Core.Inventory.Editor
 {
     public sealed class DropTestItem : ItemDefinition { }
 
     [Category("InventoryManagement")]
-    public sealed class ItemDropTests : Core.Common.Editor.ServiceTest
+    public sealed class ItemDropTests : ServiceTest
     {
 
         [Test]

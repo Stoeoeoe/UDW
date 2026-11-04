@@ -1,5 +1,4 @@
 using Unity.Cinemachine;
-using UnityEngine;
 
 namespace Core.Camera
 {

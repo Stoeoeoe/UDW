@@ -4,6 +4,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace Core.Scripting.Editor
@@ -32,7 +33,7 @@ namespace Core.Scripting.Editor
         public void CurrentActionsMatchTheVersionedHandoffFixtureWithoutLiveApis()
         {
             var manifest = LuaBindingRegistry.DescribeTypes(typeof(MapActorLuaApi), typeof(DialogueLuaApi), typeof(CutsceneLuaApi), typeof(AudioLuaApi), typeof(CameraLuaApi));
-            var path = Path.Combine(Path.GetDirectoryName(UnityEngine.Application.dataPath), "Docs/Examples/LuaActionPreview.v1.json");
+            var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), "Docs/Examples/LuaActionPreview.v1.json");
             var expected = (JObject)JObject.Parse(File.ReadAllText(path))["actions"];
             expected.Merge(JObject.Parse(File.ReadAllText(path.Replace(".v1.json", ".v2.json")))["actions"]);
             Assert.That(manifest.schemaVersion, Is.EqualTo(2));

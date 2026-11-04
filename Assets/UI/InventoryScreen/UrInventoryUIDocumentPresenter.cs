@@ -1,18 +1,19 @@
-using VContainer;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
-using Core.Events;
-using Core.Context;
 using Core.Equipment;
+using Core.Events;
 using Core.Inventory;
 using Core.Items;
+using Input;
+using Interaction.Tools;
 using Items;
+using Plants;
 using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEngine.InputSystem;
-using PlayerInputManager = Input.InputManager;
+using VContainer;
 
 namespace UI.InventoryScreen
 {
@@ -21,7 +22,7 @@ namespace UI.InventoryScreen
     {
         [Inject] private UrGUIManager _urGUIManager;
 
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
         [Inject] private ItemManager _itemManager;
 
         [SerializeField] private UIDocument document;
@@ -38,7 +39,7 @@ namespace UI.InventoryScreen
             new() { Id = "settings", Title = "Settings", Placeholder = "Settings are not available yet." }
         };
         public TabbedMenuShell Menu { get; private set; }
-        public event System.Action<TabbedMenuShell> MenuBound;
+        public event Action<TabbedMenuShell> MenuBound;
         private readonly List<VisualElement> _cells = new();
         private int _dragSource = -1, _pointer = -1;
         private Vector2 _dragStart;
@@ -190,7 +191,7 @@ namespace UI.InventoryScreen
                 var inHand = stack.Item && TargetInventory.Loadout.ActiveHandInventoryIndex == i;
                 cell.EnableInClassList("inventory-slot-active", inHand);
                 cell.EnableInClassList("inventory-slot-empty", !stack.IsOccupied);
-                var charged = stack.Item is Interaction.Tools.ToolData { maxCharge: > 0 };
+                var charged = stack.Item is ToolData { maxCharge: > 0 };
                 cell.EnableInClassList("inventory-slot-charged", charged);
                 cell.tooltip = stack.IsOccupied ? stack.Item.ItemName : "Empty slot";
                 if (stack.IsOccupied)
@@ -201,7 +202,7 @@ namespace UI.InventoryScreen
                     if (stack.Item.MaxStackSize > 1) AddLabel(cell, stack.Quantity.ToString(), "inventory-quantity");
                     if (charged)
                     {
-                        var tool = (Interaction.Tools.ToolData)stack.Item;
+                        var tool = (ToolData)stack.Item;
                         var charge = TargetInventory.Loadout.GetToolCharge(tool);
                         cell.tooltip = $"{tool.ItemName}\n{charge.Current} / {charge.Capacity}";
                         var track = new VisualElement { name = "chargeTrack", pickingMode = PickingMode.Ignore, tooltip = $"{charge.Current} / {charge.Capacity}" };
@@ -297,11 +298,11 @@ namespace UI.InventoryScreen
             var wearable = stack.Item is WornEquipmentItem;
             var food = stack.Item is ConsumableItem;
             var inHand = handItem && _selectedSlotIndex == TargetInventory.Loadout.ActiveHandInventoryIndex && !IsHoldingItem;
-            _useButton.text = wearable ? "Wear" : food ? "Eat" : stack.Item is Plants.SeedItem ? "Plant…" : inHand ? "In hand" : "Use";
+            _useButton.text = wearable ? "Wear" : food ? "Eat" : stack.Item is SeedItem ? "Plant…" : inHand ? "In hand" : "Use";
             _useButton.style.display = !inHand && (handItem || wearable || food) ? DisplayStyle.Flex : DisplayStyle.None;
             _useButton.SetEnabled(!IsHoldingItem && !inHand && (handItem || wearable ||
                 stack.Item is ConsumableItem consumable && consumable.CanConsume(_characters.MainCharacter)));
-            _beltButton.style.display = stack.Item is Interaction.Tools.ToolData ? DisplayStyle.Flex : DisplayStyle.None;
+            _beltButton.style.display = stack.Item is ToolData ? DisplayStyle.Flex : DisplayStyle.None;
             _beltButton.SetEnabled(!IsHoldingItem);
             _dropButton.style.display = stack.Item && !stack.Item.PreventDropping ? DisplayStyle.Flex : DisplayStyle.None;
             _dropButton.SetEnabled(stack.Item && !stack.Item.PreventDropping && !IsHoldingItem);
@@ -339,11 +340,11 @@ namespace UI.InventoryScreen
             HideContext();
             var success = TargetInventory.Loadout.SelectItem(_selectedSlotIndex);
             Feedback(success);
-            if (success && Selected.Item is Plants.SeedItem) CloseInventory();
+            if (success && Selected.Item is SeedItem) CloseInventory();
         }
         private void ShowToolbeltChoices()
         {
-            if (!ReceivesInput || IsHoldingItem || Selected.Item is not Interaction.Tools.ToolData) return;
+            if (!ReceivesInput || IsHoldingItem || Selected.Item is not ToolData) return;
             HideContext();
             var choices = _boundRoot.Q("quickChoices"); choices.style.display = DisplayStyle.Flex;
             PresentPrompt();
@@ -401,7 +402,7 @@ namespace UI.InventoryScreen
             }, "confirmSplitButton");
             AddPromptButton("Cancel", HideContext, "cancelPromptButton"); quantity.Focus();
         }
-        private Button AddPromptButton(string label, System.Action action, string name)
+        private Button AddPromptButton(string label, Action action, string name)
         {
             var button = new Button(() => { if (ReceivesInput && !IsHoldingItem) action(); }) { text = label, name = name };
             button.AddToClassList("quiet-action"); _context.Add(button); return button;

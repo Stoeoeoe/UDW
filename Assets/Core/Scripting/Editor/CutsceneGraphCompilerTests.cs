@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Common.Editor;
+using MoonSharp.Interpreter;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
-using MoonSharp.Interpreter;
-using Core.Common.Editor;
-using Core.Game;
 
 namespace Core.Scripting.Editor
 {
-    public sealed class CutsceneGraphCompilerTests : Core.Common.Editor.GameTest
+    public sealed class CutsceneGraphCompilerTests : GameTest
     {
 
         private static JObject Node(string id, string kind) => new() { ["id"] = id, ["kind"] = kind, ["position"] = new JObject { ["x"] = 0, ["y"] = 0 } };
@@ -149,7 +148,7 @@ namespace Core.Scripting.Editor
             var variables = new CutsceneVariables(definitions);
             var code = CutsceneGraphCompiler.Compile(graph, "stored-graph-results", "sequence", new HashSet<string>(), definitions, out var steps);
             using var run = VulcanusLuaEngine.StartSession(Game.BindSequence(steps, "cutscene", (typeof(CutsceneLuaApi), () => new CutsceneLuaApi())), code, "stored-graph-results", variables: variables);
-            run.Tick(0); Assert.That(variables.Get("duration", new MoonSharp.Interpreter.Script()).Number, Is.EqualTo(0.5));
+            run.Tick(0); Assert.That(variables.Get("duration", new Script()).Number, Is.EqualTo(0.5));
         }
 
         [Test]

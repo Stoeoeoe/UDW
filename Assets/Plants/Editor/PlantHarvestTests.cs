@@ -1,27 +1,32 @@
-using Plants;
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Core.Events;
+using Character;
 using Core.Common;
+using Core.Common.Editor;
+using Core.Events;
 using Core.Game;
 using Core.Inventory;
 using Core.Inventory.Editor;
 using Core.Items;
 using Core.TimeAndWeather;
-using Core.Tile;
+using MoreMountains.Feedbacks;
+using MoreMountains.Tools;
 using NUnit.Framework;
 using Sirenix.Serialization;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
+using Random = UnityEngine.Random;
+using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 
 namespace Plants.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class PlantHarvestTests : Core.Common.Editor.GameTest, IEventListener<PlantHarvestedEvent>, IEventListener<InventoryChangedEvent>, IEventListener<PlantRemovedEvent>
+    public sealed class PlantHarvestTests : GameTest, IEventListener<PlantHarvestedEvent>, IEventListener<InventoryChangedEvent>, IEventListener<PlantRemovedEvent>
     {
         private GameObject _root;
 
@@ -118,11 +123,11 @@ namespace Plants.Editor
             Assert.That(drop.Quantity, Is.EqualTo(3));
             Assert.That(drop.transform.position, Is.EqualTo(point));
             Assert.That(drop.gameObject.activeSelf, Is.True);
-            Assert.That(drop.GetComponents<UnityEngine.Rendering.SortingGroup>(), Has.Length.EqualTo(1));
+            Assert.That(drop.GetComponents<SortingGroup>(), Has.Length.EqualTo(1));
             // An inactive configured drop's first Awake must not duplicate its visual or sorting.
             Call(drop, "Awake");
             Assert.That(drop.transform.childCount, Is.EqualTo(1));
-            Assert.That(drop.GetComponents<UnityEngine.Rendering.SortingGroup>(), Has.Length.EqualTo(1));
+            Assert.That(drop.GetComponents<SortingGroup>(), Has.Length.EqualTo(1));
             Assert.That(Game.State.Player.Inventory.Slots, Is.SameAs(before));
             Assert.That(_plants.HasPlantAt("farm", new Vector2Int(1, 2)), Is.EqualTo(regrowthStage >= 0));
             if (regrowthStage >= 0) Assert.That(_crop.daysPassedSincePlanting, Is.EqualTo(2));
@@ -265,7 +270,7 @@ namespace Plants.Editor
             _crop.condition = PlantCondition.Wilted;
             Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
             var slots = Game.State.Player.Inventory.Slots;
-            var actor = Game.Add<Character.GameCharacter>(_root);
+            var actor = Game.Add<GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Wilted crop");
             root.SetActive(false);
@@ -310,7 +315,7 @@ namespace Plants.Editor
         public void AFullInventoryRestoresTheVisibilityOfADropThatAlreadyStartedFading()
         {
             Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var actor = Game.Add<Character.GameCharacter>(_root);
+            var actor = Game.Add<GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Fading drop");
             root.SetActive(false);
@@ -335,14 +340,14 @@ namespace Plants.Editor
         public void WiltClearingFeedbackSurvivesCropRemovalWithPrefabOwnedPlaybackAndCleanup()
         {
             _crop.condition = PlantCondition.Wilted;
-            var source = UnityEditor.AssetDatabase.LoadAssetAtPath<MoreMountains.Feedbacks.MMF_Player>(
+            var source = AssetDatabase.LoadAssetAtPath<MMF_Player>(
                 "Assets/Plants/Feedbacks/ClearWiltedCropFeedback.prefab");
             Assert.That(source, Is.Not.Null);
             Set(_data, "_wiltedFeedbackPrefab", source);
             var root = new GameObject("Wilted crop");
             root.SetActive(false);
             root.transform.position = new Vector3(7, 3, 0);
-            MoreMountains.Feedbacks.MMF_Player feedback = null;
+            MMF_Player feedback = null;
             FarmablePlant view = null;
             try
             {
@@ -352,16 +357,16 @@ namespace Plants.Editor
                 EventBus<PlantRemovedEvent>.Subscribe(view);
                 Assert.That(root.GetComponent<PlantHarvestInteractable>().TryClearWilted(), Is.True);
                 Assert.That(root == null || !root.activeSelf, Is.True);
-                feedback = Object.FindObjectsByType<MoreMountains.Feedbacks.MMF_Player>(FindObjectsSortMode.None)
+                feedback = Object.FindObjectsByType<MMF_Player>(FindObjectsSortMode.None)
                     .Single(player => player.name == source.name + "(Clone)");
                 Assert.That(feedback.transform.parent, Is.Null);
                 Assert.That(feedback.transform.position, Is.EqualTo(new Vector3(7, 3, 0)));
                 Assert.That(feedback.AutoPlayOnStart, Is.True);
-                var cleanup = feedback.GetComponent<MoreMountains.Tools.MMTimedDestruction>();
+                var cleanup = feedback.GetComponent<MMTimedDestruction>();
                 Assert.That(cleanup, Is.Not.Null);
                 Assert.That(cleanup.TimeDestructionMode,
-                    Is.EqualTo(MoreMountains.Tools.MMTimedDestruction.TimedDestructionModes.Destroy));
-                var sound = feedback.FeedbacksList.OfType<MoreMountains.Feedbacks.MMF_Sound>().Single();
+                    Is.EqualTo(MMTimedDestruction.TimedDestructionModes.Destroy));
+                var sound = feedback.FeedbacksList.OfType<MMF_Sound>().Single();
                 Assert.That(cleanup.TimeBeforeDestruction, Is.GreaterThan(sound.Sfx.length));
             }
             finally
@@ -386,13 +391,13 @@ namespace Plants.Editor
             Set(_data, "_harvestMethod", method);
             Set(_data, "_minHarvestQuantity", 2);
             Set(_data, "_maxHarvestQuantity", 8);
-            var previousRandomState = UnityEngine.Random.state;
+            var previousRandomState = Random.state;
             try
             {
-                UnityEngine.Random.InitState(321);
+                Random.InitState(321);
                 var expectedQuantity = _data.RollHarvestQuantity();
                 var expectedNextRoll = _data.RollHarvestQuantity();
-                UnityEngine.Random.InitState(321);
+                Random.InitState(321);
                 Assert.That(_plants.CanHarvest("farm", new Vector2Int(1, 2), method), Is.True);
                 if (method == HarvestMethod.Picking)
                 {
@@ -408,7 +413,7 @@ namespace Plants.Editor
                 Assert.That(_lastHarvest.Quantity, Is.EqualTo(expectedQuantity));
                 Assert.That(_data.RollHarvestQuantity(), Is.EqualTo(expectedNextRoll));
             }
-            finally { UnityEngine.Random.state = previousRandomState; }
+            finally { Random.state = previousRandomState; }
         }
 
         [TestCase(false)]
@@ -418,7 +423,7 @@ namespace Plants.Editor
             Set(_data, "_regrowthStageIndex", 1);
             if (fullInventory)
                 Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
-            var actor = Game.Add<Character.GameCharacter>(_root);
+            var actor = Game.Add<GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Bound crop");
             root.SetActive(false);

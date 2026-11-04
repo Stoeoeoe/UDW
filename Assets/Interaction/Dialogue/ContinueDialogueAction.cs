@@ -1,7 +1,7 @@
-using UnityEngine;
 using System.Threading;
 using Core.Context;
 using Core.Dialogue.Vulcanus;
+using UnityEngine;
 using VContainer;
 
 namespace Interaction.Dialogue

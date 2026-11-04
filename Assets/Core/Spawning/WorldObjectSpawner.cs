@@ -7,6 +7,7 @@ using Core.Tile;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 namespace Core.Spawning
 {
@@ -35,7 +36,7 @@ namespace Core.Spawning
             _mapManager = mapManager;
             // Spawned views live under one root that outlasts location scenes, like the session itself.
             _root = new GameObject("World objects");
-            if (Application.isPlaying) UnityEngine.Object.DontDestroyOnLoad(_root);
+            if (Application.isPlaying) Object.DontDestroyOnLoad(_root);
             var staging = new GameObject("Spawn staging");
             staging.SetActive(false);
             staging.transform.SetParent(_root.transform, false);
@@ -164,8 +165,8 @@ namespace Core.Spawning
 
         private static void DestroyView(GameObject view)
         {
-            if (Application.isPlaying) UnityEngine.Object.Destroy(view);
-            else UnityEngine.Object.DestroyImmediate(view);
+            if (Application.isPlaying) Object.Destroy(view);
+            else Object.DestroyImmediate(view);
         }
     }
 }

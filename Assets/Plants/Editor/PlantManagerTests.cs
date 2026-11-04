@@ -1,23 +1,23 @@
-using Plants;
-using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
-using Core.TimeAndWeather;
+using Core.Inventory;
 using Core.Tile;
+using Core.TimeAndWeather;
 using NUnit.Framework;
 using Sirenix.Serialization;
 using UnityEngine;
+using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
 namespace Plants.Editor
 {
     [Category("FarmingTerrain")]
-    public sealed class PlantManagerTests : Core.Common.Editor.ServiceTest, IEventListener<PlantGrowthEvent>, IEventListener<SowPlantEvent>,
+    public sealed class PlantManagerTests : ServiceTest, IEventListener<PlantGrowthEvent>, IEventListener<SowPlantEvent>,
         IEventListener<PlantConditionChangedEvent>, IEventListener<FarmlandDriedEvent>
     {
         private PlantManager _plants;
@@ -349,7 +349,7 @@ namespace Plants.Editor
                 TestConfiguration.Set(seed, "plantData", _data);
                 Set(seed, "_itemId", "test:seed");
                 var inventory = Game.Inventory(2);
-                inventory.SetSlot(1, new Core.Inventory.ItemStack(seed, 2));
+                inventory.SetSlot(1, new ItemStack(seed, 2));
                 var tile = new TileData(null, 0, 0, null, Vector3.zero, true);
                 Assert.That(_plants.TrySowCarriedSeed("farm", tile, inventory, 1), Is.False);
                 Assert.That(inventory.GetSlot(1).Quantity, Is.EqualTo(2));

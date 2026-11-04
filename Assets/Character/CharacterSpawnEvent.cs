@@ -1,5 +1,4 @@
 ﻿using Core.Events;
-using Core.Inventory;
 
 namespace Character
 {

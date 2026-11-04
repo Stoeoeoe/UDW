@@ -1,6 +1,4 @@
 using System;
-using Core.Catalogs;
-using Core.Tile;
 using Core.Tile.Vulcanus;
 using MoreMountains.Tools;
 using UnityEngine;

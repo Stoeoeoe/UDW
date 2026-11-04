@@ -2,7 +2,6 @@ using System;
 using Core.Inventory;
 using Core.Location;
 using Interaction.Tools;
-using UnityEngine;
 
 namespace Core
 {

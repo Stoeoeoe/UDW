@@ -1,7 +1,6 @@
-using VContainer;
-using Character;
 using Core.Context;
 using Input;
+using VContainer;
 
 namespace Character.Abilities
 {
@@ -9,7 +8,7 @@ namespace Character.Abilities
     public sealed class CharacterOccupationAbility : CharacterAbility
     {
         [Inject] private PlayerInteractionContext _playerInteractionContext;
-        [Inject] private Input.InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
 
         public override void Tick()
         {

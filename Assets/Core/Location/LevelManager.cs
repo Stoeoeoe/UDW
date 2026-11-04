@@ -7,7 +7,6 @@ using Core.Catalogs;
 using Core.Events;
 using Core.Game;
 using Core.Tile;
-using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
 using Interaction;
 using UI.Shared;
@@ -25,7 +24,7 @@ namespace Core.Location
     /// are re-acquired each time a new scene loads.
     /// </summary>
     [DefaultExecutionOrder(-1000)]
-    public class LevelManager : Core.GameManager, IEventListener<DayLightUpdateEvent>
+    public class LevelManager : GameManager, IEventListener<DayLightUpdateEvent>
     {
         [Inject] private LocationContext _locationContext;
         [Inject] private IObjectResolver _resolver;
@@ -67,7 +66,7 @@ namespace Core.Location
         protected override void OnAwake()
         {
             base.OnAwake();
-            _locationByScenePath = Core.Catalogs.IdIndex.FirstWins(_locations.EnabledDefinitions,
+            _locationByScenePath = IdIndex.FirstWins(_locations.EnabledDefinitions,
                 location => location ? location.ScenePath : null, StringComparer.OrdinalIgnoreCase);
         }
 

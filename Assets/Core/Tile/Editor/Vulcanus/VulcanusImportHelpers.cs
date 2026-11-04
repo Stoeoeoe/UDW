@@ -7,7 +7,6 @@ using System.Reflection;
 using Core.Tile.Vulcanus;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
@@ -162,7 +161,7 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 TilesetDto dto;
                 try { dto = LoadDto<TilesetDto>(filePath); }
-                catch (Newtonsoft.Json.JsonException) { continue; }
+                catch (JsonException) { continue; }
                 if (string.IsNullOrWhiteSpace(dto?.Id) || !TryAbsoluteToAssetPath(filePath, out var path)) continue;
                 if (!result.TryAdd(dto.Id, path))
                     throw new InvalidOperationException($"Duplicate tileset ID '{dto.Id}' in '{result[dto.Id]}' and '{path}'.");

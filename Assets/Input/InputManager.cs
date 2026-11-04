@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine.InputSystem;
 using Core;
-using Core.Location;
 using Core.Events;
+using Core.Location;
 using Core.TimeAndWeather;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Input
 {
@@ -15,7 +15,7 @@ namespace Input
     /// </summary>
     [RequireComponent(typeof(PlayerInput))]
     [DefaultExecutionOrder(100)]
-    public class InputManager : Core.GameManager, ILocationLifecycle,
+    public class InputManager : GameManager, ILocationLifecycle,
         IEventListener<DayTransitionStarted>, IEventListener<DayTransitionFinished>
     {
         private PlayerInput _player;

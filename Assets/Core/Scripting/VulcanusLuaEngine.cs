@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Character;
+using System.Text.RegularExpressions;
 using Core.Dialogue.Vulcanus;
 using MoonSharp.Interpreter;
 
@@ -94,7 +94,7 @@ namespace Core.Scripting
 
         internal DynValue CallReadOnly(string path, DynValue[] arguments)
         {
-            if (!System.Text.RegularExpressions.Regex.IsMatch(path, @"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$"))
+            if (!Regex.IsMatch(path, @"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$"))
                 throw new ArgumentException("A declared Lua function path is required.", nameof(path));
             _conditionScript ??= CreateScript(false);
             var code = "return " + path + "(...)";

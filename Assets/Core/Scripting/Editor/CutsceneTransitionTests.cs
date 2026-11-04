@@ -1,3 +1,4 @@
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -16,7 +17,7 @@ namespace Core.Scripting.Editor
                 foreach (var field in new[] { "fadeSeconds", "holdSeconds", "revealSeconds" })
                 {
                     var timing = typeof(CutscenePresentationSettings).GetField(field,
-                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                        BindingFlags.Instance | BindingFlags.NonPublic);
                     timing.SetValue(settings, value);
                     Assert.That(settings.ValidateConfiguration(), Is.Not.Empty, field);
                     Assert.That(() => settings.RequireValidConfiguration(), Throws.ArgumentException);

@@ -1,14 +1,15 @@
 using System;
+using System.Collections;
 using System.Reflection;
+using Animancer;
 using Character;
 using Character.Abilities;
 using Character.Animations;
-using Animancer;
 using Core.Common.Editor;
-using Core.Location;
 using Core.Context;
-using Core.Game;
 using DG.Tweening;
+using Input;
+using Interaction.Tools;
 using MoreMountains.Feedbacks;
 using NUnit.Framework;
 using UnityEditor;
@@ -28,7 +29,7 @@ namespace Interaction.Editor
     }
 
     /// <summary>Checks exclusive occupation, animated release, presentation cues and interrupted character lifecycles.</summary>
-    public sealed class InteractionSlotTests : Core.Common.Editor.GameTest
+    public sealed class InteractionSlotTests : GameTest
     {
 
         private MainCharacter _character, _other;
@@ -55,7 +56,7 @@ namespace Interaction.Editor
             exit.SetParent(seat.transform);
             exit.position = new Vector3(2, -1, 0);
             Set(_slot, "exitPoint", exit);
-            var animation = AssetDatabase.LoadAssetAtPath<Character.Animations.CharacterAnimationDefinition>("Assets/Interaction/PrototypeSittingAnimation.asset");
+            var animation = AssetDatabase.LoadAssetAtPath<CharacterAnimationDefinition>("Assets/Interaction/PrototypeSittingAnimation.asset");
             Set(_slot, "occupiedAnimation", animation);
             _entry = seat.AddComponent<SeatingFeedbackProbe>();
             _exit = seat.AddComponent<SeatingFeedbackProbe>();
@@ -185,7 +186,7 @@ namespace Interaction.Editor
             runtimeType.GetMethod("Setup").Invoke(runtime, null);
             try
             {
-                var input = Game.Start<Input.InputManager>(manager =>
+                var input = Game.Start<InputManager>(manager =>
                 {
                     manager.GetComponent<PlayerInput>().actions = Game.Own(Game.InjectObject(Object.Instantiate(
                         AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions"))));
@@ -564,14 +565,14 @@ namespace Interaction.Editor
             var animation = CreateAnimation("clip-only");
             animation.ValidateAsOneShot();
             var state = _character.Animator.PlayInteractionAnimation(animation);
-            var wait = (System.Collections.IEnumerator)state;
+            var wait = (IEnumerator)state;
             Assert.That(wait.MoveNext(), Is.True);
             state.Time = state.Length + 0.01f;
             Assert.That(wait.MoveNext(), Is.False);
             Assert.That(InteractionAnimationState(_character), Is.SameAs(state));
             _character.Animator.EndInteractionAnimation();
             state = _character.Animator.PlayInteractionAnimation(animation);
-            wait = (System.Collections.IEnumerator)state;
+            wait = (IEnumerator)state;
             Assert.That(wait.MoveNext(), Is.True);
             _character.Animator.EndInteractionAnimation();
             Assert.That(wait.MoveNext(), Is.False, "Stopping playback also releases Animancer's waiter.");
@@ -629,7 +630,7 @@ namespace Interaction.Editor
         [TestCase("Assets/Resources/Items/Tools/WateringJarToolData.asset", "Water", -1, 0)]
         public void AuthoredFarmingToolsPlayTheirMappedClipAndAllowEveryFrame(string path, string action, int x, int y)
         {
-            var tool = AssetDatabase.LoadAssetAtPath<Interaction.Tools.ToolData>(path);
+            var tool = AssetDatabase.LoadAssetAtPath<ToolData>(path);
             var expected = _character.Animator.AnimationLibrary.GetDirectional(action, new Vector2(x, y));
             Call(_character.Animator, "PlayToolUseAnimation", new Vector2(x, y), tool);
             var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();

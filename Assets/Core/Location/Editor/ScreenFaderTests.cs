@@ -1,10 +1,14 @@
-using System.Reflection;
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using Core.Common.Editor;
+using Core.Scripting;
 using DG.Tweening;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace Core.Location.Editor
@@ -16,7 +20,7 @@ namespace Core.Location.Editor
         private UnityEngine.Camera _camera;
         private RenderTexture _target;
         private ScreenFader _fader;
-        private UnityEngine.UI.Image _image;
+        private Image _image;
         private CanvasGroup _group;
         private Texture2D _mask;
         private readonly List<UnityEngine.Camera> _otherMainCameras = new();
@@ -90,7 +94,7 @@ namespace Core.Location.Editor
         public void CutsceneRevealOpensGraduallyAtTheAuthoredDuration()
         {
             CreateFader(ScreenFader.Effect.Iris, ScreenFader.MosaicOrder.Random);
-            var settings = AssetDatabase.LoadAssetAtPath<Core.Scripting.CutscenePresentationSettings>(
+            var settings = AssetDatabase.LoadAssetAtPath<CutscenePresentationSettings>(
                 "Assets/Resources/CutscenePresentation.asset");
             _fader.CoverCutscene(0f).Complete();
             var reveal = _fader.RevealCutscene(settings.RevealSeconds);
@@ -113,7 +117,7 @@ namespace Core.Location.Editor
             Assert.That(reveal.IsPlaying(), Is.False, "The setup frame must remain covered.");
             var flags = BindingFlags.Instance | BindingFlags.NonPublic;
             var generation = typeof(ScreenFader).GetField("_revealGeneration", flags).GetValue(_fader);
-            var deferred = (System.Collections.IEnumerator)typeof(ScreenFader)
+            var deferred = (IEnumerator)typeof(ScreenFader)
                 .GetMethod("StartRevealAfterSetupFrame", flags).Invoke(_fader, new[] { (object)reveal, generation });
             Assert.That(deferred.MoveNext(), Is.True);
             Assert.That(reveal.Elapsed(), Is.Zero);
@@ -122,7 +126,7 @@ namespace Core.Location.Editor
 
             var cancelled = _fader.RevealCutscene(0.3f);
             generation = typeof(ScreenFader).GetField("_revealGeneration", flags).GetValue(_fader);
-            deferred = (System.Collections.IEnumerator)typeof(ScreenFader)
+            deferred = (IEnumerator)typeof(ScreenFader)
                 .GetMethod("StartRevealAfterSetupFrame", flags).Invoke(_fader, new[] { (object)cancelled, generation });
             deferred.MoveNext();
             _fader.ShowSceneImmediately();
@@ -151,7 +155,7 @@ namespace Core.Location.Editor
                 foreach (var cover in new[] { 0f, 0.5f, 1f })
                 {
                     Shader.SetGlobalFloat("_CutsceneWeatherCover", cover);
-                    using var commands = new UnityEngine.Rendering.CommandBuffer();
+                    using var commands = new CommandBuffer();
                     commands.SetRenderTarget(target);
                     commands.ClearRenderTarget(false, true, Color.black);
                     commands.DrawProcedural(Matrix4x4.identity, material, 0, MeshTopology.Triangles, 3);
@@ -261,14 +265,14 @@ namespace Core.Location.Editor
             ((RectTransform)canvas.transform).sizeDelta = new Vector2(128, 64);
             canvas.transform.localScale = Vector3.one / 64f;
 
-            var overlay = new GameObject("Overlay", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            var overlay = new GameObject("Overlay", typeof(RectTransform), typeof(Image));
             overlay.layer = 31;
             overlay.transform.SetParent(canvas.transform, false);
             var rect = (RectTransform)overlay.transform;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
-            _image = overlay.GetComponent<UnityEngine.UI.Image>();
+            _image = overlay.GetComponent<Image>();
             _image.color = Color.black;
             _fader = overlay.AddComponent<ScreenFader>();
             Set("_effect", effect);

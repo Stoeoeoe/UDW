@@ -6,7 +6,7 @@ namespace Core.Spawning
 {
     /// <summary>Explicit prefab references registered at startup, independently of runtime folder conventions.</summary>
     [CreateAssetMenu(menuName = "Game/Spawnable Catalog")]
-    [DefaultCatalog(SpawnableCatalog.ResourceName)]
+    [DefaultCatalog(ResourceName)]
     public sealed class SpawnableCatalog : DefinitionCatalog<SpawnedObject>
     {
         public const string ResourceName = "SpawnableCatalog";

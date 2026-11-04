@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using Core;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
+using Core.TimeAndWeather;
 using Interaction.Tools.Stamina;
 using NUnit.Framework;
 using static Core.Common.Editor.Reflect;
@@ -11,7 +12,7 @@ using static Core.Common.Editor.Reflect;
 namespace Character.Editor
 {
     /// <summary>Checks stamina consumption, recovery, live save binding and maximum changes through a valid character fixture.</summary>
-    public sealed class CharacterStaminaTests : Core.Common.Editor.GameTest, IEventListener<StaminaChangedEvent>, IEventListener<StaminaDepletedEvent>
+    public sealed class CharacterStaminaTests : GameTest, IEventListener<StaminaChangedEvent>, IEventListener<StaminaDepletedEvent>
     {
 
         private MainCharacter _character;
@@ -132,7 +133,7 @@ namespace Character.Editor
 
             Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
             Game.State.Player.Stamina = new StaminaState { Initialized = true, Current = 37 };
-            var player = Game.Get<Core.PlayerStateManager>();
+            var player = Game.Get<PlayerStateManager>();
             player.InitializeCharacter(_character);
             Assert.That(_stamina.CurrentStamina, Is.EqualTo(37));
             _stamina.ConsumeStamina(7);
@@ -234,8 +235,8 @@ namespace Character.Editor
         {
             _stamina.GrantOvercharge(50);
             _changes.Clear();
-            _character.OnEvent(new Core.TimeAndWeather.OvernightRestCompleted(
-                _character, Core.TimeAndWeather.DayEndReason.PassedOut, 23));
+            _character.OnEvent(new OvernightRestCompleted(
+                _character, DayEndReason.PassedOut, 23));
             Assert.That(_state.Current, Is.EqualTo(60));
             Assert.That(_state.Overcharge, Is.Zero);
             Assert.That(_changes.Count, Is.EqualTo(1));
