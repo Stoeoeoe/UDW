@@ -19,6 +19,7 @@ namespace Core.Game
         public StoryState story = new();
         public GameTimeState time = new();
         public WorldState world = new();
+        public SessionState session = new();
 
         public void Validate(CharacterCatalog characters, ItemCatalog items)
         {
@@ -27,8 +28,9 @@ namespace Core.Game
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
             if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory?.ToolCharges == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
-                story == null || time == null || world?.GetLocations() == null)
+                story == null || time == null || world?.GetLocations() == null || session == null)
                 throw new FormatException("The save is missing a required state section.");
+            session.Validate();
 
             foreach (var charge in player.Inventory.ToolCharges)
                 if (string.IsNullOrWhiteSpace(charge.Key) || charge.Value == null || charge.Value.Capacity <= 0 ||

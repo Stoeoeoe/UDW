@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Core.Common;
+using Core.Game;
 using Core.Location;
 using Core.Tile.Water;
 using MoreMountains.Feedbacks;
@@ -17,6 +18,8 @@ namespace Core.TimeAndWeather
     public sealed class WeatherManager : GameManager, ILocationLifecycle
     {
         [Inject] private GameClock _clock;
+        [Inject] private GameState _gameState;
+        [Inject] private WeatherCatalog _catalog;
         private SeasonData _season;
         private float _dayProgress;
 
@@ -64,7 +67,13 @@ namespace Core.TimeAndWeather
         {
             _season = season;
             _dayProgress = dayProgress;
-            SetWeather(season.weatherData.GetRandomItem());
+            // Startup and loading resume the day's saved weather; a new day has none yet and rolls.
+            var session = _gameState.Session;
+            var resumed = session.WeatherDay == _gameState.Time.daysSinceStart && !string.IsNullOrEmpty(session.WeatherId);
+            SetWeather(resumed
+                ? _catalog.Get(session.WeatherId)
+                  ?? throw new InvalidOperationException($"The saved weather '{session.WeatherId}' is not a registered, enabled weather.")
+                : season.weatherData.GetRandomItem());
             RefreshDaylight();
         }
 
@@ -81,6 +90,8 @@ namespace Core.TimeAndWeather
             weather.RequireValidConfiguration();
             if (!_effectsRoot || !isActiveAndEnabled)
                 throw new InvalidOperationException("The weather manager is not initialized and active.");
+            _gameState.Session.WeatherId = weather.id;
+            _gameState.Session.WeatherDay = _gameState.Time.daysSinceStart;
             StartCoroutine(ApplyWeather(weather));
         }
 

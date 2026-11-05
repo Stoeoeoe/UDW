@@ -5,6 +5,7 @@ using Core.Divinity;
 using Core.Inventory;
 using Core.TimeAndWeather;
 using Sirenix.Serialization;
+using UnityEngine;
 
 namespace Core.Game
 {
@@ -22,6 +23,33 @@ namespace Core.Game
         public PlayerState Player => Data.player;
         public StoryState Story => Data.story;
         public GameTimeState Time => Data.time;
+        public SessionState Session => Data.session;
+    }
+
+    /// <summary>Where the player is and which conditions are active, so a save resumes exactly where it was made.</summary>
+    [Serializable]
+    public sealed class SessionState
+    {
+        /// <summary>The location the player was in; null until the first save made inside a location.</summary>
+        public string LocationId;
+        public Vector2 Position;
+        public Vector2 Facing = Vector2.down;
+        /// <summary>The active weather, valid only for <see cref="WeatherDay"/>; a new day rolls again.</summary>
+        public string WeatherId;
+        public int WeatherDay;
+
+        internal void Validate()
+        {
+            if (LocationId != null && string.IsNullOrWhiteSpace(LocationId))
+                throw new FormatException("The save contains an invalid location ID.");
+            if (!IsFinite(Position) || !IsFinite(Facing))
+                throw new FormatException("The save contains an invalid player position.");
+            if (WeatherId != null && string.IsNullOrWhiteSpace(WeatherId) || WeatherDay < 0)
+                throw new FormatException("The save contains invalid weather.");
+        }
+
+        private static bool IsFinite(Vector2 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y);
     }
 
     [Serializable]

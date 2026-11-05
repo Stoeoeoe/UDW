@@ -15,10 +15,12 @@ namespace Core.Game
         private readonly WorldObjectSpawner _worldObjectSpawner;
         private readonly LocationContext _location;
         private readonly GameClock _clock;
+        private readonly CharacterManager _characters;
 
         public GameStateManager(GameState state, GameSaveService saves, CutsceneRunner cutsceneRunner,
-            WorldObjectSpawner worldObjectSpawner, LocationContext location, GameClock clock)
+            WorldObjectSpawner worldObjectSpawner, LocationContext location, GameClock clock, CharacterManager characters)
         {
+            _characters = characters;
             _state = state;
             _saves = saves;
             _cutsceneRunner = cutsceneRunner;
@@ -40,9 +42,21 @@ namespace Core.Game
             if (_cutsceneRunner.IsRunning)
                 throw new InvalidOperationException("Cannot save while a cutscene is staging actors. Save after its terminal cleanup.");
             _worldObjectSpawner.SavePositions();
+            CaptureResumePoint();
             _state.Data.schemaVersion = GameSaveData.CurrentVersion;
             _state.Data.worldBaselineVersion = WorldBaselineVersion;
             _saves.Save(slot, _state.Data);
+        }
+
+        // Outside a ready location (scene-less tests, before the first entry) the previous resume point is kept.
+        private void CaptureResumePoint()
+        {
+            if (!_location.SceneReady) return;
+            var player = _characters.MainCharacter;
+            var session = _state.Session;
+            session.LocationId = _location.Location.id;
+            session.Position = player.transform.position;
+            session.Facing = player.Orientation.FacingDirection;
         }
 
         /// <summary>Returns false for a missing slot. Validates the save envelope before replacing live state.</summary>

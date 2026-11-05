@@ -201,6 +201,38 @@ namespace Core.TimeAndWeather.Editor
         }
 
         [Test]
+        public void LoadingResumesTheSavedWeatherOfTheSameDayAndANewDayRollsAgain()
+        {
+            var rain = _spring.weatherData.GetRandomItem();
+            rain.id = "test:rain";
+            var dry = Game.Asset<WeatherData>();
+            dry.id = "test:dry";
+            var catalog = Game.Asset<WeatherCatalog>();
+            catalog.Synchronize(new[] { rain, dry });
+            Set(_weather, "_catalog", catalog);
+            _clock.Start();
+            Assert.That(Game.State.Session.WeatherId, Is.EqualTo("test:rain"));
+            Assert.That(Game.State.Session.WeatherDay, Is.EqualTo(Game.State.Time.daysSinceStart));
+
+            Game.State.Session.WeatherId = "test:dry";
+            _clock.ApplySavedTime();
+            Assert.That(_weather.CurrentWeather, Is.SameAs(dry), "Loading resumes the saved weather instead of rolling.");
+
+            _clock.StartNewDay();
+            Assert.That(_weather.CurrentWeather, Is.SameAs(rain), "The next day rolls from the season again.");
+            Assert.That(Game.State.Session.WeatherDay, Is.EqualTo(Game.State.Time.daysSinceStart));
+        }
+
+        [Test]
+        public void ResumingAnUnregisteredSavedWeatherFailsClearly()
+        {
+            _clock.Start();
+            Game.State.Session.WeatherId = "missing-mod:snow";
+            Assert.That(() => _clock.ApplySavedTime(),
+                Throws.InvalidOperationException.With.Message.Contains("missing-mod:snow"));
+        }
+
+        [Test]
         public void OnlyTheLatestWeatherPublishesAfterTheRendererWait()
         {
             _clock.Start();

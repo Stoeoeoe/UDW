@@ -6,6 +6,7 @@ using System.Reflection;
 using Character;
 using Core.Common.Editor;
 using Core.Inventory;
+using Core.Location;
 using Core.Shops;
 using Core.Spawning;
 using Core.TimeAndWeather;
@@ -210,6 +211,82 @@ namespace Core.Game.Editor
             data.player.Health.Overcharge = 0;
             data.player.Stamina = new StaminaState { Initialized = true, Current = 100, Overcharge = surplus };
             Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("stamina"));
+        }
+
+        [Test]
+        public void SessionResumePointAndWeatherRoundTrip()
+        {
+            var slot = "test-" + Guid.NewGuid().ToString("N");
+            var data = new GameSaveData();
+            data.time.initialized = true;
+            data.time.daysSinceStart = 3;
+            data.time.dayOfSeason = 3;
+            data.player.Home = new PlayerHomeState("test:home", "test-bed");
+            data.session.LocationId = "test:farm";
+            data.session.Position = new Vector2(12.5f, -3.25f);
+            data.session.Facing = Vector2.left;
+            data.session.WeatherId = "test:rain";
+            data.session.WeatherDay = 3;
+            try
+            {
+                Game.Get<GameSaveService>().Save(slot, data);
+                Assert.That(Game.Get<GameSaveService>().TryLoad(slot, out var loaded), Is.True);
+                Assert.That(loaded.session.LocationId, Is.EqualTo("test:farm"));
+                Assert.That(loaded.session.Position, Is.EqualTo(new Vector2(12.5f, -3.25f)));
+                Assert.That(loaded.session.Facing, Is.EqualTo(Vector2.left));
+                Assert.That(loaded.session.WeatherId, Is.EqualTo("test:rain"));
+                Assert.That(loaded.session.WeatherDay, Is.EqualTo(3));
+            }
+            finally { File.Delete(GameSaveService.GetSavePath(slot)); }
+        }
+
+        [TestCase("missing")]
+        [TestCase("blank-location")]
+        [TestCase("nan-position")]
+        [TestCase("infinite-facing")]
+        [TestCase("blank-weather")]
+        [TestCase("negative-weather-day")]
+        public void SaveValidationRejectsMalformedSessionState(string fault)
+        {
+            var data = new GameSaveData();
+            switch (fault)
+            {
+                case "missing": data.session = null; break;
+                case "blank-location": data.session.LocationId = " "; break;
+                case "nan-position": data.session.Position = new Vector2(float.NaN, 0); break;
+                case "infinite-facing": data.session.Facing = new Vector2(0, float.PositiveInfinity); break;
+                case "blank-weather": data.session.WeatherId = ""; break;
+                case "negative-weather-day": data.session.WeatherDay = -1; break;
+            }
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
+        }
+
+        [Test]
+        public void SavingInAReadyLocationCapturesTheLocationAndPlayerPlacement()
+        {
+            var session = Game.Get<GameStateManager>();
+            Game.Get<PlayerStateManager>().InitializeHome();
+            Game.State.Time.initialized = true;
+            Game.State.Time.daysSinceStart = 1;
+            Game.State.Time.dayOfSeason = 1;
+            Game.State.Time.hour = 6;
+            var location = Game.Asset<LocationData>();
+            location.id = "test:farm";
+            Game.Location = location;
+            Game.Ready = true;
+            var player = Game.CreatePlayer();
+            player.transform.position = new Vector3(4.5f, -2f, 0);
+            player.Orientation.ForceDirection(Vector2.left);
+            var slot = "test-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                session.Save(slot);
+                Assert.That(Game.Get<GameSaveService>().TryLoad(slot, out var loaded), Is.True);
+                Assert.That(loaded.session.LocationId, Is.EqualTo("test:farm"));
+                Assert.That(loaded.session.Position, Is.EqualTo(new Vector2(4.5f, -2f)));
+                Assert.That(loaded.session.Facing, Is.EqualTo(Vector2.left));
+            }
+            finally { File.Delete(GameSaveService.GetSavePath(slot)); }
         }
 
         [Test]
