@@ -51,13 +51,13 @@ namespace Core.Scripting
             cutsceneId = id;
             mapId = map;
             lua = script;
-            steps = importedSteps.ToArray();
+            steps = Enumerable.ToArray(importedSteps);
             _steps = null;
             allowSkip = skipAllowed;
             transition = presentation ?? new CutsceneTransition();
             onComplete = completionPlan;
             onStartLua = setupScript;
-            onStart = setupSteps.ToArray();
+            onStart = Enumerable.ToArray(setupSteps);
             _onStart = null;
             variables = localVariables ?? Array.Empty<CutsceneVariableDefinition>();
             RequireValidConfiguration();
