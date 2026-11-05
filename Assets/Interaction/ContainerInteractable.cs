@@ -3,12 +3,14 @@ using Character;
 using Core.Inventory;
 using UI.Containers;
 using UnityEngine;
+using VContainer;
 
 namespace Interaction
 {
     [RequireComponent(typeof(PersistentContainer))]
     public sealed class ContainerInteractable : AbstractInteractable
     {
+        [Inject] private ContainerScreen _screen;
         private PersistentContainer _container;
         protected override void Awake()
         {
@@ -27,7 +29,7 @@ namespace Interaction
 
         protected override bool Interact(GameCharacter instigator)
         {
-            ContainerScreen.Instance.Open(_container, instigator);
+            _screen.Open(_container, instigator);
             return true;
         }
     }

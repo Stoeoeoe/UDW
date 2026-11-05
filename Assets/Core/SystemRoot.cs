@@ -6,6 +6,7 @@ using Core.Location;
 using Core.Spawning;
 using Core.TimeAndWeather;
 using Plants;
+using UI.Containers;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -21,16 +22,18 @@ namespace Core
         [SerializeField] private PlayerSettings player = new();
         [SerializeField] private ItemSettings items = new();
         [SerializeField] private ClockSettings clock = new();
-        public PlayerSettings Player => player;
         public ItemSettings Items => items;
-        public ClockSettings Clock => clock;
+
+        /// <summary>Registers the game-session services with the authored settings; scene-less tests use this alone.</summary>
+        public void RegisterServices(IContainerBuilder builder) =>
+            GameServices.Register(builder, player, items, clock);
 
         protected override void Configure(IContainerBuilder builder) => ConfigureServices(builder, gameObject);
 
         public static void ConfigureServices(IContainerBuilder builder, GameObject root)
         {
             var configuration = root.GetComponent<SystemRoot>();
-            GameServices.Register(builder, configuration.player, configuration.items, configuration.clock);
+            configuration.RegisterServices(builder);
             // The dialogue screen is a presentation component behind the runner's IDialoguePresenter.
             if (!builder.Exists(typeof(IDialoguePresenter), true))
             {
@@ -39,6 +42,10 @@ namespace Core
                     throw new InvalidOperationException("SystemRoot requires exactly one dialogue presenter.");
                 builder.RegisterInstance<IDialoguePresenter>(presenters[0]);
             }
+            var screens = root.GetComponentsInChildren<ContainerScreen>(true);
+            if (screens.Length != 1)
+                throw new InvalidOperationException("SystemRoot requires exactly one container screen.");
+            builder.RegisterInstance(screens[0]);
             // Keep authored component instances and their Inspector configuration. A registration supplied
             // by the composing caller, such as a test double, takes precedence.
             foreach (var manager in root.GetComponentsInChildren<GameManager>(true))

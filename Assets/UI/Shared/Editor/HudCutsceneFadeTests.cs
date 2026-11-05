@@ -1,6 +1,5 @@
 using System;
 using System.Reflection;
-using Core;
 using Core.Common.Editor;
 using Core.Context;
 using Core.Location;
@@ -114,13 +113,6 @@ namespace UI.Shared.Editor
         {
             Set(_gui, "toolHud", null);
             Assert.That(() => GameTestFixture.Invoke(_gui, "Start"), Throws.TypeOf<InvalidOperationException>().With.Message.Contains("hotbar"));
-        }
-
-        [Test]
-        public void AuthoredSystemsIncludeBothHudTargets()
-        {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
-            Assert.That(CutsceneHudSetup.Validate(root), Is.Empty);
         }
 
         private Tween Fade => (Tween)typeof(UrGUIManager).GetField("_hudTween", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_gui);

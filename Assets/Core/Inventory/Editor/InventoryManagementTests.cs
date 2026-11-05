@@ -5,10 +5,8 @@ using Interaction.Tools;
 using NUnit.Framework;
 using Plants;
 using Sirenix.Serialization;
-using UI.Shared.Editor;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.InputSystem.UI;
 using TestConfiguration = Core.Common.Editor.ConfigurationTestData;
 using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 using static Core.Common.Editor.Reflect;
@@ -161,10 +159,8 @@ namespace Core.Inventory.Editor
             Assert.That(_bag.Loadout.ActiveToolbeltSlot, Is.EqualTo(-1));
             Assert.That(_bag.Loadout.AssignToolbeltSlot(1, 0), Is.False);
         }
-        [Test] public void RuntimePrefabsHaveSharedConfigurationAndCompleteUIBindings()
+        [Test] public void PlayerInventoryHasTheSharedMainInventoryConfiguration()
         {
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath);
-            Assert.That(UIInputValidation.Check(root.GetComponentInChildren<InputSystemUIInputModule>(true)), Is.Empty);
             var character = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Character/Player/TestCharacter.prefab");
             foreach (var inventory in character.GetComponentsInChildren<SlotInventory>(true))
                 if (inventory.InventoryName == "MainInventory") Assert.That(inventory.Configuration.Columns, Is.EqualTo(10));

@@ -14,9 +14,6 @@ namespace UI.Containers
     {
         [Inject] private CharacterCatalog _characterCatalog;
 
-        private static ContainerScreen _instance;
-        public static ContainerScreen Instance => _instance
-            ? _instance : throw new InvalidOperationException("The required ContainerScreen is missing from SystemRoot.");
         [SerializeField] private UIDocument document;
         private VisualElement _root, _bagGrid, _containerGrid;
         private Label _title, _owner, _message;
@@ -26,9 +23,7 @@ namespace UI.Containers
 
         private void Awake()
         {
-            if (_instance && _instance != this) throw new InvalidOperationException("Only one ContainerScreen may be active.");
             ValidateConfiguration();
-            _instance = this;
         }
 
         public void ValidateConfiguration()
@@ -47,9 +42,6 @@ namespace UI.Containers
             base.OnDisable();
             this.Unsubscribe<InventoryChangedEvent>();
         }
-        private void OnDestroy() { if (_instance == this) _instance = null; }
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetInstance() => _instance = null;
 
         private void BindDocument()
         {

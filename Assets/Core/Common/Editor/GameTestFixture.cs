@@ -125,11 +125,7 @@ namespace Core.Common.Editor
                     var services = Object.Instantiate(prefab, _serviceRoot.transform);
                     SystemRoot.ConfigureServices(builder, services);
                 }
-                else
-                {
-                    var configuration = prefab.GetComponent<SystemRoot>();
-                    GameServices.Register(builder, configuration.Player, configuration.Items, configuration.Clock);
-                }
+                else prefab.GetComponent<SystemRoot>().RegisterServices(builder);
                 _container = builder.Build();
                 return _container;
             }
