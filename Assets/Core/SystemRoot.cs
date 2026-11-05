@@ -12,6 +12,7 @@ using VContainer;
 using VContainer.Unity;
 #if UNITY_EDITOR
 using Core.Game;
+using EditorSessionState = UnityEditor.SessionState;
 #endif
 
 namespace Core
@@ -62,10 +63,10 @@ namespace Core
                 container.InjectGameObject(root);
 #if UNITY_EDITOR
                 // A requested slot is loaded once, before any location is entered.
-                var startSlot = SessionState.GetString(EditorStartSlotKey, "");
+                var startSlot = EditorSessionState.GetString(EditorStartSlotKey, "");
                 if (startSlot != "")
                 {
-                    SessionState.EraseString(EditorStartSlotKey);
+                    EditorSessionState.EraseString(EditorStartSlotKey);
                     if (!container.Resolve<GameStateManager>().Load(startSlot))
                         throw new InvalidOperationException($"The requested start slot '{startSlot}' does not exist.");
                 }
