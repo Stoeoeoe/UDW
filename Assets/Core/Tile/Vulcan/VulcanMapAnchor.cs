@@ -6,6 +6,9 @@ namespace Core.Tile.Vulcanus
 {
     public class VulcanusMapAnchor : MonoBehaviour
     {
+        /// <summary>Authored in Vulcanus: the anchor where the player starts a location when no entry is given.</summary>
+        public const string DebugSpawnPointTag = "debug_spawn_point";
+
         [SerializeField] private string anchorId;
         [SerializeField] private string anchorName;
         [SerializeField] private Vector2 facingDirection = Vector2.zero;

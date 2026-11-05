@@ -297,6 +297,10 @@ namespace Core.Location
             if (TryPlaceCharacterAtEntry(character, entryKey, resolvedFacing))
                 return;
 
+            // Without an explicit entry the authored debug spawn point wins over the legacy test SpawnPoint.
+            if (string.IsNullOrWhiteSpace(entryKey) && _mapManager.TryPlaceCharacterAtDebugSpawn(character, resolvedFacing))
+                return;
+
             var spawnPoints = FindObjectsByType<SpawnPoint>(FindObjectsSortMode.None);
             var target = !string.IsNullOrWhiteSpace(entryKey)
                 ? Array.Find(spawnPoints, sp => string.Equals(sp.Key, entryKey, StringComparison.OrdinalIgnoreCase))

@@ -256,6 +256,25 @@ namespace Core.Tile
             if (character == null || !TryGetAnchor(entryKey, out var anchor))
                 return false;
 
+            PlaceAtAnchor(character, anchor, facingDirection);
+            return true;
+        }
+
+        /// <summary>Places the character at the location's debug spawn point; false when the map authors none.</summary>
+        public bool TryPlaceCharacterAtDebugSpawn(GameCharacter character, Vector2 facingDirection)
+        {
+            var anchors = Array.FindAll(FindObjectsByType<VulcanusMapAnchor>(FindObjectsSortMode.None),
+                candidate => Array.IndexOf(candidate.Tags, VulcanusMapAnchor.DebugSpawnPointTag) >= 0);
+            if (anchors.Length == 0) return false;
+            // Vulcanus keeps the tag unique per map, so several mean broken authored content.
+            if (anchors.Length > 1)
+                throw new InvalidOperationException($"The map has {anchors.Length} anchors tagged '{VulcanusMapAnchor.DebugSpawnPointTag}'; expected one.");
+            PlaceAtAnchor(character, anchors[0], facingDirection);
+            return true;
+        }
+
+        private static void PlaceAtAnchor(GameCharacter character, VulcanusMapAnchor anchor, Vector2 facingDirection)
+        {
             character.transform.position = anchor.transform.position;
 
             var resolvedFacing = anchor.FacingDirection != Vector2.zero
@@ -263,7 +282,6 @@ namespace Core.Tile
                 : (facingDirection != Vector2.zero ? facingDirection : Vector2.down);
             character.Orientation.ForceDirection(resolvedFacing);
             character.Tiles.OnPlaced();
-            return true;
         }
 
         #endregion

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
+using Core.Tile.Vulcanus;
 using Interaction;
 using NUnit.Framework;
 using UnityEngine;
@@ -119,6 +120,59 @@ namespace Core.Location.Editor
             Call(_level, "PlaceCharacterAtSpawn", _player, entryKey, Vector2.left);
             Assert.That(_player.transform.position, Is.EqualTo(root.transform.position));
             Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        public void BlankEntryPlacesThePlayerAtTheDebugSpawnPointInsteadOfTheLegacySpawn(string entryKey)
+        {
+            var legacy = Game.Own(new GameObject("Legacy spawn"));
+            legacy.transform.position = new Vector3(1, 1, 0);
+            legacy.AddComponent<SpawnPoint>();
+            var anchor = CreateAnchor("test:start", new Vector3(50, 60, 0), Vector2.right, VulcanusMapAnchor.DebugSpawnPointTag);
+            Call(_level, "PlaceCharacterAtSpawn", _player, entryKey, Vector2.left);
+            Assert.That(_player.transform.position, Is.EqualTo(anchor.transform.position));
+            Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.right), "The anchor's facing wins.");
+        }
+
+        [Test]
+        public void ExplicitEntriesIgnoreTheDebugSpawnPoint()
+        {
+            CreateAnchor("test:start", new Vector3(50, 60, 0), Vector2.zero, VulcanusMapAnchor.DebugSpawnPointTag);
+            var door = CreateAnchor("test:door", new Vector3(7, 8, 0), Vector2.zero);
+            Call(_level, "PlaceCharacterAtSpawn", _player, "test:door", Vector2.down);
+            Assert.That(_player.transform.position, Is.EqualTo(door.transform.position));
+        }
+
+        [Test]
+        public void MapWithoutADebugSpawnPointKeepsUsingTheLegacySpawn()
+        {
+            CreateAnchor("test:door", new Vector3(7, 8, 0), Vector2.zero);
+            var legacy = Game.Own(new GameObject("Legacy spawn"));
+            legacy.transform.position = new Vector3(123, 456, 0);
+            legacy.AddComponent<SpawnPoint>();
+            Call(_level, "PlaceCharacterAtSpawn", _player, null, Vector2.down);
+            Assert.That(_player.transform.position, Is.EqualTo(legacy.transform.position));
+        }
+
+        [Test]
+        public void DuplicateDebugSpawnPointsFailClearly()
+        {
+            CreateAnchor("test:a", Vector3.zero, Vector2.zero, VulcanusMapAnchor.DebugSpawnPointTag);
+            CreateAnchor("test:b", Vector3.one, Vector2.zero, VulcanusMapAnchor.DebugSpawnPointTag);
+            var error = Assert.Throws<TargetInvocationException>(() =>
+                typeof(LevelManager).GetMethod("PlaceCharacterAtSpawn", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(_level, new object[] { _player, null, Vector2.down }));
+            Assert.That(error.InnerException, Is.TypeOf<InvalidOperationException>());
+            StringAssert.Contains(VulcanusMapAnchor.DebugSpawnPointTag, error.InnerException.Message);
+        }
+
+        private VulcanusMapAnchor CreateAnchor(string id, Vector3 position, Vector2 facing, params string[] tags)
+        {
+            var anchor = Game.Own(new GameObject(id)).AddComponent<VulcanusMapAnchor>();
+            anchor.transform.position = position;
+            anchor.Configure(id, id, facing, tags);
+            return anchor;
         }
 
         private void SetReady(bool value) => Game.Ready = value;
