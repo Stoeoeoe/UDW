@@ -22,6 +22,7 @@ using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 using VContainer;
 using Object = UnityEngine.Object;
+using PreserveAttribute = UnityEngine.Scripting.PreserveAttribute;
 using static Core.Common.Editor.Reflect;
 
 namespace Core.Scripting.Editor
