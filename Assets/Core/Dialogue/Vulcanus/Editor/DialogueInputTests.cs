@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Character;
@@ -10,7 +9,6 @@ using UI.Shared;
 using UI.Shared.Editor;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using static Core.Common.Editor.Reflect;
 using Object = UnityEngine.Object;
@@ -123,33 +121,32 @@ namespace Core.Dialogue.Vulcanus.Editor
             Assert.That(anchor.ClassListContains("is-top"), Is.EqualTo(heroY > 0f));
         }
 
-        [UnityTest]
-        public IEnumerator DialogueFillsTheViewportAndRendersAtTheSelectedEdge()
+        [Test]
+        public void DialogueFillsTheViewportAndRendersAtTheSelectedEdge()
         {
-            try
-            {
-                _character.transform.position = new Vector3(0f, 3f, 0f);
-                Start();
-                yield return null;
-                yield return null;
+            _character.transform.position = new Vector3(0f, 3f, 0f);
+            Start();
+            var viewport = LayOut();
+            var panel = _document.rootVisualElement.Q("dialogue-panel");
+            Assert.That(Overlay.worldBound.height, Is.EqualTo(viewport.height).Within(1f));
+            Assert.That(panel.parent.worldBound.yMax, Is.EqualTo(viewport.yMax - 24f).Within(1f),
+                "Bottom placement must move the rendered box, not just set its class.");
+            _runner.StopDialogue();
 
-                var viewport = Overlay.panel.visualTree.worldBound;
-                var panel = _document.rootVisualElement.Q("dialogue-panel");
-                Assert.That(Overlay.worldBound.height, Is.EqualTo(viewport.height).Within(1f));
-                Assert.That(panel.parent.worldBound.yMax, Is.EqualTo(viewport.yMax - 24f).Within(1f),
-                    "Bottom placement must move the rendered box, not just set its class.");
-                _runner.StopDialogue();
+            _character.transform.position = new Vector3(0f, -3f, 0f);
+            Start(choice: true);
+            LayOut();
+            Assert.That(panel.worldBound.yMin, Is.EqualTo(viewport.yMin + 24f).Within(1f));
+        }
 
-                _character.transform.position = new Vector3(0f, -3f, 0f);
-                Start(choice: true);
-                yield return null;
-                yield return null;
-                Assert.That(panel.worldBound.yMin, Is.EqualTo(viewport.yMin + 24f).Within(1f));
-            }
-            finally
-            {
-                _runner.StopDialogue();
-            }
+        // Runtime panels only lay out when the Game view repaints, which edit-mode tests cannot rely on.
+        private Rect LayOut()
+        {
+            var panel = Overlay.panel;
+            GameTestFixture.Invoke(panel, "UpdateForRepaint");
+            var viewport = panel.visualTree.worldBound;
+            Assert.That(viewport.height, Is.GreaterThan(0f), "The runtime panel did not lay out.");
+            return viewport;
         }
 
         [TestCase("base:villager")]
