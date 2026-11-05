@@ -37,6 +37,12 @@ namespace Core.Game
         public StoryState Story => _state.Story;
         public GameTimeState Time => _state.Time;
 
+        /// <summary>The slot this session was loaded from or last saved to; null until the first load or save.</summary>
+        public string CurrentSlot { get; private set; }
+
+        /// <summary>Saves to <see cref="CurrentSlot"/>.</summary>
+        public void Save() => Save(CurrentSlot ?? throw new InvalidOperationException("The session has no current slot; save to a named slot first."));
+
         public void Save(string slot)
         {
             if (_cutsceneRunner.IsRunning)
@@ -46,6 +52,7 @@ namespace Core.Game
             _state.Data.schemaVersion = GameSaveData.CurrentVersion;
             _state.Data.worldBaselineVersion = WorldBaselineVersion;
             _saves.Save(slot, _state.Data);
+            CurrentSlot = slot;
         }
 
         // Outside a ready location (scene-less tests, before the first entry) the previous resume point is kept.
@@ -72,7 +79,15 @@ namespace Core.Game
             // The deserialized root is the live state; there is no second field-by-field restore path.
             _state.Restore(data);
             _clock.ApplySavedTime();
+            CurrentSlot = slot;
             return true;
+        }
+
+        /// <summary>Loads the most recently saved readable slot; false when there is none.</summary>
+        public bool Continue()
+        {
+            var slot = _saves.GetLastPlayedSlot();
+            return slot != null && Load(slot);
         }
     }
 }

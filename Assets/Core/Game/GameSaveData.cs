@@ -15,6 +15,8 @@ namespace Core.Game
 
         public int schemaVersion = CurrentVersion;
         public int worldBaselineVersion = 1;
+        /// <summary>The player-facing slot name; null falls back to the slot ID.</summary>
+        public string saveName;
         public PlayerState player = new();
         public StoryState story = new();
         public GameTimeState time = new();
@@ -31,6 +33,8 @@ namespace Core.Game
                 story == null || time == null || world?.GetLocations() == null || session == null)
                 throw new FormatException("The save is missing a required state section.");
             session.Validate();
+            if (saveName != null && string.IsNullOrWhiteSpace(saveName))
+                throw new FormatException("The save contains a blank save name.");
 
             foreach (var charge in player.Inventory.ToolCharges)
                 if (string.IsNullOrWhiteSpace(charge.Key) || charge.Value == null || charge.Value.Capacity <= 0 ||

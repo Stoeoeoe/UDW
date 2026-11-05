@@ -453,7 +453,8 @@ namespace Core.Game.Editor
             }
             foreach (var field in typeof(GameSaveData).GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
-                if (field.Name == nameof(GameSaveData.schemaVersion) || field.Name == nameof(GameSaveData.worldBaselineVersion))
+                if (field.Name == nameof(GameSaveData.schemaVersion) || field.Name == nameof(GameSaveData.worldBaselineVersion) ||
+                    field.Name == nameof(GameSaveData.saveName))
                     continue;
                 var name = char.ToUpperInvariant(field.Name[0]) + field.Name.Substring(1);
                 Assert.That(facade.GetProperty(name, BindingFlags.Public | BindingFlags.Instance), Is.Not.Null,
