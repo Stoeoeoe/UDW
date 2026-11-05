@@ -273,14 +273,15 @@ namespace Core.Tile
             return true;
         }
 
-        private static void PlaceAtAnchor(GameCharacter character, VulcanusMapAnchor anchor, Vector2 facingDirection)
-        {
-            character.transform.position = anchor.transform.position;
+        private static void PlaceAtAnchor(GameCharacter character, VulcanusMapAnchor anchor, Vector2 facingDirection) =>
+            PlaceCharacterAt(character, anchor.transform.position,
+                anchor.FacingDirection != Vector2.zero ? anchor.FacingDirection : facingDirection);
 
-            var resolvedFacing = anchor.FacingDirection != Vector2.zero
-                ? anchor.FacingDirection
-                : (facingDirection != Vector2.zero ? facingDirection : Vector2.down);
-            character.Orientation.ForceDirection(resolvedFacing);
+        /// <summary>Puts the character at a world position facing a direction (down when none is given).</summary>
+        public static void PlaceCharacterAt(GameCharacter character, Vector3 position, Vector2 facingDirection)
+        {
+            character.transform.position = position;
+            character.Orientation.ForceDirection(facingDirection != Vector2.zero ? facingDirection : Vector2.down);
             character.Tiles.OnPlaced();
         }
 

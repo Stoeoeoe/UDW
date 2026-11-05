@@ -10,6 +10,9 @@ using UI.Containers;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
+#if UNITY_EDITOR
+using Core.Game;
+#endif
 
 namespace Core
 {
@@ -18,6 +21,10 @@ namespace Core
     public class SystemRoot : LifetimeScope
     {
         public const string PrefabPath = "Assets/Resources/SystemRoot.prefab";
+#if UNITY_EDITOR
+        /// <summary>Editor only: a slot to load before the first location. Set by Play Mode tests and start-mode buttons.</summary>
+        public const string EditorStartSlotKey = "UrdewValley.StartSlot";
+#endif
 
         [SerializeField] private PlayerSettings player = new();
         [SerializeField] private ItemSettings items = new();
@@ -53,6 +60,16 @@ namespace Core
             builder.RegisterBuildCallback(container =>
             {
                 container.InjectGameObject(root);
+#if UNITY_EDITOR
+                // A requested slot is loaded once, before any location is entered.
+                var startSlot = SessionState.GetString(EditorStartSlotKey, "");
+                if (startSlot != "")
+                {
+                    SessionState.EraseString(EditorStartSlotKey);
+                    if (!container.Resolve<GameStateManager>().Load(startSlot))
+                        throw new InvalidOperationException($"The requested start slot '{startSlot}' does not exist.");
+                }
+#endif
                 // These session subscriptions must exist before the first overnight transition.
                 container.Resolve<PlantManager>();
                 container.Resolve<DivineFavour>();

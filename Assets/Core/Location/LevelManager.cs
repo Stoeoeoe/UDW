@@ -76,8 +76,36 @@ namespace Core.Location
         IEnumerator Start()
         {
             var location = ResolveInitialLocation();
+            var saved = _gameState.Session;
+            if (saved.LocationId != null)
+            {
+                yield return ResumeSavedLocation(location, saved);
+                yield break;
+            }
+
             SetCurrentLocation(location);
             yield return EnterLocationRoutine(location, _initialEntryKey, _initialFacingDirection);
+        }
+
+        // A loaded save resumes where it was made. The screen is still covered from startup (ScreenFader.Awake),
+        // so a different scene can replace the open one without the player seeing it.
+        IEnumerator ResumeSavedLocation(LocationData open, SessionState saved)
+        {
+            var location = _locations.Get(saved.LocationId)
+                ?? throw new InvalidOperationException($"The saved location '{saved.LocationId}' is not a registered, enabled location.");
+            if (!string.Equals(location.id, open.id, StringComparison.OrdinalIgnoreCase))
+            {
+                var openScene = SceneManager.GetActiveScene();
+                yield return SceneManager.LoadSceneAsync(location.ScenePath, LoadSceneMode.Additive);
+                SceneManager.SetActiveScene(GetLoadedScene(location.ScenePath));
+                yield return SceneManager.UnloadSceneAsync(openScene);
+                yield return null; // Allow the new scene's OnEnable to fire so components can register.
+            }
+
+            SetCurrentLocation(location);
+            yield return EnterLocationRoutine(location, placeCharacter: player =>
+                MapManager.PlaceCharacterAt(player,
+                    new Vector3(saved.Position.x, saved.Position.y, player.transform.position.z), saved.Facing));
         }
 
         LocationData ResolveInitialLocation()

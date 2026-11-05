@@ -3,6 +3,8 @@ using System.Collections;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
+using Core.Game;
+using Core.Tile;
 using Core.Tile.Vulcanus;
 using Interaction;
 using NUnit.Framework;
@@ -133,6 +135,25 @@ namespace Core.Location.Editor
             Call(_level, "PlaceCharacterAtSpawn", _player, entryKey, Vector2.left);
             Assert.That(_player.transform.position, Is.EqualTo(anchor.transform.position));
             Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.right), "The anchor's facing wins.");
+        }
+
+        [Test]
+        public void PlacingACharacterSetsItsPositionAndFacingDefaultingToDown()
+        {
+            MapManager.PlaceCharacterAt(_player, new Vector3(9, -4, 0), Vector2.left);
+            Assert.That(_player.transform.position, Is.EqualTo(new Vector3(9, -4, 0)));
+            Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
+            MapManager.PlaceCharacterAt(_player, Vector3.one, Vector2.zero);
+            Assert.That(_player.Orientation.FacingDirection, Is.EqualTo(Vector2.down));
+        }
+
+        [Test]
+        public void ResumingAnUnknownSavedLocationFailsClearly()
+        {
+            var saved = new SessionState { LocationId = "missing-mod:cave" };
+            var routine = (IEnumerator)Call(_level, "ResumeSavedLocation", _location, saved);
+            var error = Assert.Throws<InvalidOperationException>(() => routine.MoveNext());
+            StringAssert.Contains("missing-mod:cave", error.Message);
         }
 
         [Test]
