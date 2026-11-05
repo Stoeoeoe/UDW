@@ -5,6 +5,9 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using VContainer;
 using VContainer.Unity;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Core.Items
 {

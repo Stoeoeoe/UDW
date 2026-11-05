@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using Core.Common;
 using Sirenix.OdinInspector;
 using UnityEngine;
+#if UNITY_EDITOR
+using System.Linq;
+#endif
 
 namespace Core.Scripting
 {
@@ -51,13 +54,13 @@ namespace Core.Scripting
             cutsceneId = id;
             mapId = map;
             lua = script;
-            steps = Enumerable.ToArray(importedSteps);
+            steps = importedSteps.ToArray();
             _steps = null;
             allowSkip = skipAllowed;
             transition = presentation ?? new CutsceneTransition();
             onComplete = completionPlan;
             onStartLua = setupScript;
-            onStart = Enumerable.ToArray(setupSteps);
+            onStart = setupSteps.ToArray();
             _onStart = null;
             variables = localVariables ?? Array.Empty<CutsceneVariableDefinition>();
             RequireValidConfiguration();

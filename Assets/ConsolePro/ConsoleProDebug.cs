@@ -1,6 +1,7 @@
 using UnityEngine;
 using Object = UnityEngine.Object;
 #if UNITY_EDITOR
+using System;
 using System.Reflection;
 #endif
 

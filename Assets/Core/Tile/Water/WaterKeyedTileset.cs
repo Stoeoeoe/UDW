@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using Object = UnityEngine.Object;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.AssetImporters;
+using UnityEditor.U2D.Aseprite;
+#endif
 
 namespace Core.Tile.Water.Editor
 {

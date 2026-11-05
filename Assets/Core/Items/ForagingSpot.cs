@@ -8,6 +8,9 @@ using UnityEngine;
 using Util;
 using VContainer;
 using Random = UnityEngine.Random;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Core.Items
 {
