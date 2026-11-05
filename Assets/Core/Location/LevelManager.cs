@@ -91,21 +91,76 @@ namespace Core.Location
         // so a different scene can replace the open one without the player seeing it.
         IEnumerator ResumeSavedLocation(LocationData open, SessionState saved)
         {
-            var location = _locations.Get(saved.LocationId)
-                ?? throw new InvalidOperationException($"The saved location '{saved.LocationId}' is not a registered, enabled location.");
+            var location = RequireSavedLocation(saved.LocationId);
             if (!string.Equals(location.id, open.id, StringComparison.OrdinalIgnoreCase))
-            {
-                var openScene = SceneManager.GetActiveScene();
-                yield return SceneManager.LoadSceneAsync(location.ScenePath, LoadSceneMode.Additive);
-                SceneManager.SetActiveScene(GetLoadedScene(location.ScenePath));
-                yield return SceneManager.UnloadSceneAsync(openScene);
-                yield return null; // Allow the new scene's OnEnable to fire so components can register.
-            }
+                yield return ReplaceActiveScene(location);
+            yield return EnterSavedLocation(location, saved);
+        }
 
+        private LocationData RequireSavedLocation(string locationId) =>
+            _locations.Get(locationId)
+            ?? throw new InvalidOperationException($"The saved location '{locationId}' is not a registered, enabled location.");
+
+        // Loads a fresh copy of the location's scene and unloads the active one, even when they are the same location.
+        private static IEnumerator ReplaceActiveScene(LocationData location)
+        {
+            var previous = SceneManager.GetActiveScene();
+            yield return SceneManager.LoadSceneAsync(location.ScenePath, LoadSceneMode.Additive);
+            SceneManager.SetActiveScene(SceneManager.GetSceneAt(SceneManager.sceneCount - 1));
+            yield return SceneManager.UnloadSceneAsync(previous);
+            yield return null; // Allow the new scene's OnEnable to fire so components can register.
+        }
+
+        private IEnumerator EnterSavedLocation(LocationData location, SessionState saved)
+        {
             SetCurrentLocation(location);
             yield return EnterLocationRoutine(location, placeCharacter: player =>
                 MapManager.PlaceCharacterAt(player,
                     new Vector3(saved.Position.x, saved.Position.y, player.transform.position.z), saved.Facing));
+        }
+
+        /// <summary>
+        /// Replaces the running game with a loaded save behind a covered screen. <paramref name="replaceState"/> swaps in the
+        /// loaded state once the old player is gone; the caller has already read and validated the save.
+        /// Returns false while a transition is running or the location is not ready.
+        /// </summary>
+        public bool ReloadGame(string savedLocationId, Action replaceState)
+        {
+            if (!SceneReady || _transitionInProgress) return false;
+            var location = RequireSavedLocation(savedLocationId); // Fail before anything changes.
+            StartCoroutine(ReloadRoutine(location, replaceState));
+            return true;
+        }
+
+        private IEnumerator ReloadRoutine(LocationData location, Action replaceState)
+        {
+            _transitionInProgress = true;
+            SceneReady = false;
+            var character = _characterManager.MainCharacter;
+            try
+            {
+                LocationLeaving?.Invoke();
+                character.SetControlBlocked(this, true);
+                yield return _urGUIManager.CoverScene(character.transform);
+
+                _locationEntered = false;
+                foreach (var component in _lifecycleComponents.ToArray())
+                    if (_lifecycleComponents.Contains(component) && CanReceiveLocation(component, CurrentLocationData))
+                        component.OnLocationLeave(CurrentLocationData);
+
+                // The old player unbinds from the state it was bound to, so it is destroyed before the state is replaced.
+                _characterManager.UnregisterMainCharacter(character);
+                Destroy(character.gameObject);
+                yield return null;
+
+                replaceState();
+                yield return ReplaceActiveScene(location);
+                yield return EnterSavedLocation(location, _gameState.Session);
+            }
+            finally
+            {
+                _transitionInProgress = false;
+            }
         }
 
         LocationData ResolveInitialLocation()

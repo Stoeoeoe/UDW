@@ -1,4 +1,5 @@
 using System;
+using Core.Context;
 using Core.Location;
 using Core.Scripting;
 using Core.Spawning;
@@ -16,10 +17,17 @@ namespace Core.Game
         private readonly LocationContext _location;
         private readonly GameClock _clock;
         private readonly CharacterManager _characters;
+        private readonly PlayerInteractionContext _interaction;
+        private readonly LevelManager _level;
+        // Reserved for the development quick save; it never becomes the session's current slot.
+        private readonly string _quickSaveSlot = "quicksave";
 
         public GameStateManager(GameState state, GameSaveService saves, CutsceneRunner cutsceneRunner,
-            WorldObjectSpawner worldObjectSpawner, LocationContext location, GameClock clock, CharacterManager characters)
+            WorldObjectSpawner worldObjectSpawner, LocationContext location, GameClock clock, CharacterManager characters,
+            PlayerInteractionContext interaction, LevelManager level)
         {
+            _interaction = interaction;
+            _level = level;
             _characters = characters;
             _state = state;
             _saves = saves;
@@ -45,6 +53,12 @@ namespace Core.Game
 
         public void Save(string slot)
         {
+            WriteSave(slot);
+            CurrentSlot = slot;
+        }
+
+        private void WriteSave(string slot)
+        {
             if (_cutsceneRunner.IsRunning)
                 throw new InvalidOperationException("Cannot save while a cutscene is staging actors. Save after its terminal cleanup.");
             _worldObjectSpawner.SavePositions();
@@ -52,7 +66,43 @@ namespace Core.Game
             _state.Data.schemaVersion = GameSaveData.CurrentVersion;
             _state.Data.worldBaselineVersion = WorldBaselineVersion;
             _saves.Save(slot, _state.Data);
-            CurrentSlot = slot;
+        }
+
+        /// <summary>Whether the player is free to quick save or quick load: no cutscene, overnight sequence, dialogue, open screen or transition.</summary>
+        public bool CanSaveOrLoadNow =>
+            _location.SceneReady && !_cutsceneRunner.IsRunning && !_clock.IsOvernight &&
+            _interaction.CurrentSnapshot.CanInteractWithWorld && string.IsNullOrEmpty(_interaction.CurrentSnapshot.CurrentConversation);
+
+        /// <summary>Saves to the reserved quick-save slot, leaving <see cref="CurrentSlot"/> alone; false when not allowed right now.</summary>
+        public bool QuickSave()
+        {
+            if (!CanSaveOrLoadNow) return false;
+            WriteSave(_quickSaveSlot);
+            return true;
+        }
+
+        /// <summary>
+        /// Replaces the running game with the quick save behind a fade, leaving <see cref="CurrentSlot"/> alone.
+        /// False when not allowed right now or nothing was quick saved. An unreadable save throws before anything changes.
+        /// </summary>
+        public bool QuickLoad()
+        {
+            if (!CanSaveOrLoadNow || !_saves.TryLoad(_quickSaveSlot, out var data)) return false;
+            RequireCurrentBaseline(data);
+            return _level.ReloadGame(data.session.LocationId, () => Restore(data));
+        }
+
+        private static void RequireCurrentBaseline(GameSaveData data)
+        {
+            if (data.worldBaselineVersion != WorldBaselineVersion)
+                throw new NotSupportedException($"World baseline version {data.worldBaselineVersion} needs a migration to {WorldBaselineVersion}.");
+        }
+
+        private void Restore(GameSaveData data)
+        {
+            // The deserialized root is the live state; there is no second field-by-field restore path.
+            _state.Restore(data);
+            _clock.ApplySavedTime();
         }
 
         // Outside a ready location (scene-less tests, before the first entry) the previous resume point is kept.
@@ -73,12 +123,8 @@ namespace Core.Game
                 throw new InvalidOperationException("Load game state before entering a location; active scene objects are not rehydrated yet.");
 
             if (!_saves.TryLoad(slot, out var data)) return false;
-            if (data.worldBaselineVersion != WorldBaselineVersion)
-                throw new NotSupportedException($"World baseline version {data.worldBaselineVersion} needs a migration to {WorldBaselineVersion}.");
-
-            // The deserialized root is the live state; there is no second field-by-field restore path.
-            _state.Restore(data);
-            _clock.ApplySavedTime();
+            RequireCurrentBaseline(data);
+            Restore(data);
             CurrentSlot = slot;
             return true;
         }

@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Animancer;
 using Character;
 using Character.Animations;
@@ -18,6 +20,7 @@ using UI.Shared.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
@@ -195,6 +198,61 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_canvas.alpha, Is.Zero);
             Assert.That(_canvas.blocksRaycasts, Is.False);
             AssertClockResumes();
+        }
+
+        [Test]
+        public void SleepSavesTheNewMorningToTheCurrentSlot()
+        {
+            var session = Game.Get<GameStateManager>();
+            var slot = "test-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                session.Save(slot);
+                NextYield();
+                DOTween.Complete(_canvas, true);
+                Assert.That(NextYield(), Is.TypeOf<WaitForSecondsRealtime>(), "The new morning has started and been saved before the reveal.");
+
+                Assert.That(Game.Get<GameSaveService>().TryLoad(slot, out var saved), Is.True);
+                Assert.That(saved.time.daysSinceStart, Is.EqualTo(6));
+                Assert.That(saved.time.hour, Is.EqualTo(6));
+                Assert.That(saved.session.Position, Is.EqualTo(new Vector2(3, 2)), "The save is made with the player at the bed.");
+            }
+            finally { Game.Get<GameSaveService>().Delete(slot); }
+        }
+
+        [Test]
+        public void SleepWithoutACurrentSlotStillAdvancesTheDay()
+        {
+            Assert.That(Game.Get<GameStateManager>().CurrentSlot, Is.Null);
+            NextYield();
+            DOTween.Complete(_canvas, true);
+            Assert.That(NextYield(), Is.TypeOf<WaitForSecondsRealtime>());
+            Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void AFailedAutosaveIsLoggedAndDoesNotBlockTheNewDay()
+        {
+            var session = Game.Get<GameStateManager>();
+            var slot = "test-" + Guid.NewGuid().ToString("N");
+            var path = GameSaveService.GetSavePath(slot);
+            try
+            {
+                session.Save(slot);
+                // A folder where the save file belongs makes the next write fail like a real disk problem.
+                File.Delete(path);
+                Directory.CreateDirectory(path);
+                NextYield();
+                DOTween.Complete(_canvas, true);
+                LogAssert.Expect(LogType.Error, new Regex($"Autosave to slot '{slot}' failed"));
+                Assert.That(NextYield(), Is.TypeOf<WaitForSecondsRealtime>());
+                Assert.That(Game.State.Time.daysSinceStart, Is.EqualTo(6));
+            }
+            finally
+            {
+                if (Directory.Exists(path)) Directory.Delete(path);
+                Game.Get<GameSaveService>().Delete(slot);
+            }
         }
 
         [Test]

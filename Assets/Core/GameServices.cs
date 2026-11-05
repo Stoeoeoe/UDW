@@ -40,6 +40,9 @@ namespace Core
             builder.Register<WorldObjectSpawner>(Lifetime.Singleton);
             builder.Register<GameStateManager>(Lifetime.Singleton);
             builder.Register<GameSaveService>(Lifetime.Singleton);
+#if UNITY_EDITOR || DEBUG
+            builder.Register<DevQuickSave>(Lifetime.Singleton).As<ITickable>();
+#endif
             builder.Register<LuaRuntime>(Lifetime.Singleton);
             builder.Register<TypewriterSoundResolver>(Lifetime.Singleton);
             builder.Register<VulcanusDialogueRunner>(Lifetime.Singleton);
