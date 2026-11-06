@@ -1,0 +1,29 @@
+:root {
+    --menu-ink: rgb(49, 43, 32);
+    --menu-paper: rgb(238, 226, 193);
+    --menu-paper-light: rgb(249, 242, 218);
+    --menu-green: rgb(75, 105, 67);
+    --menu-gold: rgb(177, 139, 73);
+    --menu-red: rgb(139, 58, 48);
+}
+.main-menu { flex-grow: 1; justify-content: center; align-items: center; background-color: rgb(24, 30, 25); }
+.main-menu-panel { width: 460px; max-width: 92%; max-height: 92%; padding: 20px; background-color: var(--menu-paper); border-width: 5px; border-color: var(--menu-gold); border-radius: 12px; }
+.main-menu-title { color: var(--menu-ink); font-size: 34px; -unity-font-style: bold; -unity-text-align: middle-center; margin-bottom: 16px; }
+.main-menu-view { display: none; flex-shrink: 1; min-height: 0; }
+.main-menu-view.is-shown { display: flex; }
+.main-menu-heading { color: var(--menu-ink); font-size: 20px; -unity-font-style: bold; margin-bottom: 10px; }
+.main-menu-note { color: var(--menu-ink); font-size: 14px; white-space: normal; margin-bottom: 10px; }
+.main-menu-button { min-height: 38px; margin: 4px 0; color: var(--menu-ink); background-color: var(--menu-paper-light); border-width: 2px; border-color: transparent; font-size: 16px; -unity-text-align: middle-center; }
+.main-menu-button:focus { border-color: var(--menu-gold); }
+.main-menu-button:disabled { opacity: 0.45; }
+.main-menu-button.is-primary { color: white; background-color: var(--menu-green); }
+.main-menu-button.is-danger { color: white; background-color: var(--menu-red); }
+.main-menu-field { margin-bottom: 10px; }
+.main-menu-slots { flex-shrink: 1; min-height: 0; max-height: 360px; margin-bottom: 8px; }
+.main-menu-slot { flex-direction: row; align-items: center; padding: 8px; margin-bottom: 6px; background-color: var(--menu-paper-light); border-radius: 6px; }
+.main-menu-slot-info { flex-grow: 1; flex-shrink: 1; }
+.main-menu-slot-name { color: var(--menu-ink); font-size: 16px; -unity-font-style: bold; }
+.main-menu-slot-detail { color: var(--menu-ink); font-size: 12px; white-space: normal; }
+.main-menu-slot-error .main-menu-slot-detail { color: var(--menu-red); }
+.main-menu-slot-actions { flex-direction: row; flex-shrink: 0; margin-left: 8px; }
+.main-menu-slot-actions .main-menu-button { margin: 0 0 0 4px; min-width: 64px; min-height: 30px; font-size: 14px; }

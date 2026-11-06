@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="MainMenu.uss" />
+    <ui:VisualElement name="menuRoot" class="main-menu">
+        <ui:VisualElement class="main-menu-panel">
+            <ui:Label text="Urdew Valley" class="main-menu-title" />
+
+            <ui:VisualElement name="titleView" class="main-menu-view">
+                <ui:Button name="continueButton" text="Continue" class="main-menu-button" />
+                <ui:Button name="newGameButton" text="New Game" class="main-menu-button" />
+                <ui:Button name="loadGameButton" text="Load Game" class="main-menu-button" />
+                <ui:Button name="quitButton" text="Quit" class="main-menu-button" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="newGameView" class="main-menu-view">
+                <ui:Label text="Name your save" class="main-menu-heading" />
+                <ui:TextField name="saveNameField" max-length="40" class="main-menu-field" />
+                <ui:Button name="startButton" text="Start" class="main-menu-button" />
+                <ui:Button name="newGameBackButton" text="Back" class="main-menu-button" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="loadView" class="main-menu-view main-menu-view-wide">
+                <ui:Label text="Load Game" class="main-menu-heading" />
+                <ui:Label name="noSavesLabel" text="There are no saves yet." class="main-menu-note" />
+                <ui:ScrollView name="slotList" class="main-menu-slots" />
+                <ui:Button name="loadBackButton" text="Back" class="main-menu-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
