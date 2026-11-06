@@ -25,6 +25,9 @@ namespace Core
 #if UNITY_EDITOR
         /// <summary>Editor only: a slot to load before the first location. Set by Play Mode tests and start-mode buttons.</summary>
         public const string EditorStartSlotKey = "UrdewValley.StartSlot";
+
+        /// <summary>Editor only: starts a new game with this save name before the first location. Used once.</summary>
+        public const string EditorNewGameKey = "UrdewValley.NewGame";
 #endif
 
         [SerializeField] private PlayerSettings player = new();
@@ -69,6 +72,12 @@ namespace Core
                     EditorSessionState.EraseString(EditorStartSlotKey);
                     if (!container.Resolve<GameStateManager>().Load(startSlot))
                         throw new InvalidOperationException($"The requested start slot '{startSlot}' does not exist.");
+                }
+                var newGame = EditorSessionState.GetString(EditorNewGameKey, "");
+                if (newGame != "")
+                {
+                    EditorSessionState.EraseString(EditorNewGameKey);
+                    container.Resolve<GameStateManager>().NewGame(newGame);
                 }
 #endif
                 // These session subscriptions must exist before the first overnight transition.

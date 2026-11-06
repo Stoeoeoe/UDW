@@ -223,6 +223,7 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             _recorder.Refreshes.Clear();
+            _recorder.TimeChanges.Clear();
             var restored = _settings.seasons[1].season;
             Time.season = restored;
             Time.dayOfSeason = 7;
@@ -234,6 +235,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_clock.CurrentSeason.season, Is.EqualTo(restored));
             Assert.That(_recorder.Refreshes, Has.Count.EqualTo(1));
             Assert.That(Time.TotalMinutes, Is.EqualTo(minutes));
+            Assert.That(_recorder.TimeChanges, Is.EqualTo(new[] { minutes }), "Displays learn about the loaded time.");
             Assert.That(_recorder.NewDays, Is.Empty);
         }
 

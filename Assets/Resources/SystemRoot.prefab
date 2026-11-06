@@ -2190,8 +2190,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 8b92d76454e6af84cbbdb64e9263dc4c, type: 2}
     - {fileID: 11400000, guid: 2b2d483d2d3cdf04b912715bb138ae15, type: 2}
     startingItems: []
-    startingHomeLocation: {fileID: 11400000, guid: 3f3e5bd81c79f0c45bb7c97d7d1f44ce, type: 2}
-    startingBedId: GameObject_10358e7f-122e-406c-8eea-f535e3e0102c
+    startingHomeLocation: {fileID: 447913706122126786, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
+    startingBedId: home_bed
   items:
     magnetRadius: 2.5
     pickupRadius: 0.25
@@ -2295,8 +2295,6 @@ MonoBehaviour:
   pauseWhileOpen: 3
   soundOverrides: {fileID: 0}
   inputActionMap: UI
-  TargetInventoryName: MainInventory
-  PlayerId: Player1
   document: {fileID: 7410992665882482011}
   layoutAsset: {fileID: 9197481963319205126, guid: b087ac3c0bd94e20a5e5d88dd8c6ba3a, type: 3}
   menuPages:
@@ -5235,8 +5233,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bdb68cc8af84675bca4261c497175aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Hotbar.ToolHotbar
-  TargetInventoryName: MainInventory
-  PlayerId: Player1
   HotbarSize: 10
   SlotPrefab: {fileID: 4771265082564708570, guid: 74af61fbc15ca964b8131195da8b36ec, type: 3}
   SlotContainer: {fileID: 5382427714867561101}
@@ -11280,8 +11276,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bdb68cc8af84675bca4261c497175aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Hotbar.ToolHotbar
-  TargetInventoryName: Main
-  PlayerId: Player1
   HotbarSize: 5
   SlotPrefab: {fileID: 0}
   SlotContainer: {fileID: 0}

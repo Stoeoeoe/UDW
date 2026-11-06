@@ -1,15 +1,18 @@
 using System;
+using System.IO;
 using Core.Context;
 using Core.Location;
 using Core.Scripting;
 using Core.Spawning;
 using Core.TimeAndWeather;
+using UnityEngine;
 
 namespace Core.Game
 {
     /// <summary>Owns the current game session's state across location scene loads.</summary>
-    public sealed class GameStateManager
+    public sealed class GameStateManager : IDisposable
     {
+        private bool _saveWhenLocationReady;
         private readonly GameState _state;
         private readonly GameSaveService _saves;
         private readonly CutsceneRunner _cutsceneRunner;
@@ -28,6 +31,7 @@ namespace Core.Game
         {
             _interaction = interaction;
             _level = level;
+            _level.LocationReady += OnLocationReady;
             _characters = characters;
             _state = state;
             _saves = saves;
@@ -47,6 +51,41 @@ namespace Core.Game
 
         /// <summary>The slot this session was loaded from or last saved to; null until the first load or save.</summary>
         public string CurrentSlot { get; private set; }
+
+        /// <summary>
+        /// Starts a fresh game in the next free slot: the starting date and loadout, and the first location at the home bed.
+        /// Like <see cref="Load"/>, only before the first location is entered. The slot is written when that location is ready.
+        /// </summary>
+        public void NewGame(string saveName)
+        {
+            if (_location.SceneReady)
+                throw new InvalidOperationException("Start a new game before entering a location; active scene objects are not rehydrated yet.");
+            Restore(new GameSaveData { saveName = saveName });
+            _state.StartAtHome = true;
+            CurrentSlot = _saves.NextSlotId();
+            _saveWhenLocationReady = true;
+        }
+
+        // Without a current slot (a development start) there is nowhere to save. A disk problem must never break the
+        // sleep sequence or the first location's entry, so it is logged.
+        public void AutoSave()
+        {
+            if (CurrentSlot == null) return;
+            try { Save(); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                Debug.LogError($"Autosave to slot '{CurrentSlot}' failed: {error.Message}");
+            }
+        }
+
+        private void OnLocationReady(LocationData _)
+        {
+            if (!_saveWhenLocationReady) return;
+            _saveWhenLocationReady = false;
+            AutoSave();
+        }
+
+        public void Dispose() => _level.LocationReady -= OnLocationReady;
 
         /// <summary>Saves to <see cref="CurrentSlot"/>.</summary>
         public void Save() => Save(CurrentSlot ?? throw new InvalidOperationException("The session has no current slot; save to a named slot first."));

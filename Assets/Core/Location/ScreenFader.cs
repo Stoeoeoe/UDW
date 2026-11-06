@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using DG.Tweening;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Core.Location
 {
@@ -125,6 +124,15 @@ namespace Core.Location
             var point = _focusCamera.WorldToViewportPoint(_focus.position);
             var rect = _focusCamera.rect;
             _runtimeMaterial.SetVector(Center, new Vector4(rect.x + point.x * rect.width, rect.y + point.y * rect.height, 0f, 0f));
+        }
+
+        /// <summary>Covers the scene at once, without an animation.</summary>
+        public void CoverImmediately()
+        {
+            _revealGeneration++;
+            _fade?.Kill();
+            SetProgress(1f);
+            _canvasGroup.blocksRaycasts = true;
         }
 
         /// <summary>Reveals the scene and releases pointer blocking after a transition finishes or is cancelled.</summary>

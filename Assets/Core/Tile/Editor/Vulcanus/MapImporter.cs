@@ -412,6 +412,7 @@ namespace Core.Tile.Editor.Vulcanus
                     // JSON properties configure gameplay fields, never the shared prefab identity.
                     var serialized = new SerializedObject(instance.GetComponent<SpawnedObject>());
                     serialized.FindProperty("prefabId").stringValue = persistent.PrefabId;
+                    serialized.FindProperty("authoredId").stringValue = dto.Id;
                     serialized.ApplyModifiedPropertiesWithoutUndo();
                     persistentEntities.Add(new AuthoredSpawnPlacement { id = dto.Id, template = instance.GetComponent<SpawnedObject>() });
                 }

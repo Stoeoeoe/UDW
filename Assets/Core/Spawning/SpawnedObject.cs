@@ -1,5 +1,6 @@
 using Core.Common;
 using Interaction;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Core.Spawning
@@ -11,6 +12,9 @@ namespace Core.Spawning
         [NamespacedId]
         [SerializeField] private string prefabId;
         public string PrefabId => prefabId;
+
+        [Tooltip("The Vulcanus entity ID this object was imported from. Set by the importer; shown for reference.")]
+        [ReadOnly] [SerializeField] private string authoredId;
         public virtual SpawnedObjectState CreateState(int currentDay) => new();
 
         public string PersistentId { get; private set; }

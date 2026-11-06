@@ -82,33 +82,39 @@ namespace Core.TimeAndWeather
 
         public void Start()
         {
-            var time = _gameState.Time;
-            if (time.initialized)
-            {
-                _currentSeason = _seasons[time.season];
-            }
-            else
-            {
-                // The starting date is not a day transition: existing plants must not grow.
-                time.daysSinceStart = 1;
-                StartSeason(_settings.startingSeason);
-                time.dayOfSeason = _settings.startingDay;
-                time.hour = _settings.startOfDay;
-                time.minute = 0;
-                time.secondsTowardNextMinute = 0f;
-                time.initialized = true;
-            }
-
+            InitializeCalendar();
             _started = true;
             ConditionsRefreshed?.Invoke(_currentSeason, DayProgress);
         }
 
-        /// <summary>Refreshes runtime conditions after GameState.Load, without advancing time.</summary>
+        // A new game's state has no date yet; a loaded one already has its own.
+        private void InitializeCalendar()
+        {
+            var time = _gameState.Time;
+            if (time.initialized)
+            {
+                _currentSeason = _seasons[time.season];
+                return;
+            }
+
+            // The starting date is not a day transition: existing plants must not grow.
+            time.daysSinceStart = 1;
+            StartSeason(_settings.startingSeason);
+            time.dayOfSeason = _settings.startingDay;
+            time.hour = _settings.startOfDay;
+            time.minute = 0;
+            time.secondsTowardNextMinute = 0f;
+            time.initialized = true;
+        }
+
+        /// <summary>Refreshes runtime conditions after the state was replaced by a load or a new game, without advancing time.</summary>
         public void ApplySavedTime()
         {
             if (!_started) return; // Start will read the restored state instead.
-            _currentSeason = _seasons[_gameState.Time.season];
+            InitializeCalendar();
             ConditionsRefreshed?.Invoke(_currentSeason, DayProgress);
+            // Displays such as the clock HUD only redraw on this event.
+            GameTimeChangedEvent.Trigger(_gameState.Time.TotalMinutes);
         }
 
         public void RequireScriptTimeChange()

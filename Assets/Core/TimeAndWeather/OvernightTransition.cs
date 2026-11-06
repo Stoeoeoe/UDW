@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.IO;
 using Character;
 using Core.Events;
 using Core.Game;
@@ -78,7 +77,8 @@ namespace Core.TimeAndWeather
                 _clock.StartNewDay();
                 // Recovery follows clock-driven expirations and only occurs once the overnight advance succeeds.
                 EventBus<OvernightRestCompleted>.Raise(new OvernightRestCompleted(character, reason, bedtimeHour));
-                AutoSave();
+                // The new morning, with the player in bed behind the cover, is the clean save point.
+                _game.AutoSave();
                 yield return gui.RevealScene(character.transform, dayBlackoutDuration, newDayJingle);
             }
             finally
@@ -94,18 +94,6 @@ namespace Core.TimeAndWeather
                     _routine = null;
                     _clock.EndOvernight();
                 }
-            }
-        }
-
-        // The new morning, with the player in bed behind the cover, is the clean save point. A session without a
-        // slot (such as a development start) has nowhere to save; a failed write must not break the day transition.
-        private void AutoSave()
-        {
-            if (_game.CurrentSlot == null) return;
-            try { _game.Save(); }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            {
-                Debug.LogError($"Autosave to slot '{_game.CurrentSlot}' failed: {error.Message}");
             }
         }
 

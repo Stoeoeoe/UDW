@@ -14,9 +14,13 @@ namespace Core.Game
     {
         internal GameSaveData Data { get; private set; } = new();
         internal event Action Restored;
+        /// <summary>A new game's first location starts at the home bed. It is a start request, not saved data.</summary>
+        internal bool StartAtHome { get; set; }
+
         internal void Restore(GameSaveData data)
         {
             Data = data;
+            StartAtHome = false;
             Restored?.Invoke();
         }
         public WorldState World => Data.world;

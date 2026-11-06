@@ -11,7 +11,6 @@ using Core.TimeAndWeather;
 using Interaction;
 using UI.Shared;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
@@ -29,6 +28,7 @@ namespace Core.Location
         [Inject] private LocationContext _locationContext;
         [Inject] private IObjectResolver _resolver;
         [Inject] private GameState _gameState;
+        [Inject] private PlayerStateManager _players;
 
         [Inject] private MapManager _mapManager;
         [Inject] private UrGUIManager _urGUIManager;
@@ -39,6 +39,9 @@ namespace Core.Location
         [SerializeField] private Vector2 _initialFacingDirection;
 
         [SerializeField] MainCharacter _mainCharacterPrefab;
+
+        [Tooltip("Scene of the main menu. Starting in it waits for the menu's choice instead of entering a location.")]
+        [SerializeField] private string mainMenuScenePath = "Assets/Scenes/MainMenu.unity";
 
         [Header("Fallback spawn (editor / first run)")] [SerializeField]
         string _defaultSpawnKey = "Default";
@@ -75,26 +78,77 @@ namespace Core.Location
 
         IEnumerator Start()
         {
-            var location = ResolveInitialLocation();
+            // The main menu is not a location: the game begins when the menu calls BeginGame.
+            if (SceneManager.GetActiveScene().path == mainMenuScenePath)
+            {
+                yield return null; // The UI manager binds the HUD in its own Start.
+                _urGUIManager.ResetTransition(); // The screen starts covered; the menu must be visible.
+                _urGUIManager.SetMainMenuActive(true);
+                yield break;
+            }
+            yield return BeginSession(ResolveInitialLocation());
+        }
+
+        /// <summary>
+        /// Enters the location of the session chosen in the main menu (a loaded save or a new game), replacing the menu scene.
+        /// Does nothing while a game is already running.
+        /// </summary>
+        public void BeginGame()
+        {
+            if (SceneReady || _transitionInProgress) return;
+            StartCoroutine(BeginFromMenu());
+        }
+
+        IEnumerator BeginFromMenu()
+        {
+            _urGUIManager.CoverSceneImmediately();
+            _urGUIManager.SetMainMenuActive(false);
+            yield return BeginSession(null);
+        }
+
+        // The open scene is the location the game was started in, or null when it begins from the main menu.
+        IEnumerator BeginSession(LocationData open)
+        {
             var saved = _gameState.Session;
             if (saved.LocationId != null)
             {
-                yield return ResumeSavedLocation(location, saved);
+                yield return ResumeSavedLocation(open, saved);
                 yield break;
             }
+            if (_gameState.StartAtHome)
+            {
+                _gameState.StartAtHome = false;
+                yield return StartAtHomeBed(open);
+                yield break;
+            }
+            if (open == null)
+                throw new InvalidOperationException("Starting from the main menu requires a loaded save or a new game.");
 
-            SetCurrentLocation(location);
-            yield return EnterLocationRoutine(location, _initialEntryKey, _initialFacingDirection);
+            SetCurrentLocation(open);
+            yield return EnterLocationRoutine(open, _initialEntryKey, _initialFacingDirection);
         }
+
+        private static bool IsOpen(LocationData open, LocationData location) =>
+            open != null && string.Equals(location.id, open.id, StringComparison.OrdinalIgnoreCase);
 
         // A loaded save resumes where it was made. The screen is still covered from startup (ScreenFader.Awake),
         // so a different scene can replace the open one without the player seeing it.
         IEnumerator ResumeSavedLocation(LocationData open, SessionState saved)
         {
             var location = RequireSavedLocation(saved.LocationId);
-            if (!string.Equals(location.id, open.id, StringComparison.OrdinalIgnoreCase))
+            if (!IsOpen(open, location))
                 yield return ReplaceActiveScene(location);
             yield return EnterSavedLocation(location, saved);
+        }
+
+        // A new game wakes up at the authored starting home. The screen is still covered from startup.
+        IEnumerator StartAtHomeBed(LocationData open)
+        {
+            var home = _players.StartingHomeLocation;
+            if (!IsOpen(open, home))
+                yield return ReplaceActiveScene(home);
+            SetCurrentLocation(home);
+            yield return EnterLocationRoutine(home, placeCharacter: player => PlaceAtHome(player, _players.StartingBedId));
         }
 
         private LocationData RequireSavedLocation(string locationId) =>

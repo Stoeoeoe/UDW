@@ -30,6 +30,11 @@
       "id": "lakewater",
       "displayName": "Lake Water",
       "color": "#3182ce"
+    },
+    {
+      "id": "sand",
+      "displayName": "Sand",
+      "color": "#ffdd00"
     }
   ],
   "layerDefinitions": [

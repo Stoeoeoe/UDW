@@ -69,6 +69,9 @@ namespace UI.Shared
         public bool IsGameClockPaused => _clock.IsPaused;
         public bool IsWorldInteractionBlocked => HasOpenScreens || _cutsceneActive;
 
+        /// <summary>While the main menu is up the game HUD is hidden, input is blocked and the clock is paused.</summary>
+        public void SetMainMenuActive(bool active) => SetCutsceneActive(active, 0);
+
         internal void SetCutsceneActive(bool active, float hudFadeSeconds)
         {
             _cutsceneActive = active;
@@ -168,6 +171,9 @@ namespace UI.Shared
             _transitionTween = screenFader.FadeOut(focus);
             yield return _transitionTween.WaitForCompletion(true);
         }
+
+        /// <summary>Covers the scene at once, ahead of a load that is revealed later.</summary>
+        public void CoverSceneImmediately() => screenFader.CoverImmediately();
 
         internal Tween CoverCutscene(float duration, float holdSeconds) => _transitionTween = screenFader.CoverCutscene(duration, holdSeconds);
         internal Tween RevealCutscene(float duration) => _transitionTween = screenFader.RevealCutscene(duration);
