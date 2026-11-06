@@ -8,6 +8,9 @@ import { Layer } from '../../../types/schema';
 import { useLayerDragDrop } from '../../../hooks/useLayerDragDrop';
 import { LayerItem } from './LayerItem';
 import { LayerModal, LayerFormData } from './LayerModal';
+import { createEmptyWaterMask } from '../../../lib/waterMask';
+import { createWaterBody, getWaterTypeOptions } from '../../../lib/waterBodies';
+import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { LAYER_CATEGORIES, LayerCategoryConfig, kindToCategory } from './layerConstants';
 import { CaptionText, SectionLabel } from '../../../components/common/Typography.tsx';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
@@ -85,6 +88,9 @@ export const LayersPanel: React.FC = () => {
   const setSelectedLayerDefinition = useEditorStore((state) => state.setSelectedLayerDefinition);
   const openDocument = useWorkspaceStore((state) => state.openDocument);
   const toast = useToast();
+  const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
+  const tileMetadataDefinitions = useEditorStore((state) => state.tileMetadataDefinitions);
+  const waterTypes = getWaterTypeOptions(tileMetadataDefinitions);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [editingLayer, setEditingLayer] = useState<Layer | null>(null);
@@ -196,7 +202,22 @@ export const LayersPanel: React.FC = () => {
 
     if (editingLayer) {
       const nextLayerShape =
-        data.kind === 'entity'
+        data.kind === 'water'
+          ? {
+              data: undefined,
+              terrainData: undefined,
+              entities: undefined,
+              objectInstances: undefined,
+              waterBodies: editingLayer.waterBodies ?? [],
+              waterMask:
+                editingLayer.kind === 'water' && editingLayer.waterMask
+                  ? editingLayer.waterMask
+                  : createEmptyWaterMask(
+                      currentMap.width * projectTileSize,
+                      currentMap.height * projectTileSize,
+                    ),
+            }
+          : data.kind === 'entity'
           ? {
               entities: editingLayer.entities ?? [],
               data: undefined,
@@ -262,7 +283,14 @@ export const LayersPanel: React.FC = () => {
         sortingLayer: data.sortingLayer,
       };
 
-      if (data.kind === 'entity') {
+      if (data.kind === 'water') {
+        // A new water layer starts with one body to paint with; more are added in the water panel.
+        base.waterBodies = [createWaterBody(`water-${Date.now()}`, 'Water 1', waterTypes[0] ?? '')];
+        base.waterMask = createEmptyWaterMask(
+          currentMap.width * projectTileSize,
+          currentMap.height * projectTileSize,
+        );
+      } else if (data.kind === 'entity') {
         base.entities = [];
       } else if (data.kind === 'object') {
         base.objectInstances = [];

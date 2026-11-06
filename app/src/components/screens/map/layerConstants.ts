@@ -25,6 +25,7 @@ export function kindToCategory(kind: LayerKind): LayerCategory {
       return 'entities';
     case 'navigation':
     case 'metadata':
+    case 'water':
     default:
       return 'other';
   }
@@ -63,7 +64,7 @@ export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
   {
     id: 'other',
     label: 'Other',
-    kinds: ['navigation', 'metadata'],
+    kinds: ['navigation', 'metadata', 'water'],
     systemKinds: ['navigation'],
     color: 'gray.700',
   },

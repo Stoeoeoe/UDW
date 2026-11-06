@@ -172,7 +172,11 @@ export type ToolType =
   | 'collisionRect' // Drag to place a rectangle collision shape
   | 'collisionPolygon' // Click vertices to draw a polygon collision shape
   | 'collisionCircle' // Click center + drag to set radius for a circle collision shape
-  | 'collisionSelect'; // Select / move / resize / delete collision shapes
+  | 'collisionSelect' // Select / move / resize / delete collision shapes
+  | 'waterBrush' // Freehand pixel brush that paints the selected water body
+  | 'waterErase' // Freehand pixel brush that removes water
+  | 'waterFlow' // Drag along the selected body to draw a current
+  | 'waterFlowErase'; // Click a current to remove it
 
 export interface ValidationError {
   severity: 'error' | 'warning';

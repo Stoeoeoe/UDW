@@ -124,7 +124,8 @@
             "navigation",
             "metadata",
             "entity",
-            "terrain"
+            "terrain",
+            "water"
           ]
         },
         "visible": {
@@ -170,6 +171,17 @@
               "$ref": "#/$defs/SparseLayerData"
             }
           ]
+        },
+        "waterBodies": {
+          "type": "array",
+          "description": "Water layers only: the named bodies of water. A mask value n refers to waterBodies[n - 1].",
+          "maxItems": 255,
+          "items": {
+            "$ref": "#/$defs/WaterBody"
+          }
+        },
+        "waterMask": {
+          "$ref": "#/$defs/WaterMask"
         },
         "objectGroups": {
           "type": "array",
@@ -627,6 +639,59 @@
             "type": "string"
           }
         }
+      }
+    },
+    "WaterMask": {
+      "type": "object",
+      "description": "Hand-drawn water at the project's logical resolution (tileSize pixels per tile), row-major from the top-left.",
+      "required": ["width", "height", "rle"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "rle": {
+          "type": "array",
+          "description": "Flat [value, run, value, run, ...] pairs. Value 0 is empty; value n is waterBodies[n - 1]. Runs sum to width*height.",
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "WaterBody": {
+      "type": "object",
+      "required": ["id", "name", "waterType", "isFreshwater", "flow"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Unique within the layer." },
+        "name": { "type": "string" },
+        "waterType": { "type": "string", "description": "WaterProfile name, e.g. Lake_1." },
+        "isFreshwater": { "type": "boolean", "description": "Cells that are mostly this body refill watering cans." },
+        "bankProfile": { "type": "string", "description": "Unity bank profile name. Empty or absent draws no bank." },
+        "flow": {
+          "type": "array",
+          "description": "Freehand currents. None means the water type's uniform flow applies.",
+          "items": { "$ref": "#/$defs/FlowStroke" }
+        }
+      }
+    },
+    "FlowStroke": {
+      "type": "object",
+      "description": "A current drawn along the water. The first point is where water enters and the last is where it leaves.",
+      "required": ["id", "points", "width", "speed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "width": { "type": "number", "exclusiveMinimum": 0, "description": "Influence radius in map pixels." },
+        "speed": { "type": "number", "exclusiveMinimum": 0, "description": "Relative speed; 1 is the water type's flow speed." }
       }
     },
     "Path": {

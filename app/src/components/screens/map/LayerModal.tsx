@@ -44,6 +44,7 @@ export interface LayerModalProps {
 // locationlink is system-managed — never user-addable
 const ALL_KIND_OPTIONS: { value: LayerKind; label: string }[] = [
   { value: 'terrain', label: 'Terrain (Autotiled)' },
+  { value: 'water', label: 'Water (Drawn)' },
   { value: 'visual', label: 'Tile Layer' },
   { value: 'object', label: 'Object Layer' },
   { value: 'entity', label: 'Entity (Objects)' },
@@ -154,6 +155,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
                   kind !== 'object' &&
                   kind !== 'entity' &&
                   kind !== 'terrain' &&
+                  kind !== 'water' &&
                   kind !== 'navigation' &&
                   kind !== 'collision' &&
                   kind !== 'metadata' ? (

@@ -19,6 +19,12 @@ export interface ToolSlice {
   activeTool: ToolType;
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood';
   brushSize: number;
+  /** Pixel radius of the water brush (0 is a single pixel). */
+  waterBrushRadius: number;
+  /** Bumped while painting so the water overlay redraws without a history entry per pointer move. */
+  waterPaintRevision: number;
+  /** Map pixel under the pointer while a water tool is active; null outside the map. */
+  waterCursor: { x: number; y: number } | null;
   hoveredTile: { x: number; y: number } | null;
   hoveredWorldPosition: { x: number; y: number } | null;
   drawPreview: {
@@ -55,6 +61,9 @@ export interface ToolSlice {
   reloadTerrainLayers: () => void;
   setDrawMode: (mode: 'point' | 'rect' | 'circle' | 'line' | 'flood') => void;
   setBrushSize: (size: number) => void;
+  setWaterBrushRadius: (radius: number) => void;
+  bumpWaterPaintRevision: () => void;
+  setWaterCursor: (pixel: { x: number; y: number } | null) => void;
   setMode: (mode: EditorMode) => void;
   setHoveredTile: (pos: { x: number; y: number } | null) => void;
   setHoveredWorldPosition: (pos: { x: number; y: number } | null) => void;
@@ -78,6 +87,9 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   activeTool: 'stamp',
   drawMode: 'point',
   brushSize: 1,
+  waterBrushRadius: 4,
+  waterPaintRevision: 0,
+  waterCursor: null,
   hoveredTile: null,
   hoveredWorldPosition: null,
   drawPreview: { isDrawing: false, start: null, end: null },
@@ -182,6 +194,21 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   setBrushSize: (size) =>
     set((state) => {
       state.brushSize = Math.max(1, Math.round(size));
+    }),
+  setWaterBrushRadius: (radius) =>
+    set((state) => {
+      state.waterBrushRadius = Math.max(0, Math.min(64, Math.round(radius)));
+    }),
+  bumpWaterPaintRevision: () =>
+    set((state) => {
+      state.waterPaintRevision += 1;
+    }),
+  setWaterCursor: (pixel) =>
+    set((state) => {
+      const current = state.waterCursor;
+      // Skip no-op updates so hovering within one pixel does not redraw the cursor.
+      if (current?.x === pixel?.x && current?.y === pixel?.y) return;
+      state.waterCursor = pixel;
     }),
   setDrawPreview: (preview) =>
     set((state) => {

@@ -10,6 +10,13 @@ import { sampleSeededTile } from '../../../lib/randomUtils';
 import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { getIconTexture } from '../../../lib/iconRaster';
+import { getWaterBitmap } from '../../../lib/waterMaskCache';
+import {
+  isWaterPaintTool,
+  isWaterTool,
+  waterBodyColor,
+  waterBodyValue,
+} from '../../../lib/waterBodies';
 import { resolveLinkTarget, getTriggerCenter } from '../../../lib/locationLinkUtils';
 import {
   collectObjectPlacementOrigins,
@@ -198,6 +205,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const gridGraphicsRef = useRef<Graphics | null>(null);
   const collisionGraphicsRef = useRef<Graphics | null>(null);
   const terrainOverlayGraphicsRef = useRef<Graphics | null>(null);
+  const waterContainerRef = useRef<Container | null>(null);
+  const waterFlowGraphicsRef = useRef<Graphics | null>(null);
+  // One canvas-backed sprite per water layer, updated in place while painting.
+  const waterOverlaysRef = useRef<
+    Map<string, { canvas: HTMLCanvasElement; image: ImageData; sprite: Sprite; texture: Texture }>
+  >(new Map());
   const locationLinksGraphicsRef = useRef<Graphics | null>(null);
   const triggerGraphicsRef = useRef<Graphics | null>(null);
   const collisionShapesGraphicsRef = useRef<Graphics | null>(null);
@@ -222,6 +235,18 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     tileContainer.zIndex = 0;
     tileContainerRef.current = tileContainer;
     container.addChild(tileContainer);
+
+    // Drawn water (z: 0.5 — above tiles, below entities)
+    const waterContainer = new Container();
+    waterContainer.zIndex = 0.5;
+    waterContainerRef.current = waterContainer;
+    container.addChild(waterContainer);
+
+    // Flow strokes (z: 0.6 — just above the water mask)
+    const waterFlowGraphics = new Graphics();
+    waterFlowGraphics.zIndex = 0.6;
+    waterFlowGraphicsRef.current = waterFlowGraphics;
+    container.addChild(waterFlowGraphics);
 
     // Entity layer (z: 1)
     const entityContainer = new Container();
@@ -286,7 +311,11 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     viewport.addChild(container);
 
+    const waterOverlays = waterOverlaysRef.current;
     return () => {
+      waterOverlays.clear();
+      waterContainerRef.current = null;
+      waterFlowGraphicsRef.current = null;
       viewport.removeChild(container);
       container.destroy({ children: true });
       // Texture cache is intentionally NOT cleared here — textures are reusable
@@ -438,6 +467,159 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     renderCollisionGraphics(collisionGraphics, fillPolygons, mergedSegments);
   }, [projectTileSize]);
+
+  // Render drawn water layers as a translucent blue mask, one texel per map pixel.
+  const renderWater = useCallback(() => {
+    const container = waterContainerRef.current;
+    const { currentMap } = useEditorStore.getState();
+    if (!container || !currentMap) return;
+    const overlays = waterOverlaysRef.current;
+    const visibleIds = new Set<string>();
+
+    for (const layer of currentMap.layers) {
+      if (layer.kind !== 'water' || !layer.visible || !layer.waterMask) continue;
+      visibleIds.add(layer.id);
+      const { width, height } = layer.waterMask;
+      let overlay = overlays.get(layer.id);
+      if (!overlay || overlay.canvas.width !== width || overlay.canvas.height !== height) {
+        if (overlay) {
+          container.removeChild(overlay.sprite);
+          overlay.sprite.destroy({ texture: true });
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas 2D is unavailable for the water overlay.');
+        const texture = Texture.from(canvas);
+        const sprite = new Sprite(texture);
+        container.addChild(sprite);
+        overlay = { canvas, image: context.createImageData(width, height), sprite, texture };
+        overlays.set(layer.id, overlay);
+      }
+
+      const bitmap = getWaterBitmap(layer.id, layer.waterMask);
+      const pixels = overlay.image.data;
+      // One RGB per body value (value 0 is empty); a value past the list can only be stale data.
+      const palette = [0, ...(layer.waterBodies ?? []).map((_, index) => waterBodyColor(index))];
+      for (let i = 0; i < bitmap.length; i++) {
+        const offset = i * 4;
+        const color = palette[bitmap[i]];
+        pixels[offset] = (color >> 16) & 0xff;
+        pixels[offset + 1] = (color >> 8) & 0xff;
+        pixels[offset + 2] = color & 0xff;
+        pixels[offset + 3] = bitmap[i] ? 150 : 0;
+      }
+      overlay.canvas.getContext('2d')?.putImageData(overlay.image, 0, 0);
+      overlay.texture.source.update();
+      overlay.sprite.alpha = layer.opacity;
+    }
+
+    for (const [layerId, overlay] of overlays) {
+      if (visibleIds.has(layerId)) continue;
+      container.removeChild(overlay.sprite);
+      overlay.sprite.destroy({ texture: true });
+      overlays.delete(layerId);
+    }
+  }, []);
+
+  // Render freehand currents: a faint band for each stroke's reach, its line, and arrowheads.
+  const renderWaterFlow = useCallback(() => {
+    const g = waterFlowGraphicsRef.current;
+    const {
+      currentMap,
+      selectedLayerId,
+      selectedWaterBodyId,
+      waterStrokePreview,
+      waterFlowStrokeWidth,
+    } = useEditorStore.getState();
+    if (!g || !currentMap) return;
+    g.clear();
+
+    const zoom = viewport?.scale?.x ?? 1;
+    const lineWidth = Math.max(0.75, 1.5 / zoom);
+    const arrowSize = Math.max(3, 8 / zoom);
+
+    const drawLine = (points: [number, number][], color: number, alpha: number) => {
+      g.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) g.lineTo(points[i][0], points[i][1]);
+      g.stroke({ width: lineWidth, color, alpha });
+    };
+
+    // Arrowheads along the line, one roughly every ten line widths of spacing, always one at the end.
+    const drawArrows = (points: [number, number][], color: number, alpha: number) => {
+      const spacing = arrowSize * 8;
+      let carried = spacing / 2;
+      for (let i = 1; i < points.length; i++) {
+        const [x0, y0] = points[i - 1];
+        const [x1, y1] = points[i];
+        const length = Math.hypot(x1 - x0, y1 - y0);
+        if (length === 0) continue;
+        const ux = (x1 - x0) / length;
+        const uy = (y1 - y0) / length;
+        let at = carried;
+        const isLast = i === points.length - 1;
+        const stops: number[] = [];
+        for (; at < length; at += spacing) stops.push(at);
+        if (isLast) stops.push(length);
+        carried = at - length;
+        for (const distance of stops) {
+          const tipX = x0 + ux * distance;
+          const tipY = y0 + uy * distance;
+          g.moveTo(
+            tipX - ux * arrowSize + uy * arrowSize * 0.6,
+            tipY - uy * arrowSize - ux * arrowSize * 0.6,
+          );
+          g.lineTo(tipX, tipY);
+          g.lineTo(
+            tipX - ux * arrowSize - uy * arrowSize * 0.6,
+            tipY - uy * arrowSize + ux * arrowSize * 0.6,
+          );
+          g.stroke({ width: lineWidth, color, alpha });
+        }
+      }
+    };
+
+    for (const layer of currentMap.layers) {
+      if (layer.kind !== 'water' || !layer.visible) continue;
+      (layer.waterBodies ?? []).forEach((body, index) => {
+        const isSelected = layer.id === selectedLayerId && body.id === selectedWaterBodyId;
+        const color = waterBodyColor(index);
+        for (const stroke of body.flow) {
+          if (stroke.points.length < 2) continue;
+          // The band shows how far the stroke's direction reaches into the water.
+          g.moveTo(stroke.points[0][0], stroke.points[0][1]);
+          for (let i = 1; i < stroke.points.length; i++)
+            g.lineTo(stroke.points[i][0], stroke.points[i][1]);
+          g.stroke({
+            width: stroke.width * 2,
+            color,
+            alpha: isSelected ? 0.18 : 0.08,
+            cap: 'round',
+            join: 'round',
+          });
+          drawLine(stroke.points, 0xffffff, isSelected ? 0.95 : 0.55);
+          drawArrows(stroke.points, 0xffffff, isSelected ? 0.95 : 0.55);
+        }
+      });
+    }
+
+    if (waterStrokePreview && waterStrokePreview.length > 1) {
+      g.moveTo(waterStrokePreview[0][0], waterStrokePreview[0][1]);
+      for (let i = 1; i < waterStrokePreview.length; i++) {
+        g.lineTo(waterStrokePreview[i][0], waterStrokePreview[i][1]);
+      }
+      g.stroke({
+        width: waterFlowStrokeWidth * 2,
+        color: 0xffd54f,
+        alpha: 0.12,
+        cap: 'round',
+        join: 'round',
+      });
+      drawLine(waterStrokePreview, 0xffd54f, 1);
+      drawArrows(waterStrokePreview, 0xffd54f, 1);
+    }
+  }, [viewport]);
 
   // Render terrain overlay — colored fill per cell based on terrainData + terrainTypes
   const renderTerrainOverlay = useCallback(() => {
@@ -779,11 +961,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render grid
   const renderGrid = useCallback(() => {
     const gridGraphics = gridGraphicsRef.current;
-    const { currentMap } = useEditorStore.getState();
+    const { currentMap, activeTool } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!gridGraphics || !currentMap) return;
 
     gridGraphics.clear();
+    const drawingWater = isWaterTool(activeTool);
 
     const pixelWidth = currentMap.width * tileSize;
     const pixelHeight = currentMap.height * tileSize;
@@ -792,20 +975,23 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     const vp = viewport;
     const zoomScale = vp?.scale?.x ?? 1;
     const gridLineWidth = Math.max(0.25, 1 / zoomScale);
-    gridGraphics.setStrokeStyle({
-      width: gridLineWidth,
-      color: 0x2d3748,
-      alpha: 0.5,
-    });
-    for (let x = 0; x <= pixelWidth; x += tileSize) {
-      gridGraphics.moveTo(x, 0);
-      gridGraphics.lineTo(x, pixelHeight);
+    // Water is drawn per pixel, so tile lines would only get in the way.
+    if (!drawingWater) {
+      gridGraphics.setStrokeStyle({
+        width: gridLineWidth,
+        color: 0x2d3748,
+        alpha: 0.5,
+      });
+      for (let x = 0; x <= pixelWidth; x += tileSize) {
+        gridGraphics.moveTo(x, 0);
+        gridGraphics.lineTo(x, pixelHeight);
+      }
+      for (let y = 0; y <= pixelHeight; y += tileSize) {
+        gridGraphics.moveTo(0, y);
+        gridGraphics.lineTo(pixelWidth, y);
+      }
+      gridGraphics.stroke();
     }
-    for (let y = 0; y <= pixelHeight; y += tileSize) {
-      gridGraphics.moveTo(0, y);
-      gridGraphics.lineTo(pixelWidth, y);
-    }
-    gridGraphics.stroke();
 
     // Border - thicker line
     const borderLineWidth = Math.max(0.5, 2 / zoomScale);
@@ -991,11 +1177,46 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   // Render hover highlight
   const renderHover = useCallback(() => {
     const hoverGraphics = hoverGraphicsRef.current;
-    const { hoveredTile, activeTool, currentMap, selectedLayerId } = useEditorStore.getState();
+    const {
+      hoveredTile,
+      activeTool,
+      currentMap,
+      selectedLayerId,
+      selectedWaterBodyId,
+      waterCursor,
+      waterBrushRadius,
+      waterFlowStrokeWidth,
+    } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!hoverGraphics) return;
 
     hoverGraphics.clear();
+
+    // Water tools: the brush shows exactly the pixels the next dab will change, tinted with the
+    // selected body's colour; flow tools show the stroke's reach.
+    if (isWaterTool(activeTool)) {
+      if (!waterCursor) return;
+      if (isWaterPaintTool(activeTool)) {
+        const reach = waterBrushRadius * waterBrushRadius + waterBrushRadius;
+        for (let dy = -waterBrushRadius; dy <= waterBrushRadius; dy++) {
+          for (let dx = -waterBrushRadius; dx <= waterBrushRadius; dx++) {
+            if (dx * dx + dy * dy > reach) continue;
+            hoverGraphics.rect(waterCursor.x + dx, waterCursor.y + dy, 1, 1);
+          }
+        }
+        const layer = currentMap?.layers.find((candidate) => candidate.id === selectedLayerId);
+        const value = waterBodyValue(layer?.waterBodies, selectedWaterBodyId);
+        const brushColor = value > 0 ? waterBodyColor(value - 1) : 0xffffff;
+        hoverGraphics.fill({
+          color: activeTool === 'waterBrush' ? brushColor : 0xff6b6b,
+          alpha: 0.6,
+        });
+      } else {
+        hoverGraphics.circle(waterCursor.x + 0.5, waterCursor.y + 0.5, waterFlowStrokeWidth);
+        hoverGraphics.stroke({ width: 1, color: 0xffffff, alpha: 0.6 });
+      }
+      return;
+    }
 
     const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
     const isObjectLayer = selectedLayer?.kind === 'object';
@@ -1054,6 +1275,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
     previewContainer.removeChildren();
     previewContainer.alpha = 0.5;
+    if (isWaterTool(activeTool)) return;
 
     const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
     const isObjectLayer = selectedLayer?.kind === 'object';
@@ -1997,6 +2219,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
   // Main render function
   const render = useCallback(() => {
+    renderWater();
+    renderWaterFlow();
     renderTiles();
     renderEntities();
     renderGrid();
@@ -2008,6 +2232,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderHover();
     renderPreview();
   }, [
+    renderWater,
+    renderWaterFlow,
     renderTiles,
     renderEntities,
     renderGrid,
@@ -2022,6 +2248,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
 
   return {
     render,
+    renderWater,
+    renderWaterFlow,
     renderTiles,
     renderEntities,
     renderGrid,

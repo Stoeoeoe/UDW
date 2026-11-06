@@ -266,6 +266,8 @@ export const MapViewportPixi: React.FC = () => {
 
   // Use rendering and tools hooks
   const {
+    renderWater,
+    renderWaterFlow,
     renderTiles,
     renderEntities,
     renderGrid,
@@ -284,6 +286,8 @@ export const MapViewportPixi: React.FC = () => {
     if (!isReady) return;
 
     // Initial render
+    renderWater();
+    renderWaterFlow();
     renderTiles();
     renderEntities();
     renderGrid();
@@ -297,6 +301,35 @@ export const MapViewportPixi: React.FC = () => {
 
     // Subscribe to relevant state changes
     const unsubscribe = useEditorStore.subscribe((state, prevState) => {
+      // Drawn water redraws on map changes (undo, load, commit) and live while painting.
+      if (
+        state.currentMap !== prevState.currentMap ||
+        state.waterPaintRevision !== prevState.waterPaintRevision
+      ) {
+        renderWater();
+      }
+      if (
+        state.currentMap !== prevState.currentMap ||
+        state.selectedWaterBodyId !== prevState.selectedWaterBodyId ||
+        state.selectedLayerId !== prevState.selectedLayerId ||
+        state.waterStrokePreview !== prevState.waterStrokePreview ||
+        state.waterFlowStrokeWidth !== prevState.waterFlowStrokeWidth
+      ) {
+        renderWaterFlow();
+      }
+      // The grid and the brush cursor depend on whether a water tool is active.
+      if (state.activeTool !== prevState.activeTool) {
+        renderGrid();
+        renderHover();
+      }
+      if (
+        state.waterCursor !== prevState.waterCursor ||
+        state.waterBrushRadius !== prevState.waterBrushRadius ||
+        state.waterFlowStrokeWidth !== prevState.waterFlowStrokeWidth ||
+        state.selectedWaterBodyId !== prevState.selectedWaterBodyId
+      ) {
+        renderHover();
+      }
       const mapChanged = state.currentMap !== prevState.currentMap;
       const variationChanged = state.activeVariationId !== prevState.activeVariationId;
 
@@ -452,6 +485,8 @@ export const MapViewportPixi: React.FC = () => {
     return unsubscribe;
   }, [
     isReady,
+    renderWater,
+    renderWaterFlow,
     renderTiles,
     renderEntities,
     renderGrid,

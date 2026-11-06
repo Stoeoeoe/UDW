@@ -16,6 +16,19 @@ import { getTriggerCenter } from '../../../lib/locationLinkUtils';
 import { getPattern as getPatternUtil } from '../../../lib/patternUtils';
 import { applyShape as applyShapeUtil } from '../../../lib/shapeUtils';
 import { applyTerrainShape as applyTerrainShapeUtil } from '../../../lib/terrainShapeUtils';
+import { paintDisc, paintStroke } from '../../../lib/waterMask';
+import {
+  FLOW_ERASE_REACH,
+  FLOW_POINT_SPACING,
+  FLOW_SIMPLIFY_TOLERANCE,
+  MIN_FLOW_STROKE_LENGTH,
+  appendStrokePoint,
+  distanceToStroke,
+  simplifyStroke,
+  strokeLength,
+} from '../../../lib/waterFlow';
+import { isWaterTool, waterBodyValue } from '../../../lib/waterBodies';
+import { commitWaterBitmap, getWaterBitmap } from '../../../lib/waterMaskCache';
 import { MapTrigger, MapCollision } from '../../../types/schema';
 import { getObjectGroupAt } from '../../../lib/objectGroups';
 import { matchObjectDefinitionByPattern } from '../../../lib/tilesetObjects';
@@ -35,6 +48,8 @@ interface UseMapToolsProps {
 /**
  * Hook that handles all tool interactions (paint, erase, fill, entity placement, selection).
  */
+const roundTenth = (value: number): number => Math.round(value * 10) / 10;
+
 export function useMapTools({ viewport }: UseMapToolsProps) {
   const currentMap = useEditorStore((state) => state.currentMap);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
@@ -122,6 +137,16 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const isSamplingRef = useRef(false);
   const sampleStartRef = useRef<{ x: number; y: number } | null>(null);
   const historyBatchActiveRef = useRef(false);
+  // Water brush stroke in progress: the layer, the body value being painted, and the last pixel.
+  const waterStrokeRef = useRef<{ layerId: string; value: number; x: number; y: number } | null>(
+    null,
+  );
+  // Flow stroke being dragged out, in map pixels.
+  const waterFlowRef = useRef<{
+    layerId: string;
+    bodyId: string;
+    points: [number, number][];
+  } | null>(null);
 
   const startHistoryBatch = useCallback(() => {
     if (!historyBatchActiveRef.current) {
@@ -523,6 +548,62 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         worldPos.x < currentMap.width * projectTileSize &&
         worldPos.y >= 0 &&
         worldPos.y < currentMap.height * projectTileSize;
+
+      // ── Water tools — brush and eraser paint pixels; flow tools draw and remove currents ──
+      if (isWaterTool(activeTool) && e.button === 0) {
+        const waterLayer = currentMap.layers.find((layer) => layer.id === selectedLayerId);
+        if (!waterLayer || waterLayer.kind !== 'water' || !waterLayer.waterMask) return;
+        if (waterLayer.locked || !inBounds || !worldPos) return;
+        const state = useEditorStore.getState();
+
+        if (activeTool === 'waterFlowErase') {
+          // Remove the stroke nearest the click, if it is close enough to mean it.
+          let nearest: { bodyId: string; strokeId: string; distance: number } | null = null;
+          for (const body of waterLayer.waterBodies ?? []) {
+            for (const stroke of body.flow) {
+              const distance = distanceToStroke([worldPos.x, worldPos.y], stroke);
+              if (distance <= FLOW_ERASE_REACH && (!nearest || distance < nearest.distance)) {
+                nearest = { bodyId: body.id, strokeId: stroke.id, distance };
+              }
+            }
+          }
+          if (nearest) state.removeFlowStroke(waterLayer.id, nearest.bodyId, nearest.strokeId);
+          return;
+        }
+
+        const bodyValue = waterBodyValue(waterLayer.waterBodies, state.selectedWaterBodyId);
+        if (activeTool === 'waterFlow') {
+          // A current belongs to the selected body; without one there is nothing to attach it to.
+          if (!state.selectedWaterBodyId || bodyValue === 0) return;
+          const points: [number, number][] = [[roundTenth(worldPos.x), roundTenth(worldPos.y)]];
+          waterFlowRef.current = {
+            layerId: waterLayer.id,
+            bodyId: state.selectedWaterBodyId,
+            points,
+          };
+          state.setWaterStrokePreview(points);
+          return;
+        }
+
+        // The eraser paints body 0; the brush needs a body to paint with.
+        const value = activeTool === 'waterBrush' ? bodyValue : 0;
+        if (activeTool === 'waterBrush' && value === 0) return;
+        const { width, height } = waterLayer.waterMask;
+        const pixelX = Math.floor(worldPos.x);
+        const pixelY = Math.floor(worldPos.y);
+        paintDisc(
+          getWaterBitmap(waterLayer.id, waterLayer.waterMask),
+          width,
+          height,
+          pixelX,
+          pixelY,
+          state.waterBrushRadius,
+          value,
+        );
+        waterStrokeRef.current = { layerId: waterLayer.id, value, x: pixelX, y: pixelY };
+        state.bumpWaterPaintRevision();
+        return;
+      }
 
       // ── Global Select (V) — works across ALL layers ─────────────────────────
       if (activeTool === 'select' && e.button === 0) {
@@ -1166,6 +1247,20 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
     (e: PointerEvent) => {
       if (!viewport || !currentMap) return;
       const worldPos = screenToWorldUtil(viewport, e.clientX, e.clientY);
+      // Water cursor: the exact pixel the next dab (or the stroke's centre) would land on.
+      if (isWaterTool(activeTool)) {
+        const insideMap =
+          !!worldPos &&
+          worldPos.x >= 0 &&
+          worldPos.y >= 0 &&
+          worldPos.x < currentMap.width * projectTileSize &&
+          worldPos.y < currentMap.height * projectTileSize;
+        useEditorStore
+          .getState()
+          .setWaterCursor(
+            insideMap ? { x: Math.floor(worldPos.x), y: Math.floor(worldPos.y) } : null,
+          );
+      }
       if (worldPos) {
         setHoveredWorldPosition({ x: Math.round(worldPos.x), y: Math.round(worldPos.y) });
       } else {
@@ -1177,6 +1272,50 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         setHoveredTile({ x: tile.x, y: tile.y });
       } else {
         setHoveredTile(null);
+      }
+
+      // Water paint stroke: connect the previous pixel to this one so fast moves leave no gaps.
+      const waterStroke = waterStrokeRef.current;
+      if (waterStroke && e.buttons === 1 && worldPos) {
+        const waterLayer = useEditorStore
+          .getState()
+          .currentMap?.layers.find((layer) => layer.id === waterStroke.layerId);
+        if (waterLayer?.waterMask) {
+          const { width, height } = waterLayer.waterMask;
+          const pixelX = Math.min(width - 1, Math.max(0, Math.floor(worldPos.x)));
+          const pixelY = Math.min(height - 1, Math.max(0, Math.floor(worldPos.y)));
+          const state = useEditorStore.getState();
+          paintStroke(
+            getWaterBitmap(waterLayer.id, waterLayer.waterMask),
+            width,
+            height,
+            waterStroke.x,
+            waterStroke.y,
+            pixelX,
+            pixelY,
+            state.waterBrushRadius,
+            waterStroke.value,
+          );
+          waterStroke.x = pixelX;
+          waterStroke.y = pixelY;
+          state.bumpWaterPaintRevision();
+        }
+        return;
+      }
+
+      // Water flow stroke: extend the line being dragged out, kept inside the map.
+      const waterFlow = waterFlowRef.current;
+      if (waterFlow && e.buttons === 1 && worldPos) {
+        const point: [number, number] = [
+          roundTenth(Math.min(currentMap.width * projectTileSize, Math.max(0, worldPos.x))),
+          roundTenth(Math.min(currentMap.height * projectTileSize, Math.max(0, worldPos.y))),
+        ];
+        const points = appendStrokePoint(waterFlow.points, point, FLOW_POINT_SPACING);
+        if (points !== waterFlow.points) {
+          waterFlow.points = points;
+          useEditorStore.getState().setWaterStrokePreview(points);
+        }
+        return;
       }
 
       // Update shift key state for line preview
@@ -1702,6 +1841,38 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   // Handle pointer up
   const handlePointerUp = useCallback(
     (e: PointerEvent) => {
+      // Finish a water stroke: one history entry holding the re-encoded mask.
+      if (waterStrokeRef.current) {
+        const { layerId } = waterStrokeRef.current;
+        waterStrokeRef.current = null;
+        const state = useEditorStore.getState();
+        const waterLayer = state.currentMap?.layers.find((layer) => layer.id === layerId);
+        if (waterLayer?.waterMask) {
+          state.updateLayer(layerId, {
+            waterMask: commitWaterBitmap(layerId, waterLayer.waterMask),
+          });
+        }
+        return;
+      }
+
+      // Finish a flow stroke: simplified, and dropped if it was only a click.
+      if (waterFlowRef.current) {
+        const { layerId, bodyId, points } = waterFlowRef.current;
+        waterFlowRef.current = null;
+        const state = useEditorStore.getState();
+        state.setWaterStrokePreview(null);
+        const simplified = simplifyStroke(points, FLOW_SIMPLIFY_TOLERANCE);
+        if (strokeLength(simplified) >= MIN_FLOW_STROKE_LENGTH) {
+          state.addFlowStroke(layerId, bodyId, {
+            id: `flow-${Date.now()}`,
+            points: simplified,
+            width: state.waterFlowStrokeWidth,
+            speed: state.waterFlowSpeed,
+          });
+        }
+        return;
+      }
+
       // Handle right-click sampling completion
       if (isSamplingRef.current && sampleStartRef.current && currentMap && selectedLayerId) {
         const tile = screenToTile(e.clientX, e.clientY);

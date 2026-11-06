@@ -35,6 +35,8 @@ export const LayerTypeIcon: React.FC<{ kind: LayerKind }> = ({ kind }) => {
       return <BsInfoCircle {...iconProps} />;
     case 'entity':
       return <BsPeople {...iconProps} />;
+    case 'water':
+      return <BsWater {...iconProps} />;
     default:
       return <BsImage {...iconProps} />;
   }

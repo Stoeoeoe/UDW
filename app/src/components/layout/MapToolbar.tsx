@@ -1,5 +1,13 @@
 import React from 'react';
-import { HStack, Button, ButtonGroup, Tooltip } from '@chakra-ui/react';
+import {
+  HStack,
+  Button,
+  ButtonGroup,
+  Tooltip,
+  NumberInput,
+  NumberInputField,
+  Text,
+} from '@chakra-ui/react';
 import {
   FiEdit2,
   FiTrash2,
@@ -21,6 +29,8 @@ import {
   FiCircle,
   FiMaximize2,
   FiMinimize2,
+  FiWind,
+  FiXCircle,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import {
@@ -73,6 +83,12 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     { id: 'stamp', icon: FiEdit2, label: 'Paint (B)', group: 'metadata' },
     { id: 'erase', icon: FiTrash2, label: 'Erase (E)', group: 'metadata' },
   ],
+  water: [
+    { id: 'waterBrush', icon: FiEdit2, label: 'Paint Water (B)', group: 'water' },
+    { id: 'waterErase', icon: FiTrash2, label: 'Erase Water (E)', group: 'water' },
+    { id: 'waterFlow', icon: FiWind, label: 'Draw Current (F)', group: 'water-flow' },
+    { id: 'waterFlowErase', icon: FiXCircle, label: 'Remove Current', group: 'water-flow' },
+  ],
   entity: [
     {
       id: 'entitySelect',
@@ -106,6 +122,12 @@ export const MapToolbar: React.FC = () => {
   const setEntitySnapMode = useEditorStore((state) => state.setEntitySnapMode);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const currentMap = useEditorStore((state) => state.currentMap);
+  const waterBrushRadius = useEditorStore((state) => state.waterBrushRadius);
+  const setWaterBrushRadius = useEditorStore((state) => state.setWaterBrushRadius);
+  const waterFlowStrokeWidth = useEditorStore((state) => state.waterFlowStrokeWidth);
+  const setWaterFlowStrokeWidth = useEditorStore((state) => state.setWaterFlowStrokeWidth);
+  const waterFlowSpeed = useEditorStore((state) => state.waterFlowSpeed);
+  const setWaterFlowSpeed = useEditorStore((state) => state.setWaterFlowSpeed);
 
   const selectedLayer = currentMap?.layers.find((l) => l.id === selectedLayerId);
   const effectiveKind = selectedLayer ? getEffectiveToolLayerKind(selectedLayer) : null;
@@ -124,6 +146,57 @@ export const MapToolbar: React.FC = () => {
         activeId={activeTool}
         onActivate={(id) => setActiveTool(id as ToolType)}
       />
+
+      {selectedLayer?.kind === 'water' &&
+        (activeTool === 'waterBrush' || activeTool === 'waterErase') && (
+          <HStack spacing={2}>
+            <Text fontSize="xs" color="gray.400">
+              Brush radius (px)
+            </Text>
+            <NumberInput
+              size="xs"
+              w="16"
+              min={0}
+              max={64}
+              value={waterBrushRadius}
+              onChange={(_, value) => setWaterBrushRadius(Number.isNaN(value) ? 0 : value)}
+            >
+              <NumberInputField />
+            </NumberInput>
+          </HStack>
+        )}
+
+      {selectedLayer?.kind === 'water' && activeTool === 'waterFlow' && (
+        <HStack spacing={2}>
+          <Text fontSize="xs" color="gray.400">
+            Reach (px)
+          </Text>
+          <NumberInput
+            size="xs"
+            w="16"
+            min={2}
+            max={128}
+            value={waterFlowStrokeWidth}
+            onChange={(_, value) => setWaterFlowStrokeWidth(Number.isNaN(value) ? 2 : value)}
+          >
+            <NumberInputField />
+          </NumberInput>
+          <Text fontSize="xs" color="gray.400">
+            Speed
+          </Text>
+          <NumberInput
+            size="xs"
+            w="16"
+            min={0.1}
+            max={4}
+            step={0.1}
+            value={waterFlowSpeed}
+            onChange={(_, value) => setWaterFlowSpeed(Number.isNaN(value) ? 1 : value)}
+          >
+            <NumberInputField />
+          </NumberInput>
+        </HStack>
+      )}
 
       {showSnapToggle && (
         <ButtonGroup size="xs" isAttached variant="outline">

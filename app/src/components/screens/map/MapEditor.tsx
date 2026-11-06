@@ -15,6 +15,7 @@ import { TilesetPalette } from '../../tileset/TilesetPalette';
 import { ObjectPalette } from '../../tileset/ObjectPalette';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
 import { NavigationBottomPanel } from './NavigationBottomPanel';
+import { WaterBottomPanel } from './WaterBottomPanel';
 import { NewLinkDialog } from './NewLinkDialog';
 import { MapWorldView } from './MapWorldView.tsx';
 import { LayersPanel } from './LayersPanel';
@@ -156,6 +157,8 @@ export const MapEditor: React.FC = () => {
             <EntityBottomPalette />
           ) : selectedLayerKind === 'navigation' ? (
             <NavigationBottomPanel />
+          ) : selectedLayerKind === 'water' ? (
+            <WaterBottomPanel />
           ) : isObjectLayer ? (
             <ObjectPalette />
           ) : selectedLayerKind === 'terrain' ? null : (

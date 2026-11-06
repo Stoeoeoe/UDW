@@ -205,6 +205,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   navigation: 'select',
   metadata: 'stamp',
   entity: 'entitySelect',
+  water: 'waterBrush',
 };
 
 export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
@@ -215,6 +216,7 @@ export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   navigation: ['select', 'anchorPlace', 'triggerPlace', 'triggerPolygon', 'linkPlace'],
   metadata: ['stamp', 'erase', 'fill', 'select'],
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
+  water: ['waterBrush', 'waterErase', 'waterFlow', 'waterFlowErase'],
 };
 
 export function getPreferredSelectedLayerId(map: GameMap | null): string | null {

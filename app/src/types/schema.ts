@@ -206,9 +206,45 @@ export interface Layer {
   // Used to re-resolve tile graphics when terrain rules change.
   terrainData?: (string | null)[][];
 
+  // For water layers: the named bodies of water and the pixel mask saying which body each pixel is.
+  waterBodies?: WaterBodyDef[];
+  waterMask?: WaterMask;
+
   // For layers that represent entities (entity layers), store instances here
   entities?: EntityInstance[];
   definitionId?: string; // Reference to LayerDefinition (if from project template)
+}
+
+/**
+ * Hand-drawn water at the project's logical resolution (tileSize pixels per tile), row-major from the
+ * top-left. `rle` is a flat list of [value, run, value, run, ...] pairs: value 0 is empty, value n is
+ * `waterBodies[n - 1]`. Runs sum to width * height.
+ */
+export interface WaterMask {
+  width: number;
+  height: number;
+  rle: number[];
+}
+
+/** One body of water on a water layer: what it is, how it looks at the shore, and where it flows. */
+export interface WaterBodyDef {
+  id: string; // Unique within the layer
+  name: string;
+  waterType: string; // WaterProfile name, e.g. 'Lake_1'
+  isFreshwater: boolean; // Watering cans can refill from mostly-water cells
+  bankProfile?: string; // Unity BankProfile name; empty means no bank
+  flow: FlowStroke[]; // Freehand current hints; none means the profile's uniform current
+}
+
+/**
+ * A freehand current drawn along the water. The first point is where water enters and the last is where
+ * it leaves; the stroke direction guides the current within `width` map pixels of the line.
+ */
+export interface FlowStroke {
+  id: string;
+  points: [number, number][]; // Map pixels, in drawing order
+  width: number; // Influence radius in map pixels
+  speed: number; // Relative speed, 1 is the profile's flow speed
 }
 
 export type SortingLayer = 'ground' | 'above';
@@ -240,7 +276,8 @@ export type LayerKind =
   | 'navigation' // Combined layer for anchors, triggers, and location links
   | 'metadata' // Data-only, invisible
   | 'entity' // Layer that contains entities (EntityInstance[])
-  | 'terrain'; // Terrain-painted layer (autotiled)
+  | 'terrain' // Terrain-painted layer (autotiled)
+  | 'water'; // Hand-drawn pixel water mask (no tiles)
 
 export type PropertyValue =
   | string
