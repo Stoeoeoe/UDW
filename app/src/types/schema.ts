@@ -404,6 +404,8 @@ export interface EntityOverride {
 }
 
 export interface MapMetadata {
+  locationType?: 'Indoor' | 'Outdoor';
+  muteWeatherAudio?: boolean;
   description?: string;
   music?: string;
   musicCue?: string;

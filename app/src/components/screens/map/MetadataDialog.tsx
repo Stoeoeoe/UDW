@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Box,
+  Checkbox,
   FormControl,
   Input,
   NumberInput,
@@ -124,7 +125,35 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
   };
 
   const variationMetadata = (activeVariation?.metadata || {}) as VariationMetadataValues;
-  const hasLocationDefs = (locationMetadataDefinitions || []).length > 0;
+  const customLocationDefinitions = (locationMetadataDefinitions || []).filter(
+    (definition) => definition.key !== 'locationType' && definition.key !== 'muteWeatherAudio',
+  );
+  const hasLocationDefs = customLocationDefinitions.length > 0;
+
+  const renderWeatherSection = () => (
+    <VStack spacing={4} align="stretch">
+      <SectionLabel textStyle="panelLabel">Location and weather</SectionLabel>
+      <FormControl>
+        <FormLabel>Location Type</FormLabel>
+        <Select
+          value={currentMap.metadata?.locationType ?? 'Outdoor'}
+          onChange={(event) => updateMapMetadataGeneric('locationType', event.target.value)}
+        >
+          <option value="Outdoor">Outdoor</option>
+          <option value="Indoor">Indoor</option>
+        </Select>
+      </FormControl>
+      <Checkbox
+        isChecked={currentMap.metadata?.muteWeatherAudio ?? false}
+        onChange={(event) => updateMapMetadataGeneric('muteWeatherAudio', event.target.checked)}
+      >
+        Mute weather audio
+      </Checkbox>
+      <Text fontSize="xs" color="gray.500">
+        Disable weather ambience here while keeping other game sounds.
+      </Text>
+    </VStack>
+  );
 
   const renderWorldSection = () => (
     <VStack
@@ -288,8 +317,9 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
         ) : hasLocationDefs ? (
           <VStack spacing={5} align="stretch">
             {renderWorldSection()}
+            {renderWeatherSection()}
             <PropertyForm
-              schema={propertyDefinitionsToSchema(locationMetadataDefinitions)}
+              schema={propertyDefinitionsToSchema(customLocationDefinitions)}
               values={(currentMap.metadata || {}) as Record<string, PropertyValue>}
               onChange={(k, v) => updateMapMetadataGeneric(k, v)}
             />
@@ -297,6 +327,7 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
         ) : (
           <VStack spacing={4} align="stretch">
             {renderWorldSection()}
+            {renderWeatherSection()}
 
             <FormControl>
               <FormLabel>Map Name</FormLabel>
