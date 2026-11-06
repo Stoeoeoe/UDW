@@ -67,7 +67,8 @@
         "options": [
           "None",
           "Ocean_1",
-          "Lake_1"
+          "Lake_1",
+          "River_1"
         ]
       }
     }
@@ -97,6 +98,36 @@
         "options": [
           "Indoor",
           "Outdoor"
+        ]
+      }
+    },
+    {
+      "key": "flowDirectionFrom",
+      "label": "Flow Direction From",
+      "type": "enum",
+      "required": true,
+      "defaultValue": "top",
+      "constraints": {
+        "options": [
+          "top",
+          "right",
+          "bottom",
+          "left"
+        ]
+      }
+    },
+    {
+      "key": "flowDirectionEnd",
+      "label": "Flow Direction End",
+      "type": "enum",
+      "required": true,
+      "defaultValue": "bottom",
+      "constraints": {
+        "options": [
+          "top",
+          "right",
+          "bottom",
+          "left"
         ]
       }
     }

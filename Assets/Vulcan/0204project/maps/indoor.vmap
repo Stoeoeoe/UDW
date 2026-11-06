@@ -22,7 +22,13 @@
         "sparse": true,
         "width": 16,
         "height": 16,
-        "entries": []
+        "entries": [
+          {
+            "x": 8,
+            "y": 8,
+            "v": 50
+          }
+        ]
       },
       "terrainData": [
         [
@@ -178,7 +184,7 @@
           null,
           null,
           null,
-          null,
+          0,
           null,
           null,
           null,
@@ -315,7 +321,9 @@
         ]
       ],
       "definitionId": "terrain",
-      "terrainPalette": []
+      "terrainPalette": [
+        "grass"
+      ]
     },
     {
       "id": "layer-1793453797362",
@@ -712,6 +720,17 @@
       "locked": false,
       "opacity": 1,
       "zOrder": 9999
+    },
+    {
+      "id": "layer-1793949256895",
+      "name": "Entities",
+      "kind": "entity",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 4,
+      "sortingLayer": "ground",
+      "entities": []
     }
   ],
   "entities": [],
@@ -754,6 +773,21 @@
           -1
         ],
         "tags": []
+      },
+      {
+        "id": "anchor-1793894673996",
+        "name": "Debug Spawn",
+        "position": [
+          128,
+          176
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": [
+          "debug_spawn_point"
+        ]
       }
     ]
   },
