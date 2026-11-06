@@ -64,7 +64,6 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
   },
 
   updateEntityType: async (id, updates) => {
-    let updatedEntityType: EntityType | null = null;
     set((state) => {
       const et = state.entityTypes.find((e) => e.id === id);
       if (!et) return;
@@ -76,9 +75,8 @@ export const createEntityTypeSlice: ImmerStateCreator<EntityTypeSlice> = (set, g
           get().project?.idPrefix,
         ),
       );
-      updatedEntityType = { ...et } as EntityType;
     });
-    const entityType = updatedEntityType ?? get().entityTypes.find((entry) => entry.id === id);
+    const entityType = get().entityTypes.find((entry) => entry.id === id);
     if (entityType) {
       const saveUnitId = `entity:${entityType.id}`;
       useSaveStore.getState().markSaving(saveUnitId);
