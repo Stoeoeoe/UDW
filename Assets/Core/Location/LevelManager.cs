@@ -11,6 +11,7 @@ using Core.TimeAndWeather;
 using Interaction;
 using UI.Shared;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
