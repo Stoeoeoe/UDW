@@ -236,6 +236,10 @@ namespace Core.Tile.Editor.Vulcanus
         // Tile layers: either a 2-D array (dense) or a sparse object.
         [JsonProperty("data")] public JToken Data { get; set; }
 
+        // Water layers (kind == "water"): named bodies and a hand-drawn pixel mask instead of tiles.
+        [JsonProperty("waterBodies")] public List<WaterBodyDto> WaterBodies { get; set; } = new();
+        [JsonProperty("waterMask")] public WaterMaskDto WaterMask { get; set; }
+
         [JsonProperty("terrainData")] public JArray TerrainData { get; set; }
         [JsonProperty("terrainPalette")] public List<string> TerrainPalette { get; set; }
 
@@ -244,6 +248,36 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("objectGroups")] public List<ObjectGroupDto> ObjectGroups { get; set; } = new();
         // Object layers (kind == "object")
         [JsonProperty("objectInstances")] public List<MapObjectInstanceDto> ObjectInstances { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Pixel mask at the project's logical resolution (tileSize pixels per tile), row-major from the top-left.
+    /// `rle` is a flat list of [value, run, value, run, ...]: value 0 is empty, value n is `waterBodies[n - 1]`.
+    /// </summary>
+    internal class WaterMaskDto
+    {
+        [JsonProperty("width")] public int Width { get; set; }
+        [JsonProperty("height")] public int Height { get; set; }
+        [JsonProperty("rle")] public List<int> Rle { get; set; } = new();
+    }
+
+    internal class WaterBodyDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("waterType")] public string WaterType { get; set; }
+        [JsonProperty("isFreshwater")] public bool IsFreshwater { get; set; }
+        [JsonProperty("bankProfile")] public string BankProfile { get; set; }
+        [JsonProperty("flow")] public List<FlowStrokeDto> Flow { get; set; } = new();
+    }
+
+    /// <summary>A freehand current in map pixels (top-left origin, y down): enters at the first point, leaves at the last.</summary>
+    internal class FlowStrokeDto
+    {
+        [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("points")] public List<List<float>> Points { get; set; } = new();
+        [JsonProperty("width")] public float Width { get; set; }
+        [JsonProperty("speed")] public float Speed { get; set; }
     }
 
     internal class ObjectGroupDto

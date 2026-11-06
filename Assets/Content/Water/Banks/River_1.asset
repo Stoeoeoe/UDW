@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a288c522a4f2b544b91978c7c23abe76, type: 3}
+  m_Name: River_1
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Water.BankProfile
+  layers:
+  - kind: 0
+    startPixels: 0
+    endPixels: 1.5
+    coverageStart: 1
+    coverageEnd: 1
+    color: {r: 0.32941177, g: 0.16078432, b: 0.06666667, a: 1}
+    texture: {fileID: 0}
+  - kind: 0
+    startPixels: 1.5
+    endPixels: 3.5
+    coverageStart: 1
+    coverageEnd: 1
+    color: {r: 0.454902, g: 0.28627452, b: 0.14509805, a: 1}
+    texture: {fileID: 0}
+  - kind: 0
+    startPixels: 3.5
+    endPixels: 7
+    coverageStart: 0.85
+    coverageEnd: 0
+    color: {r: 0.60784316, g: 0.3921569, b: 0.19607845, a: 1}
+    texture: {fileID: 0}
+  fadeWithTransparency: 1
+  ditherStrength: 0.172
+  edgeNoisePixels: 1.2
+  edgeNoiseScale: 2.36
+  shallowPixels: 4
+  shallowColor: {r: 0.23921569, g: 0.2, b: 0.14901961, a: 1}
+  shallowCoverage: 0.75

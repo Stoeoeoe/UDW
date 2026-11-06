@@ -80,6 +80,7 @@ namespace Core.Tile.Editor.Vulcanus
                 var terrainCells = new List<VulcanusImportedMap.TerrainCell>();
                 var persistentEntities = new List<AuthoredSpawnPlacement>();
                 var waterSources = new List<Tilemap>();
+                var drawnWater = new Dictionary<Tilemap, List<DrawnWaterBody>>();
 
                 foreach (var layer in dto.Layers)
                 {
@@ -88,6 +89,15 @@ namespace Core.Tile.Editor.Vulcanus
                     if (string.Equals(layer.Kind, "object", StringComparison.OrdinalIgnoreCase))
                     {
                         SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, tilesetsByIndex);
+                        continue;
+                    }
+
+                    if (string.Equals(layer.Kind, "water", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var drawnTilemap = CreateTilemapLayer(gridGo.transform, layer.Name, layer.ZOrder, layer.Opacity,
+                            layer.SortingLayer, addCollider: true);
+                        drawnWater.Add(drawnTilemap, DrawnWaterImporter.Import(ctx, drawnTilemap, layer, width, height, tileSize));
+                        waterSources.Add(drawnTilemap);
                         continue;
                     }
 
@@ -121,7 +131,7 @@ namespace Core.Tile.Editor.Vulcanus
                         ctx, persistentEntities);
                 }
 
-                WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels);
+                WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels, drawnWater);
                 SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
 
                 var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(

@@ -86,6 +86,55 @@ namespace Core.Tile.Editor.Vulcanus
             return result;
         }
 
+        /// <summary>Whether a logical pixel is covered by any water source, drawn or tiled.</summary>
+        internal bool IsWater(Vector2Int pixel) => _water.Contains(pixel);
+
+        /// <summary>Currents for one body from its drawn strokes (see <see cref="WaterFlowField"/>).</summary>
+        internal WaterFlowData BuildFlow(Tilemap surface, IReadOnlyList<FlowStrokeData> strokes, AssetImportContext context, string assetName)
+        {
+            var body = new Raster();
+            Rasterize(surface, body, false);
+            var pixels = new List<Vector2Int>();
+            foreach (var (chunk, bits) in body.Chunks)
+                for (var i = 0; i < bits.Length; i++)
+                    if (bits[i]) pixels.Add(chunk * Size + new Vector2Int(i % Size, i / Size));
+            if (pixels.Count == 0) throw new InvalidOperationException($"Water body '{assetName}' has no opaque mask pixels.");
+            var min = new Vector2Int(pixels.Min(p => p.x), pixels.Min(p => p.y));
+            var max = new Vector2Int(pixels.Max(p => p.x), pixels.Max(p => p.y));
+            var width = max.x - min.x + 1;
+            var height = max.y - min.y + 1;
+            var water = new bool[width * height];
+            foreach (var p in pixels) water[(p.y - min.y) * width + p.x - min.x] = true;
+
+            // Same land definition as the shoreline bake, padded so land just outside the body still counts.
+            var ramp = WaterFlowField.ShoreRamp;
+            var paddedWidth = width + 2 * ramp;
+            var paddedHeight = height + 2 * ramp;
+            var land = new byte[paddedWidth * paddedHeight];
+            for (var y = 0; y < paddedHeight; y++)
+                for (var x = 0; x < paddedWidth; x++)
+                {
+                    var pixel = min + new Vector2Int(x - ramp, y - ramp);
+                    land[y * paddedWidth + x] = (byte)(_mapPixels.Contains(pixel) && !_water.Contains(pixel) ? 1 : 0);
+                }
+            var padded = Distances(land, paddedWidth, paddedHeight, ramp);
+            var shore = new float[water.Length];
+            for (var y = 0; y < height; y++)
+                Array.Copy(padded, (y + ramp) * paddedWidth + ramp, shore, y * width, width);
+
+            var flow = WaterFlowField.Compute(water, shore, min, width, height, strokes, assetName);
+            var texture = new Texture2D(width, height, TextureFormat.RGB24, false, true)
+                { name = assetName + "_Flow", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            texture.SetPixelData(flow.Bytes, 0);
+            texture.Apply(false, true);
+            context.AddObjectToAsset(texture.name, texture);
+            var result = ScriptableObject.CreateInstance<WaterFlowData>();
+            result.name = assetName + "_FlowData";
+            result.Configure(texture, min, flow.SpeedScale);
+            context.AddObjectToAsset(result.name, result);
+            return result;
+        }
+
         private void Rasterize(Tilemap source, Raster target, bool authoredOnly)
         {
             foreach (var cell in source.cellBounds.allPositionsWithin)

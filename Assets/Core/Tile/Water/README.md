@@ -36,6 +36,80 @@ sampling preserves the sprite's atlas UVs. Source layer opacity and renderer
 sorting are retained. It needs no noise texture, simulation or save state.
 Optional object reflections use one temporary color capture per camera.
 
+## Drawn water layers
+
+A Vulcanus layer of kind `water` holds hand-drawn **bodies** instead of tiles. Each body in
+`waterBodies` has a stable `id`, a `waterType` (a profile name), `isFreshwater`, an optional
+`bankProfile` and its drawn currents (`flow`). `waterMask` says which body every pixel
+belongs to: `width`/`height` in logical pixels, which must equal the map size × tile size,
+and `rle`, a flat list of `[value, run, ...]` pairs from the top-left, where value 0 is
+empty and value n is `waterBodies[n - 1]`. A mask can address 255 bodies.
+
+The importer cuts each body's pixels into one alpha-mask sprite per map cell (identical
+cells share a sprite, packed into one readable atlas per layer) and feeds them to the
+same pipeline as colour-keyed tiles. Each body is exactly one `WaterBody` named
+`Water_<id>`, however its pixels connect, with its own profile and shoreline. All water
+shares one occupancy, so neighbouring bodies never form a false coastline between them.
+A body with no pixels creates nothing. Bank profiles are not implemented: a non-empty
+`bankProfile` fails the import rather than being ignored.
+
+Gameplay stays cell based. A cell that is more than half water gets an invisible
+`VulcanusTile` in the layer's tilemap with full collision, and `isFreshwater` when the
+body with the most pixels in that cell is freshwater. Cells with less water are walkable
+and not freshwater. Pixel-accurate lookups and outline colliders are not implemented.
+The layer draws no bank; the ground layers beneath show wherever the mask is empty.
+
+## Banks
+
+A drawn body's `bankProfile` names a `BankProfile` asset in `Assets/Content/Water/Banks/`. A missing
+profile, an invalid one, or a texture without Read/Write enabled fails the import. Banks are baked at
+import into alpha sprites, one per map cell, on a `Bank_<id>` tilemap that sorts one step above its
+water layer. They are static ground decoration, lit like any tile. Every land pixel (inside the map, not
+water of any kind) belongs to its nearest drawn body; a body with no bank still keeps other banks off
+its own shore.
+
+A profile is a list of layers from the water outwards. Each land pixel takes the first layer that claims it.
+- **Band:** a distance range (`startPixels` to `endPixels`, 0 is the first land pixel) filled with a colour
+  or a tileable texture sampled in world pixels. Edges wander by `edgeNoisePixels` at `edgeNoiseScale`
+  (a broad swing plus finer roughness), never inside the water's edge.
+- **Strip:** art laid along the shoreline. The texture's top row lies against the water and its columns
+  follow the shore with the water on the left; it covers as many pixels as it is tall. The importer traces
+  the outline of the water (islands included) and measures along it; a closed shoreline is stretched
+  slightly to hold a whole number of repeats so the art meets itself, and one running off the map edge is
+  left at its true length. Transparent pixels fall through to the next layer.
+- **Coverage:** `coverageStart` to `coverageEnd` thins a layer across its range. By default pixels are
+  dithered in and out with an ordered pattern, so every pixel keeps its palette colour. With
+  `fadeWithTransparency` the coverage fades alpha instead (blended, not palette, colours), and
+  `ditherStrength` lets the same ordered pattern nudge each pixel's opacity on land for a little pixel
+  texture where the bank thins out. The creep into the water is always a smooth fade.
+- **Shallows:** `shallowPixels` creeps the bank over the water's edge as `shallowColor`, at
+  `shallowCoverage` against the shore, thinning to nothing, so the step from foam to bank is soft.
+
+Layers reach at most 64 pixels from the water.
+
+## Drawn currents
+
+A body's `flow` strokes are freehand lines in map pixels (top-left origin, y down) with a
+`width` (the radius within which the stroke steers the water) and a relative `speed`. The
+first point is where water enters and the last is where it leaves. They only take effect
+when the body's profile has `flowEnabled`; a profile that also has its own `flowMap` fails
+the import. A body with no strokes keeps the profile's uniform current.
+
+The importer solves a potential through the body's water, from the strokes' starts to their
+ends, with banks as walls, so currents run parallel to banks through bends and side bays
+stay nearly still. Near a stroke the current is pulled towards the stroke's own direction,
+fully on the line and not at all at its reach. A stroke that starts or ends within another
+stroke's reach joins it (a tributary) and is not itself a source or sink. It is solved on
+4-pixel cells, so land features thinner than that do not separate channels. Speed ramps
+from 40% at the bank to full over 8 pixels. Strokes faster than 1 scale the whole body:
+`WaterFlowData.SpeedScale` is the fastest stroke, the map's blue channel is a fraction of
+it, and `WaterBody` multiplies the profile's flow speed by it.
+
+The result is a per-body `WaterFlowData` subasset in body-local pixels that replaces the
+profile's flow map for that body only. Import fails when a stroke starts or ends on land,
+when every stroke end lies on another stroke, or when the starts are not connected through
+water to the ends.
+
 ## Shoreline geometry
 
 Map import rasterizes water sprite alpha at the project's logical pixel resolution.
@@ -103,6 +177,7 @@ original surface animation exactly.
   `(128,255,255)`, south `(128,0,255)`, still `(128,128,0)`. Halve blue for
   half-speed regions. Paint gradual direction changes through river bends;
   hard changes in the data intentionally make hard changes in current direction.
+- **Drawn currents:** see "Drawn currents" above. A body's strokes generate its own flow map.
 - **Surface highlights:** discrete stretched streaks suggest surface light, using
   `waveColor` rather than adding RGB brightness. Intensity controls their temporal
   visibility, density their spatial coverage, scale their frequency, speed their

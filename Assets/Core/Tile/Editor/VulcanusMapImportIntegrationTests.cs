@@ -263,6 +263,258 @@ namespace Core.Tile.Editor
             Assert.That(SampleShoreline(island.Shoreline, new Vector2Int(0, -8)), Is.EqualTo(Mathf.Sqrt(84.5f)).Within(0.001));
         }
 
+        // A mask over a size x size pixel map (top-down, like Vulcanus): bodyAt gives each pixel's body value.
+        private static JObject DrawnMask(int size, Func<int, int, int> bodyAt)
+        {
+            var rle = new List<int>();
+            var value = bodyAt(0, 0);
+            var run = 0;
+            for (var i = 0; i < size * size; i++)
+            {
+                var current = bodyAt(i % size, i / size);
+                if (current != value) { rle.Add(value); rle.Add(run); run = 0; value = current; }
+                run++;
+            }
+            rle.Add(value);
+            rle.Add(run);
+            return new JObject { ["width"] = size, ["height"] = size, ["rle"] = new JArray(rle) };
+        }
+
+        private static JObject DrawnBody(string id, bool freshwater = false, string type = "Lake_1") => new()
+        {
+            ["id"] = id, ["name"] = id, ["waterType"] = type, ["isFreshwater"] = freshwater, ["flow"] = new JArray()
+        };
+
+        private static JObject DrawnLayer(JObject mask, params JObject[] bodies) => new()
+        {
+            ["name"] = "Pond", ["kind"] = "water", ["zOrder"] = 3, ["opacity"] = 1,
+            ["waterBodies"] = new JArray(bodies), ["waterMask"] = mask
+        };
+
+        private void UseDrawnWaterMap(int width, int height, JObject layer)
+        {
+            _mapJson["width"] = width;
+            _mapJson["height"] = height;
+            _mapJson["layers"] = new JArray(layer);
+            _mapJson.Remove("entities");
+            _mapJson.Remove("spatialPrimitives");
+            _mapJson.Remove("locationLinks");
+        }
+
+        // Two lakes side by side on a 2x2 tile map: A is pixels x 4..15 and B x 16..27, both y 2..21 (top-down).
+        private static JObject TwoLakes(bool aFreshwater = true) => DrawnLayer(
+            DrawnMask(32, (x, y) => y is >= 2 and <= 21 ? (x is >= 4 and <= 15 ? 1 : x is >= 16 and <= 27 ? 2 : 0) : 0),
+            DrawnBody("a", aFreshwater), DrawnBody("b"));
+
+        [Test]
+        public void DrawnWaterBodiesImportAsSeparateBodiesWithPixelAccurateShoresAndCellGameplay()
+        {
+            UseDrawnWaterMap(2, 2, TwoLakes());
+            var map = ImportMap();
+            var bodies = map.GetComponentsInChildren<WaterBody>(true);
+            Assert.That(bodies.Select(body => body.name), Is.EquivalentTo(new[] { "Water_a", "Water_b" }));
+            var a = bodies.Single(body => body.name == "Water_a");
+            var b = bodies.Single(body => body.name == "Water_b");
+            a.Validate();
+            b.Validate();
+            Assert.That(a.Profile.name, Is.EqualTo("Lake_1"));
+
+            // Each body renders only its own pixels: A is the left tile column, B the right one.
+            var left = a.GetComponent<Tilemap>();
+            var right = b.GetComponent<Tilemap>();
+            foreach (var cell in new[] { new Vector3Int(0, 0), new Vector3Int(0, 1) })
+            {
+                Assert.That(left.HasTile(cell), Is.True);
+                Assert.That(right.HasTile(cell), Is.False);
+            }
+            foreach (var cell in new[] { new Vector3Int(1, 0), new Vector3Int(1, 1) })
+            {
+                Assert.That(right.HasTile(cell), Is.True);
+                Assert.That(left.HasTile(cell), Is.False);
+            }
+
+            // Mask pixel (4,10) is A's first pixel in its row. (15,10) touches B, which is water, not a coast:
+            // its nearest land is the top shore, 8.5 pixels up. (16,16) sits 5.5 above the bottom shore.
+            Assert.That(SampleShoreline(a.Shoreline, new Vector2Int(4, 13)), Is.EqualTo(0.5f).Within(0.001));
+            Assert.That(SampleShoreline(a.Shoreline, new Vector2Int(15, 13)), Is.EqualTo(8.5f).Within(0.001));
+            Assert.That(SampleShoreline(b.Shoreline, new Vector2Int(16, 7)), Is.EqualTo(5.5f).Within(0.001));
+            Assert.That(SampleShoreline(a.Shoreline, new Vector2Int(2, 13)), Is.Zero, "Left of the lakes is land.");
+
+            // Only the top tile row is mostly water: both of its cells block movement, but only the cell
+            // dominated by the freshwater body refills the watering jar.
+            var source = map.GetComponentsInChildren<Tilemap>(true).Single(layer => layer.name == "Pond");
+            var fresh = source.GetTile<VulcanusTile>(new Vector3Int(0, 1));
+            var salt = source.GetTile<VulcanusTile>(new Vector3Int(1, 1));
+            Assert.That(fresh.IsFreshwater, Is.True);
+            Assert.That(salt, Is.Not.Null);
+            Assert.That(salt.IsFreshwater, Is.False);
+            foreach (var cell in new[] { new Vector3Int(0, 1), new Vector3Int(1, 1) })
+                Assert.That(source.GetColliderType(cell), Is.EqualTo(UnityEngine.Tilemaps.Tile.ColliderType.Grid));
+            Assert.That(source.GetTile(new Vector3Int(0, 0)), Is.Null);
+            Assert.That(source.GetTile(new Vector3Int(1, 0)), Is.Null);
+        }
+
+        [Test]
+        public void ABodyWithNoPixelsCreatesNoWaterObject()
+        {
+            UseDrawnWaterMap(2, 2, DrawnLayer(DrawnMask(32, (x, _) => x < 16 ? 1 : 0), DrawnBody("used"), DrawnBody("empty")));
+            Assert.That(ImportMap().GetComponentsInChildren<WaterBody>(true).Select(body => body.name), Is.EqualTo(new[] { "Water_used" }));
+        }
+
+        [TestCase("size", "mask is 31x32")]
+        [TestCase("body", "uses body 3")]
+        [TestCase("bank", "requires a BankProfile")]
+        [TestCase("type", "requires a waterType")]
+        [TestCase("duplicate", "unique id")]
+        [TestCase("stroke", "at least two")]
+        public void InvalidDrawnWaterFailsAtTheImportBoundary(string defect, string expected)
+        {
+            var layer = TwoLakes();
+            switch (defect)
+            {
+                case "size": layer["waterMask"]["width"] = 31; break;
+                case "body": layer["waterMask"] = DrawnMask(32, (_, _) => 3); break;
+                case "bank": layer["waterBodies"][0]["bankProfile"] = "__NoSuchBank"; break;
+                case "type": layer["waterBodies"][0]["waterType"] = "None"; break;
+                case "duplicate": layer["waterBodies"][1]["id"] = "a"; break;
+                case "stroke": layer["waterBodies"][0]["flow"] = JArray.Parse("[{'id':'s','points':[[1,1]],'width':8,'speed':1}]"); break;
+            }
+            UseDrawnWaterMap(2, 2, layer);
+            var messages = new List<string>();
+            Application.LogCallback capture = (message, stack, type) => messages.Add(message);
+            var previous = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            Application.logMessageReceived += capture;
+            try { WriteAndImport(_mapPath, _mapJson.ToString()); }
+            finally { Application.logMessageReceived -= capture; LogAssert.ignoreFailingMessages = previous; }
+            Assert.That(messages.Any(message => message.Contains(expected)), Is.True, string.Join("\n", messages));
+        }
+
+        [Test]
+        public void ABodyWithABankProfileGetsABakedBankOnItsOwnTilemap()
+        {
+            const string name = "__BankTest";
+            var path = WaterBankImporter.ProfileFolder + "/" + name + ".asset";
+            if (!AssetDatabase.IsValidFolder(WaterBankImporter.ProfileFolder))
+                AssetDatabase.CreateFolder("Assets/Content/Water", "Banks");
+            var profile = ScriptableObject.CreateInstance<BankProfile>();
+            profile.edgeNoisePixels = 0;
+            profile.layers = new[] { new BankLayer { kind = BankLayerKind.Band, startPixels = 0, endPixels = 2, color = Color.red } };
+            AssetDatabase.CreateAsset(profile, path);
+            try
+            {
+                // One lake at mask pixels 8..23 in both directions of a 2x2 tile map.
+                var body = DrawnBody("a");
+                body["bankProfile"] = name;
+                UseDrawnWaterMap(2, 2, DrawnLayer(DrawnMask(32, (x, y) => x is >= 8 and <= 23 && y is >= 8 and <= 23 ? 1 : 0), body));
+                var map = ImportMap();
+                Assert.That(map.GetComponentInChildren<WaterBody>(true), Is.Not.Null);
+                var bank = map.GetComponentsInChildren<Tilemap>(true).Single(layer => layer.name == "Bank_a");
+                var tile = bank.GetTile<UnityEngine.Tilemaps.Tile>(new Vector3Int(0, 0));
+                Assert.That(tile, Is.Not.Null, "The cell left of the lake carries bank pixels.");
+
+                // Mask pixel (7,16) is the first land pixel left of the lake: grid row 31 - 16 = 15 of cell (0,0).
+                var sprite = tile.sprite;
+                Color32 Pixel(int x, int y) => ReadPixel(sprite.texture, (int)sprite.rect.x + x, (int)sprite.rect.y + y);
+                Assert.That(Pixel(7, 15), Is.EqualTo(new Color32(255, 0, 0, 255)), "Depth 0 is the first band.");
+                Assert.That(Pixel(6, 15), Is.EqualTo(new Color32(255, 0, 0, 255)), "Depth 1 is still in the band.");
+                Assert.That(Pixel(5, 15).a, Is.Zero, "Depth 2 is past the band, so the ground shows.");
+                Assert.That(Pixel(8, 15).a, Is.Zero, "The water itself is not bank.");
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(_mapPath);
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+
+        // A throwaway profile with currents enabled; the map goes first so deleting the profile cannot trigger a failing reimport.
+        private void WithFlowingProfile(Action<string> test)
+        {
+            const string type = "__FlowTestLake";
+            var profilePath = WaterTilemapImporter.ProfileFolder + "/" + type + ".asset";
+            var profile = Object.Instantiate(AssetDatabase.LoadAssetAtPath<WaterProfile>("Assets/Content/Water/Lake_1.asset"));
+            profile.flowEnabled = true;
+            AssetDatabase.CreateAsset(profile, profilePath);
+            try { test(type); }
+            finally
+            {
+                AssetDatabase.DeleteAsset(_mapPath);
+                AssetDatabase.DeleteAsset(profilePath);
+            }
+        }
+
+        [Test]
+        public void DrawnCurrentsShapeTheFlowOfFlowingBodiesOnly()
+        {
+            WithFlowingProfile(type =>
+            {
+                // One body fills a 1x3 tile map. A double-speed current runs from its top edge to its bottom edge.
+                var body = DrawnBody("river", type: type);
+                body["flow"] = JArray.Parse("[{'id':'s','points':[[8,0],[8,47]],'width':8,'speed':2}]");
+                UseDrawnWaterMap(1, 3, DrawnLayer(DrawnMask(16, (_, _) => 1), body));
+                _mapJson["layers"][0]["waterMask"]["height"] = 48;
+                _mapJson["layers"][0]["waterMask"]["rle"] = new JArray(1, 16 * 48);
+
+                var river = ImportMap().GetComponentInChildren<WaterBody>(true);
+                river.Validate();
+                Assert.That(river.Flow, Is.Not.Null);
+                Assert.That(river.Flow.SpeedScale, Is.EqualTo(2));
+                var map = river.Flow.Map;
+                Assert.That((map.width, map.height), Is.EqualTo((16, 48)));
+                var middle = ReadPixel(map, 8, 24);
+                Assert.That(middle.g, Is.LessThan(30), "The current flows down, from the top edge to the bottom edge.");
+                Assert.That(Mathf.Abs(middle.r - 128), Is.LessThan(10));
+                Assert.That(middle.b, Is.GreaterThan(200));
+
+                body["flow"] = new JArray();
+                _mapJson["layers"][0]["waterBodies"] = new JArray(body);
+                Assert.That(ImportMap().GetComponentInChildren<WaterBody>(true).Flow, Is.Null, "Without strokes the uniform current stays.");
+            });
+        }
+
+        [Test]
+        public void ACurrentDrawnOnLandFailsTheImport()
+        {
+            WithFlowingProfile(type =>
+            {
+                // Water fills only the left half of the map, but the current is drawn down its right half.
+                var body = DrawnBody("river", type: type);
+                body["flow"] = JArray.Parse("[{'id':'s','points':[[28,2],[28,29]],'width':4,'speed':1}]");
+                UseDrawnWaterMap(2, 2, DrawnLayer(DrawnMask(32, (x, _) => x < 12 ? 1 : 0), body));
+                var messages = new List<string>();
+                Application.LogCallback capture = (message, stack, logType) => messages.Add(message);
+                var previous = LogAssert.ignoreFailingMessages;
+                LogAssert.ignoreFailingMessages = true;
+                Application.logMessageReceived += capture;
+                try { WriteAndImport(_mapPath, _mapJson.ToString()); }
+                finally { Application.logMessageReceived -= capture; LogAssert.ignoreFailingMessages = previous; }
+                Assert.That(messages.Any(message => message.Contains("on land")), Is.True, string.Join("\n", messages));
+            });
+        }
+
+        private static Color32 ReadPixel(Texture2D texture, int x, int y)
+        {
+            // Imported flow maps are not CPU readable; copy through a linear target to keep exact bytes.
+            var target = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+            var previous = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(texture, target);
+                RenderTexture.active = target;
+                var copy = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false, true);
+                copy.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+                var pixel = (Color32)copy.GetPixel(x, y);
+                Object.DestroyImmediate(copy);
+                return pixel;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(target);
+            }
+        }
+
         private static float SampleShoreline(WaterShorelineData data, Vector2Int pixel)
         {
             var relative = pixel - data.OriginPixels;

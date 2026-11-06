@@ -1,3 +1,4 @@
+
 Shader "UrdewValley/Pixel Water"
 {
     Properties
@@ -9,7 +10,7 @@ Shader "UrdewValley/Pixel Water"
         _WaveColor ("Wave", Color) = (0.212,0.353,0.400,1)
         _HighlightColor ("Highlight", Color) = (0.282,0.424,0.455,1)
         _PixelsPerUnit ("Pixels Per Unit", Float) = 16
-        _AnimationFps ("Animation Frames Per Second", Float) = 8
+        _AnimationFps ("Animation Frames Per Second", Float) = 12
         _WaveSpeed ("Wave Speed", Float) = 0.16
         _WaveScale ("Wave Scale", Float) = 1.5
         _CausticIntensity ("Caustic Intensity", Float) = 0.1
@@ -25,13 +26,13 @@ Shader "UrdewValley/Pixel Water"
         _Depth ("Depth Enabled, Start Pixels, Blend Pixels", Vector) = (0,6,4,0)
         _DepthShape ("Depth Steps, Wobble Pixels, Wobble Scale", Vector) = (2,2,12,0)
         _DepthMotion ("Depth Motion Pixels, Period", Vector) = (0.75,5,0,0)
-        _StillWater ("Still Water Enabled, Slosh Pixels, Slosh Period, Wind Patch Strength", Vector) = (0,1.5,6,0.6)
+        _StillWater ("Still Water Enabled, Reserved, Reserved, Wind Patch Strength", Vector) = (0,1.5,6,0.6)
         _WindPatches ("Wind Patch Scale, Speed, Direction XY", Vector) = (48,4,1,0)
         _Current ("Current Enabled, Speed, Strength", Vector) = (0,0.3,1,0)
         [HideInInspector] _FlowMap ("Optional Flow Map", 2D) = "black" {}
         [HideInInspector] _FlowMapEnabled ("Flow Map Enabled", Float) = 0
         [HideInInspector] _FlowMapWorldRect ("Flow Map World Origin and Size", Vector) = (0,0,16,16)
-        _SurfaceHighlights ("Surface Highlights Enabled, Intensity, Density, Speed", Vector) = (0,0.25,0.2,0.15)
+        _SurfaceHighlights ("Surface Highlights Enabled, Visible Fraction, Density, Speed", Vector) = (0,0.25,0.2,0.15)
         _SurfaceHighlightShape ("Surface Highlight Scale, Stretch X, Stretch Y", Vector) = (1,4,1,0)
         _ObjectReflections ("Object Reflections Enabled, Opacity, Ripple Pixels, Speed", Vector) = (0,0.35,1,0.5)
         _Interaction ("Ripples, Rain Splashes, Contact Foam", Vector) = (0,0,0,0)
@@ -114,8 +115,8 @@ Shader "UrdewValley/Pixel Water"
             }
 
             // ---- Pixel grid helpers ---------------------------------------------------------
-            // Every pattern is built from whole logical pixels and whole animation ticks, so lines
-            // are exactly one pixel thick and movement happens in pixel steps. Pattern maths runs on
+            // Most patterns use the 16-PPU world grid. Sparse caustic glints alone use a fixed
+            // 2x detail grid; never mix the grids within one effect. Pattern maths runs on
             // unsigned grid coordinates: world pixels plus a large bias, so they are never negative.
             // Unsigned division and modulo are cheaper than signed ones and need no floor fix-ups.
             // The bias is a multiple of every power-of-two cell size, so those grids stay aligned.
@@ -136,11 +137,29 @@ Shader "UrdewValley/Pixel Water"
                 return float(h) * (1.0 / 4294967296.0);
             }
 
-            // Whole animation frames. Wraps every 65536 ticks (about two hours at 8 fps).
+            // Whole animation frames. Wraps every 65536 ticks.
             uint Tick() { return uint(floor(_Time.y * _AnimationFps)) & 0xFFFFu; }
 
             int2 WorldPixel(float2 world) { return int2(floor(world * _PixelsPerUnit)); }
+            int2 DetailPixel(float2 world) { return int2(floor(world * (_PixelsPerUnit * 2.0))); }
             uint2 Grid(int2 px) { return uint2(px) + GridBias; } // Wraps correctly for negative pixels.
+
+            // Surface patterns are drawn as dashes along +x. Flowing water turns that frame so the dashes run
+            // along the current. Only the eight compass headings are used: a quarter turn swaps and flips
+            // whole pixels, and an eighth turn uses a 45-degree lattice, so every dash stays one crisp pixel
+            // thick instead of smearing into an aliased band at an arbitrary angle.
+            static const int2 FlowSteps[8] =
+                { int2(1, 0), int2(1, 1), int2(0, 1), int2(-1, 1), int2(-1, 0), int2(-1, -1), int2(0, -1), int2(1, -1) };
+
+            // The compass heading closest to a velocity, as a step of -1, 0 or 1 per axis. Still water faces east.
+            int2 FlowStep(float2 velocity)
+            {
+                if (dot(velocity, velocity) < 1e-6) return FlowSteps[0];
+                return FlowSteps[uint(round(atan2(velocity.y, velocity.x) / 0.785398163 + 8.0)) & 7u];
+            }
+
+            // Pattern space for a current heading along `step`: x runs along the current, y across it.
+            int2 FlowFrame(int2 pixel, int2 step) { return int2(dot(pixel, step), step.x * pixel.y - step.y * pixel.x); }
 
             // Squashed ellipses read as circles on a top-down water plane.
             bool InsideEllipse(int2 d, float2 radius)
@@ -216,19 +235,11 @@ Shader "UrdewValley/Pixel Water"
             }
 
             // ---- Surface patterns -----------------------------------------------------------
-            // Flowing water drifts every pattern in one direction. Still water (lakes, ponds) has no
-            // net movement: each pattern sloshes back and forth by a pixel or two on its own clock,
-            // wavelets reappear somewhere new each cycle, and wind patches wander across the surface.
+            // Flowing water drifts in one direction. Still ponds keep their grids fixed:
+            // wavelets and glints animate in place rather than moving the entire pattern at once.
+            // Wind patches can still modulate which wavelets appear.
 
             bool StillWater() { return _StillWater.x > 0; }
-
-            // Whole-pixel back-and-forth offset. Each pattern passes its own phase, so the layers
-            // never move as one rigid sheet.
-            int2 Slosh(float seconds, float phase)
-            {
-                float w = 6.2832 * seconds / max(_StillWater.z, 0.5) + phase;
-                return int2(round(float2(sin(w), 0.5 * sin(w * 0.73 + 1.3)) * _StillWater.y));
-            }
 
             // 0 outside wind patches, up to 1 inside. Large, soft noise drifting with the wind.
             float WindPatch(int2 px, float seconds)
@@ -238,21 +249,31 @@ Shader "UrdewValley/Pixel Water"
                 return smoothstep(0.45, 0.75, ValueNoise(px - offset, _WindPatches.x));
             }
 
-            // Wavelets: short horizontal dashes that grow from the centre, hold, then shrink.
+            // The effect is absent at the beginning/end, grows over the first quarter,
+            // holds its shape, then shrinks over the final quarter. The result changes
+            // *pixel coverage*, not alpha, so all visible pixels keep the four-colour palette.
+            float LifeEnvelope(float life)
+            {
+                return smoothstep(0.0, 0.25, life) *
+                    (1.0 - smoothstep(0.75, 1.0, life));
+            }
+
+            // Wavelets: horizontal dashes grow from a point, hold, then shrink away.
             // Each cycle picks a new length and position. Some add a shorter parallel dash below.
-            half3 Ripples(uint2 g, uint tick, half3 color)
+            half3 Ripples(uint2 g, uint tick, half3 color, float2 driftDirection)
             {
                 uint2 cellSize = uint2(max(int2(round(float2(16, 8) / _WaveScale)), int2(8, 4)));
                 float seconds = tick / _AnimationFps;
-                int2 drift = StillWater() ? Slosh(seconds, 0)
-                    : int2(round(_FlowDirection.xy * (_WaveSpeed * seconds) * _PixelsPerUnit));
+                int2 drift = StillWater() ? int2(0, 0)
+                    : int2(round(driftDirection * (_WaveSpeed * seconds) * _PixelsPerUnit));
                 uint2 p = g - uint2(drift);
                 uint row = p.y / cellSize.y;
                 uint stagger = uint(Rand(uint2(row, 0), 1u) * cellSize.x); // Stagger rows like brickwork.
                 uint x = p.x + stagger;
                 uint2 cell = uint2(x / cellSize.x, row);
                 uint2 local = uint2(x % cellSize.x, p.y % cellSize.y);
-                float phase = seconds * _WaveSpeed * 0.127 + Rand(cell, 2u);
+                // An independent clock for each cell, with a shorter lifecycle on still water.
+                float phase = seconds * _WaveSpeed * (StillWater() ? 0.65 : 0.127) + Rand(cell, 2u);
                 float cycle = frac(phase);
                 if (cycle >= 0.56) return color;
                 uint2 variant = cell + uint(phase) * uint2(7u, 13u); // New wavelet every cycle.
@@ -267,49 +288,55 @@ Shader "UrdewValley/Pixel Water"
                 }
                 if (Rand(variant, 3u) >= chance) return color;
 
-                uint frame = min(uint(cycle / 0.56 * 3), 2u);          // short, full, short
+                uint stage = min(uint(cycle / 0.56 * 7), 6u);
+                if (stage == 0u || stage == 6u) return color;
                 uint longest = cellSize.x - 2u;
                 uint length = min(3u + uint(Rand(variant, 4u) * (longest - 2u)), longest);
-                uint shown = frame == 1u ? length : max(length / 2u, 2u);
+                uint shown = stage == 3u ? length :
+                    (stage == 2u || stage == 4u ? max(length / 2u, 2u) : 1u);
                 uint centreX = 1u + uint(Rand(variant, 5u) * (cellSize.x - 1u - length)) + length / 2u;
                 uint start = centreX - shown / 2u;
                 uint crest = 1u + uint(Rand(variant, 6u) * (cellSize.y - 2u));
                 if (local.y == crest && local.x >= start && local.x < start + shown) return _WaveColor.rgb;
-                bool doubled = frame == 1u && shown >= 5u && Rand(variant, 7u) < 0.35;
+                bool doubled = stage == 3u && shown >= 5u && Rand(variant, 7u) < 0.35;
                 if (doubled && local.y + 1u == crest && local.x >= start + 2u && local.x < start + shown - 1u)
                     return _WaveColor.rgb;
                 return color;
             }
 
-            // Sparse one-to-three pixel glints on their own grid and clock.
-            half3 Caustics(uint2 g, uint tick, half3 color)
+            // Sparse 32-PPU glints. Shapes are always one *detail-grid* pixel tall,
+            // and grow by pairs of detail pixels. This is the only intentionally finer layer.
+            half3 Caustics(uint2 detailG, uint tick, half3 color)
             {
                 if (_CausticIntensity <= 0) return color;
-                uint size = uint(max(round(16 / _CausticScale), 4));
+                uint size = uint(max(round(32 / _CausticScale), 8));
                 float seconds = tick / _AnimationFps;
-                int2 drift = StillWater() ? Slosh(seconds, 2.1)
-                    : int2(round(float2(0.3, -0.2) * _WaveSpeed * seconds * _PixelsPerUnit));
-                uint2 p = g - uint2(drift);
+                int2 drift = StillWater() ? int2(0, 0)
+                    : int2(round(float2(0.3, -0.2) * _WaveSpeed * seconds * _PixelsPerUnit * 2.0));
+                uint2 p = detailG - uint2(drift);
                 uint2 cell = p / size;
                 uint2 local = p % size;
                 if (Rand(cell, 3u) > _CausticIntensity) return color; // Fraction of cells with a glint.
-                float cycle = frac(seconds * _WaveSpeed * 0.3 + Rand(cell, 4u));
-                if (cycle > 0.5) return color;
-                uint frame = min(uint(cycle * 6), 2u); // dot, line, dot
-                uint2 at = uint2(1u + uint(Rand(cell, 5u) * (size - 4u)), 1u + uint(Rand(cell, 6u) * (size - 2u)));
-                uint length = frame == 1u ? 3u : 1u;
-                uint start = at.x + (frame == 1u ? 0u : 1u);
-                if (local.y == at.y && local.x >= start && local.x < start + length) return _HighlightColor.rgb;
+                float cycle = frac(seconds * _WaveSpeed * 0.9 + Rand(cell, 4u));
+                if (cycle >= 0.5) return color;
+                float life = cycle * 2.0;
+                uint length = uint(round(3.0 * LifeEnvelope(life))) * 2u;
+                if (length == 0u) return color;
+                uint2 at = uint2(2u + uint(Rand(cell, 5u) * (size - 8u)), 2u + uint(Rand(cell, 6u) * (size - 4u)));
+                uint start = at.x + (6u - length) / 2u;
+                if (local.y == at.y && local.x >= start && local.x < start + length)
+                    return length == 6u ? _HighlightColor.rgb : _WaveColor.rgb;
                 return color;
             }
 
-            // Stretched one-pixel streaks with a single step in the middle.
+            // Stretched one-pixel streaks: grow/hold/shrink about a stable centre.
+            // Use palette steps at the peak instead of fading pixels through off-palette colours.
             half3 Highlights(uint2 g, uint tick, half3 color)
             {
                 if (!(_SurfaceHighlights.x > 0 && _SurfaceHighlights.y > 0 && _SurfaceHighlights.z > 0)) return color;
                 uint2 size = uint2(max(int2(round(_SurfaceHighlightShape.yz / _SurfaceHighlightShape.x * _PixelsPerUnit)), int2(8, 3)));
                 float seconds = tick / _AnimationFps;
-                int2 drift = StillWater() ? Slosh(seconds, 4.4) * int2(2, 1)
+                int2 drift = StillWater() ? int2(0, 0)
                     : int2(round(_SurfaceHighlights.w * seconds * _PixelsPerUnit), 0);
                 uint2 p = g - uint2(drift);
                 uint2 cell = p / size;
@@ -317,20 +344,27 @@ Shader "UrdewValley/Pixel Water"
                 if (Rand(cell, 7u) >= _SurfaceHighlights.z) return color;
                 float cycle = frac(seconds * _SurfaceHighlights.w * 0.5 + Rand(cell, 8u));
                 if (cycle >= _SurfaceHighlights.y) return color;
-                uint length = size.x / 4u + uint(Rand(cell, 9u) * (size.x / 2u));
-                uint start = uint(Rand(cell, 10u) * (size.x - length));
+                float life = cycle / max(_SurfaceHighlights.y, 0.0001);
+                uint fullLength = size.x / 4u + uint(Rand(cell, 9u) * (size.x / 2u));
+                uint shown = uint(round(fullLength * LifeEnvelope(life)));
+                if (shown == 0u) return color;
+                uint fullStart = uint(Rand(cell, 10u) * (size.x - fullLength));
+                uint start = fullStart + (fullLength - shown) / 2u;
                 uint row = 1u + uint(Rand(cell, 11u) * (size.y - 2u));
-                if (local.x < start || local.x >= start + length) return color;
-                uint x = local.x - start;
-                if (local.y == row + (x * 2u >= length ? 1u : 0u)) return _WaveColor.rgb;
+                if (local.x < start || local.x >= start + shown) return color;
+                uint x = local.x - fullStart; // Keep the step anchored as the streak changes length.
+                if (local.y == row + (x * 2u >= fullLength ? 1u : 0u))
+                    return life >= 0.30 && life <= 0.70 ? _HighlightColor.rgb : _WaveColor.rgb;
                 return color;
             }
 
-            half3 SurfaceColor(uint2 g, uint tick, half3 water)
+            // `driftDirection` is the base ripple drift in pattern space: the profile's flow direction on its
+            // own, or straight along the current once the pattern frame has been turned to face it.
+            half3 SurfaceColor(uint2 g, uint2 detailG, uint tick, half3 water, float2 driftDirection)
             {
                 half3 color = water;
-                color = Ripples(g, tick, color);
-                color = Caustics(g, tick, color);
+                color = Ripples(g, tick, color, driftDirection);
+                color = Caustics(detailG, tick, color);
                 color = Highlights(g, tick, color);
                 return color;
             }
@@ -357,14 +391,29 @@ Shader "UrdewValley/Pixel Water"
                         color = _WaveColor.rgb;
                 }
 
+                // A mostly connected, stationary one-pixel rim remains visible even
+                // between foam pulses. Long gaps keep it from reading as a neon outline.
+                if (_ShorelineEffects.y > 0 && distance < 1.5 &&
+                    Rand(g / uint2(8u, 4u), 31u) < 0.75)
+                    color = _WaveColor.rgb;
+
                 if (_ShorelineEffects.y > 0 && distance < _Foam.x && _Foam.y > 0)
                 {
-                    // 3x1 foam blocks fade in and out on staggered clocks, denser on the bank row.
+                    // Bright 3x1 blocks grow and recede, but remain visible throughout
+                    // their active lifetime. Foam no longer disappears for most of a pulse.
                     uint2 block = g / uint2(3u, 1u);
                     float cycle = frac(seconds * _Foam.z * 0.5 + Rand(block, 13u));
                     // Distances measure pixel centres: the first water row is 1 pixel from land.
                     float coverage = distance < 2 ? saturate(_Foam.y * 2) : _Foam.y;
-                    if (cycle < coverage) color = _HighlightColor.rgb;
+                    if (cycle < coverage)
+                    {
+                        float life = cycle / max(coverage, 0.0001);
+                        uint shown = max(1u, uint(round(3.0 * LifeEnvelope(life))));
+                        uint offset = (3u - shown) / 2u;
+                        uint localX = g.x % 3u;
+                        if (localX >= offset && localX < offset + shown)
+                            color = _HighlightColor.rgb;
+                    }
                 }
                 return color;
             }
@@ -469,13 +518,16 @@ Shader "UrdewValley/Pixel Water"
                 half alpha = input.color.a; // Source layer opacity only.
 
                 int2 px = WorldPixel(input.world.xy);
+                uint2 detailG = Grid(DetailPixel(input.world.xy));
+                float2 p = (float2(px) + 0.5) / _PixelsPerUnit; // Centre of one logical world pixel.
                 // Tile chunks may be batched with a different object matrix. The bake belongs to
                 // the WaterBody transform, including fractional map placement in the scene.
-                int2 bodyPixel = int2(floor(mul(_WaterWorldToLocal, float4(input.world, 1)).xy * _PixelsPerUnit));
+                // Sample the local bake at the *same snapped world-pixel centre* as the surface
+                // patterns, preventing two slightly offset pixel grids from splitting a pixel.
+                int2 bodyPixel = int2(floor(mul(_WaterWorldToLocal, float4(p, input.world.z, 1)).xy * _PixelsPerUnit));
                 uint2 g = Grid(px);
                 uint tick = Tick();
                 float seconds = tick / _AnimationFps;
-                float2 p = (px + 0.5) / _PixelsPerUnit; // Pixel centre in world units.
 
                 float distance = (_ShorelineEffects.x > 0 || _Depth.x > 0) ? ShoreDistance(bodyPixel) : _ShorelineRange.y;
                 half3 water = lerp(_BaseColor.rgb, _DeepColor.rgb, DepthLevel(distance, px, g, seconds));
@@ -487,21 +539,37 @@ Shader "UrdewValley/Pixel Water"
                     float3 flow = SAMPLE_TEXTURE2D_LOD(_FlowMap, sampler_FlowMap, flowUV, 0).rgb;
                     // Byte 128 is exactly neutral; blue zero makes a stationary current.
                     float2 velocity = clamp((flow.rg * 255 - 128) / 127, -1, 1) * flow.b * _Current.z;
-                    // Two overlapping two-unit scrolls, offset in whole pixels, dithered per pixel.
+                    // The patterns face along the local current. Diagonal lattice steps are longer than a pixel.
+                    int2 step = FlowStep(velocity);
+                    float scroll = length(velocity) * length(float2(step)) * _PixelsPerUnit;
+                    uint2 frameG = Grid(FlowFrame(px, step));
+                    uint2 frameDetail = Grid(FlowFrame(DetailPixel(input.world.xy), step));
+                    float2 drift = float2(length(_FlowDirection.xy), 0);
+                    // Two overlapping two-unit scrolls along the current, in whole pixels, dithered per pixel.
                     float phase = frac(seconds * _Current.y * 0.5);
-                    int2 firstOffset = int2(round(velocity * (phase * 2) * _PixelsPerUnit));
-                    int2 secondOffset = int2(round(velocity * (frac(phase + 0.5) * 2) * _PixelsPerUnit));
-                    half3 first = SurfaceColor(g - uint2(firstOffset), tick, water);
-                    half3 second = SurfaceColor(g - uint2(secondOffset), tick, water);
+                    int firstOffset = int(round(scroll * (phase * 2)));
+                    int secondOffset = int(round(scroll * (frac(phase + 0.5) * 2)));
+                    half3 first = SurfaceColor(frameG - uint2(firstOffset, 0), frameDetail - uint2(firstOffset * 2, 0), tick, water, drift);
+                    half3 second = SurfaceColor(frameG - uint2(secondOffset, 0), frameDetail - uint2(secondOffset * 2, 0), tick, water, drift);
                     float weight = 1 - abs(phase * 2 - 1);
                     color = Rand(g, 14u) < weight ? first : second;
                 }
                 else
                 {
                     uint2 surface = g;
+                    uint2 detailSurface = detailG;
+                    float2 drift = _FlowDirection.xy;
                     if (_Current.x > 0)
-                        surface -= uint2(int2(round(_FlowDirection.xy * (_Current.y * _Current.z * seconds) * _PixelsPerUnit)));
-                    color = SurfaceColor(surface, tick, water);
+                    {
+                        // A uniform current also turns the patterns to face along it.
+                        int2 step = FlowStep(_FlowDirection.xy);
+                        float scroll = length(_FlowDirection.xy) * length(float2(step)) * (_Current.y * _Current.z * seconds) * _PixelsPerUnit;
+                        int offset = int(round(scroll));
+                        surface = Grid(FlowFrame(px, step)) - uint2(offset, 0);
+                        detailSurface = Grid(FlowFrame(DetailPixel(input.world.xy), step)) - uint2(offset * 2, 0);
+                        drift = float2(length(_FlowDirection.xy), 0);
+                    }
+                    color = SurfaceColor(surface, detailSurface, tick, water, drift);
                 }
 
                 if (_ObjectReflections.x > 0 && _ObjectReflections.y > 0 && _WaterObjectReflectionAvailable > 0)

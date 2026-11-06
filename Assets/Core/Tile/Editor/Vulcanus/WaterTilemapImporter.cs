@@ -45,16 +45,24 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         internal static void ImportAll(AssetImportContext context, IReadOnlyList<Tilemap> sources, int pixelsPerUnit,
-            int mapWidth, int mapHeight, int maximumDistance)
+            int mapWidth, int mapHeight, int maximumDistance,
+            IReadOnlyDictionary<Tilemap, List<DrawnWaterBody>> drawnWater)
         {
             // Split keyed tiles first, so the shoreline builder and every later step see final sprites.
             var keyedWater = PrepareKeyedTiles(context, sources, LoadColorKeys(context));
             // Vulcanus sprites use a top-centre pivot and the tilemap's half-cell anchor.
             var mapPixels = new RectInt(0, -pixelsPerUnit / 2, mapWidth * pixelsPerUnit, mapHeight * pixelsPerUnit);
+            // Every water source shares one occupancy, so touching bodies never form a false coastline.
             var keyedMasks = keyedWater.SelectMany(layer => layer.Value.Values.SelectMany(cells =>
                 cells.Select(cell => (layer.Key, cell.Key, cell.Value))));
-            var shorelines = new WaterShorelineBuilder(sources, keyedMasks, pixelsPerUnit, mapPixels, maximumDistance);
-            foreach (var source in sources) Import(context, source, pixelsPerUnit, shorelines, keyedWater[source]);
+            var drawnMasks = drawnWater.SelectMany(layer => layer.Value.SelectMany(body =>
+                body.Cells.Select(cell => (layer.Key, cell.Key, cell.Value))));
+            var shorelines = new WaterShorelineBuilder(sources, keyedMasks.Concat(drawnMasks), pixelsPerUnit, mapPixels, maximumDistance);
+            foreach (var source in sources)
+            {
+                var drawn = drawnWater.TryGetValue(source, out var bodies) ? bodies : new List<DrawnWaterBody>();
+                Import(context, source, pixelsPerUnit, shorelines, keyedWater[source], drawn);
+            }
         }
 
         /// <summary>
@@ -109,7 +117,8 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         private static void Import(AssetImportContext context, Tilemap source, int pixelsPerUnit,
-            WaterShorelineBuilder shorelines, Dictionary<string, Dictionary<Vector3Int, Sprite>> water)
+            WaterShorelineBuilder shorelines, Dictionary<string, Dictionary<Vector3Int, Sprite>> water,
+            List<DrawnWaterBody> drawn)
         {
             // Whole-tile water from metadata joins the keyed cells. Only these cells are hidden in the source layer.
             var metadataCells = new HashSet<Vector3Int>();
@@ -134,18 +143,7 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 var cells = water[type];
                 if (!cells.TryGetValue(seed, out var seedSprite)) continue; // Already reached by flood fill.
-                var go = new GameObject($"Water_{type}_{seed.x}_{seed.y}");
-                go.SetActive(false); // Configure required references before OnEnable.
-                go.transform.SetParent(source.transform, false);
-                var surface = go.AddComponent<Tilemap>();
-                surface.tileAnchor = source.tileAnchor;
-                surface.color = source.color;
-                var renderer = go.AddComponent<TilemapRenderer>();
-                var sourceRenderer = source.GetComponent<TilemapRenderer>();
-                renderer.sortingLayerID = sourceRenderer.sortingLayerID;
-                renderer.sortingOrder = sourceRenderer.sortingOrder;
-                renderer.sortOrder = sourceRenderer.sortOrder;
-                renderer.mode = sourceRenderer.mode;
+                var (go, surface) = CreateSurface(source, $"Water_{type}_{seed.x}_{seed.y}");
 
                 var pending = new Queue<(Vector3Int cell, Sprite sprite)>();
                 cells.Remove(seed);
@@ -153,16 +151,7 @@ namespace Core.Tile.Editor.Vulcanus
                 while (pending.Count > 0)
                 {
                     var (cell, sprite) = pending.Dequeue();
-                    if (!masks.TryGetValue(sprite, out var mask))
-                    {
-                        mask = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
-                        mask.name = $"WaterMask_{source.name}_{masks.Count}";
-                        mask.sprite = sprite;
-                        mask.colliderType = UnityEngine.Tilemaps.Tile.ColliderType.None;
-                        context.AddObjectToAsset(mask.name, mask);
-                        masks.Add(sprite, mask);
-                    }
-                    surface.SetTile(new TileChangeData(cell, mask, source.GetColor(cell), source.GetTransformMatrix(cell)), true);
+                    surface.SetTile(new TileChangeData(cell, MaskTile(context, source, sprite, masks), source.GetColor(cell), source.GetTransformMatrix(cell)), true);
                     if (metadataCells.Contains(cell))
                     {
                         // The authored tile still owns collision and gameplay metadata.
@@ -180,6 +169,62 @@ namespace Core.Tile.Editor.Vulcanus
                 go.AddComponent<WaterBody>().Configure(profiles[type], pixelsPerUnit, shoreline);
                 go.SetActive(true);
             }
+
+            // A drawn body is exactly one WaterBody, however its pixels are connected.
+            foreach (var body in drawn)
+            {
+                if (body.Cells.Count == 0) continue;
+                var profile = LoadProfile(body.WaterType, context);
+                var (go, surface) = CreateSurface(source, $"Water_{body.Id}");
+                foreach (var (cell, sprite) in body.Cells)
+                    surface.SetTile(new TileChangeData(cell, MaskTile(context, source, sprite, masks), source.GetColor(cell), source.GetTransformMatrix(cell)), true);
+                var assetName = $"{source.name}_{go.name}";
+                var shoreline = shorelines.Build(surface, context, assetName);
+                WaterFlowData currents = null;
+                // Currents only show where the profile has flow enabled; the profile decides, the strokes shape it.
+                if (body.Strokes.Count > 0 && profile.flowEnabled)
+                {
+                    if (profile.flowMap)
+                        throw new InvalidOperationException($"Water body '{body.Id}' has drawn currents, but profile '{body.WaterType}' also has a flowMap. Remove one.");
+                    currents = shorelines.BuildFlow(surface, body.Strokes, context, assetName);
+                }
+                go.AddComponent<WaterBody>().Configure(profile, pixelsPerUnit, shoreline, currents);
+                go.SetActive(true);
+            }
+
+            WaterBankImporter.Import(context, source, drawn, shorelines, masks);
+        }
+
+        // The inactive child tilemap a body renders on; inactive so references are set before OnEnable.
+        private static (GameObject go, Tilemap surface) CreateSurface(Tilemap source, string name)
+        {
+            var go = new GameObject(name);
+            go.SetActive(false);
+            go.transform.SetParent(source.transform, false);
+            var surface = go.AddComponent<Tilemap>();
+            surface.tileAnchor = source.tileAnchor;
+            surface.color = source.color;
+            var renderer = go.AddComponent<TilemapRenderer>();
+            var sourceRenderer = source.GetComponent<TilemapRenderer>();
+            renderer.sortingLayerID = sourceRenderer.sortingLayerID;
+            renderer.sortingOrder = sourceRenderer.sortingOrder;
+            renderer.sortOrder = sourceRenderer.sortOrder;
+            renderer.mode = sourceRenderer.mode;
+            return (go, surface);
+        }
+
+        // One collider-free tile per distinct mask sprite.
+        internal static UnityEngine.Tilemaps.Tile MaskTile(AssetImportContext context, Tilemap source, Sprite sprite,
+            Dictionary<Sprite, UnityEngine.Tilemaps.Tile> masks)
+        {
+            if (masks.TryGetValue(sprite, out var mask)) return mask;
+            mask = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
+            mask.name = $"WaterMask_{source.name}_{masks.Count}";
+            mask.sprite = sprite;
+            mask.colliderType = UnityEngine.Tilemaps.Tile.ColliderType.None;
+            context.AddObjectToAsset(mask.name, mask);
+            masks.Add(sprite, mask);
+            return mask;
         }
     }
 }
