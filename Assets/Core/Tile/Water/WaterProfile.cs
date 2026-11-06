@@ -22,6 +22,9 @@ namespace Core.Tile.Water
         [Min(0.001f)] public float causticScale = 2f;
         public Vector2 flowDirection = new(1, 0.25f);
 
+        [Tooltip("Blend instead of hard palette steps: depth becomes a gradient, foam and surf fade away from the shore, and swell crests become soft bands. Faded pixels are blended colours, not palette colours.")]
+        public bool smoothFades;
+
         [Header("Shoreline (logical pixels)")]
         public bool shorelineEnabled;
         public bool foamEnabled = true;
@@ -92,6 +95,36 @@ namespace Core.Tile.Water
         public float objectReflectionRipplePixels = 1;
         [Min(0)] public float objectReflectionRippleSpeed = 0.5f;
 
+        [Header("Swell (open water, logical pixels)")]
+        [Tooltip("Travelling waves for oceans and large lakes. Replaces the shore wave bands, which would not be in step with it.")]
+        public bool swellEnabled;
+        [Tooltip("Direction the swell travels. A map's swellDirection location property overrides it.")]
+        public Vector2 swellDirection = new(0, 1);
+        [Min(4), Tooltip("Distance between crests.")]
+        public float swellWavelength = 28;
+        [Min(0), Tooltip("How fast crests advance, in pixels per second.")]
+        public float swellSpeed = 6;
+        [Range(1, 3), Tooltip("Crest thickness. Rough seas add one.")]
+        public int swellCrestPixels = 1;
+        [Range(0, 1), Tooltip("How broken up crests are. Rough seas make them more continuous.")]
+        public float swellBreakup = 0.45f;
+        [Range(0, 1), Tooltip("Strength of a weaker, shorter cross swell at 35 degrees. Zero for a single train.")]
+        public float swellCrossStrength = 0.15f;
+        [Range(0, 1), Tooltip("How much crests curve sideways along their length. Zero gives straight crests.")]
+        public float swellMeander = 0.5f;
+        [Range(0, 1), Tooltip("How much crests undulate over time as they travel. Zero keeps their shape fixed.")]
+        public float swellRipple = 0.5f;
+        [Min(4), Tooltip("Typical length of a crest stretch between breaks. Shorter reads as choppier water.")]
+        public float swellStretchPixels = 16;
+        [Range(0, 1), Tooltip("Smooth fades only: how strongly the sea rolls lighter towards crests and darker between them, giving it depth.")]
+        public float swellShading = 0.35f;
+        [Min(1), Tooltip("Within this distance of land, crests bend to run parallel to the coast.")]
+        public float swellShoalPixels = 20;
+        [Min(0), Tooltip("Within this distance of land, crests break into foam. Rough seas double it.")]
+        public float surfPixels = 6;
+        [Min(0), Tooltip("Foam left behind a breaking crest.")]
+        public float surfWashPixels = 4;
+
         [Header("Interaction")]
         [Tooltip("Expanding rings from WaterInteraction.SpawnRipple and WaterContact wakes.")]
         public bool interactionRipplesEnabled;
@@ -102,6 +135,17 @@ namespace Core.Tile.Water
 
         public void Validate()
         {
+            if (!float.IsFinite(swellDirection.x) || !float.IsFinite(swellDirection.y) || (swellEnabled && swellDirection == Vector2.zero) ||
+                !float.IsFinite(swellWavelength) || swellWavelength < 4 || !float.IsFinite(swellSpeed) || swellSpeed < 0 ||
+                swellCrestPixels < 1 || swellCrestPixels > 3 || !float.IsFinite(swellBreakup) || swellBreakup < 0 || swellBreakup > 1 ||
+                !float.IsFinite(swellCrossStrength) || swellCrossStrength < 0 || swellCrossStrength > 1 ||
+                !float.IsFinite(swellMeander) || swellMeander < 0 || swellMeander > 1 ||
+                !float.IsFinite(swellRipple) || swellRipple < 0 || swellRipple > 1 ||
+                !float.IsFinite(swellStretchPixels) || swellStretchPixels < 4 ||
+                !float.IsFinite(swellShading) || swellShading < 0 || swellShading > 1 ||
+                !float.IsFinite(swellShoalPixels) || swellShoalPixels < 1 || !float.IsFinite(surfPixels) || surfPixels < 0 ||
+                !float.IsFinite(surfWashPixels) || surfWashPixels < 0)
+                throw new InvalidOperationException($"Water profile '{name}' has invalid swell settings.");
             if (!material || !material.shader || material.shader.name != ShaderName)
                 throw new InvalidOperationException($"Water profile '{name}' requires a material using '{ShaderName}'.");
             if (!float.IsFinite(animationFps) || animationFps <= 0 ||
@@ -143,6 +187,13 @@ namespace Core.Tile.Water
                 throw new InvalidOperationException($"Water profile '{name}' flow map requires linear RGB24/RGBA32 data, Point filtering, Clamp wrapping and no mipmaps. Disable sRGB and compression in its texture import settings.");
         }
 
+        /// <summary>Sets the swell's travel direction, keeping this profile's crest shape.</summary>
+        internal void ApplySwellDirection(MaterialPropertyBlock properties, Vector2 direction)
+        {
+            var travel = direction.sqrMagnitude > 0 ? direction.normalized : Vector2.up;
+            properties.SetVector("_SwellShape", new Vector4(travel.x, travel.y, swellBreakup, swellCrossStrength));
+        }
+
         private void ValidateColor(Color color)
         {
             if (!float.IsFinite(color.r) || !float.IsFinite(color.g) || !float.IsFinite(color.b) ||
@@ -182,6 +233,11 @@ namespace Core.Tile.Water
             properties.SetVector("_SurfaceHighlightShape", new Vector4(surfaceHighlightScale, surfaceHighlightStretch.x, surfaceHighlightStretch.y, 0));
             properties.SetVector("_ObjectReflections", new Vector4(objectReflectionsEnabled ? 1 : 0,
                 objectReflectionOpacity, objectReflectionRipplePixels, objectReflectionRippleSpeed));
+            properties.SetVector("_Swell", new Vector4(swellEnabled ? 1 : 0, swellWavelength, swellSpeed, swellCrestPixels));
+            ApplySwellDirection(properties, swellDirection);
+            properties.SetVector("_Surf", new Vector4(swellShoalPixels, surfPixels, surfWashPixels, swellMeander));
+            properties.SetFloat("_SmoothFades", smoothFades ? 1 : 0);
+            properties.SetVector("_SwellLook", new Vector4(swellRipple, swellShading, swellStretchPixels, 0));
             properties.SetVector("_Interaction", new Vector4(interactionRipplesEnabled ? 1 : 0,
                 rainSplashesEnabled ? 1 : 0, contactFoamEnabled ? 1 : 0, 0));
         }

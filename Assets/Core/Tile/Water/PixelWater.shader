@@ -36,6 +36,11 @@ Shader "UrdewValley/Pixel Water"
         _SurfaceHighlightShape ("Surface Highlight Scale, Stretch X, Stretch Y", Vector) = (1,4,1,0)
         _ObjectReflections ("Object Reflections Enabled, Opacity, Ripple Pixels, Speed", Vector) = (0,0.35,1,0.5)
         _Interaction ("Ripples, Rain Splashes, Contact Foam", Vector) = (0,0,0,0)
+        _Swell ("Swell Enabled, Wavelength Pixels, Speed Pixels, Crest Pixels", Vector) = (0,28,6,1)
+        _SwellShape ("Swell Direction XY, Breakup, Cross Train", Vector) = (0,1,0.45,0.35)
+        _Surf ("Shoal Pixels, Surf Pixels, Wash Pixels, Meander", Vector) = (20,6,4,0.5)
+        _SmoothFades ("Smooth Fades", Float) = 0
+        _SwellLook ("Swell Ripple, Shading, Stretch Pixels", Vector) = (0.5,0.35,16,0)
     }
     SubShader
     {
@@ -56,6 +61,8 @@ Shader "UrdewValley/Pixel Water"
             float4 _FlowMapWorldRect;
             float4 _ObjectReflections;
             float4 _Interaction;
+            float4 _Swell, _SwellShape, _Surf, _SwellLook;
+            float _SmoothFades;
             float4x4 _WaterWorldToLocal;
         CBUFFER_END
         ENDHLSL
@@ -89,6 +96,7 @@ Shader "UrdewValley/Pixel Water"
             float4 _WaterRipples[WATER_MAX_RIPPLES];   // world xy, start time, max radius pixels (0 = unused)
             float4 _WaterContacts[WATER_MAX_CONTACTS]; // world xy, foam radius pixels xy
             float _WaterContactCount, _WaterInteractionClock, _WaterRain;
+            float _WaterSeaState; // From the weather: 0 calm to 1 storm.
 
             struct Attributes { COMMON_2D_INPUTS half4 color : COLOR; };
             struct Varyings
@@ -224,6 +232,7 @@ Shader "UrdewValley/Pixel Water"
                 }
                 if (_Depth.z <= 0) return distance >= _Depth.y ? 1 : 0;
                 float t = saturate((distance - _Depth.y) / _Depth.z);
+                if (_SmoothFades > 0) return t; // Smooth fades: a continuous gradient instead of bands.
                 uint steps = uint(round(_DepthShape.x));
                 if (steps == 0u)
                 {
@@ -369,7 +378,119 @@ Shader "UrdewValley/Pixel Water"
                 return color;
             }
 
+            // ---- Swell ----------------------------------------------------------------------
+            // Open-water waves. Crests run across the travel direction a wavelength apart and advance in whole
+            // pixels. Within the shoaling distance of land the phase turns to follow the coastline, so crests
+            // bend parallel to the beach; within the surf distance they break into foam and leave wash behind.
+            // The weather's sea state makes crests more continuous and thicker, adds whitecaps and widens the
+            // surf. Every pixel stays a palette colour: crest Wave, the trough behind it Deep, foam Highlight.
+
+            // Wave phase in wavelengths; whole numbers are crests.
+            float SwellPhase(float2 pixel, float distance, float2 direction, float wavelength, float travelled)
+            {
+                float open = dot(pixel, direction) / wavelength;
+                float coast = -distance / wavelength;
+                float shoal = 1 - saturate(distance / max(_Surf.x, 1));
+                shoal = shoal * shoal * (3 - 2 * shoal);
+                return lerp(open, coast, shoal) - travelled / wavelength;
+            }
+
+            // How strongly a pixel shows the crest, the trough behind it and foam, each 0 to 1. Hard shading uses
+            // whole weights, so every pixel is one palette colour. Smooth fades let the weights taper, so crests
+            // become soft bands that fade at their edges and stretch ends, and foam washes out.
+            // The fourth weight is the swell's broad shading, -1 (trough) to 1 (crest), already scaled.
+            float4 SwellTrain(int2 px, float distance, float2 direction, float wavelength, float travelled,
+                float crestPixels, float breakup, uint seed, float seconds)
+            {
+                int along = int(round(dot(float2(px), float2(-direction.y, direction.x))));
+                float phase = SwellPhase(float2(px) + 0.5, distance, direction, wavelength, travelled);
+                // Crests meander sideways along their length, so they curve instead of running ruler-straight.
+                // The noise is fixed to the crest's place along the sea, so a crest keeps its shape as it travels.
+                phase += (ValueNoise(int2(along, int(seed) * 31), max(wavelength * 1.5, 8)) * 2 - 1) * 0.5 * _Surf.w;
+                // Ripple: crests also undulate slowly over time, so they are not stiff as they travel.
+                phase += (ValueNoise(int2(along + 977, int(seed) * 57 + int(seconds * 6)), max(wavelength * 0.8, 6)) * 2 - 1) * 0.25 * _SwellLook.x;
+                float f = frac(phase);
+                int wave = int(floor(phase));
+                float sea = _WaterSeaState;
+                bool breaking = distance < _Surf.y * (1 + sea);
+                // Each crest has its own breaks, from noise along it.
+                float gaps = breakup * (1 - 0.6 * sea) * (breaking ? 0.4 : 1);
+                // Smooth fades: crests and their shading fade out across the shoaling zone, gone before the shore.
+                float shoreFade = _SmoothFades > 0 ? saturate((distance - _Surf.y * 0.5) / max(_Surf.x - _Surf.y * 0.5, 1)) : 1;
+                // Smooth fades: the whole sea rolls gently lighter towards each crest and darker in between.
+                float shade = _SmoothFades > 0 ? cos(6.2832 * f) * _SwellLook.y * shoreFade : 0;
+                float body = ValueNoise(int2(along, wave * 97 + int(seed)), max(_SwellLook.z, 4));
+                if (body < gaps) return float4(0, 0, 0, shade);
+                // A crest stretch is thickest in its middle and thins out towards its ends.
+                float swell = gaps > 0 ? saturate((body - gaps) / 0.3) : 1;
+                float thickness = crestPixels * lerp(0.6, 1.4, swell);
+                float ahead = f * wavelength;        // Pixels in front of the crest line.
+                float behind = (1 - f) * wavelength; // Pixels behind it.
+                // Whitecaps foam on a share of crest stretches in rough seas.
+                bool whitecap = Rand(uint2(uint(along + 65536) / 3u, uint(wave + 65536)), 40u + seed) < sea * 0.5;
+                float wash = _Surf.z;
+
+                float crest, trough, foam;
+                if (_SmoothFades > 0)
+                {
+                    crest = saturate(1 - ahead / (thickness + 1.5)) * lerp(0.35, 1, swell) * shoreFade;
+                    trough = saturate(1 - behind / 2.5) * 0.45 * swell * shoreFade;
+                    foam = breaking && wash > 0 ? saturate(1 - behind / wash) * 0.7 * shoreFade : 0;
+                }
+                else
+                {
+                    crest = ahead < thickness ? 1 : 0;
+                    trough = crest == 0 && behind < 1 ? 1 : 0; // One pixel of trough behind the crest.
+                    // Wash thins out away from the crest.
+                    foam = breaking && wash > 0 && crest == 0 && behind < wash && Rand(Grid(px), 41u + seed) < 1 - behind / wash ? 1 : 0;
+                    if (foam > 0) trough = 0;
+                }
+                // A breaking crest, or a whitecap, is foam rather than a crest.
+                if (breaking || whitecap)
+                {
+                    foam = max(foam, crest * (breaking ? 1 : 0.8));
+                    crest = 0;
+                }
+                return float4(crest, trough, foam, shade);
+            }
+
+            half3 Swell(int2 px, float distance, uint tick, half3 color)
+            {
+                if (_Swell.x <= 0 || _Swell.y <= 0) return color;
+                float seconds = tick / _AnimationFps;
+                float2 direction = normalize(_SwellShape.xy);
+                float crestPixels = _Swell.w + (_WaterSeaState > 0.5 ? 1 : 0);
+                float4 weights = SwellTrain(px, distance, direction, _Swell.y, round(_Swell.z * seconds), crestPixels, _SwellShape.z, 0u, seconds);
+                if (_SwellShape.w > 0)
+                {
+                    // A weaker, shorter train at 35 degrees breaks up the regularity of a single swell.
+                    float2 cross = float2(direction.x * 0.819 - direction.y * 0.574, direction.x * 0.574 + direction.y * 0.819);
+                    float4 second = SwellTrain(px, distance, cross, _Swell.y * 0.62, round(_Swell.z * 0.8 * seconds), _Swell.w,
+                        1 - _SwellShape.w * (1 - _SwellShape.z), 7u, seconds);
+                    if (max(weights.x, max(weights.y, weights.z)) < 1)
+                    {
+                        weights.x = max(weights.x, second.x); // The weaker train casts no trough.
+                        weights.z = max(weights.z, second.z);
+                    }
+                    // Shading from both trains crossing reads as chop instead of parallel stripes.
+                    weights.w = weights.w * 0.6 + second.w * 0.4;
+                }
+                // Patches of calmer and livelier water, fixed in place while the waves pass through them.
+                weights.w *= lerp(0.2, 1, ValueNoise(px, max(_Swell.y * 3, 24)));
+                // Broad shading first, so crests and troughs sit on a rolling surface.
+                color = weights.w > 0 ? lerp(color, _WaveColor.rgb, weights.w * 0.5) : lerp(color, _DeepColor.rgb, -weights.w * 0.6);
+                color = lerp(color, _DeepColor.rgb, weights.y);
+                color = lerp(color, _WaveColor.rgb, weights.x);
+                return lerp(color, _HighlightColor.rgb, weights.z);
+            }
+
             // ---- Shoreline ------------------------------------------------------------------
+            // Hard shading paints the target palette colour; smooth fades blend towards it by `strength`.
+            half3 ShoreBlend(half3 color, half3 target, float strength)
+            {
+                return _SmoothFades > 0 ? lerp(color, target, saturate(strength)) : target;
+            }
+
             half3 Shoreline(float distance, uint2 g, uint tick, half3 color)
             {
                 if (distance >= _ShorelineRange.y) return color;
@@ -377,9 +498,9 @@ Shader "UrdewValley/Pixel Water"
                 uint ring = uint(distance); // Each pixel belongs to exactly one integer ring.
 
                 if (_ShorelineEffects.w > 0 && distance < _ShoreWaves.w)
-                    color = _WaveColor.rgb;
+                    color = ShoreBlend(color, _WaveColor.rgb, 1 - distance / _ShoreWaves.w);
 
-                if (_ShorelineEffects.z > 0 && _ShoreWaves.x > 0 && _ShoreWaves.y > 0)
+                if (_ShorelineEffects.z > 0 && _ShoreWaves.x > 0 && _ShoreWaves.y > 0 && _Swell.x <= 0)
                 {
                     uint spacing = uint(max(round(1 / _ShoreWaves.x), 2));
                     uint width = uint(clamp(round(_ShoreWaves.y), 1, spacing - 1));
@@ -388,14 +509,14 @@ Shader "UrdewValley/Pixel Water"
                     // Fade within half a spacing so ponds do not fill with nested outlines.
                     float coverage = 0.65 * saturate(1 - 2 * distance / spacing);
                     if (shifted % spacing < width && Rand(g / 8u + wave * 131u, 12u) < coverage)
-                        color = _WaveColor.rgb;
+                        color = ShoreBlend(color, _WaveColor.rgb, 0.6);
                 }
 
                 // A mostly connected, stationary one-pixel rim remains visible even
                 // between foam pulses. Long gaps keep it from reading as a neon outline.
                 if (_ShorelineEffects.y > 0 && distance < 1.5 &&
                     Rand(g / uint2(8u, 4u), 31u) < 0.75)
-                    color = _WaveColor.rgb;
+                    color = ShoreBlend(color, _WaveColor.rgb, 0.55);
 
                 if (_ShorelineEffects.y > 0 && distance < _Foam.x && _Foam.y > 0)
                 {
@@ -412,7 +533,7 @@ Shader "UrdewValley/Pixel Water"
                         uint offset = (3u - shown) / 2u;
                         uint localX = g.x % 3u;
                         if (localX >= offset && localX < offset + shown)
-                            color = _HighlightColor.rgb;
+                            color = ShoreBlend(color, _HighlightColor.rgb, 1.15 - distance / _Foam.x);
                     }
                 }
                 return color;
@@ -529,7 +650,7 @@ Shader "UrdewValley/Pixel Water"
                 uint tick = Tick();
                 float seconds = tick / _AnimationFps;
 
-                float distance = (_ShorelineEffects.x > 0 || _Depth.x > 0) ? ShoreDistance(bodyPixel) : _ShorelineRange.y;
+                float distance = (_ShorelineEffects.x > 0 || _Depth.x > 0 || _Swell.x > 0) ? ShoreDistance(bodyPixel) : _ShorelineRange.y;
                 half3 water = lerp(_BaseColor.rgb, _DeepColor.rgb, DepthLevel(distance, px, g, seconds));
 
                 half3 color;
@@ -588,6 +709,9 @@ Shader "UrdewValley/Pixel Water"
 
                 if (_ShorelineEffects.x > 0)
                     color = Shoreline(distance, g, tick, color);
+
+                // Swell after the shoreline, so breaking crests and wash show over the shallows and foam rim.
+                color = Swell(px, distance, tick, color);
 
                 // Interaction draws last so it reads on top of reflections and shore effects.
                 color = ContactFoam(px, g, tick, color);

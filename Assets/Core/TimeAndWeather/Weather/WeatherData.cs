@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using Core.Common;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace Core.TimeAndWeather
 {
@@ -43,6 +41,8 @@ namespace Core.TimeAndWeather
 
         [Range(0, 1), Tooltip("Water-surface rain splash density. Zero for dry weather or snow.")]
         public float waterRainIntensity;
+        [Range(0, 1), Tooltip("How rough the sea is: more continuous, thicker swell crests, whitecaps and a wider surf. Zero is calm.")]
+        public float waterSeaState;
 
         public override IReadOnlyList<ConfigurationError> ValidateConfiguration()
         {

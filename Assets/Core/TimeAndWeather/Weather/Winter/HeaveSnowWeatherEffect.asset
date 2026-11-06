@@ -18,6 +18,9 @@ MonoBehaviour:
   outdoorAmbience: {fileID: 0}
   indoorAmbience: {fileID: 0}
   ambienceVolume: 1
+  indoorAmbienceVolumeMultiplier: 1
+  indoorAmbienceLowPass: 0
+  indoorAmbienceCutoffFrequency: 1500
   locationFilter:
     locationType: 1
     filterMode: 1
@@ -89,3 +92,4 @@ MonoBehaviour:
   weatherRendererFeature: {fileID: 0}
   weatherMaterial: {fileID: 2100000, guid: 3258f0fa7e001e34a8c90a9bc3161391, type: 2}
   waterRainIntensity: 0
+  waterSeaState: 0.3

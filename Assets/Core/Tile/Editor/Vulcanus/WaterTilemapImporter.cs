@@ -44,9 +44,25 @@ namespace Core.Tile.Editor.Vulcanus
             return keys;
         }
 
+        private static readonly Dictionary<string, Vector2> Compass = new(StringComparer.Ordinal)
+        {
+            ["north"] = new Vector2(0, 1), ["northeast"] = new Vector2(1, 1).normalized, ["east"] = new Vector2(1, 0),
+            ["southeast"] = new Vector2(1, -1).normalized, ["south"] = new Vector2(0, -1), ["southwest"] = new Vector2(-1, -1).normalized,
+            ["west"] = new Vector2(-1, 0), ["northwest"] = new Vector2(-1, 1).normalized
+        };
+
+        /// <summary>Location metadata `swellDirection`: where the swell travels, or zero (empty or "default") for each profile's own.</summary>
+        internal static Vector2 ParseSwellDirection(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value == "default") return Vector2.zero;
+            if (!Compass.TryGetValue(value, out var direction))
+                throw new FormatException($"Location metadata 'swellDirection' must be default or a compass direction (north, northeast, ... northwest), not '{value}'.");
+            return direction;
+        }
+
         internal static void ImportAll(AssetImportContext context, IReadOnlyList<Tilemap> sources, int pixelsPerUnit,
             int mapWidth, int mapHeight, int maximumDistance,
-            IReadOnlyDictionary<Tilemap, List<DrawnWaterBody>> drawnWater)
+            IReadOnlyDictionary<Tilemap, List<DrawnWaterBody>> drawnWater, Vector2 swellDirection)
         {
             // Split keyed tiles first, so the shoreline builder and every later step see final sprites.
             var keyedWater = PrepareKeyedTiles(context, sources, LoadColorKeys(context));
@@ -61,7 +77,7 @@ namespace Core.Tile.Editor.Vulcanus
             foreach (var source in sources)
             {
                 var drawn = drawnWater.TryGetValue(source, out var bodies) ? bodies : new List<DrawnWaterBody>();
-                Import(context, source, pixelsPerUnit, shorelines, keyedWater[source], drawn);
+                Import(context, source, pixelsPerUnit, shorelines, keyedWater[source], drawn, swellDirection);
             }
         }
 
@@ -118,7 +134,7 @@ namespace Core.Tile.Editor.Vulcanus
 
         private static void Import(AssetImportContext context, Tilemap source, int pixelsPerUnit,
             WaterShorelineBuilder shorelines, Dictionary<string, Dictionary<Vector3Int, Sprite>> water,
-            List<DrawnWaterBody> drawn)
+            List<DrawnWaterBody> drawn, Vector2 swellDirection)
         {
             // Whole-tile water from metadata joins the keyed cells. Only these cells are hidden in the source layer.
             var metadataCells = new HashSet<Vector3Int>();
@@ -166,7 +182,7 @@ namespace Core.Tile.Editor.Vulcanus
                     }
                 }
                 var shoreline = shorelines.Build(surface, context, $"{source.name}_{go.name}");
-                go.AddComponent<WaterBody>().Configure(profiles[type], pixelsPerUnit, shoreline);
+                go.AddComponent<WaterBody>().Configure(profiles[type], pixelsPerUnit, shoreline, null, swellDirection);
                 go.SetActive(true);
             }
 
@@ -188,7 +204,7 @@ namespace Core.Tile.Editor.Vulcanus
                         throw new InvalidOperationException($"Water body '{body.Id}' has drawn currents, but profile '{body.WaterType}' also has a flowMap. Remove one.");
                     currents = shorelines.BuildFlow(surface, body.Strokes, context, assetName);
                 }
-                go.AddComponent<WaterBody>().Configure(profile, pixelsPerUnit, shoreline, currents);
+                go.AddComponent<WaterBody>().Configure(profile, pixelsPerUnit, shoreline, currents, swellDirection);
                 go.SetActive(true);
             }
 

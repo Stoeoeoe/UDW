@@ -12,7 +12,6 @@ using MoreMountains.Tools;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.Rendering;
 using Util;
 using static Core.Common.Editor.Reflect;
 
@@ -31,6 +30,7 @@ namespace Core.TimeAndWeather.Editor
         private Color _daylight;
         private WeatherData _dailyWeather;
         private float _previousWaterRain;
+        private float _previousSeaState;
         private float _previousIndoorCover;
         private WeatherSoundManagerProbe _sound;
         private readonly List<long> _clockNotifications = new();
@@ -39,12 +39,14 @@ namespace Core.TimeAndWeather.Editor
         public void SetUp()
         {
             _previousWaterRain = WaterInteraction.Rain;
+            _previousSeaState = WaterInteraction.SeaState;
             _previousIndoorCover = Shader.GetGlobalFloat("_IndoorWeatherCover");
 
             Game.Root.SetActive(true);
 
             _spring = CreateSeason(Season.Spring, Color.green);
             _spring.weatherData.GetRandomItem().waterRainIntensity = 0.35f;
+            _spring.weatherData.GetRandomItem().waterSeaState = 0.6f;
             _summer = CreateSeason(Season.Summer, Color.yellow);
             Game.Use(new ClockSettings { seasons = new[] { _spring, _summer } });
             _sound = Game.RegisterManager<WeatherSoundManagerProbe>();
@@ -77,6 +79,7 @@ namespace Core.TimeAndWeather.Editor
             EventBus<GameTimeChangedEvent>.Unsubscribe(this);
 
             WaterInteraction.Rain = _previousWaterRain;
+            WaterInteraction.SeaState = _previousSeaState;
             Shader.SetGlobalFloat("_IndoorWeatherCover", _previousIndoorCover);
         }
 
@@ -89,6 +92,7 @@ namespace Core.TimeAndWeather.Editor
             Assert.That(_daylight, Is.EqualTo(Color.green));
             Assert.That(_dailyWeather, Is.Null);
             Assert.That(WaterInteraction.Rain, Is.EqualTo(0.35f));
+            Assert.That(WaterInteraction.SeaState, Is.EqualTo(0.6f), "The weather sets how rough the sea is.");
         }
 
         [TestCase("setup")]

@@ -75,6 +75,26 @@
   ],
   "locationMetadataDefinitions": [
     {
+      "key": "swellDirection",
+      "label": "Swell Direction (toward)",
+      "type": "enum",
+      "required": false,
+      "defaultValue": "default",
+      "constraints": {
+        "options": [
+          "default",
+          "north",
+          "northeast",
+          "east",
+          "southeast",
+          "south",
+          "southwest",
+          "west",
+          "northwest"
+        ]
+      }
+    },
+    {
       "key": "musicCue",
       "label": "Music Cue",
       "type": "string",

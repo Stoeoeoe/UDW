@@ -7,7 +7,6 @@ using Core.Tile.Water;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using UnityEngine;
-using UnityEngine.Rendering;
 using VContainer;
 
 namespace Core.TimeAndWeather
@@ -114,6 +113,7 @@ namespace Core.TimeAndWeather
             Shader.SetGlobalFloat(IndoorWeatherCover, IsIndoor ? 1f : 0f);
             if (!CurrentWeather) return; // The location may enter before the calendar's first weather roll.
             WaterInteraction.Rain = IsIndoor ? 0f : CurrentWeather.waterRainIntensity;
+            WaterInteraction.SeaState = CurrentWeather.waterSeaState;
             StopEffects();
             _effectsRoot.MMDestroyAllChildren();
             if (!IsIndoor && CurrentWeather.weatherEffectPrefab)
@@ -194,6 +194,7 @@ namespace Core.TimeAndWeather
             if (_effectsRoot) StopEffects();
             Shader.SetGlobalFloat(IndoorWeatherCover, 0);
             WaterInteraction.Rain = 0;
+            WaterInteraction.SeaState = 0;
         }
     }
 }

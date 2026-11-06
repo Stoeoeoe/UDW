@@ -92,3 +92,4 @@ MonoBehaviour:
   weatherRendererFeature: {fileID: -4292770418832460746, guid: 424799608f7334c24bf367e4bbfa7f9a, type: 2}
   weatherMaterial: {fileID: 2100000, guid: be9523b6ba1b394489f1b9d3dcf1a0d5, type: 2}
   waterRainIntensity: 0.35
+  waterSeaState: 0.4

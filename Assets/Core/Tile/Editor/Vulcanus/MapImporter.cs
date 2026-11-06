@@ -131,7 +131,8 @@ namespace Core.Tile.Editor.Vulcanus
                         ctx, persistentEntities);
                 }
 
-                WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels, drawnWater);
+                WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels, drawnWater,
+                    WaterTilemapImporter.ParseSwellDirection(dto.Metadata?.SwellDirection));
                 SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);
 
                 var anchorsById = VulcanusMapTriggerImporter.SpawnAnchors(

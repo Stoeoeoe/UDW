@@ -59,6 +59,38 @@ body with the most pixels in that cell is freshwater. Cells with less water are 
 and not freshwater. Pixel-accurate lookups and outline colliders are not implemented.
 The layer draws no bank; the ground layers beneath show wherever the mask is empty.
 
+## Smooth fades
+
+By default every surface pixel is one of the four palette colours. `smoothFades` blends instead:
+depth becomes a continuous gradient, shallows, the foam rim and foam blocks fade away from the shore,
+and swell crests become soft bands with a faint trough that fade at their edges and stretch ends,
+with surf foam washing out behind breaking crests. Wavelets, glints and interaction effects stay hard.
+
+## Swell
+
+`swellEnabled` adds travelling waves for oceans and large lakes. Crests run across
+`swellDirection` (the direction they travel), `swellWavelength` pixels apart, advancing at
+`swellSpeed` pixels per second in whole-pixel steps. Each crest is `swellCrestPixels` thick in
+the Wave colour with a one-pixel trough behind it in Deep, broken up along its length by
+`swellBreakup`; each stretch is thickest in its middle and thins to single pixels at its ends.
+`swellStretchPixels` sets how long those stretches typically are. `swellMeander` curves crests
+sideways along their length, `swellRipple` makes them undulate slowly as they travel, and
+`swellCrossStrength` adds a weaker, shorter train at 35 degrees, so the swell does not look
+mechanical. With smooth fades, `swellShading` rolls the whole sea gently lighter towards each
+crest and darker between them, and crests fade out across the shoaling zone before the shore. Swell replaces the shore wave bands, which would not be in step with it.
+
+Near land the swell uses the baked shoreline distance. Within `swellShoalPixels` of the coast the
+crests bend to run parallel to it; within `surfPixels` they break into Highlight foam and leave
+`surfWashPixels` of thinning foam behind. Swell should head towards the coast: a swell heading
+away from it does not refract cleanly. `swellShoalPixels` and twice `surfPixels` (the storm surf)
+must fit the map importer's shoreline distance range.
+
+A map can override the direction with the Vulcanus location property `swellDirection`
+(`default`, or a compass direction: `north`, `northeast`, ... `northwest`); it applies to every
+water body on the map. Weather drives the sea: `WeatherData.waterSeaState` (0 calm, 1 storm) sets
+`WaterInteraction.SeaState`, which makes crests more continuous and one pixel thicker above 0.5,
+caps a share of them with whitecaps, and doubles the surf zone at full strength.
+
 ## Banks
 
 A drawn body's `bankProfile` names a `BankProfile` asset in `Assets/Content/Water/Banks/`. A missing

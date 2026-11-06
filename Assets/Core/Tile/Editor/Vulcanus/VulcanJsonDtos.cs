@@ -171,6 +171,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("musicCue")] public string MusicCue { get; set; }
         [JsonProperty("musicPreset")] public string MusicPreset { get; set; }
         [JsonProperty("ambience")] public string Ambience { get; set; }
+        [JsonProperty("swellDirection")] public string SwellDirection { get; set; }
 
         // Catch-all for project-defined locationMetadataDefinitions keys
         [JsonExtensionData] public Dictionary<string, JToken> Extra { get; set; } = new();

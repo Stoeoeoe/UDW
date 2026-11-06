@@ -29,8 +29,10 @@ namespace Core.Tile.Water
         private static readonly int ContactCountId = Shader.PropertyToID("_WaterContactCount");
         private static readonly int ClockId = Shader.PropertyToID("_WaterInteractionClock");
         private static readonly int RainId = Shader.PropertyToID("_WaterRain");
+        private static readonly int SeaStateId = Shader.PropertyToID("_WaterSeaState");
         private static int nextRipple;
         private static float rain;
+        private static float seaState;
         private static Vector2 sortCenter;
 
         /// <summary>Rain splash density in [0,1]. Drive this from the weather system.</summary>
@@ -42,6 +44,18 @@ namespace Core.Tile.Water
                 if (!float.IsFinite(value) || value < 0 || value > 1)
                     throw new ArgumentOutOfRangeException(nameof(value), "Water rain intensity must be in [0,1].");
                 rain = value;
+            }
+        }
+
+        /// <summary>How rough open water is, in [0,1]: swell crests, whitecaps and surf. Drive this from the weather system.</summary>
+        public static float SeaState
+        {
+            get => seaState;
+            set
+            {
+                if (!float.IsFinite(value) || value < 0 || value > 1)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Water sea state must be in [0,1].");
+                seaState = value;
             }
         }
 
@@ -85,6 +99,7 @@ namespace Core.Tile.Water
             Array.Clear(Ripples, 0, Ripples.Length);
             nextRipple = 0;
             rain = 0;
+            seaState = 0;
             RenderPipelineManager.beginCameraRendering -= Upload;
             RenderPipelineManager.beginCameraRendering += Upload;
         }
@@ -94,6 +109,7 @@ namespace Core.Tile.Water
             Shader.SetGlobalVectorArray(RipplesId, Ripples);
             Shader.SetGlobalFloat(ClockId, Time.time);
             Shader.SetGlobalFloat(RainId, rain);
+            Shader.SetGlobalFloat(SeaStateId, seaState);
 
             VisibleContacts.Clear();
             GeometryUtility.CalculateFrustumPlanes(camera, Planes);
