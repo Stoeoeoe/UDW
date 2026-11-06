@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using Core.Common;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Core.TimeAndWeather
 {

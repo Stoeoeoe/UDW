@@ -12,6 +12,7 @@ using MoreMountains.Tools;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Util;
 using static Core.Common.Editor.Reflect;
 
