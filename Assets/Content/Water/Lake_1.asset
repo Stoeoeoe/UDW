@@ -17,17 +17,17 @@ MonoBehaviour:
   baseColor: {r: 0.17254902, g: 0.3019608, b: 0.34901962, a: 1}
   waveColor: {r: 0.21960784, g: 0.36078432, b: 0.40784314, a: 1}
   highlightColor: {r: 0.36078432, g: 0.5176471, b: 0.5411765, a: 1}
-  animationFps: 8
-  waveSpeed: 0.2
-  waveScale: 1.5
-  causticIntensity: 0.15
-  causticScale: 2
+  animationFps: 12
+  waveSpeed: 0.16
+  waveScale: 1.2
+  causticIntensity: 0.954
+  causticScale: 1.7
   flowDirection: {x: 1, y: 0.12}
   shorelineEnabled: 1
   foamEnabled: 1
   foamWidth: 2
-  foamIntensity: 0.2
-  foamSpeed: 0.3
+  foamIntensity: 0.38
+  foamSpeed: 0.2
   shoreWavesEnabled: 1
   shoreWaveFrequency: 0.071428575
   shoreWaveWidth: 1
@@ -35,17 +35,19 @@ MonoBehaviour:
   shallowWaterEnabled: 0
   shallowWaterWidth: 3
   depthEnabled: 1
-  depthStartPixels: 1.28
-  depthBlendPixels: 14.85
+  depthStartPixels: 3
+  depthBlendPixels: 11
   depthSteps: 2
-  depthWobblePixels: 3
-  depthWobbleScale: 12
+  depthWobblePixels: 1.5
+  depthWobbleScale: 16
+  depthMotionPixels: 0.75
+  depthMotionPeriod: 5
   stillWater: 1
   sloshPixels: 1.5
   sloshPeriod: 6
-  windPatchStrength: 0.6
+  windPatchStrength: 0.25
   windPatchScale: 48
-  windPatchSpeed: 4
+  windPatchSpeed: 1.5
   flowEnabled: 0
   flowSpeed: 0.9
   flowStrength: 1
@@ -53,13 +55,13 @@ MonoBehaviour:
   flowMapWorldOrigin: {x: 0, y: 0}
   flowMapWorldSize: {x: 16, y: 16}
   surfaceHighlightsEnabled: 1
-  surfaceHighlightIntensity: 0.18
-  surfaceHighlightDensity: 0.12
+  surfaceHighlightIntensity: 0.35
+  surfaceHighlightDensity: 0.09
   surfaceHighlightScale: 1
-  surfaceHighlightSpeed: 0.12
+  surfaceHighlightSpeed: 0.1
   surfaceHighlightStretch: {x: 4, y: 1}
   objectReflectionsEnabled: 1
-  objectReflectionOpacity: 0.35
+  objectReflectionOpacity: 0.25
   objectReflectionRipplePixels: 1
   objectReflectionRippleSpeed: 0.5
   interactionRipplesEnabled: 1

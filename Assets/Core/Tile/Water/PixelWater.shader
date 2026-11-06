@@ -419,23 +419,29 @@ Shader "UrdewValley/Pixel Water"
                 float shoreFade = _SmoothFades > 0 ? saturate((distance - _Surf.y * 0.5) / max(_Surf.x - _Surf.y * 0.5, 1)) : 1;
                 // Smooth fades: the whole sea rolls gently lighter towards each crest and darker in between.
                 float shade = _SmoothFades > 0 ? cos(6.2832 * f) * _SwellLook.y * shoreFade : 0;
+                // Each crest slowly fades in, peaks and fades out again while it travels. Every crest has its own
+                // offset, so neighbours are at different stages. A full cycle takes this many wavelengths of travel.
+                const float lifeWavelengths = 6;
+                float life = frac(travelled / wavelength / lifeWavelengths + Rand(uint2(uint(wave + 65536), 0u), 50u + seed));
+                float lifeFade = sin(3.14159 * life);
                 float body = ValueNoise(int2(along, wave * 97 + int(seed)), max(_SwellLook.z, 4));
-                if (body < gaps) return float4(0, 0, 0, shade);
+                if (body < gaps || (_SmoothFades <= 0 && lifeFade < 0.2)) return float4(0, 0, 0, shade);
                 // A crest stretch is thickest in its middle and thins out towards its ends.
                 float swell = gaps > 0 ? saturate((body - gaps) / 0.3) : 1;
-                float thickness = crestPixels * lerp(0.6, 1.4, swell);
+                float thickness = crestPixels * lerp(0.6, 1.4, swell) * (_SmoothFades > 0 ? 1 : lerp(0.5, 1, lifeFade));
                 float ahead = f * wavelength;        // Pixels in front of the crest line.
                 float behind = (1 - f) * wavelength; // Pixels behind it.
-                // Whitecaps foam on a share of crest stretches in rough seas.
-                bool whitecap = Rand(uint2(uint(along + 65536) / 3u, uint(wave + 65536)), 40u + seed) < sea * 0.5;
+                // Ocean foam: a share of crest stretches are foam even in calm seas, more in rough seas.
+                // Only the crest itself, no trailing flecks: those are fixed to the screen, not the crest, and read as dirt.
+                bool whitecap = Rand(uint2(uint(along + 65536) / 3u, uint(wave + 65536)), 40u + seed) < 0.12 + sea * 0.4;
                 float wash = _Surf.z;
 
                 float crest, trough, foam;
                 if (_SmoothFades > 0)
                 {
-                    crest = saturate(1 - ahead / (thickness + 1.5)) * lerp(0.35, 1, swell) * shoreFade;
-                    trough = saturate(1 - behind / 2.5) * 0.45 * swell * shoreFade;
-                    foam = breaking && wash > 0 ? saturate(1 - behind / wash) * 0.7 * shoreFade : 0;
+                    crest = saturate(1 - ahead / (thickness + 1.5)) * lerp(0.35, 1, swell) * shoreFade * lifeFade;
+                    trough = saturate(1 - behind / 2.5) * 0.45 * swell * shoreFade * lifeFade;
+                    foam = breaking && wash > 0 ? saturate(1 - behind / wash) * 0.7 * shoreFade * lifeFade : 0;
                 }
                 else
                 {
