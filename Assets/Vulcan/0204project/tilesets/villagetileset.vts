@@ -7,6 +7,32 @@
   "columns": 32,
   "tileCount": 1024,
   "tiles": {
+    "0": {
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
+    },
+    "1": {
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
+    },
+    "2": {
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
+    },
     "16": {
       "id": "tile_16_0",
       "terrainCorners": [
@@ -55,13 +81,33 @@
       "pivotY": 5
     },
     "32": {
-      "id": "tile_0_1"
+      "id": "tile_0_1",
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "33": {
-      "id": "tile_1_1"
+      "id": "tile_1_1",
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "34": {
-      "id": "tile_2_1"
+      "id": "tile_2_1",
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "35": {
       "id": "tile_3_1"
@@ -208,13 +254,34 @@
       "id": "tile_31_1"
     },
     "64": {
-      "id": "tile_0_2"
+      "id": "tile_0_2",
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "65": {
-      "id": "tile_1_2"
+      "id": "tile_1_2",
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "66": {
-      "id": "tile_2_2"
+      "id": "tile_2_2",
+      "probability": 10,
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "67": {
       "id": "tile_3_2"
@@ -1351,13 +1418,31 @@
       "id": "tile_0_8"
     },
     "257": {
-      "id": "tile_1_8"
+      "id": "tile_1_8",
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "sand",
+        "dirt"
+      ]
     },
     "258": {
-      "id": "tile_2_8"
+      "id": "tile_2_8",
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "dirt",
+        "dirt"
+      ]
     },
     "259": {
-      "id": "tile_3_8"
+      "id": "tile_3_8",
+      "terrainCorners": [
+        "sand",
+        "sand",
+        "dirt",
+        "sand"
+      ]
     },
     "260": {
       "id": "tile_4_8"
@@ -1526,13 +1611,31 @@
       "id": "tile_0_9"
     },
     "289": {
-      "id": "tile_1_9"
+      "id": "tile_1_9",
+      "terrainCorners": [
+        "sand",
+        "dirt",
+        "sand",
+        "dirt"
+      ]
     },
     "290": {
-      "id": "tile_2_9"
+      "id": "tile_2_9",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "291": {
-      "id": "tile_3_9"
+      "id": "tile_3_9",
+      "terrainCorners": [
+        "dirt",
+        "sand",
+        "dirt",
+        "sand"
+      ]
     },
     "292": {
       "id": "tile_4_9"
@@ -1700,13 +1803,31 @@
       "id": "tile_0_10"
     },
     "321": {
-      "id": "tile_1_10"
+      "id": "tile_1_10",
+      "terrainCorners": [
+        "sand",
+        "dirt",
+        "sand",
+        "sand"
+      ]
     },
     "322": {
-      "id": "tile_2_10"
+      "id": "tile_2_10",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "sand",
+        "sand"
+      ]
     },
     "323": {
-      "id": "tile_3_10"
+      "id": "tile_3_10",
+      "terrainCorners": [
+        "dirt",
+        "sand",
+        "sand",
+        "sand"
+      ]
     },
     "324": {
       "id": "tile_4_10"
@@ -1868,13 +1989,31 @@
       "id": "tile_0_11"
     },
     "353": {
-      "id": "tile_1_11"
+      "id": "tile_1_11",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        "dirt",
+        null
+      ]
     },
     "354": {
-      "id": "tile_2_11"
+      "id": "tile_2_11",
+      "terrainCorners": [
+        "dirt",
+        "dirt",
+        null,
+        "dirt"
+      ]
     },
     "355": {
-      "id": "tile_3_11"
+      "id": "tile_3_11",
+      "terrainCorners": [
+        "sand",
+        "dirt",
+        "dirt",
+        "sand"
+      ]
     },
     "356": {
       "id": "tile_4_11"
@@ -1982,13 +2121,31 @@
       "id": "tile_0_12"
     },
     "385": {
-      "id": "tile_1_12"
+      "id": "tile_1_12",
+      "terrainCorners": [
+        "dirt",
+        null,
+        "dirt",
+        "dirt"
+      ]
     },
     "386": {
-      "id": "tile_2_12"
+      "id": "tile_2_12",
+      "terrainCorners": [
+        null,
+        "dirt",
+        "dirt",
+        "dirt"
+      ]
     },
     "387": {
-      "id": "tile_3_12"
+      "id": "tile_3_12",
+      "terrainCorners": [
+        "dirt",
+        "sand",
+        "sand",
+        "dirt"
+      ]
     },
     "388": {
       "id": "tile_4_12"
