@@ -16,3 +16,4 @@ release/
 .claude/settings.local.json
 .playwright-mcp/
 work/
+graphify-out
