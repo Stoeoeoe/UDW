@@ -19,12 +19,14 @@ export interface EntityInstanceSlice {
   removeEntity: (entityId: string) => void;
   moveEntity: (entityId: string, position: [number, number]) => void;
   updateEntityLabel: (entityId: string, label: string | undefined) => void;
+  /** Changes an entity's ID. Returns false when the ID is blank, taken, or a variation is active. */
+  renameEntity: (entityId: string, newId: string) => boolean;
   updateEntityProperties: (entityId: string, properties: PropertyValues) => void;
   selectEntity: (id: string | null) => void;
   setSelectedEntityType: (id: string | null) => void;
 }
 
-export const createEntityInstanceSlice: ImmerStateCreator<EntityInstanceSlice> = (set) => ({
+export const createEntityInstanceSlice: ImmerStateCreator<EntityInstanceSlice> = (set, get) => ({
   selectedEntityId: null,
   selectedEntityIds: new Set(),
 
@@ -113,6 +115,41 @@ export const createEntityInstanceSlice: ImmerStateCreator<EntityInstanceSlice> =
         e.label = label;
       });
     }),
+
+  renameEntity: (entityId, newId) => {
+    const id = newId.trim();
+    const { currentMap, activeVariationId } = get();
+    if (!currentMap || activeVariationId || !id) return false;
+    if (id === entityId) return true;
+
+    const allEntities = [
+      ...currentMap.entities,
+      ...currentMap.layers.flatMap((l) => l.entities ?? []),
+      ...(currentMap.variations ?? []).flatMap((v) =>
+        (v.entityOverrides ?? []).flatMap((o) => (o.action === 'add' && o.entity ? [o.entity] : [])),
+      ),
+    ];
+    if (allEntities.some((e) => e.id === id)) return false;
+
+    set((state) => {
+      const map = state.currentMap;
+      if (!map) return;
+      const rename = (e: { id?: string }) => {
+        if (e.id === entityId) e.id = id;
+      };
+      map.entities.forEach(rename);
+      map.layers.forEach((l) => l.entities?.forEach(rename));
+      for (const variation of map.variations ?? []) {
+        for (const o of variation.entityOverrides ?? []) {
+          if (o.entityId === entityId) o.entityId = id;
+          if (o.entity) rename(o.entity);
+        }
+      }
+      if (state.selectedEntityId === entityId) state.selectedEntityId = id;
+      if (state.selectedEntityIds.delete(entityId)) state.selectedEntityIds.add(id);
+    });
+    return true;
+  },
 
   updateEntityProperties: (entityId, properties) =>
     set((state) => {

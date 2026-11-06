@@ -32,6 +32,7 @@ export const PropertiesPanel: React.FC = () => {
   const tilesets = useEditorStore((state) => state.tilesets);
   const moveEntity = useEditorStore((state) => state.moveEntity);
   const updateEntityLabel = useEditorStore((state) => state.updateEntityLabel);
+  const renameEntity = useEditorStore((state) => state.renameEntity);
   const removeEntity = useEditorStore((state) => state.removeEntity);
   const moveObjectInstance = useEditorStore((state) => state.moveObjectInstance);
   const removeObjectInstance = useEditorStore((state) => state.removeObjectInstance);
@@ -194,7 +195,24 @@ export const PropertiesPanel: React.FC = () => {
           <VStack align="stretch" spacing={3}>
             <FormControl>
               <FormLabel>Core ID</FormLabel>
-              <Input value={selectedEntity.id} isReadOnly fontFamily="mono" />
+              <Input
+                key={selectedEntity.id}
+                defaultValue={selectedEntity.id}
+                isReadOnly={!!activeVariationId}
+                fontFamily="mono"
+                onBlur={(e) => {
+                  if (!renameEntity(selectedEntity.id, e.target.value)) {
+                    e.target.value = selectedEntity.id;
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                  if (e.key === 'Escape') {
+                    e.currentTarget.value = selectedEntity.id;
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
             </FormControl>
 
             <FormControl>
