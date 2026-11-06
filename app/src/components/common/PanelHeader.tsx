@@ -10,7 +10,7 @@ export interface PanelHeaderProps {
   left?: React.ReactNode; // optional left prop
 }
 
-export const PanelHeader: React.FC<PanelHeaderProps> = ({ label, title, subtitle, actions }) => {
+export const PanelHeader: React.FC<PanelHeaderProps> = ({ label, title, subtitle, actions, left }) => {
   return (
     <Box
       bg="editorHeaderBg"
@@ -21,6 +21,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ label, title, subtitle
       flexShrink={0}
     >
       <HStack justify="space-between" align="start" spacing={3}>
+        {left}
         <VStack align="start" spacing={0} flex={1} minW={0}>
           {label && <SectionLabel textStyle="panelLabel">{label}</SectionLabel>}
           {title && (
