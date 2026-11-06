@@ -3,6 +3,7 @@ import { Box, Flex, HStack, IconButton, Text, Tooltip, VStack } from '@chakra-ui
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import PanelHeader from '../../common/PanelHeader';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { mapHasDebugSpawnPoint } from '../../../lib/debugSpawn';
 
 export const AnchorBottomPanel: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
@@ -36,17 +37,30 @@ export const AnchorBottomPanel: React.FC = () => {
       <PanelHeader
         title="Anchors"
         actions={
-          <Tooltip label="Add new anchor" placement="top" hasArrow>
-            <IconButton
-              aria-label="Add Anchor"
-              icon={<AddIcon fontSize="10px" />}
-              size="md"
-              variant="ghost"
-              color="gray.400"
-              _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-              onClick={handleAdd}
-            />
-          </Tooltip>
+          <HStack spacing={1}>
+            {currentMap && !mapHasDebugSpawnPoint(currentMap) && (
+              <Tooltip
+                label="No anchor is tagged as the debug spawn point. Select an anchor and enable 'Debug spawn point'."
+                placement="top"
+                hasArrow
+              >
+                <Text fontSize="10px" color="orange.300" mr={1}>
+                  ⚠ No debug spawn
+                </Text>
+              </Tooltip>
+            )}
+            <Tooltip label="Add new anchor" placement="top" hasArrow>
+              <IconButton
+                aria-label="Add Anchor"
+                icon={<AddIcon fontSize="10px" />}
+                size="md"
+                variant="ghost"
+                color="gray.400"
+                _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                onClick={handleAdd}
+              />
+            </Tooltip>
+          </HStack>
         }
       />
       {anchors.length === 0 ? (

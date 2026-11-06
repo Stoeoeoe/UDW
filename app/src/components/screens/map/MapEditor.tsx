@@ -1,6 +1,8 @@
 import React from 'react';
-import { Box, useDisclosure, VStack } from '@chakra-ui/react';
+import { Box, useDisclosure, useToast, VStack } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useSaveStore } from '../../../lib/saveManager';
+import { mapHasDebugSpawnPoint } from '../../../lib/debugSpawn';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { MapViewportPixi } from './MapViewportPixi';
@@ -125,6 +127,30 @@ export const MapEditor: React.FC = () => {
     window.addEventListener('openMetadataDialog', handler as EventListener);
     return () => window.removeEventListener('openMetadataDialog', handler as EventListener);
   }, [onMetadataOpen]);
+
+  const toast = useToast();
+  const mapId = currentMap?.id;
+  const saveStatus = useSaveStore((state) =>
+    mapId ? state.saveUnits[`location:${mapId}`]?.status : undefined,
+  );
+  const lacksDebugSpawn = currentMap ? !mapHasDebugSpawnPoint(currentMap) : false;
+
+  // Warn whenever a save completes (manual or autosave) on a map without a debug spawn point.
+  React.useEffect(() => {
+    if (saveStatus !== 'saved' || !lacksDebugSpawn) return;
+    const id = `missing-debug-spawn-${mapId}`;
+    if (toast.isActive(id)) return;
+    toast({
+      id,
+      title: 'No debug spawn point',
+      description: 'Tag an anchor as "Debug spawn point" so the game can spawn here for testing.',
+      status: 'warning',
+      duration: 2500,
+      isClosable: true,
+    });
+    // Only the transition into 'saved' should warn, not later anchor edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveStatus]);
 
   if (!currentMap) {
     return (

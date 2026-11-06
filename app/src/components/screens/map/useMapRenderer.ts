@@ -1,4 +1,5 @@
 import { splitTileRef } from '../../../lib/tileRef';
+import { DEBUG_SPAWN_POINT_TAG } from '../../../lib/debugSpawn';
 import { useEffect, useRef, useCallback } from 'react';
 import { Container, Graphics, Sprite, BitmapText, Texture, Rectangle } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
@@ -212,6 +213,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     Map<string, { canvas: HTMLCanvasElement; image: ImageData; sprite: Sprite; texture: Texture }>
   >(new Map());
   const locationLinksGraphicsRef = useRef<Graphics | null>(null);
+  const anchorLabelContainerRef = useRef<Container | null>(null);
   const triggerGraphicsRef = useRef<Graphics | null>(null);
   const collisionShapesGraphicsRef = useRef<Graphics | null>(null);
   const hoverGraphicsRef = useRef<Graphics | null>(null);
@@ -277,6 +279,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     locationLinksGraphics.zIndex = 2.9;
     locationLinksGraphicsRef.current = locationLinksGraphics;
     container.addChild(locationLinksGraphics);
+
+    // Anchor labels (z: 2.95 — above the links overlay that draws anchors)
+    const anchorLabelContainer = new Container();
+    anchorLabelContainer.zIndex = 2.95;
+    anchorLabelContainerRef.current = anchorLabelContainer;
+    container.addChild(anchorLabelContainer);
 
     // Collision shapes overlay (z: 2.83 — below triggers)
     const collisionShapesGraphics = new Graphics();
@@ -1008,6 +1016,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     if (!g || !currentMap) return;
 
     g.clear();
+    const anchorLabels = anchorLabelContainerRef.current;
+    for (const child of anchorLabels?.removeChildren() ?? []) child.destroy();
 
     const navLayerVisible = currentMap.layers.some(
       (l) => l.kind === 'navigation' && l.visible !== false,
@@ -1106,9 +1116,29 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
       const isSelected = anchor.id === selectedAnchorId;
       const [ax, ay] = anchor.position;
       const [fx, fy] = anchor.facing ?? [0, 1];
-      const baseColor = 0xf6ad55;
+      const isDebugSpawn = anchor.tags.includes(DEBUG_SPAWN_POINT_TAG);
+      const baseColor = isDebugSpawn ? 0xff1a1a : 0xf6ad55;
       const selectedColor = 0xffffff;
       const markerSize = Math.max(5, Math.floor(tileSize * 0.3));
+
+      if (isDebugSpawn) {
+        // Magenta diamond around the marker distinguishes the debug spawn from normal anchors.
+        const r = markerSize + 6;
+        g.moveTo(ax, ay - r);
+        g.lineTo(ax + r, ay);
+        g.lineTo(ax, ay + r);
+        g.lineTo(ax - r, ay);
+        g.closePath();
+        g.stroke({ width: 2, color: baseColor, alpha: 0.9 });
+
+        const label = new BitmapText({
+          text: 'DEBUG SPAWN',
+          style: { fontFamily: 'EntityLabel', fontSize: 10, fill: 0xffffff },
+        });
+        label.x = ax - label.width / 2;
+        label.y = ay - r - 14;
+        anchorLabels?.addChild(label);
+      }
 
       g.circle(ax, ay, markerSize);
       g.fill({ color: isSelected ? selectedColor : baseColor, alpha: isSelected ? 0.95 : 0.85 });

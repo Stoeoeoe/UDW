@@ -1,7 +1,8 @@
 import React from 'react';
-import { Button, Wrap } from '@chakra-ui/react';
+import { Button, Checkbox, Wrap } from '@chakra-ui/react';
 import { FiMapPin } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { DEBUG_SPAWN_POINT_TAG } from '../../../lib/debugSpawn';
 import { InspectorEmptyState, InspectorPanel } from '../common';
 import {
   CompactInput,
@@ -41,6 +42,25 @@ export const AnchorInspector: React.FC = () => {
   }
 
   const facing = anchor.facing ?? [0, 1];
+  const isDebugSpawn = anchor.tags.includes(DEBUG_SPAWN_POINT_TAG);
+
+  // A map has a single debug spawn point: enabling it here clears it from other anchors.
+  const setDebugSpawn = (enabled: boolean) => {
+    if (enabled) {
+      for (const other of currentMap.spatialPrimitives?.anchors ?? []) {
+        if (other.id !== anchor.id && other.tags.includes(DEBUG_SPAWN_POINT_TAG)) {
+          updateAnchor(other.id, {
+            tags: other.tags.filter((tag) => tag !== DEBUG_SPAWN_POINT_TAG),
+          });
+        }
+      }
+    }
+    updateAnchor(anchor.id, {
+      tags: enabled
+        ? [...anchor.tags, DEBUG_SPAWN_POINT_TAG]
+        : anchor.tags.filter((tag) => tag !== DEBUG_SPAWN_POINT_TAG),
+    });
+  };
 
   return (
     <InspectorPanel title="Anchor">
@@ -58,6 +78,16 @@ export const AnchorInspector: React.FC = () => {
               />
             </Field>
           </FieldStack>
+        </InspectorSection>
+
+        <InspectorSection title="Debug">
+          <Checkbox
+            size="sm"
+            isChecked={isDebugSpawn}
+            onChange={(event) => setDebugSpawn(event.target.checked)}
+          >
+            Debug spawn point
+          </Checkbox>
         </InspectorSection>
 
         <InspectorSection title="Position">
