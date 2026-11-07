@@ -52,6 +52,20 @@ replaces the selection; seasonal probabilities and authored assets stay unchange
 
 Implementation: [WeatherCommands.cs](../Assets/Core/TimeAndWeather/Editor/WeatherCommands.cs).
 
+## Sleeping in place
+
+Sleep through the night while the game is running in Play Mode:
+
+```powershell
+unity command sleep_here
+```
+
+This runs the normal overnight sequence (fade out, new day, autosave, fade in)
+but skips the trip home, so the player wakes up at their current position.
+Sleeping at a bed still returns the player to their home bed.
+
+Implementation: [DayCommands.cs](../Assets/Core/TimeAndWeather/Editor/DayCommands.cs).
+
 ## Indoor weather
 
 In Vulcanus map metadata, set **Location Type** to **Indoor** for rooms. **Mute

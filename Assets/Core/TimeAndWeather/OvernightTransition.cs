@@ -46,18 +46,21 @@ namespace Core.TimeAndWeather
 
         private void OnBedtime() => EndDay(DayEndReason.PassedOut);
 
-        /// <summary>Fades through the next morning, stopping the clock and player controls during the transition.</summary>
-        public void EndDay(DayEndReason reason = DayEndReason.Sleep)
+        /// <summary>
+        /// Fades through the next morning, stopping the clock and player controls during the transition.
+        /// With <paramref name="stayInPlace"/> the player wakes where they are instead of at their home bed.
+        /// </summary>
+        public void EndDay(DayEndReason reason = DayEndReason.Sleep, bool stayInPlace = false)
         {
             if (IsRunning || !_levelManager.SceneReady) return;
             var character = _characterManager.MainCharacter;
             if (!character)
                 throw new InvalidOperationException("Ending the day requires a registered main character.");
-            _routine = Run(character, reason, _clock.CurrentTime.Hour);
+            _routine = Run(character, reason, _clock.CurrentTime.Hour, stayInPlace);
             StartCoroutine(_routine);
         }
 
-        private IEnumerator Run(MainCharacter character, DayEndReason reason, int bedtimeHour)
+        private IEnumerator Run(MainCharacter character, DayEndReason reason, int bedtimeHour, bool stayInPlace)
         {
             var gui = _urGUIManager;
             _clock.BeginOvernight();
@@ -72,7 +75,7 @@ namespace Core.TimeAndWeather
                     yield return gui.CoverScene(character.transform);
                 }
                 finally { character.Animator.EndInteractionAnimation(); }
-                yield return _levelManager.ReturnHome(character);
+                if (!stayInPlace) yield return _levelManager.ReturnHome(character);
                 // NewDayEvent listeners run only after the screen is completely covered.
                 _clock.StartNewDay();
                 // Recovery follows clock-driven expirations and only occurs once the overnight advance succeeds.
