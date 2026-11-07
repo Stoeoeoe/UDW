@@ -131,10 +131,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: indoor
       objectReference: {fileID: 0}
-    - target: {fileID: -8119231763395613965, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
-      propertyPath: m_ChunkCullingBounds.y
-      value: 0.5
-      objectReference: {fileID: 0}
     - target: {fileID: -5802468782268406839, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -173,18 +169,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -5802468782268406839, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -5070349443281981176, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
-      propertyPath: m_ChunkCullingBounds.y
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1560200152937676802, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
-      propertyPath: m_ChunkCullingBounds.y
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 5138441861014421839, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
-      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
