@@ -84,6 +84,8 @@ namespace UI.Shops
         public void Open(Shop shop, GameCharacter customer)
         {
             if (!EnsureBindings() || !OpenScreen(customer)) return;
+            // The document attaches its root after binding; without filling the screen the overlay has no height.
+            _boundRoot.StretchToParentSize();
 
             _shop = shop;
             _wallet = customer.Wallet;

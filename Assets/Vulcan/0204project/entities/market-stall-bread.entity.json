@@ -1,0 +1,28 @@
+{
+  "$schema": "../schemas/entity-type.schema.json",
+  "id": "base:market_stall_bread",
+  "displayName": "Bread Stall",
+  "category": "object",
+  "group": "Market",
+  "description": "A market stall with a shop: buys crops and sells seeds. Give every placed stall its own shop ID.",
+  "placeholderColor": "#4f8a3f",
+  "defaultSize": [
+    81,
+    86
+  ],
+  "sprite": {
+    "path": "assets/market_stall_bread.png"
+  },
+  "properties": [
+    {
+      "key": "shopId",
+      "label": "Shop ID",
+      "type": "string",
+      "defaultValue": "base:market_stall_bread",
+      "required": true,
+      "description": "Permanent ID of this stall's shop and its saved stock. Must be unique for each placed stall, e.g. base:market_stall_bread_01."
+    }
+  ],
+  "folderPath": "Market",
+  "icon": "GiShop"
+}

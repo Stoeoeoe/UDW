@@ -25,5 +25,11 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 951881172881740803, guid: 6e045675a7a2c0443ad3272aa576a643, type: 3}
     enabled: 1
+  - definition: {fileID: 2689978948578240564, guid: d6a597afe13bba34b9d60621bb425fd2, type: 3}
+    enabled: 1
+  - definition: {fileID: 5053250667145397084, guid: fc21c60ab3096aa4f813abdfe56bd7f7, type: 3}
+    enabled: 1
+  - definition: {fileID: 8984196255993897485, guid: 887505b1c26de14419594c6917fd11a6, type: 3}
+    enabled: 1
   - definition: {fileID: 1531555327375799097, guid: bef8951bb68ccef42b9e7ff75bbd7422, type: 3}
     enabled: 1

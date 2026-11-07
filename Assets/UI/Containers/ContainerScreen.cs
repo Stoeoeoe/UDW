@@ -74,6 +74,7 @@ namespace UI.Containers
         {
             if (!container || !character) throw new ArgumentNullException();
             BindDocument();
+            _root.StretchToParentSize();
             if (IsManagedOpen) CloseScreen(false);
             _container = container;
             _character = character;

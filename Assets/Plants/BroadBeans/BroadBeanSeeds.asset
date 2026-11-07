@@ -19,7 +19,7 @@ MonoBehaviour:
   _description: Plant on tilled soil. Ready to pick in about eight days of watering.
   _maxStackSize: 99
   _preventDropping: 0
-  _buyBasePrice: 0
+  _buyBasePrice: 15
   _sellBasePrice: 0
   _worldRepresentationPrefab: {fileID: 0}
   _pickupSound: {fileID: 0}

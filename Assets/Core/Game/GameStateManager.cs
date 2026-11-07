@@ -22,13 +22,15 @@ namespace Core.Game
         private readonly CharacterManager _characters;
         private readonly PlayerInteractionContext _interaction;
         private readonly LevelManager _level;
+        private readonly PlayerSettings _player;
         // Reserved for the development quick save; it never becomes the session's current slot.
         private readonly string _quickSaveSlot = "quicksave";
 
         public GameStateManager(GameState state, GameSaveService saves, CutsceneRunner cutsceneRunner,
             WorldObjectSpawner worldObjectSpawner, LocationContext location, GameClock clock, CharacterManager characters,
-            PlayerInteractionContext interaction, LevelManager level)
+            PlayerInteractionContext interaction, LevelManager level, PlayerSettings player)
         {
+            _player = player;
             _interaction = interaction;
             _level = level;
             _level.LocationReady += OnLocationReady;
@@ -62,6 +64,7 @@ namespace Core.Game
                 throw new InvalidOperationException("Start a new game before entering a location; active scene objects are not rehydrated yet.");
             Restore(new GameSaveData { saveName = saveName });
             _state.StartAtHome = true;
+            _state.Player.Wallet.SetBalance(_player.startingMoney);
             CurrentSlot = _saves.NextSlotId();
             _saveWhenLocationReady = true;
         }

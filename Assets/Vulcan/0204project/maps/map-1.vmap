@@ -5810,6 +5810,18 @@
         176
       ],
       "properties": {}
+    },
+    {
+      "id": "market-stall-bread-01",
+      "typeId": "base:market_stall_bread",
+      "label": "Bread Stall",
+      "position": [
+        64,
+        176
+      ],
+      "properties": {
+        "shopId": "base:market_stall_bread_01"
+      }
     }
   ],
   "spatialPrimitives": {

@@ -46,6 +46,17 @@ namespace Core.Game.Editor
         }
 
         [Test]
+        public void ANewGameStartsWithTheConfiguredMoney()
+        {
+            Game.State.Player.Wallet.SetBalance(5);
+            _session.NewGame("Hillside farm");
+
+            var startingMoney = Game.Get<PlayerSettings>().startingMoney;
+            Assert.That(startingMoney, Is.GreaterThan(0), "The authored settings give new games some money to spend.");
+            Assert.That(Game.State.Player.Wallet.Balance, Is.EqualTo(startingMoney));
+        }
+
+        [Test]
         public void ALoadedSaveClearsAPendingHomeStart()
         {
             _session.NewGame("Hillside farm");

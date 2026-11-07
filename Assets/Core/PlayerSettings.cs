@@ -12,6 +12,7 @@ namespace Core
         public ItemDefinition[] startingItems = Array.Empty<ItemDefinition>();
         public LocationData startingHomeLocation;
         public string startingBedId;
+        public int startingMoney;
 
         public void Validate()
         {

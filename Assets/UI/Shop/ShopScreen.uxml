@@ -6,7 +6,7 @@
             <ui:VisualElement class="shop-panel">
                 <ui:VisualElement class="shop-header">
                     <ui:VisualElement>
-                        <ui:Label text="GENERAL STORE" class="shop-kicker" />
+                        <ui:Label text="MARKET" class="shop-kicker" />
                         <ui:Label name="shopTitle" text="Shop" class="shop-title" />
                     </ui:VisualElement>
                     <ui:VisualElement class="shop-header-actions">

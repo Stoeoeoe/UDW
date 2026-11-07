@@ -20,6 +20,6 @@ MonoBehaviour:
   _maxStackSize: 99
   _preventDropping: 0
   _buyBasePrice: 0
-  _sellBasePrice: 0
+  _sellBasePrice: 10
   _worldRepresentationPrefab: {fileID: 0}
   _pickupSound: {fileID: 0}
