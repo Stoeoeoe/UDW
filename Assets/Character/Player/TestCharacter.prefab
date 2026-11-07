@@ -151,6 +151,7 @@ MonoBehaviour:
   - {fileID: 4949040840317661943, guid: ec7049a9783de6647939729c449dca73, type: 3}
   - {fileID: 2463901313240589972, guid: e76e17c5c8538cf4c84f10f20dbee9f5, type: 3}
   - {fileID: 6132007388190710486, guid: 217dbd65ccf8d3e4fbaae48f3d2c5213, type: 3}
+  - {fileID: 245967792162302578, guid: 5d249d72fd49c264b88b539a845f3441, type: 3}
 --- !u!1 &2653541153906028773
 GameObject:
   m_ObjectHideFlags: 0
@@ -196,7 +197,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Inventory.SlotInventory
   _inventoryName: MainInventory
-  _playerID: Player1
   _numberOfSlots: 10
   configuration: {fileID: 11400000, guid: 16359b172594fe340b9cc9b35876ed8a, type: 2}
 --- !u!1 &4035038567304184448

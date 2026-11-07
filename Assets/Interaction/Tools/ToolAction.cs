@@ -28,17 +28,9 @@ namespace Interaction.Tools
         [field: SerializeField] public bool ExecuteFeedbackPerAffectedTile { get; private set; }
         
         
-        /// <summary>
-        /// Whether this tool has a preparation phase or should be executed immediately.
-        /// Defaults to true for tools.
-        /// </summary>
-        [PropertyOrder(-8)]
-        [field: SerializeField] public bool HasToolPreparationPhase { get; private set; } = true;
-        
         // Override base virtual properties - tools get values from ToolData
         public override float CooldownTime => ToolData != null ? ToolData.cooldownDuration : 0f;
         public virtual int StaminaCost => ToolData.staminaCost;
-        public override bool HasPreparationPhase => HasToolPreparationPhase;
         public override bool FreezeCharacterDuringAction => true; // Tools currently always freeze character
         
 
@@ -82,10 +74,22 @@ namespace Interaction.Tools
         /// </summary>
         private List<TileData> ComputeAffectedTiles(PlayerInteractionContextSnapshot snapshot = null)
         {
-            return _mapManager
-                .GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration)
-                .Where(CanBeUsedOnTile)
-                .ToList();
+            var tiles = ToolData.targeting == ToolTargeting.Pointer
+                ? PointerTarget(snapshot)
+                : _mapManager.GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration);
+            return tiles.Where(CanBeUsedOnTile).ToList();
+        }
+
+        /// <summary>Whether a pointer-targeted tile is close enough to the character, by straight-line distance between tiles.</summary>
+        public static bool IsInPointerRange(ToolData tool, TileData characterTile, TileData target) =>
+            (target.Coordinates - characterTile.Coordinates).sqrMagnitude <= tool.pointerRange * tool.pointerRange;
+
+        // Without a snapshot there is no pointer, so a live preview has no pointer target.
+        private IEnumerable<TileData> PointerTarget(PlayerInteractionContextSnapshot snapshot)
+        {
+            var target = snapshot?.CurrentTileDataUnderPointer;
+            var origin = snapshot?.TileUnderCharacter;
+            if (target != null && origin != null && IsInPointerRange(ToolData, origin, target)) yield return target;
         }
 
         /// <summary>

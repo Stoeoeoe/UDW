@@ -83,6 +83,41 @@ namespace Plants.Editor
             Assert.That(_sown[0].PlantId, Is.EqualTo(_data.plantId));
         }
 
+        [Test]
+        public void AdvancingGrowthMovesAHealthyCropToTheStartOfItsNextStageUntilFullyGrown()
+        {
+            var position = new Vector2Int(2, 3);
+            Sow("farm", position, _data.plantId);
+            var crop = _plants.GetPlantState("farm", position);
+            crop.daysPassedSincePlanting = 1; // Part-way through the first stage.
+
+            Assert.That(_plants.TryAdvanceGrowthStage("farm", position), Is.True);
+            Assert.That(crop.daysPassedSincePlanting, Is.EqualTo(2));
+            Assert.That(_plants.TryAdvanceGrowthStage("farm", position), Is.True);
+            Assert.That(crop.daysPassedSincePlanting, Is.EqualTo(5));
+            Assert.That(_growth.Select(e => e.NewStageIndex), Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(_growth.All(e => e.LocationId == "farm" && e.Position == position), Is.True);
+
+            Assert.That(_plants.CanAdvanceGrowthStage("farm", position), Is.False);
+            Assert.That(_plants.TryAdvanceGrowthStage("farm", position), Is.False);
+            Assert.That(crop.daysPassedSincePlanting, Is.EqualTo(5));
+            Assert.That(_growth.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WiltedOrMissingCropsCannotBeAdvanced()
+        {
+            var position = new Vector2Int(2, 3);
+            Sow("farm", position, _data.plantId);
+            _plants.GetPlantState("farm", position).condition = PlantCondition.Wilted;
+
+            Assert.That(_plants.TryAdvanceGrowthStage("farm", position), Is.False);
+            Assert.That(_plants.TryAdvanceGrowthStage("farm", new Vector2Int(9, 9)), Is.False);
+            Assert.That(_plants.TryAdvanceGrowthStage("village", position), Is.False);
+            Assert.That(_plants.GetPlantState("farm", position).daysPassedSincePlanting, Is.Zero);
+            Assert.That(_growth, Is.Empty);
+        }
+
         [TestCase(1)]
         [TestCase(3)]
         [TestCase(5)]

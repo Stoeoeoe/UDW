@@ -43,6 +43,14 @@ namespace Interaction.Tools
         [SerializeField, Validation.Required("Assign an effect configuration."), Validation.Nested]
         private ToolEffectConfiguration _toolEffectConfiguration;
 
+        [Tooltip("Facing tools affect the tiles in the effect configuration. Pointer tools affect the tile under the pointer; their effect configuration stays empty.")]
+        [SerializeField, Validation.DefinedEnum]
+        private ToolTargeting _targeting;
+
+        [Tooltip("Pointer tools only: the farthest tile from the character that can be targeted.")]
+        [SerializeField, Validation.Min(1)]
+        private int _pointerRange = 3;
+
         [SerializeField]
         private AnimationClip _prepareUseUpAnimationClip;
 
@@ -77,6 +85,8 @@ namespace Interaction.Tools
         public float actionDuration => _actionDuration;
         public float cooldownDuration => _cooldownDuration;
         public ToolEffectConfiguration toolEffectConfiguration => _toolEffectConfiguration;
+        public ToolTargeting targeting => _targeting;
+        public int pointerRange => _pointerRange;
         public AnimationClip prepareUseUpAnimationClip => _prepareUseUpAnimationClip;
         public AnimationClip prepareUseRightAnimationClip => _prepareUseRightAnimationClip;
         public AnimationClip prepareUseDownAnimationClip => _prepareUseDownAnimationClip;

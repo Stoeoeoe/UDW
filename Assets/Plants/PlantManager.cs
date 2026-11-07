@@ -165,6 +165,28 @@ namespace Plants
                 TryGetPlantData(state.plantID, out var data) && data.TryGetHarvestStage(state.daysPassedSincePlanting, method, out _);
         }
 
+        /// <summary>Checks that a healthy crop has a later growth stage to move to.</summary>
+        public bool CanAdvanceGrowthStage(string locationId, Vector2Int position) =>
+            CanAdvanceGrowthStage(GetPlantState(locationId, position));
+
+        /// <summary>Same check for an already looked-up crop; null means there is no crop.</summary>
+        public bool CanAdvanceGrowthStage(PlantState state) =>
+            state != null && state.condition == PlantCondition.Healthy &&
+            TryGetPlantData(state.plantID, out var data) &&
+            data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting) < data.GrowthStages.Count - 1;
+
+        /// <summary>Moves a healthy crop to the start of its next growth stage; false when it is wilted or fully grown.</summary>
+        public bool TryAdvanceGrowthStage(string locationId, Vector2Int position)
+        {
+            var state = GetPlantState(locationId, position);
+            if (!CanAdvanceGrowthStage(state)) return false;
+            TryGetPlantData(state.plantID, out var data);
+            var next = data.GetGrowthStageIndexByDays(state.daysPassedSincePlanting) + 1;
+            state.daysPassedSincePlanting = data.GrowthStages[next].DaysToReachStage;
+            PlantGrowthEvent.Trigger(locationId, position, next);
+            return true;
+        }
+
         /// <summary>Removes a wilted crop without producing items; returns false for other tiles.</summary>
         public bool TryClearWilted(string locationId, Vector2Int position)
         {
