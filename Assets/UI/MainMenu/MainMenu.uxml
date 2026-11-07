@@ -1,36 +1,31 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <ui:Style src="MainMenu.uss" />
-    <ui:Template name="Settings" src="../Shared/SettingsPage.uxml" />
-    <ui:VisualElement name="menuRoot" class="main-menu">
-        <ui:VisualElement class="main-menu-panel">
-            <ui:Label text="Urdew Valley" class="main-menu-title" />
-
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Template name="Settings" src="project://database/Assets/UI/Shared/SettingsPage.uxml?fileID=9197481963319205126&amp;guid=155bf477c22e161479b83131b077b925&amp;type=3#SettingsPage"/>
+    <Style src="project://database/Assets/UI/MainMenu/MainMenu.uss?fileID=7433441132597879392&amp;guid=313a6a7e3487f864481f2f05033c2dd4&amp;type=3#MainMenu"/>
+    <ui:VisualElement name="menuRoot" class="main-menu" style="background-image: url(&quot;project://database/Assets/Prototype/pixellab-image-1123e767.png?fileID=2800000&amp;guid=29c6799fe0f1b36498370d4853df3369&amp;type=3#pixellab-image-1123e767&quot;); background-position-x: center; background-position-y: center; -unity-background-scale-mode: scale-to-fit;">
+        <ui:VisualElement class="main-menu-panel" style="top: 50px;">
             <ui:VisualElement name="titleView" class="main-menu-view">
-                <ui:Button name="continueButton" text="Continue" class="main-menu-button" />
-                <ui:Button name="newGameButton" text="New Game" class="main-menu-button" />
-                <ui:Button name="loadGameButton" text="Load Game" class="main-menu-button" />
-                <ui:Button name="settingsButton" text="Settings" class="main-menu-button" />
-                <ui:Button name="quitButton" text="Quit" class="main-menu-button" />
+                <ui:Button name="continueButton" text="Continue" class="main-menu-button"/>
+                <ui:Button name="newGameButton" text="New Game" class="main-menu-button"/>
+                <ui:Button name="loadGameButton" text="Load Game" class="main-menu-button"/>
+                <ui:Button name="settingsButton" text="Settings" class="main-menu-button"/>
+                <ui:Button name="quitButton" text="Quit" class="main-menu-button"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="newGameView" class="main-menu-view">
-                <ui:Label text="Name your save" class="main-menu-heading" />
-                <ui:TextField name="saveNameField" max-length="40" class="main-menu-field" />
-                <ui:Button name="startButton" text="Start" class="main-menu-button" />
-                <ui:Button name="newGameBackButton" text="Back" class="main-menu-button" />
+                <ui:Label text="Name your save" class="main-menu-heading"/>
+                <ui:TextField name="saveNameField" max-length="40" class="main-menu-field"/>
+                <ui:Button name="startButton" text="Start" class="main-menu-button"/>
+                <ui:Button name="newGameBackButton" text="Back" class="main-menu-button"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="loadView" class="main-menu-view main-menu-view-wide">
-                <ui:Label text="Load Game" class="main-menu-heading" />
-                <ui:Label name="noSavesLabel" text="There are no saves yet." class="main-menu-note" />
-                <ui:ScrollView name="slotList" class="main-menu-slots" />
-                <ui:Button name="loadBackButton" text="Back" class="main-menu-button" />
+                <ui:Label text="Load Game" class="main-menu-heading"/>
+                <ui:Label name="noSavesLabel" text="There are no saves yet." class="main-menu-note"/>
+                <ui:ScrollView name="slotList" class="main-menu-slots"/>
+                <ui:Button name="loadBackButton" text="Back" class="main-menu-button"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="settingsView" class="main-menu-view">
-                <ui:Label text="Settings" class="main-menu-heading" />
-                <ui:Instance template="Settings" name="settingsPage" />
-                <ui:Button name="settingsBackButton" text="Back" class="main-menu-button" />
+                <ui:Label text="Settings" class="main-menu-heading"/>
+                <ui:Instance template="Settings" name="settingsPage"/>
+                <ui:Button name="settingsBackButton" text="Back" class="main-menu-button"/>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

@@ -3,6 +3,7 @@ using System.Linq;
 using Core;
 using Core.Game;
 using Core.Location;
+using Core.Music;
 using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -36,11 +37,17 @@ namespace UI.MainMenu
         private ScrollView _slotList;
         private Label _noSaves;
         private bool _starting;
+        private MusicRequestResolver.Handle _musicRequest;
+
+        [SerializeField] private MusicCue music;
+        [SerializeField] private string musicPreset = "full";
 
         private void Start()
         {
             // The game's persistent systems already run behind the menu; the menu only picks the session.
             var container = LifetimeScope.Find<SystemRoot>().Container;
+            music.RequireValidConfiguration();
+            _musicRequest = container.Resolve<MusicDirector>().Requests.Request(music, musicPreset);
             _saves = container.Resolve<GameSaveService>();
             _game = container.Resolve<GameStateManager>();
             _level = container.Resolve<LevelManager>();
@@ -83,6 +90,8 @@ namespace UI.MainMenu
 
             ShowTitle();
         }
+
+        private void OnDestroy() => _musicRequest?.Dispose();
 
         private bool HasSaveName => !string.IsNullOrWhiteSpace(_saveName.value);
 
