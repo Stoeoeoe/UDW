@@ -378,6 +378,16 @@ Shader "UrdewValley/Pixel Water"
                 return color;
             }
 
+            // Flowing water softens the pattern across the current (1-2-1 over three pixel rows in the flow frame),
+            // so one-pixel streaks become soft bands instead of hard hairlines. Intermediate shades are intended.
+            half3 FlowSurfaceColor(uint2 g, uint2 detailG, uint tick, half3 water, float2 driftDirection)
+            {
+                half3 above = SurfaceColor(g - uint2(0, 1), detailG - uint2(0, 2), tick, water, driftDirection);
+                half3 centre = SurfaceColor(g, detailG, tick, water, driftDirection);
+                half3 below = SurfaceColor(g + uint2(0, 1), detailG + uint2(0, 2), tick, water, driftDirection);
+                return above * 0.25 + centre * 0.5 + below * 0.25;
+            }
+
             // ---- Swell ----------------------------------------------------------------------
             // Open-water waves. Crests run across the travel direction a wavelength apart and advance in whole
             // pixels. Within the shoaling distance of land the phase turns to follow the coastline, so crests
@@ -676,8 +686,8 @@ Shader "UrdewValley/Pixel Water"
                     float phase = frac(seconds * _Current.y * 0.5);
                     int firstOffset = int(round(scroll * (phase * 2)));
                     int secondOffset = int(round(scroll * (frac(phase + 0.5) * 2)));
-                    half3 first = SurfaceColor(frameG - uint2(firstOffset, 0), frameDetail - uint2(firstOffset * 2, 0), tick, water, drift);
-                    half3 second = SurfaceColor(frameG - uint2(secondOffset, 0), frameDetail - uint2(secondOffset * 2, 0), tick, water, drift);
+                    half3 first = FlowSurfaceColor(frameG - uint2(firstOffset, 0), frameDetail - uint2(firstOffset * 2, 0), tick, water, drift);
+                    half3 second = FlowSurfaceColor(frameG - uint2(secondOffset, 0), frameDetail - uint2(secondOffset * 2, 0), tick, water, drift);
                     float weight = 1 - abs(phase * 2 - 1);
                     color = Rand(g, 14u) < weight ? first : second;
                 }
@@ -696,7 +706,8 @@ Shader "UrdewValley/Pixel Water"
                         detailSurface = Grid(FlowFrame(DetailPixel(input.world.xy), step)) - uint2(offset * 2, 0);
                         drift = float2(length(_FlowDirection.xy), 0);
                     }
-                    color = SurfaceColor(surface, detailSurface, tick, water, drift);
+                    color = _Current.x > 0 ? FlowSurfaceColor(surface, detailSurface, tick, water, drift)
+                                           : SurfaceColor(surface, detailSurface, tick, water, drift);
                 }
 
                 if (_ObjectReflections.x > 0 && _ObjectReflections.y > 0 && _WaterObjectReflectionAvailable > 0)
