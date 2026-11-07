@@ -100,6 +100,32 @@ namespace UI.MainMenu.Editor
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator SettingsVolumeChangesApplyAndAreSavedWhenLeaving()
+        {
+            EditorSceneManager.OpenScene(MenuScene, OpenSceneMode.Single);
+            yield return new EnterPlayMode();
+            yield return null;
+
+            var sound = MoreMountains.Tools.MMSoundManager.Current;
+            var original = sound.settingsSo.Settings.MusicVolume;
+            var root = Root();
+            yield return Click(root.Q<Button>("settingsButton"));
+            var slider = root.Q<Slider>("musicVolume");
+            Assert.That(slider.value, Is.EqualTo(original).Within(0.01f), "The slider shows the current volume.");
+
+            slider.value = 0.35f;
+            Assert.That(sound.settingsSo.Settings.MusicVolume, Is.EqualTo(0.35f).Within(0.001f));
+            yield return Click(root.Q<Button>("settingsBackButton"));
+
+            var saved = (MoreMountains.Tools.MMSoundManagerSettings)MoreMountains.Tools.MMSaveLoadManager.Load(
+                typeof(MoreMountains.Tools.MMSoundManagerSettings), "mmsound.settings", "MMSoundManager/");
+            Assert.That(saved.MusicVolume, Is.EqualTo(0.35f).Within(0.001f), "Leaving the screen saves the settings.");
+
+            sound.SetVolumeMusic(original);
+            sound.SaveSettings();
+        }
+
         private static VisualElement Root() => UnityEngine.Object.FindFirstObjectByType<MainMenu>().GetComponent<UIDocument>().rootVisualElement;
 
         private static VisualElement Row(VisualElement root, string name) =>

@@ -27,6 +27,8 @@ namespace UI.MainMenu
         private VisualElement _titleView;
         private VisualElement _newGameView;
         private VisualElement _loadView;
+        private VisualElement _settingsView;
+        private SettingsView _settings;
         private Button _continueButton;
         private Button _startButton;
         private TextField _saveName;
@@ -47,6 +49,8 @@ namespace UI.MainMenu
             _titleView = root.Q("titleView");
             _newGameView = root.Q("newGameView");
             _loadView = root.Q("loadView");
+            _settingsView = root.Q("settingsView");
+            _settings = new SettingsView(_settingsView);
             _continueButton = root.Q<Button>("continueButton");
             _startButton = root.Q<Button>("startButton");
             _saveName = root.Q<TextField>("saveNameField");
@@ -59,6 +63,12 @@ namespace UI.MainMenu
             });
             root.Q<Button>("newGameButton").clicked += ShowNewGame;
             root.Q<Button>("loadGameButton").clicked += ShowLoad;
+            root.Q<Button>("settingsButton").clicked += ShowSettings;
+            root.Q<Button>("settingsBackButton").clicked += () =>
+            {
+                _settings.Save();
+                ShowTitle();
+            };
             root.Q<Button>("quitButton").clicked += Quit;
             _startButton.clicked += () => Begin(() => _game.NewGame(_saveName.value.Trim()));
             _startButton.AddToClassList("is-primary");
@@ -77,7 +87,7 @@ namespace UI.MainMenu
 
         private void Show(VisualElement view)
         {
-            foreach (var each in new[] { _titleView, _newGameView, _loadView })
+            foreach (var each in new[] { _titleView, _newGameView, _loadView, _settingsView })
                 each.EnableInClassList("is-shown", each == view);
         }
 
@@ -101,6 +111,12 @@ namespace UI.MainMenu
         {
             Show(_loadView);
             RefreshSlots();
+        }
+
+        private void ShowSettings()
+        {
+            Show(_settingsView);
+            _settingsView.Q<Slider>("masterVolume").Focus();
         }
 
         private void RefreshSlots()

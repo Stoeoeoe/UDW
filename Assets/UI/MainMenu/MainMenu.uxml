@@ -8,6 +8,7 @@
                 <ui:Button name="continueButton" text="Continue" class="main-menu-button" />
                 <ui:Button name="newGameButton" text="New Game" class="main-menu-button" />
                 <ui:Button name="loadGameButton" text="Load Game" class="main-menu-button" />
+                <ui:Button name="settingsButton" text="Settings" class="main-menu-button" />
                 <ui:Button name="quitButton" text="Quit" class="main-menu-button" />
             </ui:VisualElement>
 
@@ -23,6 +24,18 @@
                 <ui:Label name="noSavesLabel" text="There are no saves yet." class="main-menu-note" />
                 <ui:ScrollView name="slotList" class="main-menu-slots" />
                 <ui:Button name="loadBackButton" text="Back" class="main-menu-button" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="settingsView" class="main-menu-view">
+                <ui:Label text="Settings" class="main-menu-heading" />
+                <ui:Label text="Sound" class="main-menu-subheading" />
+                <ui:Slider name="masterVolume" label="Master" low-value="0" high-value="1" class="main-menu-slider" />
+                <ui:Slider name="musicVolume" label="Music" low-value="0" high-value="1" class="main-menu-slider" />
+                <ui:Slider name="sfxVolume" label="Effects" low-value="0" high-value="1" class="main-menu-slider" />
+                <ui:Label text="Coming soon" class="main-menu-subheading" />
+                <ui:Toggle label="Fullscreen" enabled="false" class="main-menu-slider" />
+                <ui:DropdownField label="Language" enabled="false" class="main-menu-slider" />
+                <ui:Button name="settingsBackButton" text="Back" class="main-menu-button" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

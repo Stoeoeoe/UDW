@@ -12,6 +12,13 @@
 .main-menu-view { display: none; flex-shrink: 1; min-height: 0; }
 .main-menu-view.is-shown { display: flex; }
 .main-menu-heading { color: var(--menu-ink); font-size: 20px; -unity-font-style: bold; margin-bottom: 10px; }
+.main-menu-subheading { color: var(--menu-ink); font-size: 14px; -unity-font-style: bold; margin: 6px 0 2px 0; }
+.main-menu-slider { margin: 4px 0; }
+.main-menu-slider > Label { color: var(--menu-ink); min-width: 80px; }
+.main-menu-slider .unity-base-slider__tracker { background-color: rgba(49, 43, 32, 0.4); }
+.main-menu-slider .unity-base-slider__dragger { background-color: var(--menu-green); border-width: 2px; border-color: var(--menu-ink); border-radius: 4px; }
+.main-menu-slider .unity-base-field__input { color: var(--menu-ink); background-color: var(--menu-paper-light); }
+.main-menu-slider .unity-base-slider__input { background-color: transparent; }
 .main-menu-note { color: var(--menu-ink); font-size: 14px; white-space: normal; margin-bottom: 10px; }
 .main-menu-button { min-height: 38px; margin: 4px 0; color: var(--menu-ink); background-color: var(--menu-paper-light); border-width: 2px; border-color: transparent; font-size: 16px; -unity-text-align: middle-center; }
 .main-menu-button:focus { border-color: var(--menu-gold); }

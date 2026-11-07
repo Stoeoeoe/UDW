@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 19101, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: InventoryPanelSettings
   m_EditorClassIdentifier: 
-  themeUss: {fileID: -4733365628477956816, guid: 60da22905c8d3ea49bab6610351789de, type: 3}
+  themeUss: {fileID: -4733365628477956816, guid: 511128c78d699af4fbbe4d6dae67e3cb, type: 3}
   m_DisableNoThemeWarning: 0
   m_TargetTexture: {fileID: 0}
   m_RenderMode: 0

@@ -119,3 +119,7 @@ Assets/graphify-out
 
 # Work around a Codex-on-Windows cache path that may be created literally in the repo.
 /%SystemDrive%/
+
+# MMSoundManager local audio settings (written inside Assets in the Editor)
+/Assets/MMData/
+/Assets/MMData.meta
