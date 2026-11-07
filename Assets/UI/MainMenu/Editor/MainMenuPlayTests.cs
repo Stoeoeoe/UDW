@@ -57,6 +57,55 @@ namespace UI.MainMenu.Editor
         }
 
         [UnityTest]
+        public IEnumerator ReturningToTheMenuFromTheGameAllowsStartingAgain()
+        {
+            SessionState.EraseString(SlotsKey);
+            EditorSceneManager.OpenScene(MenuScene, OpenSceneMode.Single);
+            yield return new EnterPlayMode();
+            for (var i = 0; i < 10; i++) yield return null;
+
+            yield return StartNewGame(Root(), "Menu return " + Guid.NewGuid().ToString("N"));
+            var level = LiveGame.Get<LevelManager>();
+
+            var inventory = UnityEngine.Object.FindFirstObjectByType<InventoryScreen.UrInventoryUIDocumentPresenter>();
+            inventory.OpenInventory();
+            yield return null;
+            Assert.That(inventory.Menu.SelectPage("settings"), Is.True);
+            var gameRoot = inventory.GetComponent<UIDocument>().rootVisualElement;
+            Assert.That(gameRoot.Q<Slider>("masterVolume"), Is.Not.Null, "The game menu has the volume sliders.");
+            yield return Click(gameRoot.Q<Button>("returnToMenuButton"));
+            Assert.That(level.SceneReady, Is.True, "Leaving the game asks for confirmation first.");
+            yield return Click(gameRoot.Q<Button>("leaveGameButton"));
+
+            var deadline = Time.realtimeSinceStartup + 60f;
+            while (level.SceneReady || UnityEngine.Object.FindFirstObjectByType<MainMenu>() == null)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The menu must come back.");
+                yield return null;
+            }
+            for (var i = 0; i < 10; i++) yield return null;
+            Assert.That(LiveGame.Get<CharacterManager>().MainCharacter, Is.Null, "The old player is gone.");
+
+            yield return StartNewGame(Root(), "Menu again " + Guid.NewGuid().ToString("N"));
+            Assert.That(LiveGame.Get<LevelManager>().SceneReady, Is.True);
+        }
+
+        // Starts a new game from the title screen and waits until its location is ready.
+        private static IEnumerator StartNewGame(VisualElement root, string saveName)
+        {
+            yield return Click(root.Q<Button>("newGameButton"));
+            root.Q<TextField>("saveNameField").value = saveName;
+            yield return Click(root.Q<Button>("startButton"));
+            var deadline = Time.realtimeSinceStartup + 60f;
+            while (!LiveGame.Get<LevelManager>().SceneReady)
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), "The game must start after the menu.");
+                yield return null;
+            }
+            SessionState.SetString(SlotsKey, SessionState.GetString(SlotsKey, "") + ";" + LiveGame.Get<GameStateManager>().CurrentSlot);
+        }
+
+        [UnityTest]
         public IEnumerator TheLoadListShowsEverySlotAndDeletesAfterConfirming()
         {
             var saves = new GameSaveService(Resources.Load<Character.CharacterCatalog>(Character.CharacterCatalog.ResourceName),

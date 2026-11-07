@@ -6,6 +6,7 @@ using Core.Equipment;
 using Core.Events;
 using Core.Inventory;
 using Core.Items;
+using Core.Location;
 using Input;
 using Interaction.Tools;
 using Items;
@@ -21,6 +22,7 @@ namespace UI.InventoryScreen
     public sealed class UrInventoryUIDocumentPresenter : InventoryScreenView, IEventListener<WalletChangedEvent>
     {
         [Inject] private UrGUIManager _urGUIManager;
+        [Inject] private LevelManager _level;
 
         [Inject] private InputManager _inputManager;
         [Inject] private ItemManager _itemManager;
@@ -35,8 +37,7 @@ namespace UI.InventoryScreen
             new() { Id = "world", Title = "World", Placeholder = "The world map is not available yet." },
             new() { Id = "journal", Title = "Journal", Placeholder = "Your journal is not available yet." },
             new() { Id = "skills", Title = "Skills", Placeholder = "Your skills are not available yet." },
-            new() { Id = "relationships", Title = "Relationships", Placeholder = "Relationships are not available yet." },
-            new() { Id = "settings", Title = "Settings", Placeholder = "Settings are not available yet." }
+            new() { Id = "relationships", Title = "Relationships", Placeholder = "Relationships are not available yet." }
         };
         public TabbedMenuShell Menu { get; private set; }
         public event Action<TabbedMenuShell> MenuBound;
@@ -73,6 +74,7 @@ namespace UI.InventoryScreen
             Menu.RegisterPage("bag", "Bag", root.Q("bagPage"));
             Menu.RegisterPage("equipment", "Equipment", root.Q("equipmentPage"));
             if (menuPages != null) foreach (var page in menuPages) if (page != null) Menu.RegisterPage(page);
+            RegisterSettingsPage(root.Q("settingsPage"));
             _overlay = Menu.Overlay; _grid = root.Q("slotGrid");
             _heldCursor = root.Q("heldCursor"); _heldIcon = root.Q("heldIcon");
             _heldQuantity = root.Q<Label>("heldQuantity"); _selectionLabel = root.Q<Label>("selectionLabel");
@@ -120,6 +122,35 @@ namespace UI.InventoryScreen
             RebindRoot(_overlay);
             if (IsManagedOpen) Menu.NotifyOpened();
             return true;
+        }
+        // The volume controls are shared with the main menu; leaving the game for the menu is only offered here.
+        private void RegisterSettingsPage(VisualElement page)
+        {
+            var settings = new SettingsPage(page);
+            var leave = new VisualElement();
+            leave.AddToClassList("settings-leave");
+            var ask = new Button { name = "returnToMenuButton", text = "Return to main menu" };
+            ask.AddToClassList("quiet-action");
+            var confirm = new VisualElement { style = { display = DisplayStyle.None } };
+            var warning = new Label("Progress since your last save will be lost.");
+            warning.AddToClassList("inventory-description");
+            var yes = new Button(() => { if (ReceivesInput) { CloseInventory(); _level.ReturnToMainMenu(); } }) { name = "leaveGameButton", text = "Leave the game" };
+            yes.AddToClassList("inventory-action");
+            var no = new Button { text = "Stay" };
+            no.AddToClassList("quiet-action");
+            void Ask(bool asking)
+            {
+                ask.style.display = asking ? DisplayStyle.None : DisplayStyle.Flex;
+                confirm.style.display = asking ? DisplayStyle.Flex : DisplayStyle.None;
+                if (asking) no.Focus(); // Focus lands on the safe choice.
+            }
+            ask.clicked += () => Ask(true);
+            no.clicked += () => Ask(false);
+            confirm.Add(warning); confirm.Add(yes); confirm.Add(no);
+            leave.Add(ask); leave.Add(confirm);
+            page.Add(leave);
+            Menu.RegisterPage("settings", "Settings", page,
+                shown: () => { settings.Show(); Ask(false); }, hidden: settings.Save);
         }
         private bool PreparePageChange()
         {

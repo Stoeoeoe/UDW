@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <ui:Style src="MainMenu.uss" />
+    <ui:Template name="Settings" src="../Shared/SettingsPage.uxml" />
     <ui:VisualElement name="menuRoot" class="main-menu">
         <ui:VisualElement class="main-menu-panel">
             <ui:Label text="Urdew Valley" class="main-menu-title" />
@@ -28,13 +29,7 @@
 
             <ui:VisualElement name="settingsView" class="main-menu-view">
                 <ui:Label text="Settings" class="main-menu-heading" />
-                <ui:Label text="Sound" class="main-menu-subheading" />
-                <ui:Slider name="masterVolume" label="Master" low-value="0" high-value="1" class="main-menu-slider" />
-                <ui:Slider name="musicVolume" label="Music" low-value="0" high-value="1" class="main-menu-slider" />
-                <ui:Slider name="sfxVolume" label="Effects" low-value="0" high-value="1" class="main-menu-slider" />
-                <ui:Label text="Coming soon" class="main-menu-subheading" />
-                <ui:Toggle label="Fullscreen" enabled="false" class="main-menu-slider" />
-                <ui:DropdownField label="Language" enabled="false" class="main-menu-slider" />
+                <ui:Instance template="Settings" name="settingsPage" />
                 <ui:Button name="settingsBackButton" text="Back" class="main-menu-button" />
             </ui:VisualElement>
         </ui:VisualElement>

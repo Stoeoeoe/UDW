@@ -138,7 +138,7 @@ namespace Core.Location
         {
             var location = RequireSavedLocation(saved.LocationId);
             if (!IsOpen(open, location))
-                yield return ReplaceActiveScene(location);
+                yield return ReplaceActiveScene(location.ScenePath);
             yield return EnterSavedLocation(location, saved);
         }
 
@@ -147,7 +147,7 @@ namespace Core.Location
         {
             var home = _players.StartingHomeLocation;
             if (!IsOpen(open, home))
-                yield return ReplaceActiveScene(home);
+                yield return ReplaceActiveScene(home.ScenePath);
             SetCurrentLocation(home);
             yield return EnterLocationRoutine(home, placeCharacter: player => PlaceAtHome(player, _players.StartingBedId));
         }
@@ -156,11 +156,11 @@ namespace Core.Location
             _locations.Get(locationId)
             ?? throw new InvalidOperationException($"The saved location '{locationId}' is not a registered, enabled location.");
 
-        // Loads a fresh copy of the location's scene and unloads the active one, even when they are the same location.
-        private static IEnumerator ReplaceActiveScene(LocationData location)
+        // Loads a fresh copy of the scene and unloads the active one, even when they are the same scene.
+        private static IEnumerator ReplaceActiveScene(string scenePath)
         {
             var previous = SceneManager.GetActiveScene();
-            yield return SceneManager.LoadSceneAsync(location.ScenePath, LoadSceneMode.Additive);
+            yield return SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Additive);
             SceneManager.SetActiveScene(SceneManager.GetSceneAt(SceneManager.sceneCount - 1));
             yield return SceneManager.UnloadSceneAsync(previous);
             yield return null; // Allow the new scene's OnEnable to fire so components can register.
@@ -209,8 +209,49 @@ namespace Core.Location
                 yield return null;
 
                 replaceState();
-                yield return ReplaceActiveScene(location);
+                yield return ReplaceActiveScene(location.ScenePath);
                 yield return EnterSavedLocation(location, _gameState.Session);
+            }
+            finally
+            {
+                _transitionInProgress = false;
+            }
+        }
+
+        /// <summary>
+        /// Leaves the running game for the main menu behind a covered screen, discarding unsaved progress. The menu then
+        /// starts a session as it does at launch. Returns false while a transition is running or the location is not ready.
+        /// </summary>
+        public bool ReturnToMainMenu()
+        {
+            if (!SceneReady || _transitionInProgress) return false;
+            StartCoroutine(ReturnToMainMenuRoutine());
+            return true;
+        }
+
+        private IEnumerator ReturnToMainMenuRoutine()
+        {
+            _transitionInProgress = true;
+            SceneReady = false;
+            var character = _characterManager.MainCharacter;
+            try
+            {
+                LocationLeaving?.Invoke();
+                character.SetControlBlocked(this, true);
+                yield return _urGUIManager.CoverScene(character.transform);
+
+                _locationEntered = false;
+                foreach (var component in _lifecycleComponents.ToArray())
+                    if (_lifecycleComponents.Contains(component) && CanReceiveLocation(component, CurrentLocationData))
+                        component.OnLocationLeave(CurrentLocationData);
+
+                _characterManager.UnregisterMainCharacter(character);
+                Destroy(character.gameObject);
+                yield return null;
+
+                yield return ReplaceActiveScene(mainMenuScenePath);
+                _urGUIManager.ResetTransition(); // The screen is covered; the menu must be visible.
+                _urGUIManager.SetMainMenuActive(true);
             }
             finally
             {

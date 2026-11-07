@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="SettingsPage.uss" />
+    <ui:VisualElement class="settings-page">
+        <ui:Label text="Sound" class="settings-heading" />
+        <ui:Slider name="masterVolume" label="Master" low-value="0" high-value="1" class="settings-row" />
+        <ui:Slider name="musicVolume" label="Music" low-value="0" high-value="1" class="settings-row" />
+        <ui:Slider name="sfxVolume" label="Effects" low-value="0" high-value="1" class="settings-row" />
+        <ui:Label text="Coming soon" class="settings-heading" />
+        <ui:Toggle label="Fullscreen" enabled="false" class="settings-row" />
+        <ui:DropdownField label="Language" enabled="false" class="settings-row" />
+    </ui:VisualElement>
+</ui:UXML>

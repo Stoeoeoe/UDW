@@ -3,6 +3,7 @@ using System.Linq;
 using Core;
 using Core.Game;
 using Core.Location;
+using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VContainer;
@@ -28,7 +29,7 @@ namespace UI.MainMenu
         private VisualElement _newGameView;
         private VisualElement _loadView;
         private VisualElement _settingsView;
-        private SettingsView _settings;
+        private SettingsPage _settings;
         private Button _continueButton;
         private Button _startButton;
         private TextField _saveName;
@@ -50,7 +51,7 @@ namespace UI.MainMenu
             _newGameView = root.Q("newGameView");
             _loadView = root.Q("loadView");
             _settingsView = root.Q("settingsView");
-            _settings = new SettingsView(_settingsView);
+            _settings = new SettingsPage(_settingsView);
             _continueButton = root.Q<Button>("continueButton");
             _startButton = root.Q<Button>("startButton");
             _saveName = root.Q<TextField>("saveNameField");
@@ -116,6 +117,7 @@ namespace UI.MainMenu
         private void ShowSettings()
         {
             Show(_settingsView);
+            _settings.Show();
             _settingsView.Q<Slider>("masterVolume").Focus();
         }
 

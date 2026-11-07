@@ -2314,10 +2314,6 @@ MonoBehaviour:
     Title: Relationships
     Layout: {fileID: 0}
     Placeholder: Relationships are not available yet.
-  - Id: settings
-    Title: Settings
-    Layout: {fileID: 0}
-    Placeholder: Settings are not available yet.
 --- !u!114 &8864502943986586909
 MonoBehaviour:
   m_ObjectHideFlags: 0

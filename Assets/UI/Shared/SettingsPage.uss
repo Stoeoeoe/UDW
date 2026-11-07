@@ -1,0 +1,9 @@
+.settings-page { --settings-ink: rgb(49, 43, 32); --settings-paper-light: rgb(249, 242, 218); --settings-green: rgb(75, 105, 67); }
+.settings-heading { color: var(--settings-ink); font-size: 14px; -unity-font-style: bold; margin: 6px 0 2px 0; }
+.settings-row { margin: 4px 0; }
+.settings-row > Label { color: var(--settings-ink); min-width: 80px; }
+.settings-row .unity-base-slider__tracker { background-color: rgba(49, 43, 32, 0.4); }
+.settings-row .unity-base-slider__dragger { background-color: var(--settings-green); border-width: 2px; border-color: var(--settings-ink); border-radius: 4px; }
+.settings-row .unity-base-field__input { color: var(--settings-ink); background-color: var(--settings-paper-light); }
+.settings-row .unity-base-slider__input { background-color: transparent; }
+.settings-leave { margin-top: 16px; }
