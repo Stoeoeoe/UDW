@@ -19,6 +19,10 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 11400000, guid: 8e403280a1ffeb94f9b64b93b2b7e5e6, type: 2}
     enabled: 1
+  - definition: {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: d2f04fc7b6520774bb9f0f0853fa9d1b, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 2c7aacda969659e4797be086f244d844, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: befbbffacc5d44e40bdd09263c206f87, type: 2}

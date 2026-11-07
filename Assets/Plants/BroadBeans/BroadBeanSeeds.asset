@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f099f2ad68b04f22a2c363b37d0a75b8, type: 3}
+  m_Name: BroadBeanSeeds
+  m_EditorClassIdentifier: Assembly-CSharp::Plants.SeedItem
+  _itemId: base:broad_bean_seeds
+  _itemName: Broad Bean Seeds
+  _category: Seeds
+  _icon: {fileID: 21300000, guid: 78db617cd665eaf4990c7237dc4d47f1, type: 3}
+  _description: Plant on tilled soil. Ready to pick in about eight days of watering.
+  _maxStackSize: 99
+  _preventDropping: 0
+  _buyBasePrice: 0
+  _sellBasePrice: 0
+  _worldRepresentationPrefab: {fileID: 0}
+  _pickupSound: {fileID: 0}
+  placeableOnTerrainTypes: 01000000i
+  _plantData: {fileID: 11400000, guid: d43cb9fb53ce50d4d9764ba51ca7415f, type: 2}

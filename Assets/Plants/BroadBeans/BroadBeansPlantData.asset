@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a0a485f742f4553884da6ca441525ba, type: 3}
+  m_Name: BroadBeansPlantData
+  m_EditorClassIdentifier: Assembly-CSharp::Plants.PlantData
+  _plantId: base:broad_beans
+  _label: Broad Beans
+  _description: Hardy beans that grow tall and carry fat pods.
+  growingSeasons: 0000000001000000i
+  growthStages:
+  - _daysToReachStage: 0
+    _isHarvestable: 0
+    _representation:
+      type: 0
+      sprite: {fileID: 3649233049271419800, guid: e46562567ae7d08489919cade2e08fef, type: 3}
+      prefab: {fileID: 0}
+  - _daysToReachStage: 2
+    _isHarvestable: 0
+    _representation:
+      type: 0
+      sprite: {fileID: -7368833224946052486, guid: e46562567ae7d08489919cade2e08fef, type: 3}
+      prefab: {fileID: 0}
+  - _daysToReachStage: 4
+    _isHarvestable: 0
+    _representation:
+      type: 0
+      sprite: {fileID: 7828634647373984236, guid: e46562567ae7d08489919cade2e08fef, type: 3}
+      prefab: {fileID: 0}
+  - _daysToReachStage: 6
+    _isHarvestable: 0
+    _representation:
+      type: 0
+      sprite: {fileID: 7026023649830341568, guid: e46562567ae7d08489919cade2e08fef, type: 3}
+      prefab: {fileID: 0}
+  - _daysToReachStage: 8
+    _isHarvestable: 1
+    _representation:
+      type: 0
+      sprite: {fileID: 6875536402661147707, guid: e46562567ae7d08489919cade2e08fef, type: 3}
+      prefab: {fileID: 0}
+  _harvestMethod: 0
+  _harvestItem: {fileID: 11400000, guid: d2f04fc7b6520774bb9f0f0853fa9d1b, type: 2}
+  _minHarvestQuantity: 2
+  _maxHarvestQuantity: 4
+  _regrowthStageIndex: -1
+  _daysWithoutWaterUntilWilt: 5
+  _wiltedRepresentation:
+    rid: -2
+  _daysWiltedUntilRemoval: 5
+  _wiltedFeedbackPrefab: {fileID: 7772630229047509412, guid: 6f5d1b8356311e744a6b9f724aeb9631, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

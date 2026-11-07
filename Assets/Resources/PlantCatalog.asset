@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: PlantCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Plants.PlantCatalog
   entries:
+  - definition: {fileID: 11400000, guid: d43cb9fb53ce50d4d9764ba51ca7415f, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 8434e4390b8bf664997b587750639731, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: 9c87864bb7deaf14494c7822d7b9fed4, type: 2}

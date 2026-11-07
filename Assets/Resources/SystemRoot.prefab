@@ -2189,7 +2189,13 @@ MonoBehaviour:
     startingTools:
     - {fileID: 11400000, guid: 8b92d76454e6af84cbbdb64e9263dc4c, type: 2}
     - {fileID: 11400000, guid: 2b2d483d2d3cdf04b912715bb138ae15, type: 2}
-    startingItems: []
+    startingItems:
+    - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
+    - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
+    - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
+    - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
+    - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
+    - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
     startingHomeLocation: {fileID: 447913706122126786, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
     startingBedId: home_bed
   items:
