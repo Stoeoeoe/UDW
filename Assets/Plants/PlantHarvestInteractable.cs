@@ -1,5 +1,7 @@
+using System.Collections;
 using Character;
 using Core.Inventory;
+using Core.Items;
 using Interaction;
 using UnityEngine;
 using VContainer;
@@ -10,6 +12,10 @@ namespace Plants
     public sealed class PlantHarvestInteractable : AbstractInteractable
     {
         [Inject] private PlantManager _plantManager;
+        [Inject] private ItemManager _itemManager;
+
+        // The character stands still, and the crop ignores further presses, until the pick animation ends.
+        private bool _picking;
 
         private string _locationId;
         private Vector2Int _position;
@@ -31,8 +37,8 @@ namespace Plants
         // A replaced crop at the same tile is a different target, even before this view is destroyed.
         private bool IsCurrentCrop => _plantManager.GetPlantState(_locationId, _position) == _state;
         private bool CanClearWilted => IsCurrentCrop && _state.condition == PlantCondition.Wilted;
-        public override bool CanInteract => CanClearWilted ||
-            (IsCurrentCrop && _plantManager.CanHarvest(_locationId, _position, HarvestMethod.Picking));
+        public override bool CanInteract => !_picking && (CanClearWilted ||
+            (IsCurrentCrop && _plantManager.CanHarvest(_locationId, _position, HarvestMethod.Picking)));
 
         /// <summary>Picks this crop into inventory; an unavailable crop or full bag leaves both unchanged.</summary>
         public bool TryHarvest(SlotInventory inventory) => IsCurrentCrop &&
@@ -64,11 +70,39 @@ namespace Plants
             {
                 return TryClearWilted();
             }
-            if (!CanInteract || !TryHarvest(instigator.MainInventory))
+            if (!CanInteract)
             {
                 DeniedFeedback?.PlayFeedbacks();
                 return false;
             }
+            var animation = _itemManager.PickAnimation;
+            if (!animation) return Pick(instigator);
+            // Like foraging: the character reaches down, then the crop is picked with the pickup sound.
+            var action = animation.MemaoAction;
+            instigator.Animator.PlayNamedAction(action);
+            var seconds = instigator.Animator.AnimationLibrary.GetDirectional(action, instigator.Orientation.FacingDirection).length;
+            _picking = true;
+            instigator.SetControlBlocked(this, true);
+            StartCoroutine(PickAfter(instigator, seconds));
+            return true;
+        }
+
+        private IEnumerator PickAfter(GameCharacter picker, float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            _picking = false;
+            picker.SetControlBlocked(this, false);
+            Pick(picker);
+        }
+
+        private bool Pick(GameCharacter picker)
+        {
+            if (!TryHarvest(picker.MainInventory))
+            {
+                DeniedFeedback?.PlayFeedbacks();
+                return false;
+            }
+            _itemManager.PlayPickupSound(_definition.HarvestItem.PickupSound);
             ActivationFeedback?.PlayFeedbacks();
             return true;
         }

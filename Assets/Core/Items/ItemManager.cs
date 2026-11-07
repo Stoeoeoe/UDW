@@ -1,3 +1,4 @@
+using Character.Animations;
 using Core.Inventory;
 using MoreMountains.Tools;
 using UnityEngine;
@@ -36,6 +37,7 @@ namespace Core.Items
             return true;
         }
 
+        public CharacterAnimation PickAnimation => _settings.pickAnimation;
         public float MagnetRadius => _settings.magnetRadius;
         public float PickupRadius => _settings.pickupRadius;
         public float MaxSpeed => _settings.maxSpeed;

@@ -1,4 +1,5 @@
 using System;
+using Character.Animations;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -21,6 +22,9 @@ namespace Core.Items
         public float volume = 1f;
         [Range(0f, 2f)] public float pitchMin = 0.9f;
         [Range(0f, 2f)] public float pitchMax = 1.1f;
+        [Header("Picking")]
+        [Tooltip("The Memao action (such as Pickup) the character plays when picking a crop by hand. Without one, picking is instant.")]
+        public CharacterAnimation pickAnimation;
         [Header("Dropping")]
         public WorldItem droppedItemPrefab;
         public Vector2 dropOffset = new(0f, -1f);

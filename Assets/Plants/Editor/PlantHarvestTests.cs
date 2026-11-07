@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
+using Core;
 using Core.Common;
 using Core.Common.Editor;
 using Core.Events;
@@ -49,6 +50,11 @@ namespace Plants.Editor
         public void SetUp()
         {
 
+            // These tests cover crop state; the picking animation is covered by the play test.
+            var settings = JsonUtility.FromJson<ItemSettings>(JsonUtility.ToJson(
+                AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath).GetComponent<SystemRoot>().Items));
+            settings.pickAnimation = null;
+            Game.Use(settings);
             _harvestEvents = _inventoryEvents = 0;
             _removalEvents = 0;
             _onNotification = null;
