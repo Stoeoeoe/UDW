@@ -1,0 +1,99 @@
+{
+  "id": "base:heroic-theme",
+  "bpm": 96,
+  "beatsPerBar": 4,
+  "loopBars": 28,
+  "sampleRate": 48000,
+  "frames": 3360000,
+  "loop": {
+    "startBar": 1,
+    "endBar": 29,
+    "tail": "wrap",
+    "fadeOutSeconds": 0,
+    "startTick": 0,
+    "endTick": 53760,
+    "numerator": 4,
+    "denominator": 4
+  },
+  "source": {
+    "file": "../../../../../Apollo/base/heroic-theme/source.mid",
+    "sha256": "9f9e75e99d3198ff96584267ca3134fad0f0edca427e8d9686bcb6a71c03c574",
+    "ticksPerBeat": 480
+  },
+  "renderer": {
+    "name": "FluidSynth",
+    "version": "FluidSynth runtime version 2.6.1\r\nCopyright (C) 2000-2026 Peter Hanappe and others.\r\nDistributed under the LGPL license.\r\nSoundFont(R) is a registered trademark of Creative Technology Ltd.\r\n\r\nFluidSynth executable version 2.6.1\r\nSample type=float",
+    "gain": 0.2,
+    "reverb": false,
+    "chorus": false,
+    "bankSelect": "mma"
+  },
+  "stems": [
+    {
+      "id": "heroic-theme",
+      "file": "../_stems/heroic-theme--trumpet-french-horn-strings-choir-aahs-contrabass-gm-gs-drum-set--5467f0014482.ogg",
+      "tracks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "instruments": [
+        {
+          "channel": 0,
+          "bank": 0,
+          "program": 56,
+          "preset": "Trumpet"
+        },
+        {
+          "channel": 1,
+          "bank": 0,
+          "program": 60,
+          "preset": "French Horn"
+        },
+        {
+          "channel": 2,
+          "bank": 0,
+          "program": 48,
+          "preset": "Strings"
+        },
+        {
+          "channel": 3,
+          "bank": 0,
+          "program": 52,
+          "preset": "Choir Aahs"
+        },
+        {
+          "channel": 4,
+          "bank": 0,
+          "program": 43,
+          "preset": "Contrabass"
+        },
+        {
+          "channel": 9,
+          "bank": 128,
+          "program": 0,
+          "preset": "GM/GS Drum Set"
+        }
+      ],
+      "soundFontSha256": "d2908f4aa399feda09d998c48d5bb371a8b9dd372ad7f2e7312b7c640b55febc",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 3360000,
+      "sha256": "5467f001448251e3dc46174a4c9a96a443f88b5e3df5f63f84422dded8623059"
+    }
+  ],
+  "presets": [
+    {
+      "id": "full",
+      "gains": [
+        {
+          "stem": "heroic-theme",
+          "gain": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { MidiData } from 'midi-file';
-import { inspectMidi, timeline } from './midi.js';
+import { inspectMidi, isGmSystemOn, timeline } from './midi.js';
 
 const index = z.number().int().nonnegative();
 const id = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/);
@@ -62,8 +62,8 @@ export function validateConfig(input: unknown, midi: MidiData) {
       throw new Error(`Tempo change at tick ${tick}: Unity cues require fixed tempo.`);
     if (event.type === 'timeSignature' && (event.numerator !== numerator || event.denominator !== denominator))
       throw new Error(`Meter change at tick ${tick}: Unity cues require fixed meter.`);
-    if (event.type === 'sysEx' || event.type === 'endSysEx' || (event.type === 'portPrefix' && event.port !== 0))
-      throw new Error('SysEx and multiple MIDI ports are not supported for stem export.');
+    if ((event.type === 'sysEx' && !isGmSystemOn(event)) || event.type === 'endSysEx' || (event.type === 'portPrefix' && event.port !== 0))
+      throw new Error('SysEx (other than GM System On) and multiple MIDI ports are not supported for stem export.');
   }
   const loopBars = config.loop.endBar - config.loop.startBar;
   const startFrame = Math.round(startTick / midi.header.ticksPerBeat! * us / 1000000 * config.sampleRate);

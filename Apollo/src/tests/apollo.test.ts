@@ -79,6 +79,14 @@ test('boundary validation rejects ambiguous grouping, invalid presets, and chang
   const meter = song(); meter.tracks[0].splice(2, 0, { deltaTime: 480, type: 'timeSignature', numerator: 3, denominator: 4, metronome: 24, thirtyseconds: 8 });
   assert.throws(() => validateConfig(configuration(), meter), /Meter change/);
   assert.throws(() => readMidi(Buffer.from('not midi')), /MIDI/);
+  const gm = song(); gm.tracks[0].splice(0, 0, { deltaTime: 0, type: 'sysEx', data: [0x7e, 0x7f, 0x09, 0x01, 0xf7] });
+  validateConfig(configuration(), gm);
+  // The reset would otherwise return every channel to piano after the stem's instrument selection.
+  const rendered = readMidi(stemMidi(gm, [1], 3840, [{ channel: 0, bank: 0, program: 56 }]));
+  assert.ok(!rendered.tracks[0].some(e => e.type === 'sysEx'));
+  assert.ok(rendered.tracks[0].some(e => e.type === 'programChange' && e.programNumber === 56));
+  const other = song(); other.tracks[0].splice(0, 0, { deltaTime: 0, type: 'sysEx', data: [0x41, 0x10, 0x42, 0x12, 0xf7] });
+  assert.throws(() => validateConfig(configuration(), other), /SysEx/);
 });
 
 test('nonzero loop start uses musical timing and identical sample counts', () => {

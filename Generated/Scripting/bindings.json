@@ -1450,6 +1450,10 @@
         "description": "cue"
       },
       {
+        "id": "base:heroic-theme",
+        "description": "cue"
+      },
+      {
         "id": "base:interior",
         "description": "cue"
       }

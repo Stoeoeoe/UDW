@@ -39,6 +39,15 @@
       }
     ]
   },
+  "5467f001448251e3dc46174a4c9a96a443f88b5e3df5f63f84422dded8623059": {
+    "file": "Assets/Content/Music/base/_stems/heroic-theme--trumpet-french-horn-strings-choir-aahs-contrabass-gm-gs-drum-set--5467f0014482.ogg",
+    "uses": [
+      {
+        "cue": "base:heroic-theme",
+        "stem": "heroic-theme"
+      }
+    ]
+  },
   "5b277513c720fdc6ef82133251253e4fafaaec05a19b69e878252aa99c0a596e": {
     "file": "Assets/Content/Music/base/_stems/flute-2--cello--5b277513c720.ogg",
     "uses": [

@@ -42,6 +42,10 @@ export function inspectMidi(midi: MidiData) {
   };
 }
 
+/** General MIDI System On (F0 7E 7F 09 01 F7). FluidSynth already is GM, and rendering it would reset every channel to piano after our instrument selections. */
+export const isGmSystemOn = (event: MidiEvent) =>
+  event.type === 'sysEx' && [0x7e, 0x7f, 0x09, 0x01].every((byte, i) => event.data[i] === byte);
+
 export type InstrumentOverride = { channel: number; program: number; bank: number };
 
 export function usedPatches(midi: MidiData, tracks?: number[]) {
@@ -75,7 +79,7 @@ export function stemMidi(midi: MidiData, tracks: number[], endTick: number, over
   let previous = 0;
   const heldNotes = new Set<string>();
   for (const { tick, track, event } of timeline(midi)) {
-    if (event.type === 'endOfTrack') continue;
+    if (event.type === 'endOfTrack' || isGmSystemOn(event)) continue;
     const noteKey = 'noteNumber' in event ? `${event.channel}:${event.noteNumber}` : '';
     const release = event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0);
     if (tick >= endTick) {

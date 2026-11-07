@@ -140,7 +140,7 @@ decompresses them when loaded, so playback does not decode every frame. This sav
 disk space but still uses uncompressed audio memory during play.
 The manifest records IDs, timing, presets, grouping, resolved instruments, renderer
 settings and SHA-256 hashes. SF2/SF3 preset headers are read without loading their
-sample pools into Node memory. Asynchronous format-2 MIDI, SMPTE timing, SysEx,
+sample pools into Node memory. Asynchronous format-2 MIDI, SMPTE timing, SysEx (except GM System On),
 multiple MIDI ports and meters with fractional quarter-note beats are unsupported.
 
 ## Use in the game
