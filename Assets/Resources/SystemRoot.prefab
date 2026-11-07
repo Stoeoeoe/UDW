@@ -2167,6 +2167,7 @@ Transform:
   - {fileID: 3997705227323603445}
   - {fileID: 3666859091866977424}
   - {fileID: 5206374779788682829}
+  - {fileID: 5710201411931591133}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &-5602565127603773880
@@ -2189,6 +2190,7 @@ MonoBehaviour:
     startingTools:
     - {fileID: 11400000, guid: 8b92d76454e6af84cbbdb64e9263dc4c, type: 2}
     - {fileID: 11400000, guid: 2b2d483d2d3cdf04b912715bb138ae15, type: 2}
+    - {fileID: 11400000, guid: 401cf223426147e46a3b11f27e961dbf, type: 2}
     startingItems:
     - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
     - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
@@ -2198,6 +2200,7 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 534ff581a44c55f4692dada69963ac9c, type: 2}
     startingHomeLocation: {fileID: 447913706122126786, guid: 066d4a6a73f28c04ab723abbb0be2de3, type: 3}
     startingBedId: home_bed
+    startingMoney: 100
   items:
     magnetRadius: 2.5
     pickupRadius: 0.25
@@ -2233,6 +2236,7 @@ MonoBehaviour:
     volume: 1
     pitchMin: 0.9
     pitchMax: 1.1
+    pickAnimation: {fileID: 11400000, guid: 0df20c764685e534d9719ec770a3c08b, type: 2}
     droppedItemPrefab: {fileID: 8082679006293740525, guid: 841241708f7d8b64389d6730a6a89c8f, type: 3}
     dropOffset: {x: 0, y: -1}
     dropPickupDelay: 2
@@ -8119,6 +8123,79 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
+--- !u!1 &2923271698021143831
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5710201411931591133}
+  - component: {fileID: 452700778002384198}
+  - component: {fileID: 4344638429302418636}
+  m_Layer: 0
+  m_Name: Shop Screen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5710201411931591133
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2923271698021143831}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3245482728486734529}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &452700778002384198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2923271698021143831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 2af599cf247cb8b47b48d33b6f225ad3, type: 2}
+  m_ParentUI: {fileID: 7410992665882482011}
+  sourceAsset: {fileID: 9197481963319205126, guid: 84e29898771f4e1c9c902b9f05cf278a, type: 3}
+  m_SortingOrder: 5
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!114 &4344638429302418636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2923271698021143831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9163f6897a08416eaa100312da3a32e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Shops.ShopUIDocumentPresenter
+  pauseWhileOpen: 3
+  soundOverrides: {fileID: 0}
+  inputActionMap: UI
+  layoutAsset: {fileID: 9197481963319205126, guid: 84e29898771f4e1c9c902b9f05cf278a, type: 3}
+  document: {fileID: 452700778002384198}
 --- !u!1 &2938875937911813453
 GameObject:
   m_ObjectHideFlags: 0
@@ -11574,6 +11651,54 @@ MonoBehaviour:
   PreventLeftClick: 0
   PreventMiddleClick: 1
   PreventRightClick: 1
+--- !u!1 &4280110380849138198
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6491343412347685634}
+  - component: {fileID: 7741279861153071941}
+  m_Layer: 0
+  m_Name: PlantGrowthOverlay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6491343412347685634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4280110380849138198}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6719749836087742055}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7741279861153071941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4280110380849138198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8cce02161dbec7d45abb3abfdad60532, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Overlay.PlantGrowthOverlay
+  wand: {fileID: 11400000, guid: 401cf223426147e46a3b11f27e961dbf, type: 2}
+  validTile: {fileID: 11400000, guid: 3dbe146242ef0b0489c77af70d67d85c, type: 2}
+  invalidTile: {fileID: 11400000, guid: 6dc3d21c8cc318b4fb78379d01aa6362, type: 2}
+  outOfRangeTile: {fileID: 11400000, guid: 427666c2fe34797429e41f5d3758bdd1, type: 2}
 --- !u!1 &4284237350924318850
 GameObject:
   m_ObjectHideFlags: 0
@@ -24101,6 +24226,7 @@ MonoBehaviour:
   _initialEntryKey: 
   _initialFacingDirection: {x: 0, y: 0}
   _mainCharacterPrefab: {fileID: 1754888933028988936, guid: 204dcfde5843dd14b8cca533c2b59858, type: 3}
+  mainMenuScenePath: Assets/Scenes/MainMenu.unity
   _defaultSpawnKey: Default
 --- !u!1 &8334041893401315472
 GameObject:
@@ -25737,6 +25863,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1497259056013207016}
+  - {fileID: 6491343412347685634}
   m_Father: {fileID: 3245482728486734529}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1296361458454312033
