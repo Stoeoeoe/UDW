@@ -179,5 +179,17 @@
       "type": "boolean",
       "description": ""
     }
+  ],
+  "emotions": [
+    {
+      "id": "base:neutral",
+      "name": "Neutral",
+      "icon": "GiDramaMasks"
+    },
+    {
+      "id": "base:angry",
+      "name": "Angry",
+      "icon": "GiAngryEyes"
+    }
   ]
 }

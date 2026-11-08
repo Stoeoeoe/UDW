@@ -102,6 +102,13 @@
         "$ref": "#/$defs/DialogueType"
       }
     },
+    "emotions": {
+      "type": "array",
+      "description": "Project-level emotions, picked from dropdowns such as character portraits and dialogue lines.",
+      "items": {
+        "$ref": "#/$defs/Emotion"
+      }
+    },
     "itemClasses": {
       "type": "array",
       "description": "Project-level item class definitions that add extra typed property schemas to items.",
@@ -384,6 +391,26 @@
         },
         "description": {
           "type": "string"
+        }
+      }
+    },
+    "Emotion": {
+      "type": "object",
+      "required": ["id", "name", "icon"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$",
+          "description": "Stable identifier with a required namespace (for example base:angry)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name shown in dropdowns and dialogue."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier shown next to the name."
         }
       }
     },

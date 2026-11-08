@@ -79,7 +79,7 @@ namespace Core.Tile.Editor.Vulcanus
             Assert.That(error.Message, Does.Contain("character-test.json").And.Contain(property));
         }
 
-        [TestCase("{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\",\"emotions\":[3]}")]
+        [TestCase("{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\",\"portraits\":{\"base:happy\":3}}")]
         [TestCase("{\"id\":\"base:test\",\"name\":\"Test\",\"icon\":\"Icon\",\"folderPath\":3}")]
         public void CharacterSchemaRejectsInvalidOptionalFields(string json) =>
             Assert.Throws<FormatException>(() => Parse(json, false));
@@ -149,7 +149,7 @@ namespace Core.Tile.Editor.Vulcanus
             var catalog = Resources.Load<CharacterCatalog>(CharacterCatalog.ResourceName);
             try
             {
-                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:visitor\",\"name\":\"Visitor\",\"icon\":\"🧑\",\"emotions\":[]}");
+                File.WriteAllText(path, "{\"$schema\":\"../Vulcan/0204project/schemas/character.schema.json\",\"id\":\"test:visitor\",\"name\":\"Visitor\",\"icon\":\"🧑\"}");
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
                 for (int i=0; i<20 && !catalog.Get("test:visitor"); i++) yield return null;
                 Assert.That(catalog.Get("test:visitor").DisplayName, Is.EqualTo("Visitor"));

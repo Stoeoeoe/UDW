@@ -3,6 +3,10 @@
   "id": "base:fabia",
   "name": "Fabia",
   "icon": "GiPerson",
-  "emotions": [],
-  "folderPath": ""
+  "folderPath": "",
+  "defaultPortrait": "assets/pixellab-image-80573a01.png",
+  "portraits": {
+    "base:neutral": "assets/pixellab-image-80573a01.png",
+    "base:angry": "assets/pixellab-image-06bdc030.png"
+  }
 }
