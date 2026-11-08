@@ -149,7 +149,7 @@ namespace Core.Dialogue.Vulcanus.Editor
             return viewport;
         }
 
-        [TestCase("base:villager")]
+        [TestCase("base:fabia")]
         [TestCase("")]
         public void TheRunnerReportsTheSpeakerOnlyWhileALineIsActive(string speaker)
         {

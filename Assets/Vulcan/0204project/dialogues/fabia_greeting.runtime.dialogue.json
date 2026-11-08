@@ -10,12 +10,13 @@
     "market"
   ],
   "createdAt": "2026-11-07T20:00:00Z",
-  "updatedAt": "2026-11-07T20:00:00Z",
+  "updatedAt": "2026-11-08T21:00:00Z",
   "nodes": [
     {
       "id": "line-1",
       "type": "line",
       "speaker": "base:fabia",
+      "emotion": "base:happy",
       "text": "Salve! Fresh seeds and fair prices. What can I do for you?",
       "msgKey": "dlg.base:fabia_greeting.01",
       "next": "choice-1"
@@ -29,7 +30,7 @@
           "text": "Show me your wares.",
           "msgKey": "dlg.base:fabia_greeting.02",
           "condition": null,
-          "targetNodeId": "action-shop"
+          "targetNodeId": "line-wares"
         },
         {
           "id": "opt-chat",
@@ -39,13 +40,43 @@
           "targetNodeId": "line-chat-1"
         },
         {
+          "id": "opt-haggle",
+          "text": "Surely these prices can come down a little?",
+          "msgKey": "dlg.base:fabia_greeting.04",
+          "condition": null,
+          "targetNodeId": "line-haggle-1"
+        },
+        {
+          "id": "opt-compliment",
+          "text": "That's a lovely scarf you're wearing.",
+          "msgKey": "dlg.base:fabia_greeting.05",
+          "condition": null,
+          "targetNodeId": "line-flirt-1"
+        },
+        {
+          "id": "opt-wolves",
+          "text": "I heard wolves howling last night.",
+          "msgKey": "dlg.base:fabia_greeting.06",
+          "condition": null,
+          "targetNodeId": "line-wolves-1"
+        },
+        {
           "id": "opt-bye",
           "text": "Goodbye.",
-          "msgKey": "dlg.base:fabia_greeting.04",
+          "msgKey": "dlg.base:fabia_greeting.07",
           "condition": null,
           "targetNodeId": "line-bye"
         }
       ]
+    },
+    {
+      "id": "line-wares",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:very_happy",
+      "text": "Wonderful! Take a look at what I have today.",
+      "msgKey": "dlg.base:fabia_greeting.08",
+      "next": "action-shop"
     },
     {
       "id": "action-shop",
@@ -57,8 +88,9 @@
       "id": "line-chat-1",
       "type": "line",
       "speaker": "base:fabia",
+      "emotion": "base:neutral",
       "text": "The beans do well in this soil. Water them every day and they will repay you.",
-      "msgKey": "dlg.base:fabia_greeting.05",
+      "msgKey": "dlg.base:fabia_greeting.09",
       "next": "line-chat-2"
     },
     {
@@ -66,23 +98,153 @@
       "type": "line",
       "speaker": "base:player",
       "text": "Good to know.",
-      "msgKey": "dlg.base:fabia_greeting.06",
+      "msgKey": "dlg.base:fabia_greeting.10",
       "next": "line-chat-3"
     },
     {
       "id": "line-chat-3",
       "type": "line",
       "speaker": "base:fabia",
-      "text": "Anything else?",
-      "msgKey": "dlg.base:fabia_greeting.07",
+      "emotion": "base:sad",
+      "text": "Though the frost last week took half my seedlings...",
+      "msgKey": "dlg.base:fabia_greeting.11",
+      "next": "line-chat-4"
+    },
+    {
+      "id": "line-chat-4",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "I'm sorry to hear that.",
+      "msgKey": "dlg.base:fabia_greeting.12",
+      "next": "line-chat-5"
+    },
+    {
+      "id": "line-chat-5",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:happy",
+      "text": "Ah, don't mind me. They will grow back! Anything else?",
+      "msgKey": "dlg.base:fabia_greeting.13",
+      "next": "choice-1"
+    },
+    {
+      "id": "line-haggle-1",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "Surely these prices can come down a little?",
+      "msgKey": "dlg.base:fabia_greeting.14",
+      "next": "line-haggle-2"
+    },
+    {
+      "id": "line-haggle-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:angry",
+      "text": "Come down?! I grew every one of these myself!",
+      "msgKey": "dlg.base:fabia_greeting.15",
+      "next": "line-haggle-3"
+    },
+    {
+      "id": "line-haggle-3",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "Okay, okay. Fair prices it is.",
+      "msgKey": "dlg.base:fabia_greeting.16",
+      "next": "line-haggle-4"
+    },
+    {
+      "id": "line-haggle-4",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:neutral",
+      "text": "Hmph. Fair prices. As I said.",
+      "msgKey": "dlg.base:fabia_greeting.17",
+      "next": "choice-1"
+    },
+    {
+      "id": "line-flirt-1",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "That's a lovely scarf you're wearing.",
+      "msgKey": "dlg.base:fabia_greeting.18",
+      "next": "line-flirt-2"
+    },
+    {
+      "id": "line-flirt-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:embarrassed",
+      "text": "Oh! Th-thank you. I made it myself.",
+      "msgKey": "dlg.base:fabia_greeting.19",
+      "next": "line-flirt-3"
+    },
+    {
+      "id": "line-flirt-3",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "It suits you.",
+      "msgKey": "dlg.base:fabia_greeting.20",
+      "next": "line-flirt-4"
+    },
+    {
+      "id": "line-flirt-4",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:flirty",
+      "text": "Careful, or I might start giving discounts...",
+      "msgKey": "dlg.base:fabia_greeting.21",
+      "next": "choice-1"
+    },
+    {
+      "id": "line-wolves-1",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "I heard wolves howling last night.",
+      "msgKey": "dlg.base:fabia_greeting.22",
+      "next": "line-wolves-2"
+    },
+    {
+      "id": "line-wolves-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:frightened",
+      "text": "Wolves?! Near the market?",
+      "msgKey": "dlg.base:fabia_greeting.23",
+      "next": "line-wolves-3"
+    },
+    {
+      "id": "line-wolves-3",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "Probably far away.",
+      "msgKey": "dlg.base:fabia_greeting.24",
+      "next": "line-wolves-4"
+    },
+    {
+      "id": "line-wolves-4",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:scared",
+      "text": "Please... keep an eye out for me when you go home.",
+      "msgKey": "dlg.base:fabia_greeting.25",
+      "next": "line-wolves-5"
+    },
+    {
+      "id": "line-wolves-5",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:neutral",
+      "text": "Anyway! Anything else?",
+      "msgKey": "dlg.base:fabia_greeting.26",
       "next": "choice-1"
     },
     {
       "id": "line-bye",
       "type": "line",
       "speaker": "base:fabia",
+      "emotion": "base:happy",
       "text": "Come back soon!",
-      "msgKey": "dlg.base:fabia_greeting.08",
+      "msgKey": "dlg.base:fabia_greeting.27",
       "next": null
     }
   ]

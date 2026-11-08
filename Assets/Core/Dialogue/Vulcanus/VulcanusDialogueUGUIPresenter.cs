@@ -76,7 +76,7 @@ namespace Core.Dialogue.Vulcanus
             SetSpeaker(node.Speaker, null);
             SetSpeakerPortraitStub(node.Speaker, node.Emotion);
             ClearChoices();
-            StartTypewriter(localizedText, node.Speaker);
+            StartTypewriter(localizedText, node.Speaker, node.Emotion);
 
             var advance = _advance = new AwaitableCompletionSource();
             _waitingForAdvance = true;
@@ -270,11 +270,11 @@ namespace Core.Dialogue.Vulcanus
             _advance.TrySetResult();
         }
 
-        private void StartTypewriter(string text, string speakerId)
+        private void StartTypewriter(string text, string speakerId, string emotionId)
         {
             StopTypewriter(resetText: false);
             _currentLineText = text ?? string.Empty;
-            _currentTypewriterSound = ResolveTypewriterSound(speakerId);
+            _currentTypewriterSound = ResolveTypewriterSound(speakerId, emotionId);
 
             if (bodyText == null)
                 return;
@@ -387,8 +387,8 @@ namespace Core.Dialogue.Vulcanus
                 pitch: pitch);
         }
 
-        private TypewriterSound ResolveTypewriterSound(string speakerId) =>
-            _typewriterSoundResolver.ResolveTypewriterSound(speakerId, defaultTypewriterSound);
+        private TypewriterSound ResolveTypewriterSound(string speakerId, string emotionId) =>
+            _typewriterSoundResolver.ResolveTypewriterSound(speakerId, emotionId, defaultTypewriterSound);
 
         private void SetSpeakerPortraitStub(string speaker, string emotion)
         {

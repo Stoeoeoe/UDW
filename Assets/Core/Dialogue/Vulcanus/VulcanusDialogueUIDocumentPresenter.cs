@@ -19,6 +19,8 @@ namespace Core.Dialogue.Vulcanus
 
         [Inject] private CharacterManager _characterManager;
 
+        [Inject] private Character.CharacterCatalog _characters;
+
         [Header("Layout")]
         [SerializeField] private UIDocument document;
         [SerializeField] private VisualTreeAsset layoutAsset;
@@ -34,7 +36,7 @@ namespace Core.Dialogue.Vulcanus
         private VisualElement _anchor;
         private VisualElement _panel;
         private Label _speakerLabel;
-        private Label _emotionLabel;
+        private VisualElement _portrait;
         private Label _bodyLabel;
         private Label _hintLabel;
         private VisualElement _choiceContainer;
@@ -81,15 +83,15 @@ namespace Core.Dialogue.Vulcanus
             FocusOverlay();
             _lineText = localizedText;
             _isTyping = true;
-            await Type(node.Speaker, cancellation);
+            await Type(node.Speaker, node.Emotion, cancellation);
             await DialogueWait.For(advance, cancellation);
         }
 
         // The first continue press reveals the rest of the line at once by ending the typing state.
-        private async Awaitable Type(string speaker, CancellationToken cancellation)
+        private async Awaitable Type(string speaker, string emotion, CancellationToken cancellation)
         {
             var text = _lineText;
-            var sound = _typewriterSoundResolver.ResolveTypewriterSound(speaker, defaultTypewriterSound);
+            var sound = _typewriterSoundResolver.ResolveTypewriterSound(speaker, emotion, defaultTypewriterSound);
             var revealed = 0;
             var elapsed = 0f;
             while (_isTyping && revealed < text.Length && charactersPerSecond > 0f)
@@ -330,24 +332,25 @@ namespace Core.Dialogue.Vulcanus
 
         private void SetSpeaker(string speaker, string emotion)
         {
-            if (_speakerLabel != null)
-            {
-                _speakerLabel.text = string.IsNullOrWhiteSpace(speaker) ? string.Empty : speaker;
-                _speakerLabel.style.display = string.IsNullOrWhiteSpace(speaker) ? DisplayStyle.None : DisplayStyle.Flex;
-            }
+            // An empty speaker is narration: no portrait or nameplate.
+            var hasSpeaker = !string.IsNullOrWhiteSpace(speaker);
+            var character = hasSpeaker ? _characters.Require(speaker) : null;
+            var portrait = character ? character.PortraitFor(emotion) : null;
 
-            if (_emotionLabel != null)
-            {
-                _emotionLabel.text = string.IsNullOrWhiteSpace(emotion) ? string.Empty : emotion;
-                _emotionLabel.style.display = string.IsNullOrWhiteSpace(emotion) ? DisplayStyle.None : DisplayStyle.Flex;
-            }
+            _speakerLabel.text = character ? character.DisplayName : string.Empty;
+            _portrait.style.backgroundImage = portrait ? new StyleBackground(portrait) : StyleKeyword.None;
+            _portrait.EnableInClassList("is-empty", !portrait);
+            if (portrait) SizePortrait(portrait);
+            _panel.EnableInClassList("has-speaker", hasSpeaker);
+        }
 
-            if (_panel != null)
-            {
-                _panel.EnableInClassList("has-speaker", !string.IsNullOrWhiteSpace(speaker));
-                _panel.EnableInClassList("is-neutral", string.IsNullOrWhiteSpace(speaker));
-                _panel.EnableInClassList("has-emotion", !string.IsNullOrWhiteSpace(emotion));
-            }
+        // Draw the portrait at a whole multiple of its pixels on screen; any other scale makes some pixels wider than others.
+        private void SizePortrait(Texture2D portrait)
+        {
+            var scale = Mathf.Max(1, Mathf.RoundToInt(_panel.panel.scaledPixelsPerPoint));
+            var pixelsPerPoint = _panel.panel.scaledPixelsPerPoint;
+            _portrait.style.width = portrait.width * scale / pixelsPerPoint;
+            _portrait.style.height = portrait.height * scale / pixelsPerPoint;
         }
 
         private void SetBody(string text)
@@ -383,7 +386,7 @@ namespace Core.Dialogue.Vulcanus
             _anchor = root.Q<VisualElement>("dialogue-anchor");
             _panel = root.Q<VisualElement>("dialogue-panel");
             _speakerLabel = root.Q<Label>("dialogue-speaker");
-            _emotionLabel = root.Q<Label>("dialogue-emotion");
+            _portrait = root.Q<VisualElement>("dialogue-portrait");
             _bodyLabel = root.Q<Label>("dialogue-body");
             _hintLabel = root.Q<Label>("dialogue-hint");
             _choiceContainer = root.Q<VisualElement>("dialogue-choices");
@@ -399,7 +402,7 @@ namespace Core.Dialogue.Vulcanus
                    _choiceContainer != null &&
                    _continueButton != null &&
                    _speakerLabel != null &&
-                   _emotionLabel != null;
+                   _portrait != null;
         }
 
         private static bool IsButtonTarget(VisualElement target)

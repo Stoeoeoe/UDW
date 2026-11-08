@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
+using Character;
 using Core.Common;
 using Core.Inventory;
 using Core.Music;
 using Core.Shops;
 using Core.Spawning;
+using Interaction.Dialog;
 using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
@@ -33,6 +35,17 @@ namespace Core.Catalogs.Editor
                     foreach (var offering in shop.Offerings)
                         if (!itemIds.Contains(offering.ItemId))
                             throw new InvalidOperationException($"Shop '{shop.ShopId}' offers the unknown item '{offering.ItemId}'.");
+            }
+            if (catalog is CharacterCatalog)
+            {
+                var soundIds = CatalogAssetDiscovery.Find("Assets", typeof(TypewriterSound)).Cast<TypewriterSound>().Select(sound => sound.Id).ToHashSet();
+                foreach (var character in definitions.Cast<CharacterDefinition>())
+                {
+                    var referenced = character.EmotionTypewriterSounds.Select(each => each.soundId).Append(character.DefaultTypewriterSoundId);
+                    foreach (var soundId in referenced.Where(id => !string.IsNullOrEmpty(id)))
+                        if (!soundIds.Contains(soundId))
+                            throw new InvalidOperationException($"Character '{character.CharacterId}' uses the unknown typewriter sound '{soundId}'.");
+                }
             }
             if (catalog is MusicCatalog)
             {

@@ -2,11 +2,22 @@
   "$schema": "../schemas/character.schema.json",
   "id": "base:fabia",
   "name": "Fabia",
-  "icon": "GiPerson",
   "folderPath": "",
-  "defaultPortrait": "assets/pixellab-image-80573a01.png",
+  "defaultPortrait": "assets/portraits/fabia/Fabia_Neutral.png",
   "portraits": {
-    "base:neutral": "assets/pixellab-image-80573a01.png",
-    "base:angry": "assets/pixellab-image-06bdc030.png"
+    "base:angry": "assets/portraits/fabia/Fabia_Angry.png",
+    "base:embarrassed": "assets/portraits/fabia/Fabia_Embarrassed.png",
+    "base:flirty": "assets/portraits/fabia/Fabia_Flirty.png",
+    "base:frightened": "assets/portraits/fabia/Fabia_Frightened.png",
+    "base:happy": "assets/portraits/fabia/Fabia_Happy.png",
+    "base:neutral": "assets/portraits/fabia/Fabia_Neutral.png",
+    "base:sad": "assets/portraits/fabia/Fabia_Sad.png",
+    "base:scared": "assets/portraits/fabia/Fabia_Scared.png",
+    "base:very_happy": "assets/portraits/fabia/Fabia_Very_Happy.png"
+  },
+  "typewriterSound": "base:fabia_neutral",
+  "emotionTypewriterSounds": {
+    "base:happy": "base:fabia_happy",
+    "base:angry": "base:fabia_angry"
   }
 }

@@ -169,42 +169,21 @@ namespace Core.Catalogs.Editor
         }
 
         [Test]
-        public void SpeakerIdentityLookupIgnoresAssetNamesAndPreservesCaseInsensitiveMatching()
+        public void TypewriterSoundLookupUsesItsIdNotTheAssetName()
         {
             var catalog = ScriptableObject.CreateInstance<TypewriterSoundCatalog>();
             var sound = ScriptableObject.CreateInstance<TypewriterSound>();
             try
             {
                 sound.name = "Different asset name";
-                TestConfiguration.Set(sound, "ActorId", "Player");
+                TestConfiguration.Set(sound, "_soundId", "test:voice");
                 catalog.Synchronize(new Object[] { sound });
-                Assert.That(catalog.Get("player"), Is.SameAs(sound));
+                Assert.That(catalog.Get("test:voice"), Is.SameAs(sound));
                 Assert.That(catalog.Get(sound.name), Is.Null);
                 catalog.SetEnabled(sound, false);
-                Assert.That(catalog.Get("PLAYER"), Is.Null);
+                Assert.That(catalog.Get("test:voice"), Is.Null);
             }
             finally { Object.DestroyImmediate(catalog); Object.DestroyImmediate(sound); }
-        }
-
-        [Test]
-        public void SpeakerIdsThatDifferOnlyInCaseAreRejectedBeforeLookup()
-        {
-            var catalog = ScriptableObject.CreateInstance<TypewriterSoundCatalog>();
-            var first = ScriptableObject.CreateInstance<TypewriterSound>();
-            var second = ScriptableObject.CreateInstance<TypewriterSound>();
-            try
-            {
-                TestConfiguration.Set(first, "ActorId", "Player");
-                TestConfiguration.Set(second, "ActorId", "player");
-                Assert.Throws<InvalidOperationException>(() =>
-                    CatalogValidation.Validate(catalog, new Object[] { first, second }));
-            }
-            finally
-            {
-                Object.DestroyImmediate(catalog);
-                Object.DestroyImmediate(first);
-                Object.DestroyImmediate(second);
-            }
         }
 
         [UnityTest]

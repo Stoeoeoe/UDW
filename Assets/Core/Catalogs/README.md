@@ -103,7 +103,7 @@ carry gameplay meaning and must not become a sorted flat catalog.
 
 ## Speaker audio and comparison rules
 
-`TypewriterSoundCatalog` discovers sounds throughout `Assets` and indexes `ActorId`, not asset names. It preserves case-insensitive speaker matching through `IdComparer`; flat catalogs otherwise retain ordinal comparison. Shared duplicate validation uses the same comparer as lookup, so `Player` and `player` cannot coexist in the speaker catalog. `DataManager` exposes this catalog directly, and all presenters use `TypewriterSoundResolver`; there is no Resources folder scan or copied list/dictionary.
+`TypewriterSoundCatalog` discovers sounds throughout `Assets` and indexes their lowercase `namespace:name` ID, not asset names. Vulcanus characters pick a default sound (`typewriterSound`) and optional per-emotion overrides (`emotionTypewriterSounds`) from the exported `typewriterSound` resource list. `TypewriterSoundResolver` returns the speaker's sound for the line's emotion, else the speaker's default, else the presenter's default; narrator lines and speakers without a character definition use the presenter's default. Importing a character fails if it names a sound that does not exist. `DataManager` exposes this catalog directly, and all presenters use `TypewriterSoundResolver`; there is no Resources folder scan or copied list/dictionary.
 
 The delayed import hook also covers `.vitm` imports, moves and deletions, so imported item definitions and changed IDs update automatically without entering play. Catalog writes remain excluded from import-triggered scheduling to avoid refresh loops.
 

@@ -1490,6 +1490,24 @@
         "description": "Thunder"
       }
     ],
+    "typewriterSound": [
+      {
+        "id": "base:fabia_angry",
+        "description": "FabiaAngryTypewriter"
+      },
+      {
+        "id": "base:fabia_happy",
+        "description": "FabiaHappyTypewriter"
+      },
+      {
+        "id": "base:fabia_neutral",
+        "description": "FabiaNeutralTypewriter"
+      },
+      {
+        "id": "base:standard",
+        "description": "StandardTypewriterSounds"
+      }
+    ],
     "weather": [
       {
         "id": "HeavySnow",

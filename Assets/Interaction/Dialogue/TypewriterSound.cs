@@ -8,8 +8,8 @@ namespace Interaction.Dialog
     public class TypewriterSound : ValidatedScriptableObject<TypewriterSoundValidator>
     {
         [SerializeField, Required]
-        [Validation.Id("Assign a nonblank actor ID; catalog matching is case-insensitive.")]
-        private string _actorId;
+        [Validation.NamespacedId("Assign a lowercase namespace:name ID, such as base:fabia_voice.", Lowercase = true)]
+        private string _soundId;
 
         [SerializeField, Validation.RequiredElements("Assign a clip or use an empty list for silence.")]
         private AudioClip[] _audioClips;
@@ -20,7 +20,7 @@ namespace Interaction.Dialog
         [SerializeField]
         private float _pitchMax = 1.0f;
 
-        public string ActorId => _actorId;
+        public string Id => _soundId;
         public AudioClip[] audioClips => _audioClips;
         public float pitchMin => _pitchMin;
         public float pitchMax => _pitchMax;

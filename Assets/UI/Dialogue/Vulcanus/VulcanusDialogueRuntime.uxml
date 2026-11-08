@@ -5,15 +5,18 @@
         <ui:VisualElement name="dialogue-anchor" class="dialogue-anchor">
             <ui:VisualElement class="dialogue-shell">
                 <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
+                    <ui:VisualElement class="dialogue-speaker-column" picking-mode="Ignore">
+                        <ui:VisualElement class="dialogue-portrait-frame" picking-mode="Ignore">
+                            <ui:VisualElement name="dialogue-portrait" class="dialogue-portrait" picking-mode="Ignore" />
+                        </ui:VisualElement>
+                        <ui:Label name="dialogue-speaker" class="dialogue-speaker" picking-mode="Ignore" />
+                    </ui:VisualElement>
                     <ui:ScrollView name="dialogue-content" class="dialogue-content" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
                         <ui:Label name="dialogue-body" class="dialogue-body" />
                         <ui:VisualElement name="dialogue-choices" class="dialogue-choices" />
                     </ui:ScrollView>
-                    <ui:VisualElement name="dialogue-portrait" class="dialogue-portrait" picking-mode="Ignore" />
-                    <ui:Label name="dialogue-speaker" class="dialogue-speaker" picking-mode="Ignore" />
                 </ui:VisualElement>
                 <ui:VisualElement class="dialogue-footer">
-                    <ui:Label name="dialogue-emotion" class="dialogue-emotion" />
                     <ui:Label name="dialogue-hint" class="dialogue-hint" />
                     <ui:Button name="dialogue-continue" class="dialogue-button" text="Continue" focusable="false" />
                 </ui:VisualElement>

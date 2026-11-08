@@ -5701,21 +5701,12 @@
       "properties": {}
     },
     {
-      "id": "cutscene-prototype-host-01",
-      "typeId": "base:cutscene-prototype-host",
-      "position": [
-        192,
-        176
-      ],
-      "properties": {}
-    },
-    {
       "id": "market-stall-bread-01",
       "typeId": "base:market_stall_bread",
       "label": "Bread Stall",
       "position": [
         64,
-        176
+        128
       ],
       "properties": {
         "shopId": "base:market_seeds"
@@ -5726,8 +5717,8 @@
       "typeId": "base:fabia",
       "label": "Fabia",
       "position": [
-        116,
-        176
+        160,
+        144
       ],
       "properties": {}
     }

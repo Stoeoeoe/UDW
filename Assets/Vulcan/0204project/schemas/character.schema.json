@@ -4,7 +4,7 @@
   "title": "Character",
   "description": "An character definition (*.character.json).",
   "type": "object",
-  "required": ["id", "name", "icon"],
+  "required": ["id", "name"],
   "additionalProperties": false,
   "properties": {
     "$schema": {
@@ -20,11 +20,6 @@
       "pattern": "\\S",
       "description": "Display name shown in the editor and game."
     },
-    "icon": {
-      "type": "string",
-      "pattern": "\\S",
-      "description": "Icon identifier used to represent this character in the editor."
-    },
     "defaultPortrait": {
       "type": "string",
       "description": "Relative path of the portrait shown when the character has no portrait for the line's emotion."
@@ -34,6 +29,17 @@
       "description": "Relative path of the portrait image for each emotion, keyed by emotion ID.",
       "propertyNames": { "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" },
       "additionalProperties": { "type": "string", "pattern": "\\S" }
+    },
+    "typewriterSound": {
+      "type": "string",
+      "description": "ID of the typewriter sound played while this character speaks, unless an emotion overrides it.",
+      "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$"
+    },
+    "emotionTypewriterSounds": {
+      "type": "object",
+      "description": "Typewriter sound ID per emotion ID, replacing the character's default sound for lines with that emotion.",
+      "propertyNames": { "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" },
+      "additionalProperties": { "type": "string", "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" }
     },
     "folderPath": {
       "type": "string",

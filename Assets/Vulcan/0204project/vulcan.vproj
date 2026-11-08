@@ -190,6 +190,41 @@
       "id": "base:angry",
       "name": "Angry",
       "icon": "GiAngryEyes"
+    },
+    {
+      "id": "base:happy",
+      "name": "Happy",
+      "icon": "GiSun"
+    },
+    {
+      "id": "base:very_happy",
+      "name": "Very Happy",
+      "icon": "GiSparkles"
+    },
+    {
+      "id": "base:sad",
+      "name": "Sad",
+      "icon": "GiHeartDrop"
+    },
+    {
+      "id": "base:embarrassed",
+      "name": "Embarrassed",
+      "icon": "GiRose"
+    },
+    {
+      "id": "base:flirty",
+      "name": "Flirty",
+      "icon": "GiHearts"
+    },
+    {
+      "id": "base:frightened",
+      "name": "Frightened",
+      "icon": "GiGhost"
+    },
+    {
+      "id": "base:scared",
+      "name": "Scared",
+      "icon": "GiScreaming"
     }
   ]
 }

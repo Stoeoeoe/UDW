@@ -2,6 +2,5 @@
   "$schema": "../schemas/character.schema.json",
   "id": "base:my_test_char",
   "name": "My Test Char",
-  "icon": "GiPerson",
   "folderPath": ""
 }

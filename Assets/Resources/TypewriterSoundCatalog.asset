@@ -13,5 +13,11 @@ MonoBehaviour:
   m_Name: TypewriterSoundCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Dialog.TypewriterSoundCatalog
   entries:
+  - definition: {fileID: 11400000, guid: 296f69a4b6ee4c0ea26b87df8f744d95, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 8834b2f89abc420ba163c68c01a88e74, type: 2}
+    enabled: 1
+  - definition: {fileID: 11400000, guid: 1b2353f1a3e84862abf4fc82bcdb2f50, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 75bc8f6fa67ce7c4d8d3db2483af3a98, type: 2}
     enabled: 1
