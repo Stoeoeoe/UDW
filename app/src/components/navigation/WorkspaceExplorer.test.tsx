@@ -39,6 +39,7 @@ describe('scoped workspace navigation', () => {
       tilesets: new Map(),
       characters: [],
       entityTypes: [],
+      shops: [],
       items: [],
       dialogues: [],
     });

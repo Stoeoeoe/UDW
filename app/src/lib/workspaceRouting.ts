@@ -101,6 +101,10 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'item');
       params.set('id', document.itemId);
       break;
+    case 'shop':
+      params.set('doc', 'shop');
+      params.set('id', document.shopId);
+      break;
     case 'cutscene':
       params.set('doc', 'cutscene');
       params.set('id', document.cutsceneId);
@@ -214,6 +218,13 @@ export function documentFromHash(
       id: item.id,
       name: item.name,
     });
+  }
+
+  if (doc === 'shop') {
+    const shop = snapshot.shops?.find((entry) => entry.id === params.get('id'));
+    return shop
+      ? createEditorResourceDocument({ type: 'shop', id: shop.id, name: shop.name })
+      : null;
   }
 
   if (doc === 'cutscene') {

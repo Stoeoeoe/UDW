@@ -10,6 +10,7 @@ import type {
   Layer,
   Map as GameMap,
   Project,
+  Shop,
   Tileset,
   Variation,
 } from '../types/schema';
@@ -32,6 +33,7 @@ export interface ResourceDocuments {
   tileset: Tileset;
   character: Character;
   item: Item;
+  shop: Shop;
   entity: EntityType;
   dialogue: DialogueDocument;
   'dialogue-runtime': DialogueDocument;
@@ -45,6 +47,7 @@ export type ResourceFolder =
   | 'characters'
   | 'npcs'
   | 'items'
+  | 'shops'
   | 'entities'
   | 'dialogues'
   | 'cutscenes';
@@ -343,6 +346,14 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
       id: qualifyResourceId(item.id, prefix),
       classId: localReference(item.classId),
     }),
+  },
+  shop: {
+    kind: 'shop',
+    folder: 'shops',
+    extension: '.shop.json',
+    schemaFile: 'shop.schema.json',
+    idScope: 'resource',
+    normalize: (shop, prefix) => ({ ...shop, id: qualifyResourceId(shop.id, prefix) }),
   },
   entity: {
     kind: 'entity',

@@ -33,6 +33,7 @@ describe('cutscene explorer resources', () => {
       tilesets: new Map(),
       characters: [],
       entityTypes: [],
+      shops: [],
       items: [],
       dialogues: [],
       cutscenes: state.cutscenes,

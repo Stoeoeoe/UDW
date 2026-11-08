@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "shop.schema.json",
+  "title": "Shop",
+  "description": "A static shop definition (*.shop.json): a fixed list of items at fixed prices.",
+  "type": "object",
+  "required": ["id", "name", "buysGoods", "offerings"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "description": "Stable identifier for this shop, with a required namespace (for example base:market_seeds).",
+      "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Display name shown on the shop screen and in the editor."
+    },
+    "buysGoods": {
+      "type": "boolean",
+      "description": "Whether the shop buys the player's goods, at each item's sell price."
+    },
+    "offerings": {
+      "type": "array",
+      "description": "Items the shop sells, in display order. Each is always in stock.",
+      "items": {
+        "type": "object",
+        "required": ["itemId", "price"],
+        "additionalProperties": false,
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "ID of the item sold. It must exist in the game's items."
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Price of one item."
+          }
+        }
+      }
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization. Empty string or absent = root."
+    }
+  }
+}

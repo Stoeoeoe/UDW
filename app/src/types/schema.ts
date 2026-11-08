@@ -455,6 +455,17 @@ export interface Item extends NamedEditorResource {
   classProperties?: PropertyValues; // Values for the extra properties defined by the assigned ItemClass
 }
 
+// Shops: a static shop with a fixed list of offerings
+export interface ShopOffering {
+  itemId: string; // Id of the item sold
+  price: number; // Price of one item
+}
+
+export interface Shop extends NamedEditorResource {
+  buysGoods: boolean; // Whether the shop buys the player's goods
+  offerings: ShopOffering[]; // Items sold, in display order
+}
+
 // Character Definitions
 export interface Character extends NamedEditorResource {
   icon: string; // Emoji icon for display

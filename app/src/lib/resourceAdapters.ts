@@ -7,6 +7,7 @@ import {
   DialogueDocument,
   EntityType,
   Item,
+  Shop,
   Map as GameMap,
   Tileset,
   getSchemaResourceId,
@@ -39,6 +40,14 @@ export function itemDocument(item: Item): WorkspaceDocument {
     type: 'item',
     id: getSchemaResourceId(item),
     name: getSchemaResourceName(item),
+  });
+}
+
+export function shopDocument(shop: Shop): WorkspaceDocument {
+  return createEditorResourceDocument({
+    type: 'shop',
+    id: getSchemaResourceId(shop),
+    name: getSchemaResourceName(shop),
   });
 }
 
@@ -161,12 +170,25 @@ export function listTilesetDescriptors(tilesets: Map<string, Tileset>): Resource
   }));
 }
 
+export function listShopDescriptors(shops: Shop[]): ResourceDescriptor[] {
+  return shops.map((shop) => ({
+    type: 'shop',
+    kind: 'shop',
+    id: getSchemaResourceId(shop),
+    name: getSchemaResourceName(shop),
+    folderPath: normalizeFolderPath(shop.folderPath),
+    document: shopDocument(shop),
+    saveUnitId: getEditorResourceSaveUnitId('shop', shop.id),
+  }));
+}
+
 export interface AllResourceDescriptors {
   locations: ResourceDescriptor[];
   tilesets: ResourceDescriptor[];
   characters: ResourceDescriptor[];
   entities: ResourceDescriptor[];
   items: ResourceDescriptor[];
+  shops: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
   cutscenes: ResourceDescriptor[];
 }
@@ -177,6 +199,7 @@ export function buildAllResourceDescriptors(state: {
   characters: Character[];
   entityTypes: EntityType[];
   items: Item[];
+  shops: Shop[];
   dialogues: Map<string, DialogueDocument>;
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
@@ -188,6 +211,7 @@ export function buildAllResourceDescriptors(state: {
     characters: listCharacterDescriptors(state.characters),
     entities: listEntityDescriptors(state.entityTypes),
     items: listItemDescriptors(state.items),
+    shops: listShopDescriptors(state.shops),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
     cutscenes: listCutsceneDescriptors(
       state.cutscenes ?? [],
@@ -209,13 +233,22 @@ export function normalizeFolderPath(folderPath: string | null | undefined): stri
 
 export function canCreateResourceKind(
   kind: ResourceKind,
-): kind is 'location' | 'tileset' | 'character' | 'entity' | 'item' | 'dialogue' | 'cutscene' {
+): kind is
+  | 'location'
+  | 'tileset'
+  | 'character'
+  | 'entity'
+  | 'item'
+  | 'shop'
+  | 'dialogue'
+  | 'cutscene' {
   return (
     kind === 'location' ||
     kind === 'tileset' ||
     kind === 'character' ||
     kind === 'entity' ||
     kind === 'item' ||
+    kind === 'shop' ||
     kind === 'dialogue' ||
     kind === 'cutscene'
   );
@@ -240,6 +273,9 @@ export async function setResourceFolderPath(
       break;
     case 'item':
       await store.updateItem(id, { folderPath: normalizedFolderPath });
+      break;
+    case 'shop':
+      await store.updateShop(id, { folderPath: normalizedFolderPath });
       break;
     case 'entity':
       await store.updateEntityType(id, { folderPath: normalizedFolderPath });
@@ -297,6 +333,8 @@ function listDescriptorsForKind(
       return listEntityDescriptors(state.entityTypes);
     case 'item':
       return listItemDescriptors(state.items);
+    case 'shop':
+      return listShopDescriptors(state.shops);
     case 'dialogue':
       return listDialogueDescriptors(Array.from(state.dialogues.values()));
   }

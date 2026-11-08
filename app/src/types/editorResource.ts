@@ -7,6 +7,7 @@ export const editorResourceTypeIds = [
   'character',
   'entity',
   'item',
+  'shop',
   'dialogue',
   'cutscene',
 ] as const;

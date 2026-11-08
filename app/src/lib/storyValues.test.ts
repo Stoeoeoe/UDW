@@ -53,7 +53,9 @@ describe('story value authoring', () => {
     expect(storyValueDiagnostics("GameState.Story.Set('count', 1.5)", declarations)).toHaveLength(
       1,
     );
-    expect(storyValueDiagnostics("GameState.Story.Set('quest', true)", declarations)).toHaveLength(1);
+    expect(storyValueDiagnostics("GameState.Story.Set('quest', true)", declarations)).toHaveLength(
+      1,
+    );
     expect(storyValueDiagnostics("GameState.Story.Set('name', true)", declarations)).toHaveLength(
       1,
     );
@@ -98,6 +100,7 @@ describe('story value authoring', () => {
       characters: [],
       entityTypes: [],
       items: [],
+      shops: [],
       dialogues: [],
     };
     expect(documentFromHash(documentToHash(document), snapshot)).toEqual(document);

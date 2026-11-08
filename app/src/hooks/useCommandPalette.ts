@@ -26,6 +26,8 @@ function filterCommandPaletteMatch(
       return match.resource.type === 'character';
     case 'items':
       return match.resource.type === 'item';
+    case 'shops':
+      return match.resource.type === 'shop';
     case 'cutscenes':
       return match.resource.type === 'cutscene';
     case 'dialogues':
@@ -41,6 +43,7 @@ export function useCommandPalette() {
   const entityTypes = useEditorStore((state) => state.entityTypes);
   const characters = useEditorStore((state) => state.characters);
   const items = useEditorStore((state) => state.items);
+  const shops = useEditorStore((state) => state.shops);
   const dialogues = useEditorStore((state) => state.dialogues);
   const cutscenes = useEditorStore((s) => s.cutscenes);
   const cutsceneLabels = useEditorStore((s) => s.cutsceneLabels);
@@ -62,11 +65,22 @@ export function useCommandPalette() {
         entityTypes,
         characters,
         items,
+        shops,
         dialogues: Array.from(dialogues.values()),
         cutscenes,
         cutsceneLabels,
       }),
-    [characters, dialogues, cutscenes, cutsceneLabels, entityTypes, items, maps, tilesets],
+    [
+      characters,
+      dialogues,
+      cutscenes,
+      cutsceneLabels,
+      entityTypes,
+      items,
+      maps,
+      shops,
+      tilesets,
+    ],
   );
 
   const resourceMap = React.useMemo(

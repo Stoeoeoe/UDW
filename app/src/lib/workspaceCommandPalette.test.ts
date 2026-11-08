@@ -44,6 +44,7 @@ describe('workspaceCommandPalette', () => {
       },
     ],
     characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+    shops: [],
     items: [
       {
         id: 'apple',
@@ -109,6 +110,7 @@ describe('workspaceCommandPalette', () => {
       characters: [
         { id: 'marcus', name: 'Marcus', icon: 'GiPerson', folderPath: 'NPCs/Villagers' },
       ],
+      shops: [],
       items: [],
       dialogues: [],
     });
@@ -127,6 +129,30 @@ describe('workspaceCommandPalette', () => {
         saveUnitId: 'entity:merchant-stall',
       },
     });
+  });
+
+  it('finds shops and filters them with their own chip', () => {
+    const shopResources = buildCommandPaletteResources({
+      maps: [],
+      tilesets: new Map(),
+      entityTypes: [],
+      characters: [],
+      items: [],
+      shops: [
+        { id: 'base:market_seeds', name: 'Market Stall', buysGoods: true, offerings: [] },
+      ],
+      dialogues: [],
+    });
+
+    const matches = searchCommandPaletteResources(shopResources, 'market', 'shops');
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0].resource).toMatchObject({
+      key: 'shop:base:market_seeds',
+      type: 'shop',
+      document: { kind: 'shop', shopId: 'base:market_seeds' },
+    });
+    expect(searchCommandPaletteResources(shopResources, 'market', 'items')).toHaveLength(0);
   });
 
   it('splits highlighted text into emphasized and plain segments', () => {

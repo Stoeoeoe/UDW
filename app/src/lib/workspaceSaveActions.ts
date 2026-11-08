@@ -6,6 +6,7 @@ import {
   saveProjectImmediate,
   saveTilesetImmediate,
   getDirtySaveUnitIds,
+  getSaveUnitStatus,
 } from './saveManager';
 import { fileSystem } from './fileSystem';
 import { useEditorStore } from '../store/useEditorStore';
@@ -52,6 +53,7 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'data' ||
     tab.document.kind === 'cutscene' ||
     tab.document.kind === 'cutscenes' ||
+    tab.document.kind === 'shop' ||
     tab.document.kind === 'dialogues'
   );
 }
@@ -73,6 +75,13 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
   }
   if (document.kind === 'cutscenes' && editor.selectedCutsceneId) {
     await editor.saveCutscene(editor.selectedCutsceneId);
+    return;
+  }
+  if (document.kind === 'shop') {
+    await editor.saveShop(document.shopId);
+    // A shop that cannot be written yet is reported, not shown as saved.
+    const unit = getSaveUnitStatus(document.saveUnitId);
+    if (unit.status === 'error') throw new Error(unit.error ?? 'The shop could not be saved.');
     return;
   }
 
@@ -107,7 +116,10 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
     return;
   }
 
-  if ((document.kind === 'entities' || document.kind === 'scripting' || document.kind === 'data') && editor.project) {
+  if (
+    (document.kind === 'entities' || document.kind === 'scripting' || document.kind === 'data') &&
+    editor.project
+  ) {
     await saveProjectImmediate(editor.project, 'configuration');
   }
 }
@@ -119,6 +131,10 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
   for (const saveUnitId of dirtySaveUnits) {
     if (saveUnitId.startsWith('cutscene:')) {
       await editor.saveCutscene(saveUnitId.slice('cutscene:'.length));
+      continue;
+    }
+    if (saveUnitId.startsWith('shop:')) {
+      await editor.saveShop(saveUnitId.slice('shop:'.length));
       continue;
     }
     if (saveUnitId.startsWith('location:')) {
@@ -205,6 +221,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   if (document.kind === 'cutscenes') {
     const editor = useEditorStore.getState();
     if (editor.selectedCutsceneId) editor.discardCutscene(editor.selectedCutsceneId);
+    return;
+  }
+  if (document.kind === 'shop') {
+    useEditorStore.getState().discardShop(document.shopId);
     return;
   }
   cancelPendingSaveUnit(document.saveUnitId);

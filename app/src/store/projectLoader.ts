@@ -129,6 +129,17 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       state.items = castDraft(items);
     });
 
+    // 1.83 Shops
+    const shops = await fileSystem.loadAllShops();
+    set((state) => {
+      state.shops = castDraft(shops);
+      state.savedShops = castDraft(
+        Object.fromEntries(shops.map((shop) => [shop.id, shop])),
+      );
+      state.shopPast = {};
+      state.shopFuture = {};
+    });
+
     setResourceLoadingState(set, 'Loading dialogues', 0.64);
 
     // 1.85 Dialogue documents

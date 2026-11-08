@@ -39,6 +39,7 @@ function createTreeInput(
     tilesets: overrides.tilesets ?? new Map<string, Tileset>(),
     characters: overrides.characters ?? [],
     entityTypes: overrides.entityTypes ?? [],
+    shops: [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
   };
@@ -124,6 +125,7 @@ describe('buildWorkspaceTree', () => {
             properties: [],
           },
         ],
+        shops: [],
         items: [
           {
             id: 'apple',
@@ -156,6 +158,7 @@ describe('buildWorkspaceTree', () => {
       'group:characters',
       'group:entities',
       'group:items',
+      'group:shops',
       'group:dialogues',
       'group:cutscenes',
       'data',

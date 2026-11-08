@@ -21,6 +21,7 @@ import {
   DialogueDocument,
   EntityType,
   Item,
+  Shop,
   Map as GameMap,
   Project,
   Tileset,
@@ -245,6 +246,17 @@ export class FileSystemManager {
     return this.readDirectory<Item>(
       resourceRegistry.item.folder,
       resourceRegistry.item.extension,
+      true,
+    );
+  }
+
+  /**
+   * Load all shops from shops/ directory.
+   */
+  async loadAllShops(): Promise<Shop[]> {
+    return this.readDirectory<Shop>(
+      resourceRegistry.shop.folder,
+      resourceRegistry.shop.extension,
       true,
     );
   }

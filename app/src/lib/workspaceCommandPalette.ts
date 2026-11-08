@@ -4,6 +4,7 @@ import {
   EntityType,
   Item,
   Map as GameMap,
+  Shop,
   Tileset,
 } from '../types/schema';
 import { WorkspaceDocument } from '../types/workspace';
@@ -17,6 +18,7 @@ export type CommandPaletteFilter =
   | 'entities'
   | 'characters'
   | 'items'
+  | 'shops'
   | 'dialogues'
   | 'cutscenes';
 
@@ -26,6 +28,7 @@ export type CommandPaletteResourceType =
   | 'entity'
   | 'character'
   | 'item'
+  | 'shop'
   | 'dialogue'
   | 'cutscene';
 
@@ -53,6 +56,7 @@ export interface BuildCommandPaletteResourcesOptions {
   entityTypes: EntityType[];
   characters: Character[];
   items: Item[];
+  shops: Shop[];
   dialogues: DialogueDocument[];
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
@@ -149,6 +153,25 @@ export function buildCommandPaletteResources(
           name: item.name,
         }),
         resourceId: item.id,
+      });
+    });
+
+  options.shops
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .forEach((shop) => {
+      resources.push({
+        key: `shop:${shop.id}`,
+        type: 'shop',
+        typeLabel: 'Shop',
+        label: shop.name,
+        secondaryLabel: shop.folderPath || undefined,
+        document: createEditorResourceDocument({
+          type: 'shop',
+          id: shop.id,
+          name: shop.name,
+        }),
+        resourceId: shop.id,
       });
     });
 
@@ -367,6 +390,8 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'character';
     case 'items':
       return resource.type === 'item';
+    case 'shops':
+      return resource.type === 'shop';
     case 'cutscenes':
       return resource.type === 'cutscene';
     case 'dialogues':

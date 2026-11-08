@@ -5,6 +5,7 @@ vi.mock('./saveManager', () => ({
   cancelPendingSaveUnit: vi.fn(),
   clearSaveUnit: vi.fn(),
   getDirtySaveUnitIds: vi.fn(() => []),
+  getSaveUnitStatus: vi.fn(() => ({ status: 'idle', lastSaved: null, error: null, dirty: false })),
   saveMapImmediate: vi.fn(),
   saveProjectImmediate: vi.fn(),
   saveTilesetImmediate: vi.fn(),
@@ -138,5 +139,73 @@ describe('workspaceSaveActions', () => {
 
     expect(saveAll).toHaveBeenCalledTimes(1);
     unregister();
+  });
+
+  it('saves, saves all and discards the shop identified by the active resource tab', async () => {
+    const {
+      canSaveWorkspaceTab,
+      saveWorkspaceTab,
+      saveAllDirtyWorkspaceUnits,
+      discardWorkspaceTabChanges,
+    } = await import('./workspaceSaveActions');
+    const { useEditorStore } = await import('../store/useEditorStore');
+    const { getDirtySaveUnitIds } = await import('./saveManager');
+    const state = useEditorStore.getState();
+    const saveShop = vi.fn(async () => undefined);
+    const discardShop = vi.fn();
+    const tab: WorkspaceTab = {
+      id: 'shop:base:market_seeds',
+      document: {
+        kind: 'shop',
+        shopId: 'base:market_seeds',
+        label: 'Market Stall',
+        saveUnitId: 'shop:base:market_seeds',
+      },
+    };
+
+    expect(canSaveWorkspaceTab(tab)).toBe(true);
+
+    vi.mocked(useEditorStore.getState).mockReturnValueOnce({ ...state, saveShop } as never);
+    await saveWorkspaceTab(tab);
+    expect(saveShop).toHaveBeenCalledExactlyOnceWith('base:market_seeds');
+
+    saveShop.mockClear();
+    vi.mocked(useEditorStore.getState).mockReturnValueOnce({ ...state, saveShop } as never);
+    vi.mocked(getDirtySaveUnitIds).mockReturnValueOnce(['shop:base:market_seeds']);
+    await saveAllDirtyWorkspaceUnits();
+    expect(saveShop).toHaveBeenCalledExactlyOnceWith('base:market_seeds');
+
+    vi.mocked(useEditorStore.getState).mockReturnValueOnce({ ...state, discardShop } as never);
+    await discardWorkspaceTabChanges(tab);
+    expect(discardShop).toHaveBeenCalledExactlyOnceWith('base:market_seeds');
+  });
+
+  it('reports a shop that cannot be saved instead of treating the save as done', async () => {
+    const { saveWorkspaceTab } = await import('./workspaceSaveActions');
+    const { useEditorStore } = await import('../store/useEditorStore');
+    const { getSaveUnitStatus } = await import('./saveManager');
+    const state = useEditorStore.getState();
+    vi.mocked(useEditorStore.getState).mockReturnValueOnce({
+      ...state,
+      saveShop: vi.fn(async () => undefined),
+    } as never);
+    vi.mocked(getSaveUnitStatus).mockReturnValueOnce({
+      status: 'error',
+      lastSaved: null,
+      error: 'Every item needs an item ID.',
+      dirty: true,
+    });
+
+    await expect(
+      saveWorkspaceTab({
+        id: 'shop:base:market_seeds',
+        document: {
+          kind: 'shop',
+          shopId: 'base:market_seeds',
+          label: 'Market Stall',
+          saveUnitId: 'shop:base:market_seeds',
+        },
+      }),
+    ).rejects.toThrow('Every item needs an item ID.');
   });
 });

@@ -30,6 +30,7 @@ import { loadProjectResources, loadSprite } from './projectLoader';
 import { createCutsceneSlice, CutsceneSlice } from './slices/cutsceneSlice';
 import { createCharacterSlice, CharacterSlice } from './slices/characterSlice';
 import { createItemSlice, ItemSlice } from './slices/itemSlice';
+import { createShopSlice, ShopSlice } from './slices/shopSlice';
 import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
 import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
 import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice';
@@ -58,6 +59,7 @@ export interface EditorStore
     CutsceneSlice,
     CharacterSlice,
     ItemSlice,
+    ShopSlice,
     ItemClassSlice,
     TerrainSlice,
     EntityTypeSlice,
@@ -252,6 +254,11 @@ export function runEditorHistoryCommand(
     else state.redoCutscene(cutsceneId);
     return true;
   }
+  if (activeDocument?.kind === 'shop') {
+    if (command === 'undo') state.undoShop(activeDocument.shopId);
+    else state.redoShop(activeDocument.shopId);
+    return true;
+  }
   if (state.mode !== 'maps' || !state.currentMap) return false;
   if (command === 'undo') undoEditorChange();
   else redoEditorChange();
@@ -285,6 +292,7 @@ export const useEditorStore = create<EditorStore>()(
           ...createCutsceneSlice(set, get, {} as never),
           ...createCharacterSlice(set, get, {} as never),
           ...createItemSlice(set, get, {} as never),
+          ...createShopSlice(set, get, {} as never),
           ...createItemClassSlice(set, get, {} as never),
           ...createTerrainSlice(set, get, {} as never),
           ...createEntityTypeSlice(set, get, {} as never),
@@ -324,6 +332,7 @@ export const useEditorStore = create<EditorStore>()(
           // ── Project actions ────────────────────────────────────────────────
           loadProject: async (path, project) => {
             get().resetCutscenes();
+            get().resetShops();
             project = normalizeProject(project);
             withHistorySuppressed(
               () =>
@@ -356,6 +365,7 @@ export const useEditorStore = create<EditorStore>()(
 
           closeProject: () => {
             get().resetCutscenes();
+            get().resetShops();
             for (const timeoutId of pendingTilesetSaves.values()) clearTimeout(timeoutId);
             pendingTilesetSaves.clear();
 

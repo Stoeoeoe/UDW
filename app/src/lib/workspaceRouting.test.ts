@@ -167,6 +167,26 @@ describe('workspaceRouting', () => {
         snapshot,
       ),
     ).toMatchObject({ kind: 'dialogue', dialogueId: 'intro' });
+  });
 
+  it('restores a shop document from its route', () => {
+    const shop = {
+      id: 'base:market_seeds',
+      name: 'Market Stall',
+      buysGoods: true,
+      offerings: [{ itemId: 'base:broad_bean_seeds', price: 15 }],
+    };
+    const snapshot = { maps: [], tilesets: new Map<string, Tileset>(), shops: [shop] };
+    expect(
+      documentFromHash(
+        documentToHash({
+          kind: 'shop',
+          shopId: shop.id,
+          label: shop.name,
+          saveUnitId: 'shop:base:market_seeds',
+        }),
+        snapshot,
+      ),
+    ).toMatchObject({ kind: 'shop', shopId: 'base:market_seeds' });
   });
 });

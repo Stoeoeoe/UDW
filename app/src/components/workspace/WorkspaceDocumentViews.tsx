@@ -6,6 +6,7 @@ import {
   DialogueEditor,
   EntityEditor,
   ItemEditor,
+  ShopEditor,
   MapEditor,
   TilesetEditor,
   ScriptingApiBrowser,
@@ -59,6 +60,8 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <EntityResourceDocument entityTypeId={tab.document.entityTypeId} />;
     case 'item':
       return <ItemResourceDocument itemId={tab.document.itemId} />;
+    case 'shop':
+      return <ShopResourceDocument shopId={tab.document.shopId} />;
     case 'dialogue':
       return <DialogueResourceDocument dialogueId={tab.document.dialogueId} />;
     default:
@@ -101,6 +104,14 @@ const EntityResourceDocument: React.FC<{ entityTypeId: string }> = ({ entityType
     setSelectedEntityType(entityTypeId);
   }, [entityTypeId, setSelectedEntityType]);
   return <EntityEditor />;
+};
+
+const ShopResourceDocument: React.FC<{ shopId: string }> = ({ shopId }) => {
+  const setSelectedShop = useEditorStore((state) => state.setSelectedShop);
+  React.useEffect(() => {
+    setSelectedShop(shopId);
+  }, [shopId, setSelectedShop]);
+  return <ShopEditor />;
 };
 
 const ItemResourceDocument: React.FC<{ itemId: string }> = ({ itemId }) => {

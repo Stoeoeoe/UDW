@@ -4,6 +4,7 @@ import {
   Character,
   EntityType,
   Item,
+  Shop,
   DialogueDocument,
 } from './schema';
 import { ToolType } from './editor';
@@ -86,6 +87,12 @@ export type WorkspaceDocument =
   | {
       kind: 'item';
       itemId: string;
+      label: string;
+      saveUnitId: string;
+    }
+  | {
+      kind: 'shop';
+      shopId: string;
       label: string;
       saveUnitId: string;
     }
@@ -174,6 +181,7 @@ export interface WorkspaceProjectSnapshot {
   characters?: Character[];
   entityTypes?: EntityType[];
   items?: Item[];
+  shops?: Shop[];
   dialogues?: DialogueDocument[];
   cutscenes?: import('./cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;

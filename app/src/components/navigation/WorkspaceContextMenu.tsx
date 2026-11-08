@@ -33,7 +33,15 @@ interface WorkspaceContextMenuProps {
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
   onCreateResource: (
-    kind: 'location' | 'tileset' | 'character' | 'entity' | 'item' | 'dialogue' | 'cutscene',
+    kind:
+      | 'location'
+      | 'tileset'
+      | 'character'
+      | 'entity'
+      | 'item'
+      | 'shop'
+      | 'dialogue'
+      | 'cutscene',
     folderPath: string,
   ) => void;
 }
@@ -123,7 +131,7 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
 };
 
 export const CreateNewResourceDialog: React.FC<{
-  kind: 'character' | 'entity' | 'item' | 'cutscene';
+  kind: 'character' | 'entity' | 'item' | 'shop' | 'cutscene';
   folderPath: string;
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
@@ -140,6 +148,8 @@ export const CreateNewResourceDialog: React.FC<{
         return useEditorStore.getState().entityTypes.map((entityType) => entityType.id);
       case 'item':
         return useEditorStore.getState().items.map((item) => item.id);
+      case 'shop':
+        return useEditorStore.getState().shops.map((shop) => shop.id);
     }
   }, [kind]);
 
@@ -185,6 +195,12 @@ export const CreateNewResourceDialog: React.FC<{
             pin: true,
           });
           break;
+        case 'shop':
+          await store.addShop({ id, name, buysGoods: false, offerings: [], folderPath });
+          onOpenDocument(createEditorResourceDocument({ type: 'shop', id, name }), {
+            pin: true,
+          });
+          break;
       }
 
       onClose();
@@ -223,7 +239,15 @@ function buildMenuItems(
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void,
   onClose: () => void,
   onCreateResource: (
-    kind: 'location' | 'tileset' | 'character' | 'entity' | 'item' | 'dialogue' | 'cutscene',
+    kind:
+      | 'location'
+      | 'tileset'
+      | 'character'
+      | 'entity'
+      | 'item'
+      | 'shop'
+      | 'dialogue'
+      | 'cutscene',
     folderPath: string,
   ) => void,
 ): MenuDefinition[] {
@@ -250,6 +274,7 @@ function buildMenuItems(
             | 'character'
             | 'entity'
             | 'item'
+            | 'shop'
             | 'dialogue'
             | 'cutscene',
           folderPathForNode,
