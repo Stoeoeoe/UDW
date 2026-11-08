@@ -59,7 +59,7 @@ namespace Core.Common.Editor
             {
                 Asset<ProduceItem>(), Asset<ToolData>(), Asset<SeedItem>(), Asset<StaminaConsumableItem>(),
                 Asset<WornEquipmentItem>(), Asset<InventoryConfiguration>(), Asset<EquipmentSlotDefinition>(),
-                Asset<ShopDefinition>(), Asset<SkillDefinition>(), Asset<DeityDefinition>(), Asset<BoonDefinition>(),
+                Asset<SkillDefinition>(), Asset<DeityDefinition>(), Asset<BoonDefinition>(),
                 Asset<UISoundProfile>(), Asset<TypewriterSound>()
             };
             foreach (var asset in assets) Assert.That(asset.ValidateConfiguration(), Is.Empty, asset.GetType().Name);
@@ -126,20 +126,11 @@ namespace Core.Common.Editor
         }
 
         [Test]
-        public void ShopReportsIndependentOfferingErrorsTogether()
+        public void ShopReportsDuplicateAndInvalidOfferingsTogether()
         {
-            var shop = Asset<ShopDefinition>(); var item = Asset<ProduceItem>();
-            Set(shop, "offerings", new[]
-            {
-                new ShopOffering { id = "same", item = item },
-                new ShopOffering { id = "same", item = null, minStock = -1, maxStock = int.MaxValue,
-                    priceMultiplier = float.NaN, dailyAppearanceChance = float.PositiveInfinity, restock = (ShopRestockMode)999 }
-            });
-            TestConfiguration.Set(shop, "_sellPriceMultiplier", -1);
-            AssertError(shop, "_sellPriceMultiplier"); AssertError(shop, "offerings[1].id"); AssertError(shop, "offerings[1].item");
-            AssertError(shop, "offerings[1].minStock"); AssertError(shop, "offerings[1].maxStock");
-            AssertError(shop, "offerings[1].restock"); AssertError(shop, "offerings[1].priceMultiplier");
-            AssertError(shop, "offerings[1].dailyAppearanceChance");
+            var shop = Asset<Shop>();
+            Set(shop, "offerings", new[] { new ShopOffering("test:a", 1), new ShopOffering("test:a", -1), new ShopOffering("", 1) });
+            AssertError(shop, "offerings[1].itemId"); AssertError(shop, "offerings[1].price"); AssertError(shop, "offerings[2].itemId");
         }
 
         [Test]

@@ -1,0 +1,89 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "base:fabia_greeting",
+  "name": "Fabia — Greeting",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "fabia",
+    "market"
+  ],
+  "createdAt": "2026-11-07T20:00:00Z",
+  "updatedAt": "2026-11-07T20:00:00Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "base:fabia",
+      "text": "Salve! Fresh seeds and fair prices. What can I do for you?",
+      "msgKey": "dlg.base:fabia_greeting.01",
+      "next": "choice-1"
+    },
+    {
+      "id": "choice-1",
+      "type": "choice",
+      "options": [
+        {
+          "id": "opt-wares",
+          "text": "Show me your wares.",
+          "msgKey": "dlg.base:fabia_greeting.02",
+          "condition": null,
+          "targetNodeId": "action-shop"
+        },
+        {
+          "id": "opt-chat",
+          "text": "Just wanted to chat.",
+          "msgKey": "dlg.base:fabia_greeting.03",
+          "condition": null,
+          "targetNodeId": "line-chat-1"
+        },
+        {
+          "id": "opt-bye",
+          "text": "Goodbye.",
+          "msgKey": "dlg.base:fabia_greeting.04",
+          "condition": null,
+          "targetNodeId": "line-bye"
+        }
+      ]
+    },
+    {
+      "id": "action-shop",
+      "type": "action",
+      "lua": "Shop.Open('base:market_seeds')",
+      "next": null
+    },
+    {
+      "id": "line-chat-1",
+      "type": "line",
+      "speaker": "base:fabia",
+      "text": "The beans do well in this soil. Water them every day and they will repay you.",
+      "msgKey": "dlg.base:fabia_greeting.05",
+      "next": "line-chat-2"
+    },
+    {
+      "id": "line-chat-2",
+      "type": "line",
+      "speaker": "base:player",
+      "text": "Good to know.",
+      "msgKey": "dlg.base:fabia_greeting.06",
+      "next": "line-chat-3"
+    },
+    {
+      "id": "line-chat-3",
+      "type": "line",
+      "speaker": "base:fabia",
+      "text": "Anything else?",
+      "msgKey": "dlg.base:fabia_greeting.07",
+      "next": "choice-1"
+    },
+    {
+      "id": "line-bye",
+      "type": "line",
+      "speaker": "base:fabia",
+      "text": "Come back soon!",
+      "msgKey": "dlg.base:fabia_greeting.08",
+      "next": null
+    }
+  ]
+}

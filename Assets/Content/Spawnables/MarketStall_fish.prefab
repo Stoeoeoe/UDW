@@ -180,7 +180,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2644611429007518014}
   - component: {fileID: 8984196255993897485}
-  - component: {fileID: 5044817602739498118}
   - component: {fileID: 142711084727775617}
   - component: {fileID: 7363438667912734952}
   m_Layer: 23
@@ -221,20 +220,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.SpawnedObject
   prefabId: base:market_stall_fish
   authoredId: 
---- !u!114 &5044817602739498118
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8770731866236333634}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d25b71d94cf122bb96c597186398492, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Core.Shops.Shop
-  shopId: base:market_stall_fish
-  definition: {fileID: 11400000, guid: 69db055a14f07b745a5bf69975989ab1, type: 2}
 --- !u!61 &142711084727775617
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -306,4 +291,4 @@ MonoBehaviour:
   EnterFeedback: {fileID: 0}
   ExitFeedback: {fileID: 0}
   DestroyWhenUsedUp: 0
-  shop: {fileID: 0}
+  shopId: base:market_seeds

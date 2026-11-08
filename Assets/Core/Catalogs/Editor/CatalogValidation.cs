@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using Core.Common;
+using Core.Inventory;
 using Core.Music;
+using Core.Shops;
 using Core.Spawning;
 using Object = UnityEngine.Object;
 
@@ -24,6 +26,14 @@ namespace Core.Catalogs.Editor
             }
             var duplicate = definitions.GroupBy(catalog.GetId, catalog.IdComparer).FirstOrDefault(group => group.Count() > 1);
             if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key}'.");
+            if (catalog is ShopCatalog)
+            {
+                var itemIds = CatalogAssetDiscovery.Find("Assets", typeof(ItemDefinition)).Cast<ItemDefinition>().Select(item => item.ItemId).ToHashSet();
+                foreach (var shop in definitions.Cast<Shop>())
+                    foreach (var offering in shop.Offerings)
+                        if (!itemIds.Contains(offering.ItemId))
+                            throw new InvalidOperationException($"Shop '{shop.ShopId}' offers the unknown item '{offering.ItemId}'.");
+            }
             if (catalog is MusicCatalog)
             {
                 foreach (var group in definitions.Cast<MusicCue>().GroupBy(cue => cue.Theme))

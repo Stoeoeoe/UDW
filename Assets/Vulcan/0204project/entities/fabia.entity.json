@@ -1,0 +1,16 @@
+{
+  "$schema": "../schemas/entity-type.schema.json",
+  "id": "base:fabia",
+  "displayName": "Fabia",
+  "category": "object",
+  "group": "Market",
+  "description": "Fabia, the seed seller. Talk to her to chat or open her shop.",
+  "placeholderColor": "#a83a30",
+  "defaultSize": [
+    16,
+    32
+  ],
+  "properties": [],
+  "folderPath": "Market",
+  "icon": "GiPerson"
+}

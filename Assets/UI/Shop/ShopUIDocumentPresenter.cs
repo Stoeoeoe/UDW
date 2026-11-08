@@ -5,12 +5,12 @@ using Core.Shops;
 using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
 
 namespace UI.Shops
 {
     [RequireComponent(typeof(UIDocument))]
     public sealed class ShopUIDocumentPresenter : ManagedUIScreen,
-        IEventListener<ShopChangedEvent>,
         IEventListener<WalletChangedEvent>,
         IEventListener<InventoryChangedEvent>
     {
@@ -26,6 +26,7 @@ namespace UI.Shops
         private Label _title;
         private Label _balance;
         private Label _status;
+        [Inject] private ShopService _service;
         private Shop _shop;
         private Wallet _wallet;
         private SlotInventory _inventory;
@@ -67,7 +68,6 @@ namespace UI.Shops
         {
             EnsureBindings();
             Instance = this;
-            EventBus<ShopChangedEvent>.Subscribe(this);
             EventBus<WalletChangedEvent>.Subscribe(this);
             EventBus<InventoryChangedEvent>.Subscribe(this);
         }
@@ -75,7 +75,6 @@ namespace UI.Shops
         protected override void OnDisable()
         {
             base.OnDisable();
-            EventBus<ShopChangedEvent>.Unsubscribe(this);
             EventBus<WalletChangedEvent>.Unsubscribe(this);
             EventBus<InventoryChangedEvent>.Unsubscribe(this);
             if (Instance == this) Instance = null;
@@ -104,11 +103,6 @@ namespace UI.Shops
             _refreshPending = false;
         }
 
-        public void OnEvent(ShopChangedEvent change)
-        {
-            if (change.Shop == _shop) _refreshPending = true;
-        }
-
         public void OnEvent(WalletChangedEvent change)
         {
             if (change.Wallet == _wallet) _refreshPending = true;
@@ -128,7 +122,7 @@ namespace UI.Shops
         private void Refresh()
         {
             _refreshPending = false;
-            _title.text = _shop.Definition.name;
+            _title.text = _shop.DisplayName;
             _balance.text = $"{_wallet.Balance:N0}g";
             RefreshOffers();
             RefreshInventory();
@@ -137,23 +131,17 @@ namespace UI.Shops
         private void RefreshOffers()
         {
             _offerList.Clear();
-            var offers = _shop.GetOfferings();
+            var offers = _service.GetOfferings(_shop);
 
             if (offers.Count == 0)
-                _offerList.Add(EmptyMessage("Nothing is for sale today."));
+                _offerList.Add(EmptyMessage("Nothing is for sale."));
 
             foreach (var offer in offers)
             {
-                var row = CreateRow(offer.Item, $"Stock: {offer.Quantity}");
-                var button = new Button(() => Buy(offer.OfferingId))
-                {
-                    text = offer.Quantity > 0
-                        ? $"Buy {offer.UnitPrice}g"
-                        : "Sold out"
-                };
+                var row = CreateRow(offer.Item, offer.Item.Category);
+                var button = new Button(() => Buy(offer.Item.ItemId)) { text = $"Buy {offer.Price}g" };
                 button.AddToClassList("trade-button");
-                button.SetEnabled(
-                    offer.Quantity > 0 && _wallet.Balance >= offer.UnitPrice);
+                button.SetEnabled(_wallet.Balance >= offer.Price);
                 row.Add(button);
                 _offerList.Add(row);
             }
@@ -162,7 +150,7 @@ namespace UI.Shops
         private void RefreshInventory()
         {
             _inventoryList.Clear();
-            if (!_shop.Definition.acceptsSales)
+            if (!_shop.BuysGoods)
             {
                 _inventoryList.Add(EmptyMessage("This shop does not buy items."));
                 return;
@@ -177,7 +165,7 @@ namespace UI.Shops
                 if (stack.IsEmpty) continue;
 
                 hasItems = true;
-                var price = _shop.GetSellPrice(stack.Item);
+                var price = _service.GetSellPrice(stack.Item);
                 var row = CreateRow(
                     stack.Item,
                     $"Slot {slot + 1} - {stack.Quantity} held - {price}g each");
@@ -223,14 +211,14 @@ namespace UI.Shops
             return row;
         }
 
-        private void Buy(string offeringId)
+        private void Buy(string itemId)
         {
-            ShowTradeResult(_shop.Buy(offeringId, _wallet, _inventory));
+            ShowTradeResult(_service.Buy(_shop, itemId, _wallet, _inventory));
         }
 
         private void Sell(int slotIndex)
         {
-            ShowTradeResult(_shop.Sell(slotIndex, _wallet, _inventory));
+            ShowTradeResult(_service.Sell(_shop, slotIndex, _wallet, _inventory));
         }
 
         private void ShowTradeResult(ShopTradeResult result)
@@ -254,9 +242,7 @@ namespace UI.Shops
             ShopTradeResult.Success => "Trade complete.",
             ShopTradeResult.InsufficientFunds => "You don't have enough money.",
             ShopTradeResult.InventoryFull => "There's no room in your inventory.",
-            ShopTradeResult.OutOfStock => "That item is out of stock.",
             ShopTradeResult.WalletFull => "Your wallet is full.",
-            ShopTradeResult.InvalidPrice => "This item has an invalid price.",
             ShopTradeResult.NotAccepted => "The shop won't accept that item.",
             ShopTradeResult.InvalidQuantity => "Choose a valid quantity.",
             _ => "That item is unavailable."

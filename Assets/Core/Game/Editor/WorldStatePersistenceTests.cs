@@ -7,7 +7,6 @@ using Character;
 using Core.Common.Editor;
 using Core.Inventory;
 using Core.Location;
-using Core.Shops;
 using Core.Spawning;
 using Core.TimeAndWeather;
 using Interaction;
@@ -328,13 +327,6 @@ namespace Core.Game.Editor
             data.story.Set("story:double", 12.5d);
             data.story.Set("story:object", new Dictionary<string, object> { ["quest"] = new Dictionary<string, object> { ["stage"] = 2L, ["name"] = "intro" } });
             data.story.CompletedCutscenes.Add("test:confession");
-            data.world.Set("base:grocer", new ShopState
-            {
-                offerings = new Dictionary<string, ShopStock>
-                {
-                    ["lentils"] = new ShopStock { quantity = 7, available = true, lastProcessedDay = 4 }
-                }
-            });
             data.world.Set("farm", "plot-1", new FarmlandState { plowed = true, irrigated = false });
             data.world.Set("farm", "plant:1,2", new PlantState("lentils") { daysPassedSincePlanting = 3 });
             var prayerDeadline = new GameCalendar(6, 14, Season.Spring, Season.Summer, Season.Autumn, Season.Winter)
@@ -404,10 +396,6 @@ namespace Core.Game.Editor
                 Assert.That(loaded.story.Get<double>("story:double"), Is.EqualTo(12.5d));
                 Assert.That(((Dictionary<string, object>)loaded.story.Get<Dictionary<string, object>>("story:object")["quest"])["stage"], Is.EqualTo(2L));
                 Assert.That(loaded.story.CompletedCutscenes.Contains("test:confession"), Is.True);
-                Assert.That(loaded.world.TryGet("base:grocer", out ShopState shop), Is.True);
-                Assert.That(shop.offerings["lentils"].quantity, Is.EqualTo(7));
-                Assert.That(shop.offerings["lentils"].available, Is.True);
-                Assert.That(shop.offerings["lentils"].lastProcessedDay, Is.EqualTo(4));
                 Assert.That(loaded.world.TryGet("farm", "plot-1", out FarmlandState plot), Is.True);
                 Assert.That(plot.plowed, Is.True);
                 Assert.That(plot.irrigated, Is.False);

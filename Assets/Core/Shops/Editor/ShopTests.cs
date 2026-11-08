@@ -1,346 +1,153 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Character;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
 using Core.Inventory;
-using Core.TimeAndWeather;
 using NUnit.Framework;
-using Sirenix.Serialization;
-using UnityEngine;
-using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
-using Random = UnityEngine.Random;
 
 namespace Core.Shops.Editor
 {
     public sealed class ShopTestItem : ItemDefinition { }
 
-    public sealed class ShopTests : GameTest, IEventListener<WalletChangedEvent>,
-        IEventListener<ShopPurchaseEvent>, IEventListener<ShopSaleEvent>, IEventListener<ShopRestockedEvent>
+    public sealed class ShopTests : GameTest, IEventListener<ShopPurchaseEvent>, IEventListener<ShopSaleEvent>
     {
-        private GameObject _root;
-
-        private GameStateManager _manager;
+        private ShopService _shops;
         private Shop _shop;
+        private ShopTestItem _seed, _bean;
         private SlotInventory _inventory;
         private Wallet _wallet;
-        private ShopDefinition _definition;
-        private ShopTestItem _item;
-        private ShopOffering _daily;
-        private ShopOffering _never;
-        private Random.State _random;
-        private int _expectedStock;
-        private bool _checkTrade;
-        private bool _mutateOnWalletChange;
-        private readonly List<ShopPurchaseEvent> _purchases = new();
-        private readonly List<ShopSaleEvent> _sales = new();
-        private readonly List<ShopRestockedEvent> _restocks = new();
+        private ShopPurchaseEvent _purchase;
+        private ShopSaleEvent _sale;
+        private int _purchases, _sales;
 
         [SetUp]
         public void SetUp()
         {
-
-            _random = Random.state;
-            _checkTrade = false;
-            _mutateOnWalletChange = false;
-            _purchases.Clear();
-            _sales.Clear();
-            _restocks.Clear();
-
-            _root = Game.Root;
-            _manager = Game.Get<GameStateManager>();
-            Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
-            Game.State.Time.daysSinceStart = 1;
-            _item = ScriptableObject.CreateInstance<ShopTestItem>();
-            Set(_item, "_itemId", "test:shop-item");
-            Set(_item, "_buyBasePrice", 10);
-            Set(_item, "_sellBasePrice", 4);
-            _daily = new ShopOffering { id = "daily", item = _item, minStock = 5, maxStock = 5, priceMultiplier = 1.5f };
-            _never = new ShopOffering { id = "never", item = _item, restock = ShopRestockMode.Never, minStock = 3, maxStock = 3 };
-            _definition = ScriptableObject.CreateInstance<ShopDefinition>();
-            Set(_definition, "offerings", new[] { _daily, _never });
-            _shop = Game.Add<Shop>(_root);
-            Set(_shop, "shopId", "test:vendor");
-            Set(_shop, "definition", _definition);
-            Call(_shop, "OnEnable");
-            _inventory = Game.Add<SlotInventory>(_root);
-            Set(_inventory, "_inventoryName", "ShopTestInventory");
-            Set(_inventory, "_numberOfSlots", 1);
-            Call(_inventory, "Awake");
+            _purchases = _sales = 0;
+            _seed = Item("test:seed", sellPrice: 0);
+            _bean = Item("test:bean", sellPrice: 4);
+            Game.Catalog<ItemCatalog>(_seed, _bean);
+            _shop = Shop(buysGoods: true, new ShopOffering("test:seed", 15), new ShopOffering("test:bean", 9));
+            Game.Catalog<ShopCatalog>(_shop);
+            _shops = Game.Get<ShopService>();
+            Game.State.Player.Inventory.Slots = new InventorySlotState[2];
+            _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _seed.ItemId ? _seed : id == _bean.ItemId ? _bean : null);
             _wallet = new Wallet();
             _wallet.Add(100);
             EventBus<ShopPurchaseEvent>.Subscribe(this);
             EventBus<ShopSaleEvent>.Subscribe(this);
-            EventBus<ShopRestockedEvent>.Subscribe(this);
         }
 
         [TearDown]
         public void TearDown()
         {
-            EventBus<WalletChangedEvent>.Unsubscribe(this);
             EventBus<ShopPurchaseEvent>.Unsubscribe(this);
             EventBus<ShopSaleEvent>.Unsubscribe(this);
-            EventBus<ShopRestockedEvent>.Unsubscribe(this);
-            if (_shop) Call(_shop, "OnDisable");
+        }
 
-            Object.DestroyImmediate(_definition);
-            Object.DestroyImmediate(_item);
-            Random.state = _random;
+        public void OnEvent(ShopPurchaseEvent e) { _purchase = e; _purchases++; }
+        public void OnEvent(ShopSaleEvent e) { _sale = e; _sales++; }
+
+        private ShopTestItem Item(string id, int sellPrice)
+        {
+            var item = Game.Asset<ShopTestItem>();
+            Set(item, "_itemId", id, typeof(ItemDefinition));
+            Set(item, "_sellBasePrice", sellPrice, typeof(ItemDefinition));
+            return item;
+        }
+
+        private Shop Shop(bool buysGoods, params ShopOffering[] offerings)
+        {
+            var shop = Game.Asset<Shop>();
+            shop.Configure("test:shop", "Test shop", buysGoods, offerings);
+            return shop;
         }
 
         [Test]
-        public void BuySellAndReloadRoundTripInventoryWalletAndVendorStockTogether()
+        public void OfferingsResolveTheirItemsInAuthoredOrder()
         {
-            _inventory.Bind(Game.State.Player.Inventory, id => id == _item.ItemId ? _item : null);
-            _inventory.ApplyStartingLoadout(Array.Empty<ItemDefinition>());
-            Call(_wallet, "Bind", Game.State.Player.Wallet);
-            _wallet.Add(100);
-            Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
-            var data = (GameSaveData)typeof(GameState).GetProperty("Data", BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(Game.State);
-            data.time.initialized = true;
-            data.time.dayOfSeason = 1;
-            data.time.hour = 6;
-            data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>());
-            var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var references);
-            Assert.That(references, Is.Empty);
-            var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
-            loaded.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>());
-            _inventory.Bind(loaded.player.Inventory, id => id == _item.ItemId ? _item : null);
-            Assert.That(loaded.player.Wallet.Balance, Is.EqualTo(74));
-            Assert.That(_inventory.GetSlot(0).Item, Is.SameAs(_item));
-            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
-            Assert.That(loaded.player.Inventory.StartingLoadoutApplied, Is.True);
-            Assert.That(loaded.world.TryGet(_shop.Id, out ShopState stock), Is.True);
-            Assert.That(stock.offerings["daily"].quantity, Is.EqualTo(3));
+            var offers = _shops.GetOfferings(_shop);
+            Assert.That(offers.Select(offer => offer.Item), Is.EqualTo(new ItemDefinition[] { _seed, _bean }));
+            Assert.That(offers.Select(offer => offer.Price), Is.EqualTo(new[] { 15, 9 }));
         }
 
         [Test]
-        public void NewDayReplacesDailyStockButNeverStockStaysDepleted()
+        public void BuyingPaysTheFixedPriceAddsTheItemsAndPublishesTheTrade()
         {
-            Assert.That(_shop.GetOfferings().Select(row => row.OfferingId), Is.EqualTo(new[] { "daily", "never" }));
-            Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(_shop.Buy("never", _wallet, _inventory, 3), Is.EqualTo(ShopTradeResult.Success));
-            Game.State.Time.daysSinceStart = 2;
-            NewDayEvent.Trigger(2);
-            Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(5));
-            Assert.That(_shop.GetOfferings()[1].Quantity, Is.Zero);
-        }
-
-        [Test]
-        public void SavedAppearanceAndQuantityDoNotRerollOnReopenOrRestore()
-        {
-            _daily.dailyAppearanceChance = 0.5f;
-            _daily.minStock = 1;
-            _daily.maxStock = 99;
-            _shop.GetOfferings();
-            Assert.That(Game.State.World.TryGet(_shop.Id, out ShopState state), Is.True);
-            var quantity = state.offerings["daily"].quantity;
-            var available = state.offerings["daily"].available;
-            var bytes = SerializationUtility.SerializeValue(state, DataFormat.JSON);
-            var restored = SerializationUtility.DeserializeValue<ShopState>(bytes, DataFormat.JSON);
-            Game.State.World.Set(_shop.Id, restored);
-            var before = Random.state;
-            _shop.GetOfferings();
-            Call(_shop, "OnDisable");
-            Call(_shop, "OnEnable");
-            _shop.GetOfferings();
-            Assert.That(restored.offerings["daily"].quantity, Is.EqualTo(quantity));
-            Assert.That(restored.offerings["daily"].available, Is.EqualTo(available));
-            Assert.That(Random.state, Is.EqualTo(before));
-        }
-
-        [Test]
-        public void HiddenOffersAndUnloadedCatchupUseTheCurrentDayOnly()
-        {
-            _daily.dailyAppearanceChance = 0;
-            Assert.That(_shop.GetOfferings().Select(row => row.OfferingId), Is.EqualTo(new[] { "never" }));
-            Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.Unavailable));
-            Call(_shop, "OnDisable");
-            _daily.dailyAppearanceChance = 1;
-            Game.State.Time.daysSinceStart = 12;
-            Assert.That(_shop.GetOfferings()[0].OfferingId, Is.EqualTo("daily"));
-            Game.State.World.TryGet(_shop.Id, out ShopState state);
-            Assert.That(state.offerings["daily"].lastProcessedDay, Is.EqualTo(12));
-            Assert.That(state.offerings["never"].quantity, Is.EqualTo(3));
-        }
-
-        [Test]
-        public void FailedPurchasesDoNotChangeMoneyInventoryOrStock()
-        {
-            _shop.GetOfferings();
-            _inventory.SetSlot(0, new ItemStack(_item, _item.MaxStackSize));
-            Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.InventoryFull));
-            Assert.That(_wallet.Balance, Is.EqualTo(100));
-            Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(5));
-            _wallet.TrySpend(100);
-            Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.InsufficientFunds));
-            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(_item.MaxStackSize));
-        }
-
-        [Test]
-        public void TradeEventsSeeCommittedStockMoneyAndInventory()
-        {
-            _shop.GetOfferings();
-            _expectedStock = 3;
-            _checkTrade = true;
-            EventBus<WalletChangedEvent>.Subscribe(this);
-            Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
+            Assert.That(_shops.Buy(_shop, "test:seed", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(_wallet.Balance, Is.EqualTo(70));
-        }
-
-        public void OnEvent(WalletChangedEvent change)
-        {
-            if (_mutateOnWalletChange && change.Wallet == _wallet)
-            {
-                _mutateOnWalletChange = false;
-                _wallet.Add(1);
-            }
-            if (!_checkTrade || change.Wallet != _wallet) return;
+            Assert.That(_inventory.GetSlot(0).Item, Is.SameAs(_seed));
             Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(2));
-            Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(_expectedStock));
-            Assert.That(change.Current, Is.EqualTo(70));
-            Assert.That(change.Wallet.Balance, Is.EqualTo(change.Current));
-        }
+            Assert.That(_purchases, Is.EqualTo(1));
+            Assert.That(_purchase.UnitPrice, Is.EqualTo(15));
+            Assert.That(_purchase.TotalPrice, Is.EqualTo(30));
+            Assert.That(_purchase.BalanceBefore, Is.EqualTo(100));
+            Assert.That(_purchase.BalanceAfter, Is.EqualTo(70));
 
-        public void OnEvent(ShopPurchaseEvent change) => _purchases.Add(change);
-        public void OnEvent(ShopSaleEvent change) => _sales.Add(change);
-        public void OnEvent(ShopRestockedEvent change) => _restocks.Add(change);
-
-        [Test]
-        public void PurchaseAndSaleEventsContainTransactionSnapshots()
-        {
-            Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(_purchases.Count, Is.EqualTo(1));
-            var purchase = _purchases[0];
-            Assert.That(purchase.Shop, Is.SameAs(_shop));
-            Assert.That(purchase.Wallet, Is.SameAs(_wallet));
-            Assert.That(purchase.Inventory, Is.SameAs(_inventory));
-            Assert.That(purchase.Item, Is.SameAs(_item));
-            Assert.That(purchase.OfferingId, Is.EqualTo("daily"));
-            Assert.That(purchase.Quantity, Is.EqualTo(2));
-            Assert.That(purchase.UnitPrice, Is.EqualTo(15));
-            Assert.That(purchase.TotalPrice, Is.EqualTo(30));
-            Assert.That(purchase.BalanceBefore, Is.EqualTo(100));
-            Assert.That(purchase.BalanceAfter, Is.EqualTo(70));
-            Assert.That(purchase.StockBefore, Is.EqualTo(5));
-            Assert.That(purchase.StockAfter, Is.EqualTo(3));
-            Assert.That(purchase.GameMinute, Is.EqualTo(Game.State.Time.TotalMinutes));
-
-            Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(_sales.Count, Is.EqualTo(1));
-            var sale = _sales[0];
-            Assert.That(sale.Shop, Is.SameAs(_shop));
-            Assert.That(sale.Wallet, Is.SameAs(_wallet));
-            Assert.That(sale.Inventory, Is.SameAs(_inventory));
-            Assert.That(sale.Item, Is.SameAs(_item));
-            Assert.That(sale.SlotIndex, Is.Zero);
-            Assert.That(sale.Quantity, Is.EqualTo(1));
-            Assert.That(sale.UnitPrice, Is.EqualTo(4));
-            Assert.That(sale.TotalPrice, Is.EqualTo(4));
-            Assert.That(sale.BalanceBefore, Is.EqualTo(70));
-            Assert.That(sale.BalanceAfter, Is.EqualTo(74));
-            Assert.That(sale.SlotQuantityBefore, Is.EqualTo(2));
-            Assert.That(sale.SlotQuantityAfter, Is.EqualTo(1));
-            Assert.That(purchase.BalanceAfter, Is.EqualTo(70));
+            // The stock is unlimited: the same offering can be bought again.
+            Assert.That(_shops.Buy(_shop, "test:seed", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
+            Assert.That(_wallet.Balance, Is.EqualTo(40));
         }
 
         [Test]
-        public void RestockEventsDistinguishInitialStockAndAvailabilityOnlyRefreshes()
+        public void ARefusedPurchaseLeavesMoneyAndItemsUnchanged()
         {
-            _shop.GetOfferings();
-            Assert.That(_restocks.Count, Is.EqualTo(1));
-            var initial = _restocks[0];
-            Assert.That(initial.Day, Is.EqualTo(1));
-            Assert.That(initial.Entries.All(row => row.IsInitialStock && row.Restocked), Is.True);
-            Assert.That(initial.Entries[0].QuantityBefore, Is.Zero);
-            Assert.That(initial.Entries[0].QuantityAfter, Is.EqualTo(5));
-            _shop.GetOfferings();
-            Assert.That(_restocks.Count, Is.EqualTo(1));
-            _never.dailyAppearanceChance = 0;
-            Game.State.Time.daysSinceStart = 2;
-            NewDayEvent.Trigger(2);
-            Assert.That(_restocks.Count, Is.EqualTo(2));
-            var daily = _restocks[1];
-            Assert.That(daily.Day, Is.EqualTo(2));
-            Assert.That(daily.Entries[0].Restocked, Is.True);
-            Assert.That(daily.Entries.All(row => !row.IsInitialStock), Is.True);
-            Assert.That(daily.Entries[1].Restocked, Is.False);
-            Assert.That(daily.Entries[1].QuantityBefore, Is.EqualTo(3));
-            Assert.That(daily.Entries[1].QuantityAfter, Is.EqualTo(3));
-            Assert.That(daily.Entries[1].AvailableBefore, Is.True);
-            Assert.That(daily.Entries[1].AvailableAfter, Is.False);
-            Assert.That(initial.Entries[1].AvailableAfter, Is.True);
+            Assert.That(_shops.Buy(_shop, "test:seed", _wallet, _inventory, 0), Is.EqualTo(ShopTradeResult.InvalidQuantity));
+            Assert.That(_shops.Buy(_shop, "test:missing", _wallet, _inventory), Is.EqualTo(ShopTradeResult.Unavailable));
+            Assert.That(_shops.Buy(_shop, "test:seed", _wallet, _inventory, 7), Is.EqualTo(ShopTradeResult.InsufficientFunds));
+            _inventory.AddItem(_bean, _bean.MaxStackSize * 2); // Both slots full.
+            Assert.That(_shops.Buy(_shop, "test:seed", _wallet, _inventory), Is.EqualTo(ShopTradeResult.InventoryFull));
+            Assert.That(_wallet.Balance, Is.EqualTo(100));
+            Assert.That(_inventory.GetSlot(0).Item, Is.SameAs(_bean));
+            Assert.That(_purchases, Is.Zero);
         }
 
         [Test]
-        public void FailedTradesEmitNoPurchaseOrSaleEvents()
+        public void SellingPaysTheItemsSellPriceAndPublishesTheTrade()
         {
-            _wallet.TrySpend(100);
-            Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.InsufficientFunds));
-            Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.NotAccepted));
-            Assert.That(_purchases, Is.Empty);
-            Assert.That(_sales, Is.Empty);
+            _inventory.AddItem(_bean, 5);
+            Assert.That(_shops.Sell(_shop, 0, _wallet, _inventory, 3), Is.EqualTo(ShopTradeResult.Success));
+            Assert.That(_wallet.Balance, Is.EqualTo(112));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(2));
+            Assert.That(_sales, Is.EqualTo(1));
+            Assert.That(_sale.UnitPrice, Is.EqualTo(4));
+            Assert.That(_sale.SlotQuantityBefore, Is.EqualTo(5));
+            Assert.That(_sale.SlotQuantityAfter, Is.EqualTo(2));
+
+            Assert.That(_shops.Sell(_shop, 0, _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
+            Assert.That(_inventory.GetSlot(0).IsEmpty, Is.True);
         }
 
         [Test]
-        public void PurchaseSnapshotIsCapturedBeforeNotificationCallbacksCanMutateBalance()
+        public void ASaleThatTheShopCannotMakeLeavesMoneyAndItemsUnchanged()
         {
-            _mutateOnWalletChange = true;
-            EventBus<WalletChangedEvent>.Subscribe(this);
-            _shop.Buy("daily", _wallet, _inventory);
-            Assert.That(_wallet.Balance, Is.EqualTo(86));
-            Assert.That(_purchases[0].BalanceAfter, Is.EqualTo(85));
-            Assert.That(_purchases[0].TotalPrice, Is.EqualTo(15));
+            _inventory.AddItem(_bean, 2);
+            _inventory.AddItem(_seed, 1); // Worth nothing to the shop.
+            Assert.That(_shops.Sell(_shop, 0, _wallet, _inventory, 0), Is.EqualTo(ShopTradeResult.InvalidQuantity));
+            Assert.That(_shops.Sell(_shop, 0, _wallet, _inventory, 3), Is.EqualTo(ShopTradeResult.NotAccepted));
+            Assert.That(_shops.Sell(_shop, 1, _wallet, _inventory), Is.EqualTo(ShopTradeResult.NotAccepted));
+            Assert.That(_shops.Sell(_shop, 9, _wallet, _inventory), Is.EqualTo(ShopTradeResult.NotAccepted));
+            Assert.That(_wallet.Balance, Is.EqualTo(100));
+            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(2));
+            Assert.That(_sales, Is.Zero);
         }
 
         [Test]
-        public void VendorsSharingADefinitionKeepSeparateStockAndReorderingKeepsOfferingIdentity()
+        public void AShopThatDoesNotBuyGoodsRefusesEverySale()
         {
-            var other = Game.Add<Shop>(_root);
-            Set(other, "shopId", "test:other-vendor");
-            Set(other, "definition", _definition);
-            _shop.GetOfferings();
-            other.GetOfferings();
-            Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(other.GetOfferings()[0].Quantity, Is.EqualTo(5));
-            Set(_definition, "offerings", new[] { _never, _daily });
-            Assert.That(_shop.GetOfferings().Select(row => row.OfferingId), Is.EqualTo(new[] { "never", "daily" }));
-            Assert.That(_shop.GetOfferings()[1].Quantity, Is.EqualTo(4));
+            var closed = Shop(buysGoods: false, new ShopOffering("test:seed", 15));
+            _inventory.AddItem(_bean, 2);
+            Assert.That(_shops.Sell(closed, 0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.NotAccepted));
+            Assert.That(_wallet.Balance, Is.EqualTo(100));
         }
 
         [Test]
-        public void DiscountsRoundPerUnitAndUnrepresentablePricesDoNotTrade()
+        public void AnOfferingForAnUnknownItemFailsClearly()
         {
-            _daily.priceMultiplier = 0.75f;
-            Assert.That(_shop.GetOfferings()[0].UnitPrice, Is.EqualTo(8));
-            Assert.That(_shop.Buy("daily", _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(_wallet.Balance, Is.EqualTo(84));
-            _daily.priceMultiplier = float.MaxValue;
-            Assert.That(_shop.Buy("daily", _wallet, _inventory), Is.EqualTo(ShopTradeResult.InvalidPrice));
-            Assert.That(_wallet.Balance, Is.EqualTo(84));
-            Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(3));
+            var broken = Shop(buysGoods: true, new ShopOffering("test:unknown", 1));
+            Assert.That(() => _shops.GetOfferings(broken), Throws.InvalidOperationException.With.Message.Contains("test:unknown"));
         }
-
-        [Test]
-        public void SalesRespectQuantityWalletCapAndDoNotCreateBuybackStock()
-        {
-            _inventory.AddItem(_item, 3);
-            Assert.That(_shop.Sell(0, _wallet, _inventory, -1), Is.EqualTo(ShopTradeResult.InvalidQuantity));
-            Assert.That(_shop.Sell(0, _wallet, _inventory, 4), Is.EqualTo(ShopTradeResult.OutOfStock));
-            Assert.That(_shop.Sell(0, _wallet, _inventory, 2), Is.EqualTo(ShopTradeResult.Success));
-            Assert.That(_wallet.Balance, Is.EqualTo(108));
-            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
-            Assert.That(_shop.GetOfferings()[0].Quantity, Is.EqualTo(5));
-            _wallet.Add(int.MaxValue);
-            Assert.That(_shop.Sell(0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.WalletFull));
-            Assert.That(_inventory.GetSlot(0).Quantity, Is.EqualTo(1));
-        }
-
     }
 }

@@ -15,6 +15,8 @@ MonoBehaviour:
   entries:
   - definition: {fileID: 2757037704936936944, guid: f8a9105e804ffdc459df3f8bb0c6006a, type: 3}
     enabled: 1
+  - definition: {fileID: 2757037704936936944, guid: cef9ea48017fb3f4fadfee9abac7bd12, type: 3}
+    enabled: 1
   - definition: {fileID: 2757037704936936944, guid: 0a878a54d33a65f4bb00f9c4ece4567d, type: 3}
     enabled: 1
   - definition: {fileID: 2757037704936936944, guid: edd00df96a5b4694f80aedf0466e15e6, type: 3}

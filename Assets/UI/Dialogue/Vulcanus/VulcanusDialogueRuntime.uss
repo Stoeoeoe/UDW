@@ -54,19 +54,23 @@
 }
 
 .dialogue-panel.is-neutral {
-    height: 144px;
+    height: auto;
     min-height: 144px;
+    padding: 24px;
     background-image: url("../../UIBox01.png");
     -unity-slice-scale: 0.32;
 }
 
+/* The neutral panel grows with its lines or choices; a long list scrolls beyond the maximum height. */
 .dialogue-panel.is-neutral .dialogue-content {
-    left: 24px;
-    top: 24px;
-    right: 24px;
-    bottom: 24px;
+    position: relative;
+    left: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
     width: auto;
     height: auto;
+    max-height: 360px;
 }
 
 .dialogue-body {

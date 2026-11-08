@@ -1,17 +1,23 @@
 # Shops
 
-Create a **Game > Shop Definition** asset. Its ordered offerings specify an item, permanent offering ID, Daily/Never restocking, daily appearance chance, inclusive min/max stock, and a buy-price multiplier. Never reuse an ID for a different offering. Price multipliers are factors (0.8 = 20% discount, 1.2 = 20% markup), not additive percentages.
+A shop is a static definition authored in Vulcanus (`*.shop.json`, in the project's `shops` folder). It has a namespaced ID (for example `base:market_seeds`), a display name, whether it buys goods, and a fixed list of offerings. Each offering is an item ID and a price. Everything is always in stock at its fixed price.
 
-Add `Shop` to a vendor or independent shop object, assign the definition, and author a unique permanent shop ID (for example `base:market_grocer`). Different vendors may share a definition, but must not share an ID unless they deliberately share inventory. This ID is separate from an interactable ID.
+The importer turns each file into a `Shop` asset. `ShopCatalog` registers them by ID, and its validation fails the refresh when an offering names an item that does not exist. Mods add shops by adding `.shop.json` files.
 
-`GetOfferings()` returns visible rows in authored order, including sold-out rows. `Buy(offeringId, wallet, inventory, quantity)` and `Sell(slotIndex, wallet, inventory, quantity)` return `ShopTradeResult`. Prices use the item's `BuyBasePrice`/`SellBasePrice`, rounded per unit with midpoint away from zero. Sales use the definition's sell multiplier, require a positive sell price, and do not create buyback entries. Vendors have no finite money pool in this version.
+`ShopService` resolves shops and runs trades:
 
-Stock and availability persist as `ShopState` in `GameState.World`, keyed by shop ID and offering ID. Appearance is rolled once per day. Daily restocking replaces remaining stock; Never rolls its initial quantity only once, even when initially hidden. Its appearance can still change each day. Opening/reloading on the same day never rerolls. An enabled shop handles `NewDayEvent`; unloaded shops process the current day on access. Intermediate skipped days are not replayed because daily stock is replacement, not accumulation. Removed definition entries keep their saved data but are not displayed.
+- `GetOfferings(shop)` returns the offerings with their items resolved, in authored order.
+- `Buy(shop, itemId, wallet, inventory, quantity)` and `Sell(shop, slotIndex, wallet, inventory, quantity)` return a `ShopTradeResult`. A failed trade leaves money and items unchanged.
+- Selling needs `buysGoods` and an item with a positive sell price, and pays that sell price. Items are bought from the shop at the offering's price, not the item's `Buy Base Price`.
+- Successful trades raise `ShopPurchaseEvent` or `ShopSaleEvent` with before and after balances, for UI and other listeners.
 
-Transactions prepare inventory changes and check all constraints first, commit stock/money/items without notifications, then raise wallet, inventory, and `ShopChangedEvent` notifications. Failed trades leave money/items/stock unchanged (daily catch-up can still happen before a buy).
+Static shops have no saved state, restocking or limited stock. Rules, seasons and restocking are tracked separately.
 
-Successful trades also raise `ShopPurchaseEvent` (customer buys from vendor) or `ShopSaleEvent` (customer sells to vendor). They include the shop, customer when the wallet has an owner, wallet, inventory, item, quantity, final unit/total price, game minute, before/after balances, and offering stock or source-slot quantities. Values are captured before notifying listeners, so later trades cannot change the event's numeric history. Failed trades emit neither event; the UI can use the returned `ShopTradeResult` for denial sounds.
+## Opening a shop
 
-`ShopRestockedEvent` includes the processed day and a read-only list of offering snapshots (item/ID, before/after quantities and availability, initial-stock and restocked flags). Never entries can have `Restocked == false` while their daily appearance is rerolled. Initial stocking emits this event too; UI can inspect `IsInitialStock` to avoid playing a restock sound on the first opening. Same-day reopening emits nothing. Keep sounds/presentation in UI listeners; `ShopChangedEvent` remains the generic listing-refresh notification.
+A shop is opened by its shop ID, so no scene object has to hold it:
 
-Lua conditions, opening UI/dialogue, buyback, inventory persistence, and NPC scheduling are not implemented. Shop stock and player money persist; player inventory still does not, so a complete trading save/load loop needs inventory persistence next.
+- From a dialogue or other Lua: `Shop.Open('base:market_seeds')`.
+- From the world: `ShowShopInteractable` on an object, with its **Shop Id** set. The market stall entities expose it as a `shopId` property, so each placed stall can open a different shop.
+
+The screen is `ShopUIDocumentPresenter` in `SystemRoot`; see [the shop UI setup](../../UI/Shop/SETUP.md).

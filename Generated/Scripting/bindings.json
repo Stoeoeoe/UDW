@@ -1159,6 +1159,24 @@
       ]
     },
     {
+      "path": "Shop",
+      "methods": [
+        {
+          "name": "Open",
+          "parameters": [
+            {
+              "name": "shopId",
+              "type": "string"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": []
+        }
+      ]
+    },
+    {
       "path": "Time",
       "methods": [
         {

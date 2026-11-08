@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 9030809103797510979}
   - component: {fileID: 2689978948578240564}
-  - component: {fileID: 7021414135589030242}
   - component: {fileID: 912024035807029742}
   - component: {fileID: 2443823698371346994}
   m_Layer: 23
@@ -51,20 +50,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.SpawnedObject
   prefabId: base:market_stall_bread
   authoredId: 
---- !u!114 &7021414135589030242
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2430770427396700011}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d25b71d94cf122bb96c597186398492, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Core.Shops.Shop
-  shopId: base:market_stall_bread
-  definition: {fileID: 11400000, guid: 69db055a14f07b745a5bf69975989ab1, type: 2}
 --- !u!61 &912024035807029742
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -136,7 +121,7 @@ MonoBehaviour:
   EnterFeedback: {fileID: 0}
   ExitFeedback: {fileID: 0}
   DestroyWhenUsedUp: 0
-  shop: {fileID: 0}
+  shopId: base:market_seeds
 --- !u!1 &6449455290874173495
 GameObject:
   m_ObjectHideFlags: 0

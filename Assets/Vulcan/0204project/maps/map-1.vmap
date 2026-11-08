@@ -5718,8 +5718,18 @@
         176
       ],
       "properties": {
-        "shopId": "base:market_stall_bread_01"
+        "shopId": "base:market_seeds"
       }
+    },
+    {
+      "id": "fabia-01",
+      "typeId": "base:fabia",
+      "label": "Fabia",
+      "position": [
+        116,
+        176
+      ],
+      "properties": {}
     }
   ],
   "spatialPrimitives": {

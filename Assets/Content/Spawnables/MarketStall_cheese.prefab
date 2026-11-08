@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 347781733458603739}
   - component: {fileID: 5053250667145397084}
-  - component: {fileID: 8679527540969112620}
   - component: {fileID: 4164236207169834306}
   - component: {fileID: 1638020194023805487}
   m_Layer: 23
@@ -51,20 +50,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.SpawnedObject
   prefabId: base:market_stall_cheese
   authoredId: 
---- !u!114 &8679527540969112620
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2866376277092552917}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d25b71d94cf122bb96c597186398492, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Core.Shops.Shop
-  shopId: base:market_stall_cheese
-  definition: {fileID: 11400000, guid: 69db055a14f07b745a5bf69975989ab1, type: 2}
 --- !u!61 &4164236207169834306
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -136,7 +121,7 @@ MonoBehaviour:
   EnterFeedback: {fileID: 0}
   ExitFeedback: {fileID: 0}
   DestroyWhenUsedUp: 0
-  shop: {fileID: 0}
+  shopId: base:market_seeds
 --- !u!1 &3056107875890269688
 GameObject:
   m_ObjectHideFlags: 0

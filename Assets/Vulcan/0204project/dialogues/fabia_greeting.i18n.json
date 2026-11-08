@@ -1,0 +1,58 @@
+{
+  "dialogueId": "base:fabia_greeting",
+  "dialogueName": "Fabia — Greeting",
+  "generatedAt": "2026-11-07T20:00:00.000Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:fabia_greeting.01",
+      "text": "Salve! Fresh seeds and fair prices. What can I do for you?",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.02",
+      "text": "Show me your wares.",
+      "nodeId": "choice-1",
+      "sourceType": "choiceOption",
+      "optionId": "opt-wares"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.03",
+      "text": "Just wanted to chat.",
+      "nodeId": "choice-1",
+      "sourceType": "choiceOption",
+      "optionId": "opt-chat"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.04",
+      "text": "Goodbye.",
+      "nodeId": "choice-1",
+      "sourceType": "choiceOption",
+      "optionId": "opt-bye"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.05",
+      "text": "The beans do well in this soil. Water them every day and they will repay you.",
+      "nodeId": "line-chat-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.06",
+      "text": "Good to know.",
+      "nodeId": "line-chat-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.07",
+      "text": "Anything else?",
+      "nodeId": "line-chat-3",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_greeting.08",
+      "text": "Come back soon!",
+      "nodeId": "line-bye",
+      "sourceType": "line"
+    }
+  ]
+}
