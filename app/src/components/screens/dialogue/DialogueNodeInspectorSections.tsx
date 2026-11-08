@@ -15,6 +15,7 @@ import {
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { FieldLabel } from '../../common/Typography.tsx';
+import { EmotionSelect } from '../../common/EmotionSelect';
 import { NodeIdField } from './DialogueNodeWidgets';
 import { ActionLuaValidation } from './dialogueUtils';
 import {
@@ -65,13 +66,11 @@ export const DialogueLineInspectorSection: React.FC<LineSectionProps> = ({
         value={node.speaker ?? ''}
         onChange={(event) => {
           const characterId = event.target.value || undefined;
-          const character = characters.find((item) => item.id === characterId);
           updateSelectedNode((current) => {
             if (current.type !== 'line') return current;
             return {
               ...current,
               speaker: characterId,
-              emotion: character?.emotions?.[0] ?? undefined,
             };
           });
         }}
@@ -87,28 +86,15 @@ export const DialogueLineInspectorSection: React.FC<LineSectionProps> = ({
 
     <FormControl>
       <FieldLabel>Emotion</FieldLabel>
-      <Select
-        size="xs"
-        value={node.emotion ?? ''}
-        onChange={(event) =>
+      <EmotionSelect
+        value={node.emotion}
+        onChange={(emotion) =>
           updateSelectedNode((current) => {
             if (current.type !== 'line') return current;
-            return {
-              ...current,
-              emotion: event.target.value || undefined,
-            };
+            return { ...current, emotion };
           })
         }
-      >
-        <option value="">None</option>
-        {(characters.find((character) => character.id === node.speaker)?.emotions ?? []).map(
-          (emotion) => (
-            <option key={emotion} value={emotion}>
-              {emotion}
-            </option>
-          ),
-        )}
-      </Select>
+      />
     </FormControl>
 
     <FormControl>

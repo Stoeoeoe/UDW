@@ -40,9 +40,17 @@ import {
   TopTabbedEditorLayout,
 } from '../common';
 import { EditorModal } from '../../common/EditorModal';
-import { FiLayers, FiMap, FiTag } from 'react-icons/fi';
+import { FiLayers, FiMap, FiSmile, FiTag } from 'react-icons/fi';
+import { IconPicker } from '../common/FormFields';
+import { GameIcon } from '../../common/GameIcon';
 
-type ConfigurationTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses';
+type ConfigurationTab =
+  | 'terrain'
+  | 'metadata'
+  | 'layers'
+  | 'locations'
+  | 'itemclasses'
+  | 'emotions';
 
 interface ConfigurationEditorProps {
   initialTab?: ConfigurationTab;
@@ -770,6 +778,10 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
   const itemClasses = useEditorStore((state) => state.itemClasses);
   const deleteItemClass = useEditorStore((state) => state.deleteItemClass);
   const itemClassDialog = useDisclosure();
+  const emotions = useEditorStore((state) => state.emotions);
+  const deleteEmotion = useEditorStore((state) => state.deleteEmotion);
+  const emotionDialog = useDisclosure();
+  const [editingEmotionId, setEditingEmotionId] = useState<string | null>(null);
   const [editingItemClassId, setEditingItemClassId] = useState<string | null>(null);
 
   const sortedLayers = useMemo(
@@ -867,6 +879,21 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
       </Text>
     ) : undefined,
   }));
+
+  const emotionItems: DialogListItem[] = emotions.map((emotion) => ({
+    id: emotion.id,
+    title: emotion.name,
+    subtitle: emotion.id,
+    badge: <GameIcon iconName={emotion.icon} size={16} fallback={<FiSmile />} />,
+  }));
+
+  const deleteEmotionById = async (id: string) => {
+    const emotion = emotions.find((entry) => entry.id === id);
+    if (!emotion) return;
+    if (!confirm(`Delete emotion "${emotion.name}"?`)) return;
+    await deleteEmotion(id);
+    toast({ title: 'Emotion deleted', status: 'info', duration: 1200 });
+  };
 
   const deleteItemClassById = async (id: string) => {
     const cls = itemClasses.find((c) => c.id === id);
@@ -1004,6 +1031,28 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         emptyTitle="No item classes"
         emptyDescription="Create item class templates to add extra typed properties to items (e.g. Seed, Weapon)."
       />
+    ) : activeTab === 'emotions' ? (
+      <DialogListWorkspace
+        title="Emotions"
+        description="Emotions that portraits and dialogue lines can pick from."
+        items={emotionItems}
+        enableSearch={true}
+        addLabel="Add Emotion"
+        onAdd={() => {
+          setEditingEmotionId(null);
+          emotionDialog.onOpen();
+        }}
+        onOpenItem={(id) => {
+          setEditingEmotionId(id);
+          emotionDialog.onOpen();
+        }}
+        onDeleteItem={(id) => {
+          void deleteEmotionById(id);
+        }}
+        emptyIcon={<FiSmile />}
+        emptyTitle="No emotions"
+        emptyDescription="Create emotions such as Happy or Angry to give characters a portrait for each."
+      />
     ) : (
       <DialogListWorkspace
         title="Layer Definitions"
@@ -1045,6 +1094,7 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
             badge: locationMetadataDefinitions.length,
           },
           { id: 'itemclasses', label: 'Item Classes', badge: itemClasses.length },
+          { id: 'emotions', label: 'Emotions', badge: emotions.length },
         ]}
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
@@ -1080,6 +1130,15 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         />
       )}
 
+      {emotionDialog.isOpen && (
+        <EmotionDialogModal
+          key={editingEmotionId ?? 'new-emotion'}
+          isOpen={emotionDialog.isOpen}
+          onClose={emotionDialog.onClose}
+          editingId={editingEmotionId}
+        />
+      )}
+
       {itemClassDialog.isOpen && (
         <ItemClassDialogModal
           key={editingItemClassId ?? 'new-item-class'}
@@ -1089,6 +1148,103 @@ export const ConfigurationEditor: React.FC<ConfigurationEditorProps> = ({
         />
       )}
     </>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EmotionDialogModal
+// ─────────────────────────────────────────────────────────────────────────────
+
+const EmotionDialogModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  editingId: string | null;
+}> = ({ isOpen, onClose, editingId }) => {
+  const emotions = useEditorStore((s) => s.emotions);
+  const addEmotion = useEditorStore((s) => s.addEmotion);
+  const updateEmotion = useEditorStore((s) => s.updateEmotion);
+  const toast = useToast();
+
+  const existing = emotions.find((entry) => entry.id === editingId);
+
+  const form = useForm({
+    defaultValues: {
+      id: '',
+      name: existing?.name ?? '',
+      icon: existing?.icon ?? 'GiSurprised',
+    },
+    onSubmit: async ({ value }) => {
+      const name = value.name.trim();
+      const id = value.id.trim();
+      if (!name || (!editingId && !id)) return;
+      try {
+        if (editingId) await updateEmotion(editingId, { name, icon: value.icon });
+        else await addEmotion({ id, name, icon: value.icon });
+      } catch (error) {
+        toast({ title: (error as Error).message, status: 'warning', duration: 2000 });
+        return;
+      }
+      onClose();
+    },
+  });
+
+  const title = editingId ? 'Edit Emotion' : 'New Emotion';
+  return (
+    <EditorModal isOpen={isOpen} onClose={onClose} title={title} size="md">
+      <EntityFormDialog
+        title={title}
+        onCancel={onClose}
+        onSubmit={() => form.handleSubmit()}
+        submitLabel={editingId ? 'Save Changes' : 'Create'}
+      >
+        <VStack spacing={4} align="stretch">
+          {!editingId && (
+            <form.Field name="id">
+              {(field) => (
+                <FormControl>
+                  <FormLabel>ID</FormLabel>
+                  <Input
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value.replace(/[^a-z0-9_-]/g, ''))}
+                    onBlur={field.handleBlur}
+                    placeholder="happy, angry, surprised…"
+                    fontFamily="mono"
+                    size="sm"
+                  />
+                </FormControl>
+              )}
+            </form.Field>
+          )}
+
+          <form.Field name="name">
+            {(field) => (
+              <FormControl>
+                <FormLabel>Name</FormLabel>
+                <Input
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  placeholder="Happy, Angry…"
+                  size="sm"
+                />
+              </FormControl>
+            )}
+          </form.Field>
+
+          <form.Field name="icon">
+            {(field) => (
+              <FormControl>
+                <FormLabel>Icon</FormLabel>
+                <IconPicker
+                  value={field.state.value}
+                  onChange={(icon) => field.handleChange(icon ?? '')}
+                />
+              </FormControl>
+            )}
+          </form.Field>
+        </VStack>
+      </EntityFormDialog>
+    </EditorModal>
   );
 };
 

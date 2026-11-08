@@ -103,7 +103,7 @@ export type WorkspaceDocument =
       saveUnitId: string;
     };
 
-export type WorkspaceConfigTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses';
+export type WorkspaceConfigTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses' | 'emotions';
 
 export interface WorkspaceTab {
   id: string;

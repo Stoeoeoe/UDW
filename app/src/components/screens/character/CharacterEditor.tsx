@@ -3,6 +3,7 @@ import { useForm } from '@tanstack/react-form';
 import {
   Badge,
   Box,
+  Button,
   Divider,
   FormControl,
   GridItem,
@@ -24,6 +25,9 @@ import { ReadOnlyIdField } from '../../common/Fields';
 import { FormLabelUppercase } from '../../common/FormLabel';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
+import { EmotionSelect } from '../../common/EmotionSelect';
+import { PortraitField } from './PortraitField';
+import type { Character } from '../../../types/schema';
 
 export const CharacterEditor: React.FC = () => {
   const characters = useEditorStore((state) => state.characters);
@@ -79,7 +83,7 @@ export const CharacterEditor: React.FC = () => {
         existingIds={characters.map((a) => a.id)}
         onClose={onClose}
         onSubmit={async ({ id, name }) => {
-          await addCharacter({ id, name, icon: newCharacterIcon, emotions: [] });
+          await addCharacter({ id, name, icon: newCharacterIcon });
           setNewCharacterIcon('GiPerson');
           onClose();
         }}
@@ -95,8 +99,8 @@ export const CharacterEditor: React.FC = () => {
 };
 
 const CharacterDetail: React.FC<{
-  character: { id: string; name: string; icon: string };
-  onUpdate: (id: string, updates: Partial<{ name: string; icon: string }>) => void;
+  character: Character;
+  onUpdate: (id: string, updates: Partial<Character>) => void;
 }> = ({ character, onUpdate }) => {
   let form: ReturnType<typeof useForm<any, any, any, any, any, any, any, any, any, any, any, any>>;
   form = useForm({
@@ -191,6 +195,11 @@ const CharacterDetail: React.FC<{
           </GridItem>
         </SimpleGrid>
 
+        <PortraitsSection
+          character={character}
+          onUpdate={(updates) => onUpdate(character.id, updates)}
+        />
+
         <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
           {({ isDirty, values }) => (
             <FormAutosave isDirty={isDirty} values={values} onSave={() => form.handleSubmit()} />
@@ -198,6 +207,64 @@ const CharacterDetail: React.FC<{
         </form.Subscribe>
       </VStack>
     </form>
+  );
+};
+
+const PortraitsSection: React.FC<{
+  character: Character;
+  onUpdate: (updates: Partial<Character>) => void;
+}> = ({ character, onUpdate }) => {
+  const emotions = useEditorStore((state) => state.emotions);
+  const portraits = character.portraits ?? {};
+  const [newEmotionId, setNewEmotionId] = useState<string | undefined>();
+
+  const setPortrait = (emotionId: string, path: string) =>
+    onUpdate({ portraits: { ...portraits, [emotionId]: path } });
+  const removePortrait = (emotionId: string) => {
+    const { [emotionId]: _removed, ...rest } = portraits;
+    onUpdate({ portraits: rest });
+  };
+
+  return (
+    <VStack align="stretch" spacing={4}>
+      <FieldLabel>Portraits</FieldLabel>
+      <PortraitField
+        title="Default (used when an emotion has no portrait)"
+        path={character.defaultPortrait}
+        onChange={(path) => onUpdate({ defaultPortrait: path })}
+      />
+      {Object.entries(portraits).map(([emotionId, path]) => (
+        <PortraitField
+          key={emotionId}
+          title={emotions.find((emotion) => emotion.id === emotionId)?.name ?? emotionId}
+          path={path}
+          onChange={(next) => next && setPortrait(emotionId, next)}
+          onRemove={() => removePortrait(emotionId)}
+        />
+      ))}
+      <HStack>
+        <Box flex={1} maxW="240px">
+          <EmotionSelect
+            value={newEmotionId}
+            onChange={setNewEmotionId}
+            excludeIds={Object.keys(portraits)}
+            placeholder="Add a portrait for..."
+          />
+        </Box>
+        <Button
+          size="xs"
+          isDisabled={!newEmotionId}
+          onClick={() => {
+            if (!newEmotionId) return;
+            // An emotion row starts with the default image, so it is never empty.
+            setPortrait(newEmotionId, character.defaultPortrait ?? '');
+            setNewEmotionId(undefined);
+          }}
+        >
+          Add
+        </Button>
+      </HStack>
+    </VStack>
   );
 };
 

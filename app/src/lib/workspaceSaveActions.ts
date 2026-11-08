@@ -193,6 +193,7 @@ function applyDiscardedProject(nextProject: Project): void {
     tileMetadataDefinitions: nextProject.tileMetadataDefinitions ?? [],
     locationMetadataDefinitions: nextProject.locationMetadataDefinitions ?? [],
     itemClasses: nextProject.itemClasses ?? [],
+    emotions: nextProject.emotions ?? [],
     maps: nextMaps,
     currentMap: nextCurrentMap,
   });

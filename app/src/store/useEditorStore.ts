@@ -32,6 +32,7 @@ import { createCharacterSlice, CharacterSlice } from './slices/characterSlice';
 import { createItemSlice, ItemSlice } from './slices/itemSlice';
 import { createShopSlice, ShopSlice } from './slices/shopSlice';
 import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
+import { createEmotionSlice, EmotionSlice } from './slices/emotionSlice';
 import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
 import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice';
 import { createLayerDefinitionSlice, LayerDefinitionSlice } from './slices/layerDefinitionSlice';
@@ -61,6 +62,7 @@ export interface EditorStore
     ItemSlice,
     ShopSlice,
     ItemClassSlice,
+    EmotionSlice,
     TerrainSlice,
     EntityTypeSlice,
     LayerDefinitionSlice,
@@ -294,6 +296,7 @@ export const useEditorStore = create<EditorStore>()(
           ...createItemSlice(set, get, {} as never),
           ...createShopSlice(set, get, {} as never),
           ...createItemClassSlice(set, get, {} as never),
+          ...createEmotionSlice(set, get, {} as never),
           ...createTerrainSlice(set, get, {} as never),
           ...createEntityTypeSlice(set, get, {} as never),
           ...createLayerDefinitionSlice(set, get, {} as never),

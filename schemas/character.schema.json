@@ -25,12 +25,15 @@
       "pattern": "\\S",
       "description": "Icon identifier used to represent this character in the editor."
     },
-    "emotions": {
-      "type": "array",
-      "description": "List of emotion IDs available for this character in dialogue line nodes.",
-      "items": {
-        "type": "string"
-      }
+    "defaultPortrait": {
+      "type": "string",
+      "description": "Relative path of the portrait shown when the character has no portrait for the line's emotion."
+    },
+    "portraits": {
+      "type": "object",
+      "description": "Relative path of the portrait image for each emotion, keyed by emotion ID.",
+      "propertyNames": { "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" },
+      "additionalProperties": { "type": "string", "pattern": "\\S" }
     },
     "folderPath": {
       "type": "string",

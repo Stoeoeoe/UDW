@@ -13,6 +13,7 @@ const CONFIG_TABS = new Set<WorkspaceConfigTab>([
   'layers',
   'locations',
   'itemclasses',
+  'emotions',
 ]);
 
 export function createLocationDocument(

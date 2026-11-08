@@ -279,6 +279,10 @@ export function normalizeProject(project: Project): Project {
     terrainTypes: collection(project.terrainTypes, localDefinition),
     layerDefinitions: collection(project.layerDefinitions, localDefinition),
     itemClasses: collection(project.itemClasses, localDefinition),
+    emotions: collection(project.emotions, (emotion) => ({
+      ...emotion,
+      id: qualifyResourceId(emotion.id, idPrefix),
+    })),
     entityTypes: collection(project.entityTypes, (entity) => ({
       ...entity,
       id: qualifyResourceId(entity.id, idPrefix),

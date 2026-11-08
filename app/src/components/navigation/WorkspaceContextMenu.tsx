@@ -163,7 +163,7 @@ export const CreateNewResourceDialog: React.FC<{
           });
           break;
         case 'character':
-          await store.addCharacter({ id, name, icon: 'GiPerson', emotions: [], folderPath });
+          await store.addCharacter({ id, name, icon: 'GiPerson', folderPath });
           onOpenDocument(createEditorResourceDocument({ type: 'character', id, name }), {
             pin: true,
           });

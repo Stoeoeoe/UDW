@@ -50,6 +50,8 @@ export interface Project {
   terrainTypes?: { id: string; displayName: string; color: string }[];
   // Project-level item class definitions (templates with extra property schemas)
   itemClasses?: ItemClass[];
+  // Project-level emotions, picked from dropdowns such as character portraits
+  emotions?: Emotion[];
   // Default layer definitions for maps
   layerDefinitions?: LayerDefinition[];
   // Project-level entity type definitions
@@ -469,7 +471,15 @@ export interface Shop extends NamedEditorResource {
 // Character Definitions
 export interface Character extends NamedEditorResource {
   icon: string; // Emoji icon for display
-  emotions?: string[]; // Named emotions available for line nodes
+  defaultPortrait?: string; // Portrait used when there is none for a line's emotion
+  portraits?: Record<string, string>; // Portrait image path per emotion id
+}
+
+// Emotions: a project-wide list picked from dropdowns, e.g. for character portraits
+export interface Emotion {
+  id: string; // Namespaced id, e.g. "base:angry"
+  name: string; // Display name shown in dropdowns
+  icon: string; // Icon identifier shown next to the name
 }
 
 export interface DialogueType {

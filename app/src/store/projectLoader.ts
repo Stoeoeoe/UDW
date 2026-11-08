@@ -123,6 +123,10 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       });
     }
 
+    set((state) => {
+      state.emotions = castDraft(proj?.emotions ?? []);
+    });
+
     // 1.82 Items
     const items = await fileSystem.loadAllItems();
     set((state) => {
