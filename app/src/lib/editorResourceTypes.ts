@@ -77,19 +77,13 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     createFlow: 'simple',
     metadataFlow: 'character',
     metadataTitle: 'Edit Character',
-    getMetadataFields: () => [
-      { key: 'name', label: 'Name', type: 'text' },
-      { key: 'icon', label: 'Icon', type: 'icon' },
-    ],
+    getMetadataFields: () => [{ key: 'name', label: 'Name', type: 'text' }],
     getMetadataInitialValues: (resourceId) => {
       const character = useEditorStore
         .getState()
         .characters.find((entry) => entry.id === resourceId);
       if (!character) return null;
-      return {
-        name: character.name,
-        icon: character.icon || 'GiPerson',
-      };
+      return { name: character.name };
     },
     submitMetadata: async (resourceId, values) => {
       const character = useEditorStore
@@ -98,7 +92,6 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
       if (!character) return;
       await useEditorStore.getState().updateCharacter(resourceId, {
         name: String(values.name ?? '').trim() || character.name,
-        icon: String(values.icon ?? ''),
       });
     },
     saveUnitPrefix: 'character:',

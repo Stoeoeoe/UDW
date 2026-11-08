@@ -43,7 +43,7 @@ describe('workspaceCommandPalette', () => {
         properties: [],
       },
     ],
-    characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+    characters: [{ id: 'marcus', name: 'Marcus' }],
     shops: [],
     items: [
       {
@@ -108,7 +108,7 @@ describe('workspaceCommandPalette', () => {
         },
       ],
       characters: [
-        { id: 'marcus', name: 'Marcus', icon: 'GiPerson', folderPath: 'NPCs/Villagers' },
+        { id: 'marcus', name: 'Marcus', folderPath: 'NPCs/Villagers' },
       ],
       shops: [],
       items: [],

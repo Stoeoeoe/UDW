@@ -470,9 +470,10 @@ export interface Shop extends NamedEditorResource {
 
 // Character Definitions
 export interface Character extends NamedEditorResource {
-  icon: string; // Emoji icon for display
   defaultPortrait?: string; // Portrait used when there is none for a line's emotion
   portraits?: Record<string, string>; // Portrait image path per emotion id
+  typewriterSound?: string; // Typewriter sound id played while this character speaks
+  emotionTypewriterSounds?: Record<string, string>; // Typewriter sound id per emotion id
 }
 
 // Emotions: a project-wide list picked from dropdowns, e.g. for character portraits

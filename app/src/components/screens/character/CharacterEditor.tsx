@@ -14,19 +14,17 @@ import {
   HStack,
   Text,
 } from '@chakra-ui/react';
-import { IconPicker } from '../common/FormFields';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { DetailPanel } from '../../common/DetailPanel';
-import { GameIcon } from '../../common/GameIcon';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { ReadOnlyIdField } from '../../common/Fields';
-import { FormLabelUppercase } from '../../common/FormLabel';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
 import { EmotionSelect } from '../../common/EmotionSelect';
-import { PortraitField } from './PortraitField';
+import { PortraitField, portraitFolder, usePickPortrait, usePortraitImage } from './PortraitField';
+import { ManifestResourceSelect } from '../../common/ManifestResourceSelect';
 import type { Character } from '../../../types/schema';
 
 export const CharacterEditor: React.FC = () => {
@@ -35,7 +33,6 @@ export const CharacterEditor: React.FC = () => {
   const updateCharacter = useEditorStore((state) => state.updateCharacter);
   const addCharacter = useEditorStore((state) => state.addCharacter);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [newCharacterIcon, setNewCharacterIcon] = useState('GiPerson');
 
   const selectedCharacter = characters.find((a) => a.id === selectedCharacterId);
 
@@ -83,16 +80,9 @@ export const CharacterEditor: React.FC = () => {
         existingIds={characters.map((a) => a.id)}
         onClose={onClose}
         onSubmit={async ({ id, name }) => {
-          await addCharacter({ id, name, icon: newCharacterIcon });
-          setNewCharacterIcon('GiPerson');
+          await addCharacter({ id, name });
           onClose();
         }}
-        additionalFields={
-          <FormControl>
-            <FormLabelUppercase mb={1}>Icon</FormLabelUppercase>
-            <IconPicker value={newCharacterIcon} onChange={(v) => setNewCharacterIcon(v ?? '')} />
-          </FormControl>
-        }
       />
     </>
   );
@@ -102,11 +92,11 @@ const CharacterDetail: React.FC<{
   character: Character;
   onUpdate: (id: string, updates: Partial<Character>) => void;
 }> = ({ character, onUpdate }) => {
+  const portrait = usePortraitImage(character.defaultPortrait);
   let form: ReturnType<typeof useForm<any, any, any, any, any, any, any, any, any, any, any, any>>;
   form = useForm({
     defaultValues: {
       name: character.name,
-      icon: character.icon,
     },
     onSubmit: async ({ value }) => {
       onUpdate(character.id, value);
@@ -141,7 +131,15 @@ const CharacterDetail: React.FC<{
               justifyContent="center"
               flexShrink={0}
             >
-              <GameIcon iconName={character.icon} size={26} fallback={<GiPerson />} />
+              {portrait ? (
+                <img
+                  src={portrait.src}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }}
+                />
+              ) : (
+                <GiPerson />
+              )}
             </Box>
             <VStack align="start" spacing={1}>
               <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
@@ -178,24 +176,14 @@ const CharacterDetail: React.FC<{
             </VStack>
           </GridItem>
 
-          <GridItem>
-            <VStack align="stretch" spacing={4}>
-              <form.Field name="icon">
-                {(field) => (
-                  <FormControl>
-                    <FieldLabel>Icon</FieldLabel>
-                    <IconPicker
-                      value={field.state.value}
-                      onChange={(v) => field.handleChange(v ?? '')}
-                    />
-                  </FormControl>
-                )}
-              </form.Field>
-            </VStack>
-          </GridItem>
         </SimpleGrid>
 
         <PortraitsSection
+          character={character}
+          onUpdate={(updates) => onUpdate(character.id, updates)}
+        />
+
+        <VoiceSection
           character={character}
           onUpdate={(updates) => onUpdate(character.id, updates)}
         />
@@ -217,6 +205,8 @@ const PortraitsSection: React.FC<{
   const emotions = useEditorStore((state) => state.emotions);
   const portraits = character.portraits ?? {};
   const [newEmotionId, setNewEmotionId] = useState<string | undefined>();
+  const folder = portraitFolder(character.id);
+  const pickPortrait = usePickPortrait(folder);
 
   const setPortrait = (emotionId: string, path: string) =>
     onUpdate({ portraits: { ...portraits, [emotionId]: path } });
@@ -230,6 +220,7 @@ const PortraitsSection: React.FC<{
       <FieldLabel>Portraits</FieldLabel>
       <PortraitField
         title="Default (used when an emotion has no portrait)"
+        folder={folder}
         path={character.defaultPortrait}
         onChange={(path) => onUpdate({ defaultPortrait: path })}
       />
@@ -237,6 +228,7 @@ const PortraitsSection: React.FC<{
         <PortraitField
           key={emotionId}
           title={emotions.find((emotion) => emotion.id === emotionId)?.name ?? emotionId}
+          folder={folder}
           path={path}
           onChange={(next) => next && setPortrait(emotionId, next)}
           onRemove={() => removePortrait(emotionId)}
@@ -254,11 +246,89 @@ const PortraitsSection: React.FC<{
         <Button
           size="xs"
           isDisabled={!newEmotionId}
-          onClick={() => {
-            if (!newEmotionId) return;
-            // An emotion row starts with the default image, so it is never empty.
-            setPortrait(newEmotionId, character.defaultPortrait ?? '');
+          onClick={async () => {
+            const picked = await pickPortrait();
+            if (!newEmotionId || !picked) return;
+            setPortrait(newEmotionId, picked);
             setNewEmotionId(undefined);
+          }}
+        >
+          Pick Image...
+        </Button>
+      </HStack>
+    </VStack>
+  );
+};
+
+const VoiceSection: React.FC<{
+  character: Character;
+  onUpdate: (updates: Partial<Character>) => void;
+}> = ({ character, onUpdate }) => {
+  const emotions = useEditorStore((state) => state.emotions);
+  const overrides = character.emotionTypewriterSounds ?? {};
+  const [newEmotionId, setNewEmotionId] = useState<string | undefined>();
+  const [newSoundId, setNewSoundId] = useState<string | undefined>();
+
+  const setOverride = (emotionId: string, soundId: string) =>
+    onUpdate({ emotionTypewriterSounds: { ...overrides, [emotionId]: soundId } });
+  const removeOverride = (emotionId: string) => {
+    const { [emotionId]: _removed, ...rest } = overrides;
+    onUpdate({ emotionTypewriterSounds: rest });
+  };
+
+  return (
+    <VStack align="stretch" spacing={3}>
+      <FieldLabel>Typewriter sound</FieldLabel>
+      <Box maxW="240px">
+        <ManifestResourceSelect
+          resourceType="typewriterSound"
+          value={character.typewriterSound}
+          onChange={(soundId) => onUpdate({ typewriterSound: soundId })}
+          placeholder="Dialogue default"
+        />
+      </Box>
+      {Object.entries(overrides).map(([emotionId, soundId]) => (
+        <HStack key={emotionId}>
+          <Text fontSize="sm" w="120px" noOfLines={1}>
+            {emotions.find((emotion) => emotion.id === emotionId)?.name ?? emotionId}
+          </Text>
+          <Box w="200px">
+            <ManifestResourceSelect
+              resourceType="typewriterSound"
+              value={soundId}
+              onChange={(next) => (next ? setOverride(emotionId, next) : removeOverride(emotionId))}
+            />
+          </Box>
+          <Button size="xs" variant="ghost" color="red.400" onClick={() => removeOverride(emotionId)}>
+            Remove
+          </Button>
+        </HStack>
+      ))}
+      <HStack>
+        <Box w="120px">
+          <EmotionSelect
+            value={newEmotionId}
+            onChange={setNewEmotionId}
+            excludeIds={Object.keys(overrides)}
+            placeholder="Emotion..."
+          />
+        </Box>
+        <Box w="200px">
+          <ManifestResourceSelect
+            resourceType="typewriterSound"
+            value={newSoundId}
+            onChange={setNewSoundId}
+            placeholder="Sound..."
+          />
+        </Box>
+        <Button
+          size="xs"
+          isDisabled={!newEmotionId || !newSoundId}
+          onClick={() => {
+            if (!newEmotionId || !newSoundId) return;
+            setOverride(newEmotionId, newSoundId);
+            setNewEmotionId(undefined);
+            setNewSoundId(undefined);
           }}
         >
           Add

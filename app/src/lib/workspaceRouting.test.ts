@@ -81,7 +81,7 @@ describe('workspaceRouting', () => {
 
   it('round-trips first-class resource routes for non-map documents', () => {
     const snapshot = createSnapshot({
-      characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+      characters: [{ id: 'marcus', name: 'Marcus' }],
       entityTypes: [
         {
           id: 'merchant-stall',

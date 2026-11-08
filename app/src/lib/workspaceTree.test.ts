@@ -115,7 +115,9 @@ describe('buildWorkspaceTree', () => {
   it('keeps scripting as a single overview screen and builds resource sections for the rest', () => {
     const tree = buildWorkspaceTree(
       createTreeInput({
-        characters: [{ id: 'marcus', name: 'Marcus', icon: 'GiPerson' }],
+        characters: [
+          { id: 'marcus', name: 'Marcus', defaultPortrait: 'assets/portraits/marcus/Marcus.png' },
+        ],
         entityTypes: [
           {
             id: 'merchant-stall',
@@ -175,8 +177,8 @@ describe('buildWorkspaceTree', () => {
     expect(
       tree.find((node) => node.id === 'group:characters')?.children?.[0]?.resourceIcon,
     ).toEqual({
-      type: 'game-icon',
-      value: 'GiPerson',
+      type: 'asset',
+      value: 'assets/portraits/marcus/Marcus.png',
     });
     expect(
       tree.find((node) => node.id === 'group:entities')?.children?.[0]?.resourceIcon,

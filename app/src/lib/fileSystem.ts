@@ -341,24 +341,31 @@ export class FileSystemManager {
   }
 
   /**
-   * Save an asset file (image, etc.)
+   * Save an asset file (image, etc.) in assets/, or in an assets/ subfolder such as "portraits/fabia".
    */
-  async saveAsset(filename: string, blob: Blob): Promise<string> {
+  async saveAsset(filename: string, blob: Blob, folder?: string): Promise<string> {
+    if (folder !== undefined && !/^[a-z0-9_-]+(\/[a-z0-9_-]+)*$/.test(folder)) {
+      throw new Error(`Invalid asset folder "${folder}".`);
+    }
     if (this.isElectron()) {
       const buffer = await blob.arrayBuffer();
       return await window.ipcRenderer.invoke('app:fs-write-asset', {
         projectPath: this.projectPath,
         filename,
+        folder,
         buffer: new Uint8Array(buffer),
       });
     } else {
       if (!this.projectRoot) throw new Error('No project open.');
-      const dir = await this.projectRoot.getDirectoryHandle('assets', { create: true });
+      let dir = await this.projectRoot.getDirectoryHandle('assets', { create: true });
+      for (const part of folder ? folder.split('/') : []) {
+        dir = await dir.getDirectoryHandle(part, { create: true });
+      }
       const fileHandle = await dir.getFileHandle(filename, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(blob);
       await writable.close();
-      return `assets/${filename}`;
+      return folder ? `assets/${folder}/${filename}` : `assets/${filename}`;
     }
   }
 

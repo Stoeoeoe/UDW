@@ -244,12 +244,14 @@ export function setupIpcHandlers(win: BrowserWindow | null) {
     await fs.unlink(filePath);
   });
 
-  ipcMain.handle('app:fs-write-asset', async (_event, { projectPath, filename, buffer }) => {
-    const dirPath = path.join(projectPath, 'assets');
+  ipcMain.handle('app:fs-write-asset', async (_event, { projectPath, filename, folder, buffer }) => {
+    // folder is an optional subfolder of assets/, such as "portraits/fabia".
+    const relativeDir = folder ? `assets/${folder}` : 'assets';
+    const dirPath = path.join(projectPath, relativeDir);
     await fs.mkdir(dirPath, { recursive: true });
     // buffer is passed as Uint8Array
     await fs.writeFile(path.join(dirPath, filename), Buffer.from(buffer));
-    return `assets/${filename}`;
+    return `${relativeDir}/${filename}`;
   });
 
   ipcMain.handle('app:fs-read-asset', async (_event, { projectPath, relativePath }) => {

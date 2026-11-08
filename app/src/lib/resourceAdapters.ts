@@ -82,7 +82,9 @@ export function listCharacterDescriptors(characters: Character[]): ResourceDescr
     id: getSchemaResourceId(character),
     name: getSchemaResourceName(character),
     folderPath: normalizeFolderPath(character.folderPath),
-    resourceIcon: character.icon ? { type: 'game-icon', value: character.icon } : undefined,
+    resourceIcon: character.defaultPortrait
+      ? { type: 'asset', value: character.defaultPortrait }
+      : undefined,
     document: characterDocument(character),
     saveUnitId: getEditorResourceSaveUnitId('character', character.id),
   }));
