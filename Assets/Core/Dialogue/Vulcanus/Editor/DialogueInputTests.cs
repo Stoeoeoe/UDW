@@ -91,7 +91,7 @@ namespace Core.Dialogue.Vulcanus.Editor
                 ? new VulcanusDialogueChoiceNode("entry", new[] { new VulcanusDialogueChoiceOption("yes", "Yes", "", "", "end") })
                 : new VulcanusDialogueLineNode("entry", speaker, "", "A line of dialogue.", "", "end");
             dialogue.Configure(null, 1, "test:dialogue", "Test", "", false, "", "entry", Array.Empty<string>(), "", "",
-                new[] { entry, new VulcanusDialogueEndNode("end") }, Array.Empty<VulcanusDialogueAsset.ImportedMessage>(), Array.Empty<string>());
+                new[] { entry, new VulcanusDialogueEndNode("end") }, Array.Empty<VulcanusDialogueAsset.ImportedMessage>());
             _catalog.Synchronize(new[] { dialogue });
             Assert.That(_runner.StartDialogue(dialogue.DialogueId, _character), Is.True);
             Assert.That(_input.PlayerControls.enabled, Is.False);

@@ -1,4 +1,3 @@
-using System.Collections;
 using Character;
 using Core.Dialogue.Vulcanus;
 using Interaction.Dialog;
@@ -13,10 +12,6 @@ namespace Interaction.Dialogue
         [SerializeField] private string dialogueId;
         [SerializeField] private DialogueOptions options = new();
         [Inject] private VulcanusDialogueRunner _dialogue;
-        [SerializeField] private Transform dialogueTarget;
-        [SerializeField] private bool emitLifecycleEvents = true;
-
-        private Coroutine _activeMonitor;
 
         public string DialogueId => dialogueId;
         public DialogueOptions Options => options;
@@ -38,41 +33,7 @@ namespace Interaction.Dialogue
             if (options.PauseGameClockWhileTalking) pause |= ScreenPauseMode.GameClock;
             if (!runner.StartDialogue(dialogueId, instigator, pause)) return false;
 
-            if (emitLifecycleEvents)
-            {
-                var target = dialogueTarget != null ? dialogueTarget : transform;
-                UrDialogueLifecycleEvent.Trigger(dialogueId, target, UrDialogueLifecycleEvent.UrDialogueLifecycleEventType.Started, options);
-            }
-
-            if (_activeMonitor != null)
-                StopCoroutine(_activeMonitor);
-
-            _activeMonitor = StartCoroutine(MonitorDialogue(runner));
             return true;
-        }
-
-        private IEnumerator MonitorDialogue(VulcanusDialogueRunner runner)
-        {
-            yield return new WaitUntil(() => runner == null || !runner.IsDialogueActive);
-
-            if (emitLifecycleEvents)
-            {
-                var target = dialogueTarget != null ? dialogueTarget : transform;
-                UrDialogueLifecycleEvent.Trigger(dialogueId, target, UrDialogueLifecycleEvent.UrDialogueLifecycleEventType.Finished, options);
-            }
-
-            _activeMonitor = null;
-        }
-
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-            if (_activeMonitor != null)
-            {
-                StopCoroutine(_activeMonitor);
-                _activeMonitor = null;
-            }
-
         }
     }
 }

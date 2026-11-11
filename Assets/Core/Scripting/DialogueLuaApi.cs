@@ -23,7 +23,7 @@ namespace Core.Scripting
         }
 
         [Preserve]
-        public void ValidatePlay(string dialogue) => _runner.ValidateCutsceneDialogue(dialogue);
+        public void ValidatePlay(string dialogue) => _runner.ValidateDialogue(dialogue);
 
         [LuaAction("dialogue.play", "Play dialogue", "Dialogue", "Wait for a conversation to finish through its flow.", "cutscene", Validator = nameof(ValidatePlay), Phases = new[] { "sequence" })]
         [LuaPreview(LuaPreviewSpatialState.Unknown)]

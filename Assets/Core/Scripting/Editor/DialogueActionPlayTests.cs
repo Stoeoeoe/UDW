@@ -1218,7 +1218,7 @@ namespace Core.Scripting.Editor
         {
             var dialogue = ScriptableObject.CreateInstance<VulcanusDialogueAsset>();
             dialogue.Configure(null, 1, id, id, "", false, "", "entry", Array.Empty<string>(), "", "", nodes,
-                Array.Empty<VulcanusDialogueAsset.ImportedMessage>(), Array.Empty<string>());
+                Array.Empty<VulcanusDialogueAsset.ImportedMessage>());
             return dialogue;
         }
 

@@ -14,8 +14,8 @@ namespace Core.Tile.Editor.Vulcanus
     {
         public static void ImportDialogue(AssetImportContext ctx)
         {
-            var dto = VulcanusImportHelpers.LoadDto<DialogueDto>(ctx.assetPath);
-            var diagnostics = new List<string>();
+            var dto = VulcanusSchema.Read<DialogueDto>(ctx);
+            var nodes = CreateNodes(dto, ctx.assetPath);
 
             var projectAssetPath = VulcanusImportHelpers.FindProjectAssetPath(ctx.assetPath);
             VulcanusProject project = null;
@@ -35,32 +35,6 @@ namespace Core.Tile.Editor.Vulcanus
 
             var asset = ScriptableObject.CreateInstance<VulcanusDialogueAsset>();
             asset.name = string.IsNullOrWhiteSpace(dto.Id) ? VulcanusImportHelpers.GetBaseName(ctx.assetPath) : dto.Id;
-
-            var nodeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var nodes = new List<VulcanusDialogueNode>();
-            foreach (var nodeDto in dto.Nodes ?? Enumerable.Empty<DialogueNodeDto>())
-            {
-                if (nodeDto == null)
-                    continue;
-
-                if (string.IsNullOrWhiteSpace(nodeDto.Id))
-                {
-                    diagnostics.Add("Encountered a node without an id.");
-                    continue;
-                }
-
-                if (!nodeIds.Add(nodeDto.Id))
-                {
-                    diagnostics.Add($"Duplicate node id '{nodeDto.Id}'.");
-                    continue;
-                }
-
-                var importedNode = CreateNode(nodeDto, diagnostics);
-                if (importedNode != null)
-                    nodes.Add(importedNode);
-            }
-
-            ValidateGraph(dto, nodeIds, diagnostics);
 
             var importedMessages = (i18nDto?.Messages ?? new List<DialogueI18nMessageDto>())
                 .Where(message => message != null && !string.IsNullOrWhiteSpace(message.MsgKey))
@@ -84,12 +58,63 @@ namespace Core.Tile.Editor.Vulcanus
                 dto.Tags?.ToArray() ?? Array.Empty<string>(),
                 dto.CreatedAt,
                 dto.UpdatedAt,
-                nodes.ToArray(),
-                importedMessages,
-                diagnostics.ToArray());
+                nodes,
+                importedMessages);
 
             ctx.AddObjectToAsset("dialogue", asset);
             ctx.SetMainObject(asset);
+        }
+
+        // Validate current sources before play/build: Unity can retain a previous artifact after a failed import.
+        internal static void ValidateSources()
+        {
+            var sources = new Dictionary<string, VulcanusDialogueNode[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in AssetDatabase.GetAllAssetPaths())
+            {
+                if (!path.StartsWith("Assets/", StringComparison.Ordinal) ||
+                    !path.EndsWith(".runtime.dialogue.json", StringComparison.OrdinalIgnoreCase)) continue;
+                var dto = VulcanusSchema.Read<DialogueDto>(path);
+                sources.Add(dto.Id, CreateNodes(dto, path));
+                if (!AssetDatabase.LoadAssetAtPath<VulcanusDialogueAsset>(path))
+                    throw new InvalidOperationException($"{path}: requires a successful dialogue import before play/build.");
+            }
+            var catalog = Resources.Load<DialogueCatalog>(DialogueCatalog.ResourceName);
+            foreach (var source in sources)
+            {
+                if (!catalog.Get(source.Key)) continue; // Disabled content cannot be started.
+                foreach (var jump in source.Value.OfType<VulcanusDialogueJumpNode>())
+                {
+                    if (string.IsNullOrWhiteSpace(jump.TargetDialogueId)) continue;
+                    if (!catalog.Get(jump.TargetDialogueId))
+                        throw new InvalidOperationException($"Dialogue '{source.Key}', jump '{jump.Id}' requires enabled dialogue '{jump.TargetDialogueId}'.");
+                    if (!sources.TryGetValue(jump.TargetDialogueId, out var target) ||
+                        !target.Any(node => StringComparer.OrdinalIgnoreCase.Equals(node.Id, jump.TargetNodeId)))
+                        throw new InvalidOperationException($"Dialogue '{source.Key}', jump '{jump.Id}' references missing node '{jump.TargetNodeId}' in '{jump.TargetDialogueId}'.");
+                }
+            }
+        }
+
+        internal static VulcanusDialogueNode[] CreateNodes(DialogueDto dto, string path)
+        {
+            var diagnostics = new List<string>();
+            var nodeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var nodes = new List<VulcanusDialogueNode>();
+            if (string.IsNullOrWhiteSpace(dto.Id)) diagnostics.Add("Dialogue needs an id.");
+            foreach (var nodeDto in dto.Nodes)
+            {
+                if (nodeDto == null || string.IsNullOrWhiteSpace(nodeDto.Id))
+                {
+                    diagnostics.Add("Encountered a node without an id.");
+                    continue;
+                }
+                if (!nodeIds.Add(nodeDto.Id)) diagnostics.Add($"Duplicate node id '{nodeDto.Id}'.");
+                var node = CreateNode(nodeDto, diagnostics);
+                if (node != null) nodes.Add(node);
+            }
+            ValidateGraph(dto, nodeIds, diagnostics);
+            if (diagnostics.Count > 0)
+                throw new FormatException($"{path}: invalid dialogue '{dto.Id}':\n{string.Join("\n", diagnostics)}");
+            return nodes.ToArray();
         }
 
         private static VulcanusDialogueNode CreateNode(DialogueNodeDto nodeDto, ICollection<string> diagnostics)
@@ -174,10 +199,15 @@ namespace Core.Tile.Editor.Vulcanus
 
                 if (string.Equals(node.Type, "choice", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (node.Options == null || node.Options.Count == 0)
+                        diagnostics.Add($"Choice '{node.Id}' needs at least one option.");
                     foreach (var option in node.Options ?? Enumerable.Empty<DialogueChoiceOptionDto>())
                     {
                         if (option == null)
+                        {
+                            diagnostics.Add($"Choice '{node.Id}' contains a null option.");
                             continue;
+                        }
 
                         if (string.IsNullOrWhiteSpace(option.TargetNodeId))
                         {
@@ -189,6 +219,10 @@ namespace Core.Tile.Editor.Vulcanus
                             diagnostics.Add($"Choice option '{option.Id}' on node '{node.Id}' references missing node '{option.TargetNodeId}'.");
                     }
                 }
+
+                if (string.Equals(node.Type, "jump", StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrWhiteSpace(node.TargetNodeId))
+                    diagnostics.Add($"Jump node '{node.Id}' has an empty targetNodeId.");
 
                 if (string.Equals(node.Type, "jump", StringComparison.OrdinalIgnoreCase) &&
                     string.IsNullOrWhiteSpace(node.TargetDialogueId) &&

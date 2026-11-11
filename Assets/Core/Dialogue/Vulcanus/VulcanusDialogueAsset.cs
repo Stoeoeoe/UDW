@@ -47,7 +47,6 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private string createdAt;
         [SerializeField] private string updatedAt;
         [SerializeField] private ImportedMessage[] importedMessages = Array.Empty<ImportedMessage>();
-        [SerializeField] private string[] importDiagnostics = Array.Empty<string>();
         [SerializeReference] private VulcanusDialogueNode[] nodes = Array.Empty<VulcanusDialogueNode>();
 
         [NonSerialized] private Dictionary<string, VulcanusDialogueNode> _nodeById;
@@ -69,7 +68,6 @@ namespace Core.Dialogue.Vulcanus
         public ImportedMessage[] ImportedMessages => importedMessages == null
             ? Array.Empty<ImportedMessage>()
             : (ImportedMessage[])importedMessages.Clone();
-        public string[] ImportDiagnostics => importDiagnostics == null ? Array.Empty<string>() : (string[])importDiagnostics.Clone();
         public IReadOnlyList<VulcanusDialogueNode> Nodes => _nodesView ?? Array.Empty<VulcanusDialogueNode>();
 
         public void Configure(
@@ -85,8 +83,7 @@ namespace Core.Dialogue.Vulcanus
             string created,
             string updated,
             VulcanusDialogueNode[] importedNodes,
-            ImportedMessage[] messages,
-            string[] diagnostics)
+            ImportedMessage[] messages)
         {
             project = sourceProject;
             version = Mathf.Max(1, fileVersion);
@@ -101,7 +98,6 @@ namespace Core.Dialogue.Vulcanus
             updatedAt = updated ?? string.Empty;
             nodes = importedNodes == null ? Array.Empty<VulcanusDialogueNode>() : (VulcanusDialogueNode[])importedNodes.Clone();
             importedMessages = messages == null ? Array.Empty<ImportedMessage>() : (ImportedMessage[])messages.Clone();
-            importDiagnostics = diagnostics == null ? Array.Empty<string>() : (string[])diagnostics.Clone();
             RebuildCaches();
         }
 

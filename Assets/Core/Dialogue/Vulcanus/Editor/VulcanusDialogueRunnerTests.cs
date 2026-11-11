@@ -39,7 +39,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         {
             var dialogue = Game.Asset<VulcanusDialogueAsset>();
             dialogue.Configure(null, 1, id, id, "", false, "", nodes[0].Id, Array.Empty<string>(), "", "", nodes,
-                Array.Empty<VulcanusDialogueAsset.ImportedMessage>(), Array.Empty<string>());
+                Array.Empty<VulcanusDialogueAsset.ImportedMessage>());
             _dialogues.Add(dialogue);
             return dialogue;
         }
@@ -210,18 +210,34 @@ namespace Core.Dialogue.Vulcanus.Editor
         }
 
         [Test]
-        public void CutsceneValidationFollowsJumpsAndRejectsImportErrors()
+        public void DialogueValidationRejectsUnknownReferencesBeforeOpeningThePresenter()
         {
-            Dialogue("test:first", new VulcanusDialogueJumpNode("entry", "test:second", "start"));
-            var second = Dialogue("test:second", new VulcanusDialogueLineNode("start", "", "", "Second", "", ""));
+            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
             Runner();
-            Assert.That(() => _runner.ValidateCutsceneDialogue("test:first"), Throws.Nothing);
+            Assert.That(() => _runner.ValidateDialogue("test:talk"), Throws.Nothing);
+            Assert.That(() => _runner.ValidateDialogue("test:missing"), Throws.InvalidOperationException);
+            Assert.That(_presenter.Started, Is.Zero);
+        }
 
-            second.Configure(null, 1, "test:second", "second", "", false, "", "start", Array.Empty<string>(), "", "",
-                new VulcanusDialogueNode[] { new VulcanusDialogueLineNode("start", "", "", "Second", "", "") },
-                Array.Empty<VulcanusDialogueAsset.ImportedMessage>(), new[] { "bad line" });
-            Assert.That(() => _runner.ValidateCutsceneDialogue("test:first"),
-                Throws.InvalidOperationException.With.Message.Contains("import errors"));
+        [Test]
+        public void FabiasTopicMenuCanBeRevisitedBeyondTheExecutionLimit()
+        {
+            // Use the shipped conversation, including its line-to-choice loops, rather than a synthetic cycle.
+            _dialogues.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<VulcanusDialogueAsset>(
+                "Assets/Vulcan/0204project/dialogues/fabia_greeting.runtime.dialogue.json"));
+            Runner().StartDialogue("base:fabia_greeting");
+            _presenter.FinishLine();
+            for (var visit = 0; visit < 50; visit++)
+            {
+                _presenter.Choose("opt-chat");
+                for (var line = 0; line < 5; line++) _presenter.FinishLine();
+            }
+            Assert.That(_runner.ActiveContext.StepsExecuted, Is.GreaterThan(256));
+            Assert.That(_runner.IsDialogueActive, Is.True);
+            _presenter.Choose("opt-bye");
+            _presenter.FinishLine();
+            Assert.That(_runner.IsDialogueActive, Is.False);
+            Assert.That(_presenter.Finished, Is.EqualTo(1));
         }
 
         /// <summary>Records what the runner asks for and lets the test decide when the player is done.</summary>

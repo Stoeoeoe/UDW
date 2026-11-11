@@ -14,7 +14,7 @@ namespace Core.Dialogue.Vulcanus
     /// </summary>
     public sealed class VulcanusDialogueRunner : IDisposable
     {
-        private const int MaxStepsPerRun = 256;
+        private const int MaxStepsWithoutInput = 256;
 
         private readonly DialogueCatalog _catalog;
         private readonly IDialoguePresenter _presenter;
@@ -60,25 +60,6 @@ namespace Core.Dialogue.Vulcanus
 
         /// <summary>Checks a script's dialogue reference before playback opens the UI.</summary>
         public void ValidateDialogue(string dialogueId) => ResolveDialogue(dialogueId);
-
-        /// <summary>Check referenced dialogue assets before cutscene playback. Dialogue actions apply immediately.</summary>
-        public void ValidateCutsceneDialogue(string dialogueId)
-        {
-            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            void Visit(string id)
-            {
-                if (!visited.Add(id)) return; // Dialogue jumps may form a cycle; validate each asset once.
-                var (dialogue, _) = ResolveDialogue(id);
-                if (dialogue.ImportDiagnostics.Length > 0)
-                    throw new InvalidOperationException($"Cutscene dialogue '{id}' has import errors: {string.Join("; ", dialogue.ImportDiagnostics)}");
-                foreach (var node in dialogue.Nodes)
-                {
-                    if (node is VulcanusDialogueJumpNode jump && !string.IsNullOrWhiteSpace(jump.TargetDialogueId))
-                        Visit(jump.TargetDialogueId);
-                }
-            }
-            Visit(dialogueId);
-        }
 
         private (VulcanusDialogueAsset Dialogue, VulcanusDialogueNode StartNode) ResolveDialogue(string dialogueId)
         {
@@ -127,6 +108,7 @@ namespace Core.Dialogue.Vulcanus
             };
 
             var completed = false;
+            var stepsWithoutInput = 0;
             try
             {
                 _presenter.OnDialogueStarted(context);
@@ -134,9 +116,9 @@ namespace Core.Dialogue.Vulcanus
                 {
                     context.CurrentNode = currentNode;
                     context.StepsExecuted++;
-                    if (context.StepsExecuted > MaxStepsPerRun)
+                    if (++stepsWithoutInput > MaxStepsWithoutInput)
                     {
-                        Debug.LogError($"Dialogue '{context.CurrentDialogue.DialogueId}' exceeded {MaxStepsPerRun} steps.");
+                        Debug.LogError($"Dialogue '{context.CurrentDialogue.DialogueId}' exceeded {MaxStepsWithoutInput} steps without player input.");
                         return;
                     }
 
@@ -151,7 +133,8 @@ namespace Core.Dialogue.Vulcanus
                         case VulcanusDialogueLineNode line:
                             var text = context.CurrentDialogue.ResolveLocalizedText(line.MsgKey, line.Text);
                             await _presenter.PresentLine(line, text, context, token);
-                            if (!TryResolveLocalNode(context.CurrentDialogue, line.Next, out currentNode)) return;
+                            stepsWithoutInput = 0;
+                            currentNode = ResolveLocalNode(context.CurrentDialogue, line.Next);
                             break;
 
                         case VulcanusDialogueChoiceNode choice:
@@ -162,21 +145,22 @@ namespace Core.Dialogue.Vulcanus
                                 return;
                             }
                             var selected = await _presenter.PresentChoice(choice, options, context, token);
+                            stepsWithoutInput = 0;
                             if (selected == null)
                             {
                                 Debug.LogError($"No option was selected for choice '{choice.Id}'.");
                                 return;
                             }
-                            if (!TryResolveLocalNode(context.CurrentDialogue, selected.TargetNodeId, out currentNode)) return;
+                            currentNode = ResolveLocalNode(context.CurrentDialogue, selected.TargetNodeId);
                             break;
 
                         case VulcanusDialogueActionNode action:
                             if (!RunAction(action, context)) return;
-                            if (!TryResolveLocalNode(context.CurrentDialogue, action.Next, out currentNode)) return;
+                            currentNode = ResolveLocalNode(context.CurrentDialogue, action.Next);
                             break;
 
                         case VulcanusDialogueJumpNode jump:
-                            if (!RunJump(jump, context, out currentNode)) return;
+                            currentNode = RunJump(jump, context);
                             break;
 
                         case VulcanusDialogueEndNode:
@@ -211,28 +195,16 @@ namespace Core.Dialogue.Vulcanus
             return false;
         }
 
-        private bool RunJump(VulcanusDialogueJumpNode jump, VulcanusDialogueExecutionContext context,
-            out VulcanusDialogueNode nextNode)
+        private VulcanusDialogueNode RunJump(VulcanusDialogueJumpNode jump, VulcanusDialogueExecutionContext context)
         {
-            nextNode = null;
-            if (string.IsNullOrWhiteSpace(jump.TargetNodeId))
-            {
-                Debug.LogError($"Jump '{jump.Id}' has an empty target node ID.");
-                return false;
-            }
             if (string.IsNullOrWhiteSpace(jump.TargetDialogueId))
-                return TryResolveLocalNode(context.CurrentDialogue, jump.TargetNodeId, out nextNode);
+                return ResolveLocalNode(context.CurrentDialogue, jump.TargetNodeId);
 
-            var targetDialogue = _catalog.Get(jump.TargetDialogueId);
-            if (!targetDialogue)
-            {
-                Debug.LogError($"Jump '{jump.Id}' references unknown dialogue '{jump.TargetDialogueId}'.");
-                return false;
-            }
-            if (!TryResolveLocalNode(targetDialogue, jump.TargetNodeId, out nextNode)) return false;
+            var targetDialogue = _catalog.Get(jump.TargetDialogueId)
+                ?? throw new InvalidOperationException($"Jump '{jump.Id}' references unknown dialogue '{jump.TargetDialogueId}'.");
             context.CurrentDialogue = targetDialogue;
             context.Project = targetDialogue.Project != null ? targetDialogue.Project : context.Project;
-            return true;
+            return ResolveLocalNode(targetDialogue, jump.TargetNodeId);
         }
 
         private bool TryBuildVisibleOptions(VulcanusDialogueChoiceNode choice, VulcanusDialogueExecutionContext context,
@@ -241,11 +213,6 @@ namespace Core.Dialogue.Vulcanus
             visibleOptions = new List<VulcanusDialogueChoiceOption>();
             foreach (var option in choice.Options)
             {
-                if (option == null || string.IsNullOrWhiteSpace(option.TargetNodeId))
-                {
-                    Debug.LogError($"Choice '{choice.Id}' has an invalid option.");
-                    return false;
-                }
                 if (string.IsNullOrWhiteSpace(option.Condition))
                 {
                     visibleOptions.Add(option);
@@ -257,14 +224,12 @@ namespace Core.Dialogue.Vulcanus
             return true;
         }
 
-        private static bool TryResolveLocalNode(VulcanusDialogueAsset dialogue, string nodeId, out VulcanusDialogueNode node)
+        private static VulcanusDialogueNode ResolveLocalNode(VulcanusDialogueAsset dialogue, string nodeId)
         {
-            node = null;
             // An empty Next means the flow ends here.
-            if (string.IsNullOrWhiteSpace(nodeId)) return true;
-            if (dialogue.TryGetNode(nodeId, out node)) return true;
-            Debug.LogError($"Dialogue '{dialogue.DialogueId}' references missing node '{nodeId}'.");
-            return false;
+            if (string.IsNullOrWhiteSpace(nodeId)) return null;
+            if (dialogue.TryGetNode(nodeId, out var node)) return node;
+            throw new InvalidOperationException($"Dialogue '{dialogue.DialogueId}' references missing node '{nodeId}'.");
         }
 
         private void FinishDialogue(VulcanusDialogueExecutionContext context)

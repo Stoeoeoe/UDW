@@ -48,7 +48,6 @@ namespace Core.Dialogue.Vulcanus
         private bool _waitingForAdvance;
         private bool _waitingForChoice;
         private string _lineText = string.Empty;
-        private VulcanusDialogueChoiceOption _selectedOption;
         private AwaitableCompletionSource _advance;
         private AwaitableCompletionSource<VulcanusDialogueChoiceOption> _choice;
         private readonly List<VulcanusDialogueChoiceOption> _visibleOptions = new();
@@ -129,7 +128,6 @@ namespace Core.Dialogue.Vulcanus
 
             var choice = _choice = new AwaitableCompletionSource<VulcanusDialogueChoiceOption>();
             _waitingForChoice = true;
-            _selectedOption = null;
             RebuildChoices(options, context);
             _choiceContainer[0].Focus();
             return await DialogueWait.For(choice, cancellation);
@@ -140,7 +138,6 @@ namespace Core.Dialogue.Vulcanus
             _isTyping = false;
             _waitingForAdvance = false;
             _waitingForChoice = false;
-            _selectedOption = null;
             _advance = null;
             _choice = null;
             ClearChoices();
@@ -283,7 +280,6 @@ namespace Core.Dialogue.Vulcanus
         {
             if (!_waitingForChoice || !ReceivesInput) return;
             PlayUISound(UISoundCue.Click);
-            _selectedOption = option;
             _waitingForChoice = false;
             _choice.TrySetResult(option);
         }
@@ -293,15 +289,9 @@ namespace Core.Dialogue.Vulcanus
         private void RebuildChoices(IReadOnlyList<VulcanusDialogueChoiceOption> options, VulcanusDialogueExecutionContext context)
         {
             ClearChoices();
-            if (_choiceContainer == null)
-                return;
-
             for (var i = 0; i < options.Count; i++)
             {
                 var option = options[i];
-                if (option == null)
-                    continue;
-
                 _visibleOptions.Add(option);
 
                 var index = i + 1;
@@ -319,7 +309,7 @@ namespace Core.Dialogue.Vulcanus
         private void ClearChoices()
         {
             _visibleOptions.Clear();
-            _choiceContainer?.Clear();
+            _choiceContainer.Clear();
             _content.scrollOffset = Vector2.zero;
         }
 
@@ -355,28 +345,23 @@ namespace Core.Dialogue.Vulcanus
 
         private void SetBody(string text)
         {
-            if (_bodyLabel != null)
-                _bodyLabel.text = text ?? string.Empty;
+            _bodyLabel.text = text;
         }
 
         private void SetHint(string text)
         {
-            if (_hintLabel != null)
-                _hintLabel.text = text ?? string.Empty;
+            _hintLabel.text = text;
         }
 
         private void SetContinueVisible(bool isVisible)
         {
-            if (_continueButton == null)
-                return;
-
             _continueButton.text = continueButtonText;
             _continueButton.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void FocusOverlay()
         {
-            _overlay?.Focus();
+            _overlay.Focus();
         }
 
         private void BindElements(VisualElement root)

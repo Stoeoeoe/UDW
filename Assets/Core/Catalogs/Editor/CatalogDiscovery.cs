@@ -85,6 +85,7 @@ namespace Core.Catalogs.Editor
         {
             DefaultCatalogAssets.CreateMissingCatalogs();
             foreach (var catalog in FindCatalogs()) Refresh(catalog);
+            Core.Tile.Editor.Vulcanus.DialogueImporter.ValidateSources();
         }
     }
 
