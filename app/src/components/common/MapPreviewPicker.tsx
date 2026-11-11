@@ -71,6 +71,7 @@ export type MapPreviewOverlay =
       kind: 'trigger';
       position: [number, number];
       size?: [number, number];
+      points?: [number, number][];
       color?: string;
     }
   | {

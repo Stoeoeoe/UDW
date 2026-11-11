@@ -13,6 +13,7 @@ export const LocationLinksPanel: React.FC = () => {
   const selectLayer = useEditorStore((s) => s.selectLayer);
   const setActiveTool = useEditorStore((s) => s.setActiveTool);
   const removeLocationLink = useEditorStore((s) => s.removeLocationLink);
+  const openConnectionWizard = useEditorStore((s) => s.openConnectionWizard);
 
   const links = currentMap?.locationLinks ?? [];
   const navLayer = currentMap?.layers.find((l) => l.kind === 'navigation');
@@ -33,8 +34,7 @@ export const LocationLinksPanel: React.FC = () => {
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     activateNavLayer();
-    setActiveTool('linkPlace');
-    selectLink(null);
+    openConnectionWizard();
   };
 
   const handleDelete = (e: React.MouseEvent, id: string, label?: string) => {
@@ -74,7 +74,7 @@ export const LocationLinksPanel: React.FC = () => {
             {links.length}
           </Text>
         )}
-        <Tooltip label="Place new link (N)" placement="right" hasArrow>
+        <Tooltip label="Connect locations…" placement="right" hasArrow>
           <IconButton
             aria-label="Add location link"
             icon={<AddIcon fontSize="8px" />}
@@ -90,7 +90,7 @@ export const LocationLinksPanel: React.FC = () => {
       {links.length === 0 ? (
         <Box px={4} py={2}>
           <Text fontSize="10px" color="gray.700" fontStyle="italic">
-            No links — click a trigger with the Link tool
+            No links — click + to connect locations
           </Text>
         </Box>
       ) : (

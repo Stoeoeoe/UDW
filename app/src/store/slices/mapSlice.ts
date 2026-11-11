@@ -11,6 +11,7 @@ import { Anchor, Map as GameMap, LocationLink } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { serializeMap } from '../../lib/mapMigration';
 import { DEFAULT_LINK_FACING } from '../../lib/locationLinkUtils';
+import { buildLocationConnection, type LocationConnection } from '../../lib/locationConnection';
 import { saveMapDebounced } from '../../lib/saveManager';
 import {
   addMissingDefinitionLayers,
@@ -321,7 +322,10 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
 export interface LocationLinkSlice {
   selectedLinkId: string | null;
   selectedAnchorId: string | null;
-  pendingNewLinkId: string | null;
+  connectionWizard: { triggerId?: string } | null;
+  openConnectionWizard: (triggerId?: string) => void;
+  closeConnectionWizard: () => void;
+  createLocationConnection: (draft: LocationConnection) => void;
 
   addAnchor: (anchor: Anchor) => void;
   updateAnchor: (id: string, updates: Partial<Anchor>, skipSave?: boolean) => void;
@@ -331,7 +335,6 @@ export interface LocationLinkSlice {
   updateLocationLink: (id: string, updates: Partial<LocationLink>, skipSave?: boolean) => void;
   removeLocationLink: (id: string) => void;
   selectLink: (id: string | null) => void;
-  clearPendingNewLink: () => void;
   updateMapAnchor: (
     mapId: string,
     anchorId: string,
@@ -356,7 +359,40 @@ function upsertMapInState(state: { maps: unknown[]; currentMap: unknown }, updat
 export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (set, get) => ({
   selectedLinkId: null,
   selectedAnchorId: null,
-  pendingNewLinkId: null,
+  connectionWizard: null,
+  openConnectionWizard: (triggerId) =>
+    set((state) => {
+      state.connectionWizard = { triggerId };
+    }),
+  closeConnectionWizard: () =>
+    set((state) => {
+      state.connectionWizard = null;
+    }),
+  createLocationConnection: (draft) => {
+    const { currentMap, maps, project } = get();
+    if (!currentMap || !project)
+      throw new Error('Open a project and map before connecting locations.');
+    if (draft.source.mapId !== currentMap.id)
+      throw new Error('The source map changed. Reopen the wizard.');
+    const result = buildLocationConnection(
+      maps.map((map) => (map.id === currentMap.id ? currentMap : map)),
+      draft,
+      project.tileSize,
+    );
+    set((state) => {
+      for (const map of result.maps) upsertMapInState(state, map);
+      state.selectedLinkId = result.linkId;
+      state.selectedAnchorId = null;
+      state.selectedTriggerId = null;
+      state.selectedEntityId = null;
+      state.connectionWizard = null;
+      state.activeTool = 'select';
+      state.selectedLayerId = state.currentMap!.layers.find(
+        (layer) => layer.kind === 'navigation',
+      )!.id;
+    });
+    for (const map of result.maps) saveMapDebounced(map);
+  },
 
   addAnchor: (anchor) => {
     set((state) => {
@@ -451,7 +487,6 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
       state.currentMap.locationLinks.push(castDraft(link));
       state.selectedLinkId = link.id;
       state.selectedAnchorId = null;
-      state.pendingNewLinkId = link.id;
     });
     const { currentMap } = get();
     if (currentMap) saveMapDebounced(currentMap);
@@ -494,11 +529,6 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
         state.selectedEntityId = null;
         state.selectedAnchorId = null;
       }
-    }),
-
-  clearPendingNewLink: () =>
-    set((state) => {
-      state.pendingNewLinkId = null;
     }),
 
   updateMapAnchor: (mapId, anchorId, updates, skipSave = false) => {

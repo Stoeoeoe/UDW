@@ -187,6 +187,17 @@ export const MapPreviewAnnotations: React.FC<{
           const position = project(overlay.position),
             size = overlay.size ?? [1, 1],
             color = overlay.color ?? colors.facing;
+          if (overlay.points)
+            return (
+              <polygon
+                key={index}
+                points={overlay.points.map((point) => project(point).join(',')).join(' ')}
+                fill={color}
+                fillOpacity={0.2}
+                stroke={color}
+                strokeWidth={1.5}
+              />
+            );
           return (
             <rect
               key={index}

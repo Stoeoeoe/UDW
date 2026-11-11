@@ -109,7 +109,7 @@ export interface EditorStore
 // History machinery
 // ============================================================================
 
-type EditorHistorySnapshot = { currentMap: GameMap | null };
+type EditorHistorySnapshot = { currentMap: GameMap | null; maps: GameMap[] };
 
 const UNDO_HISTORY_LIMIT = 50;
 let historyBatchDepth = 0;
@@ -211,14 +211,31 @@ export function endEditorHistoryBatch(): void {
 
 export function undoEditorChange(): void {
   endEditorHistoryBatch();
+  const previousMaps = useEditorStore.getState().maps;
   useEditorStore.temporal.getState().undo();
+  saveRestoredMaps(previousMaps);
   syncEditorSelectionsWithMap();
 }
 
 export function redoEditorChange(): void {
   endEditorHistoryBatch();
+  const previousMaps = useEditorStore.getState().maps;
   useEditorStore.temporal.getState().redo();
+  saveRestoredMaps(previousMaps);
   syncEditorSelectionsWithMap();
+}
+
+// A connection can create anchors and a return link on a second map in the same edit.
+function saveRestoredMaps(previousMaps: GameMap[]): void {
+  const { maps, currentMap } = useEditorStore.getState();
+  for (const map of maps) {
+    if (
+      map.id !== currentMap?.id &&
+      map !== previousMaps.find((previous) => previous.id === map.id)
+    ) {
+      saveMapDebounced(map);
+    }
+  }
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -347,6 +364,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.resourceLoadingProgress = 0.05;
                   state.currentMap = null;
                   state.currentMapPath = null;
+                  state.connectionWizard = null;
                   state.maps = [];
                   state.tilesets = new globalThis.Map();
                   state.loadedSprites = new globalThis.Map();
@@ -388,6 +406,7 @@ export const useEditorStore = create<EditorStore>()(
                   state.resourceLoadingLabel = null;
                   state.resourceLoadingProgress = 0;
                   state.currentMap = null;
+                  state.connectionWizard = null;
                   state.maps = [];
                   state.tilesets = new globalThis.Map();
                   state.loadedSprites = new globalThis.Map();
@@ -449,7 +468,7 @@ export const useEditorStore = create<EditorStore>()(
     ),
     {
       limit: UNDO_HISTORY_LIMIT,
-      partialize: (state) => ({ currentMap: state.currentMap }),
+      partialize: (state) => ({ currentMap: state.currentMap, maps: state.maps }),
       equality: isTrackedHistoryEqual,
       onSave: () => {
         finalizeHistoryBatchSave();

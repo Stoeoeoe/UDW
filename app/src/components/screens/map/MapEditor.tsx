@@ -18,7 +18,7 @@ import { ObjectPalette } from '../../tileset/ObjectPalette';
 import { EntityBottomPalette } from '../entity/EntityBottomPalette';
 import { NavigationBottomPanel } from './NavigationBottomPanel';
 import { WaterBottomPanel } from './WaterBottomPanel';
-import { NewLinkDialog } from './NewLinkDialog';
+import { LocationConnectionWizard } from './LocationConnectionWizard';
 import { MapWorldView } from './MapWorldView.tsx';
 import { LayersPanel } from './LayersPanel';
 import { VariationManager } from './VariationManager';
@@ -78,8 +78,7 @@ const MapLeftPanel: React.FC = () => {
 export const MapEditor: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
-  const pendingNewLinkId = useEditorStore((state) => state.pendingNewLinkId);
-  const clearPendingNewLink = useEditorStore((state) => state.clearPendingNewLink);
+  const connectionWizard = useEditorStore((state) => state.connectionWizard);
   const mapFullscreen = useEditorStore((state) => state.mapFullscreen);
   const setMapFullscreen = useEditorStore((state) => state.setMapFullscreen);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -196,7 +195,12 @@ export const MapEditor: React.FC = () => {
         bottomPanelDefaultSize={25}
       />
 
-      <NewLinkDialog linkId={pendingNewLinkId} onClose={clearPendingNewLink} />
+      {connectionWizard && (
+        <LocationConnectionWizard
+          key={currentMap.id}
+          initialTriggerId={connectionWizard.triggerId}
+        />
+      )}
       <MetadataDialog
         isOpen={isMetadataOpen}
         onClose={onMetadataClose}

@@ -11,16 +11,12 @@ export const LinkBottomPanel: React.FC = () => {
   const selectedLinkId = useEditorStore((s) => s.selectedLinkId);
   const selectLink = useEditorStore((s) => s.selectLink);
   const removeLocationLink = useEditorStore((s) => s.removeLocationLink);
-  const selectLayer = useEditorStore((s) => s.selectLayer);
-  const setActiveTool = useEditorStore((s) => s.setActiveTool);
+  const openConnectionWizard = useEditorStore((s) => s.openConnectionWizard);
 
   const links = currentMap?.locationLinks ?? [];
-  const hasTriggers = (currentMap?.spatialPrimitives?.triggers?.length ?? 0) > 0;
 
   const handleAdd = () => {
-    const navLayer = currentMap?.layers.find((layer) => layer.kind === 'navigation');
-    if (navLayer) selectLayer(navLayer.id);
-    setActiveTool('linkPlace');
+    openConnectionWizard();
   };
 
   return (
@@ -28,15 +24,7 @@ export const LinkBottomPanel: React.FC = () => {
       <PanelHeader
         title="Location Links"
         actions={
-          <Tooltip
-            label={
-              hasTriggers
-                ? 'New Link — click a highlighted trigger'
-                : 'Create a trigger first, then a link'
-            }
-            placement="top"
-            hasArrow
-          >
+          <Tooltip label="Connect locations…" placement="top" hasArrow>
             <IconButton
               aria-label="Add Link"
               icon={<AddIcon fontSize="10px" />}
@@ -44,7 +32,6 @@ export const LinkBottomPanel: React.FC = () => {
               variant="ghost"
               color="gray.400"
               _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
-              isDisabled={!hasTriggers}
               onClick={handleAdd}
             />
           </Tooltip>
@@ -53,7 +40,7 @@ export const LinkBottomPanel: React.FC = () => {
 
       {links.length === 0 ? (
         <Flex flex={1} align="center" justify="center" direction="column" gap={2} color="gray.600">
-          <Text fontSize="xs">No links yet — use the Link tool (click a trigger) to add one</Text>
+          <Text fontSize="xs">No links yet — click + to connect locations</Text>
         </Flex>
       ) : (
         <Box flex={1} overflowX="auto" overflowY="hidden">

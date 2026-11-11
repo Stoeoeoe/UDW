@@ -126,7 +126,7 @@ export interface EditorState {
   // Location link selection/editing state
   selectedLinkId: string | null; // Currently selected link (shown in inspector)
   selectedAnchorId: string | null; // Currently selected anchor
-  pendingNewLinkId: string | null; // Set immediately after link placement to trigger setup dialog
+  connectionWizard: { triggerId?: string } | null;
 
   // Trigger selection/editing state
   selectedTriggerId: string | null; // Currently selected trigger zone

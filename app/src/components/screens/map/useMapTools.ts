@@ -725,14 +725,7 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
       if (activeTool === 'linkPlace' && e.button === 0 && inBounds && worldPos) {
         const hit = hitTestTrigger(worldPos.x, worldPos.y);
         if (!hit) return;
-        const { addLocationLink } = useEditorStore.getState();
-        const newLink: import('../../../types/schema').LocationLink = {
-          id: `link-${Date.now()}`,
-          triggerId: hit.trigger.id,
-          targetMapId: currentMap.id,
-          targetAnchorId: '',
-        };
-        addLocationLink(newLink);
+        useEditorStore.getState().openConnectionWizard(hit.trigger.id);
         useEditorStore.getState().setActiveTool('select');
         return;
       }
