@@ -19,7 +19,7 @@ namespace Character.Animations
             var definition = Get(id);
             if (!definition) throw new InvalidOperationException($"Animation '{id}' is not registered and enabled.");
             if (definition is not CharacterAnimation animation)
-                throw new InvalidOperationException($"Animation '{id}' is a set; PlayAnimation requires a single finite animation.");
+                throw new InvalidOperationException($"Animation '{id}' is a set or an activity; PlayAnimation requires a single finite animation.");
             return animation;
         }
     }

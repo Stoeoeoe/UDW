@@ -17,6 +17,14 @@ namespace Character.Animations
                     Report(errors, asset, "memaoAction", "Use an importer action name without surrounding whitespace.");
                 return;
             }
+            if (asset is CharacterActivityAnimation activity)
+            {
+                if (activity.Loop is CharacterActivityAnimation)
+                    Report(errors, asset, "loop", "Use an animation or an animation set as the loop, not another activity.");
+                ReportFiniteClip(errors, activity, "start", activity.Start);
+                ReportFiniteClip(errors, activity, "end", activity.End);
+                return;
+            }
             if (asset is not CharacterAnimationSet set) return;
             var delay = set.VariationDelay;
             if (!ConfigurationRules.IsFinite(delay.x) || !ConfigurationRules.IsFinite(delay.y) ||
@@ -31,6 +39,15 @@ namespace Character.Animations
                 if (clip.isLooping || clip.length <= 0)
                     Report(errors, asset, $"variations[{i}]", "Variations require a non-looping clip with positive duration.");
             }
+        }
+
+        /// <summary>Fixed clips are checked here; Memao actions are checked against the performer's library at playback.</summary>
+        private static void ReportFiniteClip(List<ConfigurationError> errors, CharacterAnimationDefinition asset, string field,
+            CharacterAnimation animation)
+        {
+            if (!animation || !animation.Clip) return;
+            if (animation.Clip.isLooping || animation.Clip.length <= 0)
+                Report(errors, asset, field, "Use a non-looping clip with positive duration.");
         }
     }
 }

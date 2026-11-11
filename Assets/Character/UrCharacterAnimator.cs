@@ -5,6 +5,7 @@ using Core.Location;
 using Interaction;
 using Interaction.Tools;
 using Plants;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -17,6 +18,10 @@ namespace Character
         [SerializeField] private GameCharacter character;
         [SerializeField] private MemaoAnimationLibrary animationLibrary;
         public MemaoAnimationLibrary AnimationLibrary => animationLibrary;
+        [Tooltip("Optional activity played whenever this character enters a location, e.g. for decorative NPCs. " +
+                 "It is not resumed after another animation interrupts it.")]
+        [SerializeField] private CharacterActivityAnimation activityOnEnter;
+        private ActivityPlayback _activityOnEnterPlayback;
         [Header("Memao Actions")]
         [SerializeField] private string runPrefix = "Run";
         [SerializeField] private string walkPrefix = "Walk";
@@ -37,6 +42,7 @@ namespace Character
         private Vector2 _interactionFacing;
         private OneShotPlayback _oneShot;
         private TimedPlayback _timedPlayback;
+        private ActivityPlayback _activity;
         private bool _holdingLastFrame;
         internal OneShotPlayback HeldPlayback => _holdingLastFrame ? _oneShot : null;
 
@@ -58,6 +64,11 @@ namespace Character
             }
             if (character.GetComponentInChildren<PlantSeedAction>(true))
                 animationLibrary.ValidateAction(PlantSeedAction.AnimationAction, oneShot: true);
+            if (activityOnEnter)
+            {
+                var errors = activityOnEnter.ValidateConfiguration();
+                if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
+            }
         }
         private void OnDisable()
         {
@@ -73,6 +84,7 @@ namespace Character
                 _namedState = null;
                 RefreshAnimation();
             }
+            _activity?.Advance();
             if (!_interactionSet) return; // Single animations and sets without variations need no scheduling.
             if (_playingVariation)
             {
@@ -154,17 +166,10 @@ namespace Character
         public AnimancerState PlayInteractionAnimation(CharacterAnimationDefinition animation)
         {
             if (!animation) throw new ArgumentNullException(nameof(animation));
-            var errors = animation.ValidateConfiguration();
-            if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
+            if (animation is CharacterActivityAnimation)
+                throw new InvalidOperationException($"Animation '{animation.Id}' is an activity; play it with PlayActivity.");
             var facing = character.Orientation.FacingDirection;
-            // Resolve all required clips before interrupting the current animation.
-            animation.BaseAnimation.ResolveClip(animationLibrary, facing);
-            if (animation is CharacterAnimationSet validationSet)
-                foreach (var variation in validationSet.Variations)
-                {
-                    variation.Animation.ValidateAsOneShot(animationLibrary);
-                    variation.Animation.ResolveClip(animationLibrary, facing);
-                }
+            ValidateInteraction(animation, facing);
             EndNamedAnimation();
             EndInteractionAnimation();
             _interactionFacing = facing;
@@ -172,6 +177,106 @@ namespace Character
             _interactionSet = animation is CharacterAnimationSet set && set.Variations.Count > 0 ? set : null;
             PlayInteractionBase(animation.BaseAnimation);
             return _interactionState;
+        }
+
+        /// <summary>Resolves every clip an animation or set needs, so a bad reference fails before the current pose is interrupted.</summary>
+        private void ValidateInteraction(CharacterAnimationDefinition animation, Vector2 facing)
+        {
+            var errors = animation.ValidateConfiguration();
+            if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
+            animation.BaseAnimation.ResolveClip(animationLibrary, facing);
+            if (animation is CharacterAnimationSet validationSet)
+                foreach (var variation in validationSet.Variations)
+                {
+                    variation.Animation.ValidateAsOneShot(animationLibrary);
+                    variation.Animation.ResolveClip(animationLibrary, facing);
+                }
+        }
+
+        /// <summary>
+        /// Plays an activity's start once, then holds its loop until <see cref="ActivityPlayback.RequestEnd"/> plays its end.
+        /// Disposing the handle, or any other interaction animation, interrupts it without the end; play it again to restart from its start.
+        /// </summary>
+        public ActivityPlayback PlayActivity(CharacterActivityAnimation activity)
+        {
+            if (!activity) throw new ArgumentNullException(nameof(activity));
+            if (!isActiveAndEnabled) throw new InvalidOperationException("Activity playback requires an active animator.");
+            // Validate every phase before interrupting the current pose.
+            var errors = activity.ValidateConfiguration();
+            if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
+            if (activity.Start) ValidateOneShot(activity.Start);
+            if (activity.End) ValidateOneShot(activity.End);
+            ValidateInteraction(activity.Loop, character.Orientation.FacingDirection);
+
+            var playback = new ActivityPlayback(this, activity);
+            if (activity.Start) playback.EnterPhase(ActivityPhase.Starting, activity.Start);
+            else playback.EnterPhase(ActivityPhase.Looping, activity.Loop);
+            return playback;
+        }
+
+        public enum ActivityPhase { Starting, Looping, Ending, Completed }
+
+        public sealed class ActivityPlayback : IDisposable
+        {
+            private readonly UrCharacterAnimator _owner;
+            private readonly CharacterActivityAnimation _activity;
+            private AnimancerState _state;
+
+            internal ActivityPlayback(UrCharacterAnimator owner, CharacterActivityAnimation activity)
+            { _owner = owner; _activity = activity; }
+
+            public ActivityPhase Phase { get; private set; }
+            public bool IsCompleted => Phase == ActivityPhase.Completed;
+            /// <summary>Another animation, a location change or disabling the character replaced this activity before it completed.</summary>
+            public bool IsInterrupted => !IsCompleted && !ReferenceEquals(_owner._activity, this);
+
+            /// <summary>Plays the end once and then completes; without an end it completes immediately. Ending during the start skips the rest of it.</summary>
+            public void RequestEnd()
+            {
+                if (IsInterrupted) throw new InvalidOperationException("An interrupted activity cannot end; play it again instead.");
+                if (Phase is ActivityPhase.Ending or ActivityPhase.Completed) return;
+                if (_activity.End) EnterPhase(ActivityPhase.Ending, _activity.End);
+                else Complete();
+            }
+
+            internal void EnterPhase(ActivityPhase phase, CharacterAnimationDefinition animation)
+            {
+                // Starting the next phase ends the previous one, which releases the activity; this handle still owns it.
+                _state = _owner.PlayInteractionAnimation(animation);
+                _owner._activity = this;
+                Phase = phase;
+            }
+
+            internal void Advance()
+            {
+                if (Phase == ActivityPhase.Looping)
+                {
+                    // The loop repeats even when its clip is finite, such as a one-shot Memao gesture.
+                    // Set variations return to the base on their own, so only a finished base restarts.
+                    var current = _owner._interactionState;
+                    if (!_owner._playingVariation && !current.Clip.isLooping && current.NormalizedTime >= 1f)
+                        current.Time = 0;
+                    return;
+                }
+                if (_state.NormalizedTime < 1f) return;
+                if (Phase == ActivityPhase.Starting) EnterPhase(ActivityPhase.Looping, _activity.Loop);
+                else if (Phase == ActivityPhase.Ending) Complete();
+            }
+
+            private void Complete()
+            {
+                Phase = ActivityPhase.Completed;
+                _owner._activity = null;
+                _owner.EndInteractionAnimation();
+            }
+
+            public void Dispose()
+            {
+                // A completed or replaced activity no longer owns the pose.
+                if (IsCompleted || IsInterrupted) return;
+                _owner._activity = null;
+                _owner.EndInteractionAnimation();
+            }
         }
 
         /// <summary>Checks all facings because earlier scripted actions can turn the actor before playback.</summary>
@@ -255,6 +360,7 @@ namespace Character
             _holdingLastFrame = false;
             _oneShot = null;
             _timedPlayback = null;
+            _activity = null;
             _interactionAnimationActive = false;
             _interactionSet = null;
             _interactionState = null;
@@ -334,6 +440,23 @@ namespace Character
         {
             Bind();
             PlayIdleAnimation(character.Orientation.FacingDirection);
+            if (activityOnEnter) _activityOnEnterPlayback = PlayActivity(activityOnEnter);
+        }
+
+        [Button("Play Activity On Enter"), PropertyOrder(-1), EnableIf(nameof(activityOnEnter))]
+        private void ReplayActivityOnEnter()
+        {
+            if (!Application.isPlaying) throw new InvalidOperationException("Activities play in Play mode.");
+            _activityOnEnterPlayback = PlayActivity(activityOnEnter);
+        }
+
+        [Button("End Activity"), PropertyOrder(-1), EnableIf(nameof(activityOnEnter))]
+        private void EndActivityOnEnter()
+        {
+            if (!Application.isPlaying) throw new InvalidOperationException("Activities play in Play mode.");
+            if (_activityOnEnterPlayback == null || _activityOnEnterPlayback.IsInterrupted)
+                throw new InvalidOperationException("The activity is not playing; play it first.");
+            _activityOnEnterPlayback.RequestEnd();
         }
         public void OnLocationLeave(LocationData location)
         {

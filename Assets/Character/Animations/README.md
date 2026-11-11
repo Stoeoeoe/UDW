@@ -45,3 +45,34 @@ before the next action. Override `pauseAfterSeconds` to adjust this breathing ro
 zero skips it. Cancellation and skip release presentation immediately, including
 during the pause. This pause is separate from the gesture's duration.
 Timed actions cannot run in synchronous dialogue action/condition chunks.
+
+# Activity animations
+
+Create one with **Assets > Create > Game > Character > Activity Animation** for poses
+that last a while, such as sitting and reading or working at a counter. It has a
+namespaced ID like other animations and three parts:
+
+- **Start** (optional): a finite animation played once, for example sitting down.
+- **Loop** (required): an animation or an animation set, repeated until the activity ends,
+  even when its clip is finite (such as a one-shot Memao gesture). Sets keep their
+  occasional variations.
+- **End** (optional): a finite animation played once, for example standing up.
+
+Start and end must not loop; the loop cannot be another activity. Play it with
+`UrCharacterAnimator.PlayActivity(activity)`, which returns an `ActivityPlayback`:
+
+- The start plays, then the loop. `RequestEnd()` plays the end once and then sets
+  `IsCompleted`; without an end it completes at once. Ending during the start skips
+  straight to the end.
+- `Dispose()` stops immediately without the end. Any other interaction animation, a
+  location change or disabling the character also interrupts it (`IsInterrupted`).
+  To resume, call `PlayActivity` again: it restarts from the start.
+- `PlayInteractionAnimation` and `characters.playAnimation` reject activities.
+
+NPC routines use this for their goal activities: start on arrival, end at departure.
+
+For decorative characters, assign **Activity On Enter** on the character's
+`UrCharacterAnimator`: the activity starts whenever the character enters a
+location. It is not resumed after something else interrupts it. In Play mode the
+inspector's **Play Activity On Enter** and **End Activity** buttons replay it or
+play its end, which is handy for checking new activity assets.
