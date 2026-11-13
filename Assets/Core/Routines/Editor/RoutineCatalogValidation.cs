@@ -42,7 +42,9 @@ namespace Core.Routines.Editor
             }
             var anchorsByMap = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var placedCharacters = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var world in CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>())
+            var worlds = CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>().ToArray();
+            var links = MapLinkGraph.Build(worlds);
+            foreach (var world in worlds)
                 foreach (var binding in world.MapBindings)
                     if (binding.MapPrefab)
                     {
@@ -84,6 +86,30 @@ namespace Core.Routines.Editor
                     RequireDialogue(routine, goal.DialogueId, $"goal '{goal.Id}'");
                     if (!string.IsNullOrEmpty(goal.ActivityAnimationId) && !animationIds.Contains(goal.ActivityAnimationId))
                         throw new InvalidOperationException($"Routine '{routine.RoutineId}': goal '{goal.Id}' uses the unknown animation '{goal.ActivityAnimationId}'.");
+                }
+                var unreachable = UnreachableGoals(routine, links).FirstOrDefault();
+                if (unreachable != null) throw new InvalidOperationException(unreachable);
+            }
+        }
+
+        /// <summary>
+        /// Goals whose map no chain of location links reaches from where the character comes from: home, or the goal
+        /// before. Skipped goals need no extra check, since reaching through a goal's map also reaches past it.
+        /// </summary>
+        internal static IEnumerable<string> UnreachableGoals(RoutineDefinition routine, MapLinkGraph links)
+        {
+            var days = routine.Overrides.Concat(routine.Variants)
+                .SelectMany(entry => entry.IsPool ? entry.PickOne.Cast<RoutineDay>() : new RoutineDay[] { entry });
+            foreach (var day in days)
+            {
+                var from = routine.Home;
+                foreach (var goal in day.Goals)
+                {
+                    var to = goal.ToHome ? routine.Home : goal.Destination;
+                    if (!links.CanReach(from.MapId, to.MapId))
+                        yield return $"Routine '{routine.RoutineId}': goal '{goal.Id}' of '{day.Id}' goes to map '{to.MapId}', " +
+                            $"but no location links lead there from map '{from.MapId}'.";
+                    from = to;
                 }
             }
         }

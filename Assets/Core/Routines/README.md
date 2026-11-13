@@ -45,6 +45,12 @@ the first departure, otherwise which goal the character last set off for, from
 where, and how long ago. Whether they have arrived depends on the route, which
 the caller measures.
 
+## Moving between maps
+
+Characters change maps only through location links. `MapLinkGraph` (built from the world catalog's map prefabs) joins
+the maps; catalog refresh rejects a routine whose goal is on a map no chain of links reaches from where the character
+comes from (home or the goal before). Walking between maps itself is STO-70.
+
 ## What the character says
 
 Talking to a routine character starts the dialogue its routine has in effect,
