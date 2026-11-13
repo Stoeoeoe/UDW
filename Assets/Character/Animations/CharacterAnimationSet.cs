@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Core.Common;
 using UnityEngine;
+using Util;
 
 namespace Character.Animations
 {
@@ -35,17 +36,7 @@ namespace Character.Animations
         public IReadOnlyList<Variation> Variations => variations;
 
         /// <summary>Selects from a nonempty, validated set using a sample in [0, 1], including Unity Random.value's upper endpoint.</summary>
-        public CharacterAnimation SelectVariation(float sample)
-        {
-            double total = 0;
-            foreach (var variation in variations) total += variation.Weight;
-            var remaining = sample * total;
-            for (var i = 0; i < variations.Length - 1; i++)
-            {
-                remaining -= variations[i].Weight;
-                if (remaining < 0) return variations[i].Animation;
-            }
-            return variations[^1].Animation;
-        }
+        public CharacterAnimation SelectVariation(float sample) =>
+            MathUtils.PickWeighted(variations, variation => variation.Weight, sample).Animation;
     }
 }
