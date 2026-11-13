@@ -2,9 +2,10 @@
  * Route preview for NPC navigation: the same weighted 8-directional A* as Unity's GridPathfinder, run on the
  * navigation cost grid with blocked cells taken from the map's collision data. See docs/routine-editor.md.
  */
-import type { Map as GameMap, MapCollision, Tileset } from '../types/schema';
+import type { CollisionDefinition, Map as GameMap, MapCollision, Tileset } from '../types/schema';
 import { computeNavigationCostGrid, type NavigationCostGrid } from './navigationCost';
-import { getPolygonFromCollision } from './collisionUtils';
+import { shapeToNormalizedPolygon } from './collisionUtils';
+import { getObjectDefinition } from './mapObjects';
 import { resolveTileAt } from './mapUtils';
 import { splitTileRef } from './tileRef';
 import { getWaterBitmap } from './waterMaskCache';
@@ -22,8 +23,10 @@ const CIRCLE_SEGMENTS = 12;
 export type BlockedGrid = boolean[][];
 
 /**
- * Cells blocked by tile collisions (visible visual, terrain and object layers), drawn water and the map's
- * collision shapes. Entities placed on the map can also block in Unity; they are not known here.
+ * Cells blocked by the static collision Unity builds at import, by the same rules as Unity's baked grid
+ * (NavigationBlockedCellsBuilder): tile collisions on visible visual and terrain layers, placed objects at their exact
+ * position, drawn water covering more than half a cell, and the map's collision shapes. A cell is blocked when
+ * collision covers its middle half. Entities placed on the map can also block in Unity; they are not known here.
  */
 export function computeBlockedGrid(
   map: GameMap,
@@ -33,21 +36,46 @@ export function computeBlockedGrid(
   const blocked = Array.from({ length: map.height }, () =>
     new Array<boolean>(map.width).fill(false),
   );
+  // Blocks every cell whose middle the polygon (in tile units) overlaps.
+  const blockUnder = (polygon: Point[]) => {
+    if (polygon.length < 3) return;
+    const xs = polygon.map((p) => p[0]);
+    const ys = polygon.map((p) => p[1]);
+    const minX = Math.max(0, Math.floor(Math.min(...xs)));
+    const maxX = Math.min(map.width - 1, Math.floor(Math.max(...xs)));
+    const minY = Math.max(0, Math.floor(Math.min(...ys)));
+    const maxY = Math.min(map.height - 1, Math.floor(Math.max(...ys)));
+    for (let y = minY; y <= maxY; y++)
+      for (let x = minX; x <= maxX; x++)
+        if (!blocked[y][x] && polygonOverlapsBox(polygon, footprint(x, y))) blocked[y][x] = true;
+  };
 
   for (const layer of map.layers) {
     if (!layer.visible) continue;
-    if (layer.kind === 'visual' || layer.kind === 'terrain' || layer.kind === 'object') {
-      for (let y = 0; y < map.height; y++) {
+    if (layer.kind === 'visual' || layer.kind === 'terrain') {
+      for (let y = 0; y < map.height; y++)
         for (let x = 0; x < map.width; x++) {
           if (blocked[y][x]) continue;
-          const tileRef = resolveTileAt(map, layer.id, x, y, null, tilesets);
+          const tileRef = resolveTileAt(map, layer.id, x, y, null);
           if (!tileRef) continue;
           const [tilesetId, index] = splitTileRef(tileRef);
           const tile = tilesets.get(tilesetId)?.tiles[parseInt(index, 10)];
-          const polygon = getPolygonFromCollision(tile?.collision, tileSize);
-          if (polygon.length < 3) continue;
-          const shifted = polygon.map(([px, py]): Point => [x + px, y + py]);
-          if (polygonOverlapsBox(shifted, footprint(x, y))) blocked[y][x] = true;
+          for (const polygon of tilePolygons(tile?.collision, [x, y], tileSize))
+            blockUnder(polygon);
+        }
+    } else if (layer.kind === 'object') {
+      for (const instance of layer.objectInstances ?? []) {
+        const definition = getObjectDefinition(
+          tilesets,
+          instance.tilesetId,
+          instance.objectDefinitionId,
+        );
+        // Objects stand at their exact pixel position, which need not be a whole tile.
+        for (const part of definition?.tiles ?? []) {
+          const tile = tilesets.get(instance.tilesetId)?.tiles[part.tileIndex];
+          const topLeft: Point = [instance.x / tileSize + part.x, instance.y / tileSize + part.y];
+          for (const polygon of tilePolygons(tile?.collision, topLeft, tileSize))
+            blockUnder(polygon);
         }
       }
     } else if (layer.kind === 'water' && layer.waterMask) {
@@ -61,20 +89,42 @@ export function computeBlockedGrid(
     }
   }
 
-  for (const collision of map.spatialPrimitives?.collisions ?? []) {
-    const polygon = collisionPolygon(collision, tileSize);
-    if (polygon.length < 3) continue;
-    const xs = polygon.map((p) => p[0]);
-    const ys = polygon.map((p) => p[1]);
-    const minX = Math.max(0, Math.floor(Math.min(...xs)));
-    const maxX = Math.min(map.width - 1, Math.floor(Math.max(...xs)));
-    const minY = Math.max(0, Math.floor(Math.min(...ys)));
-    const maxY = Math.min(map.height - 1, Math.floor(Math.max(...ys)));
-    for (let y = minY; y <= maxY; y++)
-      for (let x = minX; x <= maxX; x++)
-        if (!blocked[y][x] && polygonOverlapsBox(polygon, footprint(x, y))) blocked[y][x] = true;
-  }
+  for (const collision of map.spatialPrimitives?.collisions ?? [])
+    blockUnder(collisionPolygon(collision, tileSize));
   return blocked;
+}
+
+/**
+ * A tile's collision as polygons placed at `topLeft` (tile units): "full" fills the tile, "complex" uses every polygon
+ * and rectangle shape, as Unity's imported physics shape does.
+ */
+function tilePolygons(
+  collision: CollisionDefinition | undefined,
+  [x, y]: Point,
+  tileSize: number,
+): Point[][] {
+  if (collision?.type === 'full')
+    return [
+      [
+        [x, y],
+        [x + 1, y],
+        [x + 1, y + 1],
+        [x, y + 1],
+      ],
+    ];
+  if (collision?.type !== 'complex') return [];
+  return (collision.shapes ?? []).flatMap((shape): Point[][] => {
+    const points: Point[] =
+      shape.type === 'rectangle'
+        ? [
+            [shape.x ?? 0, shape.y ?? 0],
+            [(shape.x ?? 0) + (shape.width ?? 0), shape.y ?? 0],
+            [(shape.x ?? 0) + (shape.width ?? 0), (shape.y ?? 0) + (shape.height ?? 0)],
+            [shape.x ?? 0, (shape.y ?? 0) + (shape.height ?? 0)],
+          ]
+        : shapeToNormalizedPolygon(shape, tileSize);
+    return points.length >= 3 ? [points.map(([px, py]): Point => [x + px, y + py])] : [];
+  });
 }
 
 function footprint(x: number, y: number): [Point, Point] {
@@ -109,6 +159,7 @@ function collisionPolygon(collision: MapCollision, tileSize: number): Point[] {
   }
 }
 
+/** Drawn water blocks a cell when it covers more than half of its pixels, like Unity's imported water collider. */
 function markWater(
   blocked: BlockedGrid,
   map: GameMap,
@@ -116,17 +167,13 @@ function markWater(
   maskWidth: number,
   tileSize: number,
 ) {
-  const from = Math.round((0.5 - FOOTPRINT_HALF) * tileSize);
-  const to = Math.round((0.5 + FOOTPRINT_HALF) * tileSize);
   for (let y = 0; y < map.height; y++)
     for (let x = 0; x < map.width; x++) {
-      if (blocked[y][x]) continue;
-      search: for (let py = y * tileSize + from; py < y * tileSize + to; py++)
-        for (let px = x * tileSize + from; px < x * tileSize + to; px++)
-          if (bitmap[py * maskWidth + px]) {
-            blocked[y][x] = true;
-            break search;
-          }
+      let water = 0;
+      for (let py = y * tileSize; py < (y + 1) * tileSize; py++)
+        for (let px = x * tileSize; px < (x + 1) * tileSize; px++)
+          if (bitmap[py * maskWidth + px]) water++;
+      if (water * 2 > tileSize * tileSize) blocked[y][x] = true;
     }
 }
 

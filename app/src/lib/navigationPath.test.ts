@@ -57,13 +57,21 @@ const tileset: Tileset = {
         ],
       },
     },
+    // A bench: a rectangle across the middle.
+    5: {
+      collision: {
+        type: 'complex',
+        shapes: [{ id: 'r', type: 'rectangle', x: 0.1, y: 0.45, width: 0.8, height: 0.1 }],
+      },
+    },
   },
+  objects: [{ id: 'stone', name: 'Stone', tiles: [{ x: 0, y: 0, tileIndex: 2 }] }],
 } as unknown as Tileset;
 const tilesets = new Map([[tileset.id, tileset]]);
 
-/** A map from rows of characters: . grass, = road, # wall, o fence post, ~ hedge. */
+/** A map from rows of characters: . grass, = road, # wall, o fence post, ~ hedge, b bench. */
 function makeMap(rows: string[], collisions: MapCollision[] = []): GameMap {
-  const codes: Record<string, number> = { '.': 0, '=': 1, '#': 2, o: 3, '~': 4 };
+  const codes: Record<string, number> = { '.': 0, '=': 1, '#': 2, o: 3, '~': 4, b: 5 };
   const terrain: Layer = {
     id: 'terrain',
     name: 'Terrain',
@@ -100,6 +108,52 @@ describe('computeBlockedGrid', () => {
   it('blocks full-collision tiles and polygons that reach the middle of a cell', () => {
     const blocked = computeBlockedGrid(makeMap(['.#o~']), tilesets, TILE);
     expect(blocked[0]).toEqual([false, true, true, false]); // a hedge on the tile's edge leaves the middle free
+  });
+
+  it('counts rectangle shapes, as Unity does', () => {
+    expect(computeBlockedGrid(makeMap(['b.']), tilesets, TILE)[0]).toEqual([true, false]);
+  });
+
+  it('blocks under placed objects at their exact position, also between tiles', () => {
+    const map = makeMap(['....', '....']);
+    // A one-tile stone placed 1.5 tiles across and half a tile down covers the middles of four cells.
+    map.layers.push({
+      id: 'objects',
+      name: 'Objects',
+      kind: 'object',
+      visible: true,
+      locked: false,
+      opacity: 1,
+      zOrder: 1,
+      objectInstances: [
+        { id: 's', tilesetId: tileset.id, objectDefinitionId: 'stone', x: 24, y: 8 },
+      ],
+    } as unknown as Layer);
+    expect(computeBlockedGrid(map, tilesets, TILE)).toEqual([
+      [false, true, true, false],
+      [false, true, true, false],
+    ]);
+  });
+
+  it('blocks cells that drawn water covers more than half of', () => {
+    const map = makeMap(['....', '....']);
+    // Each pixel row: 25 water pixels (all of cell 0, 9 of 16 columns of cell 1), 7 dry, 7 water (cell 2), 25 dry.
+    const rle = Array.from({ length: 2 * TILE }, () => [1, 25, 0, 7, 1, 7, 0, 25]).flat();
+    map.layers.push({
+      id: 'water',
+      name: 'Water',
+      kind: 'water',
+      visible: true,
+      locked: false,
+      opacity: 1,
+      zOrder: 1,
+      waterBodies: [{ id: 'pond', name: 'Pond' }],
+      waterMask: { width: 4 * TILE, height: 2 * TILE, rle },
+    } as unknown as Layer);
+    expect(computeBlockedGrid(map, tilesets, TILE)).toEqual([
+      [true, true, false, false],
+      [true, true, false, false],
+    ]);
   });
 
   it('blocks cells under the map collision shapes', () => {

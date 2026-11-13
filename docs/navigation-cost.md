@@ -14,7 +14,7 @@ them; clearing the field removes the key. Absent values are never written to the
 3. Object layers contribute only their placed object instances (each object's tiles at the instance's tile offset).
 4. Invisible layers are ignored.
 
-Blocking (walls, objects, water) is not part of the cost; it is decided at runtime in Unity. Use the collision overlay to see it.
+Blocking (walls, objects, water) is not part of the cost. Unity bakes it next to the costs at import, and the routine editor's route preview computes the same cells (`computeBlockedGrid` in `app/src/lib/navigationPath.ts`): a cell is blocked when collision covers its middle half. Live walking in Unity still asks physics, so placed entities block too. Use the collision overlay to see collisions.
 
 Constants (kept identical in `schemas/tileset.schema.json`, `app/src/lib/navigationCost.ts` and the Unity importer):
 default cost 2, authored range 1-100.
