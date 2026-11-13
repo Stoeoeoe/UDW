@@ -48,6 +48,16 @@ namespace Core.Scripting.Editor
         }
 
         [Test]
+        public void ExportDescribesTheGameClockFromSystemRoot()
+        {
+            var clock = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemRoot>(SystemRoot.PrefabPath).Clock;
+            var described = LuaBindingManifestExporter.DescribeClock(clock);
+            Assert.That(described.secondsPerInGameMinute, Is.EqualTo(clock.secondsPerInGameMinute));
+            Assert.That(described.startOfDay, Is.EqualTo(clock.startOfDay));
+            Assert.That(described.endOfDay, Is.EqualTo(clock.endOfDay));
+        }
+
+        [Test]
         public void ExportWritesResourceChoicesAndParameterLinksInTheSameFile()
         {
             var manifest = VulcanusLuaEngine.DescribeBindings();

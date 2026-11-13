@@ -10,7 +10,8 @@ namespace Character
         [SerializeField] private CharacterAttribute maxHealth = new(100f);
         [SerializeField] private CharacterAttribute maxStamina = new(100f);
         [SerializeField] private CharacterAttribute physicalDefense = new(0f);
-        [SerializeField] private CharacterAttribute walkSpeed = new(4f);
+        [SerializeField, Tooltip("Replaced on Awake by the character definition's walk speed, which Vulcanus authors.")]
+        private CharacterAttribute walkSpeed = new(CharacterDefinition.DefaultWalkSpeed);
         [SerializeField] private CharacterAttribute runSpeed = new(7f);
 
         public int MaxHealth => Mathf.RoundToInt(maxHealth.Value);
@@ -30,6 +31,9 @@ namespace Character
             if (MaxHealth != previousHealth) MaximumHealthChanged?.Invoke();
             if (MaxStamina != previous) MaximumStaminaChanged?.Invoke();
         }
+
+        /// <summary>Uses the walk speed (tiles per second) authored on the character's definition.</summary>
+        public void UseWalkSpeed(float tilesPerSecond) => walkSpeed.SetBaseValue(tilesPerSecond);
 
         public bool RemoveModifier(CharacterAttributeType type, string sourceId)
         {

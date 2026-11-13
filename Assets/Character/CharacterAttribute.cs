@@ -23,6 +23,14 @@ namespace Character
 
         public float BaseValue => baseValue;
 
+        /// <summary>Replaces the authored base, for values that come from imported content rather than the prefab.</summary>
+        public void SetBaseValue(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
+                throw new ArgumentOutOfRangeException(nameof(value), "Attribute base values must be finite and nonnegative.");
+            baseValue = value;
+        }
+
         // Percentage bonuses add together, then apply after flat bonuses.
         // TODO: Consider adding a cache if the modifier count rises.
         public float Value

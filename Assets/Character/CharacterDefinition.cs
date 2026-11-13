@@ -18,7 +18,14 @@ namespace Character
         [SerializeField, ReadOnly, Tooltip("Portrait shown when the character has none for a line's emotion.")]
         private Texture2D defaultPortrait;
         [SerializeField, ReadOnly] private EmotionPortrait[] emotionPortraits = Array.Empty<EmotionPortrait>();
+        [SerializeField, ReadOnly, Tooltip("Walking speed in tiles per second, before boons and other modifiers.")]
+        private float walkSpeed = DefaultWalkSpeed;
+
+        /// <summary>Walk speed when the Vulcanus character leaves it out; Vulcanus documents the same value.</summary>
+        public const float DefaultWalkSpeed = 4f;
+
         public string CharacterId => characterId;
+        public float WalkSpeed => walkSpeed;
         public string DisplayName => displayName;
         public string DefaultTypewriterSoundId => typewriterSoundId;
         public IReadOnlyList<EmotionPortrait> EmotionPortraits => emotionPortraits;
@@ -42,7 +49,8 @@ namespace Character
 #if UNITY_EDITOR
         public void Configure(string id, string characterName,
             string defaultTypewriterSoundId = null, EmotionTypewriterSound[] emotionSounds = null,
-            Texture2D defaultPortraitTexture = null, EmotionPortrait[] emotionPortraitTextures = null)
+            Texture2D defaultPortraitTexture = null, EmotionPortrait[] emotionPortraitTextures = null,
+            float walkTilesPerSecond = DefaultWalkSpeed)
         {
             characterId = id;
             displayName = characterName;
@@ -50,6 +58,7 @@ namespace Character
             emotionTypewriterSounds = emotionSounds ?? Array.Empty<EmotionTypewriterSound>();
             defaultPortrait = defaultPortraitTexture;
             emotionPortraits = emotionPortraitTextures ?? Array.Empty<EmotionPortrait>();
+            walkSpeed = walkTilesPerSecond;
             RequireValidConfiguration();
         }
 #endif
@@ -75,6 +84,8 @@ namespace Character
     {
         protected override void CollectConfigurationErrors(CharacterDefinition asset, List<ConfigurationError> errors)
         {
+            if (!ConfigurationRules.IsFinite(asset.WalkSpeed) || asset.WalkSpeed <= 0f)
+                Report(errors, asset, "walkSpeed", "Walk speed must be a positive number of tiles per second.");
             if (!string.IsNullOrEmpty(asset.DefaultTypewriterSoundId) && !DefinitionIdRules.IsLowercaseNamespaced(asset.DefaultTypewriterSoundId))
                 Report(errors, asset, "typewriterSound", "Use a lowercase namespace:name typewriter sound ID.");
             var portraitEmotions = new HashSet<string>();

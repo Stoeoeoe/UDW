@@ -11,6 +11,16 @@ namespace Core.Scripting
         public LuaModuleDescription[] modules;
         public LuaTableDescription[] tables;
         public Dictionary<string, LuaResourceDescription[]> resources = new(StringComparer.Ordinal);
+        /// <summary>The game clock, so editors can turn walking distances into in-game minutes.</summary>
+        public LuaClockDescription clock;
+    }
+
+    [Serializable]
+    public sealed class LuaClockDescription
+    {
+        public float secondsPerInGameMinute;
+        public int startOfDay;
+        public int endOfDay;
     }
 
     [Serializable]

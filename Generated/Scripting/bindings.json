@@ -1526,5 +1526,10 @@
         "description": "Sunny"
       }
     ]
+  },
+  "clock": {
+    "secondsPerInGameMinute": 5.0,
+    "startOfDay": 6,
+    "endOfDay": 23
   }
 }

@@ -35,6 +35,7 @@ namespace Core
         [SerializeField] private ItemSettings items = new();
         [SerializeField] private ClockSettings clock = new();
         public ItemSettings Items => items;
+        public ClockSettings Clock => clock;
 
         /// <summary>Registers the game-session services with the authored settings; scene-less tests use this alone.</summary>
         public void RegisterServices(IContainerBuilder builder) =>

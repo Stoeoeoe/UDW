@@ -41,6 +41,11 @@
       "propertyNames": { "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" },
       "additionalProperties": { "type": "string", "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" }
     },
+    "walkSpeed": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Walking speed in tiles per second, before boons and other modifiers. Absent = 4. NPC routines use it to time each walk."
+    },
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'NPCs/Villagers'). Empty string or absent = root."

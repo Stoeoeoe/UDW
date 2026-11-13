@@ -33,6 +33,7 @@ namespace Core.Scripting.Editor
                 var manifest = VulcanusLuaEngine.DescribeBindings();
                 DefaultCatalogAssets.CreateMissingCatalogs();
                 PopulateResources(manifest);
+                manifest.clock = DescribeClock(AssetDatabase.LoadAssetAtPath<SystemRoot>(SystemRoot.PrefabPath).Clock);
                 AssetDatabase.RegisterCustomDependency(DependencyName, Hash128.Compute(Serialize(manifest)));
                 var path = Path.Combine(Path.GetDirectoryName(Application.dataPath), RelativePath);
                 if (!WriteIfChanged(path, manifest)) return;
@@ -86,6 +87,13 @@ namespace Core.Scripting.Editor
                 .Select(definition => new LuaResourceDescription { id = catalog.GetId(definition), description = description(definition) }).ToArray();
         }
 
+        internal static LuaClockDescription DescribeClock(Core.TimeAndWeather.ClockSettings clock) => new()
+        {
+            secondsPerInGameMinute = clock.secondsPerInGameMinute,
+            startOfDay = clock.startOfDay,
+            endOfDay = clock.endOfDay
+        };
+
         internal static LuaResourceDescription[] DescribeDirections() => CardinalDirections.Values.Keys.OrderBy(id => id, StringComparer.Ordinal)
             .Select(id => new LuaResourceDescription { id = id, description = id }).ToArray();
 
@@ -121,7 +129,8 @@ namespace Core.Scripting.Editor
         {
             if (imported.Concat(deleted).Concat(moved).Concat(movedFrom).Any(path =>
                 path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith(".apollocue", StringComparison.OrdinalIgnoreCase)))
+                path.EndsWith(".apollocue", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals(SystemRoot.PrefabPath, StringComparison.OrdinalIgnoreCase)))
                 Schedule();
         }
 

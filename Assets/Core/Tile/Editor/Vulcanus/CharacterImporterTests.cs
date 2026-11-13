@@ -35,6 +35,24 @@ namespace Core.Tile.Editor.Vulcanus
             finally { Object.DestroyImmediate(definition); }
         }
 
+        [Test]
+        public void WalkSpeedComesFromTheSourceAndDefaultsToFourTilesPerSecond()
+        {
+            var authored = Parse("{\"id\":\"base:fabia\",\"name\":\"Fabia\",\"walkSpeed\":2.5}", false);
+            var omitted = Parse("{\"id\":\"base:fabia\",\"name\":\"Fabia\"}", false);
+            try
+            {
+                Assert.That(authored.WalkSpeed, Is.EqualTo(2.5f));
+                Assert.That(omitted.WalkSpeed, Is.EqualTo(CharacterDefinition.DefaultWalkSpeed));
+                Assert.Throws<FormatException>(() => Parse("{\"id\":\"base:fabia\",\"name\":\"Fabia\",\"walkSpeed\":0}", false));
+            }
+            finally
+            {
+                Object.DestroyImmediate(authored);
+                Object.DestroyImmediate(omitted);
+            }
+        }
+
         [TestCase("{\"name\":\"Gagaa\"}")]
         [TestCase("{\"id\":123,\"name\":\"Gagaa\"}")]
         [TestCase("{\"id\":\"base:gagaa\",\"name\":\"\"}")]

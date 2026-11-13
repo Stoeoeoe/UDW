@@ -88,6 +88,7 @@ namespace Character
         protected virtual void Awake()
         {
             ValidateConfiguration();
+            attributes.UseWalkSpeed(definition.WalkSpeed);
             Controller = GetComponent<Controller2D>();
             Orientation = GetComponent<Orientation2D>();
             Tiles = GetComponent<CharacterTileContext>();

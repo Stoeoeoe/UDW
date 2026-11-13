@@ -40,7 +40,8 @@ namespace Core.Tile.Editor.Vulcanus
                     .Select(each => new EmotionTypewriterSound { emotionId = each.Key, soundId = each.Value }).ToArray(),
                     data.DefaultPortrait == null ? null : loadPortrait(data.DefaultPortrait),
                     (data.Portraits ?? new Dictionary<string, string>())
-                    .Select(each => new EmotionPortrait { emotionId = each.Key, portrait = loadPortrait(each.Value) }).ToArray());
+                    .Select(each => new EmotionPortrait { emotionId = each.Key, portrait = loadPortrait(each.Value) }).ToArray(),
+                    data.WalkSpeed ?? CharacterDefinition.DefaultWalkSpeed);
                 return definition; }
             catch { UnityEngine.Object.DestroyImmediate(definition); throw; }
         }
@@ -53,6 +54,7 @@ namespace Core.Tile.Editor.Vulcanus
             [JsonProperty("portraits")] public Dictionary<string, string> Portraits;
             [JsonProperty("typewriterSound")] public string TypewriterSound;
             [JsonProperty("emotionTypewriterSounds")] public Dictionary<string, string> EmotionTypewriterSounds;
+            [JsonProperty("walkSpeed")] public float? WalkSpeed;
         }
     }
 }
