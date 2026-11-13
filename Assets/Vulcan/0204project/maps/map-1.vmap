@@ -3180,7 +3180,7 @@
       "id": "layer-1777115083001",
       "name": "collision",
       "kind": "collision",
-      "visible": false,
+      "visible": true,
       "locked": false,
       "opacity": 1,
       "zOrder": 4,
@@ -5711,16 +5711,6 @@
       "properties": {
         "shopId": "base:market_seeds"
       }
-    },
-    {
-      "id": "fabia-01",
-      "typeId": "base:fabia",
-      "label": "Fabia",
-      "position": [
-        160,
-        144
-      ],
-      "properties": {}
     }
   ],
   "spatialPrimitives": {
@@ -5767,6 +5757,32 @@
         "tags": [
           "debug_spawn_point"
         ]
+      },
+      {
+        "id": "right-sie",
+        "name": "Right Side",
+        "position": [
+          496,
+          160
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": []
+      },
+      {
+        "id": "fabia-destination",
+        "name": "Fabia Destination",
+        "position": [
+          176,
+          192
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": []
       }
     ],
     "triggers": [
@@ -5832,62 +5848,7 @@
         "label": "Go to house"
       }
     ],
-    "collisions": [
-      {
-        "id": "collision-1777189534070",
-        "shape": "polygon",
-        "position": [
-          368,
-          48
-        ],
-        "points": [
-          [
-            368,
-            64
-          ],
-          [
-            368,
-            96
-          ],
-          [
-            416,
-            128
-          ],
-          [
-            464,
-            80
-          ],
-          [
-            432,
-            48
-          ]
-        ],
-        "tags": []
-      },
-      {
-        "id": "collision-1777189537658",
-        "shape": "circle",
-        "position": [
-          400,
-          224
-        ],
-        "radius": 43,
-        "tags": []
-      },
-      {
-        "id": "collision-1777189540944",
-        "shape": "rectangle",
-        "position": [
-          368,
-          304
-        ],
-        "size": [
-          80,
-          64
-        ],
-        "tags": []
-      }
-    ]
+    "collisions": []
   },
   "locationLinks": [
     {

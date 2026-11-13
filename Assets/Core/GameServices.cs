@@ -11,6 +11,7 @@ using Core.Items;
 using Core.Location;
 using Core.Scripting;
 using Core.Shops;
+using Core.Routines;
 using Core.Spawning;
 using Core.TimeAndWeather;
 using Interaction.Dialog;
@@ -39,6 +40,7 @@ namespace Core
             builder.Register<ItemManager>(Lifetime.Singleton);
             builder.Register<PlantManager>(Lifetime.Singleton);
             builder.Register<WorldObjectSpawner>(Lifetime.Singleton);
+            builder.Register<RoutineNpcService>(Lifetime.Singleton).AsSelf().As<ITickable>();
             builder.Register<ShopService>(Lifetime.Singleton);
             builder.Register<GameStateManager>(Lifetime.Singleton);
             builder.Register<GameSaveService>(Lifetime.Singleton);

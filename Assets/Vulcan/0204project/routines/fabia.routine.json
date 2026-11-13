@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/routine.schema.json",
+  "formatVersion": 1,
+  "id": "base:fabia_routine",
+  "character": "base:fabia",
+  "home": { "map": "base:map-1", "anchor": "right-sie" },
+  "variants": [
+    {
+      "id": "default",
+      "goals": [
+        {
+          "id": "visit",
+          "departAt": "06:10",
+          "destination": { "map": "base:map-1", "anchor": "fabia-destination" },
+          "activity": { "animation": "base:wave2" }
+        },
+        { "id": "back_home", "departAt": "07:00", "destination": "home" }
+      ]
+    }
+  ]
+}

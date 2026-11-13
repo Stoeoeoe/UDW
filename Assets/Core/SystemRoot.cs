@@ -3,6 +3,7 @@ using Core.Dialogue.Vulcanus;
 using Core.Divinity;
 using Core.Items;
 using Core.Location;
+using Core.Routines;
 using Core.Spawning;
 using Core.TimeAndWeather;
 using Plants;
@@ -87,6 +88,8 @@ namespace Core
                 var level = container.Resolve<LevelManager>();
                 // Persistent entities are restored first, before the managers' own location callbacks.
                 level.RegisterLifecycle(container.Resolve<WorldObjectSpawner>());
+                // Routine characters are placed after persistent entities exist; they are never saved.
+                level.RegisterLifecycle(container.Resolve<RoutineNpcService>());
                 foreach (var manager in root.GetComponentsInChildren<GameManager>(true))
                     if (manager is ILocationLifecycle lifecycle)
                     {

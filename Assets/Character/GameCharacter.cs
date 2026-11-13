@@ -78,6 +78,8 @@ namespace Character
         public bool IsControlBlocked => IsConditionOrControlBlocked || Occupation.IsOccupied;
         public bool IsConditionOrControlBlocked => ConditionState != ConditionState.Normal || _controlBlocks.Count > 0 || _urGUIManager.IsCharacterPaused(this);
         public bool IsRuntimeInitialized { get; private set; }
+        /// <summary>The character has received its location entry, so its animator is bound and has played the entry idle.</summary>
+        public bool IsInLocation => _locationEntered;
         private bool _locationEntered;
         private readonly HashSet<object> _controlBlocks = new();
         private CharacterAbility[] _abilities;
