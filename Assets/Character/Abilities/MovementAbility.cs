@@ -14,11 +14,13 @@ namespace Character.Abilities
         [Inject] private InputManager _inputManager;
 
         [Header("Footsteps")]
-        [SerializeField] float baseFootstepInterval = 0.4f;
+        [Tooltip("World units travelled between footsteps.")]
+        [SerializeField] float strideLength = 1.6f;
         [SerializeField] float footstepVolume = 0.5f;
 
-        float _footstepTimer;
-        float _nextFootstepTime;
+        float _strideDistance;
+        Vector2 _lastPosition;
+        bool _wasMoving;
 
         public override void Tick()
         {
@@ -47,36 +49,35 @@ namespace Character.Abilities
             HandleFootsteps(state);
         }
 
+        // Steps are paced by distance actually travelled, so they follow speed ramps and stop against walls.
         void HandleFootsteps(MovementState state)
         {
-            if (state is MovementState.Walking or MovementState.Running)
+            var position = (Vector2)transform.position;
+            bool moving = state is MovementState.Walking or MovementState.Running;
+            bool wasMoving = _wasMoving;
+            _wasMoving = moving;
+            if (!moving)
             {
-                if (_footstepTimer >= _nextFootstepTime)
-                {
-                    var surfaceSound = Character.Tiles.Current?.TerrainData?.SurfaceSound;
-                    var sound   = state == MovementState.Walking
-                        ? surfaceSound?.walkSound
-                        : surfaceSound?.runSound;
-
-                    float pitch = surfaceSound != null
-                        ? Random.Range(Mathf.Min(surfaceSound.minPitch, surfaceSound.maxPitch), Mathf.Max(surfaceSound.minPitch, surfaceSound.maxPitch))
-                        : 1f;
-                    MMSoundManagerSoundPlayEvent.Trigger(sound, MMSoundManager.MMSoundManagerTracks.Sfx,
-                        transform.position, false, pitch: pitch, volume: footstepVolume);
-
-                    _footstepTimer    = 0f;
-                    _nextFootstepTime = baseFootstepInterval * (4f / Mathf.Max(1f, Controller.CurrentVelocity.magnitude));
-                }
-                else
-                {
-                    _footstepTimer += Time.deltaTime;
-                }
+                _strideDistance = 0f;
+                _lastPosition = position;
+                return;
             }
-            else
-            {
-                _footstepTimer    = 0f;
-                _nextFootstepTime = 0f;
-            }
+
+            // First step lands half a stride after starting to move, not instantly.
+            if (!wasMoving) _strideDistance = strideLength * 0.5f;
+            _strideDistance += Vector2.Distance(position, _lastPosition);
+            _lastPosition = position;
+            if (_strideDistance < strideLength) return;
+            _strideDistance -= strideLength;
+
+            var surfaceSound = Character.Tiles.Current?.TerrainData?.SurfaceSound;
+            var sound = state == MovementState.Walking ? surfaceSound?.walkSound : surfaceSound?.runSound;
+            if (sound == null) return; // Surfaces without a clip are silent.
+
+            float pitch = Random.Range(Mathf.Min(surfaceSound.minPitch, surfaceSound.maxPitch),
+                                       Mathf.Max(surfaceSound.minPitch, surfaceSound.maxPitch));
+            MMSoundManagerSoundPlayEvent.Trigger(sound, MMSoundManager.MMSoundManagerTracks.Sfx,
+                transform.position, false, pitch: pitch, volume: footstepVolume);
         }
     }
 }

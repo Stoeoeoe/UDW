@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce352a4ee41450409cea262601501e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character.Abilities.MovementAbility
-  baseFootstepInterval: 0.4
+  strideLength: 1.6
   footstepVolume: 0.5
 --- !u!114 &6138255719784877473
 MonoBehaviour:
