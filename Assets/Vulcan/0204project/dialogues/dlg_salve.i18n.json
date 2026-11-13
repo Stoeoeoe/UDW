@@ -1,0 +1,14 @@
+{
+  "dialogueId": "base:dlg_salve",
+  "dialogueName": "Salve",
+  "generatedAt": "2026-11-13T16:38:10.875Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:dlg_salve.01",
+      "text": "Salve!",
+      "nodeId": "step_1",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../schemas/dialogue-i18n.schema.json"
+}

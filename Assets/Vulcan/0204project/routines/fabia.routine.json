@@ -13,20 +13,22 @@
       "goals": [
         {
           "id": "visit",
-          "departAt": "06:10",
+          "departAt": "06:30",
           "destination": {
             "map": "base:map-1",
             "anchor": "fabia-destination"
           },
           "activity": {
             "animation": "base:wave"
-          }
+          },
+          "walkingDialogue": "base:dlg_salve",
+          "dialogue": "base:fabia_greeting"
         },
         {
           "id": "back_home",
-          "departAt": "07:00",
+          "departAt": "08:00",
           "destination": "home",
-          "condition": "DivineFavour.GetFavour(\"mars\")"
+          "walkingDialogue": "base:dlg_salve"
         }
       ]
     }
