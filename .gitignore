@@ -123,3 +123,4 @@ Assets/graphify-out
 # MMSoundManager local audio settings (written inside Assets in the Editor)
 /Assets/MMData/
 /Assets/MMData.meta
+.playwright-mcp/*

@@ -1,7 +1,7 @@
 {
   "dialogueId": "base:fabia_greeting",
   "dialogueName": "Fabia — Greeting",
-  "generatedAt": "2026-11-08T21:00:00.000Z",
+  "generatedAt": "2026-11-12T21:28:34.516Z",
   "messages": [
     {
       "msgKey": "dlg.base:fabia_greeting.01",
@@ -13,43 +13,43 @@
       "msgKey": "dlg.base:fabia_greeting.02",
       "text": "Show me your wares.",
       "nodeId": "choice-1",
-      "sourceType": "choiceOption",
-      "optionId": "opt-wares"
+      "optionId": "opt-wares",
+      "sourceType": "choiceOption"
     },
     {
       "msgKey": "dlg.base:fabia_greeting.03",
       "text": "Just wanted to chat.",
       "nodeId": "choice-1",
-      "sourceType": "choiceOption",
-      "optionId": "opt-chat"
+      "optionId": "opt-chat",
+      "sourceType": "choiceOption"
     },
     {
       "msgKey": "dlg.base:fabia_greeting.04",
       "text": "Surely these prices can come down a little?",
       "nodeId": "choice-1",
-      "sourceType": "choiceOption",
-      "optionId": "opt-haggle"
+      "optionId": "opt-haggle",
+      "sourceType": "choiceOption"
     },
     {
       "msgKey": "dlg.base:fabia_greeting.05",
       "text": "That's a lovely scarf you're wearing.",
       "nodeId": "choice-1",
-      "sourceType": "choiceOption",
-      "optionId": "opt-compliment"
+      "optionId": "opt-compliment",
+      "sourceType": "choiceOption"
     },
     {
       "msgKey": "dlg.base:fabia_greeting.06",
       "text": "I heard wolves howling last night.",
       "nodeId": "choice-1",
-      "sourceType": "choiceOption",
-      "optionId": "opt-wolves"
+      "optionId": "opt-wolves",
+      "sourceType": "choiceOption"
     },
     {
       "msgKey": "dlg.base:fabia_greeting.07",
       "text": "Goodbye.",
       "nodeId": "choice-1",
-      "sourceType": "choiceOption",
-      "optionId": "opt-bye"
+      "optionId": "opt-bye",
+      "sourceType": "choiceOption"
     },
     {
       "msgKey": "dlg.base:fabia_greeting.08",
@@ -171,5 +171,6 @@
       "nodeId": "line-bye",
       "sourceType": "line"
     }
-  ]
+  ],
+  "$schema": "../schemas/dialogue-i18n.schema.json"
 }
