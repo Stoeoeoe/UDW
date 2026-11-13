@@ -273,6 +273,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderNavigationCostOverlay,
     renderTriggers,
     renderCollisionShapes,
     renderLocationLinks,
@@ -293,6 +294,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderNavigationCostOverlay();
     renderCollisionShapes();
     renderTriggers();
     renderLocationLinks();
@@ -376,6 +378,7 @@ export const MapViewportPixi: React.FC = () => {
           renderGrid();
           renderCollisionOverlay();
           renderTerrainOverlay();
+          renderNavigationCostOverlay();
           renderCollisionShapes();
           renderTriggers();
           renderLocationLinks();
@@ -413,11 +416,16 @@ export const MapViewportPixi: React.FC = () => {
       // Re-render collision overlay when tileset metadata changes
       if (state.tilesets !== prevState.tilesets) {
         renderCollisionOverlay();
+        renderNavigationCostOverlay();
       }
       // Re-render collision overlay when toggled
       if (state.showCollisionOverlay !== prevState.showCollisionOverlay) {
         renderCollisionOverlay();
         renderCollisionShapes();
+      }
+      // Re-render navigation cost overlay when toggled
+      if (state.showNavigationCostOverlay !== prevState.showNavigationCostOverlay) {
+        renderNavigationCostOverlay();
       }
       // Re-render terrain overlay when toggled
       if (state.showTerrainOverlay !== prevState.showTerrainOverlay) {
@@ -430,6 +438,7 @@ export const MapViewportPixi: React.FC = () => {
       ) {
         renderHover();
         renderPreview();
+        if (state.showNavigationCostOverlay) renderNavigationCostOverlay();
       }
       // Re-render trigger preview while drawing a trigger
       if (
@@ -492,6 +501,7 @@ export const MapViewportPixi: React.FC = () => {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderNavigationCostOverlay,
     renderCollisionShapes,
     renderTriggers,
     renderLocationLinks,

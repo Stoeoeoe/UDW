@@ -37,6 +37,7 @@ import {
   getTileIndicesForObjectDefinition,
 } from '../../lib/tilesetObjects';
 import { saveMapDebounced } from '../../lib/saveManager';
+import { MAX_NAVIGATION_COST, MIN_NAVIGATION_COST } from '../../lib/navigationCost';
 
 interface TilesetInspectorProps {
   tileset: Tileset;
@@ -113,6 +114,57 @@ const PivotYField: React.FC<PivotYFieldProps> = ({
   );
 };
 
+interface NavigationCostFieldProps {
+  currentCost: number | undefined;
+  selectionCount: number;
+  onCommit: (cost: number | undefined) => void;
+}
+
+/** Empty = not set (removes the key). Applies to every selected tile via onCommit. */
+const NavigationCostField: React.FC<NavigationCostFieldProps> = ({
+  currentCost,
+  selectionCount,
+  onCommit,
+}) => {
+  const [text, setText] = React.useState(() => (currentCost === undefined ? '' : String(currentCost)));
+
+  const handleChange = (str: string) => {
+    setText(str);
+    if (str === '') {
+      onCommit(undefined);
+      return;
+    }
+    if (!/^\d+$/.test(str)) return;
+    const cost = parseInt(str, 10);
+    if (cost < MIN_NAVIGATION_COST || cost > MAX_NAVIGATION_COST) return;
+    onCommit(cost);
+  };
+
+  return (
+    <FormControl>
+      <FormLabel>Navigation cost</FormLabel>
+      <NumberInput
+        value={text}
+        min={MIN_NAVIGATION_COST}
+        max={MAX_NAVIGATION_COST}
+        step={1}
+        precision={0}
+        onChange={handleChange}
+      >
+        <NumberInputField placeholder="Not set" />
+        <NumberInputStepper>
+          <NumberIncrementStepper />
+          <NumberDecrementStepper />
+        </NumberInputStepper>
+      </NumberInput>
+      <Text fontSize="9px" color="gray.500" mt={2}>
+        Empty: terrain tiles use 2, other layers don't override. Lower = preferred (1-100).
+        {selectionCount > 1 ? ` Applies to all ${selectionCount} selected tiles.` : ''}
+      </Text>
+    </FormControl>
+  );
+};
+
 export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
   tileset,
   selectedIndex: propSelectedIndex,
@@ -126,6 +178,7 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
   const selectedIndex =
     typeof propSelectedIndex !== 'undefined' ? propSelectedIndex : storeSelectedIndex;
   const updateTileDef = useEditorStore((state) => state.updateTileDefinition);
+  const setTilesNavigationCost = useEditorStore((state) => state.setTilesNavigationCost);
   const updateTileset = useEditorStore((state) => state.updateTileset);
   const maps = useEditorStore((state) => state.maps);
   const tileMetadataDefinitions = useEditorStore((state) => state.tileMetadataDefinitions);
@@ -155,6 +208,14 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
   // Selection & terrain helpers
   const selectedTileDef: TileDefinition =
     selectedIndex !== null ? tileset.tiles[selectedIndex] || {} : {};
+
+  // Multi-selection applies the cost to all selected tiles; otherwise just the inspected tile.
+  const navigationCostTargets =
+    selectedIndex !== null && selectedTileIndices.includes(selectedIndex)
+      ? selectedTileIndices
+      : selectedIndex !== null
+        ? [selectedIndex]
+        : [];
 
   const tileMetadataSchema = useMemo(
     () => propertyDefinitionsToSchema(tileMetadataDefinitions),
@@ -664,6 +725,13 @@ export const TilesetInspector: React.FC<TilesetInspectorProps> = ({
                   terrain: v == null ? undefined : String(v),
                 });
             }}
+          />
+
+          <NavigationCostField
+            key={`navigationCost-${tileset.id}-${navigationCostTargets.join(',')}`}
+            currentCost={selectedTileDef.navigationCost}
+            selectionCount={navigationCostTargets.length}
+            onCommit={(cost) => setTilesNavigationCost(tileset.id, navigationCostTargets, cost)}
           />
 
           <PivotYField

@@ -600,6 +600,20 @@ describe('useEditorStore', () => {
     });
   });
 
+  describe('setShowTilesetNavigationCostOverlay', () => {
+    it('should default to hidden tileset navigation cost overlay', () => {
+      expect(useEditorStore.getState().showTilesetNavigationCostOverlay).toBe(false);
+    });
+
+    it('should toggle tileset navigation cost overlay visibility', () => {
+      useEditorStore.getState().setShowTilesetNavigationCostOverlay(true);
+      expect(useEditorStore.getState().showTilesetNavigationCostOverlay).toBe(true);
+
+      useEditorStore.getState().setShowTilesetNavigationCostOverlay(false);
+      expect(useEditorStore.getState().showTilesetNavigationCostOverlay).toBe(false);
+    });
+  });
+
   describe('addLayerDefinition injects into currentMap', () => {
     const mockProject = {
       idPrefix: 'base',

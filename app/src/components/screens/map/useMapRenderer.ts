@@ -13,6 +13,11 @@ import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { getIconTexture } from '../../../lib/iconRaster';
 import { getWaterBitmap } from '../../../lib/waterMaskCache';
 import {
+  computeNavigationCostGrid,
+  navigationCostTint,
+  type NavigationCostGrid,
+} from '../../../lib/navigationCost';
+import {
   isWaterPaintTool,
   isWaterTool,
   waterBodyColor,
@@ -206,6 +211,12 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const gridGraphicsRef = useRef<Graphics | null>(null);
   const collisionGraphicsRef = useRef<Graphics | null>(null);
   const terrainOverlayGraphicsRef = useRef<Graphics | null>(null);
+  const navigationCostGraphicsRef = useRef<Graphics | null>(null);
+  const navigationCostLabelContainerRef = useRef<Container | null>(null);
+  const navigationCostGridCache = useRef<{
+    key: unknown[];
+    grid: NavigationCostGrid;
+  } | null>(null);
   const waterContainerRef = useRef<Container | null>(null);
   const waterFlowGraphicsRef = useRef<Graphics | null>(null);
   // One canvas-backed sprite per water layer, updated in place while painting.
@@ -273,6 +284,16 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     terrainOverlayGraphics.zIndex = 2.7;
     terrainOverlayGraphicsRef.current = terrainOverlayGraphics;
     container.addChild(terrainOverlayGraphics);
+
+    // Navigation cost overlay (z: 2.72) with the hovered-cell label above it
+    const navigationCostGraphics = new Graphics();
+    navigationCostGraphics.zIndex = 2.72;
+    navigationCostGraphicsRef.current = navigationCostGraphics;
+    container.addChild(navigationCostGraphics);
+    const navigationCostLabelContainer = new Container();
+    navigationCostLabelContainer.zIndex = 2.73;
+    navigationCostLabelContainerRef.current = navigationCostLabelContainer;
+    container.addChild(navigationCostLabelContainer);
 
     // Location links overlay (z: 2.9)
     const locationLinksGraphics = new Graphics();
@@ -659,6 +680,57 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
           g.fill({ color, alpha: 0.45 });
         }
       }
+    }
+  }, [projectTileSize]);
+
+  // Render navigation cost overlay - heat tint per cell plus a cost/source label on the hovered cell
+  const renderNavigationCostOverlay = useCallback(() => {
+    const g = navigationCostGraphicsRef.current;
+    const labels = navigationCostLabelContainerRef.current;
+    const {
+      currentMap,
+      tilesets,
+      activeVariationId,
+      showNavigationCostOverlay,
+      hoveredTile,
+    } = useEditorStore.getState();
+    const tileSize = projectTileSize;
+    if (!g || !labels || !currentMap) return;
+
+    g.clear();
+    labels.removeChildren().forEach((child) => child.destroy());
+    if (!showNavigationCostOverlay) return;
+
+    const key = [currentMap, tilesets, activeVariationId, tileSize];
+    const cached = navigationCostGridCache.current;
+    let grid = cached && cached.key.every((value, i) => value === key[i]) ? cached.grid : null;
+    if (!grid) {
+      grid = computeNavigationCostGrid(currentMap, tilesets, activeVariationId, tileSize);
+      navigationCostGridCache.current = { key, grid };
+    }
+
+    for (let y = 0; y < grid.height; y++) {
+      for (let x = 0; x < grid.width; x++) {
+        const tint = navigationCostTint(grid.cells[y][x].cost);
+        if (!tint) continue;
+        g.rect(x * tileSize, y * tileSize, tileSize, tileSize);
+        g.fill({ color: tint.color, alpha: tint.alpha });
+      }
+    }
+
+    const cell = hoveredTile ? grid.cells[hoveredTile.y]?.[hoveredTile.x] : undefined;
+    if (hoveredTile && cell) {
+      const source = cell.sourceLayerId
+        ? (currentMap.layers.find((layer) => layer.id === cell.sourceLayerId)?.name ??
+          cell.sourceLayerId)
+        : 'default';
+      const label = new BitmapText({
+        text: `Cost ${cell.cost} (${source})`,
+        style: { fontFamily: 'EntityLabel', fontSize: 10, fill: 0xffffff },
+      });
+      label.x = hoveredTile.x * tileSize + tileSize / 2 - label.width / 2;
+      label.y = hoveredTile.y * tileSize - 14;
+      labels.addChild(label);
     }
   }, [projectTileSize]);
 
@@ -2256,6 +2328,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid();
     renderCollisionOverlay();
     renderTerrainOverlay();
+    renderNavigationCostOverlay();
     renderCollisionShapes();
     renderTriggers();
     renderLocationLinks();
@@ -2269,6 +2342,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderNavigationCostOverlay,
     renderCollisionShapes,
     renderTriggers,
     renderLocationLinks,
@@ -2285,6 +2359,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
     renderGrid,
     renderCollisionOverlay,
     renderTerrainOverlay,
+    renderNavigationCostOverlay,
     renderCollisionShapes,
     renderTriggers,
     renderLocationLinks,

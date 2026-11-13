@@ -54,6 +54,11 @@ export interface TilesetSlice {
   updateTileset: (id: string, updates: Partial<Tileset>) => Promise<void>;
   deleteTileset: (id: string) => Promise<void>;
   updateTileDefinition: (tilesetId: string, index: number, definition: TileDefinition) => void;
+  setTilesNavigationCost: (
+    tilesetId: string,
+    indices: number[],
+    navigationCost: number | undefined,
+  ) => void;
   setTileCornerTerrain: (
     tilesetId: string,
     index: number,
@@ -223,6 +228,20 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
                   : 1,
               };
         ts.tiles[index] = castDraft(normalizedDefinition);
+      }
+    });
+    get().scheduleTilesetSave(tilesetId);
+  },
+
+  setTilesNavigationCost: (tilesetId, indices, navigationCost) => {
+    set((state) => {
+      const ts = state.tilesets.get(tilesetId);
+      if (!ts) return;
+      for (const index of indices) {
+        const tile = ts.tiles[index] ?? {};
+        if (navigationCost === undefined) delete tile.navigationCost;
+        else tile.navigationCost = navigationCost;
+        ts.tiles[index] = castDraft(tile);
       }
     });
     get().scheduleTilesetSave(tilesetId);

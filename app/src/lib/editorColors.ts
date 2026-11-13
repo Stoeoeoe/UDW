@@ -4,3 +4,7 @@ export const EDITOR_PANEL_HEX = '#1b1f26';
 export const EDITOR_SHELL_BORDER_HEX = '#071018';
 export const EDITOR_FIELD_BORDER_HEX = '#0b1116';
 export const EDITOR_INLINE_BORDER_HEX = '#1a1a2e';
+
+// Navigation cost overlay heat tint (Pixi numeric colors).
+export const NAVIGATION_COST_CHEAP_COLOR = 0x3fb950;
+export const NAVIGATION_COST_EXPENSIVE_COLOR = 0xf85149;

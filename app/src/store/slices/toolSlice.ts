@@ -39,6 +39,8 @@ export interface ToolSlice {
   showCollisionOverlay: boolean;
   showTilesetCollisionOverlay: boolean;
   showTilesetSortPivotOverlay: boolean;
+  showTilesetNavigationCostOverlay: boolean;
+  showNavigationCostOverlay: boolean;
   showTerrainOverlay: boolean;
   show3DLayerView: boolean;
   showMapTestMode: boolean;
@@ -54,6 +56,8 @@ export interface ToolSlice {
   setShowCollisionOverlay: (enabled: boolean) => void;
   setShowTilesetCollisionOverlay: (enabled: boolean) => void;
   setShowTilesetSortPivotOverlay: (enabled: boolean) => void;
+  setShowTilesetNavigationCostOverlay: (enabled: boolean) => void;
+  setShowNavigationCostOverlay: (enabled: boolean) => void;
   setShowTerrainOverlay: (enabled: boolean) => void;
   setShow3DLayerView: (enabled: boolean) => void;
   setShowMapTestMode: (enabled: boolean) => void;
@@ -99,6 +103,8 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   showCollisionOverlay: false,
   showTilesetCollisionOverlay: false,
   showTilesetSortPivotOverlay: false,
+  showTilesetNavigationCostOverlay: false,
+  showNavigationCostOverlay: false,
   showTerrainOverlay: false,
   show3DLayerView: false,
   showMapTestMode: false,
@@ -140,6 +146,14 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
   setShowTilesetSortPivotOverlay: (enabled) =>
     set((state) => {
       state.showTilesetSortPivotOverlay = enabled;
+    }),
+  setShowTilesetNavigationCostOverlay: (enabled) =>
+    set((state) => {
+      state.showTilesetNavigationCostOverlay = enabled;
+    }),
+  setShowNavigationCostOverlay: (enabled) =>
+    set((state) => {
+      state.showNavigationCostOverlay = enabled;
     }),
   setShowTerrainOverlay: (enabled) =>
     set((state) => {

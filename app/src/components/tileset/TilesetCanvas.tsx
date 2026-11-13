@@ -6,6 +6,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { Tileset } from '../../types/schema';
 import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
 import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
+import { navigationCostTint } from '../../lib/navigationCost';
 import { useProject } from '../../hooks/useProject';
 import {
   findObjectDefinitionAtTileIndex,
@@ -45,6 +46,9 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const setTileCornerTerrain = useEditorStore((state) => state.setTileCornerTerrain);
   const showTilesetCollisionOverlay = useEditorStore((state) => state.showTilesetCollisionOverlay);
   const showTilesetSortPivotOverlay = useEditorStore((state) => state.showTilesetSortPivotOverlay);
+  const showTilesetNavigationCostOverlay = useEditorStore(
+    (state) => state.showTilesetNavigationCostOverlay,
+  );
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{
@@ -842,6 +846,40 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       }
     }
 
+    // Navigation cost: only tiles with an authored cost are shown; unset tiles don't override anything.
+    if (showTilesetNavigationCostOverlay && mode === 'interactive') {
+      const fontSizePx = Math.max(6, tileSize * 0.35);
+      ctx.font = `bold ${fontSizePx}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let idx = 0; idx < tileset.tileCount; idx++) {
+        const cost = tileset.tiles?.[idx]?.navigationCost;
+        if (cost === undefined) continue;
+
+        const col = idx % tileset.columns;
+        const row = Math.floor(idx / tileset.columns);
+        const x = sheetX + col * tileSize;
+        const y = sheetY + row * tileSize;
+
+        const tint = navigationCostTint(cost);
+        if (tint) {
+          const r = (tint.color >> 16) & 0xff;
+          const g = (tint.color >> 8) & 0xff;
+          const b = tint.color & 0xff;
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${tint.alpha})`;
+          ctx.fillRect(x, y, tileSize, tileSize);
+        }
+
+        const label = String(cost);
+        ctx.lineWidth = 3 / effectiveZoom;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.strokeText(label, x + tileSize / 2, y + tileSize / 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+        ctx.fillText(label, x + tileSize / 2, y + tileSize / 2);
+      }
+    }
+
     if (showTilesetSortPivotOverlay && mode === 'interactive') {
       const fontSizePx = Math.max(6, tileSize * 0.35);
       ctx.font = `bold ${fontSizePx}px sans-serif`;
@@ -913,6 +951,7 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     selectionEnd,
     showTilesetCollisionOverlay,
     showTilesetSortPivotOverlay,
+    showTilesetNavigationCostOverlay,
   ]);
 
   const handleClick = (e: React.MouseEvent) => {

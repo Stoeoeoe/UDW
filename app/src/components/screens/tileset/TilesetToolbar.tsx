@@ -1,6 +1,13 @@
 import React from 'react';
 import { HStack } from '@chakra-ui/react';
-import { FiMousePointer, FiEdit2, FiShield, FiArrowDown, FiBox } from 'react-icons/fi';
+import {
+  FiMousePointer,
+  FiEdit2,
+  FiShield,
+  FiArrowDown,
+  FiBox,
+  FiNavigation,
+} from 'react-icons/fi';
 import Toolbar, { ToolItem, ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
 import { useEditorStore } from '../../../store/useEditorStore';
 
@@ -15,6 +22,13 @@ export const TilesetToolbar: React.FC = () => {
   const showTilesetSortPivotOverlay = useEditorStore((state) => state.showTilesetSortPivotOverlay);
   const setShowTilesetSortPivotOverlay = useEditorStore(
     (state) => state.setShowTilesetSortPivotOverlay,
+  );
+
+  const showTilesetNavigationCostOverlay = useEditorStore(
+    (state) => state.showTilesetNavigationCostOverlay,
+  );
+  const setShowTilesetNavigationCostOverlay = useEditorStore(
+    (state) => state.setShowTilesetNavigationCostOverlay,
   );
 
   const TOOLS: ToolItem[] = [
@@ -52,6 +66,17 @@ export const TilesetToolbar: React.FC = () => {
           colorScheme="cyan"
           isActive={showTilesetSortPivotOverlay}
           onClick={() => setShowTilesetSortPivotOverlay(!showTilesetSortPivotOverlay)}
+        />
+        <ToolbarToggleButton
+          label={
+            showTilesetNavigationCostOverlay
+              ? 'Hide navigation cost overlay'
+              : 'Show navigation cost overlay'
+          }
+          icon={<FiNavigation />}
+          colorScheme="green"
+          isActive={showTilesetNavigationCostOverlay}
+          onClick={() => setShowTilesetNavigationCostOverlay(!showTilesetNavigationCostOverlay)}
         />
       </ToolbarShell>
     </HStack>

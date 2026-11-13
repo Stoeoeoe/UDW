@@ -60,8 +60,10 @@ export interface EditorState {
   selectedEntityIds: Set<string>; // Multiple selected entities
   entitySnapMode: 'grid' | 'pixel'; // Snap mode for entity placement/movement
   showCollisionOverlay: boolean; // Visualize tile collision shapes in map viewport
+  showTilesetNavigationCostOverlay: boolean; // Show each tile's navigation cost in tileset editor
   showTilesetCollisionOverlay: boolean; // Visualize tile collision shapes in tileset editor
   showTilesetSortPivotOverlay: boolean; // Visualize per-tile pivotY line in tileset editor
+  showNavigationCostOverlay: boolean; // Heat-tint tile navigation costs in map viewport
   showTerrainOverlay: boolean; // Visualize painted terrain IDs on terrain layers
 
   drawMode: 'point' | 'rect' | 'circle' | 'line' | 'flood'; // Shape mode for tools
@@ -115,7 +117,6 @@ export interface EditorState {
   dialogues: globalThis.Map<string, DialogueDocument>;
   selectedDialogueId: string | null;
   selectedDialogueNodeId: string | null;
-
 
   // Scripting primitives (persisted in project)
 

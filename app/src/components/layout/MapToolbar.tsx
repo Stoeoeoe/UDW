@@ -19,6 +19,7 @@ import {
   FiMaximize,
   FiMousePointer,
   FiShield,
+  FiNavigation,
   FiLayers,
   FiRefreshCw,
   FiRotateCcw,
@@ -231,6 +232,10 @@ export const MapToolbar: React.FC = () => {
 export const MapToolbarActions: React.FC = () => {
   const showCollisionOverlay = useEditorStore((state) => state.showCollisionOverlay);
   const setShowCollisionOverlay = useEditorStore((state) => state.setShowCollisionOverlay);
+  const showNavigationCostOverlay = useEditorStore((state) => state.showNavigationCostOverlay);
+  const setShowNavigationCostOverlay = useEditorStore(
+    (state) => state.setShowNavigationCostOverlay,
+  );
   const showTerrainOverlay = useEditorStore((state) => state.showTerrainOverlay);
   const setShowTerrainOverlay = useEditorStore((state) => state.setShowTerrainOverlay);
   const show3DLayerView = useEditorStore((state) => state.show3DLayerView);
@@ -283,6 +288,21 @@ export const MapToolbarActions: React.FC = () => {
           aria-label="Toggle collision overlay"
         >
           <FiShield />
+        </Button>
+      </Tooltip>
+
+      <Tooltip
+        label={showNavigationCostOverlay ? 'Hide navigation cost overlay' : 'Show navigation cost overlay'}
+        fontSize="xs"
+      >
+        <Button
+          size="xs"
+          variant={showNavigationCostOverlay ? 'solid' : 'outline'}
+          colorScheme="teal"
+          onClick={() => setShowNavigationCostOverlay(!showNavigationCostOverlay)}
+          aria-label="Toggle navigation cost overlay"
+        >
+          <FiNavigation />
         </Button>
       </Tooltip>
 

@@ -31,4 +31,21 @@ describe('tilesetMigration', () => {
     const migrated = migrateTilesetOnLoad(serialized);
     expect(migrated.objects).toEqual(tileset.objects);
   });
+
+  it('round-trips navigationCost and leaves it absent when unset', () => {
+    const tileset: Tileset = {
+      version: 1,
+      id: 'base:village',
+      name: 'Village',
+      spriteSheet: 'village.png',
+      columns: 8,
+      tileCount: 64,
+      tiles: { 4: { navigationCost: 1 }, 5: { probability: 2 } },
+    };
+
+    const serialized = serializeTileset(tileset);
+    expect(serialized.tiles[4]).toEqual({ navigationCost: 1 });
+    expect('navigationCost' in serialized.tiles[5]).toBe(false);
+    expect(migrateTilesetOnLoad(serialized).tiles[4].navigationCost).toBe(1);
+  });
 });

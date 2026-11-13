@@ -113,6 +113,9 @@ export interface TileDefinition {
   // For tiles above the ground (e.g. tree crown 3 rows up): set pivotY = 3 so
   // sort depth = this tile's worldY + 3*tileSize = the actual ground line.
   pivotY?: number;
+  // NPC navigation cost, integer 1..100 (lower = preferred). Absent = not set (default cost 2 applies
+  // to terrain tiles; other layers do not override). See docs/navigation-cost.md.
+  navigationCost?: number;
   // Optional per-corner terrain assignments for corner-based Wang tiles
   // Order: [top-left, top-right, bottom-left, bottom-right]
   terrainCorners?: (string | null)[];

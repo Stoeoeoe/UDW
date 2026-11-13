@@ -108,3 +108,59 @@ describe('TilesetInspector object mode', () => {
     expect(state.selectedTileIndices).toEqual([0, 1, 4, 5]);
   });
 });
+
+describe('TilesetInspector navigation cost', () => {
+  const tileset = {
+    version: 1,
+    id: 'village',
+    name: 'Village',
+    spriteSheet: 'village.png',
+    columns: 4,
+    tileCount: 64,
+    tiles: { 3: { navigationCost: 4 } },
+    objects: [],
+  };
+
+  const setup = (selected: number[]) => {
+    const setTilesNavigationCost = vi.fn();
+    useEditorStore.getState().closeProject();
+    useEditorStore.setState((state) => {
+      state.tilesetToolMode = 'tiles';
+      state.selectedTileIndex = selected[selected.length - 1];
+      state.selectedTileIndices = selected;
+      state.selectedObjectDefinitionId = null;
+      state.maps = [];
+      state.tilesets = new Map();
+      state.loadedSprites = new Map();
+      state.setTilesNavigationCost = setTilesNavigationCost;
+    });
+    renderWithChakra(<TilesetInspector tileset={tileset} />);
+    return setTilesNavigationCost;
+  };
+
+  it('sets the cost on a single tile', () => {
+    const set = setup([5]);
+    fireEvent.change(screen.getByPlaceholderText('Not set'), { target: { value: '3' } });
+    expect(set).toHaveBeenCalledWith('village', [5], 3);
+  });
+
+  it('applies the cost to every selected tile', () => {
+    const set = setup([5, 6, 7]);
+    fireEvent.change(screen.getByPlaceholderText('Not set'), { target: { value: '1' } });
+    expect(set).toHaveBeenCalledWith('village', [5, 6, 7], 1);
+  });
+
+  it('clears the cost when emptied', () => {
+    const set = setup([3]);
+    const input = screen.getByPlaceholderText('Not set');
+    expect(input).toHaveValue('4');
+    fireEvent.change(input, { target: { value: '' } });
+    expect(set).toHaveBeenCalledWith('village', [3], undefined);
+  });
+
+  it('ignores out-of-range values', () => {
+    const set = setup([5]);
+    fireEvent.change(screen.getByPlaceholderText('Not set'), { target: { value: '500' } });
+    expect(set).not.toHaveBeenCalled();
+  });
+});
