@@ -1089,6 +1089,19 @@
         "tags": [
           "debug_spawn_point"
         ]
+      },
+      {
+        "id": "fabia-home",
+        "name": "Fabia's home",
+        "position": [
+          40,
+          104
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": []
       }
     ]
   },

@@ -4,8 +4,8 @@
   "id": "base:fabia_routine",
   "character": "base:fabia",
   "home": {
-    "map": "base:map-1",
-    "anchor": "right-sie"
+    "map": "base:indoor",
+    "anchor": "fabia-home"
   },
   "variants": [
     {
