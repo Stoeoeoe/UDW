@@ -49,7 +49,21 @@ the caller measures.
 
 Characters change maps only through location links. `MapLinkGraph` (built from the world catalog's map prefabs) joins
 the maps; catalog refresh rejects a routine whose goal is on a map no chain of links reaches from where the character
-comes from (home or the goal before). Walking between maps itself is STO-70.
+comes from (home or the goal before).
+
+`RoutineTimetablePlanner.Plan(dayPlan, world, walkSpeed, secondsPerInGameMinute)` turns a day plan into a
+`RoutineTimetable`: stays and the walks between them, minute by minute and split at every door crossed. It reads only
+`WorldNavigation` (each map's baked navigation grid and anchors, plus the links, built once from the map prefabs), so
+it answers for maps that aren't loaded. `At(minute)` gives the segment, `PositionAt(minute)` the feet position in that
+map's local space.
+
+- A walk takes the shortest chain of links by walking distance. Links within one map are ignored.
+- A link is used at the walkable tile nearest the middle of its trigger, among those the trigger covers or borders.
+  Walking resumes at the link's arrival anchor; crossing takes no time.
+- A walk that is still going at the next departure sets off again on arrival.
+- A goal with no walkable route is reached as soon as she sets off, with a warning in `Warnings`.
+
+The service doesn't use the timetable yet; placing characters from it on any map is STO-86.
 
 ## What the character says
 

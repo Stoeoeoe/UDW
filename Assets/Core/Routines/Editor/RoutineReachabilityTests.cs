@@ -11,10 +11,13 @@ namespace Core.Routines.Editor
         // map-1 <-> town, town -> cellar; nothing leads back out of the cellar or to the island.
         private static readonly MapLinkGraph Links = new(new[]
         {
-            new MapLink("base:map-1", "base:town", "gate"),
-            new MapLink("base:town", "base:map-1", "gate"),
-            new MapLink("base:town", "base:cellar", "stairs")
+            Link("base:map-1", "base:town", "gate"),
+            Link("base:town", "base:map-1", "gate"),
+            Link("base:town", "base:cellar", "stairs")
         });
+
+        // Where the trigger is doesn't matter for which maps are joined.
+        private static MapLink Link(string from, string to, string arrivalAnchor) => new(from, to, arrivalAnchor, default);
 
         private RoutineDefinition Routine(params RoutineGoal[] goals)
         {

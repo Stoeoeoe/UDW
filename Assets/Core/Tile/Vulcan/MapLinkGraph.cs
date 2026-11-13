@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Location;
+using UnityEngine;
 
 namespace Core.Tile.Vulcanus
 {
@@ -11,12 +12,15 @@ namespace Core.Tile.Vulcanus
         public string FromMapId { get; }
         public string ToMapId { get; }
         public string ArrivalAnchorId { get; }
+        /// <summary>The trigger's bounds in the local space of its map, where characters use the link.</summary>
+        public Rect TriggerArea { get; }
 
-        public MapLink(string fromMapId, string toMapId, string arrivalAnchorId)
+        public MapLink(string fromMapId, string toMapId, string arrivalAnchorId, Rect triggerArea)
         {
             FromMapId = fromMapId;
             ToMapId = toMapId;
             ArrivalAnchorId = arrivalAnchorId;
+            TriggerArea = triggerArea;
         }
     }
 
@@ -42,7 +46,24 @@ namespace Core.Tile.Vulcanus
             new(worlds.SelectMany(world => world.MapBindings)
                 .Where(binding => binding.MapPrefab)
                 .SelectMany(binding => binding.MapPrefab.GetComponentsInChildren<LocationLink>(true)
-                    .Select(link => new MapLink(binding.MapId, link.TargetLocationId, link.TargetEntryKey))));
+                    .Select(link => new MapLink(binding.MapId, link.TargetLocationId, link.TargetEntryKey,
+                        TriggerArea(binding.MapPrefab.transform, link)))));
+
+        /// <summary>The bounds of the link's trigger collider in the map's local space; works on prefab assets.</summary>
+        private static Rect TriggerArea(Transform map, LocationLink link)
+        {
+            Vector2[] corners = link.GetComponent<Collider2D>() switch
+            {
+                BoxCollider2D box => new[] { box.offset - box.size / 2, box.offset + box.size / 2 },
+                PolygonCollider2D polygon => polygon.points.Select(point => point + polygon.offset).ToArray(),
+                var other => throw new InvalidOperationException(
+                    $"Location link '{link.Key}' needs a box or polygon trigger, not {other?.GetType().Name ?? "none"}.")
+            };
+            var local = corners.Select(corner => (Vector2)map.InverseTransformPoint(link.transform.TransformPoint(corner))).ToArray();
+            var min = local.Aggregate(Vector2.Min);
+            var max = local.Aggregate(Vector2.Max);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
 
         public IReadOnlyList<MapLink> LinksFrom(string mapId) =>
             _linksFrom.TryGetValue(mapId, out var links) ? links : Array.Empty<MapLink>();
