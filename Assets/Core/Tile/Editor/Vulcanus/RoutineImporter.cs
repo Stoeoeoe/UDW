@@ -33,7 +33,7 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 var home = Place(data.Home);
                 routine.Configure(data.Id, data.Character, home,
-                    Entries(data.Overrides, "overrides", sourcePath), Entries(data.Variants, "variants", sourcePath));
+                    Entries(data.Overrides, "overrides", sourcePath), Entries(data.Variants, "variants", sourcePath), data.Dialogue);
                 return routine;
             }
             catch { Object.DestroyImmediate(routine); throw; }
@@ -53,7 +53,7 @@ namespace Core.Tile.Editor.Vulcanus
         private static RoutineGoal[] Goals(List<GoalDto> goals, string sourcePath, string path) =>
             (goals ?? new List<GoalDto>()).Select((goal, i) => new RoutineGoal(goal.Id, Minutes(goal.DepartAt),
                 Condition(goal.Condition, sourcePath, $"{path}.goals[{i}]"), Destination(goal.Destination),
-                goal.Activity?.Animation)).ToArray();
+                goal.Activity?.Animation, goal.WalkingDialogue, goal.Dialogue)).ToArray();
 
         /// <summary>Null means the routine's home.</summary>
         private static RoutinePlace Destination(JToken destination) =>
@@ -82,6 +82,7 @@ namespace Core.Tile.Editor.Vulcanus
             [JsonProperty("id")] public string Id;
             [JsonProperty("character")] public string Character;
             [JsonProperty("home")] public PlaceDto Home;
+            [JsonProperty("dialogue")] public string Dialogue;
             [JsonProperty("overrides")] public List<EntryDto> Overrides;
             [JsonProperty("variants")] public List<EntryDto> Variants;
         }
@@ -109,6 +110,8 @@ namespace Core.Tile.Editor.Vulcanus
             [JsonProperty("condition")] public string Condition;
             [JsonProperty("destination")] public JToken Destination;
             [JsonProperty("activity")] public ActivityDto Activity;
+            [JsonProperty("walkingDialogue")] public string WalkingDialogue;
+            [JsonProperty("dialogue")] public string Dialogue;
         }
 
         private sealed class ActivityDto

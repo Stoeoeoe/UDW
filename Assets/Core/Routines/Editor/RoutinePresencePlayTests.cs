@@ -6,6 +6,7 @@ using Core.Common.Editor;
 using Core.Location;
 using Core.Tile;
 using Core.TimeAndWeather;
+using Interaction.Dialogue;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -39,6 +40,10 @@ namespace Core.Routines.Editor
             var fabia = Single(service);
             yield return null; // She enters the location on her first frame.
             Assert.That(FeetDistance(fabia, home.AnchorId), Is.LessThan(0.05f));
+            Assert.That(fabia.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true).DialogueId,
+                Is.EqualTo(service.Plans.Single(plan => plan.Routine.CharacterId == Fabia).DialogueAt(-1, arrived: true) ?? ""),
+                "Talking to her starts the dialogue her routine sets, not one fixed on her prefab.");
+
 
             // Between her departures she has arrived and plays her activity.
             SetTime((visit.DepartMinute + goHome.DepartMinute) / 2);

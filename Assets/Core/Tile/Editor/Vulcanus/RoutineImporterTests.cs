@@ -3,6 +3,7 @@ using Core.Common.Editor;
 using Core.Routines;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
@@ -63,6 +64,28 @@ namespace Core.Tile.Editor.Vulcanus
                 Assert.That(routine.ValidateConfiguration(), Is.Empty);
             }
             finally { Object.DestroyImmediate(routine); }
+        }
+
+        [Test]
+        public void ImportsWhatTheCharacterSaysThroughTheDay()
+        {
+            var visit = Goal("visit", "08:00");
+            visit["walkingDialogue"] = "base:hurrying";
+            visit["dialogue"] = "base:fabia_greeting";
+            var json = Routine(new JArray(Entry("default", null, visit, Goal("back_home", "10:00", "home"))));
+            json["dialogue"] = "base:morning";
+            var routine = Parse(json);
+            try
+            {
+                Assert.That(routine.DialogueId, Is.EqualTo("base:morning"));
+                Assert.That(routine.Variants[0].Goals[0].WalkingDialogueId, Is.EqualTo("base:hurrying"));
+                Assert.That(routine.Variants[0].Goals[0].DialogueId, Is.EqualTo("base:fabia_greeting"));
+                Assert.That(routine.Variants[0].Goals[1].DialogueId, Is.Empty, "An unset dialogue keeps the one before.");
+            }
+            finally { Object.DestroyImmediate(routine); }
+
+            json["dialogue"] = "Fabia Greeting";
+            Assert.Throws<FormatException>(() => Parse(json), "Dialogue IDs are namespaced.");
         }
 
         [Test]

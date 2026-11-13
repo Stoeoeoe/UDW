@@ -104,7 +104,7 @@ MonoBehaviour:
   EnterFeedback: {fileID: 0}
   ExitFeedback: {fileID: 0}
   DestroyWhenUsedUp: 0
-  dialogueId: base:fabia_greeting
+  dialogueId: 
   options:
     CanMoveWhileTalking: 0
     PauseGameClockWhileTalking: 1
@@ -112,8 +112,6 @@ MonoBehaviour:
     RotateTargetTowardsDialogueStarter: 1
     ReturnDialogueStarterRotationAfterDialogue: 0
     ReturnDialogueTargetRotationAfterDialogue: 1
-  dialogueTarget: {fileID: 5909159666678768742}
-  emitLifecycleEvents: 1
 --- !u!1001 &9123319117234000259
 PrefabInstance:
   m_ObjectHideFlags: 0

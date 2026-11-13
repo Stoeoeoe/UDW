@@ -118,12 +118,12 @@ namespace Core.Shops.Editor
             Assert.That(LiveGame.Player.IsControlBlocked, Is.False);
         }
 
+        // Her routine decides when she says the greeting; these tests are about the greeting's shop choice.
         private static void TalkToFabia()
         {
-            var fabia = Object.FindObjectsByType<ShowVulcanusDialogueInteractable>(FindObjectsSortMode.None)
-                .Single(each => each.DialogueId == "base:fabia_greeting");
-            fabia.TriggerInteraction(LiveGame.Player);
-            Assert.That(LiveGame.Get<VulcanusDialogueRunner>().IsDialogueActive, Is.True);
+            var runner = LiveGame.Get<VulcanusDialogueRunner>();
+            Assert.That(runner.StartDialogue("base:fabia_greeting", LiveGame.Player, UI.Shared.ScreenPauseMode.Character), Is.True);
+            Assert.That(runner.IsDialogueActive, Is.True);
         }
 
         private static readonly BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;

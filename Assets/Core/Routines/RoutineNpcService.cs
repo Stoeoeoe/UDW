@@ -10,6 +10,7 @@ using Core.Spawning;
 using Core.Tile;
 using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
+using Interaction.Dialogue;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -32,6 +33,8 @@ namespace Core.Routines
         {
             public GameObject Instance;
             public GameCharacter Character;
+            /// <summary>What talking to the character starts; the routine changes its dialogue through the day.</summary>
+            public ShowVulcanusDialogueInteractable Talk;
             public DayPlan Plan;
             /// <summary>The goal most recently set off for; -1 while still at home.</summary>
             public int GoalIndex;
@@ -208,6 +211,7 @@ namespace Core.Routines
             PlaceFeet(npc.Character, feet);
             npc.Facing = Cardinal(route.PointAt(Mathf.Min(walked + 0.5f, route.Length)) - feet);
             npc.WalkOnTo = goal;
+            UpdateDialogue(npc, arrived: false);
         }
 
         private Npc Spawn(DayPlan plan, RoutineMoment moment, RoutinePlace place, PlannedGoal goal)
@@ -222,6 +226,7 @@ namespace Core.Routines
             {
                 Instance = instance,
                 Character = instance.GetComponentInChildren<GameCharacter>(true),
+                Talk = instance.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true),
                 Plan = plan,
                 GoalIndex = moment.GoalIndex
             };
@@ -237,6 +242,7 @@ namespace Core.Routines
             PlaceFeet(npc.Character, anchor.transform.position);
             npc.Facing = anchor.FacingDirection;
             npc.PendingActivity = Activity(goal);
+            UpdateDialogue(npc, arrived: true);
         }
 
         // ── Living through the day ─────────────────────────────────────────────────
@@ -268,6 +274,7 @@ namespace Core.Routines
                 PlaceFeet(npc.Character, anchor.transform.position);
                 npc.Character.Orientation.ForceDirection(anchor.FacingDirection);
                 StartActivity(npc, Activity(goal));
+                UpdateDialogue(npc, arrived: true);
                 return;
             }
 
@@ -303,6 +310,17 @@ namespace Core.Routines
             npc.WalkOnTo = null;
             npc.Heading = goal;
             npc.Route = CharacterNavigation.NavigateTo(npc.Character, AnchorFeet(goal.Destination), _maps);
+            UpdateDialogue(npc, arrived: false);
+        }
+
+        /// <summary>Lets the character say what the routine has set for this point of the day.</summary>
+        private static void UpdateDialogue(Npc npc, bool arrived)
+        {
+            var dialogue = npc.Plan.DialogueAt(npc.GoalIndex, arrived);
+            if (npc.Talk) npc.Talk.UseDialogue(dialogue);
+            else if (dialogue != null)
+                throw new InvalidOperationException($"Routine '{npc.Plan.Routine.RoutineId}' sets the dialogue '{dialogue}', but " +
+                    $"character '{npc.Character.CharacterId}' has no {nameof(ShowVulcanusDialogueInteractable)} to say it.");
         }
 
         private void StartActivity(Npc npc, CharacterAnimationDefinition animation)

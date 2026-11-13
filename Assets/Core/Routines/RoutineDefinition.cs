@@ -33,6 +33,8 @@ namespace Core.Routines
         [SerializeField, ReadOnly, Tooltip("Goes to the routine's home instead of a destination.")] private bool toHome;
         [SerializeField, ReadOnly] private RoutinePlace destination;
         [SerializeField, ReadOnly] private string activityAnimationId;
+        [SerializeField, ReadOnly, Tooltip("Dialogue while walking here; empty keeps the one before.")] private string walkingDialogueId;
+        [SerializeField, ReadOnly, Tooltip("Dialogue once arrived; empty keeps the one before.")] private string dialogueId;
 
         public string Id => id;
         public int DepartMinute => departMinute;
@@ -43,8 +45,13 @@ namespace Core.Routines
         public RoutinePlace Destination => toHome ? null : destination;
         /// <summary>Character animation played at the destination; empty for none.</summary>
         public string ActivityAnimationId => activityAnimationId;
+        /// <summary>Dialogue ID while walking to this goal; empty keeps the dialogue in effect before.</summary>
+        public string WalkingDialogueId => walkingDialogueId;
+        /// <summary>Dialogue ID once arrived; empty keeps the dialogue in effect before.</summary>
+        public string DialogueId => dialogueId;
 
-        public RoutineGoal(string id, int departMinute, string condition, RoutinePlace destination, string activityAnimationId)
+        public RoutineGoal(string id, int departMinute, string condition, RoutinePlace destination, string activityAnimationId,
+            string walkingDialogueId = null, string dialogueId = null)
         {
             this.id = id;
             this.departMinute = departMinute;
@@ -52,6 +59,8 @@ namespace Core.Routines
             toHome = destination == null;
             this.destination = destination;
             this.activityAnimationId = activityAnimationId ?? "";
+            this.walkingDialogueId = walkingDialogueId ?? "";
+            this.dialogueId = dialogueId ?? "";
         }
     }
 
@@ -108,19 +117,24 @@ namespace Core.Routines
         [SerializeField, ReadOnly, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true)]
         private string characterId;
         [SerializeField, ReadOnly, Validation.Required("The source requires a home.")] private RoutinePlace home;
+        [SerializeField, ReadOnly, Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
+        private string dialogueId;
         [SerializeField, ReadOnly] private RoutineEntry[] overrides = Array.Empty<RoutineEntry>();
         [SerializeField, ReadOnly] private RoutineEntry[] variants = Array.Empty<RoutineEntry>();
 
         public string RoutineId => routineId;
         public string CharacterId => characterId;
         public RoutinePlace Home => home;
+        /// <summary>Dialogue ID at the start of each day; empty when the character cannot be talked to until a goal sets one.</summary>
+        public string DialogueId => dialogueId;
         public RoutineEntry[] Overrides => overrides;
         public RoutineEntry[] Variants => variants;
 
 #if UNITY_EDITOR
         public void Configure(string id, string character, RoutinePlace homePlace, RoutineEntry[] overrideEntries,
-            RoutineEntry[] variantEntries)
+            RoutineEntry[] variantEntries, string startDialogueId = null)
         {
+            dialogueId = startDialogueId ?? "";
             routineId = id;
             characterId = character;
             home = homePlace;

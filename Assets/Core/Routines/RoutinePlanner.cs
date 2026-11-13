@@ -15,9 +15,15 @@ namespace Core.Routines
         public RoutinePlace Destination { get; }
         /// <summary>Character animation played at the destination; empty for none.</summary>
         public string ActivityAnimationId { get; }
+        /// <summary>Dialogue while walking here; empty keeps the one in effect before.</summary>
+        public string WalkingDialogueId { get; }
+        /// <summary>Dialogue once arrived; empty keeps the one in effect before.</summary>
+        public string DialogueId { get; }
 
         internal PlannedGoal(RoutineGoal goal, RoutinePlace home)
         {
+            WalkingDialogueId = goal.WalkingDialogueId;
+            DialogueId = goal.DialogueId;
             Id = goal.Id;
             DepartMinute = goal.DepartMinute;
             Destination = goal.ToHome ? home : goal.Destination;
@@ -75,6 +81,23 @@ namespace Core.Routines
             if (index < 0) return new RoutineMoment(null, -1, Routine.Home, 0);
             var from = index == 0 ? Routine.Home : Goals[index - 1].Destination;
             return new RoutineMoment(Goals[index], index, from, minuteOfDay - Goals[index].DepartMinute);
+        }
+
+        /// <summary>
+        /// The dialogue in effect: the newest one the day has set so far, starting from the routine's own. Walking to a goal
+        /// and then being there can each set one. Null when none is set.
+        /// </summary>
+        /// <param name="goalIndex">The goal most recently set off for; -1 at home before the first departure.</param>
+        /// <param name="arrived">Whether that goal's destination has been reached.</param>
+        public string DialogueAt(int goalIndex, bool arrived)
+        {
+            if (goalIndex < -1 || goalIndex >= Goals.Count) throw new ArgumentOutOfRangeException(nameof(goalIndex));
+            for (var i = goalIndex; i >= 0; i--)
+            {
+                if ((i < goalIndex || arrived) && !string.IsNullOrEmpty(Goals[i].DialogueId)) return Goals[i].DialogueId;
+                if (!string.IsNullOrEmpty(Goals[i].WalkingDialogueId)) return Goals[i].WalkingDialogueId;
+            }
+            return string.IsNullOrEmpty(Routine.DialogueId) ? null : Routine.DialogueId;
         }
     }
 

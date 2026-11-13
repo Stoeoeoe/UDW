@@ -45,6 +45,22 @@ the first departure, otherwise which goal the character last set off for, from
 where, and how long ago. Whether they have arrived depends on the route, which
 the caller measures.
 
+## What the character says
+
+Talking to a routine character starts the dialogue its routine has in effect,
+never one fixed on its prefab (catalog refresh rejects a prefab that sets
+one). The routine's top-level `dialogue` applies at the start of each day.
+Each goal can set `walkingDialogue` (on the way there) and `dialogue` (once
+arrived); a phase that sets nothing keeps the newest dialogue set earlier that
+day, and goals skipped for the day set nothing. With no dialogue in effect the
+character cannot be talked to. `DayPlan.DialogueAt` decides it, and
+`RoutineNpcService` applies it to the character's
+`ShowVulcanusDialogueInteractable` whenever it is placed, sets off or arrives.
+A conversation already running finishes as it started.
+
+Characters that always say the same thing have no routine and keep their
+dialogue on their own prefab.
+
 ## Rules checked at import
 
 - The schema: IDs, `HH:MM` departure times, `"home"` or a map anchor as
