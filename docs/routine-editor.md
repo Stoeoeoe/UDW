@@ -21,6 +21,13 @@ the routine is named after its character.
   on this map. Legs show the route Unity's pathfinder would walk; a red dashed line means there is no walkable
   route and is only a straight stand-in. Travel between maps is not drawn.
 
+## Moving between maps
+
+Characters only change maps through location links (a trigger on one map, an arrival anchor on another), like the
+player. A goal on another map must be reachable through a chain of links from where the character comes from (home
+or the goal before); otherwise it is reported, here and at Unity's catalog refresh. `lib/worldGraph.ts` and Unity's
+`MapLinkGraph` build the same graph from the maps' links.
+
 ## Walking times
 
 Each goal card says when the character arrives, and the day strip shows walking as a hatched part of each

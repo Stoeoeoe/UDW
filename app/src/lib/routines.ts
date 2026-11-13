@@ -13,6 +13,7 @@ import type {
   RoutinePlace,
 } from '../types/routine';
 import { LOCAL_ID_PATTERN } from './resourceIds';
+import { canReachMap } from './worldGraph';
 
 /** Routines are named after their character. */
 export function routineLabel(routine: Routine, characters: readonly Character[]): string {
@@ -202,6 +203,25 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
   const checkGoals = (goals: RoutineGoal[], day: RoutineDayRef) => {
     const ids = new Set<string>();
     let previous = -1;
+    // Each goal's map must be reachable through location links from where the character comes from.
+    let from = routine.home;
+    goals.forEach((goal, goalIndex) => {
+      const to = resolvePlace(routine, goal.destination);
+      // Unknown maps are reported on their own.
+      const known = (mapId: string) => references?.maps.some((map) => map.id === mapId);
+      if (
+        references &&
+        known(from.map) &&
+        known(to.map) &&
+        !canReachMap(references.maps, from.map, to.map)
+      )
+        issues.push({
+          day,
+          goalIndex,
+          message: `${goal.id || `Goal ${goalIndex + 1}`} goes to ${to.map}, but no location links lead there from ${from.map}.`,
+        });
+      from = to;
+    });
     goals.forEach((goal, goalIndex) => {
       const name = goal.id || `Goal ${goalIndex + 1}`;
       const at = (message: string) => issues.push({ day, goalIndex, message });
