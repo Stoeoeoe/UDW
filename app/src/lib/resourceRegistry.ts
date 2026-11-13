@@ -373,17 +373,24 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
         ...p,
         map: resourceReference(p.map, prefix),
       });
+      const dialogue = <T extends { dialogue?: string }>(value: T): T =>
+        value.dialogue ? { ...value, dialogue: resourceReference(value.dialogue, prefix) } : value;
       const goals = (list: RoutineGoal[]) =>
-        list.map((goal) =>
-          goal.destination === 'home' ? goal : { ...goal, destination: place(goal.destination) },
-        );
+        list.map((goal) => {
+          const placed =
+            goal.destination === 'home' ? goal : { ...goal, destination: place(goal.destination) };
+          const walking = goal.walkingDialogue
+            ? { ...placed, walkingDialogue: resourceReference(goal.walkingDialogue, prefix) }
+            : placed;
+          return dialogue(walking);
+        });
       const entry = (e: RoutineEntry): RoutineEntry => ({
         ...e,
         ...(e.goals ? { goals: goals(e.goals) } : {}),
         ...(e.pickOne ? { pickOne: e.pickOne.map((c) => ({ ...c, goals: goals(c.goals) })) } : {}),
       });
       return {
-        ...routine,
+        ...dialogue(routine),
         id: qualifyResourceId(routine.id, prefix),
         character: resourceReference(routine.character, prefix),
         home: place(routine.home),

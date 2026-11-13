@@ -146,6 +146,7 @@ export interface RoutineIssue {
 
 export interface RoutineReferences {
   maps: GameMap[];
+  dialogueIds: ReadonlySet<string>;
   characterIds: ReadonlySet<string>;
   /** Animation IDs exported by Unity, or null when the Lua manifest is not loaded. */
   animationIds: ReadonlySet<string> | null;
@@ -187,6 +188,16 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
     if (twin) issues.push({ message: `${routine.character} already has the routine ${twin.id}.` });
   }
   checkPlace(routine.home, 'Home');
+  const checkDialogue = (
+    id: string | undefined,
+    where: string,
+    day?: RoutineDayRef,
+    goalIndex?: number,
+  ) => {
+    if (id && references && !references.dialogueIds.has(id))
+      issues.push({ day, goalIndex, message: `${where} uses the unknown dialogue ${id}.` });
+  };
+  checkDialogue(routine.dialogue, 'The start of the day');
 
   const checkGoals = (goals: RoutineGoal[], day: RoutineDayRef) => {
     const ids = new Set<string>();
@@ -207,6 +218,8 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
       if (goal.condition !== undefined && !goal.condition.trim())
         at(`${name} is only on some days but has no condition yet.`);
       if (goal.destination !== 'home') checkPlace(goal.destination, name, day, goalIndex);
+      checkDialogue(goal.walkingDialogue, `${name} (walking)`, day, goalIndex);
+      checkDialogue(goal.dialogue, name, day, goalIndex);
       if (goal.activity && !goal.activity.animation.trim())
         at(`${name} has an activity without an animation.`);
       else if (
@@ -264,6 +277,33 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
     }
   }
   return issues;
+}
+
+export interface GoalDialogues {
+  /** The dialogue while walking to the goal, and whether the goal sets it or keeps the one before. */
+  walking: { id: string | null; inherited: boolean };
+  /** The dialogue once arrived. */
+  there: { id: string | null; inherited: boolean };
+}
+
+/**
+ * What talking to the character starts during each goal, like Unity's DayPlan.DialogueAt: the newest dialogue the
+ * day has set so far, starting from the routine's own. Goals the preview skips set nothing and get null.
+ */
+export function goalDialogues(
+  routine: Routine,
+  goals: readonly RoutineGoal[],
+  preview: ReadonlySet<string> | null,
+): (GoalDialogues | null)[] {
+  let current = routine.dialogue ?? null;
+  return goals.map((goal) => {
+    if (preview && !goalRuns(goal, preview)) return null;
+    const walking = { id: goal.walkingDialogue ?? current, inherited: !goal.walkingDialogue };
+    current = walking.id;
+    const there = { id: goal.dialogue ?? current, inherited: !goal.dialogue };
+    current = there.id;
+    return { walking, there };
+  });
 }
 
 /** A local ID not yet used by any day of the routine, such as `day-2`. */

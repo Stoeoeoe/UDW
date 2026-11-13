@@ -53,6 +53,45 @@ describe('resource namespaces', () => {
     expect(resourceSchemaPath('project')).toBe('schemas/project.schema.json');
   });
 
+  it('qualifies the maps, character and dialogues a routine refers to', () => {
+    const routine = normalizeResourceDocument(
+      {
+        formatVersion: 1,
+        id: 'fabia_routine',
+        character: 'fabia',
+        home: { map: 'map-1', anchor: 'right-sie' },
+        dialogue: 'fabia_greeting',
+        variants: [
+          {
+            id: 'default',
+            goals: [
+              {
+                id: 'visit',
+                departAt: '06:10',
+                destination: { map: 'map-1', anchor: 'square' },
+                walkingDialogue: 'hurrying',
+                dialogue: 'selling',
+              },
+              { id: 'back_home', departAt: '07:00', destination: 'home' },
+            ],
+          },
+        ],
+      },
+      'routine',
+    );
+    expect(routine.dialogue).toBe('base:fabia_greeting');
+    expect(routine.variants[0].goals).toEqual([
+      {
+        id: 'visit',
+        departAt: '06:10',
+        destination: { map: 'base:map-1', anchor: 'square' },
+        walkingDialogue: 'base:hurrying',
+        dialogue: 'base:selling',
+      },
+      { id: 'back_home', departAt: '07:00', destination: 'home' },
+    ]);
+  });
+
   it('does not treat unrelated field names or user property values as references', () => {
     const character = {
       id: 'base:villager',

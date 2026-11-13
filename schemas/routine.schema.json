@@ -23,6 +23,10 @@
       "$ref": "#/definitions/place",
       "description": "Where the character starts every morning and returns to overnight. Goals can use the destination \"home\"."
     },
+    "dialogue": {
+      "$ref": "#/definitions/dialogueId",
+      "description": "What talking to the character starts at the start of each day, until a goal sets another dialogue. Omit for none."
+    },
     "overrides": {
       "type": "array",
       "description": "Days that must win, such as festivals. Checked before 'variants'; the first entry whose condition is true wins.",
@@ -40,6 +44,11 @@
     }
   },
   "definitions": {
+    "dialogueId": {
+      "type": "string",
+      "description": "ID of a dialogue, for example base:fabia_greeting.",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
     "localId": {
       "type": "string",
       "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
@@ -92,6 +101,14 @@
               "description": "ID of a character animation: a looping animation, an animation set or an activity animation (start, loop and end)."
             }
           }
+        },
+        "walkingDialogue": {
+          "$ref": "#/definitions/dialogueId",
+          "description": "What talking to the character starts while walking to this goal. Omit to keep the dialogue in effect before."
+        },
+        "dialogue": {
+          "$ref": "#/definitions/dialogueId",
+          "description": "What talking to the character starts once it has arrived. Omit to keep the dialogue in effect before."
         }
       }
     },

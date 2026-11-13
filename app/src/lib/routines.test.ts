@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   fallbackIndex,
+  goalDialogues,
   previewDay,
   routineConditions,
   validateRoutine,
@@ -30,6 +31,7 @@ const map = {
 
 const references: RoutineReferences = {
   maps: [map],
+  dialogueIds: new Set(['base:fabia_greeting', 'base:selling']),
   characterIds: new Set(['base:fabia']),
   animationIds: new Set(['base:wave2']),
   otherRoutines: [],
@@ -222,5 +224,42 @@ describe('routine editing', () => {
     ]);
     expect(next.variants[0].goals).toHaveLength(3);
     expect(newGoal([])).toEqual({ id: 'goal', departAt: '08:00', destination: 'home' });
+  });
+});
+
+describe('dialogues through the day', () => {
+  it('keeps the newest dialogue until a goal sets another, like Unity', () => {
+    const routine = fabia();
+    routine.dialogue = 'base:fabia_greeting';
+    const [visit, back] = routine.variants[0].goals!;
+    visit.walkingDialogue = 'base:hurrying';
+    visit.dialogue = 'base:selling';
+    back.condition = 'tired';
+
+    expect(goalDialogues(routine, [visit, back], null)).toEqual([
+      {
+        walking: { id: 'base:hurrying', inherited: false },
+        there: { id: 'base:selling', inherited: false },
+      },
+      {
+        walking: { id: 'base:selling', inherited: true },
+        there: { id: 'base:selling', inherited: true },
+      },
+    ]);
+    // A goal the previewed day skips sets nothing.
+    expect(goalDialogues(routine, [visit, back], new Set())[1]).toBeNull();
+    expect(
+      goalDialogues({ ...routine, dialogue: undefined }, [back], null)[0]?.there.id,
+    ).toBeNull();
+  });
+
+  it('reports dialogues that do not exist', () => {
+    const routine = fabia();
+    routine.dialogue = 'base:missing';
+    routine.variants[0].goals![0].walkingDialogue = 'base:gone';
+    expect(messages(routine)).toEqual([
+      'The start of the day uses the unknown dialogue base:missing.',
+      'visit (walking) uses the unknown dialogue base:gone.',
+    ]);
   });
 });

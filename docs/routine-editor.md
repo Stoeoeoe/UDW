@@ -33,6 +33,18 @@ walking times are not shown. Walks to another map have no known duration yet.
 The same walk speed drives the game: Unity imports it into the character definition and uses it as the base
 walk speed (boons still modify it).
 
+## What the character says
+
+**Says** in the header is the dialogue at the start of each day. Each goal has **says on the way** and **says
+there**. Leaving one empty keeps the newest dialogue set earlier that day; the empty choice names it
+("keeps …"). Goals skipped in the previewed day set nothing. With no dialogue at all, the character cannot be
+talked to. Routine characters get their dialogue only from the routine, never from their Unity prefab.
+
+Every dialogue picker ends with **New dialogue…**: it opens the usual create form with a name for that spot
+(for example "Fabia – market") and files the dialogue in a folder named after the character. **Create** assigns it
+and stays in the routine; **Create and open** also opens it in a tab. The ↗ button next to a picker opens the chosen
+dialogue.
+
 ## Picking and creating anchors
 
 The crosshair next to a place (home or a goal destination) arms the map. Click within ¾ of a tile of an anchor to

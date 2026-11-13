@@ -25,6 +25,8 @@ import type { RoutineGoal } from '../../../types/routine';
 
 const NO_GOALS: RoutineGoal[] = [];
 import { PlaceField } from './PlaceField';
+import { DialogueSelect } from './DialogueSelect';
+import { without } from '../../../lib/routineEditing';
 
 /** What a map click assigns while picking: the routine's home, or a goal's destination. */
 export type PlaceTarget = { kind: 'home' } | { kind: 'goal'; goalIndex: number };
@@ -60,6 +62,7 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
   const characters = useEditorStore((state) => state.characters);
   const maps = useEditorStore((state) => state.maps);
   const routines = useEditorStore((state) => state.routines);
+  const dialogues = useEditorStore((state) => state.dialogues);
   const updateRoutine = useEditorStore((state) => state.updateRoutine);
   const undo = useEditorStore((state) => state.undoRoutine);
   const redo = useEditorStore((state) => state.redoRoutine);
@@ -77,11 +80,12 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
     () =>
       validateRoutine(routine, {
         maps,
+        dialogueIds: new Set(dialogues.keys()),
         characterIds: new Set(characters.map((character) => character.id)),
         animationIds: animations ? new Set(animations.map((animation) => animation.id)) : null,
         otherRoutines: routines,
       }),
-    [routine, maps, characters, animations, routines],
+    [routine, maps, dialogues, characters, animations, routines],
   );
 
   // Keep the selection valid when days are removed or reordered elsewhere (undo, another tab).
@@ -133,6 +137,26 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
               onChange={setHome}
               picking={picking?.kind === 'home'}
               onPick={() => setPicking(picking?.kind === 'home' ? null : { kind: 'home' })}
+            />
+          </Box>
+          <Tooltip
+            hasArrow
+            label="What talking to the character starts each morning, until a goal sets another dialogue."
+          >
+            <Text fontSize="xs" color="editorMutedText" flexShrink={0}>
+              Says
+            </Text>
+          </Tooltip>
+          <Box w="180px" flexShrink={0}>
+            <DialogueSelect
+              label="Dialogue at the start of the day"
+              newName={`${name} – start of day`}
+              newFolder={name}
+              value={routine.dialogue}
+              inherited={null}
+              onChange={(dialogue) =>
+                update(dialogue ? { ...routine, dialogue } : without(routine, 'dialogue'))
+              }
             />
           </Box>
         </HStack>

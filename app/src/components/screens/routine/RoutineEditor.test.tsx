@@ -2,14 +2,19 @@ import React from 'react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { enableMapSet } from 'immer';
 import { RoutineEditor } from './RoutineEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useSaveStore } from '../../../lib/saveManager';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { parseScriptingManifest } from '../../../lib/scriptingManifest';
 import { theme } from '../../../theme';
 import type { Routine } from '../../../types/routine';
 import type { Character, Map as GameMap, Tileset } from '../../../types/schema';
+
+// The app enables Map support at startup; dialogues live in a Map.
+enableMapSet();
 
 vi.mock('../../../lib/fileSystem', async (importOriginal) => {
   const original = await importOriginal<typeof import('../../../lib/fileSystem')>();
@@ -154,6 +159,58 @@ describe('RoutineEditor', () => {
     // Straight would be 4 tiles; the wall in column 2 forces a detour through the bottom row.
     const route = screen.getByText(/^Route of \d+ tiles/).textContent!;
     expect(Number(/\d+/.exec(route)![0])).toBeGreaterThan(4);
+  });
+
+  it('sets what Fabia says, showing what each goal keeps from earlier in the day', () => {
+    const dialogue = (id: string, name: string) => [id, { id, name }] as const;
+    act(() =>
+      useEditorStore.setState({
+        dialogues: new Map([
+          dialogue('base:fabia_greeting', 'Fabia greeting'),
+          dialogue('base:selling', 'Selling'),
+        ]) as never,
+      }),
+    );
+    renderEditor();
+    fireEvent.change(screen.getByLabelText('Dialogue at the start of the day'), {
+      target: { value: 'base:fabia_greeting' },
+    });
+    expect(current().dialogue).toBe('base:fabia_greeting');
+    expect(screen.getAllByLabelText('Dialogue once there')).toHaveLength(2);
+    expect(screen.getAllByText('keeps Fabia greeting').length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getAllByLabelText('Dialogue once there')[0], {
+      target: { value: 'base:selling' },
+    });
+    expect(current().variants[0].goals![0].dialogue).toBe('base:selling');
+    // Walking home keeps what she said at the square.
+    expect(
+      (screen.getAllByLabelText('Dialogue while walking there')[1] as HTMLSelectElement).options[0]
+        .text,
+    ).toBe('keeps Selling');
+  });
+
+  it('creates a dialogue for a goal, named and filed for Fabia, and opens it on request', async () => {
+    const openDocument = vi.spyOn(useWorkspaceStore.getState(), 'openDocument');
+    act(() => useEditorStore.setState({ dialogues: new Map() as never }));
+    renderEditor();
+    fireEvent.change(screen.getAllByLabelText('Dialogue once there')[0], {
+      target: { value: '__new__' },
+    });
+    expect((screen.getByDisplayValue('Fabia – visit') as HTMLInputElement).value).toBe(
+      'Fabia – visit',
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create and open'));
+    });
+
+    const id = current().variants[0].goals![0].dialogue!;
+    const created = useEditorStore.getState().dialogues.get(id)!;
+    expect(created).toMatchObject({ name: 'Fabia – visit', folderPath: 'Fabia' });
+    expect(openDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'dialogue', dialogueId: id }),
+      { pin: true },
+    );
   });
 
   it('adds a goal an hour after the last one and marks the routine unsaved', () => {

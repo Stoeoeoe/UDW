@@ -22,7 +22,10 @@ import { ManifestResourceSelect } from '../../common/ManifestResourceSelect';
 import { ConditionEditor } from '../scripting/ConditionEditor';
 import {
   dayAt,
+  goalDialogues,
+  routineLabel,
   goalRuns,
+  type GoalDialogues,
   minutesOf,
   timeOf,
   TIME_PATTERN,
@@ -39,6 +42,8 @@ import {
 } from '../../../lib/routineEditing';
 import type { Routine, RoutineGoal } from '../../../types/routine';
 import { PlaceField } from './PlaceField';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { DialogueSelect } from './DialogueSelect';
 import type { RoutineLeg } from './useRoutineLegs';
 import { formatWalk } from '../../../lib/routineTiming';
 import type { PlaceTarget } from './RoutineEditor';
@@ -67,6 +72,7 @@ export const RoutineDayPanel: React.FC<{
   preview,
   legs,
 }) => {
+  const speaker = useEditorStore((state) => routineLabel(routine, state.characters));
   const day = dayAt(routine, dayRef);
   if (!day) return null;
   const { entry, choice, goals } = day;
@@ -77,6 +83,7 @@ export const RoutineDayPanel: React.FC<{
       issue.day.entryIndex === dayRef.entryIndex &&
       (issue.day.choiceIndex === null || issue.day.choiceIndex === dayRef.choiceIndex),
   );
+  const dialogues = goalDialogues(routine, goals, preview);
   const setGoals = (next: RoutineGoal[]) => onChange(setDayGoals(routine, dayRef, next));
   const setGoal = (index: number, goal: RoutineGoal) =>
     setGoals(goals.map((existing, i) => (i === index ? goal : existing)));
@@ -185,6 +192,7 @@ export const RoutineDayPanel: React.FC<{
             isSelected={selectedGoal === index}
             skipped={preview !== null && !goalRuns(goal, preview)}
             leg={legs.find((leg) => leg.goalIndex === index)}
+            dialogues={dialogues[index]}
             issues={dayIssues.filter((issue) => issue.goalIndex === index)}
             picking={picking?.kind === 'goal' && picking.goalIndex === index}
             onSelect={() => onSelectGoal(index)}
@@ -201,6 +209,7 @@ export const RoutineDayPanel: React.FC<{
               onSelectGoal(null);
             }}
             home={routine.home}
+            speaker={speaker}
           />
         ))}
         <Box>
@@ -335,10 +344,14 @@ const GoalCard: React.FC<{
   index: number;
   goal: RoutineGoal;
   home: Routine['home'];
+  /** The character's name, for naming and filing dialogues created here. */
+  speaker: string;
   isSelected: boolean;
   skipped: boolean;
   /** The walk to this goal, unless the goal is skipped. */
   leg?: RoutineLeg;
+  /** What the character says during this goal, unless the goal is skipped. */
+  dialogues: GoalDialogues | null;
   issues: RoutineIssue[];
   picking: boolean;
   onSelect: () => void;
@@ -349,9 +362,11 @@ const GoalCard: React.FC<{
   index,
   goal,
   home,
+  speaker,
   isSelected,
   skipped,
   leg,
+  dialogues,
   issues,
   picking,
   onSelect,
@@ -424,6 +439,40 @@ const GoalCard: React.FC<{
             value={goal.activity?.animation}
             onChange={(animation) =>
               onChange(animation ? { ...goal, activity: { animation } } : without(goal, 'activity'))
+            }
+          />
+        </HStack>
+        <HStack spacing={2}>
+          <Text fontSize="xs" color="editorMutedText" w="72px" flexShrink={0}>
+            says on the way
+          </Text>
+          <DialogueSelect
+            label="Dialogue while walking there"
+            newName={`${speaker} – on the way to ${goal.id}`}
+            newFolder={speaker}
+            value={goal.walkingDialogue}
+            inherited={dialogues?.walking.inherited ? dialogues.walking.id : null}
+            onChange={(dialogue) =>
+              onChange(
+                dialogue
+                  ? { ...goal, walkingDialogue: dialogue }
+                  : without(goal, 'walkingDialogue'),
+              )
+            }
+          />
+        </HStack>
+        <HStack spacing={2}>
+          <Text fontSize="xs" color="editorMutedText" w="72px" flexShrink={0}>
+            says there
+          </Text>
+          <DialogueSelect
+            label="Dialogue once there"
+            newName={`${speaker} – ${goal.id}`}
+            newFolder={speaker}
+            value={goal.dialogue}
+            inherited={dialogues?.there.inherited ? dialogues.there.id : null}
+            onChange={(dialogue) =>
+              onChange(dialogue ? { ...goal, dialogue } : without(goal, 'dialogue'))
             }
           />
         </HStack>
