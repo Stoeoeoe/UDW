@@ -69,6 +69,11 @@ namespace Core.Tile.Editor.Vulcanus
                 var tileId = !string.IsNullOrEmpty(meta?.Id) ? meta.Id : $"{tilesetId}_{i}";
                 var tilePivotY = meta?.PivotY ?? 1f;
                 var waterType = "None";
+                // Tilesets are not schema-validated on import, so enforce the authored range here.
+                if (meta?.NavigationCost is { } navigationCost &&
+                    (navigationCost < NavigationCostGrid.MinCost || navigationCost > NavigationCostGrid.MaxCost))
+                    throw new FormatException(
+                        $"Tile {i}: navigationCost must be {NavigationCostGrid.MinCost}..{NavigationCostGrid.MaxCost}, got {navigationCost}.");
 
                 // Use "grid" collision if "Full" mode was selected
                 if (collisionKind == VulcanusCollisionKind.Full)
@@ -148,7 +153,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                 tile.Configure(i, tileId, terrainId,
                     VulcanusImportHelpers.MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind,
-                    metaProps, tilePivotY, shapes, waterType);
+                    metaProps, tilePivotY, shapes, waterType, meta?.NavigationCost ?? 0);
 
                 // Use Sprite collider type so TilemapCollider2D picks up the overridden physics shape.
                 if (collisionKind == VulcanusCollisionKind.Complex && sprite != null)

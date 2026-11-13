@@ -9,6 +9,17 @@ namespace Character
     /// <summary>Shared entry point for character movement. Currently supports straight-line routes only.</summary>
     public static class CharacterNavigation
     {
+        /// <summary>
+        /// Plans the cheapest tile route to a feet position on the current map and walks it, through other characters
+        /// but not through walls or objects. Same lifecycle as <see cref="MoveTo"/>: tick it, dispose it when interrupted.
+        /// </summary>
+        public static NavigationRoute NavigateTo(GameCharacter actor, Vector2 destination, Core.Tile.MapManager maps,
+            bool immediateAcceleration = true) => new(actor, destination, maps, immediateAcceleration);
+
+        /// <summary>Plans the route <see cref="NavigateTo"/> would walk from the character's position, without moving it.</summary>
+        public static NavigationPlan PlanRoute(GameCharacter actor, Vector2 destination, Core.Tile.MapManager maps) =>
+            NavigationPlan.Create(actor, destination, maps);
+
         public static NavigationMove MoveTo(GameCharacter actor, Vector2 destination, bool immediateAcceleration = false,
             bool ignoreCollisions = false) => new(actor, destination, immediateAcceleration, ignoreCollisions);
     }
@@ -25,6 +36,8 @@ namespace Character
         private readonly Vector2 _facing;
         private readonly float _speed;
         private readonly bool _immediateAcceleration;
+        private readonly bool _ignoreCollisions;
+        private readonly int _passThroughMask; // layers of characters this move walks through; 0 = none
         private readonly List<(Collider2D collider, LayerMask excluded, int priority, int queryMask)> _collisionOverrides = new();
         private readonly List<Collider2D> _overlaps = new();
         private readonly HashSet<Collider2D> _warnedObstacles = new();
@@ -33,7 +46,22 @@ namespace Character
         public NavigationMoveStatus Status { get; private set; } = NavigationMoveStatus.Moving;
         public string Error { get; private set; }
 
-        internal NavigationMove(GameCharacter actor, Vector2 destination, bool immediateAcceleration, bool ignoreCollisions)
+        /// <summary>The physics layer shared by every character's solid colliders.</summary>
+        internal const string CharactersLayerName = "Characters";
+
+        internal static int CharactersLayerMask
+        {
+            get
+            {
+                var layer = LayerMask.NameToLayer(CharactersLayerName);
+                if (layer < 0) throw new InvalidOperationException($"Physics layer '{CharactersLayerName}' is missing from the project.");
+                return 1 << layer;
+            }
+        }
+
+        /// <param name="passThroughCharacters">Walk through other characters (player and NPCs) while still colliding with everything else.</param>
+        internal NavigationMove(GameCharacter actor, Vector2 destination, bool immediateAcceleration, bool ignoreCollisions,
+            bool passThroughCharacters = false)
         {
             if (!actor) throw new ArgumentNullException(nameof(actor));
             if (!actor.isActiveAndEnabled || !actor.IsRuntimeInitialized)
@@ -53,6 +81,8 @@ namespace Character
                 throw new InvalidOperationException("MoveTo requires a positive walk speed.");
             _destination = destination;
             _immediateAcceleration = immediateAcceleration;
+            _ignoreCollisions = ignoreCollisions;
+            _passThroughMask = passThroughCharacters ? CharactersLayerMask : 0;
             // A straight segment keeps one animation facing even when physics nudges the
             // remaining direction across a diagonal boundary. Exact diagonals face horizontally,
             // matching the animation library's 45-degree sectors.
@@ -74,7 +104,7 @@ namespace Character
             // Block ordinary input while this move controls the character.
             _controller.ClaimMovement(this);
             _actor.SetControlBlocked(this, true);
-            if (ignoreCollisions)
+            if (ignoreCollisions || passThroughCharacters)
             {
                 foreach (var collider in _body.GetComponentsInChildren<Collider2D>(true))
                 {
@@ -82,7 +112,8 @@ namespace Character
                     var queryMask = (Physics2D.GetLayerCollisionMask(collider.gameObject.layer) |
                         collider.includeLayers.value) & ~collider.excludeLayers.value;
                     _collisionOverrides.Add((collider, collider.excludeLayers, collider.layerOverridePriority, queryMask));
-                    collider.excludeLayers = ~0;
+                    // Pass-through excludes characters only; walls and objects keep their contacts.
+                    collider.excludeLayers = ignoreCollisions ? ~0 : collider.excludeLayers.value | _passThroughMask;
                     collider.layerOverridePriority = int.MaxValue;
                 }
             }
@@ -101,7 +132,7 @@ namespace Character
                 if (collider.attachedRigidbody != _body || collider.isTrigger || !collider.isActiveAndEnabled) continue;
                 hasFootprint = true;
                 var filter = new ContactFilter2D { useTriggers = false };
-                filter.SetLayerMask(Physics2D.GetLayerCollisionMask(collider.gameObject.layer));
+                filter.SetLayerMask(Physics2D.GetLayerCollisionMask(collider.gameObject.layer) & ~_passThroughMask);
                 if (remaining.magnitude > ArrivalDistance && collider.Cast(remaining.normalized, filter, hits, remaining.magnitude) > 0)
                 {
                     var hit = hits[0];
@@ -130,7 +161,7 @@ namespace Character
                 return;
             }
 
-            WarnAboutOverlaps();
+            if (_ignoreCollisions) WarnAboutOverlaps();
             var remaining = _destination - _body.position;
             if (remaining.magnitude <= ArrivalDistance)
             {

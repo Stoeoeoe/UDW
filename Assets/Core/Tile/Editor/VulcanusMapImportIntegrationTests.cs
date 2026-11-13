@@ -589,6 +589,78 @@ namespace Core.Tile.Editor
         }
 
         [Test]
+        public void TilesetImportsNavigationCostAndLeavesAbsentCostsUnset()
+        {
+            var tileset = ImportNavigationTileset("{\"navigationCost\":1}");
+            Assert.That(tileset.Tiles[0].TryGetNavigationCost(out var cost), Is.True);
+            Assert.That(cost, Is.EqualTo(1));
+            Assert.That(tileset.Tiles[1].TryGetNavigationCost(out _), Is.False);
+        }
+
+        [TestCase(0)]
+        [TestCase(101)]
+        public void TilesetRejectsOutOfRangeNavigationCost(int cost)
+        {
+            var errors = new List<string>();
+            Application.LogCallback capture = (text, stack, type) => { if (type == LogType.Error) errors.Add(text); };
+            var previous = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            Application.logMessageReceived += capture;
+            try { ImportNavigationTileset("{\"navigationCost\":" + cost + "}"); }
+            finally { Application.logMessageReceived -= capture; LogAssert.ignoreFailingMessages = previous; }
+            Assert.That(errors.Any(error => error.Contains("navigationCost must be")), Is.True, string.Join("\n", errors));
+        }
+
+        [Test]
+        public void MapImportBakesTheNavigationCostGridFromTilesetCostsWithTheRowsFlipped()
+        {
+            ImportNavigationTileset("{\"navigationCost\":1}", "{\"navigationCost\":9}");
+            // 4x3 map; tile 0 = cost 1, tile 1 = cost 9, tile 2 = no cost. Vulcanus rows are top-down.
+            JArray Rows(params (int x, int y, int tile)[] tiles)
+            {
+                var rows = new JArray(Enumerable.Range(0, 3).Select(_ => new JArray(Enumerable.Repeat((object)null, 4))));
+                foreach (var (x, y, tile) in tiles) rows[y][x] = tile;
+                return rows;
+            }
+            _mapJson = new JObject
+            {
+                ["id"] = "test:navmap", ["name"] = "Nav", ["width"] = 4, ["height"] = 3,
+                ["tilesetRefs"] = new JArray("test:nav"),
+                ["layers"] = new JArray(
+                    new JObject { ["name"] = "Terrain", ["kind"] = "terrain", ["zOrder"] = 0, ["data"] = Rows((1, 2, 0), (2, 2, 0)) },
+                    new JObject { ["name"] = "Over", ["kind"] = "visual", ["zOrder"] = 5, ["data"] = Rows((1, 2, 1), (2, 2, 2)) },
+                    new JObject { ["name"] = "Hidden", ["kind"] = "visual", ["zOrder"] = 9, ["visible"] = false, ["data"] = Rows((3, 2, 1)) })
+            };
+            var grid = ImportMap().NavigationCosts;
+            Assert.That(grid.Width, Is.EqualTo(4));
+            Assert.That(grid.Height, Is.EqualTo(3));
+            Assert.That(grid.GetCost(new Vector2Int(0, 0)), Is.EqualTo(NavigationCostGrid.DefaultCost));
+            Assert.That(grid.GetCost(new Vector2Int(1, 0)), Is.EqualTo(9)); // overridden by the higher layer
+            Assert.That(grid.GetCost(new Vector2Int(2, 0)), Is.EqualTo(1)); // cost-less tile above is transparent
+            Assert.That(grid.GetCost(new Vector2Int(3, 0)), Is.EqualTo(NavigationCostGrid.DefaultCost)); // invisible layer
+            Assert.That(grid.GetCost(new Vector2Int(1, 2)), Is.EqualTo(NavigationCostGrid.DefaultCost)); // top row is Unity y 2
+        }
+
+        // Four-tile tileset; tile 0 and 1 carry the given meta JSON, tiles 2 and 3 carry none.
+        private VulcanusTilesetAsset ImportNavigationTileset(string tile0Meta, string tile1Meta = "{}")
+        {
+            var texture = new Texture2D(16, 64);
+            texture.SetPixels(Enumerable.Repeat(Color.green, 16 * 64).ToArray());
+            texture.Apply();
+            File.WriteAllBytes(Absolute(_root + "/navsheet.png"), texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(_root + "/navsheet.png", ImportAssetOptions.ForceSynchronousImport);
+            var sheetImporter = (TextureImporter)AssetImporter.GetAtPath(_root + "/navsheet.png");
+            sheetImporter.isReadable = true;
+            sheetImporter.filterMode = FilterMode.Point;
+            sheetImporter.SaveAndReimport();
+            var path = _root + "/nav.vts";
+            WriteAndImport(path, "{\"id\":\"test:nav\",\"spriteSheet\":\"navsheet.png\",\"columns\":1,\"tileCount\":4," +
+                "\"tiles\":{\"0\":" + tile0Meta + ",\"1\":" + tile1Meta + "}}");
+            return AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(path);
+        }
+
+        [Test]
         public void PersistentEntitiesAreInactiveTemplatesWithStablePlacementAndPrefabIdentity()
         {
             var map = ImportMap();

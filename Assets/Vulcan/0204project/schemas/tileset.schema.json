@@ -95,6 +95,12 @@
           "description": "Relative weight for random tile selection. Default is 1.",
           "exclusiveMinimum": 0
         },
+        "navigationCost": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Optional navigation cost for NPC pathfinding (lower = preferred). A map cell starts with the terrain layer tile's cost, or the default cost 2 if that tile has no cost. Every other visible tile or object layer (ascending zOrder) whose tile at that cell has a navigationCost overrides it; tiles without a cost are transparent. Absent = not set."
+        },
         "pivotY": {
           "type": "integer",
           "description": "Tile-heights from this tile to the ground contact. depth = worldY + pivotY*tileSize. Default 1 (ground tile). Crown 3 rows above ground: pivotY=3.",

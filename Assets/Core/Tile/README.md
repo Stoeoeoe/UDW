@@ -72,3 +72,53 @@ without a key falls back to a default spawn point.
 Run the `MapLoading` EditMode category for catalog, path, decoding, and integration
 coverage. Integration tests import disposable source assets, preserve Build Settings,
 and read the project's registered spawnable prefab without changing its catalog.
+
+## Navigation cost
+
+Tileset tiles may carry an optional `navigationCost` (integer 1-100, lower = preferred; imported into
+`VulcanusTile.TryGetNavigationCost`, absent = unset). The tileset importer throws for values outside that range
+(tilesets are not schema-validated on import). `NavigationCostGridBuilder` bakes one `NavigationCostGrid` per map at
+import (`VulcanusImportedMap.NavigationCosts`), in Unity cell coordinates (`y = height - 1 - vulcanusY`, like
+`PopulateTileLayer`). The rule, mirrored by Vulcanus' overlay (`docs/navigation-cost.md` in the editor repo):
+
+- A cell starts with the **terrain layer** tile's cost; if that tile has none (or there is no terrain tile) the default
+  cost `NavigationCostGrid.DefaultCost` (2) applies. The terrain layer is the first visible terrain layer with tile data,
+  the same one `MapImporter` uses as the terrain tilemap, and is always the base regardless of zOrder.
+- Every other visible tile or object layer, in ascending `zOrder`, overrides the cost where its tile has a cost. Tiles
+  without a cost are transparent. Object layers contribute their placed instances' object tiles (first instance wins).
+- Invisible layers are ignored. Blocking is not baked; it is decided at runtime with Physics2D.
+
+The scene-independent weighted A* is `Assets/Character/GridPathfinder.cs`. The importer revision was bumped so existing
+maps reimport and gain a grid.
+
+## Navigation (NavigateTo)
+
+`CharacterNavigation.NavigateTo(actor, feetDestination, mapManager)` returns a tickable, disposable `NavigationRoute`
+(same lifecycle as `MoveTo`'s `NavigationMove`: the caller ticks it and disposes it when interrupted). It plans once, with
+`GridPathfinder` over the map's baked `NavigationCostGrid`, then walks the waypoints segment by segment. There is no
+re-planning, waiting or stuck handling. No route sets `Status = Unreachable` with an `Error` naming the character, start
+and destination tiles. The destination is a feet position (like `characters.walkPath` points); the last waypoint is that
+exact position, not the tile centre.
+
+- Tiles are walked at the middle of the sprite as drawn. Imported tile sprites have a top-centre pivot, so a cell's
+  sprite hangs half a cell below the logical cell (`MapManager.TileVisualOffset`); routes and the debug view use
+  `WorldToVisualTile` / `TileToVisualCenter`, not the logical `TileToWorldCenter`.
+- `MoveTo` / `characters.moveTo` / `walkPath` are unchanged: straight lines only, characters block them.
+- Blocking is decided at runtime: a tile is blocked when `Physics2D.OverlapBox` with the character's solid footprint
+  (shrunk to 90%) hits a non-trigger collider in its collision mask. Colliders on the `Characters` physics layer are ignored,
+  so characters never block planning.
+- While walking, `NavigationMove` runs in pass-through mode: its solid colliders add the `Characters` layer to
+  `excludeLayers` (with `layerOverridePriority = int.MaxValue`, restored on arrival, cancellation and disposal), and its
+  straight-segment check ignores that layer. Walls and objects keep their contacts. Every character's solid colliders must
+  stay on the `Characters` layer (layer 10, formerly "Player").
+
+Dev tooling (editor only):
+
+- `unity command navigate_to <characterId> <anchorId>` (Play mode): sends a character in the current map to an anchor and
+  returns status, total cost and waypoints. `NavigationCommands` ticks the route until it ends, the location unloads or
+  Play mode stops, and logs the final status.
+- **Tools > Navigation > Show Navigation Debug** (checked state in `EditorPrefs`) draws in the Scene view, with nothing
+  added to scenes or prefabs: per-cell cost tint and number of the current map's `NavigationCostGrid` (visible cells only;
+  works in Edit mode on an opened map prefab/scene and in Play mode), the cells the last request treated as blocked
+  (orange outlines), active routes as cyan polylines with the destination ringed, and the start and goal in red when a
+  request failed. Gameplay publishes to the debug view only through the editor-only `NavigationDebug` hook.

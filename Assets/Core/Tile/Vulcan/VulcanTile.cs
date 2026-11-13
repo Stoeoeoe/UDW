@@ -37,6 +37,7 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private bool isFarmable;
         [SerializeField] private string waterType = "None";
         [SerializeField] private float pivotY = 1f;
+        [SerializeField] private int navigationCost; // 0 = not set; authored range is 1..100
         [SerializeField] private CollisionShape[] collisionShapes = Array.Empty<CollisionShape>();
 
         [Serializable]
@@ -71,7 +72,8 @@ namespace Core.Tile.Vulcanus
             VulcanusTileProperty[] metaProperties = null,
             float tilePivotY = 1f,
             CollisionShape[] tileCollisionShapes = null,
-            string tileWaterType = "None")
+            string tileWaterType = "None",
+            int tileNavigationCost = 0)
         {
             tileIndex = index;
             tileId = id;
@@ -82,8 +84,15 @@ namespace Core.Tile.Vulcanus
             collisionKind = collision;
             properties = metaProperties ?? Array.Empty<VulcanusTileProperty>();
             pivotY = Mathf.Max(0.01f, tilePivotY);
+            navigationCost = tileNavigationCost;
             collisionShapes = tileCollisionShapes ?? Array.Empty<CollisionShape>();
             colliderType = collision == VulcanusCollisionKind.None ? ColliderType.None : ColliderType.Grid;
+        }
+
+        public bool TryGetNavigationCost(out int cost)
+        {
+            cost = navigationCost;
+            return navigationCost > 0;
         }
 
         public bool TryGetProperty(string key, out string jsonValue)

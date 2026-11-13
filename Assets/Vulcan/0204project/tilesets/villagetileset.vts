@@ -72,6 +72,12 @@
     "23": {
       "probability": 2
     },
+    "24": {
+      "navigationCost": 1
+    },
+    "25": {
+      "navigationCost": 1
+    },
     "28": {
       "id": "asd",
       "pivotY": 5
@@ -170,6 +176,7 @@
     "50": {
       "id": "tile_18_1",
       "probability": 40,
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -227,11 +234,13 @@
     },
     "56": {
       "id": "tile_24_1",
-      "probability": 10
+      "probability": 10,
+      "navigationCost": 1
     },
     "57": {
       "id": "tile_25_1",
-      "probability": 10
+      "probability": 10,
+      "navigationCost": 1
     },
     "58": {
       "id": "tile_26_1"
@@ -474,6 +483,7 @@
     "112": {
       "id": "tile_16_3",
       "probability": 20,
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -483,6 +493,7 @@
     },
     "113": {
       "id": "tile_17_3",
+      "navigationCost": 3,
       "terrainCorners": [
         "grass",
         "grass",
@@ -492,6 +503,7 @@
     },
     "114": {
       "id": "tile_18_3",
+      "navigationCost": 3,
       "terrainCorners": [
         "grass",
         "grass",
@@ -512,10 +524,12 @@
       "id": "tile_20_3"
     },
     "117": {
-      "id": "tile_21_3"
+      "id": "tile_21_3",
+      "navigationCost": 5
     },
     "118": {
-      "id": "tile_22_3"
+      "id": "tile_22_3",
+      "navigationCost": 5
     },
     "119": {
       "id": "tile_23_3"
@@ -605,6 +619,8 @@
     "144": {
       "id": "tile_16_4",
       "probability": 10,
+      "pivotY": 4,
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -614,6 +630,7 @@
     },
     "145": {
       "id": "tile_17_4",
+      "navigationCost": 3,
       "terrainCorners": [
         "grass",
         "dirt",
@@ -623,6 +640,7 @@
     },
     "146": {
       "id": "tile_18_4",
+      "navigationCost": 3,
       "terrainCorners": [
         "dirt",
         "grass",
@@ -644,10 +662,12 @@
     },
     "149": {
       "id": "tile_21_4",
-      "probability": 4
+      "probability": 4,
+      "navigationCost": 5
     },
     "150": {
-      "id": "tile_22_4"
+      "id": "tile_22_4",
+      "navigationCost": 5
     },
     "151": {
       "id": "tile_23_4"
@@ -903,13 +923,15 @@
       "id": "tile_11_5"
     },
     "172": {
-      "id": "tile_12_5"
+      "id": "tile_12_5",
+      "navigationCost": 4
     },
     "173": {
       "id": "tile_13_5",
       "collision": {
         "type": "full"
-      }
+      },
+      "navigationCost": 4
     },
     "174": {
       "id": "tile_14_5",
@@ -939,13 +961,16 @@
             ]
           }
         ]
-      }
+      },
+      "pivotY": 4,
+      "navigationCost": 4
     },
     "175": {
       "id": "tile_15_5"
     },
     "176": {
       "id": "tile_16_5",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -955,6 +980,7 @@
     },
     "177": {
       "id": "tile_17_5",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -1135,6 +1161,7 @@
     },
     "208": {
       "id": "tile_16_6",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -1144,6 +1171,7 @@
     },
     "209": {
       "id": "tile_17_6",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -1554,6 +1582,7 @@
     },
     "278": {
       "id": "tile_22_8",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "dirt",
@@ -1563,6 +1592,7 @@
     },
     "279": {
       "id": "tile_23_8",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "dirt",
@@ -1572,6 +1602,7 @@
     },
     "280": {
       "id": "tile_24_8",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "dirt",
@@ -1581,6 +1612,7 @@
     },
     "281": {
       "id": "tile_25_8",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "dirt",
@@ -1747,6 +1779,7 @@
     },
     "310": {
       "id": "tile_22_9",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "grass",
@@ -1756,6 +1789,7 @@
     },
     "311": {
       "id": "tile_23_9",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -1765,6 +1799,7 @@
     },
     "312": {
       "id": "tile_24_9",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "grass",
@@ -1774,6 +1809,7 @@
     },
     "313": {
       "id": "tile_25_9",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "dirt",
@@ -1933,6 +1969,7 @@
     },
     "342": {
       "id": "tile_22_10",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "grass",
@@ -1942,6 +1979,7 @@
     },
     "343": {
       "id": "tile_23_10",
+      "navigationCost": 4,
       "terrainCorners": [
         "dirt",
         "grass",
@@ -1951,6 +1989,7 @@
     },
     "344": {
       "id": "tile_24_10",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "dirt",
@@ -1960,6 +1999,7 @@
     },
     "345": {
       "id": "tile_25_10",
+      "navigationCost": 4,
       "terrainCorners": [
         "grass",
         "dirt",

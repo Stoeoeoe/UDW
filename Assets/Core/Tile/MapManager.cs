@@ -219,6 +219,22 @@ namespace Core.Tile
             return new Vector2Int(cell.x, cell.y);
         }
 
+        /// <summary>World position of a tile's logical centre; the inverse of <see cref="WorldToTileCoordinates"/>.</summary>
+        public Vector2 TileToWorldCenter(Vector2Int coordinates) => GetWorldPositionFromTileCoordinates(coordinates);
+
+        /// <summary>
+        /// Imported tile sprites have a top-centre pivot, so a cell's sprite is drawn half a cell below its logical
+        /// cell (the importer's tilemap collider carries the same offset). Anything that must line up with what the
+        /// player sees, such as walking to the middle of a tile, uses the visual conversions below.
+        /// </summary>
+        public static readonly Vector2 TileVisualOffset = new(0f, -0.5f);
+
+        /// <summary>The tile whose drawn sprite contains this world position.</summary>
+        public Vector2Int WorldToVisualTile(Vector2 worldPosition) => WorldToTileCoordinates(worldPosition - TileVisualOffset);
+
+        /// <summary>World position of the middle of a tile's drawn sprite.</summary>
+        public Vector2 TileToVisualCenter(Vector2Int coordinates) => TileToWorldCenter(coordinates) + TileVisualOffset;
+
         public Vector2Int GetCurrentTileCoordinates(GameCharacter character) =>
             WorldToTileCoordinates(character.ToolInteractionAnchor.position);
 

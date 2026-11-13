@@ -34,6 +34,9 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private TerrainCell[] terrainCells;
         [SerializeField] private AuthoredSpawnPlacement[] persistentEntities = Array.Empty<AuthoredSpawnPlacement>();
 
+        [Header("Navigation")]
+        [SerializeField] private NavigationCostGrid navigationCosts;
+
         private Dictionary<Vector2Int, TerrainType> _terrainByCoord;
 
         public string MapId => mapId;
@@ -43,6 +46,9 @@ namespace Core.Tile.Vulcanus
         public int TileSize => tileSize;
         public IReadOnlyList<AuthoredSpawnPlacement> PersistentEntities => persistentEntities;
         public void SetPersistentEntities(AuthoredSpawnPlacement[] placements) => persistentEntities = placements;
+
+        public NavigationCostGrid NavigationCosts => navigationCosts;
+        public void SetNavigationCostGrid(NavigationCostGrid grid) => navigationCosts = grid;
 
         public Tilemap TerrainTilemap => terrainTilemap;
         public Tilemap FarmlandTilemap => farmlandTilemap;

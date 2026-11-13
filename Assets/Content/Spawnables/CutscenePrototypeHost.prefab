@@ -279,7 +279,7 @@ GameObject:
   - component: {fileID: 9192923332619228175}
   - component: {fileID: 5674254781157152928}
   - component: {fileID: 1334576898638670829}
-  m_Layer: 13
+  m_Layer: 10
   m_Name: CutscenePrototypeHost
   m_TagString: Untagged
   m_Icon: {fileID: 0}

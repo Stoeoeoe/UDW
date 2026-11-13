@@ -109,6 +109,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("collision")] public CollisionDto Collision { get; set; }
         [JsonProperty("properties")] public List<PropertyInstanceDto> Properties { get; set; } = new();
         [JsonProperty("pivotY")] public float? PivotY { get; set; }
+        [JsonProperty("navigationCost")] public int? NavigationCost { get; set; }
     }
 
     internal class CollisionDto

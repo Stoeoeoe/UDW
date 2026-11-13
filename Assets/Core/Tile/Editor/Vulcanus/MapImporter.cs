@@ -131,6 +131,9 @@ namespace Core.Tile.Editor.Vulcanus
                         ctx, persistentEntities);
                 }
 
+                mapComponent.SetNavigationCostGrid(
+                    NavigationCostGridBuilder.Build(dto.Layers, tilesetsByIndex, width, height, tileSize));
+
                 WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels, drawnWater,
                     WaterTilemapImporter.ParseSwellDirection(dto.Metadata?.SwellDirection));
                 SpawnEntities(mapRoot.transform, dto.Entities, "Entities", height, tileSize, catalog, spawnCatalog, ctx, persistentEntities);

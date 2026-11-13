@@ -66,6 +66,20 @@ Sleeping at a bed still returns the player to their home bed.
 
 Implementation: [DayCommands.cs](../Assets/Core/TimeAndWeather/Editor/DayCommands.cs).
 
+## Navigation
+
+Send a character in the current map to an anchor with tile pathfinding while the game is running in Play mode:
+
+```powershell
+unity command navigate_to --characterId <id> --anchorId <anchor>
+```
+
+The result lists the status, total cost and planned waypoints (or the error). The route keeps walking until it
+arrives, the location unloads or Play mode stops. See [Tile README](../Assets/Core/Tile/README.md) for the rules and the
+Scene-view debug view (**Tools > Navigation > Show Navigation Debug**).
+
+Implementation: [NavigationCommands.cs](../Assets/Character/Editor/NavigationCommands.cs).
+
 ## Indoor weather
 
 In Vulcanus map metadata, set **Location Type** to **Indoor** for rooms. **Mute
