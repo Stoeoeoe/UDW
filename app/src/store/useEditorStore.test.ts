@@ -614,6 +614,62 @@ describe('useEditorStore', () => {
     });
   });
 
+  describe('renameAnchor', () => {
+    const anchor = (id: string) => ({
+      id,
+      name: id,
+      position: [0, 0] as [number, number],
+      tags: [],
+    });
+    const link = (id: string, targetMapId: string, targetAnchorId: string) => ({
+      id,
+      triggerId: `${id}-trigger`,
+      targetMapId,
+      targetAnchorId,
+    });
+    const makeMap = (id: string, anchors: string[], links: ReturnType<typeof link>[] = []) =>
+      ({
+        id,
+        spatialPrimitives: { anchors: anchors.map(anchor) },
+        locationLinks: links,
+        layers: [],
+      }) as never;
+
+    beforeEach(() => {
+      const home = makeMap('base:home', ['door', 'bed'], [link('in', 'base:home', 'door')]);
+      const town = makeMap(
+        'base:town',
+        ['door'],
+        [link('to-home', 'base:home', 'door'), link('to-town', 'base:town', 'door')],
+      );
+      useEditorStore.setState({ currentMap: home, maps: [home, town], selectedAnchorId: 'door' });
+    });
+
+    it('renames the anchor and retargets links that point at it, on any map', () => {
+      expect(useEditorStore.getState().renameAnchor('door', 'front_door')).toBeNull();
+
+      const state = useEditorStore.getState();
+      expect(state.currentMap?.spatialPrimitives?.anchors?.map((a) => a.id)).toEqual([
+        'front_door',
+        'bed',
+      ]);
+      expect(state.currentMap?.locationLinks?.[0].targetAnchorId).toBe('front_door');
+      expect(state.selectedAnchorId).toBe('front_door');
+      const town = state.maps.find((m) => m.id === 'base:town')!;
+      expect(town.locationLinks?.find((l) => l.id === 'to-home')?.targetAnchorId).toBe(
+        'front_door',
+      );
+      // Same anchor ID on a different map is a different anchor.
+      expect(town.locationLinks?.find((l) => l.id === 'to-town')?.targetAnchorId).toBe('door');
+    });
+
+    it('rejects an ID that is invalid or already used on this map', () => {
+      expect(useEditorStore.getState().renameAnchor('door', 'Bad ID')).toMatch(/lowercase/);
+      expect(useEditorStore.getState().renameAnchor('door', 'bed')).toMatch(/already uses/);
+      expect(useEditorStore.getState().currentMap?.spatialPrimitives?.anchors?.[0].id).toBe('door');
+    });
+  });
+
   describe('addLayerDefinition injects into currentMap', () => {
     const mockProject = {
       idPrefix: 'base',

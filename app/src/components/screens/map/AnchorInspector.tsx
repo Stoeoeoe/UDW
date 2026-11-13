@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Checkbox, Wrap } from '@chakra-ui/react';
+import React, { useEffect, useState } from 'react';
+import { Button, Checkbox, FormErrorMessage, Wrap, useToast } from '@chakra-ui/react';
 import { FiMapPin } from 'react-icons/fi';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { DEBUG_SPAWN_POINT_TAG } from '../../../lib/debugSpawn';
@@ -10,7 +10,6 @@ import {
   FieldStack,
   InlineNumberPair,
   InspectorSection,
-  ReadOnlyIdField,
 } from '../../common/Fields';
 
 const FACING_PRESETS: Array<{ label: string; value: [number, number] }> = [
@@ -24,10 +23,20 @@ export const AnchorInspector: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const selectedAnchorId = useEditorStore((state) => state.selectedAnchorId);
   const updateAnchor = useEditorStore((state) => state.updateAnchor);
+  const renameAnchor = useEditorStore((state) => state.renameAnchor);
+  const cutscenes = useEditorStore((state) => state.cutscenes);
+  const toast = useToast();
+  const [idDraft, setIdDraft] = useState('');
+  const [idError, setIdError] = useState<string | null>(null);
 
   const anchor = currentMap?.spatialPrimitives?.anchors?.find(
     (item) => item.id === selectedAnchorId,
   );
+
+  useEffect(() => {
+    setIdDraft(selectedAnchorId ?? '');
+    setIdError(null);
+  }, [selectedAnchorId]);
 
   if (!anchor || !currentMap) {
     return (
@@ -43,6 +52,29 @@ export const AnchorInspector: React.FC = () => {
 
   const facing = anchor.facing ?? [0, 1];
   const isDebugSpawn = anchor.tags.includes(DEBUG_SPAWN_POINT_TAG);
+
+  const commitId = () => {
+    const nextId = idDraft.trim();
+    const error = renameAnchor(anchor.id, nextId);
+    setIdError(error);
+    if (error) return;
+    setIdDraft(nextId);
+    // Links are updated automatically; cutscene steps and Lua only reference anchors by text.
+    const affected = cutscenes
+      .filter(
+        (scene) =>
+          scene.mapId === currentMap.id && JSON.stringify(scene).includes(`"${anchor.id}"`),
+      )
+      .map((scene) => scene.id);
+    if (nextId !== anchor.id && affected.length > 0)
+      toast({
+        status: 'warning',
+        title: `Anchor renamed to "${nextId}"`,
+        description: `Cutscenes still referencing "${anchor.id}" need updating: ${affected.join(', ')}`,
+        duration: 10000,
+        isClosable: true,
+      });
+  };
 
   // A map has a single debug spawn point: enabling it here clears it from other anchors.
   const setDebugSpawn = (enabled: boolean) => {
@@ -67,8 +99,24 @@ export const AnchorInspector: React.FC = () => {
       <FieldStack spacing={5}>
         <InspectorSection>
           <FieldStack>
-            <Field label="ID">
-              <ReadOnlyIdField value={anchor.id} />
+            <Field
+              label="ID"
+              isInvalid={idError !== null}
+              helperText="Location links are updated automatically."
+            >
+              <CompactInput
+                value={idDraft}
+                onChange={(event) => setIdDraft(event.target.value)}
+                onBlur={commitId}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                  if (event.key === 'Escape') {
+                    setIdDraft(anchor.id);
+                    setIdError(null);
+                  }
+                }}
+              />
+              {idError ? <FormErrorMessage>{idError}</FormErrorMessage> : null}
             </Field>
 
             <Field label="Name">

@@ -4,7 +4,11 @@ import {
   resourceSchemaPath,
   normalizeResourceDocument,
 } from '../../lib/resourceRegistry';
-import { qualifyResourceId, assertUniqueResourceIds } from '../../lib/resourceIds';
+import {
+  qualifyResourceId,
+  assertUniqueResourceIds,
+  LOCAL_ID_PATTERN,
+} from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
 import { Anchor, Map as GameMap, LocationLink } from '../../types/schema';
@@ -330,6 +334,8 @@ export interface LocationLinkSlice {
   addAnchor: (anchor: Anchor) => void;
   updateAnchor: (id: string, updates: Partial<Anchor>, skipSave?: boolean) => void;
   removeAnchor: (id: string) => void;
+  /** Changes an anchor's ID and every location link that targets it. Returns an error message, or null on success. */
+  renameAnchor: (id: string, newId: string) => string | null;
   selectAnchor: (id: string | null) => void;
   addLocationLink: (link: LocationLink) => void;
   updateLocationLink: (id: string, updates: Partial<LocationLink>, skipSave?: boolean) => void;
@@ -463,6 +469,46 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
       }
       saveMapDebounced(currentMap);
     }
+  },
+
+  renameAnchor: (id, newId) => {
+    if (newId === id) return null;
+    if (!LOCAL_ID_PATTERN.test(newId))
+      return 'Use lowercase letters, digits, "_", "-" and "."; start and end with a letter or digit.';
+    const { currentMap, maps } = get();
+    if (!currentMap) return 'No map is open.';
+    const anchors = currentMap.spatialPrimitives?.anchors ?? [];
+    if (!anchors.some((anchor) => anchor.id === id)) return `Anchor ${id} does not exist.`;
+    if (anchors.some((anchor) => anchor.id === newId))
+      return `Another anchor already uses "${newId}".`;
+
+    const retarget = (link: LocationLink) =>
+      link.targetMapId === currentMap.id && link.targetAnchorId === id;
+    set((state) => {
+      if (!state.currentMap) return;
+      const anchor = ensureAnchorCollection(state.currentMap).find((item) => item.id === id);
+      if (anchor) anchor.id = newId;
+      for (const link of state.currentMap.locationLinks ?? [])
+        if (retarget(link as LocationLink)) link.targetAnchorId = newId;
+      if (state.selectedAnchorId === id) state.selectedAnchorId = newId;
+    });
+    // Links in other maps that arrive at this anchor.
+    for (const otherMap of maps) {
+      if (otherMap.id === currentMap.id || !(otherMap.locationLinks ?? []).some(retarget)) continue;
+      const updated: GameMap = {
+        ...otherMap,
+        locationLinks: otherMap.locationLinks!.map((link) =>
+          retarget(link) ? { ...link, targetAnchorId: newId } : link,
+        ),
+      };
+      set((state) => {
+        upsertMapInState(state, updated);
+      });
+      saveMapDebounced(updated);
+    }
+    const latest = get().currentMap;
+    if (latest) saveMapDebounced(latest);
+    return null;
   },
 
   selectAnchor: (id) =>
