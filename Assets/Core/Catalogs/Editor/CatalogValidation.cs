@@ -1,17 +1,22 @@
 using System;
 using System.Linq;
 using Character;
+using Character.Editor;
 using Core.Common;
-using Core.Inventory;
 using Core.Music;
+using Core.Music.Editor;
 using Core.Shops;
+using Core.Shops.Editor;
 using Core.Spawning;
-using Interaction.Dialog;
+using Core.Spawning.Editor;
 using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
 {
-    /// <summary>Definition identity checks at the authoring boundary, never on runtime reads.</summary>
+    /// <summary>
+    /// Definition identity checks at the authoring boundary, never on runtime reads. Checks of references between a
+    /// catalog's definitions and content authored elsewhere live with their feature; this only dispatches to them.
+    /// </summary>
     internal static class CatalogValidation
     {
         public static void Validate(DefinitionCatalog catalog, Object[] definitions)
@@ -19,44 +24,19 @@ namespace Core.Catalogs.Editor
             foreach (var definition in definitions)
             {
                 if (!definition) throw new InvalidOperationException($"Catalog '{catalog.name}' has a missing reference.");
-                var id = catalog.GetId(definition);
-                if (!DefinitionIdRules.IsPresent(id))
+                if (!DefinitionIdRules.IsPresent(catalog.GetId(definition)))
                     throw new InvalidOperationException($"Catalog '{catalog.name}': '{definition.name}' needs an ID.");
-                if (definition is SpawnedObject && !DefinitionIdRules.IsLowercaseNamespaced(id))
-                    throw new InvalidOperationException($"Spawnable '{definition.name}' needs a lowercase namespace:name ID.");
                 if (definition is ValidatedScriptableObject asset) ValidateConfiguration(asset);
             }
             var duplicate = definitions.GroupBy(catalog.GetId, catalog.IdComparer).FirstOrDefault(group => group.Count() > 1);
             if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key}'.");
-            if (catalog is ShopCatalog)
+
+            switch (catalog)
             {
-                var itemIds = CatalogAssetDiscovery.Find("Assets", typeof(ItemDefinition)).Cast<ItemDefinition>().Select(item => item.ItemId).ToHashSet();
-                foreach (var shop in definitions.Cast<Shop>())
-                    foreach (var offering in shop.Offerings)
-                        if (!itemIds.Contains(offering.ItemId))
-                            throw new InvalidOperationException($"Shop '{shop.ShopId}' offers the unknown item '{offering.ItemId}'.");
-            }
-            if (catalog is CharacterCatalog)
-            {
-                var soundIds = CatalogAssetDiscovery.Find("Assets", typeof(TypewriterSound)).Cast<TypewriterSound>().Select(sound => sound.Id).ToHashSet();
-                foreach (var character in definitions.Cast<CharacterDefinition>())
-                {
-                    var referenced = character.EmotionTypewriterSounds.Select(each => each.soundId).Append(character.DefaultTypewriterSoundId);
-                    foreach (var soundId in referenced.Where(id => !string.IsNullOrEmpty(id)))
-                        if (!soundIds.Contains(soundId))
-                            throw new InvalidOperationException($"Character '{character.CharacterId}' uses the unknown typewriter sound '{soundId}'.");
-                }
-            }
-            if (catalog is MusicCatalog)
-            {
-                foreach (var group in definitions.Cast<MusicCue>().GroupBy(cue => cue.Theme))
-                {
-                    var first = group.First();
-                    foreach (var cue in group.Skip(1))
-                        if (cue.bpm != first.bpm || cue.beatsPerBar != first.beatsPerBar || cue.loopBars != first.loopBars ||
-                            cue.stems[0].clip.frequency != first.stems[0].clip.frequency || cue.stems[0].clip.samples != first.stems[0].clip.samples)
-                            throw new InvalidOperationException($"Music theme '{group.Key}' has arrangements with different timing or sample counts.");
-                }
+                case SpawnableCatalog: SpawnableCatalogValidation.Validate(definitions.Cast<SpawnedObject>()); break;
+                case ShopCatalog: ShopCatalogValidation.Validate(definitions.Cast<Shop>()); break;
+                case CharacterCatalog: CharacterCatalogValidation.Validate(definitions.Cast<CharacterDefinition>()); break;
+                case MusicCatalog: MusicCatalogValidation.Validate(definitions.Cast<MusicCue>()); break;
             }
         }
 
