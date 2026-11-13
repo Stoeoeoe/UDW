@@ -549,7 +549,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
           ];
 
           // Add LSP completions if available
-          if (lspReady && !matches.argument) {
+          if (lspReady && !matches.argument && !matches.member) {
             try {
               const lspItems = await getLspClient().completion(
                 uri,

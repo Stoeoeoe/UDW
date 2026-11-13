@@ -61,10 +61,32 @@ export function validateStoryValueDeclarations(values: readonly StoryValueDefini
   }
 }
 
+/** The story type of a Lua literal at the start of `expression`, or undefined for anything else. */
+function literalStoryType(expression: string): StoryValueDefinition['type'] | undefined {
+  if (/^(true|false)\s*[,)=~<>]/.test(expression) || /^(true|false)\s*$/.test(expression))
+    return 'boolean';
+  if (/^\{/.test(expression)) return 'object';
+  if (/^(['"])(?:\\.|(?!\1)[^\\])*?\1/.test(expression)) return 'string';
+  const number = /^(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)(?![\w.])/.exec(expression);
+  if (number) return Number.isSafeInteger(Number(number[1])) ? 'long' : 'double';
+  return undefined;
+}
+
+export interface StoryValueIssue {
+  from: number;
+  to: number;
+  message: string;
+  /** Set for an undeclared key: a declaration matching how the key is used here. */
+  undeclared?: StoryValueDefinition;
+}
+
 /** Diagnose literal keys/values only. Dynamic Lua expressions are checked by the runtime. */
-export function storyValueDiagnostics(text: string, declarations: readonly StoryValueDefinition[]) {
+export function storyValueDiagnostics(
+  text: string,
+  declarations: readonly StoryValueDefinition[],
+): StoryValueIssue[] {
   const code = luaCode(text).code;
-  const issues: { from: number; to: number; message: string }[] = [];
+  const issues: StoryValueIssue[] = [];
   // A local GameState shadows the global API; avoid diagnosing those calls.
   if (/\blocal\s+(?:\w+\s*,\s*)*GameState\b|\bfunction\s*[\w.:]*\s*\([^)]*\bGameState\b/.test(code))
     return issues;
@@ -80,10 +102,19 @@ export function storyValueDiagnostics(text: string, declarations: readonly Story
     const declaration = declarations.find((v) => v.key === key);
     const to = argumentStart + literal[0].length;
     if (!declaration) {
+      // Set('key', value) shows the type through its value, Get('key') == value through the comparison.
+      const rest = text.slice(to);
+      const used =
+        call[1] === 'Set'
+          ? literalStoryType(rest.replace(/^,\s*/, ''))
+          : call[1] === 'Get'
+            ? literalStoryType(rest.replace(/^\)\s*(?:==|~=|<=|>=|<|>)\s*/, ''))
+            : undefined;
       issues.push({
         from,
         to,
         message: `Story key '${key}' is not declared in Data. Undeclared keys are allowed.`,
+        undeclared: { key, type: used ?? 'boolean' },
       });
       continue;
     }

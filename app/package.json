@@ -51,6 +51,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.2",
+    "@lezer/highlight": "^1.2.3",
     "@monaco-editor/react": "^4.7.0",
     "@pixelation/aseprite": "^1.2.6",
     "@tanstack/react-form": "^1.29.0",

@@ -68,6 +68,28 @@ describe('story value authoring', () => {
     );
   });
 
+  it('suggests a declaration for an undeclared key from how it is used', () => {
+    const suggested = (text: string) => storyValueDiagnostics(text, declarations)[0]?.undeclared;
+    expect(suggested("GameState.Story.Has('met_fabia')")).toEqual({
+      key: 'met_fabia',
+      type: 'boolean',
+    });
+    expect(suggested("GameState.Story.Get('visits') >= 3")).toEqual({
+      key: 'visits',
+      type: 'long',
+    });
+    expect(suggested("GameState.Story.Get('mood') == 'grumpy'")).toEqual({
+      key: 'mood',
+      type: 'string',
+    });
+    expect(suggested("GameState.Story.Set('ratio', 0.5)")).toEqual({
+      key: 'ratio',
+      type: 'double',
+    });
+    expect(suggested("GameState.Story.Get('flag')")).toEqual({ key: 'flag', type: 'boolean' });
+    expect(suggested("GameState.Story.Get('met')")).toBeUndefined();
+  });
+
   it('does not mistake comments, strings, dynamic keys or shadowed API calls for declarations', () => {
     for (const text of [
       "-- GameState.Story.Get('typo')",
@@ -101,6 +123,7 @@ describe('story value authoring', () => {
       entityTypes: [],
       items: [],
       shops: [],
+      routines: [],
       dialogues: [],
     };
     expect(documentFromHash(documentToHash(document), snapshot)).toEqual(document);

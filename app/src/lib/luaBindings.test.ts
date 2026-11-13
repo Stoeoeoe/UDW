@@ -240,3 +240,57 @@ describe('Lua bindings intelligence', () => {
     expect(bindingDiagnostics('Characters.Unknown()', shipped, SCRIPT_SCOPE)).toEqual([]);
   });
 });
+
+describe('fields of returned tables', () => {
+  // Shapes copied from Unity's Generated/Scripting/bindings.json.
+  const timeManifest = parseScriptingManifest({
+    schemaVersion: 2,
+    tables: [
+      {
+        name: 'TimeLuaView',
+        fields: [
+          { name: 'hour', type: 'integer' },
+          { name: 'minute', type: 'integer' },
+          { name: 'season', type: 'string' },
+        ],
+      },
+    ],
+    modules: [
+      {
+        path: 'Time',
+        methods: [
+          {
+            name: 'GetCurrent',
+            parameters: [],
+            returnType: 'TimeLuaView',
+            outputs: [{ name: 'result', type: 'table', nullable: true }],
+          },
+        ],
+      },
+    ],
+  });
+  const symbols = bindingSymbols(timeManifest, CONDITION_SCOPE);
+  const labels = (text: string) => bindingCompletions(text, symbols).options.map((o) => o.label);
+
+  it('offers the fields right after the call, filtered by what is typed', () => {
+    const afterDot = bindingCompletions('Time.GetCurrent().', symbols);
+    expect(afterDot.member).toBe(true);
+    expect(afterDot.from).toBe('Time.GetCurrent().'.length);
+    expect(afterDot.options.map((o) => [o.label, o.detail])).toEqual([
+      ['hour', 'integer'],
+      ['minute', 'integer'],
+      ['season', 'string'],
+    ]);
+    expect(labels('Time.GetCurrent().h')).toEqual(['hour']);
+    expect(labels('Time.GetCurrent ( ).s')).toEqual(['season']);
+  });
+
+  it('follows a variable assigned from the call in a script', () => {
+    expect(labels('local now = Time.GetCurrent()\nif now.mi')).toEqual(['minute']);
+    expect(labels('local other = 1\nother.')).toEqual([]);
+  });
+
+  it('keeps module completion for module paths', () => {
+    expect(labels('Time.')).toEqual(['Time.GetCurrent']);
+  });
+});

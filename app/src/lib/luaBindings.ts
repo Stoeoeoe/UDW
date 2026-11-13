@@ -50,6 +50,8 @@ export interface LuaBindingSymbol {
   description?: string;
   insertText?: string;
   parameters?: ScriptingManifest['modules'][number]['methods'][number]['parameters'];
+  /** Fields of the table a function returns, when Unity exports its shape. */
+  fields?: NonNullable<ScriptingManifest['tables']>[number]['fields'];
 }
 
 /** Keep the exported Lua path/casing: action IDs are not Lua function names. */
@@ -77,6 +79,7 @@ export function bindingSymbols(
         description:
           typeof method.description === 'string' ? method.description : method.action?.description,
         parameters: method.parameters,
+        fields: manifest?.tables?.find((table) => table.name === method.returnType)?.fields,
       });
     }
   }
@@ -196,7 +199,14 @@ export function bindingCompletions(
   resources: ScriptingResources = {},
   characters: readonly { id: string; name: string }[] = [],
   references: LuaArgumentReferences = {},
-): { from: number; options: LuaBindingSymbol[]; string?: boolean; argument?: boolean } {
+): {
+  from: number;
+  options: LuaBindingSymbol[];
+  string?: boolean;
+  argument?: boolean;
+  /** The options are fields of a returned table, offered right after the dot. */
+  member?: boolean;
+} {
   const scanned = luaCode(text);
   if (scanned.blocked) return { from: text.length, options: [] };
   const call = luaCallContext(text);
@@ -246,6 +256,22 @@ export function bindingCompletions(
       };
   }
   if (scanned.string) return { from: scanned.string.from, options: [], string: true };
+  const fields = returnedTableFields(scanned.code, symbols);
+  if (fields) {
+    const prefix = /\w*$/.exec(scanned.code)![0];
+    return {
+      from: text.length - prefix.length,
+      member: true,
+      options: fields
+        .filter((field) => field.name.startsWith(prefix))
+        .map((field) => ({
+          label: field.name,
+          type: 'constant',
+          detail: `${field.type}${field.nullable ? ' | nil' : ''}`,
+          description: typeof field.description === 'string' ? field.description : undefined,
+        })),
+    };
+  }
   const path = /[\w.:]*$/.exec(scanned.code)?.[0] ?? '';
   const separator = Math.max(path.lastIndexOf('.'), path.lastIndexOf(':'));
   const parent = separator < 0 ? '' : path.slice(0, separator + 1);
@@ -255,6 +281,45 @@ export function bindingCompletions(
       (s) => s.label.startsWith(path) && (!parent || !/[.:]/.test(s.label.slice(parent.length))),
     ),
   };
+}
+
+/**
+ * Fields offered after `Module.Call(...).` or after `name.` where the script assigned `name = Module.Call(...)`,
+ * when the call returns a table Unity describes. Undefined when the text does not end in such a field access.
+ */
+export function returnedTableFields(
+  code: string,
+  symbols: readonly LuaBindingSymbol[],
+): LuaBindingSymbol['fields'] | undefined {
+  const access = /(\)|\b[A-Za-z_]\w*)\s*\.\w*$/.exec(code);
+  if (!access) return undefined;
+  let callName: string | undefined;
+  if (access[1] === ')') {
+    // Walk back to the bracket that opens this call.
+    let depth = 0;
+    let open = access.index;
+    for (; open >= 0; open--) {
+      if (code[open] === ')') depth++;
+      else if (code[open] === '(' && --depth === 0) break;
+    }
+    callName = /([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+)\s*$/.exec(code.slice(0, Math.max(0, open)))?.[1];
+  } else {
+    // The latest assignment to this name before the cursor, such as `local now = Time.GetCurrent()`.
+    const name = access[1];
+    if (/[\w.:]/.test(code[access.index - 1] ?? '')) return undefined;
+    const assignments = [
+      ...code
+        .slice(0, access.index)
+        .matchAll(
+          new RegExp(
+            `(?:^|[^\\w.])${name}\\s*=\\s*([A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*)+)\\s*\\(`,
+            'g',
+          ),
+        ),
+    ];
+    callName = assignments[assignments.length - 1]?.[1];
+  }
+  return symbols.find((symbol) => symbol.label === callName)?.fields;
 }
 
 export function bindingSnippet(symbol: LuaBindingSymbol): string {
@@ -302,4 +367,14 @@ export function unavailableBindings(manifest: ScriptingManifest | null, scope: L
       if (reason) unavailable.set(`${module.path}.${method.name}`, reason);
     }
   return unavailable;
+}
+
+/**
+ * The part of a binding's detail that adds to its label: the signature without the repeated name, or the kind.
+ */
+export function completionDetail(label: string, detail: string | undefined): string | undefined {
+  if (!detail) return detail;
+  if (detail.startsWith(`${label}(`)) return detail.slice(label.length);
+  if (detail === `module ${label}`) return 'module';
+  return detail;
 }

@@ -6,6 +6,7 @@ import { CompletionContext } from '@codemirror/autocomplete';
 import { syntaxTree } from '@codemirror/language';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConditionEditor } from './ConditionEditor';
+import { completionDetail } from '../../../lib/luaBindings';
 import { parseScriptingManifest } from '../../../lib/scriptingManifest';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 
@@ -130,5 +131,18 @@ describe('condition Lua language support', () => {
     expect(complete().options).not.toContainEqual(
       expect.objectContaining({ label: 'Weather.IsRain' }),
     );
+  });
+});
+
+describe('completion details', () => {
+  it('drops the name the label already shows', () => {
+    expect(
+      completionDetail(
+        'GameState.Player.Skills.GetLevel',
+        'GameState.Player.Skills.GetLevel(skillId: string): number',
+      ),
+    ).toBe('(skillId: string): number');
+    expect(completionDetail('GameState.Story', 'module GameState.Story')).toBe('module');
+    expect(completionDetail('Cutscene', 'Current cutscene run')).toBe('Current cutscene run');
   });
 });

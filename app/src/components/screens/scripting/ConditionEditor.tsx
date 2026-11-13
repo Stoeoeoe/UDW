@@ -13,11 +13,14 @@ import {
   showTooltip,
   type Tooltip as CodeTooltip,
 } from '@codemirror/view';
-import { StreamLanguage } from '@codemirror/language';
+import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { lua } from '@codemirror/legacy-modes/mode/lua';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { storyValueDiagnostics } from '../../../lib/storyValues';
+import { DeclareStoryValueButton } from './DeclareStoryValueButton';
+import { conditionTypeIssues } from '../../../lib/conditionTypes';
 import {
   bindingSymbols,
   bindingCompletions,
@@ -28,6 +31,7 @@ import {
   unavailableBindings,
   CONDITION_SCOPE,
   bindingParameterDescription,
+  completionDetail,
 } from '../../../lib/luaBindings';
 import { withProjectCharacters } from '../../../lib/scriptingManifest';
 import {
@@ -43,6 +47,78 @@ import { Prec, StateField, type EditorState } from '@codemirror/state';
 import { LUA_STDLIB_COMPLETIONS } from '../../../config/luaStandardLibrary';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+const color = (token: string) => `var(--chakra-colors-${token})`;
+
+/**
+ * Lua token colours. The Lua grammar tags every name as a variable, which oneDark paints red; names stay in the
+ * normal text colour so real errors stand out.
+ */
+const CONDITION_HIGHLIGHT = HighlightStyle.define([
+  { tag: tags.variableName, color: color('gray-100') },
+  { tag: tags.standard(tags.variableName), color: color('cyan-300') },
+  { tag: tags.keyword, color: color('purple-300') },
+  { tag: tags.number, color: color('orange-300') },
+  { tag: tags.string, color: color('green-300') },
+  { tag: tags.comment, color: color('gray-500'), fontStyle: 'italic' },
+]);
+
+/**
+ * Readable completion list. Selectors start with `&.cm-editor` so they outrank the oneDark theme's rules.
+ */
+const COMPLETION_THEME = {
+  '&.cm-editor .cm-tooltip.cm-tooltip-autocomplete': {
+    background: color('editorPanelBg'),
+    border: `1px solid ${color('editorFieldBorderHover')}`,
+    borderRadius: '6px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+    overflow: 'hidden',
+  },
+  '&.cm-editor .cm-tooltip-autocomplete > ul': {
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    maxHeight: '18em',
+    maxWidth: 'min(640px, 90vw)',
+    padding: '4px 0',
+  },
+  '&.cm-editor .cm-tooltip-autocomplete > ul > li': {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '3px 10px',
+    lineHeight: '1.6',
+    color: color('gray-200'),
+  },
+  '&.cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected]': {
+    background: color('blue-700'),
+    color: color('white'),
+  },
+  '&.cm-editor .cm-completionIcon': { width: '1.4em', opacity: '0.7', paddingRight: '4px' },
+  '&.cm-editor .cm-completionMatchedText': {
+    textDecoration: 'none',
+    fontWeight: '700',
+    color: color('cyan-300'),
+  },
+  '&.cm-editor li[aria-selected] .cm-completionMatchedText': { color: color('cyan-100') },
+  '&.cm-editor .cm-completionDetail': {
+    marginLeft: 'auto',
+    paddingLeft: '16px',
+    fontStyle: 'normal',
+    fontSize: '11px',
+    color: color('gray-500'),
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  '&.cm-editor li[aria-selected] .cm-completionDetail': { color: color('gray-200') },
+  '&.cm-editor .cm-tooltip.cm-completionInfo': {
+    background: color('editorPanelBg'),
+    border: `1px solid ${color('editorFieldBorderHover')}`,
+    borderRadius: '6px',
+    padding: '6px 10px',
+    maxWidth: '360px',
+    color: color('gray-300'),
+  },
+};
 
 export interface ConditionEditorProps {
   cutsceneVariables?: readonly { name: string; type: string; nullable?: boolean }[];
@@ -60,18 +136,24 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const characters = useEditorStore((s) => s.characters);
   const storyValues = useEditorStore((s) => s.project?.storyValues);
-  const storyWarning = useMemo(
-    () => storyValueDiagnostics(value, storyValues ?? [])[0]?.message,
+  const storyIssues = useMemo(
+    () => storyValueDiagnostics(value, storyValues ?? []),
     [value, storyValues],
   );
+  const storyWarning = storyIssues[0]?.message;
+  // The line shows the first issue; declaring it reveals the next one.
+  const undeclared = storyIssues[0]?.undeclared;
   const symbols = useMemo(
     () => bindingSymbols(manifest, { ...CONDITION_SCOPE, cutsceneVariables }),
     [manifest, cutsceneVariables],
   );
   const unavailable = useMemo(() => unavailableBindings(manifest, CONDITION_SCOPE), [manifest]);
   const contextIssues = useMemo(
-    () => bindingDiagnostics(value, manifest, CONDITION_SCOPE),
-    [value, manifest],
+    () => [
+      ...bindingDiagnostics(value, manifest, CONDITION_SCOPE),
+      ...conditionTypeIssues(value, manifest, storyValues, cutsceneVariables),
+    ],
+    [value, manifest, storyValues, cutsceneVariables],
   );
   const contextError = contextIssues[0]?.message;
 
@@ -92,10 +174,11 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         { storyValues },
       );
       const q = text.slice(matches.from);
-      if (!q && !context.explicit && !matches.string && !matches.argument) return null;
+      if (!q && !context.explicit && !matches.string && !matches.argument && !matches.member)
+        return null;
       const scanned = luaCode(text);
       const legacy =
-        scanned.blocked || scanned.string || matches.argument
+        scanned.blocked || scanned.string || matches.argument || matches.member
           ? []
           : allCompletions
               .filter((c) => c.label.startsWith(q) && !unavailable.has(c.label))
@@ -105,13 +188,13 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
           ? snippetCompletion(bindingSnippet(symbol), {
               label: symbol.label,
               type: symbol.type,
-              detail: symbol.detail,
+              detail: completionDetail(symbol.label, symbol.detail),
               info: symbol.description,
             })
           : {
               label: symbol.label,
               type: symbol.type,
-              detail: symbol.detail,
+              detail: completionDetail(symbol.label, symbol.detail),
               info: symbol.description,
               apply: symbol.insertText ?? symbol.label,
             },
@@ -156,6 +239,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
 
     return [
       StreamLanguage.define(lua),
+      Prec.high(syntaxHighlighting(CONDITION_HIGHLIGHT)),
       signatures,
       keymap.of([{ key: 'Ctrl-Space', run: startCompletion }]),
       hoverTooltip((view, pos) => {
@@ -190,6 +274,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         '.cm-content': { fontFamily: 'monospace', padding: '3px 6px' },
         '.cm-gutters': { display: 'none' },
         '.cm-lua-signature': { padding: '4px 8px', maxWidth: '500px', whiteSpace: 'normal' },
+        ...COMPLETION_THEME,
       }),
 
       // 3. The Single-Line Hack (Moved to lowest priority)
@@ -259,17 +344,25 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
       </HStack>
 
       {/* Fixed-height error line — visibility toggle, no layout shift */}
-      <Text
+      <HStack
         h="14px"
         mt="2px"
-        fontSize="9px"
-        color={isValid ? 'orange.300' : 'red.400'}
-        fontFamily="mono"
-        noOfLines={1}
+        spacing={2}
         visibility={(!isValid || !!storyWarning) && value.trim() !== '' ? 'visible' : 'hidden'}
       >
-        {contextError ?? result.error ?? storyWarning ?? ' '}
-      </Text>
+        <Text
+          flex={1}
+          fontSize="9px"
+          color={isValid ? 'orange.300' : 'red.400'}
+          fontFamily="mono"
+          noOfLines={1}
+        >
+          {contextError ?? result.error ?? storyWarning ?? ' '}
+        </Text>
+        {isValid && undeclared && (
+          <DeclareStoryValueButton key={undeclared.key} suggestion={undeclared} />
+        )}
+      </HStack>
 
       {/* Footer */}
       <HStack justify="space-between" mt="2px">
